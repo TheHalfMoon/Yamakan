@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { fork, execFileSync } from "node:child_process";
 import { mkdtemp, readFile, access, rm, stat } from "node:fs/promises";
@@ -13,8 +13,16 @@ import {
   readableByOtherAccounts,
 } from "../core/process/access.ts";
 
+// Every test folder is removed when the file's tests finish; each test
+// waits for its server to exit first.
+const bases: string[] = [];
+after(() =>
+  Promise.all(bases.map((b) => rm(b, { recursive: true, force: true }))),
+);
+
 test("loopback API rejects unauthenticated and cross-site access; restart preserves edits", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-http-"));
+  bases.push(root);
   const port = 24318;
   const origin = `http://127.0.0.1:${port}`;
   const script = fileURLToPath(new URL("../server/main.ts", import.meta.url));
@@ -465,6 +473,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
 
 test("a VFR upload returns 202 with a conversion job; the converted asset joins the project", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-http-vfr-"));
+  bases.push(root);
   const port = 24319;
   const origin = `http://127.0.0.1:${port}`;
   const script = fileURLToPath(new URL("../server/main.ts", import.meta.url));
@@ -577,6 +586,7 @@ test("a VFR upload returns 202 with a conversion job; the converted asset joins 
 
 test("the preview route serves plan-compiled frames and segments to authenticated clients only", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-http-preview-"));
+  bases.push(root);
   const port = 24321;
   const origin = `http://127.0.0.1:${port}`;
   const script = fileURLToPath(new URL("../server/main.ts", import.meta.url));

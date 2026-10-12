@@ -1,7 +1,8 @@
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { fork, spawnSync } from "node:child_process";
-import { access, mkdtemp, readdir, stat } from "node:fs/promises";
+import { once } from "node:events";
+import { access, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,9 +12,19 @@ import type { SupervisorOptions } from "../core/jobs.ts";
 import { CommandError } from "../core/command/errors.ts";
 import { workers } from "../core/process/workers.ts";
 
+// Every test folder is removed when the file's tests finish, after the
+// stores and queues opened in it close (Windows cannot delete them open).
+const bases: string[] = [];
+const handles: { close(): unknown }[] = [];
+after(async () => {
+  for (const handle of handles.reverse()) await handle.close();
+  await Promise.all(bases.map((b) => rm(b, { recursive: true, force: true })));
+});
 async function workspace(frames = 30, width = 320, height = 180) {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-jobs-"));
+  bases.push(root);
   const store = new ProjectStore(root);
+  handles.push(store);
   await store.initialize();
   const created = await store.create("Jobs");
   const project = await store.save(
@@ -372,6 +383,8 @@ test(
       return found;
     }
     const observer = new ProjectStore(root);
+    handles.push(observer);
+    await observer.initialize();
     let pid = 0;
     let ownerPid = 0;
     let supervisor: JobSupervisor | undefined;
@@ -382,7 +395,6 @@ test(
         ownerPid > 0 && alive(ownerPid),
         "the process owner is running before the kill",
       );
-      await observer.initialize();
       // Kill only once FFmpeg is resumed and writing its output.
       const partial = path.join(
         root,
