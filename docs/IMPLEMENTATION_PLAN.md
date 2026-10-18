@@ -4,6 +4,8 @@
 
 Read the [founder packet](FOUNDER_DECISION_PACKET.md), [assessment](review/FINAL_OPTIMIZATION_REVIEW.md), [contracts](OPERATIONAL_CONTRACTS.md), [source matrix](SOURCE_IMPORT_MATRIX.md), and [acceptance](E2E_ACCEPTANCE.md). The historical `docs/evidence/yamakan/phase-plan.json` describes the original proposal only.
 
+**Update 2026-10-18:** T1–T10 are merged. The MVP release gates below stay authoritative. The expansion phases P05–P09 are re-based on the reuse-first plan in [research/rea-source-reuse](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md), which also defines the M-gate for starting major integrations. Where the two differ on P05–P09, that plan applies.
+
 ## Architecture and accepted product
 
 Retain D′: React/TypeScript local web, Node 24 command service, **one SQLite authority**, immutable content-addressed media, one canonical project/timeline, owned FFmpeg export and libass typography. Refine it by storing canonical snapshot bytes inside the DB transaction, separating jobs from attempts with fencing, and providing FFmpeg reference preview. Fast interactive preview is a measured optimization. No donor persistent store, whole application or alternate renderer becomes canonical.

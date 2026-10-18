@@ -33,3 +33,11 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
   - Committed memory may overshoot the limit by a few MiB: up to 7.5 MiB was seen at limits of 32–192 MiB, so the test allows 16 MiB.
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
+
+## 2026-10-18: M-gate for major integrations; migrated video clips keep their export
+
+- **Authority:** the founder's 2026-10-18 planning instruction asked the agent to "define when the MVP is qualified enough to start major integrations"; the continuation directive of 2026-10-13 delegates engineering order.
+- **Decision (M-gate):** donor imports that change the canonical schema or add a workspace (modules M3–M17 in [the blueprint](research/rea-source-reuse/04_EXACT_SOURCE_IMPORT_BLUEPRINT.md)) start only after worker read containment, a video clip's own sound, the recovery and integrity defects, per-agent principals and the pinned bundle are merged with exact-head CI, `qualify:release` passes on that main head, and no release-blocking defect remains in `specs/CURRENT.md`. Human-only gates block release, not integration work. Provenance and brand tooling is exempt. Details: [master plan](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md#m-gate).
+- **Decision (video sound, planned for W1):** new video clips whose asset has sound play it by default; clips migrated from the earlier schema get the sound disabled, so an existing project's export is unchanged by the migration (render intent is preserved, as the migration policy requires).
+- **Rationale:** imports change the canonical schema; starting them before the MVP schema stabilizes multiplies migrations and invalidates release evidence.
+- **Change rule:** a new entry here with the reason; the gate is never relaxed to let a specific import through.

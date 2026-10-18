@@ -1,0 +1,29 @@
+{
+  "tool": "rea-agents 6.3.0 (local install)",
+  "command": "node <rea-agents>/scripts/rea.mjs analyze-javascript-application <sparse checkout of Mediabunny src> --json",
+  "date": "2026-10-18",
+  "target": {
+    "repository": "Vanilagy/mediabunny",
+    "commit": "9d36fc5779b254904bc609e66f2cd80ed8390b4b",
+    "rootArtifactSha256": "bf0d9fd9c04282f4164464cc2f23fe19a9cf1ccadf1683a6bc4ed29ba7a36ecc"
+  },
+  "evidenceId": "ev_01b9c52f349bc1cb9fb221748f7c5a5cf352d88157ca9334414edf5511bd2bb7",
+  "result": {
+    "nodes": 1063,
+    "edges": 3217,
+    "parseFailures": 0,
+    "integrityContradictions": 0,
+    "externalImportsBySubsystem": {
+      "node.ts": {
+        "node:fs/promises": 1
+      },
+      "source.ts": {
+        "node:fs/promises": 2
+      },
+      "target.ts": {
+        "node:fs/promises": 2
+      }
+    }
+  },
+  "limitations": "Static, inert parse of a sparse checkout; no execution, no native engine. Import specifiers are as written; type-only imports are included."
+}
