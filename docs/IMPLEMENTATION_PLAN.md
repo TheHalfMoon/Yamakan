@@ -8,9 +8,10 @@ This file is the canonical entry point to the Yamakan plan. **Implementation of 
 |---|---|
 | [START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md) | The single starting point when development is authorized |
 | [PLAN_FREEZE_MANIFEST.md](PLAN_FREEZE_MANIFEST.md) | The frozen commit, source pins, document hashes, external gates and assumptions |
-| [07 Optimized master plan](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md) | Final architecture (B, balanced reuse on D′), phases, the M-gate |
+| [06 Final architecture](research/rea-source-reuse/06_FINAL_ARCHITECTURE.md) | Architecture B (balanced reuse on D′), single owners, workspaces |
+| [07 Optimized master plan](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md) | Tracks, phases, the M-gate, phase-to-task mapping |
 | [04 Exact source import blueprint](research/rea-source-reuse/04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) | Frozen donor selections and file-level mapping |
-| [08 Implementation tasks](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md) | All 18 task cards (W1–W18), the dependency graph and qualification tests Q1–Q14 |
+| [08 Implementation tasks](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md) | All 18 task cards (W1–W18), the dependency graph and qualification tests Q1–Q15 |
 | [13 First implementation wave](research/rea-source-reuse/13_FIRST_IMPLEMENTATION_WAVE.md) | The first ten PRs, starting with W1 |
 | [FUTURE_CLAUDE_EXECUTION_PROMPT.md](FUTURE_CLAUDE_EXECUTION_PROMPT.md) | The prompt to paste when development is authorized |
 

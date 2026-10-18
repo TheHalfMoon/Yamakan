@@ -73,4 +73,4 @@ A disabled workspace shows the reason, for example "needs qualified local hardwa
 - **No donor code** may call `fetch`, open sockets or read `node:` modules inside the browser subtrees.
   - The rule is ported from InvokeAI's dependency policy into `src/studio/boundaries.test.ts`.
   - **The enforcing control** is a page CSP (`connect-src 'self'`; no remote images, fonts or scripts) plus the e2e egress capture.
-- **Approvals** (Director) are human-only and bound to an output hash. Agent principals cannot approve.
+- **Human-only commands:** agent token create and revoke, Director approval (bound to an output hash and an expiry) and likeness consent grant and revoke. They need the browser principal, which comes only from a single-use, short-lived launch secret, plus the user-presence confirmation Q15 selects. Agent and CLI tokens can never hold these scopes (W4).

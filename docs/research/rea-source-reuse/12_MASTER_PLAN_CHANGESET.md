@@ -21,7 +21,7 @@ This is what this planning PR changes and what it deliberately leaves alone.
 | `docs/FUTURE_CLAUDE_EXECUTION_PROMPT.md` | The prompt the founder pastes to start development                          |
 | `docs/PLAN_FREEZE_MANIFEST.md`           | Frozen commit, source pins, document hashes, external gates and assumptions |
 
-The freeze also completed [08](08_IMPLEMENTATION_TASKS.md): 18 task cards, the dependency graph and qualification tests Q1–Q14 (W18 was added for the P08 follow-ups that had no task). It also froze the selection summary and the Studio integration boundary in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md).
+The freeze also completed [08](08_IMPLEMENTATION_TASKS.md): 18 task cards, the dependency graph and qualification tests Q1–Q15 (W18 was added for the P08 follow-ups that had no task). It also froze the selection summary and the Studio integration boundary in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md).
 
 ## Amended
 

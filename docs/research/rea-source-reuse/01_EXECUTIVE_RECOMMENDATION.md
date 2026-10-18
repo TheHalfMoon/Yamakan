@@ -42,7 +42,7 @@ The human-only gates (native Arabic review, a clean profile, a second account, p
 
 ## Expected effect (estimate, not measurement)
 
-Across the expansion workspaces in this plan, about **44,000 donor source lines** (43,986) are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 88–131 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
+Across the expansion workspaces in this plan, about **43,300 donor source lines** (43,277) are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 87.5–130.5 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
 
 ## Status
 

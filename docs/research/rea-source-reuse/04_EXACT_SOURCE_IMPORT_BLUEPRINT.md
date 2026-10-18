@@ -4,27 +4,27 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 
 ## Frozen selection summary
 
-"Effort" is reuse-path builder days ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). "Q" names the bounded qualification test that settles an open assumption ([08](08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q14)). Integration is a future qualification requirement; none of it has been proven.
+"Effort" is reuse-path builder days ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). "Q" names the bounded qualification test that settles an open assumption ([08](08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q15)). Integration is a future qualification requirement; none of it has been proven.
 
-| Subsystem               | Module | Primary (repository @ commit)                                                                                                | Method         | Fallback                                                             | Permission and notices                                              | Gate                                              | Effort (days) | Q        | Task     |
-| ----------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------- | ------------- | -------- | -------- |
-| Video clip sound        | M1     | Yamakan original                                                                                                             | E              | Linked sound clip on a sound track                                   | GPL-3.0-or-later                                                    | MVP                                               | 2–3           | Q1       | W1       |
-| Provenance and brand    | M2     | Yamakan original                                                                                                             | E              | Existing checks                                                      | GPL-3.0-or-later                                                    | None                                              | 1–1.5         | —        | W6       |
-| Ripple                  | M3     | OpenCut-app/opencut-classic `cf5e79e919144200294fb9fed22a222592a0aeea`                                                       | B              | Existing `src/edit-ops.ts` operations                                | MIT, `notices/OpenCut-LICENSE`                                      | M-gate                                            | 1.5–2         | Q4       | W8       |
-| Group move              | M4     | same                                                                                                                         | B              | Single-clip move (present)                                           | MIT                                                                 | M-gate                                            | 2–3           | Q4       | W8       |
-| Retime                  | M5     | same, plus `soundtouchjs@0.3.0`                                                                                              | B + A          | Field absent (1×)                                                    | MIT; LGPL-2.1 dependency                                            | M-gate                                            | 2.5–4         | Q6       | W9       |
-| Keyframes               | M6     | same                                                                                                                         | B              | Static properties (present)                                          | MIT                                                                 | M-gate                                            | 5–8           | Q13, Q14 | W16      |
-| Studio canvas           | M7     | invoke-ai/InvokeAI `ffe9e1a98b19640388d72f88ae0ecadf1bee1717`                                                                | B              | InvokeAI webv1 `controlLayers` at the same commit, else original (C) | Apache-2.0 + NOTICE                                                 | M-gate, Studio ADR                                | 10–15         | Q7–Q10   | W10, W11 |
-| Camera math             | M8     | storytold/artcraft `28a39a0de4a2fc2eccc237df2046c24245bd12ab`                                                                | A/B            | — (pure, small)                                                      | Apache-2.0 / MIT + NOTICE                                           | M-gate                                            | 0.5           | —        | W14      |
-| Scene schema            | M9     | same                                                                                                                         | B              | Entity absent                                                        | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —        | W14      |
-| Camera controller       | M10    | same                                                                                                                         | B              | three `OrbitControls`                                                | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —        | W14      |
-| Identity                | M11    | mne03005-png/OpenVideoStudio `175da9960411fbe740932b0a08d57e32a4a36a18`                                                      | B (translated) | Entity absent                                                        | Apache-2.0 + NOTICE                                                 | M-gate                                            | 2–3           | —        | W15      |
-| Director stages         | M12    | calesthio/OpenMontage `9327439db69021ab4b0e2776729bf3b58fdb5a87`                                                             | B (translated) | Manual storyboard                                                    | AGPL-3.0 (version 3 only in combination)                            | M-gate, W4                                        | 4–6           | —        | W15      |
-| Local engine            | M13    | Comfy-Org/ComfyUI `7f7fd918ed0815c5d5ef2ccfe44bfc8e72cfd217` (wrapped); OpenVideoStudio client shape                         | D + B          | Fake engine; capability disabled                                     | GPL-3.0 (not copied)                                                | M-gate; **E-SEC and founder F for a real engine** | 1.5–2.5       | —        | W10      |
-| Browser demux, waveform | M14    | Vanilagy/mediabunny `9d36fc5779b254904bc609e66f2cd80ed8390b4b`, `mediabunny@1.61.3`                                          | A              | Server-derived peaks (present)                                       | MPL-2.0 (unmodified)                                                | M-gate                                            | 1–2           | Q5       | W9       |
-| Live title preview      | M15    | ThaUnknown/jassub `dea3d2d398569a591cf0c767d945d84e9f120484`, `jassub@2.5.20`                                                | A              | Server reference still (present; primary today)                      | LGPL-2.1+ AND (FTL OR GPL-2.0+) AND MIT …; GPL elected for FreeType | M-gate, H1                                        | 1–1.5         | Q11      | W12      |
-| Interchange             | M16    | Yamakan original; OpenTimelineIO `00c22fa3a64256d8d3dcafbc7276492185dd970d` as test oracle                                   | E              | OTIO Python in a contained worker                                    | Apache-2.0 (not shipped)                                            | M-gate                                            | 1–1.5         | Q12      | W13      |
-| Agents rules            | M17    | TheHalfMoon/Gomrey `5f299a7a6174ad3a1180f827778db5f4400a4d71`, TheHalfMoon/Ascout `ca6b6f514e5a8881e2cfa2789b5e5ea43e3aaaad` | B              | Current job states                                                   | Founder-owned (founder-attested)                                    | M-gate                                            | 1.5–2.5       | —        | W17      |
+| Subsystem               | Module | Primary (repository @ commit)                                                                                                | Method         | Fallback                                                             | Permission and notices                                              | Gate                                              | Effort (days) | Q                | Task     |
+| ----------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------- | ------------- | ---------------- | -------- |
+| Video clip sound        | M1     | Yamakan original                                                                                                             | E              | Linked sound clip on a sound track                                   | GPL-3.0-or-later                                                    | MVP                                               | 2–3           | Q1               | W1       |
+| Provenance and brand    | M2     | Yamakan original                                                                                                             | E              | Existing checks                                                      | GPL-3.0-or-later                                                    | None                                              | 1–1.5         | —                | W6       |
+| Ripple                  | M3     | OpenCut-app/opencut-classic `cf5e79e919144200294fb9fed22a222592a0aeea`                                                       | B              | Existing `src/edit-ops.ts` operations                                | MIT, `notices/OpenCut-LICENSE`                                      | M-gate                                            | 1.5–2         | Q4               | W8       |
+| Group move              | M4     | same                                                                                                                         | B              | Single-clip move (present)                                           | MIT                                                                 | M-gate                                            | 2–3           | Q4               | W8       |
+| Retime                  | M5     | same, plus `soundtouchjs@0.3.0`                                                                                              | B + A          | Field absent (1×)                                                    | MIT; LGPL-2.1 dependency                                            | M-gate                                            | 2.5–4         | Q6               | W9       |
+| Keyframes               | M6     | same                                                                                                                         | B              | Static properties (present)                                          | MIT                                                                 | M-gate                                            | 5–8           | Q13, Q14         | W16      |
+| Studio canvas           | M7     | invoke-ai/InvokeAI `ffe9e1a98b19640388d72f88ae0ecadf1bee1717`                                                                | B              | InvokeAI webv1 `controlLayers` at the same commit, else original (C) | Apache-2.0 + NOTICE                                                 | M-gate, Studio ADR                                | 10–15         | Q7a, Q7b, Q8–Q10 | W10, W11 |
+| Camera math             | M8     | storytold/artcraft `28a39a0de4a2fc2eccc237df2046c24245bd12ab`                                                                | A/B            | — (pure, small)                                                      | Apache-2.0 / MIT + NOTICE                                           | M-gate                                            | 0.5           | —                | W14      |
+| Scene schema            | M9     | same                                                                                                                         | B              | Entity absent                                                        | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —                | W14      |
+| Camera controller       | M10    | same                                                                                                                         | B              | three `OrbitControls`                                                | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —                | W14      |
+| Identity                | M11    | mne03005-png/OpenVideoStudio `175da9960411fbe740932b0a08d57e32a4a36a18`                                                      | B (translated) | Entity absent                                                        | Apache-2.0 + NOTICE                                                 | M-gate                                            | 2–3           | —                | W15      |
+| Director stages         | M12    | calesthio/OpenMontage `9327439db69021ab4b0e2776729bf3b58fdb5a87`                                                             | B (translated) | Manual storyboard                                                    | AGPL-3.0 (version 3 only in combination)                            | M-gate, W4                                        | 4–6           | —                | W15      |
+| Local engine            | M13    | Comfy-Org/ComfyUI `7f7fd918ed0815c5d5ef2ccfe44bfc8e72cfd217` (wrapped); OpenVideoStudio client shape                         | D + B          | Fake engine; capability disabled                                     | GPL-3.0 (not copied)                                                | M-gate; **E-SEC and founder F for a real engine** | 1.5–2.5       | —                | W10      |
+| Browser demux, waveform | M14    | Vanilagy/mediabunny `9d36fc5779b254904bc609e66f2cd80ed8390b4b`, `mediabunny@1.61.3`                                          | A              | Server-derived peaks (present)                                       | MPL-2.0 (unmodified)                                                | M-gate                                            | 1–2           | Q5               | W9       |
+| Live title preview      | M15    | ThaUnknown/jassub `dea3d2d398569a591cf0c767d945d84e9f120484`, `jassub@2.5.20`                                                | A              | Server reference still (present; primary today)                      | LGPL-2.1+ AND (FTL OR GPL-2.0+) AND MIT …; GPL elected for FreeType | M-gate, H1                                        | 1–1.5         | Q11              | W12      |
+| Interchange             | M16    | Yamakan original; OpenTimelineIO `00c22fa3a64256d8d3dcafbc7276492185dd970d` as test oracle                                   | E              | OTIO Python in a contained worker                                    | Apache-2.0 (not shipped)                                            | M-gate                                            | 1–1.5         | Q12              | W13      |
+| Agents rules            | M17    | TheHalfMoon/Gomrey `5f299a7a6174ad3a1180f827778db5f4400a4d71`, TheHalfMoon/Ascout `ca6b6f514e5a8881e2cfa2789b5e5ea43e3aaaad` | B              | Current job states                                                   | Founder-owned (founder-attested)                                    | M-gate                                            | 1.5–2.5       | —                | W17      |
 
 Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-editor UI and the OpenCut snapping/overlap adapters are already integrated and stay unchanged.
 
@@ -130,7 +130,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 8. **Dependency closure:** none.
 9. **Excluded:** none.
 10. **Modifications:** not applicable.
-11. **Adapter contract:** each ledger record gains `license` (SPDX), `authorization` (`"public-licence"` or `"founder-attested"`), `owner` and `tests` (test file paths).
+11. **Adapter contract:** each ledger record gains `license` (SPDX), `authorization` (`"public-licence"` or `"founder-attested"`), `owner` and `tests` (test file paths). The check also enforces a SHA-256 denylist of excluded files at their pins and a dependency-closure check of every imported file (W6).
 12. **Canonical impact:** none.
 13. **Security boundary:** excluded paths stay hard failures.
 14. **Inherited tests:** the existing provenance check in CI.
@@ -341,87 +341,118 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 2. **Workspace/subsystem:** Studio, layered image canvas (raster, masks, regions, control layers, history, export).
 3. **Donor @ pin:** invoke-ai/InvokeAI `ffe9e1a98b19640388d72f88ae0ecadf1bee1717`.
 4. **Licence/notice:** Apache-2.0 plus the InvokeAI `NOTICE`, kept in `notices/InvokeAI-LICENSE` and `notices/InvokeAI-NOTICE`. The model licence files (SD1/SD2, SDXL and similar) are **not** imported.
-5. **Donor paths:**
-   - `invokeai/frontend/webv2/src/workbench/canvas-engine/**`, excluding the tests listed in field 9.
-   - The host closure and reducer seam named in fields 7–8: `invokeai/frontend/webv2/src/platform/{browser/sha256,browser/downloadBlob,core/json,ui/modalPresence}.ts`, `invokeai/frontend/webv2/src/workbench/{mediaReferences,canvasProjectMutations,canvasMigration,canvasLoadContracts,canvasSchemaVersion}.ts`.
-   - About 35,589 source lines in the engine; subtrees include `api.ts`, `engine.ts`, `contracts.ts`, `capabilities.ts`, `controllers/`, `document/`, `document-model/`, `editing/`, `export/`, `history/`, `input/`, `math/`, `render/`, `selection/`, `tools/` and `transform/`.
+5. **Donor paths** (under `invokeai/frontend/webv2/src/`; line counts at the pin):
+
+   | Group                     | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Lines  | Treatment                                             |
+   | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------- |
+   | Engine production files   | `workbench/canvas-engine/**` except tests and test support: 156 files, including the SAM files (`samInteraction.ts`, `samCoordinates.ts`, `tools/samTool.ts`, `tools/samHitTest.ts`; 305 lines)                                                                                                                                                                                                                                                                                                                    | 34,647 | Copied unchanged                                      |
+   | Engine test support       | 6 `*.testStub.ts` / `*.testing.ts` files and `render/golden/goldenHarness.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                      | 942    | Copied for the inherited tests; not counted as source |
+   | Engine tests              | 145 `*.test.ts` files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 56,394 | Copied; run under Q9's rule                           |
+   | Closure, copied unchanged | `platform/browser/sha256.ts` (124), `platform/core/json.ts` (36), `platform/ui/modalPresence.ts` (44), `workbench/mediaReferences.ts` (61), `workbench/panZoom.ts` (101), `workbench/projectEventContracts.ts` (20)                                                                                                                                                                                                                                                                                                | 386    | Copied unchanged                                      |
+   | Reducer seam              | `workbench/canvasProjectMutations.ts` (1,013), `workbench/canvasMigration.ts` (746), `workbench/canvasLoadContracts.ts` (15), `workbench/canvasSchemaVersion.ts` (28)                                                                                                                                                                                                                                                                                                                                              | 1,802  | Copied, then adapted (Q7b)                            |
+   | Replaced by host code     | `workbench/canvasProjectMutationPort.ts` (35; imports `workbenchStore` and `projectContracts`), `workbench/controlAdapters.ts` (99; imports `@features/generation/graph`), `platform/browser/downloadBlob.ts` (26), the type imports `@features/gallery` (`GeneratedImageContract`, in `contracts.ts`) and `@workbench/projectContracts` (`ProjectEvent`, in `controllers/stagedResultController.ts`), and `@workbench/canvasStagingView` (`getCanvasStagingCandidateFingerprint`, in `stagedResultController.ts`) | —      | Host shims (field 8)                                  |
+
+   This is the complete set of non-relative imports of the engine's production files at the pin, apart from `@workbench/canvas-engine/*` itself. It was checked by grep at the freeze; Q7a proves it by compiling.
+
 6. **Yamakan paths:**
-   - `src/studio/canvas-engine/**` (copied subtree);
-   - `src/studio/host/` (new): `documentStore.ts` maps `CanvasDocumentContractV3` ↔ a canonical `studioDocument` revision; `bitmapStore.ts` makes dirty-bitmap flushes content-addressed asset puts; `mediaReferences.ts` maps media references to asset ids; `platform.ts` provides `sha256` (WebCrypto) and `downloadBlob`.
-7. **Ladder level:** B (copy the subtree whole; adapt only at the host seam).
+   - `src/studio/canvas-engine/**`: the copied engine, unchanged.
+   - `src/studio/workbench/*` and `src/studio/platform/*`: the copied closure and reducer seam, keeping their donor file names.
+   - `src/studio/host/` (new):
+     - `port.ts` implements `CanvasProjectMutationPort`;
+     - `documentStore.ts` maps the canvas document to a canonical `studioDocument` revision;
+     - `bitmapStore.ts` makes dirty-bitmap flushes content-addressed asset puts;
+     - `shims.ts` holds the replacements in field 5;
+     - `images.ts` is the limited image decoder;
+     - `fonts.ts` is the pinned-font readiness seam.
+7. **Ladder level:** B (copy the engine whole; adapt only at the host seam).
 
-   **Integration boundary (frozen; proving it is future qualification work, Q7–Q10):**
+   **Integration boundary (frozen; proving it is future qualification work, Q7a, Q7b and Q8–Q10):**
 
-   - **The engine side (copied unchanged):** `workbench/canvas-engine/**`, 158 source files.
-   - **The port the engine needs.** Per the donor's `ARCHITECTURE.md`, each engine receives a `CanvasProjectMutationPort` bound to one project. It exposes `getCanvasState()`, `subscribe()`, `dispatch(mutation, origin?)` and `commitEdit(intent)`. Yamakan's host implements this port. It is the only seam.
-   - **The reducer side (copied and adapted):** `workbench/canvasProjectMutations.ts` (1,013 lines) applies `CanvasProjectMutation` to the document, and `workbench/canvasMigration.ts` (746) loads and validates. Their small helpers `canvasLoadContracts.ts` (15) and `canvasSchemaVersion.ts` (28) come too.
-     - Their imports of `projectContracts`, `projectEvents` and `canvasStagingView` pull in the InvokeAI workbench, queue and transport. Those are **not** copied: the adapted files use a minimal Yamakan `StudioProject` type instead.
-     - Generation staging (`canvasStagingView`) is excluded until an engine is enabled.
-     - If adaptation fails Q7, the fallback is an original host reducer that applies the same mutation vocabulary through the engine's own `document/*` modules, which the donor's dependency policy already allows the reducer to use.
+   - **The port.** Per the donor's `ARCHITECTURE.md`, each engine receives a `CanvasProjectMutationPort` bound to one project. It exposes `getCanvasState()`, `subscribe()`, `dispatch(mutation, origin?)` and `commitEdit(intent)`. The port's type is kept, and its implementation is Yamakan's (`host/port.ts`). It is the only seam.
+   - **The reducer seam.** `canvasProjectMutations.ts` applies `CanvasProjectMutation` to the document, and `canvasMigration.ts` loads and validates it.
+     - Their imports of `projectContracts`, `projectEvents` and `canvasStagingView` (which pull in the InvokeAI workbench, queue and transport) are replaced by a minimal Yamakan `StudioProject` type and the shims.
+     - **Q7b decides:** if the adaptation fails, an original host reducer applies the same mutation vocabulary through the engine's own `document/*` modules (which the donor's dependency policy lets the reducer use), and **the engine stays primary**.
    - **Host-owned state:**
-     - The `CanvasDocumentContractV3` JSON is stored as canonical bytes in a `studioDocument` revision.
+     - The canvas document JSON is stored as canonical bytes in a `studioDocument` revision.
      - Bitmaps are content-addressed assets.
      - Committed edits are canonical revisions with the principal and request id.
-   - **Engine-owned state:** pixels, decoded images, render caches, interaction and session-local history. None of it is persisted or reaches the database.
-   - **Asset persistence:** dirty-bitmap flushes become asset puts (hash, then publish). A layer accepts the bitmap reference only after the put is durable, matching the donor rule "clears a dirty result only after the intended layer accepts the bitmap reference".
-   - **Migration strategy:**
-     - The `studioDocument` stores `contractVersion: 3`, and the donor loader refuses older versions.
-     - A future donor contract change is a separate upgrade PR, with a host migration function and a Yamakan schema version bump.
-     - Yamakan never edits the donor loader to accept unknown versions.
+   - **Engine-owned state:** pixels, decoded images, render caches, interaction and the session's edit history. None of it is persisted or reaches the database.
+   - **Undo model (two layers, one authority):**
+     - **Ctrl+Z / Ctrl+Y inside Studio are the engine's own undo.** History replay dispatches through the port as `system`, as the donor does.
+     - **Every `commitEdit`, and every `system` dispatch that changes the document,** marks the `studioDocument` dirty. The host commits one canonical revision per user edit, coalescing edits by the same principal within 1 s to protect the revision budget. An engine undo is therefore saved as a new revision, never as a rewind of history.
+     - **Yamakan's revision history** (restore an earlier revision) replaces the whole document and reloads the engine, which clears the engine's session history. Restoring is itself a new revision.
+   - **Asset persistence:**
+     - Dirty-bitmap flushes become asset puts (hash, then publish).
+     - A layer accepts the bitmap reference only after the put is durable, matching the donor rule that persistence "clears a dirty result only after the intended layer accepts the bitmap reference".
+     - The flush barrier completes before the revision commits.
+   - **Document versions and migration:**
+     - At the pin, the donor reads canvas schema versions **3 and 4** (`canvasSchemaVersion.ts`: minimum 3, maximum 4). It writes 4 when a document needs font references.
+     - The `studioDocument` stores the version as written and accepts only 3 and 4.
+     - A future donor contract change is a separate upgrade PR, with a host migration function and a Yamakan schema version bump. Yamakan never edits the loader to accept unknown versions.
+     - **Normalization:** the loader silently normalizes malformed fields (`.catch(undefined)` in `canvasMigration.ts`). The host compares the loaded document with the stored bytes. Any difference is reported as a diagnostic, and the normalized document is committed only after the user confirms. It is never committed silently.
    - **React compatibility:**
      - The engine imports no React (REA).
      - The webv2 widgets are React 19 and are **not** imported.
-     - Yamakan's Studio UI shell is React 18.3.1 and talks to the engine only through `api.ts`.
-     - Q8 confirms this at runtime.
+     - Yamakan's Studio UI shell is React 18.3.1 and talks to the engine only through `api.ts` (Q8).
 
 8. **Dependency closure:**
-   - **Copied unchanged** (host platform files, 291 lines):
-     - `platform/browser/sha256.ts` (124);
-     - `platform/browser/downloadBlob.ts` (26);
-     - `platform/core/json.ts` (36);
-     - `platform/ui/modalPresence.ts` (44);
-     - `workbench/mediaReferences.ts` (61).
-   - **Replaced:** `workbench/controlAdapters.ts` (99), which imports `@features/generation/graph`, by a Yamakan stub that exposes `CONTROL_ADAPTER_DEFAULTS` and `createDefaultControlAdapter` with no adapters enabled.
-   - npm `ag-psd` (MIT) and `perfect-freehand` (MIT). The donor declares `^31.0.2` and `^1.2.3`; Yamakan pins exact versions with integrity hashes. M8–M10 likewise pin `three` exactly.
-   - `zod`: Yamakan 4.4.3 against the donor's ^4.6.5. Q7's compile run decides whether Yamakan moves to an exact newer 4.x (its own reviewed dependency change).
-   - TypeScript: Yamakan 5.9.3 against the donor's ^7.0.2 (Q7).
+   - **Copied:** the closure and reducer seam in field 5.
+   - **Host shims (`host/shims.ts`):**
+     - `controlAdapters` exports `CONTROL_ADAPTER_DEFAULTS`, `createDefaultControlAdapter` and `normalizeControlAdapter` (imported by `canvasMigration.ts`), with no adapters enabled.
+     - `downloadBlob` routes to `studio.export`, which writes a content-addressed asset with a host-controlled file name. The browser download that bypassed the asset store is gone.
+     - `GeneratedImageContract` and `ProjectEvent` are minimal Yamakan types.
+     - `getCanvasStagingCandidateFingerprint` is computed over Yamakan takes; there are no staged results until an engine is enabled.
+   - **npm:** `ag-psd` (MIT) and `perfect-freehand` (MIT). The donor declares `^31.0.2` and `^1.2.3`; Yamakan pins exact versions with integrity hashes.
+   - **Toolchain** (all Q7a): `zod` (Yamakan 4.4.3 against the donor's ^4.6.5) and TypeScript (Yamakan 5.9.3 against the donor's ^7.0.2).
 9. **Excluded:**
    - `workbench/canvas-operations/**` (account lifecycle, gallery, backend).
-   - `samInteraction.ts` and `samCoordinates.ts` until a local segmentation engine is qualified.
+   - The rest of `workbench/**` and `features/**`.
    - Any socket or backend file.
-   - Browser-mode Vitest tests run only in the e2e browser.
+   - The SAM tool's capability stays **disabled** until a local segmentation engine is qualified. Its files are copied unchanged because engine files import them.
 10. **Modifications:**
-    - Path aliases are rewritten (`@workbench/canvas-engine/*` → relative).
-    - `controlAdapters` is stubbed to the engines Yamakan has enabled (none at first).
-    - No behavioural changes inside the engine. The exception is that any decoding moved into a Worker is a ledgered modification.
-    - The canvas-engine rules from InvokeAI's dependency policy (`src/architecture/dependencyPolicy.ts`, 305 lines, with `dependencyPolicy.test.ts` and `canvasSeamOwnership.test.ts`) are ported into a new `src/studio/boundaries.test.ts`. That file does not ship inside the subtree; `importBoundaries.test.ts`, named in the donor's `ARCHITECTURE.md`, does not exist at the pin. The new test also forbids `node:`, `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and dynamic `import()` inside the subtree. A text rule is easy to evade, so it is a lint aid, not the control.
-    - **The control:** the page's Content Security Policy limits `connect-src` to `'self'` and refuses remote `img-src`, `font-src` and `script-src`. The e2e egress capture must show no request off loopback.
-11. **Adapter contract:**
-    - The host owns the document (canonical revision) and assets.
-    - The engine owns pixels and transient history. Its undo is session-local; a committed canvas edit is a canonical revision with its own undo.
-    - The `PersistenceController` flush barrier must complete before a revision commits.
-12. **Canonical impact:** a new `studioDocument` entity (JSON contract V3 stored as canonical bytes) and bitmap assets.
+    - Path aliases are rewritten (`@workbench/canvas-engine/*`, `@workbench/*`, `@platform/*`) to the Yamakan locations.
+    - Engine files have no behavioural changes. The exceptions are the injected backends below, which are supplied through the engine's existing injection seams rather than by editing engine files. Any edit that proves necessary is ledgered.
+    - **Image decoding:**
+      - The engine's image decode reaches `createImageBitmap` (`controllers/rasterController.ts`) with no dimension limit, and clipboard paste (`controllers/newRasterLayerController.ts`) decodes pixels the host never probed.
+      - `host/images.ts` supplies the decode backend for both. It checks dimensions **before decoding**: at most 16,384 px a side and 64 megapixels. The result is tied to the asset hash.
+    - **Fonts:**
+      - The engine's font readiness seam (`engine.ts`, defaulting to `document.fonts`) and `render/fontLoader.ts` could reach system fonts.
+      - `host/fonts.ts` injects a loader that knows only the pinned fonts. Studio text refuses any other family.
+    - **Boundary test:** the canvas-engine rules from InvokeAI's dependency policy (`src/architecture/dependencyPolicy.ts`, 305 lines, with `dependencyPolicy.test.ts` and `canvasSeamOwnership.test.ts`) are ported into `src/studio/boundaries.test.ts`.
+      - That policy does not ship inside the subtree; `importBoundaries.test.ts`, named in the donor's `ARCHITECTURE.md`, does not exist at the pin.
+      - The new test also forbids `node:`, `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and dynamic `import()` in the copied code. A text rule is easy to evade, so it is a lint aid, not the control.
+    - **The control:**
+      - The page's Content Security Policy limits `connect-src` to `'self'` and refuses remote `img-src`, `font-src` and `script-src`.
+      - The e2e egress capture must show no request off loopback.
+11. **Adapter contract:** the port and undo model in field 7. The host owns the document and assets; the engine owns pixels and session history.
+12. **Canonical impact:** a new `studioDocument` entity (canvas contract version 3 or 4, stored as canonical bytes) and bitmap assets.
 13. **Security boundary:**
-    - Browser-only code.
-    - No network.
+    - Browser-only code. No network.
+    - Image and font limits as in field 10.
     - The engine only **writes** PSD at the pin (`export/psdExport.ts`, `writePsd`); `readPsd` appears only in tests. PSD import is not planned, and adding it would need its own Worker-based importer with limits.
-    - Untrusted images reach `createImageBitmap` (`rasterController.ts`) with no dimension limit. The host seam checks the asset's probed dimensions first: at most 16,384 px a side and 64 megapixels. Larger images are refused before decoding.
-14. **Inherited tests:** 145 test files (56,394 lines, Vitest). Node-compatible ones run under Vitest added as a dev dependency for `src/studio/**` only; browser-mode ones run in Playwright.
+14. **Inherited tests:** 145 test files (56,394 lines, Vitest).
+    - Node-compatible tests run under Vitest added as an exact dev dependency for `src/studio/**` only.
+    - Browser-mode tests run in Playwright.
+    - Q9 governs failures. Tests of limits, the dependency policy, seam ownership or the loader may never be dropped.
 15. **New tests:**
-    - Host round trip: document → revision → reload → identical contract bytes.
-    - Bitmap flush → asset hash stable.
-    - Kill during flush → no partial asset is published.
+    - Host round trip: document → revision → reload → identical contract bytes, for versions 3 and 4.
+    - A normalized load is shown as a diagnostic and never committed silently.
+    - Bitmap flush → asset hash stable. Kill during flush → no partial asset is published.
+    - An oversized image and an oversized paste are refused before decoding.
+    - A non-pinned font family is refused.
+    - Undo model: an engine undo creates a new revision; restoring a revision clears the engine history.
     - The 10,000-node limit is enforced by the canonical schema too.
 16. **Validation commands:** `npx vitest run src/studio && npm test && npm run build && npm run test:e2e && npm run provenance:check`.
 17. **Benchmark:**
     - A 4096×4096 document with 20 raster layers: brush stroke latency ≤ 16 ms p95.
     - Memory within the engine's own raster budget.
     - Reload ≤ 2 s on Profile A (proposed).
-18. **Size:** 37,682 donor lines: 35,589 engine, 291 platform closure and 1,802 reducer seam. Plus 2,500–4,000 new (host port, schema, commands, UI shell, tests).
-19. **Owner, phase, gate:** Studio builder; P06; after the M-gate and the Studio ADR (React 18 host, Vitest scope, bundle size).
+18. **Size:** 36,835 donor source lines (34,647 engine, 386 closure, 1,802 reducer seam), excluding test and test-support lines. Plus 2,500–4,000 new lines (host port, shims, schema, commands, UI shell, tests).
+19. **Owner, phase, gate:** Studio builder; P06; after the M-gate and the Studio ADR (W10).
 20. **Fallback and rollback:**
-    - Fallback, chosen by the Studio ADR when Q7 or Q8 fails: InvokeAI webv1 `controlLayers` (Konva) at the same commit, with higher coupling. If that also fails the same tests, an original canvas (ladder C) scoped to raster layers, masks and export.
-    - Rollback: the Studio workspace stays disabled behind its capability flag; no canonical data is written until enabled.
+    - **Fallback** (Q7a's binding decision, or Q8's when even a plain container cannot host the engine): InvokeAI webv1 `controlLayers` (Konva) at the same commit, put through the same Q7a/Q8. If that also fails, an original canvas (ladder C) scoped to raster layers, masks and export.
+    - **Reducer seam** failures (Q7b) do not trigger the fallback; they get the original host reducer.
+    - **Rollback:** the Studio workspace stays disabled behind its capability flag; no canonical data is written until it is enabled.
 
 ---
 
@@ -529,12 +560,13 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
     - lineage;
     - invalidation of derived outputs and references when consent is revoked.
 
-    This module implements all of it, not only the presence check.
+    This module implements all of it, not only the presence check. **Granting and revoking consent are human-only commands:** W4's scope ceiling and user-presence confirmation apply, and agent principals are refused.
 
 14. **Inherited tests:** the identity test cases translated to `node:test`.
 15. **New tests:**
     - Missing, expired, revoked or wrong-purpose consent refuses the encoding job.
     - Revocation invalidates every encoding and take derived from that consent.
+    - An agent principal granting or revoking consent is refused.
     - A reference that is not an image is refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
@@ -581,7 +613,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
     - An approval for an output hash that has since changed is refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
-18. **Size:** about 500 donor lines / 700–1,000 new.
+18. **Size:** 638 donor lines translated (manifest schema 196, `pipeline_loader.py` 240, the five rule functions of `checkpoint.py` 177, `framework-smoke.yaml` 25) / 700–1,000 new.
 19. **Owner, phase, gate:** Director builder; P07. W4 (transport-bound principals) is a hard prerequisite.
 20. **Fallback and rollback:** a manual storyboard (no stages).
 
@@ -612,8 +644,14 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 9. **Excluded:**
    - ComfyUI-Manager and automatic custom-node install.
    - Any node not in a pinned allowlist. This is **enforced** two ways:
-     - **Launch flags, checked at the pin's `comfy/cli_args.py`:** `--disable-all-custom-nodes`, `--disable-api-nodes`, `--disable-partner-nodes`, `--offline`, `--disabled-nodes-config <pinned file>`, `--disable-metadata`, a pinned `--front-end-root` (never `--front-end-version`, which downloads), and fixed `--input-directory`, `--output-directory`, `--user-directory` and `--temp-directory`. `--enable-manager` is never passed, so ComfyUI-Manager is not loaded at all. `--disable-manager-ui` is not relied on, because its help text says background tasks still run.
-     - **Service-side validation:** every node `class_type` in a graph must be in the pinned allowlist before submit. Core ComfyUI ships paid partner/API nodes, so this check is required even with the flags.
+     - **Launch flags, checked at the pin's `comfy/cli_args.py`:** `--disable-all-custom-nodes`, `--disable-api-nodes`, `--disable-partner-nodes`, `--offline`, `--disabled-nodes-config <pinned file>`, `--disable-metadata`, `--disable-assets`, `--max-upload-size <the job's largest input>`, `--listen 127.0.0.1`, a pinned `--front-end-root` (never `--front-end-version`, which downloads), and fixed `--input-directory`, `--output-directory`, `--user-directory`, `--temp-directory` and `--models-directory`.
+       - **Never passed:** `--enable-cors-header`, `--whitelist-custom-nodes`, `--auto-launch` and `--enable-manager`.
+       - **Refused at start:** an `extra_model_paths.yaml` in the engine folder, which ComfyUI's `main.py` loads automatically.
+       - **`--offline` limits the front end only.** It does not stop the process reaching the network; E-SEC's network denial does that. `--enable-manager` is never passed, so ComfyUI-Manager is not loaded at all. `--disable-manager-ui` is not relied on, because its help text says background tasks still run.
+     - **Service-side validation before submit:**
+       - Every node `class_type` in a graph must be in the pinned allowlist. Core ComfyUI ships paid partner/API nodes, so this check is required even with the flags.
+       - Every input value that names a file or model (for example image names and `ckpt_name`) must be in the job's own inputs or the model allowlist.
+     - **Weights:** only `safetensors` files, or files whose SHA-256 is in the allowlist, may be in the models directory. Pickled weights can run code. Yamakan never downloads weights (founder decision F).
 10. **Modifications:**
     - Polling → durable job attempts with fencing.
     - Output path lookup → `/view` download into content-addressed import, then probe.
@@ -624,7 +662,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 12. **Canonical impact:** takes and outputs are assets with a generation receipt (graph hash, engine version, seed).
 13. **Security boundary:**
     - procd containment.
-    - **Unresolved: an authenticated channel.** ComfyUI at the pin has no auth or token option. AppContainer loopback isolation would either block the service or need a machine-wide loopback exemption, which opens the port to every local process and user. Until this is solved, any local process could submit graphs to `/prompt` or write through `/upload/*`. **No real engine runs until this is resolved.** Candidate designs (decided in the gate below):
+    - **Unresolved: an authenticated channel covering every route**, including `/prompt`, `/ws`, `/view`, `/upload/*`, `/history`, `/interrupt` and `/userdata`. ComfyUI at the pin has no auth or token option. AppContainer loopback isolation would either block the service or need a machine-wide loopback exemption, which opens the port to every local process and user. Until this is solved, any local process could submit graphs to `/prompt` or write through `/upload/*`. **No real engine runs until this is resolved.** Candidate designs (decided in the gate below):
       - a per-launch-token reverse proxy owned by the service;
       - a named pipe with an owner-only ACL.
     - Uploads are only the job's inputs. Outputs are imported through the probe path and never trusted.
@@ -695,7 +733,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 6. **Yamakan paths:** `src/preview/titles.ts`; `src/donors/film-editor/components/PreviewPlayer.tsx` (overlay canvas).
 7. **Ladder level:** A.
 8. **Dependency closure:** WebAssembly; the font files are the same pinned IBM Plex Sans Arabic bytes served by the service.
-9. **Excluded:** system-font fallback. Only the pinned fonts are provided, through options that load fonts from the service alone. `queryLocalFonts` and any remote font loading are disabled explicitly. The threaded build needs COOP/COEP headers, which would change the service's headers, so step 1 chooses between the non-threaded build and a reviewed header change.
+9. **Excluded:** system-font fallback. Only the pinned fonts are provided, through options that load fonts from the service alone. JASSUB is constructed with `queryFonts: false`, `defaultFont` and `availableFonts` set to the pinned fonts only (its default would query local fonts and fall back to a bundled Liberation Sans), and non-zero `libassMemoryLimit` and `libassGlyphLimit`. The worker and wasm are served locally. The wasm needs `'wasm-unsafe-eval'` in the CSP, a reviewed change (Q11). The threaded build needs COOP/COEP headers, which would change the service's headers, so step 1 chooses between the non-threaded build and a reviewed header change.
 10. **Modifications:** none.
 11. **Adapter contract:** the same `titles.ass` generated by `core/render/ass.ts`.
 12. **Canonical impact:** none.
@@ -724,7 +762,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
     - `toOtio(project) → JSON`, using rational time (rate 705,600,000).
     - `fromOtio(json) → proposal`, which is a reviewable batch, never a direct write.
 12. **Canonical impact:** none.
-13. **Security boundary:** import is a hostile-input parser. Its limits are 16 MiB of JSON, 50,000 objects, nesting depth 32 and strings of at most 4,096 characters, with rational times checked as integers. Media references must resolve to existing assets.
+13. **Security boundary:** import is a hostile-input parser. Its limits are 16 MiB of JSON, 50,000 objects, nesting depth 32 and strings of at most 4,096 characters, with rational times checked as integers. Media references match existing assets by asset id or content hash only. `target_url` is never opened, and an unmatched reference stays unresolved.
 14. **Inherited tests:** none.
 15. **New tests:** a round trip through the official Python library preserves every clip's range exactly.
 16. **Validation commands:** `npm test`; CI job `otio-oracle`.

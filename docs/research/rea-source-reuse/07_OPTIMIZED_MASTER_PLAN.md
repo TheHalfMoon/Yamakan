@@ -21,6 +21,8 @@ This **amends** the [implementation plan](../../IMPLEMENTATION_PLAN.md) and does
 Major integrations (Track 2 modules M3–M17) may start when **all** of the following hold. This is an agent decision ([agent decision record](../../AGENT_DECISION_RECORD.md)):
 
 1. R1–R8 are merged on main with exact-head CI.
+   - **R5 (PRs #24 and #19)** is satisfied by merging them, or by their owner closing them, with the reason recorded in `specs/CURRENT.md`. A closed PR's purpose (the mid-render kill window; test temp cleanup) then becomes a Track 1 follow-up task before W7.
+   - **R1 (worker read containment)** is satisfied only by containment merged on main, through PR #29 or a successor PR. If #29 closes unmerged, containment becomes a new Track 1 task ahead of W5. It stays release-blocking.
 2. `npm run qualify:release` passes on that main head, with its receipt committed.
 3. No open release-blocking defect remains in `specs/CURRENT.md`.
 
