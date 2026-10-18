@@ -51,7 +51,7 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
 ## C — Selective reuse ("MVP plus minimal imports")
 
 - **What:** import only what the MVP needs (nothing new, since the original-audio fix is original work). Expansion workspaces are built mostly as original code with donors used as references.
-- **Reuse share:** 971 donor lines (OpenCut ripple 377, retime 398 including tests, ArtCraft camera math 196).
+- **Reuse share:** 879 donor source lines (OpenCut ripple 377, retime 306, ArtCraft camera math 196).
 - **Cost:** reimplementing a layered canvas engine, keyframe interpolation and group move. The estimate is about 84–126 builder days: the all-reimplementation 87.5–130.5 less the 3.5–5 days that importing ripple, retime and camera math saves, per [09](09_REUSE_AND_EFFORT_ESTIMATES.md) against 41–63 for B.
 - **Verdict:** **Not recommended.** It is slower and less tested than donor code, which is the opposite of the reuse mandate. It remains the fallback for any module whose B-path validation fails, module by module.
 
@@ -61,7 +61,7 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
 | ----------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------- | ----------- |
 | Hard gates                                | Fail (H2 ×3, H3 ×2)                  | Pass                                                                             | Pass        |
 | One authority preserved                   | No                                   | Yes                                                                              | Yes         |
-| Donor lines reused (estimate)             | ~120,000                             | ~41,900                                                                          | 971         |
+| Donor lines reused (estimate)             | ~120,000                             | ~41,900                                                                          | 879         |
 | Expansion effort (builder days, estimate) | Not estimated (sync layer unbounded) | 41–63                                                                            | ~84–126     |
 | Inherited donor tests                     | Most                                 | ~150 files (InvokeAI 145, OpenCut 3, plus OpenMontage and OpenVideoStudio cases) | ~3          |
 | Upstream drift burden                     | Very high                            | Medium (one large subtree)                                                       | Low         |

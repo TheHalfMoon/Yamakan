@@ -157,7 +157,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 16. **Validation commands:** `npm test && npm run provenance:check && npm run test:e2e`.
 17. **Benchmark:** a ripple on 10,000 clips across 20 tracks takes ≤ 50 ms p95 on Profile A (proposed target).
 18. **Size:** 377 donor lines / 300–500 new.
-19. **Owner, phase, gate:** editing builder; P10 Edit+; after the M-gate.
+19. **Owner, phase, gate:** editing builder; P05 Edit+; after the M-gate.
 20. **Fallback and rollback:**
     - Fallback: the existing film-editor timeline operations (`src/edit-ops.ts`).
     - Rollback: remove the commands. The data model is unchanged.
@@ -467,7 +467,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 14. **Inherited tests:** the identity test cases translated to `node:test`.
 15. **New tests:**
     - Missing, expired, revoked or wrong-purpose consent refuses the encoding job.
-    - Revocation marks derived encodings and takes invalid.
+    - Revocation invalidates every encoding and take derived from that consent.
     - A reference that is not an image is refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
@@ -545,7 +545,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 9. **Excluded:**
    - ComfyUI-Manager and automatic custom-node install.
    - Any node not in a pinned allowlist. This is **enforced** two ways:
-     - **Launch flags, checked at the pin's `comfy/cli_args.py`:** `--disable-all-custom-nodes`, `--disable-api-nodes`, `--disable-partner-nodes`, `--offline`, `--disabled-nodes-config <pinned file>`, `--disable-manager-ui`, `--disable-metadata`, a pinned `--front-end-root` (never `--front-end-version`, which downloads), and fixed `--input-directory`, `--output-directory`, `--user-directory` and `--temp-directory`.
+     - **Launch flags, checked at the pin's `comfy/cli_args.py`:** `--disable-all-custom-nodes`, `--disable-api-nodes`, `--disable-partner-nodes`, `--offline`, `--disabled-nodes-config <pinned file>`, `--disable-metadata`, a pinned `--front-end-root` (never `--front-end-version`, which downloads), and fixed `--input-directory`, `--output-directory`, `--user-directory` and `--temp-directory`. `--enable-manager` is never passed, so ComfyUI-Manager is not loaded at all. `--disable-manager-ui` is not relied on, because its help text says background tasks still run.
      - **Service-side validation:** every node `class_type` in a graph must be in the pinned allowlist before submit. Core ComfyUI ships paid partner/API nodes, so this check is required even with the flags.
 10. **Modifications:**
     - Polling → durable job attempts with fencing.

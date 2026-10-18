@@ -104,7 +104,7 @@ Nothing was installed, built or executed from any donor. No model, weight or hos
   - `POST /prompt`, `GET /history/{prompt_id}`, `POST /interrupt` and `POST /free`;
   - `POST /api/jobs/{job_id}/cancel`, `GET /view` and `POST /upload/image`;
   - 27 routes in total, including the `GET /ws` WebSocket.
-- **Finding:** the integration boundary is the HTTP API, so Yamakan wraps the engine rather than copying code. Custom nodes run arbitrary Python, so only a pinned node set is allowed and the server runs as a contained worker (procd, loopback-only port, no outbound network).
+- **Finding:** the integration boundary is the HTTP API, so Yamakan wraps the engine rather than copying code. Custom nodes run arbitrary Python, so only a pinned node set is allowed and the server runs as a contained worker (procd, ephemeral loopback port). An authenticated channel and outbound-network denial are not in place today, so no real engine runs before gate E-SEC ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) M13).
 
 ### R6 — OpenVideoStudio (`175da996`, Apache-2.0 + NOTICE), Python, static reading
 
