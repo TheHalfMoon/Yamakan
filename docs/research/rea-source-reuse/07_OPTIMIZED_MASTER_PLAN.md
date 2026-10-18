@@ -33,13 +33,26 @@ The human gates H1–H5 are **not** part of the M-gate. They block the release, 
 | Phase                      | Modules ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md))                                                                             | Exit evidence                                                                                                    | Est. builder days |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------- |
 | P05 Edit+ and interchange  | M3 ripple, M4 group move, M5 retime, M14 Mediabunny, M16 OTIO; then M15 JASSUB once the native Arabic review (H1) passes        | Goldens, parity, property tests, OTIO round trip. P05 closes without M15; M15's 1–1.5 days are inside this total | 9–14              |
-| P06 Studio and Cinema      | M7 canvas engine, M8–M10 camera and scene, M13 engine contract (fake engine)                                                    | Host round trip, kill during flush, 145 inherited test files green                                               | 14–21             |
+| P06 Studio and Cinema      | M7 canvas engine, M8–M10 camera and scene, M13 engine contract (fake engine)                                                    | Host round trip, kill during flush, inherited tests per Q9                                                       | 14–21             |
 | P07 Director               | M11 identity, M12 stages                                                                                                        | Resume/fence/approval tests; manual storyboard works without AI                                                  | 6–9               |
 | P08 Motion, Audio and Flow | M6 animation, M1 follow-ups (unlink, loudness), Flow over manifests                                                             | Animated goldens; preview/export sample equality                                                                 | 7–11              |
 | P09 Agents and Quality     | M17, Quality Lab, Router explain and agent lineage views (original; lineage from Ascout concepts); per-agent undo is already W4 | Refused transitions safe; blinded comparison harness                                                             | 5–8               |
 | **Total**                  |                                                                                                                                 |                                                                                                                  | **41–63**         |
 
 These are estimates, not measurements. Re-estimate after M7's first step (Studio ADR), which carries the most uncertainty.
+
+### Phase to task mapping
+
+The complete task cards and the dependency graph are in [08](08_IMPLEMENTATION_TASKS.md). The plan has **18 tasks**: W1–W7 in Track 1 and W8–W18 in Track 2.
+
+| Phase         | Tasks                            |
+| ------------- | -------------------------------- |
+| Track 1 (MVP) | W1, W2, W3, W4, W5, W6, W7       |
+| P05           | W8, W9, W13, then W12 (after H1) |
+| P06           | W10, W11, W14                    |
+| P07           | W15                              |
+| P08           | W16, W18                         |
+| P09           | W17                              |
 
 ### Ordering logic
 

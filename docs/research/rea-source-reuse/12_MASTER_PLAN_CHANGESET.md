@@ -13,13 +13,24 @@ This is what this planning PR changes and what it deliberately leaves alone.
 | `docs/evidence/rea/source-reuse-2026-10-18/mediabunny-src.json`                                     | REA summary, Mediabunny source                                                 |
 | `docs/evidence/rea/source-reuse-2026-10-18/python-and-license-inspection.json`                      | Static reading of the Python donors, licences, and the Yamakan defect location |
 
+## Added in the freeze (2026-10-18)
+
+| File                                     | Purpose                                                                     |
+| ---------------------------------------- | --------------------------------------------------------------------------- |
+| `docs/START_HERE_WHEN_READY.md`          | The single starting point when development is authorized                    |
+| `docs/FUTURE_CLAUDE_EXECUTION_PROMPT.md` | The prompt the founder pastes to start development                          |
+| `docs/PLAN_FREEZE_MANIFEST.md`           | Frozen commit, source pins, document hashes, external gates and assumptions |
+
+The freeze also completed [08](08_IMPLEMENTATION_TASKS.md): 18 task cards, the dependency graph and qualification tests Q1–Q14 (W18 was added for the P08 follow-ups that had no task). It also froze the selection summary and the Studio integration boundary in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md).
+
 ## Amended
 
-| File                              | Change                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `docs/FOUNDER_DECISION_RECORD.md` | 2026-10-18 entry: the planning instruction and the minimal source-authorization statement (no confidential content) |
-| `docs/AGENT_DECISION_RECORD.md`   | 2026-10-18 entry: the M-gate, and the video-sound migration default                                                 |
-| `docs/IMPLEMENTATION_PLAN.md`     | One pointer paragraph to [07](07_OPTIMIZED_MASTER_PLAN.md) as the current expansion plan                            |
+| File                                       | Change                                                                                                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `docs/FOUNDER_DECISION_RECORD.md`          | 2026-10-18 entry: the planning instruction and the minimal source-authorization statement (no confidential content)  |
+| `docs/AGENT_DECISION_RECORD.md`            | 2026-10-18 entry: the M-gate, and the video-sound migration default                                                  |
+| `docs/IMPLEMENTATION_PLAN.md`              | A canonical entry-point section at the top (reading order and order of authority); the historical plan below is kept |
+| `docs/FOUNDER_DECISION_RECORD.md` (freeze) | 2026-10-18 entry for the freeze instruction (no implementation authorized)                                           |
 
 ## Not changed
 

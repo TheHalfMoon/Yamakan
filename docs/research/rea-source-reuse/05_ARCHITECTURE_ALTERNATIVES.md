@@ -38,7 +38,7 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
   - **Media:** Mediabunny, and JASSUB later as a live-preview upgrade over the existing reference still.
   - **Engines:** ComfyUI wrapped.
   - The file-level map is in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md).
-- **Reuse share:** an estimated 41,900 donor source lines; 74–82% of expansion code by line count ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)).
+- **Reuse share:** an estimated 44,000 donor source lines (43,986); 74.5–82.2% of expansion code by line count ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)).
 - **Cost:**
   - Host adapters, the largest being Studio at an estimated 2,500–4,000 lines.
   - Canonical schema additions (sound, speed, animation, studioDocument, scene3d, character, directorRun).
@@ -61,7 +61,7 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
 | ----------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------- | ----------- |
 | Hard gates                                | Fail (H2 ×3, H3 ×2)                  | Pass                                                                             | Pass        |
 | One authority preserved                   | No                                   | Yes                                                                              | Yes         |
-| Donor lines reused (estimate)             | ~120,000                             | ~41,900                                                                          | 879         |
+| Donor lines reused (estimate)             | ~120,000                             | ~44,000                                                                          | 879         |
 | Expansion effort (builder days, estimate) | Not estimated (sync layer unbounded) | 41–63                                                                            | ~84–126     |
 | Inherited donor tests                     | Most                                 | ~150 files (InvokeAI 145, OpenCut 3, plus OpenMontage and OpenVideoStudio cases) | ~3          |
 | Upstream drift burden                     | Very high                            | Medium (one large subtree)                                                       | Low         |

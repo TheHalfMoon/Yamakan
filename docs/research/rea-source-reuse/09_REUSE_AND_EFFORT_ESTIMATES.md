@@ -8,27 +8,35 @@
 - Nothing here is a measured speedup.
 - The arithmetic was checked with a small script (the totals below are its output).
 
+## Three different measures (do not mix them)
+
+- **Copied source lines** are a count of donor lines at the pins. They describe how much code arrives, not how much work it saves.
+- **Reuse share** is copied lines ÷ (copied + new lines). It is a ratio of estimated code volumes, not of time.
+- **Time savings** compare two separate estimates of builder days: reuse path against reimplementation. They do not follow from the share. M7 carries about 86% of the copied lines but about two thirds (64–67%) of the estimated savings.
+
+None of the three is measured. Each is re-estimated after its task's first qualification test.
+
 ## Per module
 
-| Module                                                 | Phase | Donor lines reused | New lines   | B-path days (reuse) | E-path days (reimplement) |
-| ------------------------------------------------------ | ----- | ------------------ | ----------- | ------------------- | ------------------------- |
-| M3 ripple                                              | P05   | 377                | 300–500     | 1.5–2               | 3–4                       |
-| M4 group move                                          | P05   | 820                | 350–550     | 2–3                 | 4–6                       |
-| M5 retime (source only)                                | P05   | 306                | 450–700     | 2.5–4               | 4–6                       |
-| M14 Mediabunny (dependency)                            | P05   | 0 copied           | 250–400     | 1–2                 | 3–5                       |
-| M15 JASSUB (dependency)                                | P05   | 0 copied           | 200–350     | 1–1.5               | 2–3                       |
-| M16 OTIO writer                                        | P05   | 0                  | 500–800     | 1–1.5               | 1–1.5                     |
-| M7 Studio canvas engine                                | P06   | 35,589             | 2,500–4,000 | 10–15               | 40–60                     |
-| M8 camera math                                         | P06   | 196                | 80–150      | 0.5                 | 1–1.5                     |
-| M9 scene schema                                        | P06   | 34                 | 200–300     | 1–1.5               | 1–1.5                     |
-| M10 camera controller                                  | P06   | 345                | 150–250     | 1–1.5               | 1.5–2                     |
-| M13 engine contract and ComfyUI                        | P06   | 147                | 900–1,400   | 1.5–2.5             | 2–3                       |
-| M11 identity                                           | P07   | 318                | 300–450     | 2–3                 | 2.5–3.5                   |
-| M12 stages                                             | P07   | ~500               | 700–1,000   | 4–6                 | 6–9                       |
-| M6 keyframes                                           | P08   | 2,961              | 1,200–1,800 | 5–8                 | 9–13                      |
-| P08 other (unlink sound, loudness, Flow view)          | P08   | 0                  | 500–800     | 2–3                 | 2–3                       |
-| M17 founder rules                                      | P09   | ~300               | 250–400     | 1.5–2.5             | 2–3                       |
-| P09 other (Quality Lab, Router explain, lineage views) | P09   | 0                  | 700–1,200   | 3.5–5.5             | 3.5–5.5                   |
+| Module                                                           | Phase | Donor lines reused | New lines   | B-path days (reuse) | E-path days (reimplement) |
+| ---------------------------------------------------------------- | ----- | ------------------ | ----------- | ------------------- | ------------------------- |
+| M3 ripple                                                        | P05   | 377                | 300–500     | 1.5–2               | 3–4                       |
+| M4 group move                                                    | P05   | 820                | 350–550     | 2–3                 | 4–6                       |
+| M5 retime (source only)                                          | P05   | 306                | 450–700     | 2.5–4               | 4–6                       |
+| M14 Mediabunny (dependency)                                      | P05   | 0 copied           | 250–400     | 1–2                 | 3–5                       |
+| M15 JASSUB (dependency)                                          | P05   | 0 copied           | 200–350     | 1–1.5               | 2–3                       |
+| M16 OTIO writer                                                  | P05   | 0                  | 500–800     | 1–1.5               | 1–1.5                     |
+| M7 Studio canvas engine (engine, platform closure, reducer seam) | P06   | 37,682             | 2,500–4,000 | 10–15               | 40–60                     |
+| M8 camera math                                                   | P06   | 196                | 80–150      | 0.5                 | 1–1.5                     |
+| M9 scene schema                                                  | P06   | 34                 | 200–300     | 1–1.5               | 1–1.5                     |
+| M10 camera controller                                            | P06   | 345                | 150–250     | 1–1.5               | 1.5–2                     |
+| M13 engine contract and ComfyUI                                  | P06   | 147                | 900–1,400   | 1.5–2.5             | 2–3                       |
+| M11 identity                                                     | P07   | 318                | 300–450     | 2–3                 | 2.5–3.5                   |
+| M12 stages                                                       | P07   | ~500               | 700–1,000   | 4–6                 | 6–9                       |
+| M6 keyframes                                                     | P08   | 2,961              | 1,200–1,800 | 5–8                 | 9–13                      |
+| P08 other, W18 (unlink sound, loudness, Flow view)               | P08   | 0                  | 500–800     | 2–3                 | 2–3                       |
+| M17 founder rules                                                | P09   | ~300               | 250–400     | 1.5–2.5             | 2–3                       |
+| P09 other (Quality Lab, Router explain, lineage views)           | P09   | 0                  | 700–1,200   | 3.5–5.5             | 3.5–5.5                   |
 
 ## Totals
 
@@ -41,8 +49,8 @@
 | P09 Agents and Quality     | 5–8               | 5.5–8.5                 | 950–1,600        |
 | **Expansion total**        | **41–63**         | **87.5–130.5**          | **9,530–15,050** |
 
-- **Donor lines reused:** 41,893 (source lines; imported test lines are not counted). Their share of the expansion code is 41,893 / (41,893 + new) = **73.6%–81.5%**.
-- **Estimated savings:** **about 46–68 builder days**, from 46.5 (87.5 − 41) to 67.5 (130.5 − 63). Almost all of it comes from M7, the canvas engine.
+- **Donor lines reused:** 43,986 (source lines; imported test lines are not counted). Their share of the expansion code is 43,986 / (43,986 + new) = **74.5%–82.2%**.
+- **Estimated savings:** **about 46–68 builder days**, from 46.5 (87.5 − 41) to 67.5 (130.5 − 63). About two thirds of it comes from M7, the canvas engine.
 - **Biggest uncertainty:** M7's host adapter. The Studio ADR is its first step and re-estimates it before any import.
 
 ## MVP work (Track 1; not counted above)
@@ -65,7 +73,7 @@ Contingency for Windows findings and review latency: plus 5–10 days, as in the
 | Workspace                              | Donor lines          | Share of its code (estimate)                                     |
 | -------------------------------------- | -------------------- | ---------------------------------------------------------------- |
 | Edit                                   | 1,503 + dependencies | ~31–42% (algorithms reused; UI and plan compile original)        |
-| Studio                                 | 35,589               | ~90%                                                             |
+| Studio                                 | 37,682               | ~90–94%                                                          |
 | Cinema                                 | 575                  | ~45–57%                                                          |
 | Director                               | ~818                 | ~36–45%                                                          |
 | Motion                                 | 2,961                | ~62–71%                                                          |

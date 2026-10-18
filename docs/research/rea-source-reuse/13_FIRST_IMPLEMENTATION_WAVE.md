@@ -1,54 +1,53 @@
 # 13 — First implementation wave
 
-The first ten PRs. W1–W7 are MVP or MVP-safe and may start now; W8–W10 wait for the [M-gate](07_OPTIMIZED_MASTER_PLAN.md#m-gate), except where noted.
+The first ten PRs, in the order they become eligible. The full task cards (instructions, acceptance tests, checks, definition of done, rollback, next task) are in [08](08_IMPLEMENTATION_TASKS.md). This page is the quick-start view.
 
-**Common validation for every PR:**
+**Implementation has not started.** It begins only on the founder's start authorization ([START_HERE_WHEN_READY](../../START_HERE_WHEN_READY.md)).
 
-```bash
-npm ci --ignore-scripts --no-audit --no-fund
-npm run lint
-npm run format:check
-npm run provenance:check
-npm test
-npm run build
-npm run test:e2e
-```
+## First task when development begins
 
-Windows-only tests (procd, containment, sandbox) need `npm run build:native` first and run on the Windows development machine.
+**W1 — a video clip's own sound.** It has no prerequisites, needs no founder decision, imports no donor code and closes a confirmed MVP defect.
 
-| PR                                 | Branch                                        | Starting files                                                                                                                                                                                                                                                           | Extra validation                                                                                                                    | Blockers                                                                                                                           |
-| ---------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| W1 Video clip's own sound          | `fix/video-clip-sound`                        | `core/render/plan.ts` (audio from video clips), `core/canonical.ts` (clip `sound`, schema version), `core/migrate.ts`, `core/timeline/operations.ts`, `src/donors/film-editor/components/PreviewPlayer.tsx` (unmute; ledger modification), `tests/export-golden.test.ts` | `npm run qualify:av-sync`                                                                                                           | None. The migration default (disabled for migrated clips) is recorded as an agent decision.                                        |
-| W2 Replay-safe recovery            | `fix/recovery-replay`                         | `core/recovery.ts`, `core/jobs.ts`, `core/command/*` (backup and restore request ids; `job.retry`, `job.discard`), `tests/recovery.test.ts`, `tests/backup.test.ts`, `tests/jobs.test.ts`                                                                                | `npm run recovery -- --help` smoke                                                                                                  | Overlaps PR #24's test file. Rebase is not allowed, so merge main after #24 lands.                                                 |
-| W3 Canonical integrity             | `fix/canonical-integrity`                     | `core/canonical.ts` (overlap refinement), `core/media.ts` (hidden VFR original GC, quarantine repair), `tests/canonical.test.ts`, `tests/derivative.test.ts`                                                                                                             | `npm run qualify:large-import`                                                                                                      | W2                                                                                                                                 |
-| W4 Per-agent principals            | `feat/agent-principals`                       | `core/command/*` (principal derived from the authenticated transport or token, never from MCP `clientInfo`), `mcp/main.ts`, `cli/main.ts`, `tests/parity.test.ts`                                                                                                        | parity replay                                                                                                                       | W3. The security reviewer must review the principal derivation.                                                                    |
-| W5 Distributable bundle            | `feat/bundle`                                 | `scripts/bundle.ts` (new), `package.json` (`bundle` script), `notices/`, `NOTICE`, `core/render/fonts.ts` (fontconfig restricted to the pinned fonts), `tests/bundle.test.ts` (new)                                                                                      | Install, update, rollback and uninstall on a scratch profile; `npm run qualify:typography` with a substituted-font negative control | PR #29 merged (bundle includes the containment build). Disk space: about 10 GiB free on D:, so the founder may need to free space. |
-| W6 Provenance and brand tooling    | `chore/provenance-brand`                      | `scripts/provenance.mjs`, `scripts/brand-check.mjs` (new), `docs/provenance/import-policy.json`, `docs/provenance/imports.json` (backfill fields for the 25 existing records), `.github/workflows/qualify.yml`                                                           | `node scripts/brand-check.mjs`                                                                                                      | None (exempt from the M-gate)                                                                                                      |
-| W7 Release evidence                | `chore/release-evidence`                      | `scripts/qualify-release.ts`, harness `taskkill /T` in the `scripts/qualify-*.ts` cleanups, `docs/RELEASE_PROPOSAL.md`, `specs/CURRENT.md`                                                                                                                               | `npm run qualify:release` at the exact head; receipt committed                                                                      | W1–W5, #24, #19                                                                                                                    |
-| W8 Ripple and group move           | `feat/edit-ripple`                            | `core/donors/opencut/ripple/*`, `core/donors/opencut/group-move/*` (from `apps/web/src/ripple/*`, `apps/web/src/timeline/group-move/*` @ `cf5e79e9`), `core/timeline/operations.ts`, `tests/ripple.test.ts` and `tests/group-move.test.ts` (new)                         | `node scripts/provenance.mjs --diff OpenCut-app/opencut-classic`                                                                    | M-gate, W6                                                                                                                         |
-| W9 Mediabunny and retime           | `feat/media-retime`                           | `package.json` (`mediabunny@1.61.3`, `soundtouchjs@0.3.0`), `src/media/demux.ts` (new), `src/donors/film-editor/components/Waveform.tsx`, `core/donors/opencut/retime/*`, `core/render/plan.ts`, `tests/retime.test.ts` (new)                                            | `npm run qualify:playback`; `npm run qualify:av-sync`                                                                               | W8                                                                                                                                 |
-| W10 Studio ADR and engine contract | `docs/studio-adr` then `feat/engine-contract` | `docs/adr/` (Studio: React 18 host, Vitest scope, bundle size, `zod` alignment), `core/engines/{contract,fake}.ts`, `tests/engines.test.ts` (new)                                                                                                                        | Engine-absent journey shows a disabled capability; no egress                                                                        | M-gate, W6. No real engine (founder decision F).                                                                                   |
+- **Branch:** `fix/video-clip-sound`.
+- **First action:** run Q1, comparing the import probe's `hasAudio` with the render-time probe over the media corpus.
+- **Starting files:** `core/canonical.ts`, `core/project.ts`, `core/migrate.ts`, `core/media.ts`, `core/render/plan.ts`, `core/timeline/operations.ts`, `core/command/registry.ts`, `src/donors/film-editor/components/PreviewPlayer.tsx`, `src/edit-ops.ts`, `src/main.tsx`, `src/i18n.ts`, `tests/export-golden.test.ts`, `tests/migrate.test.ts`, `tests/render-plan.test.ts` and `tests/parity.test.ts`.
 
-## Blockers that this plan cannot remove
+If W1 is already merged when development starts, take the next eligible task in the order below.
 
-1. **PR #29** (containment) is owned by another session. W5 and the M-gate wait for it.
-2. **PRs #24 and #19** are owned by other sessions. W7 waits for them.
-3. **Human gates H1–H5** (Arabic review, clean profile, second account, packet capture, disk-full) block the release, and W12 (JASSUB) waits for H1.
-4. **Real engines** (ComfyUI with weights) need:
-   - security gate E-SEC: an authenticated channel, B4 for Python descendants, enforced network denial and a cross-account negative test ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) M13);
-   - founder decision F (hardware, weights);
-   - for any paid route, founder decision G.
+## The first ten PRs
 
-   This plan requests none of these decisions.
+| Order | PR                                 | Branch                                         | Eligible when                 | Starting files (summary)                                                                                                                                                                      | Extra validation                                                                                                       |
+| ----- | ---------------------------------- | ---------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1     | W1 Video clip's own sound          | `fix/video-clip-sound`                         | Now                           | See above                                                                                                                                                                                     | `npm run qualify:av-sync`                                                                                              |
+| 2     | W6 Provenance and brand tooling    | `chore/provenance-brand`                       | Now (exempt from the M-gate)  | `scripts/provenance.mjs`, `scripts/import-guard.mjs`, `scripts/brand-check.mjs` (new), `docs/provenance/*`, `.github/workflows/qualify.yml`, `tests/provenance.test.ts` (new)                 | `node scripts/brand-check.mjs`                                                                                         |
+| 3     | W2 Replay-safe recovery            | `fix/recovery-replay`                          | PR #24 merged                 | `core/recovery.ts`, `core/jobs.ts`, `core/command/registry.ts`, `core/store.ts`, `tests/recovery.test.ts`, `tests/backup.test.ts`, `tests/jobs.test.ts`                                       | Kill-between-effect-and-response replay                                                                                |
+| 4     | W3 Canonical integrity             | `fix/canonical-integrity`                      | W2                            | `core/canonical.ts`, `core/media.ts`, `core/recovery.ts`, `tests/canonical.test.ts`, `tests/derivative.test.ts`, `tests/streaming-import.test.ts`                                             | `npm run qualify:large-import`                                                                                         |
+| 5     | W4 Transport-bound principals      | `feat/agent-principals`                        | W3                            | `core/command/registry.ts`, `server/api.ts`, `server/main.ts`, `mcp/main.ts`, `cli/main.ts`, `core/timeline/operations.ts`, `tests/parity.test.ts`, `tests/http.test.ts`, `tests/mcp.test.ts` | Parity replay with distinct principals                                                                                 |
+| 6     | W5 Distributable bundle            | `feat/bundle`                                  | PR #29 merged                 | `scripts/bundle.ts` (new), `package.json`, `NOTICE`, `notices/`, `core/render/fonts.ts`, `core/render/ass.ts`, `tests/bundle.test.ts` (new), `tests/typography.test.ts`                       | Install/update/rollback/uninstall on a scratch profile; `npm run qualify:typography` with the substituted-font control |
+| 7     | W7 Release evidence                | `chore/release-evidence`                       | W1–W5, PRs #24 and #19 merged | `scripts/qualify-release.ts`, `scripts/qualify-*.ts`, `docs/RELEASE_PROPOSAL.md`, `specs/CURRENT.md`                                                                                          | `npm run qualify:release` at the exact head                                                                            |
+| 8     | W8 Ripple and group move           | `feat/edit-ripple`                             | M-gate passed, W6             | `core/donors/opencut/{ripple,group-move}/*`, `core/timeline/operations.ts`, `tests/ripple.test.ts` and `tests/group-move.test.ts` (new)                                                       | `node scripts/provenance.mjs --diff OpenCut-app/opencut-classic`                                                       |
+| 9     | W9 Mediabunny and retime           | `feat/media-retime`                            | W8                            | `package.json`, `src/media/demux.ts` (new), `src/donors/film-editor/components/Waveform.tsx`, `core/donors/opencut/retime/*`, `core/render/plan.ts`, `tests/retime.test.ts` (new)             | `npm run qualify:playback`, `npm run qualify:av-sync`                                                                  |
+| 10    | W10 Studio ADR and engine contract | `docs/studio-adr`, then `feat/engine-contract` | M-gate passed, W6             | `docs/adr/0003-studio-canvas-engine.md` (new), `core/engines/{contract,fake}.ts` (new), `tests/engines.test.ts` (new)                                                                         | Q7–Q10 recorded in the ADR; engine-absent journey                                                                      |
 
-5. **Disk:** D: has about 10 GiB free, so bundle and media qualification may need space freed.
+**Sequencing:**
 
-## Verdict
+- The order follows the [dependency graph](08_IMPLEMENTATION_TASKS.md#dependency-graph) with its tie-break rule.
+- W6 is placed second because it has no prerequisites and protects every later import.
+- **If PR #24 is still open,** take W6 before W2.
+- **If PR #29 is still open** when W4 merges, W5 waits and W7 cannot start.
 
-**READY TO IMPLEMENT** for wave 1, W1–W7.
+**Common validation** for every PR is in [08, rule 6](08_IMPLEMENTATION_TASKS.md#rules-for-every-task).
 
-- Each has its starting files, validation and dependency identified on main `6e471088`.
-- None needs a founder decision.
-- None imports donor code (W6 builds the tooling that every later import requires).
+## External dependencies this plan cannot remove
 
-W8–W10 are fully specified and start on the M-gate. The release verdict remains **NO-GO** until the M-gate and H1–H5 pass.
+1. **PR #29** (containment) belongs to another session. W5 and the M-gate wait for it.
+2. **PRs #24 and #19** belong to other sessions. W2 waits for #24, and W7 waits for both.
+3. **Human gates H1–H5:** native Arabic review, a clean profile, a second account, a packet capture and disk-full runs. They block the release; W12 also waits for H1.
+4. **Real engines** (ComfyUI with weights) need security gate E-SEC ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) M13), founder decision F (hardware, weights) and, for any paid route, founder decision G. This plan requests none of these decisions.
+5. **Disk:** D: had about 10 GiB free at the freeze. The bundle and media qualification may need space freed.
+
+## Readiness
+
+- W1–W7 are fully specified against main `6e471088`. None needs a founder decision beyond the start authorization, and none imports donor code.
+- W8–W18 are fully specified and gated on the M-gate (and, where noted, on Q tests, H1 or E-SEC).
+- The release verdict remains **NO-GO** until the M-gate and H1–H5 pass.

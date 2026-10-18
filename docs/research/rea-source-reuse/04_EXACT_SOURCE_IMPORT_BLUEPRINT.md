@@ -1,6 +1,32 @@
 # 04 — Exact source import blueprint
 
-This is the mandatory file-level map, **donor path → Yamakan path → modification → validation**. Each module lists the same 20 fields. Paths are relative to the donor repository at its pin, or to the Yamakan repository. No file below has been imported yet: this blueprint is the instruction for the PRs in [08](08_IMPLEMENTATION_TASKS.md).
+This is the mandatory file-level map, **donor path → Yamakan path → modification → validation**. Each module lists the same 20 fields. Paths are relative to the donor repository at its pin, or to the Yamakan repository. No file below has been imported yet: this blueprint is the instruction for the PRs in [08](08_IMPLEMENTATION_TASKS.md). Each selection is **frozen** at the pins below. Changing one needs a new entry in the [agent decision record](../../AGENT_DECISION_RECORD.md) with evidence, and an update to the [freeze manifest](../../PLAN_FREEZE_MANIFEST.md).
+
+## Frozen selection summary
+
+"Effort" is reuse-path builder days ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). "Q" names the bounded qualification test that settles an open assumption ([08](08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q14)). Integration is a future qualification requirement; none of it has been proven.
+
+| Subsystem               | Module | Primary (repository @ commit)                                                                                                | Method         | Fallback                                                             | Permission and notices                                              | Gate                                              | Effort (days) | Q        | Task     |
+| ----------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------- | ------------- | -------- | -------- |
+| Video clip sound        | M1     | Yamakan original                                                                                                             | E              | Linked sound clip on a sound track                                   | GPL-3.0-or-later                                                    | MVP                                               | 2–3           | Q1       | W1       |
+| Provenance and brand    | M2     | Yamakan original                                                                                                             | E              | Existing checks                                                      | GPL-3.0-or-later                                                    | None                                              | 1–1.5         | —        | W6       |
+| Ripple                  | M3     | OpenCut-app/opencut-classic `cf5e79e919144200294fb9fed22a222592a0aeea`                                                       | B              | Existing `src/edit-ops.ts` operations                                | MIT, `notices/OpenCut-LICENSE`                                      | M-gate                                            | 1.5–2         | Q4       | W8       |
+| Group move              | M4     | same                                                                                                                         | B              | Single-clip move (present)                                           | MIT                                                                 | M-gate                                            | 2–3           | Q4       | W8       |
+| Retime                  | M5     | same, plus `soundtouchjs@0.3.0`                                                                                              | B + A          | Field absent (1×)                                                    | MIT; LGPL-2.1 dependency                                            | M-gate                                            | 2.5–4         | Q6       | W9       |
+| Keyframes               | M6     | same                                                                                                                         | B              | Static properties (present)                                          | MIT                                                                 | M-gate                                            | 5–8           | Q13, Q14 | W16      |
+| Studio canvas           | M7     | invoke-ai/InvokeAI `ffe9e1a98b19640388d72f88ae0ecadf1bee1717`                                                                | B              | InvokeAI webv1 `controlLayers` at the same commit, else original (C) | Apache-2.0 + NOTICE                                                 | M-gate, Studio ADR                                | 10–15         | Q7–Q10   | W10, W11 |
+| Camera math             | M8     | storytold/artcraft `28a39a0de4a2fc2eccc237df2046c24245bd12ab`                                                                | A/B            | — (pure, small)                                                      | Apache-2.0 / MIT + NOTICE                                           | M-gate                                            | 0.5           | —        | W14      |
+| Scene schema            | M9     | same                                                                                                                         | B              | Entity absent                                                        | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —        | W14      |
+| Camera controller       | M10    | same                                                                                                                         | B              | three `OrbitControls`                                                | Apache-2.0 / MIT                                                    | M-gate                                            | 1–1.5         | —        | W14      |
+| Identity                | M11    | mne03005-png/OpenVideoStudio `175da9960411fbe740932b0a08d57e32a4a36a18`                                                      | B (translated) | Entity absent                                                        | Apache-2.0 + NOTICE                                                 | M-gate                                            | 2–3           | —        | W15      |
+| Director stages         | M12    | calesthio/OpenMontage `9327439db69021ab4b0e2776729bf3b58fdb5a87`                                                             | B (translated) | Manual storyboard                                                    | AGPL-3.0 (version 3 only in combination)                            | M-gate, W4                                        | 4–6           | —        | W15      |
+| Local engine            | M13    | Comfy-Org/ComfyUI `7f7fd918ed0815c5d5ef2ccfe44bfc8e72cfd217` (wrapped); OpenVideoStudio client shape                         | D + B          | Fake engine; capability disabled                                     | GPL-3.0 (not copied)                                                | M-gate; **E-SEC and founder F for a real engine** | 1.5–2.5       | —        | W10      |
+| Browser demux, waveform | M14    | Vanilagy/mediabunny `9d36fc5779b254904bc609e66f2cd80ed8390b4b`, `mediabunny@1.61.3`                                          | A              | Server-derived peaks (present)                                       | MPL-2.0 (unmodified)                                                | M-gate                                            | 1–2           | Q5       | W9       |
+| Live title preview      | M15    | ThaUnknown/jassub `dea3d2d398569a591cf0c767d945d84e9f120484`, `jassub@2.5.20`                                                | A              | Server reference still (present; primary today)                      | LGPL-2.1+ AND (FTL OR GPL-2.0+) AND MIT …; GPL elected for FreeType | M-gate, H1                                        | 1–1.5         | Q11      | W12      |
+| Interchange             | M16    | Yamakan original; OpenTimelineIO `00c22fa3a64256d8d3dcafbc7276492185dd970d` as test oracle                                   | E              | OTIO Python in a contained worker                                    | Apache-2.0 (not shipped)                                            | M-gate                                            | 1–1.5         | Q12      | W13      |
+| Agents rules            | M17    | TheHalfMoon/Gomrey `5f299a7a6174ad3a1180f827778db5f4400a4d71`, TheHalfMoon/Ascout `ca6b6f514e5a8881e2cfa2789b5e5ea43e3aaaad` | B              | Current job states                                                   | Founder-owned (founder-attested)                                    | M-gate                                            | 1.5–2.5       | —        | W17      |
+
+Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-editor UI and the OpenCut snapping/overlap adapters are already integrated and stay unchanged.
 
 **Field key:**
 
@@ -141,6 +167,11 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 8. **Dependency closure:** `@/timeline/types` only (REA). Mapped to a local `types.ts` exposing the canonical clip fields that ripple reads (track id, start, duration, source start).
 9. **Excluded:** none.
 10. **Modifications:**
+    - **Time contract (shared by M3–M6):**
+      - The donor's `MediaTime` is an integer tick count at 120,000/s. At the pin, none of these modules uses `TICKS_PER_SECOND` or a seconds conversion (checked statically at the freeze), so the integer maths is unit-agnostic.
+      - The port re-types `MediaTime` as Yamakan's integer flick tick (705,600,000/s, `core/time.ts`). It replaces `addMediaTime`/`subMediaTime` with the checked `addTicks`, and `roundMediaTime` with `Math.round` plus a `Number.isSafeInteger` assertion.
+      - Values imported from OpenCut data, if ever, multiply by exactly 5,880.
+      - Q4 tests the contract.
     - `MediaTime` → flick ticks with checked `addTicks`.
     - Element types → canonical clip subset.
     - No mutation in place: functions return a patch applied by the reducer.
@@ -178,14 +209,16 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 6. **Yamakan paths:** `core/donors/opencut/group-move/*`, reusing the already-imported `core/donors/opencut/{snapping,overlap}.ts`.
 7. **Ladder level:** B.
 8. **Dependency closure:**
-   - `@/timeline`, `@/wasm`, snapping, placement/overlap, element update and snap sources.
-   - Snapping and overlap are already imported.
-   - The element-update helper is replaced by a canonical patch.
-   - The snap sources map to canonical clip edges, markers and the playhead.
+   - Imports at the pin: `@/timeline`, `@/wasm` (`MediaTime`, `addMediaTime`, `subMediaTime`), `timeline/snapping` and `timeline/placement/overlap` (both already imported), plus `timeline/track-element-update.ts` (147 lines), `timeline/playhead-snap-source.ts` (10), `timeline/element-snap-source.ts` (39), `timeline/animation-snap-points.ts` (36) and `timeline/placement/compatibility.ts` (51).
+   - **None of these five is copied.** Each is replaced by a Yamakan adapter:
+     - the element-update helper becomes a canonical patch;
+     - the snap sources become canonical clip edges, markers and the playhead;
+     - animation snap points are added with M6;
+     - compatibility becomes the canonical track-kind rule.
 9. **Excluded:** UI drag handlers.
 10. **Modifications:**
     - Flick ticks.
-    - Canonical track kinds (video, audio, title): a clip never moves to a track of another kind.
+    - Canonical track kinds (`video`, `audio`; titles are clips on video tracks): a clip never moves to a track of another kind.
     - Return a patch.
 11. **Adapter contract:** `resolveGroupMove(project, selection, delta, snap) → { patch, snappedTo }`.
 12. **Canonical impact:** none.
@@ -227,7 +260,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 10. **Modifications:**
     - The rate is a rational number (numerator/denominator integers) instead of a float, so durations stay exact in flicks.
     - Split keeps source mapping exact.
-    - Tests are ported from Vitest to `node:test`.
+    - Tests are ported from `bun:test` (the donor's runner) to `node:test`.
 11. **Adapter contract:** `sourceRange(clip)` and `timelineDuration(clip)` are pure and used by both the preview and `plan.ts`.
 12. **Canonical impact:** new optional `speed` field (default 1/1); migration not needed when absent.
 13. **Security boundary:** the FFmpeg filters are generated from integers only.
@@ -275,9 +308,10 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
    - `core/render/plan.ts` compiles channels to FFmpeg expressions sampled per frame (`overlay` x/y, `scale`, `colorchannelmixer` alpha, `volume` with `eval=frame`).
 7. **Ladder level:** B.
 8. **Dependency closure:**
-   - `@/animation/types`, `@/params`, `@/wasm` and `@/utils`.
-   - `@params` descriptors are replaced by a Yamakan property registry (`core/timeline/properties.ts`, new).
-   - `@/utils` helpers are inlined after REA confirms the exact functions used (task step 1).
+   - Imports at the pin: `@/animation/types` (copied), `@/animation/bezier` (copied) and `@/wasm` (`MediaTime`, `mediaTime`, `roundMediaTime`, `subMediaTime`; time contract above).
+   - `@/params`: `ParamValue`, `ParamValues`, `ParamDefinition`, `ChannelEasingMode`, `formatLinearRgba` and `parseColorToLinearRgba`. These are mapped onto a Yamakan property registry (`core/timeline/properties.ts`, new); Q14 settles whether the donor `@/params` files must be ported instead.
+   - `@/utils/id`: `generateUUID`, replaced by `crypto.randomUUID`.
+   - `@/utils/math`: `clamp`, inlined.
 9. **Excluded:** effect and graphic channels; OpenCut's keyframe UI.
 10. **Modifications:**
     - Flick ticks.
@@ -286,7 +320,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 11. **Adapter contract:** `sampleChannel(channel, tick) → number` is used by both preview and plan. The plan emits per-frame values through an expression or a `sendcmd` file, chosen in step 1 by a fixture test.
 12. **Canonical impact:** a new `animation` field (versioned; refused by older builds).
 13. **Security boundary:** the compiler accepts only numbers; no user text reaches filter expressions.
-14. **Inherited tests:** 1 file (241 lines).
+14. **Inherited tests:** 1 file (241 lines, `bun:test`, ported to `node:test`).
 15. **New tests:**
     - Keyframed position, opacity and gain goldens (±1 px, ±1 alpha step, ±0.1 dB at sampled frames).
     - Preview/export sample equality.
@@ -309,15 +343,48 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 4. **Licence/notice:** Apache-2.0 plus the InvokeAI `NOTICE`, kept in `notices/InvokeAI-LICENSE` and `notices/InvokeAI-NOTICE`. The model licence files (SD1/SD2, SDXL and similar) are **not** imported.
 5. **Donor paths:**
    - `invokeai/frontend/webv2/src/workbench/canvas-engine/**`, excluding the tests listed in field 9.
-   - About 35,589 source lines; subtrees include `api.ts`, `engine.ts`, `contracts.ts`, `capabilities.ts`, `controllers/`, `document/`, `document-model/`, `editing/`, `export/`, `history/`, `input/`, `math/`, `render/`, `selection/`, `tools/` and `transform/`.
+   - The host closure and reducer seam named in fields 7–8: `invokeai/frontend/webv2/src/platform/{browser/sha256,browser/downloadBlob,core/json,ui/modalPresence}.ts`, `invokeai/frontend/webv2/src/workbench/{mediaReferences,canvasProjectMutations,canvasMigration,canvasLoadContracts,canvasSchemaVersion}.ts`.
+   - About 35,589 source lines in the engine; subtrees include `api.ts`, `engine.ts`, `contracts.ts`, `capabilities.ts`, `controllers/`, `document/`, `document-model/`, `editing/`, `export/`, `history/`, `input/`, `math/`, `render/`, `selection/`, `tools/` and `transform/`.
 6. **Yamakan paths:**
    - `src/studio/canvas-engine/**` (copied subtree);
    - `src/studio/host/` (new): `documentStore.ts` maps `CanvasDocumentContractV3` ↔ a canonical `studioDocument` revision; `bitmapStore.ts` makes dirty-bitmap flushes content-addressed asset puts; `mediaReferences.ts` maps media references to asset ids; `platform.ts` provides `sha256` (WebCrypto) and `downloadBlob`.
 7. **Ladder level:** B (copy the subtree whole; adapt only at the host seam).
+
+   **Integration boundary (frozen; proving it is future qualification work, Q7–Q10):**
+
+   - **The engine side (copied unchanged):** `workbench/canvas-engine/**`, 158 source files.
+   - **The port the engine needs.** Per the donor's `ARCHITECTURE.md`, each engine receives a `CanvasProjectMutationPort` bound to one project. It exposes `getCanvasState()`, `subscribe()`, `dispatch(mutation, origin?)` and `commitEdit(intent)`. Yamakan's host implements this port. It is the only seam.
+   - **The reducer side (copied and adapted):** `workbench/canvasProjectMutations.ts` (1,013 lines) applies `CanvasProjectMutation` to the document, and `workbench/canvasMigration.ts` (746) loads and validates. Their small helpers `canvasLoadContracts.ts` (15) and `canvasSchemaVersion.ts` (28) come too.
+     - Their imports of `projectContracts`, `projectEvents` and `canvasStagingView` pull in the InvokeAI workbench, queue and transport. Those are **not** copied: the adapted files use a minimal Yamakan `StudioProject` type instead.
+     - Generation staging (`canvasStagingView`) is excluded until an engine is enabled.
+     - If adaptation fails Q7, the fallback is an original host reducer that applies the same mutation vocabulary through the engine's own `document/*` modules, which the donor's dependency policy already allows the reducer to use.
+   - **Host-owned state:**
+     - The `CanvasDocumentContractV3` JSON is stored as canonical bytes in a `studioDocument` revision.
+     - Bitmaps are content-addressed assets.
+     - Committed edits are canonical revisions with the principal and request id.
+   - **Engine-owned state:** pixels, decoded images, render caches, interaction and session-local history. None of it is persisted or reaches the database.
+   - **Asset persistence:** dirty-bitmap flushes become asset puts (hash, then publish). A layer accepts the bitmap reference only after the put is durable, matching the donor rule "clears a dirty result only after the intended layer accepts the bitmap reference".
+   - **Migration strategy:**
+     - The `studioDocument` stores `contractVersion: 3`, and the donor loader refuses older versions.
+     - A future donor contract change is a separate upgrade PR, with a host migration function and a Yamakan schema version bump.
+     - Yamakan never edits the donor loader to accept unknown versions.
+   - **React compatibility:**
+     - The engine imports no React (REA).
+     - The webv2 widgets are React 19 and are **not** imported.
+     - Yamakan's Studio UI shell is React 18.3.1 and talks to the engine only through `api.ts`.
+     - Q8 confirms this at runtime.
+
 8. **Dependency closure:**
-   - `@workbench/mediaReferences`, `@workbench/controlAdapters` and `@platform/browser/{sha256,downloadBlob}` are supplied by the host.
+   - **Copied unchanged** (host platform files, 291 lines):
+     - `platform/browser/sha256.ts` (124);
+     - `platform/browser/downloadBlob.ts` (26);
+     - `platform/core/json.ts` (36);
+     - `platform/ui/modalPresence.ts` (44);
+     - `workbench/mediaReferences.ts` (61).
+   - **Replaced:** `workbench/controlAdapters.ts` (99), which imports `@features/generation/graph`, by a Yamakan stub that exposes `CONTROL_ADAPTER_DEFAULTS` and `createDefaultControlAdapter` with no adapters enabled.
    - npm `ag-psd` (MIT) and `perfect-freehand` (MIT). The donor declares `^31.0.2` and `^1.2.3`; Yamakan pins exact versions with integrity hashes. M8–M10 likewise pin `three` exactly.
-   - `zod` is already present (Yamakan 4.4.3 against donor ^4.6.5; aligned in step 1).
+   - `zod`: Yamakan 4.4.3 against the donor's ^4.6.5. Q7's compile run decides whether Yamakan moves to an exact newer 4.x (its own reviewed dependency change).
+   - TypeScript: Yamakan 5.9.3 against the donor's ^7.0.2 (Q7).
 9. **Excluded:**
    - `workbench/canvas-operations/**` (account lifecycle, gallery, backend).
    - `samInteraction.ts` and `samCoordinates.ts` until a local segmentation engine is qualified.
@@ -350,10 +417,10 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - A 4096×4096 document with 20 raster layers: brush stroke latency ≤ 16 ms p95.
     - Memory within the engine's own raster budget.
     - Reload ≤ 2 s on Profile A (proposed).
-18. **Size:** about 35,600 donor lines / 2,500–4,000 new (host, schema, commands, UI shell, tests).
+18. **Size:** 37,682 donor lines: 35,589 engine, 291 platform closure and 1,802 reducer seam. Plus 2,500–4,000 new (host port, schema, commands, UI shell, tests).
 19. **Owner, phase, gate:** Studio builder; P06; after the M-gate and the Studio ADR (React 18 host, Vitest scope, bundle size).
 20. **Fallback and rollback:**
-    - Fallback: InvokeAI webv1 `controlLayers` (Konva), with higher coupling.
+    - Fallback, chosen by the Studio ADR when Q7 or Q8 fails: InvokeAI webv1 `controlLayers` (Konva) at the same commit, with higher coupling. If that also fails the same tests, an original canvas (ladder C) scoped to raster layers, masks and export.
     - Rollback: the Studio workspace stays disabled behind its capability flag; no canonical data is written until enabled.
 
 ---

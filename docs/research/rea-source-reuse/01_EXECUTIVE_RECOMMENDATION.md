@@ -42,8 +42,13 @@ The human-only gates (native Arabic review, a clean profile, a second account, p
 
 ## Expected effect (estimate, not measurement)
 
-Across the expansion workspaces in this plan, about **41,900 donor source lines** (41,893) are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 88–131 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
+Across the expansion workspaces in this plan, about **44,000 donor source lines** (43,986) are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 88–131 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
 
-## Verdict
+## Status
 
-See [13](13_FIRST_IMPLEMENTATION_WAVE.md#verdict). In short, the plan is ready for implementation of wave 1 (PRs W1–W7: the MVP work plus the provenance tooling). The expansion PRs W8–W10 are fully specified and stay gated on the M-gate.
+The plan is frozen and **implementation has not started**. It begins only on the founder's start authorization ([START_HERE_WHEN_READY](../../START_HERE_WHEN_READY.md)).
+
+- **Size:** 18 tasks, W1–W18 ([08](08_IMPLEMENTATION_TASKS.md)).
+- **First task:** W1 ([13](13_FIRST_IMPLEMENTATION_WAVE.md)).
+- **Gates:** W8–W18 wait for the M-gate.
+- **Reference:** the frozen state is in the [freeze manifest](../../PLAN_FREEZE_MANIFEST.md).
