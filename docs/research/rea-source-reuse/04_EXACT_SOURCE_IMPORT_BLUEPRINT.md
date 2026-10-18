@@ -30,6 +30,10 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 - **Ledger entry.** Each copied file gets an entry in [`docs/provenance/imports.json`](../../provenance/imports.json) with source, pin, original path and SHA-256, imported path and SHA-256, and modifications. The PR in [08](08_IMPLEMENTATION_TASKS.md) task W6 extends the record with `license`, `authorization`, `owner` and `tests`.
 - **Notices.** Each donor licence is kept verbatim as `notices/<Donor>-LICENSE` (the existing convention) and listed in `NOTICE`. A donor file keeps its header, and a first line `// Adapted from <repo>@<pin> <path> (<licence>)` is added where the file had no header.
 - **Policy.** `docs/provenance/import-policy.json` gains the donor root and the excluded paths before the first file lands. `npm run provenance:check` must fail on any excluded path.
+  - **Known gap today (security review of this PR):** `donorRoots` covers only `src/donors` and `core/donors`. The excluded patterns also miss part of the do-not-import list: the real ArtCraft paths `crates/desktop/artcraft/tauri.conf.json` and `capabilities/default.json`, the five ArtCraft `crates/api_clients/*` consumer clients, and other ledger rows.
+  - **W6 closes it:** it adds every new destination root used below (`src/studio/canvas-engine`, `src/studio/host`, `src/cinema`, `core/director`, `core/engines`, `core/identity*.ts`, `core/scene3d.ts`, `core/donors/opencut/*`) and one pattern per row of the [mandatory do-not-import list](../../SOURCE_REUSE_LEDGER.md#mandatory-do-not-import-list-independent-review-2026-10-11). A test copies each excluded path at its pin into a scratch tree and expects the check to fail.
+- **Dependencies.** Every new npm dependency is pinned to an exact version with its lockfile integrity hash. Its own dependency tree is reviewed in the PR that adds it. No `^` or `~` ranges.
+- **Upstream security fixes.** A frozen pin does not track upstream fixes, because `--diff` finds only local drift. For each copied subtree (above all M7), W6 adds a monthly check of upstream commits and advisories since the pin. The module's named owner is responsible for security patches, which land as their own PRs.
 - **Time.** Donor time units are converted to integer flick ticks with checked arithmetic, following the `core/donors/opencut/snapping.ts` pattern. One OpenCut tick is 5,880 flicks.
 - **No donor state.** No donor module may own state that survives a reload. Everything persistent is a canonical revision, an asset or a job.
 
@@ -95,7 +99,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
    - `scripts/provenance.mjs` (new required fields; a `--diff <source>` mode that re-hashes the upstream file at the pin from a local clone and reports drift);
    - `scripts/brand-check.mjs` (fails if a user-visible string in `src/**`, `src/i18n.ts` or the CLI help names a donor product);
    - `docs/provenance/import-policy.json`;
-   - `tests/provenance.test.ts`.
+   - `tests/provenance.test.ts` (new).
 7. **Ladder level:** E (small and Yamakan-specific).
 8. **Dependency closure:** none.
 9. **Excluded:** none.
@@ -112,7 +116,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 16. **Validation commands:** `npm run provenance:check && node --test tests/provenance.test.ts`.
 17. **Benchmark:** none.
 18. **Size:** 0 donor lines / 200–350 new.
-19. **Owner, phase, gate:** security reviewer; MVP (W6); precedes any new import.
+19. **Owner, phase, gate:** runtime builder (author), reviewed by a fresh independent security reviewer; MVP (W6); precedes any new import.
 20. **Fallback and rollback:** revert the PR; the existing checks remain.
 
 ---
@@ -234,7 +238,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - Parity between preview and export.
 16. **Validation commands:** `npm test && npm run test:e2e && npm run qualify:av-sync`.
 17. **Benchmark:** a 30 s export at 2× stays ≤ 3× real time (the frozen export target).
-18. **Size:** 398 donor lines / 450–700 new.
+18. **Size:** 306 donor source lines (plus 92 imported test lines) / 450–700 new.
 19. **Owner, phase, gate:** media builder; Edit+; after the M-gate.
 20. **Fallback and rollback:** the field is absent, so behaviour is unchanged.
 
@@ -312,7 +316,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 7. **Ladder level:** B (copy the subtree whole; adapt only at the host seam).
 8. **Dependency closure:**
    - `@workbench/mediaReferences`, `@workbench/controlAdapters` and `@platform/browser/{sha256,downloadBlob}` are supplied by the host.
-   - npm `ag-psd` (MIT) and `perfect-freehand` (MIT), pinned.
+   - npm `ag-psd` (MIT) and `perfect-freehand` (MIT). The donor declares `^31.0.2` and `^1.2.3`; Yamakan pins exact versions with integrity hashes. M8–M10 likewise pin `three` exactly.
    - `zod` is already present (Yamakan 4.4.3 against donor ^4.6.5; aligned in step 1).
 9. **Excluded:**
    - `workbench/canvas-operations/**` (account lifecycle, gallery, backend).
@@ -322,8 +326,9 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 10. **Modifications:**
     - Path aliases are rewritten (`@workbench/canvas-engine/*` → relative).
     - `controlAdapters` is stubbed to the engines Yamakan has enabled (none at first).
-    - No behavioural changes inside the engine.
-    - `importBoundaries.test.ts` is kept and extended to forbid `node:`, `fetch` and `WebSocket` inside the subtree.
+    - No behavioural changes inside the engine. The exception is that any decoding moved into a Worker is a ledgered modification.
+    - The canvas-engine rules from InvokeAI's dependency policy (`src/architecture/dependencyPolicy.ts`, 305 lines, with `dependencyPolicy.test.ts` and `canvasSeamOwnership.test.ts`) are ported into a new `src/studio/boundaries.test.ts`. That file does not ship inside the subtree; `importBoundaries.test.ts`, named in the donor's `ARCHITECTURE.md`, does not exist at the pin. The new test also forbids `node:`, `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and dynamic `import()` inside the subtree. A text rule is easy to evade, so it is a lint aid, not the control.
+    - **The control:** the page's Content Security Policy limits `connect-src` to `'self'` and refuses remote `img-src`, `font-src` and `script-src`. The e2e egress capture must show no request off loopback.
 11. **Adapter contract:**
     - The host owns the document (canonical revision) and assets.
     - The engine owns pixels and transient history. Its undo is session-local; a committed canvas edit is a canonical revision with its own undo.
@@ -332,7 +337,8 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 13. **Security boundary:**
     - Browser-only code.
     - No network.
-    - PSD import (`ag-psd`) parses untrusted files, so it gets size and dimension limits and runs in a Worker.
+    - The engine only **writes** PSD at the pin (`export/psdExport.ts`, `writePsd`); `readPsd` appears only in tests. PSD import is not planned, and adding it would need its own Worker-based importer with limits.
+    - Untrusted images reach `createImageBitmap` (`rasterController.ts`) with no dimension limit. The host seam checks the asset's probed dimensions first: at most 16,384 px a side and 64 megapixels. Larger images are refused before decoding.
 14. **Inherited tests:** 145 test files (56,394 lines, Vitest). Node-compatible ones run under Vitest added as a dev dependency for `src/studio/**` only; browser-mode ones run in Playwright.
 15. **New tests:**
     - Host round trip: document → revision → reload → identical contract bytes.
@@ -394,12 +400,12 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - Add a version.
 11. **Adapter contract:** `Scene3D ↔ Object3DJSON[]` import for scenes exported from ArtCraft-format JSON.
 12. **Canonical impact:** a new entity `scene3d`.
-13. **Security boundary:** schema-validated; bounded item count (10,000).
+13. **Security boundary:** schema-validated, with these limits: 4 MiB of JSON, 10,000 items, nesting depth 16, strings of at most 1,024 characters, and finite numbers only.
 14. **Inherited tests:** none.
 15. **New tests:** round trip; a hostile scene (NaN, huge counts, unknown asset) refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
-18. **Size:** about 60 donor lines / 200–300 new.
+18. **Size:** 34 donor lines (27 + 7) / 200–300 new.
 19. **Owner, phase, gate:** Cinema builder; P06.
 20. **Fallback and rollback:** the entity is absent.
 
@@ -409,7 +415,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 2. **Workspace/subsystem:** Cinema, viewport navigation.
 3. **Donor @ pin:** ArtCraft `28a39a0d`.
 4. **Licence/notice:** Apache-2.0 / MIT.
-5. **Donor paths:** `.../engine/CameraController.ts` (345 lines).
+5. **Donor paths:** `frontend/libs/components/pagescene/src/lib/engine/editor/CameraController.ts` (345 lines).
 6. **Yamakan paths:** `src/cinema/camera/CameraController.ts`.
 7. **Ladder level:** B.
 8. **Dependency closure:** `three`, `three/addons/controls/PointerLockControls.js` and the ArtCraft event bus.
@@ -451,9 +457,18 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - Frozen dataclasses → zod `readonly` schemas.
 11. **Adapter contract:** a `CharacterAsset` is a canonical entity. `IdentityEncoding` and `IdentityApplication` are job outputs owned by an engine.
 12. **Canonical impact:** a new entity `character`.
-13. **Security boundary:** likeness consent is required before any encoding job runs (the likeness row of [SECURITY.md](../../SECURITY.md) requires it before the respective AI operation; this module implements it).
+13. **Security boundary:** likeness consent is required before any encoding job runs. The likeness row of [SECURITY.md](../../SECURITY.md) requires, before the respective AI operation:
+    - consent with version, purpose, expiry and revocation;
+    - lineage;
+    - invalidation of derived outputs and references when consent is revoked.
+
+    This module implements all of it, not only the presence check.
+
 14. **Inherited tests:** the identity test cases translated to `node:test`.
-15. **New tests:** a missing consent refuses the encoding job; a reference not an image is refused.
+15. **New tests:**
+    - Missing, expired, revoked or wrong-purpose consent refuses the encoding job.
+    - Revocation marks derived encodings and takes invalid.
+    - A reference that is not an image is refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
 18. **Size:** 318 donor lines / 300–450 new.
@@ -465,7 +480,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 1. **ID:** M12.
 2. **Workspace/subsystem:** Director / Flow, script → shots → takes → timeline stages with approvals.
 3. **Donor @ pin:** calesthio/OpenMontage `9327439db69021ab4b0e2776729bf3b58fdb5a87`.
-4. **Licence/notice:** AGPL-3.0. Combined under GPL-3.0 §13; ported files keep the AGPL notice and are listed separately in `NOTICE`. **AGPL §13 network-interaction duty:** Yamakan's local web server serves only its own user over loopback, but the source-offer link is added to the About view anyway.
+4. **Licence/notice:** AGPL-3.0. Combined under GPL-3.0 §13; once AGPL code is included, the combined work can in practice be distributed only under version 3, which limits Yamakan's "or later" option; ported files keep the AGPL notice and are listed separately in `NOTICE`. **AGPL §13 network-interaction duty:** Yamakan's local web server serves only its own user over loopback, but the source-offer link is added to the About view anyway.
 5. **Donor paths:**
    - `schemas/pipelines/**` (manifest schema);
    - `lib/pipeline_loader.py` (240 lines);
@@ -484,7 +499,9 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
    - `remotion-composer/**`, external font loading and `lib/providers/**`.
 10. **Modifications:**
     - A checkpoint becomes a durable job plus a canonical revision receipt.
-    - Approval is an explicit command with a principal.
+    - Approval is an explicit command, `director.approve`. It is **human-only**: it is granted to the browser session principal and never to MCP, CLI or SDK agent principals.
+    - An approval binds the stage output's hash and an expiry, as [SECURITY.md](../../SECURITY.md) requires for approvals. A changed output needs a new approval.
+    - Principals come from the authenticated transport or token (W4), never from a client-declared name such as MCP `clientInfo`.
 11. **Adapter contract:** `nextStage(project, manifest) → stage | blocked(reasons)`.
 12. **Canonical impact:** new entities `directorRun` and `stageReceipt`.
 13. **Security boundary:** manifests are data only and cannot name executables.
@@ -493,10 +510,12 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - Resume after a kill continues at the correct stage.
     - A fenced attempt cannot write a stale receipt.
     - An approval-required stage blocks agents without approval.
+    - An agent principal calling `director.approve`, including on its own stage, is refused.
+    - An approval for an output hash that has since changed is refused.
 16. **Validation commands:** `npm test`.
 17. **Benchmark:** none.
 18. **Size:** about 500 donor lines / 700–1,000 new.
-19. **Owner, phase, gate:** Director builder; P07.
+19. **Owner, phase, gate:** Director builder; P07. W4 (transport-bound principals) is a hard prerequisite.
 20. **Fallback and rollback:** a manual storyboard (no stages).
 
 ---
@@ -518,25 +537,36 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
    - `core/engines/contract.ts` (engine capability, submit, poll, cancel, outputs);
    - `core/engines/comfyui.ts`;
    - `core/engines/fake.ts` (for tests);
-   - `tests/engines.test.ts`.
+   - `tests/engines.test.ts` (new).
 7. **Ladder level:** D (wrap) plus B for the client.
 8. **Dependency closure:**
    - Python and ComfyUI pinned in a separate runtime folder, installed only by explicit user action.
    - **No weights are downloaded by Yamakan.**
 9. **Excluded:**
    - ComfyUI-Manager and automatic custom-node install.
-   - Any node not in a pinned allowlist.
+   - Any node not in a pinned allowlist. This is **enforced** two ways:
+     - **Launch flags, checked at the pin's `comfy/cli_args.py`:** `--disable-all-custom-nodes`, `--disable-api-nodes`, `--disable-partner-nodes`, `--offline`, `--disabled-nodes-config <pinned file>`, `--disable-manager-ui`, `--disable-metadata`, a pinned `--front-end-root` (never `--front-end-version`, which downloads), and fixed `--input-directory`, `--output-directory`, `--user-directory` and `--temp-directory`.
+     - **Service-side validation:** every node `class_type` in a graph must be in the pinned allowlist before submit. Core ComfyUI ships paid partner/API nodes, so this check is required even with the flags.
 10. **Modifications:**
     - Polling → durable job attempts with fencing.
     - Output path lookup → `/view` download into content-addressed import, then probe.
 11. **Adapter contract:**
     - `EngineAdapter { capabilities(), submit(graph, inputs), status(id), cancel(id), outputs(id) }`.
-    - The server is started by procd as a contained worker bound to 127.0.0.1 on an ephemeral port, with no outbound network.
+    - The server is started by procd as a contained worker bound to 127.0.0.1 on an ephemeral port.
+    - Outbound-network denial for engines is **not** in place today. PR #29 is read containment, and SECURITY.md treats policy types as not being enforcement. Network denial is part of gate E-SEC below.
 12. **Canonical impact:** takes and outputs are assets with a generation receipt (graph hash, engine version, seed).
 13. **Security boundary:**
     - procd containment.
-    - A loopback port reachable only by the service: a random token header via ComfyUI's `--` options if available; otherwise the port is protected by the AppContainer loopback rules. **Unresolved, task step 1.**
-    - Uploads are only the job's inputs.
+    - **Unresolved: an authenticated channel.** ComfyUI at the pin has no auth or token option. AppContainer loopback isolation would either block the service or need a machine-wide loopback exemption, which opens the port to every local process and user. Until this is solved, any local process could submit graphs to `/prompt` or write through `/upload/*`. **No real engine runs until this is resolved.** Candidate designs (decided in the gate below):
+      - a per-launch-token reverse proxy owned by the service;
+      - a named pipe with an owner-only ACL.
+    - Uploads are only the job's inputs. Outputs are imported through the probe path and never trusted.
+    - **Gate E-SEC before any real engine run, required in addition to founder decision F.** All of the following must hold:
+      - the authenticated channel above;
+      - B4 qualified for Python and its descendant processes ([SECURITY.md](../../SECURITY.md));
+      - an enforced network-deny mechanism, proved by a packet-capture test;
+      - a negative test showing that a second account and an unrelated local process cannot reach the engine;
+      - the launch-flag and node-allowlist checks above.
 14. **Inherited tests:** the OpenVideoStudio `test_comfy_client.py` cases translated against the fake engine.
 15. **New tests:**
     - Cancel ends the attempt.
@@ -546,7 +576,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 16. **Validation commands:** `npm test`. A real-engine run needs qualified hardware and weights (founder choice F), so it is not part of CI.
 17. **Benchmark:** recorded per named hardware once F is approved.
 18. **Size:** 147 donor lines (shape) / 900–1,400 new.
-19. **Owner, phase, gate:** engine builder; P06; the real engine requires founder decision F.
+19. **Owner, phase, gate:** engine builder; P06. The contract and the fake engine land first. A real engine needs gate E-SEC and founder decision F.
 20. **Fallback and rollback:** the fake engine only; the capability is disabled.
 
 ---
@@ -562,7 +592,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 5. **Donor paths:** npm package (no copy).
 6. **Yamakan paths:**
    - `package.json` dependency;
-   - `src/media/demux.ts` (wrapper);
+   - `src/media/demux.ts` (new wrapper);
    - `src/donors/film-editor/components/Waveform.tsx` (modification: a data source from Mediabunny-decoded samples instead of a full `decodeAudioData`).
 7. **Ladder level:** A.
 8. **Dependency closure:** none (REA).
@@ -570,10 +600,10 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
    - URL, HLS and segmented sources.
    - Encoding/muxing (export stays FFmpeg).
 10. **Modifications:** none to the library.
-11. **Adapter contract:** `openAsset(blobUrlFromService) → tracks, packets, samples`, read through the existing authenticated media route.
+11. **Adapter contract:** `openAsset(blob) → tracks, packets, samples`. The input is a `Blob` or `ArrayBuffer` fetched by the page through the existing authenticated media route. Mediabunny's URL source is never used.
 12. **Canonical impact:** none.
 13. **Security boundary:**
-    - It parses untrusted media in the browser, so it runs in a Worker, size-limited.
+    - It parses untrusted media in the browser, so it runs in a Worker. Input is capped at the import size limit, and the Worker is terminated after a 2 s timeout. Browsers cannot cap Worker memory, so the 64 MiB figure below is a benchmark, not a limit.
     - Results never override the server probe.
 14. **Inherited tests:** library tests are not run (dependency).
 15. **New tests:**
@@ -589,13 +619,16 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
 
 1. **ID:** M15.
 2. **Workspace/subsystem:** Edit, titles in the live preview.
-3. **Donor @ pin:** ThaUnknown/jassub `dea3d2d3`, npm `jassub` at the release matching the pin (step 1 confirms the release; 2.5.21 is current on npm).
-4. **Licence/notice:** MIT plus bundled libass (ISC), FreeType (FTL or GPL-2.0-or-later) and HarfBuzz/fribidi notices; all copied into `notices/`.
+3. **Donor @ pin:** ThaUnknown/jassub `dea3d2d3`, which is `package.json` version 2.5.20. The npm dependency is pinned to exactly `jassub@2.5.20` with its lockfile integrity hash.
+4. **Licence/notice:** the pinned `package.json` declares `LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0`. Obligations:
+   - **FreeType:** Yamakan elects GPL-2.0-or-later, because FTL's credit clause is generally treated as GPL-incompatible.
+   - **fribidi (LGPL-2.1-or-later):** the notice, plus replaceability of the WebAssembly module.
+   - **Everything else:** all notices are copied into `notices/`.
 5. **Donor paths:** npm (no copy).
 6. **Yamakan paths:** `src/preview/titles.ts`; `src/donors/film-editor/components/PreviewPlayer.tsx` (overlay canvas).
 7. **Ladder level:** A.
 8. **Dependency closure:** WebAssembly; the font files are the same pinned IBM Plex Sans Arabic bytes served by the service.
-9. **Excluded:** system-font fallback (only the pinned fonts are provided).
+9. **Excluded:** system-font fallback. Only the pinned fonts are provided, through options that load fonts from the service alone. `queryLocalFonts` and any remote font loading are disabled explicitly. The threaded build needs COOP/COEP headers, which would change the service's headers, so step 1 chooses between the non-threaded build and a reviewed header change.
 10. **Modifications:** none.
 11. **Adapter contract:** the same `titles.ass` generated by `core/render/ass.ts`.
 12. **Canonical impact:** none.
@@ -624,7 +657,7 @@ This is the mandatory file-level map, **donor path → Yamakan path → modifica
     - `toOtio(project) → JSON`, using rational time (rate 705,600,000).
     - `fromOtio(json) → proposal`, which is a reviewable batch, never a direct write.
 12. **Canonical impact:** none.
-13. **Security boundary:** import is a hostile-input parser with size limits; media references must resolve to existing assets.
+13. **Security boundary:** import is a hostile-input parser. Its limits are 16 MiB of JSON, 50,000 objects, nesting depth 32 and strings of at most 4,096 characters, with rational times checked as integers. Media references must resolve to existing assets.
 14. **Inherited tests:** none.
 15. **New tests:** a round trip through the official Python library preserves every clip's range exactly.
 16. **Validation commands:** `npm test`; CI job `otio-oracle`.

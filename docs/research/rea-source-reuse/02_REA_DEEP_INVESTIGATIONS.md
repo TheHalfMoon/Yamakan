@@ -52,7 +52,10 @@ Nothing was installed, built or executed from any donor. No model, weight or hos
   - `@workbench/mediaReferences` and `@workbench/controlAdapters`;
   - `@platform/browser/sha256` and `@platform/browser/downloadBlob`;
   - npm `ag-psd` and `perfect-freehand`.
-- **`importBoundaries.test.ts`** enforces no React, widgets, backend or sockets inside canvas-engine. React 19 in webv2 does not reach the engine, so Yamakan's React 18.3.1 is not a conflict.
+- **Boundary enforcement:**
+  - InvokeAI's dependency policy (`src/architecture/dependencyPolicy.ts`, 305 lines, with `dependencyPolicy.test.ts` and `canvasSeamOwnership.test.ts`) enforces canvas seam ownership, but it lives **outside** the subtree and would not come with an import of `canvas-engine/`.
+  - `ARCHITECTURE.md` mentions an `importBoundaries.test.ts`, but no such file exists at the pin.
+  - REA independently finds no React, backend or socket import inside canvas-engine. React 19 in webv2 does not reach the engine, so Yamakan's React 18.3.1 is not a conflict.
 - **`ARCHITECTURE.md`** (219 lines) states the ownership split. The workbench reducer owns the serializable `CanvasDocumentContractV3`; the engine owns pixels, rendering, history and transient state.
   - The contract has four stack forests (raster, control, regional guidance, inpaint mask) and groups up to 10 deep.
   - It allows at most 10,000 nodes and refuses older versions.
@@ -76,7 +79,7 @@ Nothing was installed, built or executed from any donor. No model, weight or hos
 | ----------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | `cameraMath.ts`                                                         | 196        | Imports only `three` (`MathUtils`, `Vector3`, `PerspectiveCamera`): free-camera move, rotate, pan, zoom, lerp | Direct candidate                        |
 | `EditorState/EditorStateJSON/object_3d_json.ts` + `scene_state_json.ts` | 27 + small | Pure schema `{version, sceneItems: Object3DJSON[]}`                                                           | Adapt (see below)                       |
-| `CameraController.ts`                                                   | 345        | three, PointerLockControls and the event bus                                                                  | Adapt                                   |
+| `editor/CameraController.ts`                                            | 345        | three, PointerLockControls and the event bus                                                                  | Adapt                                   |
 | `save_manager.ts`                                                       | 372        | `StoryTellerProxyScene` / `@storyteller/common`                                                               | Reject                                  |
 | `HistoryManager.ts`                                                     | 105        | —                                                                                                             | Reject: canonical revisions own history |
 
@@ -100,7 +103,7 @@ Nothing was installed, built or executed from any donor. No model, weight or hos
 - **The routes include:**
   - `POST /prompt`, `GET /history/{prompt_id}`, `POST /interrupt` and `POST /free`;
   - `POST /api/jobs/{job_id}/cancel`, `GET /view` and `POST /upload/image`;
-  - 26 routes in total.
+  - 27 routes in total, including the `GET /ws` WebSocket.
 - **Finding:** the integration boundary is the HTTP API, so Yamakan wraps the engine rather than copying code. Custom nodes run arbitrary Python, so only a pinned node set is allowed and the server runs as a contained worker (procd, loopback-only port, no outbound network).
 
 ### R6 — OpenVideoStudio (`175da996`, Apache-2.0 + NOTICE), Python, static reading

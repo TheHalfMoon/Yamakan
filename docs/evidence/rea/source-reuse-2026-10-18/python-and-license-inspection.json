@@ -18,9 +18,13 @@
     "remotion-dev/remotion@9fdd1fc4": "Remotion company-size licence (not an OSI licence)"
   },
   "comfyui": {
-    "files": { "server.py": 1568, "execution.py": 1464 },
+    "files": {
+      "server.py": 1568,
+      "execution.py": 1464
+    },
     "httpRoutes": [
       "GET /",
+      "GET /ws (WebSocket)",
       "GET /api/jobs",
       "GET /api/jobs/{job_id}",
       "POST /api/jobs/cancel",

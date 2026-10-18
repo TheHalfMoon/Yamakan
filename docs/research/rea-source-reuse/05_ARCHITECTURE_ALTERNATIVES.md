@@ -38,7 +38,7 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
   - **Media:** Mediabunny, and JASSUB later as a live-preview upgrade over the existing reference still.
   - **Engines:** ComfyUI wrapped.
   - The file-level map is in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md).
-- **Reuse share:** an estimated 42,000 donor lines; 74–82% of expansion code by line count ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)).
+- **Reuse share:** an estimated 41,900 donor source lines; 74–82% of expansion code by line count ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)).
 - **Cost:**
   - Host adapters, the largest being Studio at an estimated 2,500–4,000 lines.
   - Canonical schema additions (sound, speed, animation, studioDocument, scene3d, character, directorRun).
@@ -51,8 +51,8 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
 ## C — Selective reuse ("MVP plus minimal imports")
 
 - **What:** import only what the MVP needs (nothing new, since the original-audio fix is original work). Expansion workspaces are built mostly as original code with donors used as references.
-- **Reuse share:** an estimated 5,000 donor lines (OpenCut ripple, retime and camera math only).
-- **Cost:** reimplementing a layered canvas engine, keyframe interpolation and group move. The estimate is about 85–128 builder days (the all-reimplementation estimate of 88–131 less the three small modules C still imports) against 41–63 for B.
+- **Reuse share:** 971 donor lines (OpenCut ripple 377, retime 398 including tests, ArtCraft camera math 196).
+- **Cost:** reimplementing a layered canvas engine, keyframe interpolation and group move. The estimate is about 84–126 builder days: the all-reimplementation 87.5–130.5 less the 3.5–5 days that importing ripple, retime and camera math saves, per [09](09_REUSE_AND_EFFORT_ESTIMATES.md) against 41–63 for B.
 - **Verdict:** **Not recommended.** It is slower and less tested than donor code, which is the opposite of the reuse mandate. It remains the fallback for any module whose B-path validation fails, module by module.
 
 ## Comparison
@@ -61,8 +61,8 @@ Replacing any of these would discard merged, tested work (T1–T10, PRs #1–#28
 | ----------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------- | ----------- |
 | Hard gates                                | Fail (H2 ×3, H3 ×2)                  | Pass                                                                             | Pass        |
 | One authority preserved                   | No                                   | Yes                                                                              | Yes         |
-| Donor lines reused (estimate)             | ~120,000                             | ~42,000                                                                          | ~5,000      |
-| Expansion effort (builder days, estimate) | Not estimated (sync layer unbounded) | 41–63                                                                            | ~85–128     |
+| Donor lines reused (estimate)             | ~120,000                             | ~41,900                                                                          | 971         |
+| Expansion effort (builder days, estimate) | Not estimated (sync layer unbounded) | 41–63                                                                            | ~84–126     |
 | Inherited donor tests                     | Most                                 | ~150 files (InvokeAI 145, OpenCut 3, plus OpenMontage and OpenVideoStudio cases) | ~3          |
 | Upstream drift burden                     | Very high                            | Medium (one large subtree)                                                       | Low         |
 | Security surface                          | Hosted and backend coupling          | Contained engines; browser-only canvas                                           | Smallest    |

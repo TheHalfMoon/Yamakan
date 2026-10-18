@@ -26,17 +26,23 @@ Date: 2026-10-18. Planning base: `origin/main` `6e471088a56b6bdda4fef29c74716782
 
 The MVP is not qualified yet. The release verdict stays **NO-GO**. Major integrations wait for the **M-gate** ([07](07_OPTIMIZED_MASTER_PLAN.md#m-gate)). The M-gate requires:
 
-1. Worker read containment merged (PR #29, owned by another session).
-2. **A video clip's own sound exported.** This is a confirmed defect: `core/render/plan.ts` creates sound only for sound-track clips.
-3. The interruption and recovery defects closed.
-4. The pinned distributable bundle built.
-5. `qualify:release` passing at an exact main head.
+1. Every MVP engineering item R1–R8 in [07](07_OPTIMIZED_MASTER_PLAN.md#track-1--mvp-release) merged with exact-head CI:
+   - worker read containment (PR #29, owned by another session);
+   - **a video clip's own sound exported** — a confirmed defect: `core/render/plan.ts` creates sound only for sound-track clips;
+   - the interruption, recovery and integrity defects closed;
+   - per-agent principals;
+   - PRs #24 and #19 (other sessions);
+   - the pinned distributable bundle;
+   - the release evidence bundle;
+   - title-font substitution excluded.
+2. `qualify:release` passing at that main head.
+3. No release-blocking defect left in `specs/CURRENT.md`.
 
 The human-only gates (native Arabic review, a clean profile, a second account, packet capture, disk-full) do not block integration work from starting. They do block release.
 
 ## Expected effect (estimate, not measurement)
 
-Across the expansion workspaces in this plan, about **42,000 donor source lines** are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 88–131 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
+Across the expansion workspaces in this plan, about **41,900 donor source lines** (41,893) are reused directly or by adaptation, against an estimated **9,500–15,000 new Yamakan lines** of adapters, schema, commands, UI and tests ([09](09_REUSE_AND_EFFORT_ESTIMATES.md)). The planned expansion effort falls from an estimated 88–131 builder days (reimplementation) to **41–63 builder days**. These figures come from donor line counts at the pins and from this document's per-module estimates. They are not measured speedups.
 
 ## Verdict
 

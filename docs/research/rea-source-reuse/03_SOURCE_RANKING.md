@@ -62,7 +62,7 @@ Score = Σ(criterion score × weight) / 5, so the maximum is 100. **Scores are t
 
 - **OpenCut compatibility 5:** REA shows ripple importing only `@/timeline/types`. The `@/wasm` usage is `MediaTime` arithmetic, already adapted twice (`core/donors/opencut/`).
 - **OpenCut maturity 3:** only 3 test files cover these modules at the pin, and none covers ripple or group move.
-- **InvokeAI maturity 5:** 145 test files, an architecture document, and an enforced import-boundary test. The commit is from 2026-10-10.
+- **InvokeAI maturity 5:** 145 test files, an architecture document, and an enforced dependency policy. The policy lives outside the subtree, so Yamakan must port its rules. The commit is from 2026-10-10.
 - **InvokeAI integration cost 2:** about 35,600 source lines; tests in Vitest (Yamakan uses `node:test`); two npm dependencies; a host adapter for documents, bitmaps and media references.
 - **ComfyUI security 2:** custom nodes run arbitrary Python, and the server is a network service. Containment and a pinned node set are mandatory.
 - **Mediabunny integration cost 5:** REA finds no third-party import in the browser build.

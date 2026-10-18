@@ -55,15 +55,22 @@ A disabled workspace shows the reason, for example "needs qualified local hardwa
 ## Branding
 
 - **User-facing surfaces say Yamakan:** UI, CLI, MCP tool names, window titles and file metadata (`encoder`/`comment` tags set to Yamakan).
-- **Donor names appear only in** `NOTICE`, `notices/`, `docs/provenance/` and an About → Open-source notices view.
+- **Donor names appear only in** `NOTICE`, `notices/`, `docs/`, source-file provenance headers and an About → Open-source notices view (rule 2 in [11](11_SOURCE_PROVENANCE_AND_BRANDING.md)).
 - Brand rules and the brand check are in [11](11_SOURCE_PROVENANCE_AND_BRANDING.md).
 
 ## Security model additions
 
 - **Engines:**
-  - Engines are workers under procd with AppContainer containment (PR #29). Each gets an ephemeral loopback port and no outbound network.
+  - Engines are workers under procd with AppContainer read containment (PR #29). Each gets an ephemeral loopback port.
+  - **Not solved yet: an authenticated channel and outbound-network denial.** No real engine runs before gate E-SEC passes ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) M13).
   - Inputs are granted per job.
   - Outputs are imported through the probe path, never trusted.
-- **Browser-side parsers** (Mediabunny, `ag-psd`) run in Workers with byte and dimension limits, and never override the server probe.
+- **Browser-side parsers and decoders:**
+  - Mediabunny runs in a Worker on `Blob` input only, with a timeout.
+  - Images are checked against their probed dimensions before `createImageBitmap`.
+  - Neither ever overrides the server probe.
 - **Manifests** (Director and Flow) are data, never commands or executables.
-- **No donor code** may call `fetch`, open sockets or read `node:` modules inside the browser subtrees. The rule is extended from InvokeAI's `importBoundaries.test.ts`.
+- **No donor code** may call `fetch`, open sockets or read `node:` modules inside the browser subtrees.
+  - The rule is ported from InvokeAI's dependency policy into `src/studio/boundaries.test.ts`.
+  - **The enforcing control** is a page CSP (`connect-src 'self'`; no remote images, fonts or scripts) plus the e2e egress capture.
+- **Approvals** (Director) are human-only and bound to an output hash. Agent principals cannot approve.

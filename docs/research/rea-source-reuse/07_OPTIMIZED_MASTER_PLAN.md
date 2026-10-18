@@ -30,14 +30,14 @@ The human gates H1–H5 are **not** part of the M-gate. They block the release, 
 
 ## Track 2 — Reuse-first expansion (after the M-gate)
 
-| Phase                      | Modules ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md))                          | Exit evidence                                                      | Est. builder days |
-| -------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------- |
-| P05 Edit+ and interchange  | M3 ripple, M4 group move, M5 retime, M14 Mediabunny, M15 JASSUB, M16 OTIO    | Goldens, parity, property tests, OTIO round trip                   | 9–14              |
-| P06 Studio and Cinema      | M7 canvas engine, M8–M10 camera and scene, M13 engine contract (fake engine) | Host round trip, kill during flush, 145 inherited test files green | 14–21             |
-| P07 Director               | M11 identity, M12 stages                                                     | Resume/fence/approval tests; manual storyboard works without AI    | 6–9               |
-| P08 Motion, Audio and Flow | M6 animation, M1 follow-ups (unlink, loudness), Flow over manifests          | Animated goldens; preview/export sample equality                   | 7–11              |
-| P09 Agents and Quality     | M17, per-agent undo, Quality Lab (original)                                  | Refused transitions safe; blinded comparison harness               | 5–8               |
-| **Total**                  |                                                                              |                                                                    | **41–63**         |
+| Phase                      | Modules ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md))                                                                      | Exit evidence                                                                                                    | Est. builder days |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ----------------- |
+| P05 Edit+ and interchange  | M3 ripple, M4 group move, M5 retime, M14 Mediabunny, M16 OTIO; then M15 JASSUB once the native Arabic review (H1) passes | Goldens, parity, property tests, OTIO round trip. P05 closes without M15; M15's 1–1.5 days are inside this total | 9–14              |
+| P06 Studio and Cinema      | M7 canvas engine, M8–M10 camera and scene, M13 engine contract (fake engine)                                             | Host round trip, kill during flush, 145 inherited test files green                                               | 14–21             |
+| P07 Director               | M11 identity, M12 stages                                                                                                 | Resume/fence/approval tests; manual storyboard works without AI                                                  | 6–9               |
+| P08 Motion, Audio and Flow | M6 animation, M1 follow-ups (unlink, loudness), Flow over manifests                                                      | Animated goldens; preview/export sample equality                                                                 | 7–11              |
+| P09 Agents and Quality     | M17, Quality Lab and Router explain (original); per-agent undo is already W4                                             | Refused transitions safe; blinded comparison harness                                                             | 5–8               |
+| **Total**                  |                                                                                                                          |                                                                                                                  | **41–63**         |
 
 These are estimates, not measurements. Re-estimate after M7's first step (Studio ADR), which carries the most uncertainty.
 
@@ -45,7 +45,7 @@ These are estimates, not measurements. Re-estimate after M7's first step (Studio
 
 - **P05 first.** It has the smallest imports, the highest user value for an editor and reuses the proven OpenCut adapter pattern.
 - **M7 is the critical-path risk.** Its ADR runs in parallel with P05.
-- **The real ComfyUI engine stays disabled** until founder decision F (hardware and weights). The engine contract and fake engine still land, so Studio and Director are testable.
+- **The real ComfyUI engine stays disabled** until security gate E-SEC ([04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) M13) and founder decision F (hardware and weights) both pass. The engine contract and fake engine still land, so Studio and Director are testable.
 - **Each module ships behind its capability flag** and flips on only when its validation passes at an exact head.
 
 ## What changed from the previous plan
