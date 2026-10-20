@@ -1,6 +1,6 @@
 # Plan freeze manifest
 
-The frozen state of the Yamakan implementation plan. **Implementation has not started.** It begins only on the founder's written start authorization ([START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md)).
+The frozen state of the Yamakan implementation plan. The plan content below is immutable at the tagged content commit. **Implementation started** on the founder's 2026-10-21 start authorization ([FOUNDER_DECISION_RECORD.md](FOUNDER_DECISION_RECORD.md); [START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md)).
 
 ## Frozen references
 
@@ -8,14 +8,13 @@ The frozen state of the Yamakan implementation plan. **Implementation has not st
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Freeze date                                        | 2026-10-18                                                                                                                                                                                         |
 | Main at the freeze                                 | `6e471088a56b6bdda4fef29c747167827958a224` (PR #28 merged)                                                                                                                                         |
-| Planning PR                                        | [TheHalfMoon/Yamakan#30](https://github.com/TheHalfMoon/Yamakan/pull/30), branch `docs/rea-source-reuse`, not merged                                                                               |
+| Planning PR                                        | [TheHalfMoon/Yamakan#30](https://github.com/TheHalfMoon/Yamakan/pull/30), branch `docs/rea-source-reuse`, **merged** as `c19a95b5fef591724675229f073656f26e48fff9` (exact head `d42b32b5003c4427fe31f2a6e7ee278e67e0fb87`) |
 | **Plan content commit**                            | `651733ab7f83ccb178523741b887016a12df6d4f`                                                                                                                                                         |
+| **Immutable tag**                                  | `plan-freeze-2026-10-18` → content commit `651733ab7f83ccb178523741b887016a12df6d4f` (created 2026-10-21; do not move)                                                                              |
 | Open PRs at the freeze (other sessions, untouched) | #29 `6b56bfa59390d52a9efd308a57a9f226d9a9fe6f` (containment), #24 `33ceb5380d2a801a32d3ed46f362c5b9411c60ed` (mid-render kill), #19 `ce047bb53596a6189ca401094a4b41a42303b48f` (test temp cleanup) |
 | Release verdict                                    | NO-GO                                                                                                                                                                                              |
 
-The plan content commit is the commit that holds the frozen documents below. This manifest was added in the commit after it, so it cannot name its own commit. The PR's final head contains both.
-
-**Proposed tag:** `plan-freeze-2026-10-18` on the plan content commit. It is created only after the founder approves the plan. Until then, the commit SHA is the immutable reference.
+The plan content commit is the commit that holds the frozen documents below. This manifest was added in the commit after it, so it cannot name its own commit. The PR's final head contains both. The SHA-256 block and `git diff` check still verify the frozen document bodies against the content commit; post-freeze status rows in this file are governance records only and do not alter those bodies.
 
 ## Check the frozen documents
 
