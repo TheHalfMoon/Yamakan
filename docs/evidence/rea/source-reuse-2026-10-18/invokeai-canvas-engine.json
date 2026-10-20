@@ -1,0 +1,155 @@
+{
+  "tool": "rea-agents 6.3.0 (local install)",
+  "command": "node <rea-agents>/scripts/rea.mjs analyze-javascript-application <sparse checkout of InvokeAI invokeai/frontend/webv2/src/workbench: canvas-engine, canvas-operations> --json",
+  "date": "2026-10-18",
+  "target": {
+    "repository": "invoke-ai/InvokeAI",
+    "commit": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "rootArtifactSha256": "a37a8c074dc557c5428e43b46326ecd09b1f71df3288e59c31b3707ff7cbb807"
+  },
+  "evidenceId": "ev_50dd086d4c8da5df2940f36c58b3478daff2e3fc372416317307a994b07f7179",
+  "result": {
+    "nodes": 5388,
+    "edges": 9053,
+    "parseFailures": 0,
+    "externalImportsBySubsystem": {
+      "canvas-engine/render": {
+        "@workbench/canvas-engine/contracts": 60,
+        "@workbench/canvas-engine/types": 50,
+        "@workbench/canvas-engine/math/rect": 36,
+        "@workbench/canvas-engine/render/raster": 26,
+        "@workbench/canvas-engine/math/mat2d": 16,
+        "@workbench/canvas-engine/document/sources": 13,
+        "@workbench/canvas-engine/render/adjustments": 11,
+        "@workbench/canvas-engine/render/compositor": 10,
+        "@workbench/canvas-engine/document-model/documentModel": 10,
+        "@workbench/canvas-engine/document-model/semanticLeaf": 10,
+        "@workbench/canvas-engine/render/layerCache": 9,
+        "@workbench/canvas-engine/diagnostics": 8,
+        "@workbench/canvas-engine/render/decodedBitmapPool": 6,
+        "@workbench/canvas-engine/selection/floatingSelection": 6
+      },
+      "canvas-engine/controllers": {
+        "@workbench/canvas-engine/contracts": 83,
+        "@workbench/canvas-engine/capabilities": 74,
+        "@workbench/canvas-engine/history/history": 54,
+        "@workbench/canvas-engine/document/documentIndex": 54,
+        "@workbench/canvas-engine/math/rect": 49,
+        "@workbench/canvas-engine/render/raster": 48,
+        "@workbench/canvas-engine/render/layerCache": 42,
+        "@workbench/canvas-engine/types": 41,
+        "@workbench/canvas-engine/document-model/documentModel": 35,
+        "@workbench/canvas-engine/document/sources": 28,
+        "@workbench/canvas-engine/editConcurrency": 20,
+        "@workbench/canvas-engine/mutationContracts": 19,
+        "@workbench/canvas-engine/transform/transformMath": 17,
+        "@workbench/canvas-engine/document/insertionAnchors": 17
+      },
+      "canvas-operations": {
+        "@workbench/canvas-engine/api": 65,
+        "@workbench/canvas-operations/operationTypes": 30,
+        "@platform/state/accountLifecycle": 24,
+        "@workbench/canvas-engine/types": 22,
+        "@workbench/canvas-operations/contracts": 18,
+        "@workbench/canvas-engine/engine": 18,
+        "@workbench/canvas-operations/api": 14,
+        "@features/gallery": 13,
+        "@workbench/canvas-operations/samGraph": 12,
+        "@workbench/canvas-engine/render/raster": 12,
+        "@workbench/projectContracts": 12,
+        "@workbench/graphContracts": 12,
+        "@workbench/widgets/layers/layerOps": 12,
+        "@workbench/canvas-operations/compositeForGeneration": 11
+      },
+      "canvas-engine/document": {
+        "@workbench/canvas-engine/contracts": 58,
+        "@workbench/canvas-engine/types": 6,
+        "@workbench/canvas-engine/document-model/semanticLeaf": 6,
+        "@workbench/canvas-engine/math/mat2d": 6,
+        "@workbench/canvas-engine/document/imageUpload": 2,
+        "@workbench/canvas-engine/render/paintCacheTrim": 2,
+        "@workbench/canvas-engine/render/raster": 2,
+        "@workbench/canvas-engine/render/rasterizers/textRasterizer": 2,
+        "@workbench/canvas-engine/math/rect": 2,
+        "@workbench/canvas-engine/mutationContracts": 2,
+        "@platform/browser/sha256": 2,
+        "@workbench/controlAdapters": 2,
+        "@workbench/canvas-engine/render/thumbnail": 2
+      },
+      "canvas-engine/tools": {
+        "@workbench/canvas-engine/types": 59,
+        "@workbench/canvas-engine/math/mat2d": 29,
+        "@workbench/canvas-engine/contracts": 27,
+        "@workbench/canvas-engine/math/rect": 16,
+        "@workbench/canvas-engine/transform/transformMath": 16,
+        "@workbench/canvas-engine/freehand": 14,
+        "@workbench/canvas-engine/document/layerEligibility": 14,
+        "@workbench/canvas-engine/document-model/documentModel": 12,
+        "@workbench/canvas-engine/document/documentIndex": 10,
+        "@workbench/canvas-engine/engineStores": 9,
+        "@workbench/canvas-engine/document/sources": 8,
+        "@workbench/canvas-engine/math/snapping": 7,
+        "@workbench/canvas-engine/mutationContracts": 6,
+        "@workbench/canvas-engine/document/insertionAnchors": 6
+      },
+      "canvas-engine/document-model": {
+        "@workbench/canvas-engine/document/layerStacks": 27,
+        "@workbench/canvas-engine/contracts": 21,
+        "@workbench/canvas-engine/mutationContracts": 17,
+        "@workbench/canvas-engine/document/documentIndex": 14,
+        "@workbench/canvas-engine/document/documentTree": 12,
+        "@workbench/canvas-engine/document/layerEligibility": 11,
+        "@workbench/canvas-engine/document/insertionAnchors": 7,
+        "@workbench/canvas-engine/math/mat2d": 2,
+        "@workbench/canvas-engine/types": 2,
+        "@workbench/canvas-engine/document/selectionRepair": 2
+      },
+      "canvas-engine/export": {
+        "ag-psd": 5,
+        "@workbench/canvas-engine/math/rect": 5,
+        "@workbench/canvas-engine/contracts": 4,
+        "@workbench/canvas-engine/types": 3,
+        "@workbench/canvas-engine/render/raster": 2,
+        "@workbench/canvas-engine/math/mat2d": 2,
+        "@workbench/canvas-engine/render/adjustments": 2,
+        "@workbench/canvas-engine/render/compositor": 2,
+        "@platform/browser/downloadBlob": 2
+      },
+      "canvas-engine/selection": {
+        "@workbench/canvas-engine/types": 23,
+        "@workbench/canvas-engine/math/rect": 12,
+        "@workbench/canvas-engine/render/raster": 11,
+        "@workbench/canvas-engine/math/mat2d": 8,
+        "@workbench/canvas-engine/history/history": 4,
+        "@workbench/canvas-engine/freehand": 2,
+        "@workbench/canvas-engine/transform/transformMath": 2,
+        "@workbench/canvas-engine/selection/selectionPaths": 2,
+        "@workbench/canvas-engine/selection/maskOutline": 2
+      },
+      "canvas-engine/math": {
+        "@workbench/canvas-engine/types": 10
+      },
+      "canvas-engine/transform": {
+        "@workbench/canvas-engine/math/mat2d": 3,
+        "@workbench/canvas-engine/types": 3,
+        "@workbench/canvas-engine/math/snapping": 2,
+        "@workbench/canvas-engine/contracts": 2
+      },
+      "canvas-engine/history": {
+        "@workbench/canvas-engine/types": 4,
+        "@workbench/canvas-engine/contracts": 3,
+        "@workbench/canvas-engine/mutationContracts": 2,
+        "@workbench/mediaReferences": 2
+      }
+    }
+  },
+  "confidence": "derived",
+  "limitations": [
+    "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+    "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+    "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+    "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+    "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+  ],
+  "note": "Summary of the full JSON output (not kept). Top 14 external imports per subsystem. Static, inert parsing."
+}

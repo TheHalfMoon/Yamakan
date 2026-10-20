@@ -1,8 +1,30 @@
 # Yamakan master implementation plan — final proposal
 
-**CONDITIONAL GO for scoped implementation after founder approval; NO-GO for release today.** This is the sole current task authority. Final optimization starts at live PR #4 head `73910ba9db870a68c9b08c7c369c4bdd1ff3f420`, following original PR #3 `419bc356eaa6738ba546f38310687739177da6bb`. Main remains `0d3bdacb51188294ba8d36ce2b218db72f6073a6`. Claude's [review](review/CLAUDE_INDEPENDENT_REVIEW.md) and entire evidence directory remain unchanged. Approval binds the exact final proposal commit. No implementation is authorized by this document.
+## Canonical entry point (frozen 2026-10-18)
+
+This file is the canonical entry point to the Yamakan plan. **Implementation of the frozen plan has not started.** It begins only on the founder's start authorization.
+
+| Read in this order | For |
+|---|---|
+| [START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md) | The single starting point when development is authorized |
+| [PLAN_FREEZE_MANIFEST.md](PLAN_FREEZE_MANIFEST.md) | The frozen commit, source pins, document hashes, external gates and assumptions |
+| [06 Final architecture](research/rea-source-reuse/06_FINAL_ARCHITECTURE.md) | Architecture B (balanced reuse on D′), single owners, workspaces |
+| [07 Optimized master plan](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md) | Tracks, phases, the M-gate, phase-to-task mapping |
+| [04 Exact source import blueprint](research/rea-source-reuse/04_EXACT_SOURCE_IMPORT_BLUEPRINT.md) | Frozen donor selections and file-level mapping |
+| [08 Implementation tasks](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md) | All 18 task cards (W1–W18), the dependency graph and qualification tests Q1–Q15 |
+| [13 First implementation wave](research/rea-source-reuse/13_FIRST_IMPLEMENTATION_WAVE.md) | The first ten PRs, starting with W1 |
+| [FUTURE_CLAUDE_EXECUTION_PROMPT.md](FUTURE_CLAUDE_EXECUTION_PROMPT.md) | The prompt to paste when development is authorized |
+
+**Order of authority:**
+
+- T1–T10 below are merged (PRs #1–#28). The MVP release gates in this file and in the [release proposal](RELEASE_PROPOSAL.md) stay authoritative.
+- The phases P05–P09 below are superseded by the reuse-first plan (07), and the open MVP work is tasks W1–W7 there. Where this file and 07 differ on P05–P09, 07 applies.
+- The sections below are kept as the approved historical plan (`edbaba6c`).
+
+**CONDITIONAL GO for scoped implementation after founder approval; NO-GO for release today.** (Historical text of the 2026-10-11 plan; the canonical entry point above governs.) Final optimization starts at live PR #4 head `73910ba9db870a68c9b08c7c369c4bdd1ff3f420`, following original PR #3 `419bc356eaa6738ba546f38310687739177da6bb`. Main remains `0d3bdacb51188294ba8d36ce2b218db72f6073a6`. Claude's [review](review/CLAUDE_INDEPENDENT_REVIEW.md) and entire evidence directory remain unchanged. Approval binds the exact final proposal commit. No implementation is authorized by this document.
 
 Read the [founder packet](FOUNDER_DECISION_PACKET.md), [assessment](review/FINAL_OPTIMIZATION_REVIEW.md), [contracts](OPERATIONAL_CONTRACTS.md), [source matrix](SOURCE_IMPORT_MATRIX.md), and [acceptance](E2E_ACCEPTANCE.md). The historical `docs/evidence/yamakan/phase-plan.json` describes the original proposal only.
+
 
 ## Architecture and accepted product
 

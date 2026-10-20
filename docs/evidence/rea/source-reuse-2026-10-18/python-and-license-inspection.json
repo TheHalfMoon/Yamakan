@@ -1,0 +1,97 @@
+{
+  "tool": "git (blob-less partial clones at the catalog pins) with git show / git ls-tree --name-only; no REA analyzer, because REA 6.3.0 analyzes JavaScript applications and these donors are Python",
+  "date": "2026-10-18",
+  "limitations": "Static reading only. Nothing was installed, built or executed; no model, weight or provider was downloaded or called. Line counts are wc -l of the pinned blob.",
+  "licenses": {
+    "TheHalfMoon/Yamakan": "GPL-3.0 (LICENSE; package.json GPL-3.0-or-later)",
+    "OpenCut-app/opencut-classic@cf5e79e9": "MIT",
+    "LudwigKienle/ai-video-production-editor@752cd43d": "GPL-3.0-or-later (NOTICE: copyright Ludwig Maximillian Kienle; TRADEMARK.md: no trademark licence for presenting a fork as the official project)",
+    "storytold/artcraft@28a39a0d": "LICENSE-APACHE and LICENSE-MIT",
+    "invoke-ai/InvokeAI@ffe9e1a9": "Apache-2.0 (plus separate model licence files, not imported)",
+    "Comfy-Org/ComfyUI@7f7fd918": "GPL-3.0",
+    "calesthio/OpenMontage@9327439d": "AGPL-3.0",
+    "mne03005-png/OpenVideoStudio@175da996": "Apache-2.0 with NOTICE",
+    "Vanilagy/mediabunny@9d36fc57": "MPL-2.0 (package 1.61.3)",
+    "AcademySoftwareFoundation/OpenTimelineIO@00c22fa3": "Apache-2.0 (LICENSE.txt, NOTICE.txt; CLA for contributions upstream only)",
+    "ThaUnknown/jassub@dea3d2d3": "package.json 2.5.20: LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0 (libass and dependencies compiled to WebAssembly)",
+    "openvideodev/react-video-editor@9a8c5296": "OpenVideo company-size licence (not an OSI licence)",
+    "remotion-dev/remotion@9fdd1fc4": "Remotion company-size licence (not an OSI licence)"
+  },
+  "comfyui": {
+    "files": {
+      "server.py": 1568,
+      "execution.py": 1464
+    },
+    "httpRoutes": [
+      "GET /",
+      "GET /ws (WebSocket)",
+      "GET /api/jobs",
+      "GET /api/jobs/{job_id}",
+      "POST /api/jobs/cancel",
+      "POST /api/jobs/{job_id}/cancel",
+      "GET /embeddings",
+      "GET /extensions",
+      "GET /features",
+      "GET /history",
+      "GET /history/{prompt_id}",
+      "POST /history",
+      "GET /models",
+      "GET /models/{folder}",
+      "GET /object_info",
+      "GET /object_info/{node_class}",
+      "GET /prompt",
+      "POST /prompt",
+      "GET /queue",
+      "POST /queue",
+      "POST /interrupt",
+      "POST /free",
+      "GET /system_stats",
+      "GET /view",
+      "GET /view_metadata/{folder_name}",
+      "POST /upload/image",
+      "POST /upload/mask"
+    ],
+    "finding": "The integration boundary is the HTTP API (submit a graph, poll history, cancel, view outputs, free). Yamakan wraps it as an engine (ladder D) in a separate contained process; no ComfyUI source is copied. ComfyUI custom nodes execute arbitrary Python, so only a pinned node set may be installed."
+  },
+  "openvideostudio": {
+    "files": {
+      "studio/identity/models.py": 46,
+      "studio/identity/assets.py": 66,
+      "studio/creative/identity.py": 206,
+      "studio/creative/validation.py": 114,
+      "studio/providers/_comfy_client.py": 147,
+      "studio/core/render.py": 340
+    },
+    "identityContracts": "Frozen dataclasses ReferenceImage(path, view), CharacterAsset(character_id, root, description, reference_images, clothing, accessories, embeddings, bible_version), IdentityEncoding(character_id, provider, method, payload, metadata), IdentityApplication(prompt, controls, metadata).",
+    "comfyClient": "ComfyClient(server default http://127.0.0.1:8188): is_available, upload_input_image, submit, wait_for_result (polling), cancel, output_path, free. Uses requests and a local comfy_root path.",
+    "finding": "Identity contracts are small and pure: port to TypeScript/zod (ladder B) keyed by canonical asset ids instead of paths. The ComfyUI client shape is a direct reference for Yamakan's engine adapter; its polling and filesystem output lookup are replaced by job attempts and content-addressed import."
+  },
+  "openmontage": {
+    "files": {
+      "lib/checkpoint.py": 633,
+      "lib/pipeline_loader.py": 240,
+      "lib/delivery_promise.py": 247,
+      "lib/events.py": 118,
+      "pipeline_defs/framework-smoke.yaml": 25
+    },
+    "pipelineDefinitions": 13,
+    "manifestShape": "name, version, description, category, stability, default_checkpoint_policy, stages[] with name, required_artifacts_in, produces, tools_available, checkpoint_required, human_approval_default, success_criteria",
+    "checkpointFunctions": "validate_checkpoint, init_project, _enforce_stage_prerequisites, _archive_superseded_checkpoint, write_checkpoint, read_checkpoint, get_latest_checkpoint, get_completed_stages, get_next_stage (JSON Schema validated, file-per-stage under PROJECTS_DIR)",
+    "finding": "The manifest format and prerequisite rules are the reusable part; the file checkpoint store would be a second authority and is rejected. Port the manifest schema and prerequisite/approval rules onto durable jobs and revisions (ladder B), keeping AGPL notices on the ported files."
+  },
+  "filmEditor": {
+    "imported": 18,
+    "notImportedAudio": [
+      "src/services/audioMastering/audioMasteringService.ts",
+      "src/services/audioMastering/providers/localAudioMasteringProvider.ts",
+      "src/services/audioMastering/providers/remoteAudioMasteringProvider.ts",
+      "src/services/audioMastering/types.ts",
+      "src/services/audioRemasterService.ts"
+    ],
+    "finding": "No donor module renders a video clip's own sound; the MVP defect is fixed in Yamakan's own render plan. The remote mastering provider is excluded (hosted service)."
+  },
+  "yamakanDefect": {
+    "file": "core/render/plan.ts",
+    "observation": "AudioInstruction entries are created only when the clip's track is a sound track or the asset is audio (line 140 at main 6e471088); video assets add only picture layers. Recorded as open in specs/CURRENT.md (found 2026-10-13)."
+  }
+}

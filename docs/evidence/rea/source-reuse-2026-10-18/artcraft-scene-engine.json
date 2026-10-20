@@ -1,0 +1,130 @@
+{
+  "tool": "rea-agents 6.3.0 (local install)",
+  "command": "node <rea-agents>/scripts/rea.mjs analyze-javascript-application <sparse checkout of ArtCraft frontend/libs/components/pagescene/src/lib/engine> --json",
+  "date": "2026-10-18",
+  "target": {
+    "repository": "storytold/artcraft",
+    "commit": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "rootArtifactSha256": "919855ecf2424323b5c616e775119176f5d1b4fee02db197e9fe73157955c80e"
+  },
+  "evidenceId": "ev_344cd98f450dcdae98a5e4d687c1add83346b564e6b93bb72e4ca4aa8a52d609",
+  "result": {
+    "nodes": 448,
+    "edges": 856,
+    "parseFailures": 0,
+    "integrityContradictions": 0,
+    "externalImportsBySubsystem": {
+      "CustomOutlinePass.js": {
+        "three/examples/jsm/postprocessing/Pass.js": 4,
+        "three": 2
+      },
+      "EditorState": {
+        "three": 2
+      },
+      "FindSurfaces.js": {
+        "three": 2
+      },
+      "InfiniteGridHelper.ts": {
+        "three": 2
+      },
+      "KinHelpers": {
+        "three": 5
+      },
+      "SelectionOutlinePass.ts": {
+        "three/addons/postprocessing/Pass.js": 3,
+        "three": 2,
+        "@sparkjsdev/spark": 2
+      },
+      "TransformControls.js": {
+        "three": 20
+      },
+      "animation": {
+        "three": 2
+      },
+      "cameraMath.ts": {
+        "three": 5
+      },
+      "chromakey.js": {
+        "three": 2
+      },
+      "editor": {
+        "three": 22,
+        "three/addons/controls/PointerLockControls.js": 2,
+        "@storyteller/common": 2,
+        "three/addons/postprocessing/RenderPass.js": 2,
+        "three/addons/postprocessing/EffectComposer.js": 2,
+        "three/addons/postprocessing/OutputPass.js": 2
+      },
+      "editor.ts": {
+        "@sparkjsdev/spark": 2,
+        "three/addons/controls/PointerLockControls.js": 2,
+        "three/examples/jsm/libs/stats.module.js": 2,
+        "three/addons/controls/OrbitControls.js": 2,
+        "three": 2
+      },
+      "entrance": {
+        "three": 4,
+        "@sparkjsdev/spark": 3
+      },
+      "entranceAnimation.ts": {
+        "three": 2,
+        "@sparkjsdev/spark": 2
+      },
+      "events": {
+        "@storyteller/common": 2
+      },
+      "helper.ts": {
+        "three": 2
+      },
+      "internalBbox.ts": {
+        "three": 2
+      },
+      "keybinds_controls.ts": {
+        "three": 4,
+        "three/examples/jsm/Addons.js": 3
+      },
+      "keymap.ts": {
+        "@storyteller/keybinds": 7
+      },
+      "pickDropPosition.ts": {
+        "three": 2
+      },
+      "placeholder_manager.ts": {
+        "three/examples/jsm/loaders/FontLoader.js": 4,
+        "three": 2,
+        "three/addons/geometries/TextGeometry.js": 2
+      },
+      "pointer.ts": {
+        "three": 2
+      },
+      "recording": {
+        "mediabunny": 7,
+        "three": 2
+      },
+      "save_manager.ts": {
+        "@storyteller/common": 2,
+        "three": 2
+      },
+      "scene.spec.ts": {
+        "three": 4
+      },
+      "scene.ts": {
+        "@storyteller/ui-viewer-3d": 3,
+        "three/examples/jsm/Addons.js": 3,
+        "three/addons/loaders/GLTFLoader.js": 3,
+        "three/addons/loaders/MMDLoader.js": 2,
+        "three": 2,
+        "three/examples/jsm/loaders/FontLoader.js": 2,
+        "three/src/math/MathUtils.js": 2,
+        "@sparkjsdev/spark": 2,
+        "react-hot-toast": 2,
+        "@storyteller/common": 2
+      },
+      "scene_manager_api.ts": {
+        "lucide-react": 6,
+        "three": 2
+      }
+    }
+  },
+  "limitations": "Static, inert parse of a sparse checkout; no execution, no native engine. Import specifiers are as written; type-only imports are included."
+}
