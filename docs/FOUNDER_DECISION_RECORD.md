@@ -78,3 +78,16 @@ Approval line in the packet's format:
 - **Source:** written founder instruction titled "YAMAKAN — FINALIZE, VERIFY AND FREEZE THE IMPLEMENTATION PLAN", delivered to the implementing agent (Claude, Claude Code) in an interactive session on 2026-10-18. Chat instruction only.
 - **Recorded statements:** "The founder does NOT want to start implementation now." "I am not authorizing implementation today." "Do not merge the planning PR without my approval." The planning package is to be completed and frozen so that a future agent can start the first executable task without repeating research or planning.
 - **Effect:** PR #30 is updated with the final planning package and is not merged. No production code, implementation PR, model install, paid service or task W1–W18 is started. Implementation begins only on a later written start authorization ([START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md)).
+
+## 2026-10-21: start authorization for frozen plan (Track 1 and Track 2)
+
+- **Source and form:** written founder instruction titled "YAMAKAN — AUTONOMOUS ENGINEERING EXECUTION UNTIL VERIFIED COMPLETION", delivered to the implementing agent (Cursor) in an interactive session on the founder's Windows device `Abdulaziz` on 2026-10-21. Chat instruction only. There is no separate signed approval and no founder GitHub review; none is claimed.
+- **Bound freeze:** plan content commit `651733ab7f83ccb178523741b887016a12df6d4f`; freeze manifest at PR #30 head `d42b32b5003c4427fe31f2a6e7ee278e67e0fb87`; immutable tag `plan-freeze-2026-10-18` on the content commit. Main before merge was `6e471088a56b6bdda4fef29c747167827958a224`.
+- **Authorized scope:**
+  - Finalize and merge planning PR #30 through normal GitHub process.
+  - Track 1 MVP engineering W1–W7 and Track 2 reuse-first expansion W8–W18 under Architecture B.
+  - Qualify and merge dependency PRs #19, #24 and #29 (or recorded successors) when gates pass.
+  - Ordinary merges after independent review, exact-head CI and repository merge discipline.
+- **Still not authorized without a further explicit instruction:** purchases, paid cloud services, paid inference, paid API usage, model-weight downloads, public production deployment, and an artifact-bound public ship decision.
+- **Gates that remain execution-time requirements:** H1–H5, E-SEC, founder decisions F and G, and any genuine external resource the plan already names. Blocked capabilities stay disabled; independent authorized work continues.
+- **Effect:** implementation of the frozen plan is authorized per [START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md). PR #30 merged as a normal merge commit; engineering begins at W1.
