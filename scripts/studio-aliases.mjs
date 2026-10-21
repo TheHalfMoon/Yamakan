@@ -56,6 +56,10 @@ export function studioAliases() {
       root,
       "src/studio/host/workbench/workbenchState.ts",
     ),
+    "@workbench/workbenchState.testing": path.join(
+      root,
+      "src/studio/host/workbench/workbenchState.testing.ts",
+    ),
     "@workbench/workbenchStore": path.join(
       root,
       "src/studio/host/workbench/workbenchStore.ts",

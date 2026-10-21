@@ -1,22 +1,22 @@
 # P10 progress
 
-**Last verified main SHA:** `c6d10f7a82fc17c0d39e1536331b6287b2dfa99e`  
+**Last verified main SHA:** `72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d`  
 **Updated:** 2026-10-21  
-**Open PRs:** #56 (P10-00 plan), #57 (P10-01 Studio Q8 — stacked on main)  
-**Next task:** Merge P10-00 (#56) when exact-head CI green; land P10-01 Q8 host fixes; continue Q9/Q10 before enablement.
+**Open PRs:** P10-01 Q9 inherited tests (in flight)  
+**Next task:** Land Q9 PR; measure Q10 stroke latency on 4096²×20; keep `STUDIO_ENABLED=false` until latency + residual exclusion rewrites close.
 
 ## Completed cards
 
 | Card | PR | Merge SHA | Notes |
 | --- | --- | --- | --- |
-| — | — | — | None yet |
+| P10-00 | #58 | `c19c01e` | Plan package + founder auth |
+| P10-01 Q8 | #57 | `72bc193` | Host assets + Playwright stroke PASS |
 
 ## Active work
 
 | Card | Branch / PR | Status |
 | --- | --- | --- |
-| P10-00 | #56 `docs/p10-qualification-plan` | Awaiting exact-head CI (prior run cancelled after long queue) |
-| P10-01 | #57 `feat/p10-01-studio-q8` | Q8 PASS locally; Q9/Q10 open; flag still false |
+| P10-01 Q9 | `feat/p10-01-studio-q9` | 98.36% node-mode remaining; ledgered; flag still false |
 
 ## Test outcomes (session)
 
