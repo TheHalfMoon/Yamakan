@@ -1,0 +1,28 @@
+{
+  "qualification": "Q10",
+  "aspect": "studio-application-chunk-gzip",
+  "checkedAt": "2026-10-21T14:53:00Z",
+  "gitHead": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+  "budgetMiBGzip": 2.5,
+  "passedChunk": true,
+  "passedLatency": false,
+  "passedOverall": false,
+  "viteBuildChunksKiBGzip": {
+    "engine": 87.12,
+    "rasterComposite": 21.39,
+    "port": 4.6,
+    "canvasMigration": 3.09,
+    "documentStore": 0.28,
+    "fonts": 0.32,
+    "indexIncludesStudioHost": 113.16,
+    "note": "index also includes the film editor; Studio-only dynamic imports are engine+port+raster+migration+hosts. Conservative Studio-related sum without shared index ≈ 116 KiB gzip."
+  },
+  "studioRelatedSumKiBGzipApprox": 116,
+  "latency": {
+    "fixture": "4096x4096 document with 20 layers",
+    "targetP95Ms": 16,
+    "measured": false,
+    "detail": "Deferred to dedicated qualify:q10 after Q9; Q8 stroke proof used 1024² empty document."
+  },
+  "binding": "Do not enable STUDIO_ENABLED on chunk-only evidence; stroke latency required."
+}

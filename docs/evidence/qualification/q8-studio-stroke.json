@@ -1,0 +1,28 @@
+{
+  "qualification": "Q8",
+  "module": "M7",
+  "task": "P10-01",
+  "checkedAt": "2026-10-21T14:53:17.237Z",
+  "gitHead": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+  "passed": true,
+  "detail": "React host mounted with forceMount; brush tool selected; pointer stroke changed document/layer epoch or undo stack; STUDIO_ENABLED remains false.",
+  "before": {
+    "tool": "view",
+    "layerPixelEpoch": 0,
+    "documentEpoch": 0,
+    "canUndo": false
+  },
+  "after": {
+    "tool": "brush",
+    "layerPixelEpoch": 1,
+    "documentEpoch": 0,
+    "canUndo": true,
+    "midPixel": [
+      54,
+      54,
+      54,
+      255
+    ]
+  },
+  "pageErrors": []
+}
