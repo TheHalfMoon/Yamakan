@@ -8,7 +8,13 @@
     "modifications": [
       "Add optional TimelineClip.soundEnabled for W1 preview parity with export."
     ],
-    "importedSha256": "f376e55a2266ec2fcd3040678485f539b3e0a21a8d2cd7afac81c01bbe7ed9e8"
+    "importedSha256": "f376e55a2266ec2fcd3040678485f539b3e0a21a8d2cd7afac81c01bbe7ed9e8",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -20,7 +26,13 @@
       "Use isolated LibraryAsset type; omit cloud-backed library hook.",
       "Duplicate clips use canonical UUIDs."
     ],
-    "importedSha256": "ef1b80d6057b3476dd1f2d5d070e860ea78564a8760e8146c0b90b764c07b8f0"
+    "importedSha256": "ef1b80d6057b3476dd1f2d5d070e860ea78564a8760e8146c0b90b764c07b8f0",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -32,7 +44,13 @@
       "Use individual media playback elements per clip, dispose detached media/context on removal/unmount, mute embedded video sound to match explicit-audio export, and fit portrait video within the project canvas.",
       "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity)."
     ],
-    "importedSha256": "2d6e4f7415c72bbe18b20a0bed26a897ae4ba49b4c717999276a00a310cb613b"
+    "importedSha256": "2d6e4f7415c72bbe18b20a0bed26a897ae4ba49b4c717999276a00a310cb613b",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -41,7 +59,13 @@
     "imported": "src/donors/film-editor/components/Waveform.tsx",
     "sha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
     "modifications": [],
-    "importedSha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e"
+    "importedSha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -50,7 +74,13 @@
     "imported": "src/donors/film-editor/components/icons.tsx",
     "sha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1",
     "modifications": [],
-    "importedSha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1"
+    "importedSha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -59,7 +89,13 @@
     "imported": "src/donors/film-editor/utils/timecode.ts",
     "sha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064",
     "modifications": [],
-    "importedSha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064"
+    "importedSha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -68,7 +104,13 @@
     "imported": "src/donors/film-editor/utils/colorGrading.ts",
     "sha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c",
     "modifications": [],
-    "importedSha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c"
+    "importedSha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -77,7 +119,13 @@
     "imported": "src/donors/film-editor/utils/colorWheels.ts",
     "sha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041",
     "modifications": [],
-    "importedSha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041"
+    "importedSha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -86,7 +134,13 @@
     "imported": "src/donors/film-editor/utils/lut.ts",
     "sha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969",
     "modifications": [],
-    "importedSha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969"
+    "importedSha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -95,7 +149,13 @@
     "imported": "src/donors/film-editor/utils/effects.ts",
     "sha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43",
     "modifications": [],
-    "importedSha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43"
+    "importedSha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -104,7 +164,13 @@
     "imported": "src/donors/film-editor/utils/historyState.ts",
     "sha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a",
     "modifications": [],
-    "importedSha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a"
+    "importedSha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -113,7 +179,13 @@
     "imported": "src/donors/film-editor/utils/historyState.test.ts",
     "sha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123",
     "modifications": [],
-    "importedSha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123"
+    "importedSha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "src/donors/film-editor/utils/historyState.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -122,7 +194,13 @@
     "imported": "src/donors/film-editor/utils/exportSettings.ts",
     "sha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d",
     "modifications": [],
-    "importedSha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d"
+    "importedSha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -131,7 +209,13 @@
     "imported": "src/donors/film-editor/utils/exportSettings.test.ts",
     "sha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc",
     "modifications": [],
-    "importedSha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc"
+    "importedSha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "src/donors/film-editor/utils/exportSettings.test.ts"
+    ]
   },
   {
     "source": "TheHalfMoon/Ninerr",
@@ -140,7 +224,15 @@
     "imported": "core/donors/ninerr/canonical.ts",
     "sha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039",
     "modifications": [],
-    "importedSha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039"
+    "importedSha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "persistence builder",
+    "tests": [
+      "tests/core.test.ts",
+      "tests/canonical-store.test.ts",
+      "tests/command.test.ts"
+    ]
   },
   {
     "source": "TheHalfMoon/Ninerr",
@@ -149,7 +241,13 @@
     "imported": "core/donors/ninerr/errors.ts",
     "sha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74",
     "modifications": [],
-    "importedSha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74"
+    "importedSha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "persistence builder",
+    "tests": [
+      "tests/core.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -158,7 +256,13 @@
     "imported": "src/donors/film-editor/data/moodboardTypes.ts",
     "sha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865",
     "modifications": [],
-    "importedSha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865"
+    "importedSha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -167,7 +271,13 @@
     "imported": "src/donors/film-editor/data/productionFormats.ts",
     "sha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476",
     "modifications": [],
-    "importedSha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476"
+    "importedSha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -178,7 +288,13 @@
     "modifications": [
       "Extract timeline/editor CSS and tokens only; omit remote fonts and unrelated global rules; scope tokens to Darzain app."
     ],
-    "importedSha256": "ec10b881ca35357be77dba06b57f7f5d0cc1d30c1d35f97162a0e069540cadf8"
+    "importedSha256": "ec10b881ca35357be77dba06b57f7f5d0cc1d30c1d35f97162a0e069540cadf8",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -200,7 +316,14 @@
       "T9c: the render worker runs sandboxed (restricted, low-integrity token) and may write only to its own worker/ subfolder, named in the worker request; only the main data stream of what it wrote is kept, copied by keepMainStream into a file the service creates in the staging folder the worker could never write, so neither the worker's permissions (on its file or its folder) nor alternate streams reach a published file.",
       "Resource policy v2 (agent decision, 2026-10-13): -threads is an FFmpeg per-input option, so every render input now gets renderThreads before its -i (the single global -threads, which bound only the first input, is removed) and the libx264 encoder takes the policy value; decoded frames and the encoder are unchanged, so rendered output and RENDERER_VERSION are unaffected."
     ],
-    "importedSha256": "5d28e288859dc7e90a45717ee7d6b24e0d60a88336845600f6bb32dec0cc59cf"
+    "importedSha256": "5d28e288859dc7e90a45717ee7d6b24e0d60a88336845600f6bb32dec0cc59cf",
+    "license": "GPL-3.0-or-later",
+    "authorization": "public-licence",
+    "owner": "editing builder",
+    "tests": [
+      "tests/render-plan.test.ts",
+      "tests/export-golden.test.ts"
+    ]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -210,7 +333,12 @@
     "sha256": "67deb21124c581eb5b099a073f11b71c47eb3aa0892e7aabb8835570fbaf3e20",
     "importedSha256": "67deb21124c581eb5b099a073f11b71c47eb3aa0892e7aabb8835570fbaf3e20",
     "modifications": [],
-    "authorization": "Founder-provided authorization in the Darzain master directive. No repository license file was found in this pinned snapshot; no third-party license is inferred."
+    "authorization": "founder-attested",
+    "license": "LicenseRef-NoUpstreamLicenseFile",
+    "owner": "storage builder",
+    "tests": [
+      "tests/skelet-storage.test.mjs"
+    ]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -222,36 +350,51 @@
     "modifications": [
       "Use Darzain module import; verify absolute generated temporary fixture paths before recursive cleanup on Windows; format test source."
     ],
-    "authorization": "Founder-provided authorization in the Darzain master directive. No repository license file was found in this pinned snapshot; no third-party license is inferred."
+    "authorization": "founder-attested",
+    "license": "LicenseRef-NoUpstreamLicenseFile",
+    "owner": "storage builder",
+    "tests": [
+      "tests/skelet-storage.test.mjs"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
-    "authorization": "Founder source-reuse authorization (docs/FOUNDER_DECISION_RECORD.md); MIT license preserved in notices/OpenCut-LICENSE",
+    "authorization": "public-licence",
     "original": "apps/web/src/timeline/snapping/build.ts",
     "imported": "core/donors/opencut/snapping.ts",
     "sha256": "7cf9b8dc203a691af38e99d16ceb401cb881055b93244f9f6afa65338ef46e1a",
     "modifications": [
       "Combined with snapping/resolve.ts and types.ts into one module; integer flick ticks replace the wasm MediaTime brand; formatted with Prettier."
     ],
-    "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279"
+    "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
-    "authorization": "Founder source-reuse authorization (docs/FOUNDER_DECISION_RECORD.md); MIT license preserved in notices/OpenCut-LICENSE",
+    "authorization": "public-licence",
     "original": "apps/web/src/timeline/snapping/resolve.ts",
     "imported": "core/donors/opencut/snapping.ts",
     "sha256": "73f7865940cd914b09070ca3daa03325b03a31bd33ebb6766dc0975736c6fc0d",
     "modifications": [
       "Combined with snapping/build.ts and types.ts into one module; integer flick ticks replace the wasm MediaTime brand; formatted with Prettier."
     ],
-    "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279"
+    "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
-    "authorization": "Founder source-reuse authorization (docs/FOUNDER_DECISION_RECORD.md); MIT license preserved in notices/OpenCut-LICENSE",
+    "authorization": "public-licence",
     "original": "apps/web/src/timeline/placement/overlap.ts",
     "imported": "core/donors/opencut/overlap.ts",
     "sha256": "0ed2ec979ea29d56a2dbbc3f456a8e4bee0850eddb342ad9dbaa6742c16d0001",
@@ -259,6 +402,11 @@
       "Elements are Yamakan clips ({ id, startTicks, durationTicks }) in integer flick ticks; PlacementTimeSpan inlined; formatted with Prettier.",
       "T6 review: element and span ends use checked tick addition (addTicks)."
     ],
-    "importedSha256": "56d0629bd8f19b517644df9ae4205b8166bda5521c8c81d6e1b54a4a0ac01ef7"
+    "importedSha256": "56d0629bd8f19b517644df9ae4205b8166bda5521c8c81d6e1b54a4a0ac01ef7",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   }
 ]

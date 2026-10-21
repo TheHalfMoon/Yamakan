@@ -1,0 +1,72 @@
+[
+  {
+    "source": "LudwigKienle/ai-video-production-editor",
+    "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
+    "original": "electron/main.js",
+    "sha256": "ad080726a70027bd3965a35d2933fc62eea83065122de43a994bc37c35c139be",
+    "reason": "Unsafe Electron shell: unrestricted filesystem and renderer-to-shell IPC."
+  },
+  {
+    "source": "LudwigKienle/ai-video-production-editor",
+    "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
+    "original": "electron/preload.js",
+    "sha256": "a9b4f709e827cb26bde7690d57218feb8d88e6bec7ed8f5d29b2ad93c92441a3",
+    "reason": "Renderer bridge exposing privileged desktop IPC."
+  },
+  {
+    "source": "LudwigKienle/ai-video-production-editor",
+    "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
+    "original": "electron/local-agents.js",
+    "sha256": "8aeaeb2f7cab0b5f1c68bc0869b24347afa77e65d726443d3c647c9a2fb3bb35",
+    "reason": "Arbitrary local command execution."
+  },
+  {
+    "source": "LudwigKienle/ai-video-production-editor",
+    "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
+    "original": "electron/midjourney-agent.js",
+    "sha256": "3084eff64b42c9f599c632cb03927800086de0a7cb276bcf3259c78ee2352549",
+    "reason": "Consumer-session automation of a third-party service."
+  },
+  {
+    "source": "LudwigKienle/ai-video-production-editor",
+    "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
+    "original": "electron/studio-mcp-server.js",
+    "sha256": "a4e3e871fe5f70f7f173035c82c45c3dd775937657209445a875391af4238318",
+    "reason": "Unbounded MCP server with desktop shell access."
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "crates/desktop/artcraft/tauri.conf.json",
+    "sha256": "a4ad1e841899779deccb623e279796faddcf29cda3cda3ee10e248c35ef9fdb9",
+    "reason": "Desktop configurations granting broad filesystem/shell capabilities."
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "crates/desktop/artcraft/capabilities/default.json",
+    "sha256": "a26f50269a7035b5012dc3455cb641ba609e33fc374dfb3c046075aaea91bc5c",
+    "reason": "Desktop configurations granting broad filesystem/shell capabilities."
+  },
+  {
+    "source": "mne03005-png/OpenVideoStudio",
+    "sha": "175da9960411fbe740932b0a08d57e32a4a36a18",
+    "original": "studio/core/render.py",
+    "sha256": "e0b00b575b3833005e30b700b667540e938649685e1e68118d31fb9e4bcc6e55",
+    "reason": "Alternate renderer; FFmpeg render plan is the single rendering authority."
+  },
+  {
+    "source": "Anil-matcha/Open-Generative-AI",
+    "sha": "d8d624dcf48a581fde18102f53d76a01a95ec58c",
+    "original": "packages/studio/src/muapi.js",
+    "sha256": "bae731359407ba035fb79e115075fdf911c45a6452676b44854ee73548277db0",
+    "reason": "Unqualified provider submit/poll proxy with ambiguous billing retries."
+  },
+  {
+    "source": "Anil-matcha/Open-Generative-AI",
+    "sha": "d8d624dcf48a581fde18102f53d76a01a95ec58c",
+    "original": "src/lib/muapi.js",
+    "sha256": "dea747fbda9ddc67aa4374267e8ec50b6db5a3ae69f706e193fc32654d4627e7",
+    "reason": "Unqualified provider submit/poll proxy with ambiguous billing retries."
+  }
+]

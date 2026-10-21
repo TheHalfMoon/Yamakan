@@ -1,6 +1,28 @@
 {
   "policy": "yamakan.import-policy/v1",
-  "donorRoots": ["src/donors", "core/donors"],
+  "donorRoots": [
+    "src/donors",
+    "core/donors",
+    "src/studio/canvas-engine",
+    "src/studio/host",
+    "src/cinema",
+    "core/director",
+    "core/engines"
+  ],
+  "sourceNotices": [
+    {
+      "source": "LudwigKienle/ai-video-production-editor",
+      "notices": ["notices/ai-video-production-editor-LICENSE"]
+    },
+    {
+      "source": "TheHalfMoon/Ninerr",
+      "notices": ["notices/Ninerr-LICENSE"]
+    },
+    {
+      "source": "OpenCut-app/opencut-classic",
+      "notices": ["notices/OpenCut-LICENSE"]
+    }
+  ],
   "localFilesInDonorRoots": [
     {
       "path": "src/donors/film-editor/libraryAsset.ts",
@@ -47,6 +69,26 @@
       "pattern": "(^|/)src-tauri/(capabilities|tauri\\.conf\\.json)",
       "source": "storytold/artcraft",
       "reason": "Desktop configurations granting broad filesystem/shell capabilities."
+    },
+    {
+      "pattern": "(^|/)crates/desktop/artcraft/(tauri\\.conf\\.json|capabilities/default\\.json)$",
+      "source": "storytold/artcraft",
+      "reason": "Desktop configurations granting broad filesystem/shell capabilities."
+    },
+    {
+      "pattern": "(^|/)crates/api_clients/(openai_sora_client|grok_consumer_client|midjourney_client|worldlabs_consumer_client|kinovi_web_client)(/|$)",
+      "source": "storytold/artcraft",
+      "reason": "Consumer-session cookie authentication clients."
+    },
+    {
+      "pattern": "(^|/)electron/lib/localInference\\.js$",
+      "source": "Anil-matcha/Open-Generative-AI",
+      "reason": "Silent retrying model downloads without idempotency."
+    },
+    {
+      "pattern": "(^|/)app/api/",
+      "source": "Anil-matcha/Open-Generative-AI",
+      "reason": "Single-aggregator provider proxies."
     },
     {
       "pattern": "(^|/)studio/core/render\\.py$",
