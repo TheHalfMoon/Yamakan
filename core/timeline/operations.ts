@@ -29,6 +29,7 @@ import {
 } from "../donors/opencut/group-move/index.ts";
 import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
 import { getSourceTimeAtClipTime } from "../donors/opencut/retime/resolve.ts";
+import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
 
 const UNITY = rational(1, 1);
 function clipRetime(c: CanonicalProject["clips"][number]) {
@@ -146,6 +147,21 @@ export const OperationSchema = z.discriminatedUnion("type", [
           den: z.number().int().positive().max(1_000_000),
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.unlinkSound"),
+      clipId: Id,
+      audioTrackId: Id,
+      audioClipId: Id,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.relinkSound"),
+      clipId: Id,
+      audioClipId: Id,
     })
     .strict(),
   z.object({ type: z.literal("scene.add"), sceneId: Id, name: Name }).strict(),
@@ -488,6 +504,20 @@ function apply(p: CanonicalProject, op: Operation): void {
       const c = clip(p, op.clipId);
       unlocked(p, c.trackId);
       if (!c.sound) throw invalid("Only a video clip has embedded sound.");
+      if (op.enabled === true && c.assetId) {
+        // W18: refuse re-enabling embedded sound while an unlinked audio
+        // clip still shares this asset (would double the bus).
+        const unlinked = p.clips.some(
+          (other) =>
+            other.id !== c.id &&
+            other.assetId === c.assetId &&
+            track(p, other.trackId).kind === "audio",
+        );
+        if (unlinked)
+          throw invalid(
+            "Relink the unlinked audio clip before enabling embedded sound.",
+          );
+      }
       if (op.enabled !== undefined) c.sound.enabled = op.enabled;
       if (op.gainDb !== undefined) c.sound.gainDb = op.gainDb;
       if (op.fadeInTicks !== undefined) c.sound.fadeInTicks = op.fadeInTicks;
@@ -504,6 +534,28 @@ function apply(p: CanonicalProject, op: Operation): void {
       unlocked(p, c.trackId);
       if (c.title !== null) throw invalid("Titles do not support retime.");
       c.speed = clampRetimeRate({ rate: op.speed });
+      return;
+    }
+    case "clip.unlinkSound": {
+      unlocked(p, clip(p, op.clipId).trackId);
+      unlocked(p, op.audioTrackId);
+      placeable(p, op.audioTrackId, clip(p, op.clipId).startTicks, clip(p, op.clipId).durationTicks);
+      const next = unlinkVideoSound(p, {
+        videoClipId: op.clipId,
+        audioTrackId: op.audioTrackId,
+        audioClipId: op.audioClipId,
+      });
+      p.formatVersion = next.formatVersion;
+      p.clips = next.clips;
+      return;
+    }
+    case "clip.relinkSound": {
+      const video = clip(p, op.clipId);
+      const audio = clip(p, op.audioClipId);
+      unlocked(p, video.trackId);
+      unlocked(p, audio.trackId);
+      const next = relinkVideoSound(p, op.clipId, op.audioClipId);
+      p.clips = next.clips;
       return;
     }
     case "scene.add":

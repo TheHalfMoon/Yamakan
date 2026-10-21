@@ -22,6 +22,12 @@ import {
 } from "./donors/opencut/retime/resolve.ts";
 import { atempoChain } from "./donors/opencut/retime/atempo.ts";
 import { rateAsFloat } from "./donors/opencut/retime/rate.ts";
+import {
+  applyPassFilter,
+  measurePassFilter,
+  parseLoudnormJson,
+} from "./audio/loudnorm.ts";
+import { withMeasuredLoudnorm } from "./render/plan.ts";
 export type RenderJob = {
   id: string;
   projectId: string;
@@ -206,8 +212,9 @@ export async function renderPlan(
     durationTicks: plan.durationTicks,
     output: "mp4",
   },
-): Promise<{ output: string; receipt: RenderReceipt }> {
-  const { profile } = plan;
+): Promise<{ output: string; receipt: RenderReceipt; plan: RenderPlan }> {
+  let activePlan = plan;
+  const { profile } = activePlan;
   const rate = `${profile.fps.num}/${profile.fps.den}`;
   const wStart = window.startTicks;
   const wEnd = wStart + window.durationTicks;
@@ -441,10 +448,64 @@ export async function renderPlan(
       visual = "titled";
     }
     filters.push(`[${visual}]setpts=PTS-STARTPTS[picture]`);
-    if (audio.length)
+    if (audio.length) {
+      // W18: optional two-pass loudnorm on the mixed bus before the limiter.
+      let loudTail = "alimiter=limit=0.95";
+      if (
+        window.output === "mp4" &&
+        activePlan.loudnorm &&
+        !activePlan.loudnorm.measured
+      ) {
+        const measureFilters = [
+          ...filters,
+          `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${measurePassFilter(activePlan.loudnorm.target)}[audio]`,
+        ];
+        const measureArgs = [
+          ...args,
+          "-filter_complex",
+          measureFilters.join(";"),
+          "-map",
+          "[audio]",
+          "-f",
+          "null",
+          "-",
+        ];
+        if (controller.signal.aborted) throw stopped();
+        const measured = await workers().run({
+          executable: mediaTools().ffmpeg,
+          args: measureArgs,
+          cwd: dir,
+          writable: [work],
+          readable: activePlan.titles
+            ? [
+                ...readable,
+                path.join(dir, "titles.ass"),
+                path.join(dir, "fonts"),
+                path.join(dir, "fonts.conf"),
+              ]
+            : readable,
+          workerEnv: titleFontconfig,
+          memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
+          signal: controller.signal,
+          stderrLimit: 32_000,
+        });
+        if (controller.signal.aborted) throw stopped();
+        if (measured.code !== 0)
+          throw new Error(
+            `FFmpeg failed loudnorm measure (exit ${measured.code}).`,
+            { cause: measured.stderr },
+          );
+        activePlan = withMeasuredLoudnorm(
+          activePlan,
+          parseLoudnormJson(measured.stderr),
+        );
+      }
+      if (activePlan.loudnorm?.measured)
+        loudTail = `${applyPassFilter(activePlan.loudnorm)},alimiter=limit=0.95`;
       filters.push(
-        `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},alimiter=limit=0.95[audio]`,
+        `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${loudTail}[audio]`,
       );
+    }
     args.push("-filter_complex", filters.join(";"), "-map", "[picture]");
     if (window.output === "png")
       args.push(
@@ -504,7 +565,7 @@ export async function renderPlan(
       // The render's own folder is the only place it may write.
       writable: [work],
       // The title files exist exactly when the plan has titles.
-      readable: plan.titles
+      readable: activePlan.titles
         ? [
             ...readable,
             path.join(dir, "titles.ass"),
@@ -556,8 +617,9 @@ export async function renderPlan(
     onProgress(1);
     return {
       output,
+      plan: activePlan,
       receipt: {
-        planHash: plan.planHash,
+        planHash: activePlan.planHash,
         width: probed.width,
         height: probed.height,
         durationFrames: window.output === "png" ? 1 : probed.durationFrames,
@@ -601,12 +663,15 @@ export async function renderRevision(
   signal: AbortSignal,
   onProgress: (value: number) => void,
   onCreated?: (pid: number) => void | Promise<void>,
+  options: { normalizeLoudness?: boolean } = {},
 ) {
   const { project, snapshotHash } = store.revisionCanonical(
     projectId,
     revision,
   );
-  const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts());
+  const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
+    normalizeLoudness: options.normalizeLoudness,
+  });
   const rendered = await renderPlan(
     store,
     plan,
@@ -616,5 +681,5 @@ export async function renderRevision(
     onProgress,
     onCreated,
   );
-  return { plan, ...rendered };
+  return { ...rendered, plan: rendered.plan };
 }

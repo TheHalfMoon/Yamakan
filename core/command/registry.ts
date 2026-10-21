@@ -24,10 +24,13 @@ import {
   approveStage,
   directorNext,
   grantConsent,
+  loadRun,
   recordEncoding,
   revokeConsentRecord,
   startDirectorRun,
 } from "../director/runtime.ts";
+import { builtinManifest } from "../director/manifest.ts";
+import { FLOW_ENABLED, flowSnapshot } from "../flow/snapshot.ts";
 
 export const RESOURCE_POLICY_HASH = sha256Hex(canonicalJson(RESOURCE_POLICY));
 
@@ -232,6 +235,63 @@ export const commands = {
         a.projectId,
         a.expectedRevision,
         [{ type: "clip.setSpeed", clipId: a.clipId, speed: a.speed }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.unlinkSound": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Unlink a video clip's embedded sound onto an audio track (format v4).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        audioTrackId: Id,
+        audioClipId: Id,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "clip.unlinkSound",
+            clipId: a.clipId,
+            audioTrackId: a.audioTrackId,
+            audioClipId: a.audioClipId,
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.relinkSound": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Relink an unlinked audio clip back into the video clip's sound.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        audioClipId: Id,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "clip.relinkSound",
+            clipId: a.clipId,
+            audioClipId: a.audioClipId,
+          },
+        ],
         principal.id,
         receipt,
       ),
@@ -485,9 +545,17 @@ export const commands = {
     mutation: true,
     summary: "Queue an MP4 export of the current project revision.",
     input: z
-      .object({ projectId: Id, idempotencyKey: z.string().min(1).max(80) })
+      .object({
+        projectId: Id,
+        idempotencyKey: z.string().min(1).max(80),
+        /** W18: two-pass loudnorm on the mixed audio bus. */
+        normalizeLoudness: z.boolean().optional(),
+      })
       .strict(),
-    run: ({ queue }, a) => queue.submit(a.projectId, a.idempotencyKey),
+    run: ({ queue }, a) =>
+      queue.submit(a.projectId, a.idempotencyKey, {
+        normalizeLoudness: a.normalizeLoudness === true,
+      }),
   }),
   "yamakan.job.status": define({
     scope: "job:read",
@@ -672,6 +740,28 @@ export const commands = {
     summary: "Return the next Director stage, blocked reasons, or done.",
     input: z.object({ runId: Id }).strict(),
     run: ({ store }, a) => directorNext(store, a.runId),
+  }),
+  "yamakan.flow.snapshot": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read-only Flow projection of a Director run (or builtin manifest). Issues no commands.",
+    input: z
+      .object({
+        pipelineName: z.string().min(1).max(80).optional(),
+        runId: Id.optional(),
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      if (!FLOW_ENABLED)
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Flow view is disabled.",
+        );
+      const run = a.runId ? await loadRun(store, a.runId) : null;
+      const name = a.pipelineName ?? run?.pipelineName ?? "framework-smoke";
+      return flowSnapshot(builtinManifest(name), run);
+    },
   }),
   "yamakan.agent.create": define({
     scope: "agent:create",

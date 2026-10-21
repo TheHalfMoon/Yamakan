@@ -1,0 +1,8 @@
+{
+  "format": "yamakan.qualification.w18-loudnorm/v1",
+  "targetI": -16,
+  "measuredBefore": -9.75,
+  "measuredAfter": -16.05,
+  "deltaLu": 0.05000000000000071,
+  "pass": true
+}

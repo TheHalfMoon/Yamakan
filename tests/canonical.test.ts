@@ -85,7 +85,7 @@ test("the 30 fps editing shape round-trips losslessly through canonical v1", () 
   const view = richView();
   const canonical = fromEditView(view, "ar");
   assert.equal(canonical.format, FORMAT);
-  assert.equal(canonical.formatVersion, 3);
+  assert.equal(canonical.formatVersion, 4);
   assert.equal(canonical.language, "ar");
   assert.deepEqual(canonical.output.fps, { num: 30, den: 1 });
   // One 30 fps frame is exactly 23,520,000 flicks.
@@ -166,12 +166,12 @@ test("canonical validation enforces refs, safe integers and strict keys", () => 
 test("newer formats can be inspected but not parsed for editing", () => {
   const newer = {
     ...fromEditView(richView()),
-    formatVersion: 4,
+    formatVersion: 5,
     futureField: { x: 1 },
   };
   assert.deepEqual(inspectFormat(newer), {
     format: FORMAT,
-    formatVersion: 4,
+    formatVersion: 5,
     supported: false,
   });
   assert.throws(
@@ -311,7 +311,7 @@ test("a stored v2 canonical snapshot upgrades to v3 with embedded sound disabled
   for (const a of v2.assets) delete a.hasAudio;
   for (const c of v2.clips) delete c.sound;
   const parsed = parseCanonical(v2);
-  assert.equal(parsed.formatVersion, 3);
+  assert.equal(parsed.formatVersion, 4);
   assert.equal(parsed.assets.find((a) => a.id === videoId)?.hasAudio, null);
   const migratedVideo = parsed.clips.find((c) => c.assetId === videoId)!;
   assert.equal(migratedVideo.sound?.enabled, false);
