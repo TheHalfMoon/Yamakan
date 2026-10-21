@@ -296,7 +296,10 @@ async function measureEmbeddedVideoSound(clickPeriod = 10) {
       await store.importAsset(created.id, "flash-embedded-30s.mp4", mediaBytes)
     ).asset;
     const head = await store.load(created.id);
-    const total = Math.min(picture.durationFrames, Math.floor(durationSeconds * 30));
+    const total = Math.min(
+      picture.durationFrames,
+      Math.floor(durationSeconds * 30),
+    );
     await store.save(
       {
         ...head,
@@ -415,7 +418,8 @@ async function measureEmbeddedVideoSound(clickPeriod = 10) {
         durationSeconds,
         mediaSha256: sha256(mediaBytes),
         exportSha256: sha256(exported),
-        exportSeconds: Math.round(((performance.now() - started) / 1000) * 10) / 10,
+        exportSeconds:
+          Math.round(((performance.now() - started) / 1000) * 10) / 10,
         exportFrames: frameCount,
       },
       marks: rows,
@@ -474,8 +478,7 @@ const receipt = {
     checks: embeddedVideoSound.checks,
     passed: embeddedVideoSound.passed,
   },
-  passed:
-    separateTracks.passed && controlDetected && embeddedVideoSound.passed,
+  passed: separateTracks.passed && controlDetected && embeddedVideoSound.passed,
 };
 await writeFile(RECEIPT, `${JSON.stringify(receipt, null, 2)}\n`);
 console.log(
