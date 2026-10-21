@@ -1,6 +1,13 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -76,7 +83,9 @@ test("uninstall does not follow a junction inside the version folder", async (t)
   }
   const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-"));
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-root-"));
-  const outside = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-out-"));
+  const outside = await mkdtemp(
+    path.join(tmpdir(), "yamakan-bundle-junc-out-"),
+  );
   bases.push(bundle, root, outside);
   await writeFile(path.join(outside, "keep.txt"), "survive\n", "utf8");
   await scaffoldDevBundle(bundle, "1.0.0-test");
@@ -85,7 +94,10 @@ test("uninstall does not follow a junction inside the version folder", async (t)
   await mkdir(path.join(versionDir, "trap"), { recursive: true });
   await symlink(outside, path.join(versionDir, "trap", "link"), "junction");
   await uninstallBinaries(root);
-  assert.equal(await readFile(path.join(outside, "keep.txt"), "utf8"), "survive\n");
+  assert.equal(
+    await readFile(path.join(outside, "keep.txt"), "utf8"),
+    "survive\n",
+  );
 });
 
 test("tampered bundle file fails verification", async () => {

@@ -172,8 +172,7 @@ try {
         commit,
         measuredAt: new Date().toISOString(),
         entries: transcript,
-        mcp:
-          "MCP parity replay for journey steps 2–11 remains open; this transcript records the export fixture path only.",
+        mcp: "MCP parity replay for journey steps 2–11 remains open; this transcript records the export fixture path only.",
       },
       null,
       2,

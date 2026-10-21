@@ -303,10 +303,7 @@ async function copyPinnedFonts(outDir: string) {
 
 async function copyPinnedNode(outDir: string, pinned: PinnedBinary) {
   await mkdir(path.join(outDir, "node"), { recursive: true });
-  await copyFile(
-    pinned.sourcePath,
-    path.join(outDir, pinned.relativePath),
-  );
+  await copyFile(pinned.sourcePath, path.join(outDir, pinned.relativePath));
 }
 
 async function copyPinnedMedia(

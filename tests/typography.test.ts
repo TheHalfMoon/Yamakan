@@ -7,10 +7,7 @@ import path from "node:path";
 import { mediaTools } from "../core/process/workers.ts";
 import { compileTitles, escapeAssText, assTime } from "../core/render/ass.ts";
 import { titleFonts, missingGlyphs } from "../core/render/fonts.ts";
-import {
-  fontconfigEnv,
-  stageTitleFonts,
-} from "../core/render/fontconfig.ts";
+import { fontconfigEnv, stageTitleFonts } from "../core/render/fontconfig.ts";
 import { overflows, renderRevision } from "../core/render.ts";
 import { ProjectStore } from "../core/store.ts";
 import {
@@ -506,8 +503,5 @@ test("Q3: without confinement, a host-only font name can substitute", async () =
     "Arial",
   );
   const { log } = await render(ass, { confined: false });
-  assert.match(
-    log,
-    /fontselect:.*-> Arial|not found, selecting one more font/,
-  );
+  assert.match(log, /fontselect:.*-> Arial|not found, selecting one more font/);
 });

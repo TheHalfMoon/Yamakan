@@ -13,10 +13,7 @@ import { compilePlan } from "./render/plan.ts";
 import type { RenderPlan } from "./render/plan.ts";
 import { titleFonts } from "./render/fonts.ts";
 import type { PinnedFont } from "./render/fonts.ts";
-import {
-  fontconfigEnv,
-  stageTitleFonts,
-} from "./render/fontconfig.ts";
+import { fontconfigEnv, stageTitleFonts } from "./render/fontconfig.ts";
 import { compileTitles } from "./render/ass.ts";
 import { titleCapability } from "./render/capability.ts";
 export type RenderJob = {
