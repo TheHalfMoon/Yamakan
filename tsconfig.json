@@ -44,6 +44,9 @@
       "@workbench/workbenchState": [
         "src/studio/host/workbench/workbenchState.ts"
       ],
+      "@workbench/workbenchState.testing": [
+        "src/studio/host/workbench/workbenchState.testing.ts"
+      ],
       "@workbench/workbenchStore": [
         "src/studio/host/workbench/workbenchStore.ts"
       ],
@@ -65,5 +68,17 @@
     "src",
     "tests",
     "vite.config.ts"
+  ],
+  "exclude": [
+    "src/studio/canvas-engine/**/*.browser.test.ts",
+    "src/studio/canvas-engine/render/golden/**",
+    "src/studio/canvas-engine/controllers/stagedResultController.integration.test.ts",
+    "src/studio/canvas-engine/controllers/structuralLayerController.test.ts",
+    "src/studio/canvas-engine/engine.heldAssets.test.ts",
+    "src/studio/canvas-engine/engine.mask.test.ts",
+    "src/studio/canvas-engine/engine.test.ts",
+    "src/studio/canvas-engine/tools/samTool.test.ts",
+    "src/studio/canvas-engine/controllers/stagedResultController.test.ts",
+    "src/studio/canvas-engine/render/compositeFrame.test.ts"
   ]
 }

@@ -1,8 +1,9 @@
 import type { CanvasStateContractV3 } from "../../canvas-engine/contracts";
+import type { CanvasProjectMutation } from "../../canvas-engine/mutationContracts";
 
 export type CanvasEditIntent = { kind: string; [k: string]: unknown };
 export type CanvasMutationOrigin = "user" | "system" | string;
-export type CanvasProjectMutation = { type: string; [k: string]: unknown };
+export type { CanvasProjectMutation };
 
 export interface CanvasProjectMutationPort {
   getCanvasState(): CanvasStateContractV3 | null;

@@ -24,6 +24,15 @@
       "render/compositeFrame.test.ts"
     ]
   },
+  "productionTscExclude": {
+    "reason": "Same Q9-excluded / browser / residual files must not fail `tsc --noEmit` for production build. Files remain in-repo for provenance and honest denominator accounting; vitest still owns runtime selection via vitest.config.ts.",
+    "paths": [
+      "src/studio/canvas-engine/**/*.browser.test.ts",
+      "src/studio/canvas-engine/render/golden/**",
+      "nodeModeDenominatorExclusions.files",
+      "remainingKnownFailuresExcludedFromDefaultCi.files"
+    ]
+  },
   "requiredRetained": [
     "src/studio/boundaries.test.ts"
   ]
