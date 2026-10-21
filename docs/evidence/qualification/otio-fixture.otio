@@ -1,0 +1,104 @@
+{
+  "OTIO_SCHEMA": "Timeline.1",
+  "name": "otio-oracle-fixture",
+  "tracks": {
+    "OTIO_SCHEMA": "Stack.1",
+    "children": [
+      {
+        "OTIO_SCHEMA": "Track.1",
+        "name": "Picture",
+        "kind": "Video",
+        "children": [
+          {
+            "OTIO_SCHEMA": "Gap.1",
+            "name": "gap",
+            "source_range": {
+              "OTIO_SCHEMA": "TimeRange.1",
+              "start_time": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 0
+              },
+              "duration": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 235200000
+              }
+            }
+          },
+          {
+            "OTIO_SCHEMA": "Clip.1",
+            "name": "pic.mp4",
+            "source_range": {
+              "OTIO_SCHEMA": "TimeRange.1",
+              "start_time": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 117600000
+              },
+              "duration": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 1411200000
+              }
+            },
+            "media_reference": {
+              "OTIO_SCHEMA": "ExternalReference.1",
+              "name": "pic.mp4",
+              "target_url": "yamakan:asset:33333333-3333-4333-8333-333333333333",
+              "metadata": {
+                "yamakan_asset_id": "33333333-3333-4333-8333-333333333333",
+                "yamakan_content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            },
+            "metadata": {
+              "yamakan_clip_id": "66666666-6666-4666-8666-666666666666",
+              "yamakan_timeline_start": "235200000"
+            }
+          }
+        ]
+      },
+      {
+        "OTIO_SCHEMA": "Track.1",
+        "name": "Sound",
+        "kind": "Audio",
+        "children": [
+          {
+            "OTIO_SCHEMA": "Clip.1",
+            "name": "tone.wav",
+            "source_range": {
+              "OTIO_SCHEMA": "TimeRange.1",
+              "start_time": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 0
+              },
+              "duration": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "rate": 705600000,
+                "value": 2116800000
+              }
+            },
+            "media_reference": {
+              "OTIO_SCHEMA": "ExternalReference.1",
+              "name": "tone.wav",
+              "target_url": "yamakan:asset:44444444-4444-4444-8444-444444444444",
+              "metadata": {
+                "yamakan_asset_id": "44444444-4444-4444-8444-444444444444",
+                "yamakan_content_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              }
+            },
+            "metadata": {
+              "yamakan_clip_id": "77777777-7777-4777-8777-777777777777",
+              "yamakan_timeline_start": "0"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "yamakan_project_id": "55555555-5555-4555-8555-555555555555",
+    "yamakan_format_version": "3"
+  }
+}
