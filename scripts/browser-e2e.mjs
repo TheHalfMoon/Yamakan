@@ -316,6 +316,11 @@ try {
   // The tool catalog is read with the page's session and shown in place
   // (a new tab would hold no session).
   await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  // W11: Studio is imported but disabled until Q8–Q10; show the gate reason.
+  const studio = page.getByTestId("studio-canvas");
+  await studio.waitFor();
+  assert.equal(await studio.getAttribute("data-studio-enabled"), "false");
+  await page.getByTestId("studio-disabled-reason").waitFor();
   await page
     .getByRole("button", {
       name: "Show the versioned tool catalog",
@@ -325,6 +330,10 @@ try {
   await page
     .locator("pre.catalog")
     .filter({ hasText: "yamakan.project.create" })
+    .waitFor();
+  await page
+    .locator("pre.catalog")
+    .filter({ hasText: "yamakan.studio.open" })
     .waitFor();
   await page.getByRole("button", { name: "Production", exact: true }).click();
   const picture = saved.clips.filter((c) =>
