@@ -1,0 +1,32 @@
+{
+  "qualification": "STUDIO_ACTIVATION",
+  "module": "M7",
+  "task": "P10-01",
+  "checkedAt": "2026-10-21T17:13:33.694Z",
+  "gitHead": "16f8154a1d0b9dd50350a16498878b2f8f70df92",
+  "prerequisites": {
+    "q8": "docs/evidence/qualification/q8-studio-stroke.json",
+    "q9": "docs/evidence/qualification/q9-studio-inherited.json",
+    "q10": "docs/evidence/qualification/q10-studio.json"
+  },
+  "passed": true,
+  "detail": "STUDIO_ENABLED=true mounts without forceMount; brush stroke advances epoch/undo; command capability available.",
+  "undoRedo": {
+    "canRedo": true,
+    "epoch": 1
+  },
+  "before": {
+    "tool": "view",
+    "layerPixelEpoch": 0,
+    "documentEpoch": 0,
+    "canUndo": false
+  },
+  "after": {
+    "tool": "brush",
+    "layerPixelEpoch": 1,
+    "documentEpoch": 0,
+    "canUndo": true,
+    "canRedo": false
+  },
+  "pageErrors": []
+}
