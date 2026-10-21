@@ -132,11 +132,10 @@ test("undo binds to the principal that wrote the batch", async () => {
   const { token: otherToken } = otherCreated.result as { token: string };
   const otherAgent = store.principalForAgentToken(otherToken)!;
   await assert.rejects(
-    execute(
-      { store, queue, principal: otherAgent },
-      "yamakan.project.undo",
-      { projectId: project.id, expectedRevision: after.revision },
-    ),
+    execute({ store, queue, principal: otherAgent }, "yamakan.project.undo", {
+      projectId: project.id,
+      expectedRevision: after.revision,
+    }),
     (e: unknown) =>
       e instanceof CommandError &&
       e.code === "REVISION_CONFLICT" &&
