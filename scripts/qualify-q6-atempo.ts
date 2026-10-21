@@ -31,9 +31,9 @@ const ffmpeg = (args: string[]) =>
   );
 
 const rates = [
-  { label: "0.5x", num: 1, den: 2 },
-  { label: "2x", num: 2, den: 1 },
-  { label: "1.5x", num: 3, den: 2 },
+  { label: "0.5x", key: "q6-half", num: 1, den: 2 },
+  { label: "2x", key: "q6-double", num: 2, den: 1 },
+  { label: "1.5x", key: "q6-three-halves", num: 3, den: 2 },
 ] as const;
 
 // Source must cover the fastest rate: 2× of a 6 s timeline needs 12 s of media.
@@ -81,7 +81,7 @@ try {
   }[] = [];
 
   for (const rate of rates) {
-    const created = await open.store.create(`q6-${rate.label}`);
+    const created = await open.store.create(rate.key);
     const imported = await open.store.importAsset(
       created.id,
       "av.mp4",
@@ -118,7 +118,7 @@ try {
       },
       head.revision,
     );
-    const job = await open.supervisor.submit(saved.id, `q6-${rate.label}`);
+    const job = await open.supervisor.submit(saved.id, rate.key);
     let state = open.supervisor.status(job.id);
     for (
       let i = 0;
