@@ -67,11 +67,11 @@ export async function resolvePinnedNode(): Promise<PinnedBinary> {
 export const EXTERNAL_BINARY_PINS = {
   ffmpeg: {
     url: "vendor/ffmpeg-win64-r8/ffmpeg.exe",
-    sha256: "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
+    sha256: "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
   },
   ffprobe: {
     url: "vendor/ffmpeg-win64-r8/ffprobe.exe",
-    sha256: "02e3a14c752bdb6b89d841a05d9647abda930b7918e841154eeed497c0b8ebe9",
+    sha256: "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
   },
   node: null as { url: string; sha256: string } | null,
 };

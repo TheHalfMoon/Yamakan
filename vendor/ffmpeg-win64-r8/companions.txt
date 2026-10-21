@@ -18,4 +18,5 @@ libpng16-16.dll
 libstdc++-6.dll
 libwinpthread-1.dll
 libx264-165.dll
+libx265-217.dll
 zlib1.dll
