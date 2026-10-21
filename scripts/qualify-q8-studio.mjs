@@ -4,12 +4,7 @@
  */
 import { chromium } from "playwright-core";
 import { fork } from "node:child_process";
-import {
-  mkdirSync,
-  writeFileSync,
-  mkdtempSync,
-  readFileSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
@@ -81,7 +76,9 @@ try {
     channel: process.env.YAMAKAN_BROWSER_CHANNEL || "msedge",
     headless: true,
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1050 },
+  });
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
@@ -94,7 +91,9 @@ try {
   await page
     .getByLabel("Project name", { exact: true })
     .fill("Q8 Studio stroke");
-  await page.getByRole("button", { name: "Create project", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
   await page
     .getByRole("heading", { name: "Q8 Studio stroke", exact: true })
     .waitFor();
@@ -147,7 +146,9 @@ try {
   });
 
   await page.evaluate(() => window.__yamakanStudioQ8.setBrushTool());
-  const tool = await page.evaluate(() => window.__yamakanStudioQ8.getActiveTool());
+  const tool = await page.evaluate(() =>
+    window.__yamakanStudioQ8.getActiveTool(),
+  );
   assert.equal(tool, "brush");
 
   const overlay = page.getByTestId("studio-overlay");
