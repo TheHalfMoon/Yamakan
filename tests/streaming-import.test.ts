@@ -19,6 +19,8 @@ import { ProjectStore } from "../core/store.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { probe } from "../core/media.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
+import { execute } from "../core/command/registry.ts";
+import type { CommandContext, Scope } from "../core/command/registry.ts";
 
 const ffmpeg = (args: string[]) =>
   execFileSync(
@@ -337,7 +339,6 @@ test("playlist and concat files cannot reach other files or the network", async 
 
 test("repair releases a fixed quarantined object and keeps a still-bad one quarantined", async () => {
   const { root, store, project } = await workspace();
-  const { execute } = await import("../core/command/registry.ts");
   const { readFile, writeFile, truncate } = await import("node:fs/promises");
   const wav = path.join(root, "tone.wav");
   ffmpeg(["-f", "lavfi", "-i", "sine=frequency=440:duration=1", wav]);
@@ -364,34 +365,42 @@ test("repair releases a fixed quarantined object and keeps a still-bad one quara
   const reopened = new ProjectStore(root);
   handles.push(reopened);
   await reopened.initialize();
-  const ctx = {
+  const repairScopes: ReadonlySet<Scope> = new Set<Scope>([
+    "project:read",
+    "project:write",
+    "project:recover",
+    "render:execute",
+    "job:read",
+    "job:control",
+  ]);
+  const ctx: CommandContext = {
     store: reopened,
     queue: null as any,
     principal: {
       id: "local-client" as const,
-      scopes: new Set([
-        "project:read",
-        "project:write",
-        "project:recover",
-        "render:execute",
-        "job:read",
-        "job:control",
-      ]),
+      scopes: repairScopes,
     },
   };
+  type RepairResult =
+    | { released: false; reason: string }
+    | { released: true };
   const stillBad = await execute(ctx, "yamakan.asset.repair", {
     projectId: project.id,
     assetId: bad.asset.id,
   });
-  assert.equal(stillBad.result.released, false);
-  assert.match(stillBad.result.reason, /size|content address|Media/i);
+  const stillBadResult = stillBad.result as RepairResult;
+  assert.equal(stillBadResult.released, false);
+  assert.match(
+    stillBadResult.released === false ? stillBadResult.reason : "",
+    /size|content address|Media/i,
+  );
   assert.equal(reopened.assetVersion(bad.asset.id)!.state, "quarantined");
   await writeFile(badFile, originalBytes);
   const fixed = await execute(ctx, "yamakan.asset.repair", {
     projectId: project.id,
     assetId: bad.asset.id,
   });
-  assert.equal(fixed.result.released, true);
+  assert.equal((fixed.result as RepairResult).released, true);
   assert.equal(reopened.assetVersion(bad.asset.id)!.state, "ready");
   await reopened.assetFile(project.id, bad.asset.id);
   await reopened.assetFile(project.id, good.asset.id);
