@@ -58,8 +58,7 @@ export type FaultPoint =
   | "before-commit"
   | "after-commit";
 export type RecoveryFaultPoint =
-  | "after-recovery-effect"
-  | "before-recovery-receipt";
+  "after-recovery-effect" | "before-recovery-receipt";
 export type StoreOptions = {
   fault?: (point: FaultPoint) => void;
   recoveryFault?: (point: RecoveryFaultPoint) => void;
@@ -388,7 +387,14 @@ export class ProjectStore {
         "PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;",
       );
       // Versioned, transactional schema steps; each commits on its own.
-      const steps = [SCHEMA, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6];
+      const steps = [
+        SCHEMA,
+        SCHEMA_V2,
+        SCHEMA_V3,
+        SCHEMA_V4,
+        SCHEMA_V5,
+        SCHEMA_V6,
+      ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
         db.exec("BEGIN IMMEDIATE");
@@ -1038,10 +1044,11 @@ export class ProjectStore {
       }
       return { ref: effectRef };
     });
-    if ("done" in reserved) return reserved.done;
+    if ("done" in reserved) return reserved.done as T;
     const ref = reserved.ref ?? effectRef;
     const resumed = await resume(ref);
-    if (resumed !== null) return this.#finishRecoveryReceipt(receipt, operation, resumed);
+    if (resumed !== null)
+      return this.#finishRecoveryReceipt(receipt, operation, resumed);
     const result = await effect(ref);
     this.#options.recoveryFault?.("after-recovery-effect");
     return this.#finishRecoveryReceipt(receipt, operation, result);

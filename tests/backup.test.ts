@@ -656,10 +656,7 @@ test("replaying a backup during concurrent edits returns the first backup manife
   assert.equal(again.backupId, first.backupId);
   assert.equal(again.objects, first.objects);
   const complete = (await listBackups(home)).filter((b) => b.complete);
-  assert.equal(
-    complete.filter((b) => b.backupId === first.backupId).length,
-    1,
-  );
+  assert.equal(complete.filter((b) => b.backupId === first.backupId).length, 1);
   store.close();
 });
 
@@ -689,10 +686,7 @@ test("a lost response after backup still replays the original result", async () 
     "lost-response",
   )) as { backupId: string; complete: true };
   assert.equal(healed.complete, true);
-  assert.equal(
-    (await listBackups(home)).filter((b) => b.complete).length,
-    1,
-  );
+  assert.equal((await listBackups(home)).filter((b) => b.complete).length, 1);
   store.close();
 });
 
