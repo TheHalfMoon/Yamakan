@@ -1,9 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d`  
+**Last verified main SHA:** `72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d` (pre-Q9 merge)  
 **Updated:** 2026-10-21  
-**Open PRs:** P10-01 Q9 inherited tests (in flight)  
-**Next task:** Land Q9 PR; measure Q10 stroke latency on 4096²×20; keep `STUDIO_ENABLED=false` until latency + residual exclusion rewrites close.
+**Open PRs:** #59 Q9 — CI green @ `6546794`; reviews recorded; merging  
+**Next task:** Merge #59; Q10 4096²×20 + app-chunk gzip; keep `STUDIO_ENABLED=false` until Q10 PASS.
 
 ## Completed cards
 
@@ -16,18 +16,23 @@
 
 | Card | Branch / PR | Status |
 | --- | --- | --- |
-| P10-01 Q9 | `feat/p10-01-studio-q9` | 98.36% node-mode remaining; ledgered; flag still false |
+| P10-01 Q9 | `feat/p10-01-studio-q9` / #59 | 120/122=98.36%; CI SUCCESS run 39638171676 @ `6546794`; flag false |
 
 ## Test outcomes (session)
 
 | Command / check | Result | Bound SHA |
 | --- | --- | --- |
-| Live frontier verify | main = `c6d10f7…`; open PRs none | `c6d10f7` |
-| Local dirty tree | clean | `c6d10f7` |
+| Exact-head CI #59 | qualify + windows-r8 + otio PASS | `6546794` |
+| Local `tsc` + `npm run build` | PASS | `6546794` |
+| Vitest smoke (boundaries/lasso/fontReferences) | 27/27 PASS | `6546794` |
+| Q9 ratio | 120/122 = 98.36% (≥90%) | `6546794` |
 
 ## Review findings
 
-None yet (planning package).
+- Correctness: PASS_WITH_RESIDUALS (`docs/evidence/qualification/q9-correctness-review.md`)
+- Architecture: PASS (`docs/evidence/qualification/q9-architecture-review.md`)
+- Security: PASS (`docs/evidence/qualification/q9-security-review.md`)
+- OpenCodeReview LLM: blocked (provider chatgpt unconfigured locally); recorded, not fabricated.
 
 ## Open external gates
 
