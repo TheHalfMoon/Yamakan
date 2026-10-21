@@ -14,7 +14,16 @@ import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
 import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
-import { mediaHeader, MAX_ASSET_BYTES, probe } from "./media.ts";
+import {
+  mediaHeader,
+  MAX_ASSET_BYTES,
+  probe,
+  verifyAndProbe,
+} from "./media.ts";
+import {
+  isHiddenVfrOriginal,
+  referencedDigestsInRetention,
+} from "./recovery.ts";
 import { LocalContentAddressedStorage } from "./donors/skelet/storage.ts";
 import { CommandError } from "./command/errors.ts";
 import {
@@ -1167,7 +1176,89 @@ export class ProjectStore {
         }
       }
     }
+    await this.#collectHiddenVfrOriginals(report);
     return report;
+  }
+  async #collectHiddenVfrOriginals(report: { objects: number; bytes: number }) {
+    if (this.#holds > 0 || this.#importing > 0) return;
+    const db = this.#database;
+    const projects = db.prepare("SELECT project_id FROM projects").all() as {
+      project_id: string;
+    }[];
+    for (const { project_id: projectId } of projects) {
+      if (this.#publishing.has(projectId) || this.#holds > 0) return;
+      const refs = referencedDigestsInRetention(
+        db,
+        projectId,
+        (hash, revision) => this.#canonical(hash, projectId, revision),
+      );
+      const rows = db
+        .prepare(
+          `SELECT v.version_id, v.digest, v.probe, o.byte_length
+           FROM asset_versions v
+           JOIN asset_objects o ON o.project_id = v.project_id AND o.digest = v.digest
+           WHERE v.project_id = ? AND o.state = 'ready'`,
+        )
+        .all(projectId) as {
+        version_id: string;
+        digest: string;
+        probe: string | null;
+        byte_length: number;
+      }[];
+      for (const row of rows) {
+        if (!isHiddenVfrOriginal(row.probe) || refs.has(row.digest)) continue;
+        const digest = this.transaction((inner) => {
+          const current = inner
+            .prepare(
+              "SELECT probe FROM asset_versions WHERE version_id = ? AND project_id = ?",
+            )
+            .get(row.version_id, projectId) as
+            { probe: string | null } | undefined;
+          if (!current || !isHiddenVfrOriginal(current.probe)) return null;
+          const liveRefs = referencedDigestsInRetention(
+            inner,
+            projectId,
+            (hash, revision) => this.#canonical(hash, projectId, revision),
+          );
+          if (liveRefs.has(row.digest)) return null;
+          inner
+            .prepare(
+              "DELETE FROM asset_versions WHERE version_id = ? AND project_id = ?",
+            )
+            .run(row.version_id, projectId);
+          const shared = inner
+            .prepare(
+              "SELECT 1 FROM asset_versions WHERE project_id = ? AND digest = ? LIMIT 1",
+            )
+            .get(projectId, row.digest);
+          if (shared) return null;
+          inner
+            .prepare(
+              "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
+            )
+            .run(projectId, row.digest);
+          return row.digest;
+        });
+        if (!digest) continue;
+        if (
+          await unlink(
+            await this.file(
+              projectId,
+              "objects",
+              "sha256",
+              digest.slice(0, 2),
+              digest,
+            ),
+          ).then(
+            () => true,
+            () => false,
+          )
+        ) {
+          report.objects++;
+          report.bytes += row.byte_length;
+        }
+      }
+    }
   }
   // Releases a staged version that never joined the project (its conversion
   // failed or was cancelled): the version row goes, and the object goes too
@@ -1824,6 +1915,55 @@ export class ProjectStore {
     const a = p.assets.find((a) => a.id === Id.parse(assetId));
     if (!a) throw new Error("Asset not found.");
     return { file: await this.readyObjectFile(id, a), asset: a };
+  }
+  async repairAsset(projectId: string, assetId: string) {
+    Id.parse(projectId);
+    Id.parse(assetId);
+    const version = this.assetVersion(assetId);
+    if (!version || version.projectId !== projectId)
+      throw new CommandError("NOT_FOUND", "Asset version was not found.");
+    if (version.state !== "quarantined")
+      throw new CommandError(
+        "VALIDATION",
+        "Only a quarantined asset can be repaired.",
+      );
+    const head = await this.load(projectId);
+    const asset = head.assets.find((a) => a.id === assetId);
+    if (!asset)
+      throw new CommandError(
+        "VALIDATION",
+        "The asset is not attached to the project head.",
+      );
+    const file = await this.file(
+      projectId,
+      "objects",
+      "sha256",
+      version.digest.slice(0, 2),
+      version.digest,
+    );
+    const result = await verifyAndProbe(file, version.digest, version.bytes);
+    if (!result.released)
+      return { released: false as const, reason: result.reason };
+    const probeRecord = JSON.stringify({
+      format: result.probed.format,
+      width: result.probed.width,
+      height: result.probed.height,
+      hasVideo: result.probed.hasVideo,
+      hasAudio: result.probed.hasAudio,
+      timebase: result.probed.timebase,
+      frameRate: result.probed.frameRate,
+      averageFrameRate: result.probed.averageFrameRate,
+      variableFrameRate: result.probed.variableFrameRate,
+    });
+    this.transaction((db) => {
+      db.prepare(
+        "UPDATE asset_objects SET state = 'ready' WHERE project_id = ? AND digest = ? AND state = 'quarantined'",
+      ).run(projectId, version.digest);
+      db.prepare(
+        "UPDATE asset_versions SET probe = ? WHERE version_id = ? AND project_id = ?",
+      ).run(probeRecord, assetId, projectId);
+    });
+    return { released: true as const };
   }
   // The file of a published object, by its hash: the object row is ready and
   // the file has the recorded size (bytes are re-hashed on import, restore

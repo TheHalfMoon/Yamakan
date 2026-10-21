@@ -19,6 +19,8 @@ import { ProjectStore } from "../core/store.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { probe } from "../core/media.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
+import { execute } from "../core/command/registry.ts";
+import type { CommandContext, Scope } from "../core/command/registry.ts";
 
 const ffmpeg = (args: string[]) =>
   execFileSync(
@@ -333,6 +335,74 @@ test("playlist and concat files cannot reach other files or the network", async 
       name,
     );
   }
+});
+
+test("repair releases a fixed quarantined object and keeps a still-bad one quarantined", async () => {
+  const { root, store, project } = await workspace();
+  const { readFile, writeFile, truncate } = await import("node:fs/promises");
+  const wav = path.join(root, "tone.wav");
+  ffmpeg(["-f", "lavfi", "-i", "sine=frequency=440:duration=1", wav]);
+  const good = await store.importAsset(
+    project.id,
+    "good.wav",
+    await readFile(wav),
+  );
+  ffmpeg(["-f", "lavfi", "-i", "sine=frequency=220:duration=1", wav]);
+  const bad = await store.importAsset(
+    project.id,
+    "bad.wav",
+    await readFile(wav),
+  );
+  const badFile = (await store.assetFile(project.id, bad.asset.id)).file;
+  const originalBytes = await readFile(badFile);
+  store.close();
+  await truncate(badFile, 10);
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.prepare(
+    "UPDATE asset_objects SET state = 'quarantined' WHERE digest = ?",
+  ).run(bad.asset.hash);
+  db.close();
+  const reopened = new ProjectStore(root);
+  handles.push(reopened);
+  await reopened.initialize();
+  const repairScopes: ReadonlySet<Scope> = new Set<Scope>([
+    "project:read",
+    "project:write",
+    "project:recover",
+    "render:execute",
+    "job:read",
+    "job:control",
+  ]);
+  const ctx: CommandContext = {
+    store: reopened,
+    queue: null as any,
+    principal: {
+      id: "local-client" as const,
+      scopes: repairScopes,
+    },
+  };
+  type RepairResult = { released: false; reason: string } | { released: true };
+  const stillBad = await execute(ctx, "yamakan.asset.repair", {
+    projectId: project.id,
+    assetId: bad.asset.id,
+  });
+  const stillBadResult = stillBad.result as RepairResult;
+  assert.equal(stillBadResult.released, false);
+  assert.match(
+    stillBadResult.released === false ? stillBadResult.reason : "",
+    /size|content address|Media/i,
+  );
+  assert.equal(reopened.assetVersion(bad.asset.id)!.state, "quarantined");
+  await writeFile(badFile, originalBytes);
+  const fixed = await execute(ctx, "yamakan.asset.repair", {
+    projectId: project.id,
+    assetId: bad.asset.id,
+  });
+  assert.equal((fixed.result as RepairResult).released, true);
+  assert.equal(reopened.assetVersion(bad.asset.id)!.state, "ready");
+  await reopened.assetFile(project.id, bad.asset.id);
+  await reopened.assetFile(project.id, good.asset.id);
+  reopened.close();
 });
 
 test("upgrading to schema v2 registers existing assets (ready, or quarantined if damaged)", async () => {

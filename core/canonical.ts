@@ -18,6 +18,7 @@ import {
   ticksToFrames,
 } from "./time.ts";
 import { CommandError } from "./command/errors.ts";
+import { canPlaceTimeSpansOnTrack } from "./donors/opencut/overlap.ts";
 
 export const FORMAT = "yamakan.project";
 export const FORMAT_VERSION = 3;
@@ -223,6 +224,34 @@ const ProjectBody = z
           )
         )
           fail("Clip extends beyond its source.");
+      }
+    }
+    for (const track of p.tracks) {
+      const onTrack = p.clips.filter((c) => c.trackId === track.id);
+      const elements = onTrack.map((c) => ({
+        id: c.id,
+        startTicks: c.startTicks,
+        durationTicks: c.durationTicks,
+      }));
+      for (const clip of onTrack) {
+        try {
+          const others = elements.filter((e) => e.id !== clip.id);
+          if (
+            !canPlaceTimeSpansOnTrack({
+              track: { elements: others },
+              timeSpans: [
+                {
+                  startTime: clip.startTicks,
+                  duration: clip.durationTicks,
+                  excludeElementId: clip.id,
+                },
+              ],
+            })
+          )
+            fail("Clips on a track cannot overlap.");
+        } catch {
+          // Unsafe or out-of-range ticks are reported by the tick validators.
+        }
       }
     }
   });

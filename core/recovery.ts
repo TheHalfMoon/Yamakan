@@ -37,6 +37,7 @@ import { CommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { inspectWal } from "./wal.ts";
 import { restrictToOwner } from "./process/access.ts";
+import type { CanonicalProject } from "./canonical.ts";
 import type { ProjectStore, RequestReceipt } from "./store.ts";
 
 export const BACKUP_FORMAT = "yamakan.backup/1";
@@ -904,3 +905,54 @@ export const healthy = (r: Awaited<ReturnType<typeof diagnoseWorkspace>>) =>
   r.objects.missing.length === 0 &&
   r.objects.mismatched.length === 0 &&
   r.objects.invalid.length === 0;
+
+function probeDerivedFromDigest(probe: string | null): string | null {
+  if (!probe) return null;
+  try {
+    const value = JSON.parse(probe) as { derivedFrom?: { digest?: string } };
+    const digest = value.derivedFrom?.digest;
+    return typeof digest === "string" && /^[a-f0-9]{64}$/.test(digest)
+      ? digest
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isHiddenVfrOriginal(probe: string | null): boolean {
+  if (!probe) return false;
+  try {
+    return JSON.parse(probe).variableFrameRate === true;
+  } catch {
+    return false;
+  }
+}
+
+// Digests retained revisions still reference, including variable-frame-rate
+// originals named by a derivative's lineage.
+export function referencedDigestsInRetention(
+  db: DatabaseSync,
+  projectId: string,
+  canonicalAt: (snapshotHash: string, revision: number) => CanonicalProject,
+): Set<string> {
+  const refs = new Set<string>();
+  const rows = db
+    .prepare(
+      "SELECT revision, snapshot_hash FROM revisions WHERE project_id = ?",
+    )
+    .all(projectId) as { revision: number; snapshot_hash: string }[];
+  for (const row of rows) {
+    const project = canonicalAt(row.snapshot_hash, row.revision);
+    for (const asset of project.assets) {
+      refs.add(asset.hash);
+      const version = db
+        .prepare(
+          "SELECT probe FROM asset_versions WHERE version_id = ? AND project_id = ?",
+        )
+        .get(asset.id, projectId) as { probe: string | null } | undefined;
+      const lineage = probeDerivedFromDigest(version?.probe ?? null);
+      if (lineage) refs.add(lineage);
+    }
+  }
+  return refs;
+}
