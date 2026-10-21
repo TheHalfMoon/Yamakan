@@ -29,7 +29,6 @@ assert.equal(qualityLabCapability().available, true);
 assert.equal(ROUTER_PROVIDERS_ENABLED, false);
 
 const digestA = "a".repeat(64);
-const digestB = "b".repeat(64);
 const outA = "1".repeat(64);
 const outB = "2".repeat(64);
 const comparison = {
