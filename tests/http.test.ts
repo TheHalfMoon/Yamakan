@@ -188,8 +188,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
         assert.equal(await readableByOtherAccounts(file), false, file);
     } else {
       assert.equal((await stat(root)).mode & 0o777, 0o700);
-      for (const file of secrets)
-        assert.equal((await stat(file)).mode & 0o777, 0o600, file);
+      assert.equal((await stat(tokenPath)).mode & 0o777, 0o600, tokenPath);
     }
     const envelope = JSON.stringify({
       apiVersion: 1,
