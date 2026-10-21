@@ -34,9 +34,7 @@ writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`);
 console.log(
   JSON.stringify({
     wrote: path,
-    sha256: createHash("sha256")
-      .update(JSON.stringify(receipt))
-      .digest("hex"),
+    sha256: createHash("sha256").update(JSON.stringify(receipt)).digest("hex"),
     verdict: receipt.verdict,
   }),
 );
