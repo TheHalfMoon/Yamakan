@@ -38,3 +38,11 @@ OpenMontage pipeline/stage rules (translated): AGPL-3.0, pin
 9327439db69021ab4b0e2776729bf3b58fdb5a87 — notices/OpenMontage-LICENSE.
 Combined distribution follows GPL-3.0 §13 for these translated modules; the
 loopback About view will carry the AGPL source-offer link when Director UI lands.
+
+Gomrey job transition rules (translated): Apache-2.0, pin
+5f299a7a6174ad3a1180f827778db5f4400a4d71 — notices/Gomrey-LICENSE,
+notices/Gomrey-NOTICE. Founder-attested.
+
+Ascout review-lineage independence concepts (translated): Apache-2.0, pin
+ca6b6f514e5a8881e2cfa2789b5e5ea43e3aaaad — notices/Ascout-LICENSE,
+notices/Ascout-NOTICE. Founder-attested; not independent review execution.

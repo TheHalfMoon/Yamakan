@@ -68,9 +68,27 @@
         "notices/InvokeAI-LICENSE",
         "notices/InvokeAI-NOTICE"
       ]
+    },
+    {
+      "source": "TheHalfMoon/Gomrey",
+      "notices": [
+        "notices/Gomrey-LICENSE",
+        "notices/Gomrey-NOTICE"
+      ]
+    },
+    {
+      "source": "TheHalfMoon/Ascout",
+      "notices": [
+        "notices/Ascout-LICENSE",
+        "notices/Ascout-NOTICE"
+      ]
     }
   ],
   "localFilesInDonorRoots": [
+    {
+      "path": "core/donors/gomrey/yamakan-transitions.ts",
+      "reason": "Yamakan JobState transition table extending Gomrey closed-machine style with preparing/validating/cancelRequested/reconciliationRequired/succeeded."
+    },
     {
       "path": "src/donors/film-editor/libraryAsset.ts",
       "reason": "Yamakan-authored type shim isolating the donor LibraryAsset type from its cloud-backed library hook (see Timeline.tsx ledger modification)."

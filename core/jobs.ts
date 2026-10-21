@@ -28,6 +28,35 @@ import { keepMainStream, renderRevision } from "./render.ts";
 import type { RenderJob } from "./render.ts";
 import { CommandError, toCommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
+import { IllegalTransition } from "./donors/gomrey/jobs.ts";
+import {
+  transitionYamakanJob,
+  type YamakanJobState,
+} from "./donors/gomrey/yamakan-transitions.ts";
+
+/** Assert Gomrey-style legal transition, then run the UPDATE inside the caller transaction. */
+function assertAndApplyJobState(
+  db: DatabaseSync,
+  jobId: string,
+  to: YamakanJobState,
+  apply: () => void,
+): void {
+  const row = db
+    .prepare("SELECT state FROM jobs WHERE job_id = ?")
+    .get(jobId) as { state: string } | undefined;
+  if (!row) {
+    throw new CommandError("NOT_FOUND", "Job not found.");
+  }
+  try {
+    transitionYamakanJob(jobId, row.state, to);
+  } catch (e) {
+    if (e instanceof IllegalTransition) {
+      throw new CommandError("VALIDATION", e.message);
+    }
+    throw e;
+  }
+  apply();
+}
 
 export type JobState =
   | "queued"
@@ -143,9 +172,14 @@ export class JobSupervisor {
         db.prepare(
           "UPDATE attempts SET state = 'failed', error = ? WHERE job_id = ? AND attempt_no = ?",
         ).run(INTERRUPTED, a.job_id, a.attempt_no);
-        db.prepare(
-          "UPDATE jobs SET state = ?, progress = 0 WHERE job_id = ?",
-        ).run(a.cancel_requested ? "cancelled" : "queued", a.job_id);
+        const next: YamakanJobState = a.cancel_requested
+          ? "cancelled"
+          : "queued";
+        assertAndApplyJobState(db, a.job_id, next, () => {
+          db.prepare(
+            "UPDATE jobs SET state = ?, progress = 0 WHERE job_id = ?",
+          ).run(next, a.job_id);
+        });
       }
       return stale;
     });
@@ -262,9 +296,11 @@ export class JobSupervisor {
           "VALIDATION",
           "Only jobs awaiting reconciliation can be retried.",
         );
-      db.prepare(
-        "UPDATE jobs SET state = 'queued', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
-      ).run(jobId);
+      assertAndApplyJobState(db, jobId, "queued", () => {
+        db.prepare(
+          "UPDATE jobs SET state = 'queued', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
+        ).run(jobId);
+      });
       return this.#row(db, jobId)!;
     });
     this.#pump();
@@ -290,9 +326,11 @@ export class JobSupervisor {
           "VALIDATION",
           "Only jobs awaiting reconciliation can be discarded.",
         );
-      db.prepare(
-        "UPDATE jobs SET state = 'cancelled', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
-      ).run(jobId);
+      assertAndApplyJobState(db, jobId, "cancelled", () => {
+        db.prepare(
+          "UPDATE jobs SET state = 'cancelled', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
+        ).run(jobId);
+      });
       return this.#row(db, jobId)!;
     });
     return this.#view(row);
@@ -303,14 +341,19 @@ export class JobSupervisor {
       const row = this.#row(db, jobId);
       if (!row) throw new Error("Job not found.");
       if (TERMINAL.includes(row.state)) return row;
-      if (row.state === "queued")
-        db.prepare(
-          "UPDATE jobs SET state = 'cancelled' WHERE job_id = ? AND state = 'queued'",
-        ).run(jobId);
-      else
-        db.prepare(
-          "UPDATE jobs SET state = 'cancelRequested', cancel_requested = 1 WHERE job_id = ?",
-        ).run(jobId);
+      if (row.state === "queued") {
+        assertAndApplyJobState(db, jobId, "cancelled", () => {
+          db.prepare(
+            "UPDATE jobs SET state = 'cancelled' WHERE job_id = ? AND state = 'queued'",
+          ).run(jobId);
+        });
+      } else {
+        assertAndApplyJobState(db, jobId, "cancelRequested", () => {
+          db.prepare(
+            "UPDATE jobs SET state = 'cancelRequested', cancel_requested = 1 WHERE job_id = ?",
+          ).run(jobId);
+        });
+      }
       return this.#row(db, jobId)!;
     });
     this.#controllers.get(jobId)?.abort();
@@ -394,9 +437,16 @@ export class JobSupervisor {
             .get(row.job_id, INTERRUPTED) as { n: number }
         ).n;
         if (interruptions >= MAX_INTERRUPTIONS) {
-          db.prepare(
-            "UPDATE jobs SET state = 'reconciliationRequired', error = 'The job was interrupted too many times.' WHERE job_id = ?",
-          ).run(row.job_id);
+          assertAndApplyJobState(
+            db,
+            row.job_id,
+            "reconciliationRequired",
+            () => {
+              db.prepare(
+                "UPDATE jobs SET state = 'reconciliationRequired', error = 'The job was interrupted too many times.' WHERE job_id = ?",
+              ).run(row.job_id);
+            },
+          );
           this.#setAside.push(row.job_id);
           continue;
         }
@@ -406,6 +456,12 @@ export class JobSupervisor {
   }
 
   #claimIn(db: DatabaseSync, row: Row, attempt: number) {
+    try {
+      transitionYamakanJob(row.job_id, row.state, "preparing");
+    } catch (e) {
+      if (e instanceof IllegalTransition) return null;
+      throw e;
+    }
     const moved = db
       .prepare(
         "UPDATE jobs SET state = 'preparing', error = NULL WHERE job_id = ? AND state = 'queued'",
@@ -447,17 +503,19 @@ export class JobSupervisor {
     error: string | null,
   ) {
     this.#fenced(jobId, attempt, (db) => {
-      db.prepare(
-        "UPDATE attempts SET state = ?, error = ? WHERE job_id = ? AND attempt_no = ?",
-      ).run(state === "queued" ? "failed" : state, error, jobId, attempt);
-      db.prepare(
-        "UPDATE jobs SET state = ?, error = ?, progress = ? WHERE job_id = ?",
-      ).run(
-        state,
-        state === "queued" ? null : error,
-        state === "queued" ? 0 : (this.#progress.get(jobId) ?? 0),
-        jobId,
-      );
+      assertAndApplyJobState(db, jobId, state, () => {
+        db.prepare(
+          "UPDATE attempts SET state = ?, error = ? WHERE job_id = ? AND attempt_no = ?",
+        ).run(state === "queued" ? "failed" : state, error, jobId, attempt);
+        db.prepare(
+          "UPDATE jobs SET state = ?, error = ?, progress = ? WHERE job_id = ?",
+        ).run(
+          state,
+          state === "queued" ? null : error,
+          state === "queued" ? 0 : (this.#progress.get(jobId) ?? 0),
+          jobId,
+        );
+      });
     });
   }
 
@@ -471,12 +529,14 @@ export class JobSupervisor {
   // The worker's identity is durable before it may run.
   #markRunning(jobId: string, attempt: number, pid: number) {
     this.#fenced(jobId, attempt, (db) => {
+      // CAS is authoritative when cancel wins the race; do not assert first.
       const moved = db
         .prepare(
           "UPDATE jobs SET state = 'running' WHERE job_id = ? AND state = 'preparing' AND cancel_requested = 0",
         )
         .run(jobId);
       if (moved.changes !== 1) throw new Error("Cancelled.");
+      transitionYamakanJob(jobId, "preparing", "running");
       db.prepare(
         "UPDATE attempts SET state = 'running', pid = ? WHERE job_id = ? AND attempt_no = ?",
       ).run(pid, jobId, attempt);
@@ -490,6 +550,7 @@ export class JobSupervisor {
         )
         .run(jobId);
       if (moved.changes !== 1) throw new Error("Cancelled.");
+      transitionYamakanJob(jobId, "running", "validating");
       db.prepare(
         "UPDATE attempts SET state = 'validating' WHERE job_id = ? AND attempt_no = ?",
       ).run(jobId, attempt);
@@ -526,6 +587,7 @@ export class JobSupervisor {
       )
       .run(artifact, receipt?.planHash ?? null, jobId);
     if (moved.changes !== 1) throw new Error("Cancelled.");
+    transitionYamakanJob(jobId, "validating", "succeeded");
     db.prepare(
       "UPDATE attempts SET state = 'succeeded', receipt = ? WHERE job_id = ? AND attempt_no = ?",
     ).run(receipt ? JSON.stringify(receipt) : null, jobId, attempt);

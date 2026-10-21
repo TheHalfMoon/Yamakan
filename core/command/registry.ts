@@ -37,6 +37,16 @@ import {
 } from "../director/runtime.ts";
 import { builtinManifest } from "../director/manifest.ts";
 import { FLOW_ENABLED, flowSnapshot } from "../flow/snapshot.ts";
+import {
+  QualityComparisonSchema,
+  qualityLabCapability,
+  summarizeBlindedComparison,
+} from "../quality/lab.ts";
+import { explainRoutes } from "../router/explain.ts";
+import {
+  evaluateReviewIndependenceV1,
+  type ReviewLineageV1,
+} from "../agents/lineage.ts";
 
 export const RESOURCE_POLICY_HASH = sha256Hex(canonicalJson(RESOURCE_POLICY));
 
@@ -830,6 +840,68 @@ export const commands = {
       const name = a.pipelineName ?? run?.pipelineName ?? "framework-smoke";
       return flowSnapshot(builtinManifest(name), run);
     },
+  }),
+  "yamakan.quality.capability": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Report Quality Lab availability (QUALITY_LAB_ENABLED gate).",
+    input: z.object({}).strict(),
+    run: () => qualityLabCapability(),
+  }),
+  "yamakan.quality.compare": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Summarize a blinded Quality Lab comparison (reproducible content hash).",
+    input: z
+      .object({
+        comparison: QualityComparisonSchema,
+      })
+      .strict(),
+    run: (_ctx, a) => summarizeBlindedComparison(a.comparison),
+  }),
+  "yamakan.router.explain": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Hard-filter routes before ranking; with providers disabled returns only rejections.",
+    input: z
+      .object({
+        operation: z.string().min(1).max(80),
+        region: z.string().min(1).max(40).optional(),
+        remainingBudgetMinor: z.number().int().nonnegative().optional(),
+      })
+      .strict(),
+    run: (_ctx, a) => explainRoutes(a),
+  }),
+  "yamakan.lineage.evaluate": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Evaluate Ascout-style review lineage independence (concepts only).",
+    input: z
+      .object({
+        author: z
+          .object({
+            model_family: z.string().min(1).max(64),
+            provider_identity: z.string().min(1).max(128).nullable(),
+            context_digest: z.string().regex(/^[a-f0-9]{64}$/),
+          })
+          .strict(),
+        reviewer: z
+          .object({
+            model_family: z.string().min(1).max(64),
+            provider_identity: z.string().min(1).max(128).nullable(),
+            context_digest: z.string().regex(/^[a-f0-9]{64}$/),
+          })
+          .strict(),
+      })
+      .strict(),
+    run: (_ctx, a) =>
+      evaluateReviewIndependenceV1(
+        a.author as ReviewLineageV1,
+        a.reviewer as ReviewLineageV1,
+      ),
   }),
   "yamakan.agent.create": define({
     scope: "agent:create",
