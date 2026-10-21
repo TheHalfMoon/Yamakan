@@ -67,7 +67,10 @@ export default defineConfig({
         root,
         "src/studio/platform/browser/sha256.ts",
       ),
-      "@platform/core/json": path.join(root, "src/studio/platform/core/json.ts"),
+      "@platform/core/json": path.join(
+        root,
+        "src/studio/platform/core/json.ts",
+      ),
       "@platform/ui/modalPresence": path.join(
         root,
         "src/studio/platform/ui/modalPresence.ts",

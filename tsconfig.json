@@ -31,13 +31,13 @@
       "@workbench/canvasProjectMutationPort": [
         "src/studio/host/workbench/canvasProjectMutationPort.ts"
       ],
-      "@workbench/controlAdapters": [
-        "src/studio/workbench/controlAdapters.ts"
-      ],
+      "@workbench/controlAdapters": ["src/studio/workbench/controlAdapters.ts"],
       "@workbench/projectContracts": [
         "src/studio/host/workbench/projectContracts.ts"
       ],
-      "@workbench/projectEvents": ["src/studio/host/workbench/projectEvents.ts"],
+      "@workbench/projectEvents": [
+        "src/studio/host/workbench/projectEvents.ts"
+      ],
       "@workbench/canvasStagingView": [
         "src/studio/workbench/canvasStagingView.ts"
       ],

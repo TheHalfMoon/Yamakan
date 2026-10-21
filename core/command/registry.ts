@@ -615,7 +615,8 @@ export const commands = {
   "yamakan.studio.capability": define({
     scope: "project:read",
     mutation: false,
-    summary: "Report Studio canvas availability (STUDIO_ENABLED / Q8–Q10 gate).",
+    summary:
+      "Report Studio canvas availability (STUDIO_ENABLED / Q8–Q10 gate).",
     input: z.object({}).strict(),
     run: () => studioCapability(),
   }),
