@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W15 Director identity and stages (M11–M12)
+
+- **Authority:** frozen plan W15 / M11–M12 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W14 merged at `498cf45`; W4/W10 prerequisites satisfied.
+- **Decision:** Translate OpenVideoStudio `175da996` identity contracts to `core/identity.ts` + `core/identity-format.ts` (asset ids, consent with purpose/expiry/revocation and encoding invalidation). Translate OpenMontage `9327439` stage rules to `core/director/{manifest,stages,runtime}.ts` with output-hash-bound human approvals. Register `yamakan.consent.{grant,revoke}`, `yamakan.identity.encode`, `yamakan.director.{start,advance,approve,next}`; keep `DIRECTOR_ENABLED = false`.
+- **Evidence:** `tests/identity.test.ts`, `tests/director-stages.test.ts` (journey 5 agent block); AGPL/Apache notices.
+- **Change rule:** enabling Director UI or real encoding providers needs a new ADR and E-SEC/F gates as applicable.
+
 ## 2026-10-21: W14 Cinema camera and scene3d (M8–M10)
 
 - **Authority:** frozen plan W14 / M8–M10 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W13 merged at `a6f287d`; W10 prerequisite satisfied.

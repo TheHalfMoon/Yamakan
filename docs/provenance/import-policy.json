@@ -37,6 +37,17 @@
         "notices/ArtCraft-LICENSE-APACHE",
         "notices/ArtCraft-NOTICE"
       ]
+    },
+    {
+      "source": "mne03005-png/OpenVideoStudio",
+      "notices": [
+        "notices/OpenVideoStudio-LICENSE",
+        "notices/OpenVideoStudio-NOTICE"
+      ]
+    },
+    {
+      "source": "calesthio/OpenMontage",
+      "notices": ["notices/OpenMontage-LICENSE"]
     }
   ],
   "localFilesInDonorRoots": [

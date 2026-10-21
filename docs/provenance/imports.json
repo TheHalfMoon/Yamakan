@@ -750,5 +750,125 @@
     "license": "Apache-2.0 OR MIT",
     "authorization": "public-licence",
     "owner": "cinema builder"
+  },
+  {
+    "source": "mne03005-png/OpenVideoStudio",
+    "sha": "175da9960411fbe740932b0a08d57e32a4a36a18",
+    "original": "studio/identity/models.py",
+    "imported": "core/identity.ts",
+    "sha256": "160268fce36d2dfc31a8454c4c474b487031005598a65ccea04a862f66435364",
+    "modifications": [
+      "Translated Python dataclasses to zod; paths become asset ids; bible_version becomes bibleRevision; added likeness consent schemas."
+    ],
+    "tests": [
+      "tests/identity.test.ts"
+    ],
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "f28717d0b7b3ff814c903133b3236a9fc97b8ffdc11e93d77cd84e51ba0a768e"
+  },
+  {
+    "source": "mne03005-png/OpenVideoStudio",
+    "sha": "175da9960411fbe740932b0a08d57e32a4a36a18",
+    "original": "studio/identity/assets.py",
+    "imported": "core/identity.ts",
+    "sha256": "c7a08f5520efea1053992e88a2465c10d654aab03fbab30bf5b26bcf4cc3d3bb",
+    "modifications": [
+      "Translated Character Bible loader rules into zod CharacterAsset and assertReferenceIsImageAsset (shared identity.ts)."
+    ],
+    "tests": [
+      "tests/identity.test.ts"
+    ],
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "f28717d0b7b3ff814c903133b3236a9fc97b8ffdc11e93d77cd84e51ba0a768e"
+  },
+  {
+    "source": "mne03005-png/OpenVideoStudio",
+    "sha": "175da9960411fbe740932b0a08d57e32a4a36a18",
+    "original": "studio/creative/identity.py",
+    "imported": "core/identity-format.ts",
+    "sha256": "f0d76b27f2072d7384c680f7925766c55fe308d9e47415859ca2f32abe9d4b56",
+    "modifications": [
+      "Translated format_character_identity/format_environment_identity and validate_identities; excluded LLM generate_identities."
+    ],
+    "tests": [
+      "tests/identity.test.ts"
+    ],
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "d5dcacf1a49d3e790d9cc89e2eb8e33ce70f1d664c5c5dc5f4b35b70021bb328"
+  },
+  {
+    "source": "calesthio/OpenMontage",
+    "sha": "9327439db69021ab4b0e2776729bf3b58fdb5a87",
+    "original": "schemas/pipelines/pipeline_manifest.schema.json",
+    "imported": "core/director/manifest.ts",
+    "sha256": "6d929fdb0a79e081b2c0fc06646acffb4c6060df4208a0bd4cdd693d0e3c65ec",
+    "modifications": [
+      "Translated JSON Schema to zod; tools_available forced empty; added framework-smoke builtin."
+    ],
+    "tests": [
+      "tests/director-stages.test.ts"
+    ],
+    "license": "AGPL-3.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "97733923daf9886cde14ff071e86f28d54d00c574dd6393c745e593dd21a0245"
+  },
+  {
+    "source": "calesthio/OpenMontage",
+    "sha": "9327439db69021ab4b0e2776729bf3b58fdb5a87",
+    "original": "lib/checkpoint.py",
+    "imported": "core/director/stages.ts",
+    "sha256": "2082cc353fa0c71f268f137e1018b3a467edc12318e2c922f6d4bbe42277eace",
+    "modifications": [
+      "Translated prerequisite/approval/next-stage rules; checkpoints become StageReceipt with output-hash-bound approvals."
+    ],
+    "tests": [
+      "tests/director-stages.test.ts"
+    ],
+    "license": "AGPL-3.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "e1b8c4059b5ffedde38174e0ff4a6c04651636bea79bc39ec0db2f698700a89a"
+  },
+  {
+    "source": "calesthio/OpenMontage",
+    "sha": "9327439db69021ab4b0e2776729bf3b58fdb5a87",
+    "original": "pipeline_defs/framework-smoke.yaml",
+    "imported": "assets/pipelines/framework-smoke.yaml",
+    "sha256": "597b46b3a160341d18d61ab4e9033e995875013dd80720746ca0c8801553313d",
+    "modifications": [
+      "Yamakan-authored smoke pipeline adding a timeline stage; tools_available empty."
+    ],
+    "tests": [
+      "tests/director-stages.test.ts"
+    ],
+    "license": "AGPL-3.0",
+    "authorization": "public-licence",
+    "owner": "director builder",
+    "importedSha256": "a9aa76ec375f5309878b533c9851a8c51129c511c834afd144ccc4fac0cf312d"
+  },
+  {
+    "source": "calesthio/OpenMontage",
+    "sha": "9327439db69021ab4b0e2776729bf3b58fdb5a87",
+    "original": "lib/pipeline_loader.py",
+    "imported": "core/director/runtime.ts",
+    "sha256": "7e3eb9c266a9c49ab2b8501cf11b53e1758e672eaae011a30e20b74f5f11f7ef",
+    "importedSha256": "2556a0ba913b8eb568b7742e78cc76f9a0b5231860b85e043459dda69d56e6df",
+    "modifications": [
+      "Yamakan workspace-backed director/consent runtime; builtin manifests replace file pipeline loader."
+    ],
+    "tests": [
+      "tests/director-stages.test.ts",
+      "tests/identity.test.ts"
+    ],
+    "license": "AGPL-3.0",
+    "authorization": "public-licence",
+    "owner": "director builder"
   }
 ]
