@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { RESOURCE_POLICY } from "./command/policy.ts";
+import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 const { timelineFrames, mediaDimension } = RESOURCE_POLICY.enforced;
 export const Id = z.uuid();
 const frame = z.number().int().min(0).max(timelineFrames);
@@ -75,12 +76,7 @@ export const ClipSchema = z
       .strict()
       .optional(),
     // W16/M6: optional animation channel map (path → channel). Absent when unused.
-    animation: z
-      .record(z.string().min(1).max(120), z.unknown())
-      .refine((m) => Object.keys(m).length <= 32, {
-        message: "At most 32 animation channels per clip.",
-      })
-      .optional(),
+    animation: ClipAnimationSchema.optional(),
   })
   .strict();
 const ShotSchema = z

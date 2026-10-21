@@ -19,6 +19,7 @@ import {
 } from "./time.ts";
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./donors/opencut/overlap.ts";
+import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 
 export const FORMAT = "yamakan.project";
 export const FORMAT_VERSION = 3;
@@ -96,13 +97,7 @@ const CanonicalClip = z
     // W9/M5: constant retime. Absent means 1/1 (no migration required).
     speed: RationalSchema.optional(),
     // W16/M6: OpenCut-shaped animation channel map (path → channel). Absent when unused.
-    // Validated loosely here; the animation module enforces keyframe structure when sampling.
-    animation: z
-      .record(z.string().min(1).max(120), z.unknown())
-      .refine((m) => Object.keys(m).length <= 32, {
-        message: "At most 32 animation channels per clip.",
-      })
-      .optional(),
+    animation: ClipAnimationSchema.optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
