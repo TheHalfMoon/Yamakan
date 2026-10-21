@@ -35,3 +35,41 @@ jobs:
           path: work/browser-e2e/
           if-no-files-found: ignore
           retention-days: 7
+
+  # R8/Q3: Windows fontconfig FFmpeg pin + procd companion DLL staging.
+  qualify-windows-r8:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          lfs: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build:native
+      - run: node --test tests/typography.test.ts tests/bundle.test.ts
+      - name: Probe fontconfig provider
+        shell: pwsh
+        run: |
+          $ff = Join-Path $env:GITHUB_WORKSPACE 'vendor/ffmpeg-win64-r8/ffmpeg.exe'
+          $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ("r8-" + [guid]::NewGuid().ToString('N')))
+          Set-Location $tmp
+          @'
+          [Script Info]
+          ScriptType: v4.00+
+          PlayResX: 64
+          PlayResY: 64
+          [V4+ Styles]
+          Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+          Style: Default,Arial,12,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,2,0,0,0,1
+          [Events]
+          Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+          Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,x
+          '@ | Set-Content -Encoding ascii t.ass
+          $log = & $ff -hide_banner -loglevel info -f lavfi -i color=c=black:s=64x64:d=0.04 -vf ass=t.ass -frames:v 1 -f null - 2>&1 | Out-String
+          if ($log -notmatch 'Using font provider fontconfig') { throw "expected fontconfig provider`n$log" }
+          if ($log -match 'font provider directwrite') { throw "DirectWrite must be disabled`n$log" }

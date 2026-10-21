@@ -2,6 +2,7 @@
 // install/update/rollback/uninstall. Code signing and auto-update servers are
 // intentionally out of scope.
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import {
   copyFile,
   lstat,
@@ -84,21 +85,24 @@ export async function resolvePinnedMediaTools(): Promise<{
   const node = await resolvePinnedNode();
   const ffmpeg = await hashFile(tools.ffmpeg);
   const ffprobe = await hashFile(tools.ffprobe);
-  if (
-    EXTERNAL_BINARY_PINS.ffmpeg &&
-    ffmpeg.sha256 !== EXTERNAL_BINARY_PINS.ffmpeg.sha256
-  ) {
-    throw new Error(
-      `Bundle FFmpeg SHA-256 ${ffmpeg.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffmpeg.sha256}). Use the R8 vendor pin.`,
-    );
-  }
-  if (
-    EXTERNAL_BINARY_PINS.ffprobe &&
-    ffprobe.sha256 !== EXTERNAL_BINARY_PINS.ffprobe.sha256
-  ) {
-    throw new Error(
-      `Bundle ffprobe SHA-256 ${ffprobe.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffprobe.sha256}). Use the R8 vendor pin.`,
-    );
+  // R8 pin is Windows-only; Linux CI scaffolds against apt FFmpeg.
+  if (process.platform === "win32") {
+    if (
+      EXTERNAL_BINARY_PINS.ffmpeg &&
+      ffmpeg.sha256 !== EXTERNAL_BINARY_PINS.ffmpeg.sha256
+    ) {
+      throw new Error(
+        `Bundle FFmpeg SHA-256 ${ffmpeg.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffmpeg.sha256}). Use the R8 vendor pin.`,
+      );
+    }
+    if (
+      EXTERNAL_BINARY_PINS.ffprobe &&
+      ffprobe.sha256 !== EXTERNAL_BINARY_PINS.ffprobe.sha256
+    ) {
+      throw new Error(
+        `Bundle ffprobe SHA-256 ${ffprobe.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffprobe.sha256}). Use the R8 vendor pin.`,
+      );
+    }
   }
   return {
     node,
@@ -358,10 +362,41 @@ async function copyPinnedMedia(
     path.join(outDir, pinned.ffprobe.relativePath),
   );
   // Companion DLLs for the R8 mingw64 pin (loaded from the exe directory).
-  const vendorDir = path.dirname(pinned.ffmpeg.sourcePath);
-  for (const name of await readdir(vendorDir)) {
-    if (!name.toLowerCase().endsWith(".dll")) continue;
-    await copyFile(path.join(vendorDir, name), path.join(ffmpegDir, name));
+  // Only the allowlisted set in companions.txt, each hash-checked vs SHA256SUMS.
+  if (process.platform === "win32") {
+    await copyPinnedCompanions(
+      path.dirname(pinned.ffmpeg.sourcePath),
+      ffmpegDir,
+    );
+  }
+}
+
+async function readSha256Sums(dir: string) {
+  const text = await readFile(path.join(dir, "SHA256SUMS"), "utf8");
+  const map = new Map<string, string>();
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^([0-9a-f]{64})\s+\*?(.+)$/i.exec(line.trim());
+    if (m) map.set(m[2].replace(/^\.\//, ""), m[1].toLowerCase());
+  }
+  return map;
+}
+
+async function copyPinnedCompanions(vendorDir: string, destDir: string) {
+  const listPath = path.join(vendorDir, "companions.txt");
+  if (!existsSync(listPath)) return;
+  const sums = await readSha256Sums(vendorDir);
+  const names = (await readFile(listPath, "utf8"))
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+  for (const name of names) {
+    const src = path.join(vendorDir, name);
+    const expected = sums.get(name);
+    if (!expected) throw new Error(`Companion ${name} missing from SHA256SUMS`);
+    const { sha256 } = await hashFile(src);
+    if (sha256 !== expected)
+      throw new Error(`Companion ${name} SHA-256 ${sha256} != pin ${expected}`);
+    await copyFile(src, path.join(destDir, name));
   }
 }
 

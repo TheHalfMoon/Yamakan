@@ -382,35 +382,55 @@ pub fn staged_tool(exe: &str) -> Result<String, String> {
     Ok(target.to_string_lossy().to_string())
 }
 
-/// Copy every `*.dll` next to the allowlisted source into the staged tools
-/// folder (byte-identical; skip when already matching).
+/// Copy allowlisted companion DLLs (from `companions.txt` beside the source
+/// exe) into the staged tools folder. Without companions.txt, nothing is
+/// copied (fully static builds). Never globs arbitrary `*.dll`.
 fn stage_sibling_dlls(src_dir: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
-    let entries = std::fs::read_dir(src_dir).map_err(|e| format!("list companion DLLs: {e}"))?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let Some(name) = path.file_name() else { continue };
-        let name_str = name.to_string_lossy();
-        if !name_str.to_ascii_lowercase().ends_with(".dll") {
+    let list = src_dir.join("companions.txt");
+    if !list.exists() {
+        return Ok(());
+    }
+    let text = std::fs::read_to_string(&list).map_err(|e| format!("read companions.txt: {e}"))?;
+    for line in text.lines() {
+        let name = line.trim();
+        if name.is_empty() || name.starts_with('#') {
             continue;
         }
+        if !name.to_ascii_lowercase().ends_with(".dll")
+            || name.contains('/')
+            || name.contains('\\')
+            || name.contains("..")
+        {
+            return Err(format!("invalid companion name: {name}"));
+        }
+        let path = src_dir.join(name);
+        if !path.is_file() {
+            return Err(format!("companion DLL missing: {name}"));
+        }
         let dest = dest_dir.join(name);
-        if dest.exists() && same_bytes(&path, &dest)? {
-            continue;
+        if dest.exists() {
+            if same_bytes(&path, &dest)? {
+                continue;
+            }
+            // Refuse a stale staged DLL the same way we refuse a stale exe.
+            return Err(format!(
+                "staged companion DLL {name} differs from its allowlisted source"
+            ));
         }
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let partial = dest_dir.join(format!("{name_str}.{}.{nanos}.partial", std::process::id()));
-        std::fs::copy(&path, &partial).map_err(|e| format!("copy companion DLL {name_str}: {e}"))?;
+        let partial = dest_dir.join(format!("{name}.{}.{nanos}.partial", std::process::id()));
+        std::fs::copy(&path, &partial).map_err(|e| format!("copy companion DLL {name}: {e}"))?;
         if !same_bytes(&path, &partial)? {
             let _ = std::fs::remove_file(&partial);
-            return Err(format!("companion DLL {name_str} differs from its source"));
+            return Err(format!("companion DLL {name} differs from its source"));
         }
         if let Err(e) = std::fs::rename(&partial, &dest) {
             let _ = std::fs::remove_file(&partial);
-            if !dest.exists() {
-                return Err(format!("publish companion DLL {name_str}: {e}"));
+            if !(dest.exists() && same_bytes(&path, &dest)?) {
+                return Err(format!("publish companion DLL {name}: {e}"));
             }
         }
     }

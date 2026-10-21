@@ -12,9 +12,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -30,9 +28,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -48,9 +44,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -63,9 +57,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -78,9 +70,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -93,9 +83,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -108,9 +96,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -123,9 +109,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -138,9 +122,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -153,9 +135,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -168,9 +148,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -183,9 +161,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "src/donors/film-editor/utils/historyState.test.ts"
-    ]
+    "tests": ["src/donors/film-editor/utils/historyState.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -198,9 +174,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -213,9 +187,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "src/donors/film-editor/utils/exportSettings.test.ts"
-    ]
+    "tests": ["src/donors/film-editor/utils/exportSettings.test.ts"]
   },
   {
     "source": "TheHalfMoon/Ninerr",
@@ -245,9 +217,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "persistence builder",
-    "tests": [
-      "tests/core.test.ts"
-    ]
+    "tests": ["tests/core.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -260,9 +230,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -275,9 +243,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -292,9 +258,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -323,10 +287,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/render-plan.test.ts",
-      "tests/export-golden.test.ts"
-    ]
+    "tests": ["tests/render-plan.test.ts", "tests/export-golden.test.ts"]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -339,9 +300,7 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": [
-      "tests/skelet-storage.test.mjs"
-    ]
+    "tests": ["tests/skelet-storage.test.mjs"]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -357,9 +316,7 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": [
-      "tests/skelet-storage.test.mjs"
-    ]
+    "tests": ["tests/skelet-storage.test.mjs"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -374,9 +331,7 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/donor-opencut.test.ts"
-    ]
+    "tests": ["tests/donor-opencut.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -391,9 +346,7 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/donor-opencut.test.ts"
-    ]
+    "tests": ["tests/donor-opencut.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -409,8 +362,22 @@
     "importedSha256": "56d0629bd8f19b517644df9ae4205b8166bda5521c8c81d6e1b54a4a0ac01ef7",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/donor-opencut.test.ts"
-    ]
+    "tests": ["tests/donor-opencut.test.ts"]
+  },
+  {
+    "source": "FFmpeg/FFmpeg + libass/libass (MSYS2 mingw64 redistributable pin)",
+    "sha": "ffmpeg-7.1.1 + libass-0.17.3 (see vendor/ffmpeg-win64-r8/BUILD.json)",
+    "authorization": "public-licence",
+    "original": "https://ffmpeg.org/releases/ffmpeg-7.1.1.tar.xz + https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.xz",
+    "imported": "vendor/ffmpeg-win64-r8/",
+    "sha256": "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
+    "modifications": [
+      "Cross-built/custom: libass meson -Ddirectwrite=disabled -Dfontconfig=enabled; FFmpeg --enable-gpl --enable-libass --enable-fontconfig (scripts/vendor/build-ffmpeg-win64-r8-msys2.sh).",
+      "Companion MinGW DLLs listed in companions.txt and SHA256SUMS; EXTERNAL_BINARY_PINS hash-gates ffmpeg.exe/ffprobe.exe on Windows."
+    ],
+    "importedSha256": "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
+    "license": "GPL-3.0-or-later",
+    "owner": "media builder",
+    "tests": ["tests/typography.test.ts", "tests/bundle.test.ts"]
   }
 ]

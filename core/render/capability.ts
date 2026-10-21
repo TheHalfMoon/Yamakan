@@ -75,9 +75,10 @@ async function probeTitles(): Promise<TitleCapability> {
       cwd: dir,
       readable: [path.join(dir, "probe.ass")],
       memoryBytes: RESOURCE_POLICY.enforced.workerMemoryBytes,
-      // A hung probe must not hold every title export.
+      // Cold R8 staging copies companion DLLs into worker-tools; allow headroom
+      // above the short media-probe wall without holding exports forever.
       signal: AbortSignal.timeout(
-        RESOURCE_POLICY.enforced.probeWallSeconds * 1000,
+        Math.max(RESOURCE_POLICY.enforced.probeWallSeconds, 60) * 1000,
       ),
       stderrLimit: 64_000,
       onStderr: (chunk: Buffer) => {
