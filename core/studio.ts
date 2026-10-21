@@ -95,17 +95,22 @@ export function createEmptyStudioDocument(input: {
       `Studio megapixels exceed ${STUDIO_LIMITS.maxMegapixels}.`,
     );
   }
+  // Stack keys and document fields must match CanvasStateContractV3 (snake_case).
   const canvas = {
     version: 3 as const,
+    documentRevision: 0,
+    snapshots: [] as unknown[],
     document: {
+      version: 3 as const,
       width,
       height,
+      background: "transparent" as const,
       selectedLayerId: null,
       stacks: {
         raster: [],
         control: [],
-        regionalGuidance: [],
-        inpaintMask: [],
+        regional_guidance: [],
+        inpaint_mask: [],
       },
       bbox: { x: 0, y: 0, width, height },
     },

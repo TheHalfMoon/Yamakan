@@ -1,10 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { STUDIO_ENABLED, studioCapability } from "./flags.ts";
+import { createStudioAssetStore } from "./host/assetStore.ts";
 
 type Props = {
   /** When true, attempt mount even if STUDIO_ENABLED is false (Q8 measurement). */
   forceMount?: boolean;
 };
+
+/** Q8 measurement handle exposed only while forceMount is active. */
+export type YamakanStudioQ8Handle = {
+  setBrushTool: () => void;
+  getActiveTool: () => string;
+  getLayerPixelEpoch: () => number;
+  getDocumentEpoch: () => number;
+  canUndo: () => boolean;
+  sampleScreenPixel: (x: number, y: number) => number[] | null;
+};
+
+declare global {
+  interface Window {
+    __yamakanStudioQ8?: YamakanStudioQ8Handle;
+  }
+}
 
 /**
  * Host shell for the canvas-engine. Talks only through the host port.
@@ -24,6 +41,7 @@ export function StudioCanvas({ forceMount = false }: Props) {
     }
     let cancelled = false;
     let destroy: (() => void) | undefined;
+    const assets = createStudioAssetStore();
     (async () => {
       try {
         const { createCanvasEngine } = await import("./canvas-engine/engine.ts");
@@ -43,37 +61,43 @@ export function StudioCanvas({ forceMount = false }: Props) {
         const composition = createCanvasEngine({
           projectId: session.document.id,
           mutationPort: port,
-          uploadImage: async (blob) => {
-            const bmp = await createImageBitmap(blob);
-            const meta = {
-              height: bmp.height,
-              width: bmp.width,
-              imageName: `studio-${crypto.randomUUID()}`,
-            };
-            bmp.close();
-            return meta;
-          },
-          uploadIntermediateImage: async (blob) => {
-            const bmp = await createImageBitmap(blob);
-            const meta = {
-              height: bmp.height,
-              width: bmp.width,
-              imageName: `tmp-${crypto.randomUUID()}`,
-            };
-            bmp.close();
-            return meta;
-          },
+          uploadImage: (blob) => assets.uploadImage(blob),
+          uploadIntermediateImage: (blob) => assets.uploadIntermediateImage(blob),
           reportError: (report) => {
             setError(String(report.message));
           },
-          imageResolver: async () => new Blob(),
+          imageResolver: (imageName, signal) =>
+            assets.imageResolver(imageName, signal),
           fonts,
         });
 
         composition.engine.surface.attach(screen, overlay);
         destroy = () => {
+          if (forceMount && window.__yamakanStudioQ8) {
+            delete window.__yamakanStudioQ8;
+          }
           composition.engine.lifecycle.dispose();
+          assets.dispose();
         };
+
+        if (forceMount) {
+          const { interaction, tools } = composition.engine;
+          window.__yamakanStudioQ8 = {
+            setBrushTool: () => tools.setTool("brush"),
+            getActiveTool: () => interaction.get("activeTool"),
+            getLayerPixelEpoch: () => interaction.get("layerPixelEpoch"),
+            getDocumentEpoch: () => interaction.get("documentEpoch"),
+            canUndo: () => interaction.get("canUndo"),
+            sampleScreenPixel: (x, y) => {
+              const ctx = screen.getContext("2d");
+              if (!ctx) return null;
+              const px = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1)
+                .data;
+              return [px[0], px[1], px[2], px[3]];
+            },
+          };
+        }
+
         if (!cancelled) setStatus("mounted");
       } catch (e) {
         if (!cancelled) {
@@ -92,6 +116,7 @@ export function StudioCanvas({ forceMount = false }: Props) {
     <section
       data-testid="studio-canvas"
       data-studio-enabled={STUDIO_ENABLED ? "true" : "false"}
+      data-studio-force-mount={forceMount ? "true" : "false"}
       data-studio-status={status}
       aria-label="Studio canvas"
     >
@@ -105,18 +130,21 @@ export function StudioCanvas({ forceMount = false }: Props) {
               ref={screenRef}
               width={1024}
               height={1024}
+              data-testid="studio-screen"
               style={{ width: "100%", height: "auto", display: "block" }}
             />
             <canvas
               ref={overlayRef}
               width={1024}
               height={1024}
+              data-testid="studio-overlay"
               style={{
                 position: "absolute",
                 inset: 0,
                 width: "100%",
                 height: "auto",
-                pointerEvents: "none",
+                // Engine binds pointer input to the overlay surface.
+                touchAction: "none",
               }}
             />
           </>

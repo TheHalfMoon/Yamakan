@@ -1,23 +1,27 @@
 {
   "qualification": ["Q8", "Q9", "Q10"],
   "module": "M7",
-  "task": "W11",
+  "task": "P10-01",
   "checkedAt": "2026-10-21",
+  "gitHeadAtQ8": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
   "results": {
     "Q8": {
-      "status": "scaffolded",
-      "detail": "StudioCanvas mounts createCanvasEngine behind host port (forceMount path). Full one-stroke browser proof deferred to enablement PR; STUDIO_ENABLED remains false.",
-      "passed": false
+      "status": "pass",
+      "detail": "Playwright Edge forceMount mount; brush stroke via pointer events; layerPixelEpoch 0→1; canUndo true; midPixel non-empty; STUDIO_ENABLED remains false. Receipt: q8-studio-stroke.json. Host asset store stores/resolves blobs; empty document stack keys fixed to CanvasStateContractV3.",
+      "passed": true,
+      "receipt": "docs/evidence/qualification/q8-studio-stroke.json",
+      "command": "npm run qualify:q8"
     },
     "Q9": {
       "status": "partial",
-      "detail": "Vitest scoped to src/studio/**; boundaries.test.ts passes (2/2). Full 145 inherited node-mode suite not yet imported (production-only copy for Q7a).",
+      "detail": "Vitest scoped to src/studio/**; boundaries + assetStore node tests pass. Full inherited node-mode suite (M7 field 5 exclusions) not yet restored to ≥90%.",
       "passed": false
     },
     "Q10": {
-      "status": "not-run",
-      "detail": "Chunk/latency measurement requires enabled Studio mount. Proper Q7a vite gzip was 119.71 KiB for engine-only lib entry (under 2.5 MiB budget) but is not the Studio app chunk.",
-      "passed": false
+      "status": "partial-chunk",
+      "detail": "Production vite build Studio-related gzip chunks (engine 87.12 KiB + rasterComposite 21.39 + port 4.60 + canvasMigration 3.09 + hosts <1) ≈ 116 KiB total — under 2.5 MiB app budget. Brush stroke p95 on 4096²×20 layers not yet measured.",
+      "passed": false,
+      "chunkNote": "Measured after Q8 host fixes; bind final receipt to enablement head."
     }
   },
   "binding": "STUDIO_ENABLED stays false until Q8–Q10 pass on an exact head."

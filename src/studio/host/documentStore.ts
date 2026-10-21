@@ -1,10 +1,10 @@
 import type { StudioDocument } from "../../../core/studio.ts";
 import {
   createEmptyStudioDocument,
-  hashStudioDocument,
   saveStudioDocument,
 } from "../../../core/studio.ts";
 import type { CanvasStateContractV3 } from "../canvas-engine/contracts";
+import { createEmptyCanvasState } from "../workbench/canvasMigration.ts";
 
 /** Maps StudioDocument ↔ engine canvas state without a second DB. */
 export function canvasFromStudioDocument(
@@ -37,6 +37,12 @@ export function newStudioSession(name = "Untitled studio"): {
   contentHash: string;
 } {
   const id = crypto.randomUUID();
-  const document = createEmptyStudioDocument({ id, name });
-  return { document, contentHash: hashStudioDocument(document) };
+  // Prefer the engine's empty canvas factory so stack keys and required fields match.
+  const canvas = createEmptyCanvasState(1024, 1024);
+  const document = createEmptyStudioDocument({ id, name, width: 1024, height: 1024 });
+  document.canvasJson = JSON.stringify(canvas);
+  // Do not call hashStudioDocument here: core/donors/ninerr uses node:crypto,
+  // which Vite externalizes and is not available in the browser bundle.
+  // Durable hashes are computed on the service when committing studio.* commands.
+  return { document, contentHash: "session-unhashed" };
 }

@@ -647,7 +647,13 @@ function App() {
               <p>{t("tools.intro")}</p>
               <h2>{t("studio.title")}</h2>
               <p>{t("studio.intro")}</p>
-              <StudioCanvas />
+              <StudioCanvas
+                forceMount={
+                  new URLSearchParams(window.location.search).get(
+                    "studioQ8",
+                  ) === "1"
+                }
+              />
               <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
               {/* Shown here: a new tab would hold no session. */}
               <p>
