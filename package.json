@@ -36,7 +36,8 @@
     "qualify:playback": "node scripts/qualify-playback.mjs",
     "qualify:release": "node scripts/qualify-release.ts",
     "qualify:release-evidence": "node scripts/qualify-release-evidence.ts",
-    "bundle": "node scripts/bundle.ts"
+    "bundle": "node scripts/bundle.ts",
+    "bundle:install-dev": "node scripts/bundle.ts install-dev"
   },
   "dependencies": {
     "react": "18.3.1",

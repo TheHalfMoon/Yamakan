@@ -49,6 +49,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** Q3 tests skip the confined case when DirectWrite is detected; fontconfig plumbing merged in PR #39 (`FONTCONFIG_FILE` allowlisted in procd).
 - **Change rule:** R8 closes only when Q3 passes on the bundle FFmpeg at an exact main head with committed receipts.
 
+## 2026-10-21: R8 machine survey — no fontconfig-runtime FFmpeg on host
+
+- **Authority:** same Q3/R8 binding as above; survey at main `00fe271`.
+- **Decision:** **`mediaTools()`** resolves `YAMAKAN_FFMPEG` / `DARZAIN_FFMPEG` when set, otherwise the first `ffmpeg` / `ffprobe` on `PATH` via `resolveExecutable` ([`core/process/workers.ts`](../core/process/workers.ts), [`core/process/owner.ts`](../core/process/owner.ts)). On this machine that is winget **Gyan.FFmpeg** `8.1.1-full_build` (`--enable-fontconfig` and `--enable-libass` at compile time, **DirectWrite at runtime** in libass logs). No other `ffmpeg.exe` was found under `%LOCALAPPDATA%` (except Yamakan worker-tool copies of the same binary), `%ProgramFiles%`, `%USERPROFILE%\scoop`, or `C:\tools` / `C:\msys64`. The repo does **not** vendor FFmpeg in git; W5 copies whatever `mediaTools()` resolves into the bundle manifest. **Q3 fail path** (custom FFmpeg with libass fontconfig provider and DirectWrite disabled per [Q3](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q15)) is **not satisfied** by app changes alone and was **not** attempted as an R8 close. **R8 stays open**; M-gate **not** declared.
+- **Evidence:** `tests/typography.test.ts` Q3 confined case skips on DirectWrite; negative control substitutes Arial. No download of a replacement binary (hash pin slot remains `EXTERNAL_BINARY_PINS` in `scripts/bundle.ts`).
+- **Change rule:** close R8 only after a pinned bundle FFmpeg passes Q3 with committed receipts.
+
 ## 2026-10-21: W6 provenance drift uses pin fetch when no local clone
 
 - **Authority:** W6 on branch `chore/provenance-brand` ([08 task card](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#w6--provenance-and-brand-tooling)).
