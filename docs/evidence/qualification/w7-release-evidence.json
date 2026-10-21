@@ -1,0 +1,17 @@
+{
+  "receipt": "yamakan.release-evidence-bundle/1",
+  "commit": "259db962f54ac934916da5abf6992f808d0265e8",
+  "measuredAt": "2026-10-21T03:29:20.389Z",
+  "artifacts": {
+    "exportHashes": "docs/evidence/qualification/w7-export-hashes.json",
+    "ffprobe": "docs/evidence/qualification/w7-export-ffprobe.json",
+    "titleFrameHashes": "docs/evidence/qualification/w7-title-frame-hashes.json",
+    "sessionTranscript": "docs/evidence/qualification/w7-session-transcript.json",
+    "audioReport": "docs/evidence/qualification/q1-has-audio.json",
+    "avSyncReport": "docs/evidence/qualification/av-sync.json",
+    "processLifecycle": "docs/evidence/qualification/t10-release.json (offline.serviceTree and tests)"
+  },
+  "notInGit": [
+    "export MP4 bytes (hash in w7-export-hashes.json)"
+  ]
+}
