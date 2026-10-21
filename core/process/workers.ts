@@ -18,8 +18,8 @@ const ROOT = path.resolve(
 export const VENDOR_FFMPEG_DIR = path.join(ROOT, "vendor", "ffmpeg-win64-r8");
 
 const PINNED_SHA256 = {
-  ffmpeg: "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
-  ffprobe: "02e3a14c752bdb6b89d841a05d9647abda930b7918e841154eeed497c0b8ebe9",
+  ffmpeg: "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+  ffprobe: "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
 } as const;
 
 function sha256File(file: string) {

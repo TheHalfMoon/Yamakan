@@ -85,13 +85,13 @@ build_ffmpeg() {
       --pkg-config-flags=--static \
       --extra-cflags="-I$PREFIX/include" \
       --extra-ldflags="-L$PREFIX/lib" \
-      --extra-libs="-lfontconfig -lfreetype -lharfbuzz -lfribidi -lexpat -lpng -lz -lbz2 -lstdc++ -lwinpthread -lws2_32 -lgdi32 -lole32 -luser32 -lbcrypt -lstrmiids -lrpcrt4" \
+      --extra-libs="-lfontconfig -lfreetype -lharfbuzz -lfribidi -lexpat -lpng -lz -lbz2 -lx265 -lstdc++ -lwinpthread -lws2_32 -lgdi32 -lole32 -luser32 -lbcrypt -lstrmiids -lrpcrt4" \
       --enable-gpl --enable-version3 \
       --enable-static --disable-shared \
       --disable-doc --disable-ffplay --disable-debug \
       --enable-libass --enable-libfreetype --enable-fontconfig \
       --enable-libfribidi --enable-libharfbuzz \
-      --enable-libx264 --enable-libmp3lame --enable-libopus \
+      --enable-libx264 --enable-libx265 --enable-libmp3lame --enable-libopus \
       --enable-zlib \
       --disable-autodetect \
       --enable-ffmpeg --enable-ffprobe

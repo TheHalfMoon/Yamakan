@@ -1,6 +1,6 @@
 {
-  "receipt": "yamakan.ffmpeg-win64-r8/1",
-  "purpose": "Q3/R8: libass fontconfig provider, DirectWrite disabled",
+  "receipt": "yamakan.ffmpeg-win64-r8/2",
+  "purpose": "Q3/R8: libass fontconfig provider, DirectWrite disabled; libx265 for qualification fixtures",
   "ffmpegVersion": "7.1.1",
   "libassVersion": "0.17.3",
   "host": "msys2-mingw64",
@@ -8,17 +8,17 @@
     "directwrite": "disabled",
     "fontconfig": "enabled"
   },
-  "configureNotes": "Built via scripts/vendor/build-ffmpeg-win64-r8-msys2.sh. Free MSYS2 mingw64 toolchain; custom libass only.",
-  "ffmpegSha256": "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
-  "ffprobeSha256": "02e3a14c752bdb6b89d841a05d9647abda930b7918e841154eeed497c0b8ebe9",
+  "configureNotes": "Built via scripts/vendor/build-ffmpeg-win64-r8-msys2.sh with --enable-libx265.",
+  "ffmpegSha256": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+  "ffprobeSha256": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
   "binaries": {
     "ffmpeg.exe": {
-      "sha256": "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
-      "bytes": 24481792
+      "sha256": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+      "bytes": 24494080
     },
     "ffprobe.exe": {
-      "sha256": "02e3a14c752bdb6b89d841a05d9647abda930b7918e841154eeed497c0b8ebe9",
-      "bytes": 24347648
+      "sha256": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
+      "bytes": 24358912
     },
     "libbrotlicommon.dll": {
       "sha256": "ca7bc06ead80259971badf2cd0bfc688db9154dad65f139f49a38b4be9976f97",
@@ -99,6 +99,10 @@
     "libx264-165.dll": {
       "sha256": "0d814d13db7eeac0ff5264ed86d376f9260746323107cb07affb6c306b240329",
       "bytes": 2024174
+    },
+    "libx265-217.dll": {
+      "sha256": "23a4579cf07ad233818d53f941e846847876cb68f57e4492f943d26463cc995f",
+      "bytes": 22667339
     },
     "zlib1.dll": {
       "sha256": "93e9243a44c29200eeacaf9658efe2558581770e4b11ca4b500e18e424a6e3b5",
