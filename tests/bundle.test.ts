@@ -16,6 +16,7 @@ import {
   readCurrentVersion,
   rollback,
   scaffoldDevBundle,
+  installDevBundle,
   uninstallBinaries,
   resolvePinnedMediaTools,
   resolvePinnedNode,
@@ -98,6 +99,16 @@ test("uninstall does not follow a junction inside the version folder", async (t)
     await readFile(path.join(outside, "keep.txt"), "utf8"),
     "survive\n",
   );
+});
+
+test("install-dev scaffolds into LOCALAPPDATA and verifies", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "yamakan-bundle-install-dev-"),
+  );
+  bases.push(root);
+  const manifest = await installDevBundle("install-dev-test", root);
+  assert.equal(manifest.version, "install-dev-test");
+  await verifyInstalledBinaries(root);
 });
 
 test("tampered bundle file fails verification", async () => {

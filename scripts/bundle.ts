@@ -6,6 +6,7 @@ import {
   copyFile,
   lstat,
   mkdir,
+  mkdtemp,
   readFile,
   readdir,
   rm,
@@ -14,6 +15,7 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mediaTools } from "../core/process/workers.ts";
@@ -326,6 +328,24 @@ async function copyPinnedMedia(
   );
 }
 
+// W5/R6: external binary pins belong here before any download is added.
+// FFmpeg must pass Q3 at runtime (fontconfig provider, not DirectWrite-only).
+export const EXTERNAL_BINARY_PINS = {
+  ffmpeg: null as { url: string; sha256: string } | null,
+  ffprobe: null as { url: string; sha256: string } | null,
+  node: null as { url: string; sha256: string } | null,
+};
+
+export async function installDevBundle(version: string, root = installRoot()) {
+  const staging = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-stage-"));
+  try {
+    await scaffoldDevBundle(staging, version);
+    return await installVersion(staging, version, root);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
+}
+
 export async function scaffoldDevBundle(outDir: string, version: string) {
   await mkdir(outDir, { recursive: true });
   const pinned = await resolvePinnedMediaTools();
@@ -357,6 +377,21 @@ if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
   if (cmd === "scaffold") {
     const manifest = await scaffoldDevBundle(out, version);
     console.log(JSON.stringify({ out, manifest }, null, 2));
+  } else if (cmd === "install-dev") {
+    const manifest = await installDevBundle(version);
+    console.log(
+      JSON.stringify(
+        {
+          installRoot: installRoot(),
+          version,
+          manifest,
+          launchHint:
+            "Set YAMAKAN_BUNDLE_INSTALL to the install root before npm start to verify pinned binaries at launch. R8 (title-font substitution) stays open until bundle FFmpeg passes Q3.",
+        },
+        null,
+        2,
+      ),
+    );
   } else {
     throw new Error(`Unknown bundle command: ${cmd}`);
   }
