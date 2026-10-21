@@ -503,5 +503,6 @@ test("Q3: without confinement, a host-only font name can substitute", async () =
     "Arial",
   );
   const { log } = await render(ass, { confined: false });
-  assert.match(log, /fontselect:.*-> Arial|not found, selecting one more font/);
+  assert.match(log, /fontselect:.*\(Arial, 400, 0\) ->/);
+  assert.doesNotMatch(log, /fontselect:.*IBMPlexSansArabic/);
 });
