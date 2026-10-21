@@ -29,6 +29,14 @@
     {
       "source": "soundtouchjs",
       "notices": ["notices/soundtouchjs-LICENSE"]
+    },
+    {
+      "source": "storytold/artcraft",
+      "notices": [
+        "notices/ArtCraft-LICENSE-MIT",
+        "notices/ArtCraft-LICENSE-APACHE",
+        "notices/ArtCraft-NOTICE"
+      ]
     }
   ],
   "localFilesInDonorRoots": [

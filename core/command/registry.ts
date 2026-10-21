@@ -17,6 +17,7 @@ import {
   restoreFromHome,
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
+import { Scene3DSchema, saveScene3D } from "../scene3d.ts";
 
 export const RESOURCE_POLICY_HASH = sha256Hex(canonicalJson(RESOURCE_POLICY));
 
@@ -514,6 +515,18 @@ export const commands = {
       "Cancel a job that needs reconciliation without changing project revisions.",
     input: z.object({ jobId: Id }).strict(),
     run: ({ queue }, a) => queue.discard(a.jobId),
+  }),
+  "yamakan.scene.save": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Validate and content-hash a Cinema scene3d document (durable attach behind CINEMA_ENABLED).",
+    input: z
+      .object({
+        scene: Scene3DSchema,
+      })
+      .strict(),
+    run: (_ctx, a) => saveScene3D(a.scene),
   }),
   "yamakan.agent.create": define({
     scope: "agent:create",

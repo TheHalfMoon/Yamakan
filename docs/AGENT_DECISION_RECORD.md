@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W14 Cinema camera and scene3d (M8–M10)
+
+- **Authority:** frozen plan W14 / M8–M10 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W13 merged at `a6f287d`; W10 prerequisite satisfied.
+- **Decision:** Import ArtCraft `28a39a0d` `cameraMath.ts` and EditorStateJSON types byte-identical under `src/cinema/`; adapt `CameraController.ts` with callbacks (no event bus / `@storyteller/*`); pin `three@0.171.0`; define `core/scene3d.ts` (metres, Euler order, camera intrinsics, asset ids, M9 limits; no `media_file_token`); register `yamakan.scene.save`; keep `CINEMA_ENABLED = false` until Cinema UI attaches.
+- **Evidence:** `tests/cinema.test.ts`; notices `notices/ArtCraft-*` + root `NOTICE`; provenance ledger rows for the four donor paths. Security review must-fix closed (M9 `maxDepth` + 4 MiB bounds before receipt hash). PStack checklist applied manually. Graft keyless build/ask with `--dir` outside the repo. Alibaba OCR not installed locally (delegate-only; no model-backed OCR claimed).
+- **Change rule:** turning `CINEMA_ENABLED` on requires Cinema UI wiring and a new ADR entry.
+
 ## 2026-10-21: W10 Studio ADR and engine contract
 
 - **Authority:** frozen plan W10 / M7 measurement + M13 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 merged at `33a3cdc`.
