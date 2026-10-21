@@ -24,10 +24,10 @@ const outA = "1111111111111111111111111111111111111111111111111111111111111111";
 const outB = "2222222222222222222222222222222222222222222222222222222222222222";
 
 describe("W17 Quality Lab and router explain", () => {
-  it("keeps Quality Lab and providers disabled by default", () => {
-    assert.equal(QUALITY_LAB_ENABLED, false);
+  it("enables deterministic Quality Lab while providers stay off", () => {
+    assert.equal(QUALITY_LAB_ENABLED, true);
     assert.equal(ROUTER_PROVIDERS_ENABLED, false);
-    assert.equal(qualityLabCapability().available, false);
+    assert.equal(qualityLabCapability().available, true);
   });
 
   it("blinded comparison summary is reproducible", () => {
@@ -82,7 +82,7 @@ describe("W17 Quality Lab and router explain", () => {
     assert.equal(once.slotAverages.B, 5);
     assert.equal(once.attemptTotals.A, 2);
     assert.equal(once.failureTotals.A, 1);
-    assert.equal(once.qualityLabEnabled, false);
+    assert.equal(once.qualityLabEnabled, true);
   });
 
   it("router explain ranks nothing when providers are disabled", () => {

@@ -1,0 +1,18 @@
+{
+  "qualification": "P10-05-quality-lab",
+  "module": "M17",
+  "checkedAt": "2026-10-21T17:28:58.112Z",
+  "gitHead": "65451bd06fde091a54efea9c5db5acd387746735",
+  "qualityLabEnabled": true,
+  "routerProvidersEnabled": false,
+  "capabilityAvailable": true,
+  "compareContentHash": "da103ba1d83cfce5f5721f40786079f5f6bc141b181666cc7a8ab01d394eb5d3",
+  "routerExplain": {
+    "providersEnabled": false,
+    "rejectionCodes": [
+      "PROVIDERS_DISABLED"
+    ]
+  },
+  "passed": true,
+  "detail": "Deterministic Quality Lab enabled; router explain rejects with PROVIDERS_DISABLED; no paid routes."
+}
