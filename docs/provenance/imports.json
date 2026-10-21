@@ -730,7 +730,7 @@
     "original": "apps/web/src/animation/keyframes.ts",
     "imported": "core/donors/opencut/animation/keyframes.ts",
     "sha256": "703a30219a3d079b93ac7eae8659da82b35a5386fb6a000cbae944c8bf2f1d93",
-    "importedSha256": "fd5b932e84e8c416e5544edeb530749ba1fa30b14b8566a07987f93a68b195de",
+    "importedSha256": "9c52f51978787102268b1d974e85f255e6502c3f6038a5f0c0818e079fb31f2f",
     "modifications": [
       "@/wasm to media-time.ts; generateUUID to crypto.randomUUID."
     ],
