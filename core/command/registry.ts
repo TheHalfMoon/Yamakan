@@ -18,6 +18,16 @@ import {
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
 import { Scene3DSchema, saveScene3D } from "../scene3d.ts";
+import { ConsentPurposeSchema } from "../identity.ts";
+import {
+  advanceStage,
+  approveStage,
+  directorNext,
+  grantConsent,
+  recordEncoding,
+  revokeConsentRecord,
+  startDirectorRun,
+} from "../director/runtime.ts";
 
 export const RESOURCE_POLICY_HASH = sha256Hex(canonicalJson(RESOURCE_POLICY));
 
@@ -527,6 +537,141 @@ export const commands = {
       })
       .strict(),
     run: (_ctx, a) => saveScene3D(a.scene),
+  }),
+  "yamakan.consent.grant": define({
+    scope: "consent:grant",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Grant likeness consent (version, purpose, expiry). Browser session only.",
+    input: z
+      .object({
+        characterId: z.string().min(1).max(80),
+        purpose: ConsentPurposeSchema,
+        version: z.string().min(1).max(40),
+        ttlMs: z.number().int().positive(),
+      })
+      .strict(),
+    run: ({ store, principal }, a) =>
+      grantConsent(store, {
+        characterId: a.characterId,
+        purpose: a.purpose,
+        version: a.version,
+        ttlMs: a.ttlMs,
+        principalId: principal.id,
+      }),
+  }),
+  "yamakan.consent.revoke": define({
+    scope: "consent:revoke",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Revoke likeness consent and invalidate derived encodings. Browser session only.",
+    input: z.object({ consentId: Id }).strict(),
+    run: ({ store }, a) => revokeConsentRecord(store, a.consentId),
+  }),
+  "yamakan.identity.encode": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Record an identity encoding only when matching unexpired consent exists.",
+    input: z
+      .object({
+        characterId: z.string().min(1).max(80),
+        purpose: ConsentPurposeSchema,
+        consentId: Id,
+        provider: z.string().min(1).max(64),
+        method: z.string().min(1).max(64),
+        payloadHash: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      recordEncoding(store, {
+        characterId: a.characterId,
+        purpose: a.purpose,
+        consentId: a.consentId,
+        provider: a.provider,
+        method: a.method,
+        payloadHash: a.payloadHash,
+      }),
+  }),
+  "yamakan.director.start": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Start a Director run for a named pipeline manifest.",
+    input: z
+      .object({
+        projectId: Id,
+        pipelineName: z.string().min(1).max(80),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      startDirectorRun(store, {
+        projectId: a.projectId,
+        pipelineName: a.pipelineName,
+      }),
+  }),
+  "yamakan.director.advance": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Write a stage receipt (gates on prerequisites and approvals).",
+    input: z
+      .object({
+        runId: Id,
+        stage: z.string().min(1).max(80),
+        status: z.enum([
+          "pending",
+          "in_progress",
+          "awaiting_human",
+          "completed",
+          "failed",
+        ]),
+        outputHash: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .nullable(),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      advanceStage(store, {
+        runId: a.runId,
+        stage: a.stage,
+        status: a.status,
+        outputHash: a.outputHash,
+      }),
+  }),
+  "yamakan.director.approve": define({
+    scope: "director:approve",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Human approval bound to a stage output hash and expiry. Browser session only.",
+    input: z
+      .object({
+        runId: Id,
+        stage: z.string().min(1).max(80),
+        outputHash: z.string().regex(/^[a-f0-9]{64}$/),
+        ttlMs: z
+          .number()
+          .int()
+          .positive()
+          .max(30 * 24 * 60 * 60 * 1000),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      approveStage(store, {
+        runId: a.runId,
+        stage: a.stage,
+        outputHash: a.outputHash,
+        ttlMs: a.ttlMs,
+      }),
+  }),
+  "yamakan.director.next": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Return the next Director stage, blocked reasons, or done.",
+    input: z.object({ runId: Id }).strict(),
+    run: ({ store }, a) => directorNext(store, a.runId),
   }),
   "yamakan.agent.create": define({
     scope: "agent:create",
