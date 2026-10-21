@@ -62,7 +62,13 @@ type Row = {
 };
 
 // The only payload this build executes; anything else is quarantined.
-const ExportPayload = z.object({ format: z.literal("export/1") }).strict();
+const ExportPayload = z
+  .object({
+    format: z.literal("export/1"),
+    /** W18: optional two-pass loudnorm on the mixed audio bus. */
+    normalizeLoudness: z.boolean().optional(),
+  })
+  .strict();
 const DerivativePayload = z
   .object({
     format: z.literal("cfr/1"),
@@ -179,7 +185,11 @@ export class JobSupervisor {
       Row | undefined;
   }
 
-  async submit(projectId: string, key: string) {
+  async submit(
+    projectId: string,
+    key: string,
+    options: { normalizeLoudness?: boolean } = {},
+  ) {
     if (this.#closing) throw new Error("Render queue is closing.");
     this.#current();
     if (!this.#generation) await this.start();
@@ -213,7 +223,10 @@ export class JobSupervisor {
         projectId,
         project.revision,
         key,
-        JSON.stringify({ format: "export/1" }),
+        JSON.stringify({
+          format: "export/1",
+          normalizeLoudness: options.normalizeLoudness === true,
+        }),
       );
       return this.#row(db, jobId)!;
     });
@@ -615,6 +628,7 @@ export class JobSupervisor {
     const jobId = row.job_id;
     // The plan is compiled from the frozen revision's stored snapshot; the
     // render draws only what the plan says.
+    const exportPayload = ExportPayload.parse(safeJson(row.payload));
     const { output: partial, receipt } = await renderRevision(
       this.store,
       row.project_id,
@@ -623,6 +637,9 @@ export class JobSupervisor {
       signal,
       (value) => this.#progress.set(jobId, value),
       (pid) => this.#markRunning(jobId, attempt, pid),
+      {
+        normalizeLoudness: exportPayload.normalizeLoudness === true,
+      },
     );
     this.#markValidating(jobId, attempt);
     await this.#options.fault?.("before-publish", jobId);

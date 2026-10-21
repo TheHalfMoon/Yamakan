@@ -22,7 +22,7 @@ import { canPlaceTimeSpansOnTrack } from "./donors/opencut/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 
 export const FORMAT = "yamakan.project";
-export const FORMAT_VERSION = 3;
+export const FORMAT_VERSION = 4;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -219,8 +219,19 @@ const ProjectBody = z
         if (c.sourceStartTicks !== 0) fail("Titles have no source offset.");
       } else if (!asset) fail("Clip asset is missing.");
       else {
-        if ((asset.kind === "audio") !== (track?.kind === "audio"))
+        // W18: an audio track may hold a video asset's unlinked sound
+        // when the asset probe reported hasAudio.
+        if (track?.kind === "audio") {
+          const ok =
+            asset.kind === "audio" ||
+            (asset.kind === "video" && asset.hasAudio === true);
+          if (!ok)
+            fail(
+              "Audio track requires an audio asset or a video asset with audio.",
+            );
+        } else if (asset.kind === "audio") {
           fail("Asset and track types do not match.");
+        }
         if (
           asset.kind !== "image" &&
           !(
@@ -410,7 +421,13 @@ export function parseCanonical(value: unknown): CanonicalProject {
   let doc = value as Record<string, unknown>;
   if (info.formatVersion === 1) doc = upgradeV1(doc);
   if (doc.formatVersion === 2) doc = upgradeV2(doc);
+  if (doc.formatVersion === 3) doc = upgradeV3(doc);
   return CanonicalProjectSchema.parse(doc);
+}
+
+/** v4: video-with-audio assets may sit on audio tracks (unlinked sound). */
+function upgradeV3(value: Record<string, unknown>) {
+  return { ...value, formatVersion: 4 };
 }
 
 const EDIT_FPS = rational(30, 1);

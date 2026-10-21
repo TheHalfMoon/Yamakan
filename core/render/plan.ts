@@ -13,6 +13,11 @@ import { ASS_COMPILER_VERSION, compileTitles } from "./ass.ts";
 import type { TitleCue } from "./ass.ts";
 import type { PinnedFont } from "./fonts.ts";
 import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
+import {
+  DEFAULT_LOUDNORM_TARGET,
+  LOUDNORM_ENABLED,
+  type LoudnormSpec,
+} from "../audio/loudnorm.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -80,10 +85,17 @@ export type RenderPlan = {
     cues: TitleCue[];
   } | null;
   fonts: { name: string; sha256: string }[];
+  /** Two-pass loudnorm; null when normalization is off for this export. */
+  loudnorm: LoudnormSpec | null;
   planHash: string;
 };
 
 export type CompiledPlan = { plan: RenderPlan; ass: string | null };
+
+export type CompilePlanOptions = {
+  /** When true and LOUDNORM_ENABLED, attach the default loudnorm target. */
+  normalizeLoudness?: boolean;
+};
 
 // Compiles the plan for `project` at its revision. `snapshotHash` is the
 // stored snapshot the project was read from.
@@ -91,6 +103,7 @@ export function compilePlan(
   project: CanonicalProject,
   snapshotHash: string,
   fonts: PinnedFont[],
+  options: CompilePlanOptions = {},
 ): CompiledPlan {
   if (!/^[a-f0-9]{64}$/.test(snapshotHash))
     throw new CommandError("VALIDATION", "Snapshot hash is invalid.");
@@ -201,9 +214,43 @@ export function compilePlan(
     fonts: compiled
       ? fonts.map((f) => ({ name: f.name, sha256: f.sha256 }))
       : [],
+    loudnorm:
+      LOUDNORM_ENABLED && options.normalizeLoudness
+        ? { target: { ...DEFAULT_LOUDNORM_TARGET }, measured: null }
+        : null,
   };
   const planHash = createHash("sha256")
     .update(JSON.stringify(body))
     .digest("hex");
   return { plan: { ...body, planHash }, ass: compiled?.ass ?? null };
+}
+
+/** Attach measured loudnorm values and recompute planHash. */
+export function withMeasuredLoudnorm(
+  plan: RenderPlan,
+  measured: NonNullable<LoudnormSpec["measured"]>,
+): RenderPlan {
+  if (!plan.loudnorm)
+    throw new CommandError(
+      "VALIDATION",
+      "Plan has no loudnorm target to measure.",
+    );
+  const body: Omit<RenderPlan, "planHash"> = {
+    format: plan.format,
+    compilerVersion: plan.compilerVersion,
+    projectId: plan.projectId,
+    revision: plan.revision,
+    snapshotHash: plan.snapshotHash,
+    profile: plan.profile,
+    durationTicks: plan.durationTicks,
+    layers: plan.layers,
+    audio: plan.audio,
+    titles: plan.titles,
+    fonts: plan.fonts,
+    loudnorm: { ...plan.loudnorm, measured },
+  };
+  const planHash = createHash("sha256")
+    .update(JSON.stringify(body))
+    .digest("hex");
+  return { ...body, planHash };
 }

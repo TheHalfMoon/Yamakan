@@ -8,7 +8,7 @@ import {
   otioJson,
   toOtio,
 } from "../core/interchange/otio.ts";
-import type { CanonicalProject } from "../core/canonical.ts";
+import { FORMAT_VERSION, type CanonicalProject } from "../core/canonical.ts";
 import { rational } from "../core/time.ts";
 
 const F = 23_520_000; // 1 frame @ 30 fps in flicks
@@ -23,7 +23,7 @@ function sampleProject(): CanonicalProject {
   const hashA = "b".repeat(64);
   return {
     format: FORMAT,
-    formatVersion: 3,
+    formatVersion: FORMAT_VERSION,
     id: crypto.randomUUID(),
     name: "otio-fixture",
     revision: 1,

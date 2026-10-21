@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W18 Audio unlink, loudnorm, and Flow
+
+- **Authority:** frozen plan W18 / P08 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W1 + W15 + M-gate prerequisites satisfied; W16 merged at `320c4a5`.
+- **Decision:** Bump canonical project to **format v4** so a video asset with `hasAudio` may sit on an audio track (unlinked sound). Register `yamakan.clip.{unlinkSound,relinkSound}` and timeline ops; `AUDIO_UNLINK_ENABLED = true`. Two-pass FFmpeg `loudnorm` on export when `normalizeLoudness: true` (measured values stored on the render plan); `LOUDNORM_ENABLED = true`. Read-only Flow projection `yamakan.flow.snapshot` + `src/flow/FlowView.tsx`; `FLOW_ENABLED = true`. Film-editor remote mastering provider stays excluded (local `loudnorm` only).
+- **Evidence:** `tests/w18-audio-flow.test.ts` (unlink/relink restores `planHash`; Flow read-only); `npm run qualify:w18-loudnorm` → `docs/evidence/qualification/w18-loudnorm.json` (±1 LU of −16 LUFS).
+- **Change rule:** changing the loudnorm target or unlink schema needs a new format version or ADR entry.
+
 ## 2026-10-21: W16 Keyframe animation (M6)
 
 - **Authority:** frozen plan W16 / M6 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 prerequisite satisfied; W15 merged at `53f6dab`.
