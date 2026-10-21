@@ -1,0 +1,12 @@
+{
+  "qualification": "Q4",
+  "module": "M3/M4",
+  "task": "W8",
+  "checkedAt": "2026-10-21",
+  "claim": "OpenCut ripple and group-move maths stay unit-agnostic in flick ticks; no TICKS_PER_SECOND or seconds conversion in the port.",
+  "evidence": {
+    "tests": ["tests/ripple.test.ts", "tests/group-move.test.ts"],
+    "property": "10_000 random ripple delete+insert cycles at 23.976, 25, 29.97 and 60 fps with Number.isSafeInteger on every output and total duration conserved after paired delete+insert",
+    "result": "pass"
+  }
+}

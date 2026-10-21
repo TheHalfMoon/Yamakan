@@ -412,5 +412,175 @@
     "tests": [
       "tests/donor-opencut.test.ts"
     ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/ripple/apply.ts",
+    "imported": "core/donors/opencut/ripple/apply.ts",
+    "sha256": "d3cb81af1520bd813a2d292105746b8c2c539aed08478093e0d04955c2cc5446",
+    "modifications": [
+      "SceneTracks projected from Yamakan tracks via adapters; integer flick ticks; formatted for the repo."
+    ],
+    "importedSha256": "338eaea8d4ab3f94593b5937262fcae87e3a690532c81e0754d826191800dc8a",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/ripple/diff.ts",
+    "imported": "core/donors/opencut/ripple/diff.ts",
+    "sha256": "8fcdd474e6dd0d93a1aaf0d0dfbe7519fd0faae5d1bfc8966fd1e965dc2fdfcc",
+    "modifications": [
+      "Element ends use checked addTicks; shift amounts asserted Number.isSafeInteger; flick ticks."
+    ],
+    "importedSha256": "ec36344bd93d5fcc21f77a40805e0086aaf71df2d2304cb3c48a6a719fa1ce5c",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/ripple/shift.ts",
+    "imported": "core/donors/opencut/ripple/shift.ts",
+    "sha256": "2648c4ea38ac51ece842656670e167623132f0aa7a5a4c8bec14a254a48528f5",
+    "modifications": [
+      "startTime updates via addTicks(start, -shiftAmount); signed shiftAmount allowed for insert."
+    ],
+    "importedSha256": "801b6b26096f43b513e2ae8f9beeb453d9707b9452dbe3297bcfb2e7b37ec224",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/ripple/index.ts",
+    "imported": "core/donors/opencut/ripple/index.ts",
+    "sha256": "9012aa42d40beac820efddfda4fccc3ea8e35bc1b11176145d0624d9e5841630",
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
+    "importedSha256": "9bd8f4666644fb04472e6d2ff874d1936f6c133f09e72cf3fef63503efc5e36d",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/types.ts",
+    "imported": "core/donors/opencut/group-move/types.ts",
+    "sha256": "e93d30c22fc91f51bbca112c5bab991182a47048325a587cbeb853174156157c",
+    "modifications": [
+      "MediaTime → number (flick ticks); TrackType → video|audio; ElementRef from local timeline-types."
+    ],
+    "importedSha256": "b5a5e0eda931ba204b97fff17f079ed7dd81bf7d765bd87851591432650397c7",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/track-placement.ts",
+    "imported": "core/donors/opencut/group-move/track-placement.ts",
+    "sha256": "e8b4a0a2d3de5c1d80ead54aa659822d4028d15388f97bac037086fd9fdfc0be",
+    "modifications": [
+      "SceneTracks from Yamakan adapters; track.type is video|audio."
+    ],
+    "importedSha256": "2dd966b83e2d9b6ad15103c756f68805df5a045f6587ee380a072887eb7df683",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/build-group.ts",
+    "imported": "core/donors/opencut/group-move/build-group.ts",
+    "sha256": "5fb71e4a41be149f85a71c7da838ae195273c44c644d80992b53420c8e7bbb58",
+    "modifications": [
+      "findTrackInSceneTracks from adapters; subMediaTime → addTicks(a, -b)."
+    ],
+    "importedSha256": "ec5cf16a98594598859510ed8559233a4f80f7d82061471a12805d5cbdccbe40",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/snap.ts",
+    "imported": "core/donors/opencut/group-move/snap.ts",
+    "sha256": "fe9bc3fed428deba33e25c94aca2d84edff0e7a5ebfa66c254a70521e7b6a88a",
+    "modifications": [
+      "Snap sources from adapters (edges, playhead; animation empty until M6); maxSnapDistance passed in (no zoom); MediaTime → addTicks."
+    ],
+    "importedSha256": "dea818caac683d5a44900f0a4504a75fa28a235cad302729cb1efe1d9113aafa",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/resolve-move.ts",
+    "imported": "core/donors/opencut/group-move/resolve-move.ts",
+    "sha256": "07d195708d07df3792417c03363e4e31d4f7ecaa561cf8d4deaaf25be78a304f",
+    "modifications": [
+      "MediaTime → flick ticks via addTicks; compatibility/overlap from adapters; overlap call maps startTime/duration to startTicks/durationTicks; donor main-track fill-from-zero clamp omitted (Yamakan has no such invariant)."
+    ],
+    "importedSha256": "58a76a7198a99844bada071ab58fe8568d8017b6dde4662345edb2d9e912a87d",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/timeline/group-move/index.ts",
+    "imported": "core/donors/opencut/group-move/index.ts",
+    "sha256": "276581b341b3499227d1cc97d83bb2d539be0a962aa5914a6c80c5c372762069",
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
+    "importedSha256": "7775a20be0c2c22692a03861424b6a220a7bb77935cddf0c899bddbbe2489a99",
+    "license": "MIT",
+    "owner": "editing builder",
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   }
 ]

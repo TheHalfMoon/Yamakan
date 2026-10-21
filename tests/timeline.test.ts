@@ -1130,3 +1130,69 @@ test("the editor's drag-trim of a still image matches the reducer", async () => 
   assert.equal(viaEditor.clips[0].sourceFrame, 0);
   store.close();
 });
+
+test("E2E journey 2: ripple delete then undo then redo restores snapshot bytes", async () => {
+  const { store, project, call } = await workspace();
+  const [picture] = project.tracks.map((t) => t.id);
+  const add = (rev: number, clipId: string, start: number) =>
+    call("yamakan.project.applyBatch", {
+      projectId: project.id,
+      expectedRevision: rev,
+      operations: [
+        {
+          type: "clip.add",
+          clipId,
+          trackId: picture,
+          assetId: null,
+          title: "T",
+          startTicks: start * F,
+          durationTicks: 30 * F,
+          sourceStartTicks: 0,
+        },
+      ],
+    });
+  const a = await add(project.revision, ids.title, 0);
+  const b = await add(a.revision, ids.title2, 30);
+  const c = await add(b.revision, ids.extra, 60);
+  const beforeRipple = structuredClone(c);
+  const rippled = await call("yamakan.timeline.rippleDelete", {
+    projectId: project.id,
+    expectedRevision: c.revision,
+    clipId: ids.title2,
+  });
+  assert.equal(rippled.clips.length, 2);
+  // Commands return the 30 fps edit view (startFrame), not canonical ticks.
+  assert.equal(
+    rippled.clips.find((x: { id: string }) => x.id === ids.extra).startFrame,
+    30,
+  );
+  const undone = await call("yamakan.project.undo", {
+    projectId: project.id,
+    expectedRevision: rippled.revision,
+  });
+  assert.deepEqual(
+    undone.clips.map((x: { id: string; startFrame: number }) => ({
+      id: x.id,
+      startFrame: x.startFrame,
+    })),
+    beforeRipple.clips.map((x: { id: string; startFrame: number }) => ({
+      id: x.id,
+      startFrame: x.startFrame,
+    })),
+  );
+  const redone = await call("yamakan.project.redo", {
+    projectId: project.id,
+    expectedRevision: undone.revision,
+  });
+  assert.deepEqual(
+    redone.clips.map((x: { id: string; startFrame: number }) => ({
+      id: x.id,
+      startFrame: x.startFrame,
+    })),
+    rippled.clips.map((x: { id: string; startFrame: number }) => ({
+      id: x.id,
+      startFrame: x.startFrame,
+    })),
+  );
+  store.close();
+});

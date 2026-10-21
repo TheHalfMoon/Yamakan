@@ -27,6 +27,14 @@
     {
       "path": "src/donors/film-editor/libraryAsset.ts",
       "reason": "Yamakan-authored type shim isolating the donor LibraryAsset type from its cloud-backed library hook (see Timeline.tsx ledger modification)."
+    },
+    {
+      "path": "core/donors/opencut/timeline-types.ts",
+      "reason": "Yamakan-authored type surface for OpenCut ripple/group-move ports (M3/M4); replaces donor @/timeline/types."
+    },
+    {
+      "path": "core/donors/opencut/adapters.ts",
+      "reason": "Yamakan adapters replacing the five non-copied OpenCut group-move dependencies (track lookup, kind compatibility, snap sources) and SceneTracks projection."
     }
   ],
   "excludedPaths": [
