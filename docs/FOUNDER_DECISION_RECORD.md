@@ -91,3 +91,16 @@ Approval line in the packet's format:
 - **Still not authorized without a further explicit instruction:** purchases, paid cloud services, paid inference, paid API usage, model-weight downloads, public production deployment, and an artifact-bound public ship decision.
 - **Gates that remain execution-time requirements:** H1–H5, E-SEC, founder decisions F and G, and any genuine external resource the plan already names. Blocked capabilities stay disabled; independent authorized work continues.
 - **Effect:** implementation of the frozen plan is authorized per [START_HERE_WHEN_READY.md](START_HERE_WHEN_READY.md). PR #30 merged as a normal merge commit; engineering begins at W1.
+
+## 2026-10-21: P10 qualification, activation, and release readiness
+
+- **Source and form:** written founder instruction titled "YAMAKAN — P10 AUTONOMOUS QUALIFICATION, ACTIVATION & RELEASE ENGINEERING", delivered to the implementing agent (Cursor) in an interactive session on the founder's Windows device on 2026-10-21. Chat instruction only. There is no separate signed approval and no founder GitHub review; none is claimed.
+- **Baseline main at authorization:** `c6d10f7a82fc17c0d39e1536331b6287b2dfa99e` (W17 frontier record merged; Track 1 and Track 2 engineering merged; W12 H1-blocked; release **NO-GO**).
+- **Authorized scope:**
+  - Create and merge the P10 implementation-ready plan under `docs/plans/P10-qualification-activation/`.
+  - Qualify and, where gates pass, activate already-merged capabilities (Studio Q8–Q10, Animation, Cinema, Director, Quality Lab deterministic paths, Smart Router explain, W12 engineering prerequisites, Windows bundle residuals, release evidence, achievable Windows security tests).
+  - Independent reviews, test infrastructure, release-candidate packaging, ordinary merges after exact-head CI and repository discipline.
+  - Autonomous continuation without routine per-step approval for ordinary engineering under this phase.
+- **Still not authorized without a further explicit instruction:** purchases, paid cloud services, paid inference, paid API usage, model-weight downloads, public production deployment, bypassing security gates, fabricating human sign-offs (including native Arabic review), and an artifact-bound public ship decision (H5).
+- **Gates that remain execution-time requirements:** H1–H5, E-SEC, founder decisions F and G, Profile A / second-account / constrained-volume runs that need an administrator, and Q15 OS user-presence where still fallback. Blocked capabilities stay disabled; independent authorized work continues.
+- **Effect:** P10 engineering is authorized. Plan package: [docs/plans/P10-qualification-activation/MASTER_PLAN.md](plans/P10-qualification-activation/MASTER_PLAN.md). Release remains **NO-GO** until mandatory release checks pass and the founder gives artifact-bound ship authorization.
