@@ -1,0 +1,16 @@
+{
+  "qualification": "Q7b",
+  "module": "M7",
+  "task": "W11",
+  "checkedAt": "2026-10-21",
+  "donor": "invoke-ai/InvokeAI",
+  "pin": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+  "claim": "Reducer seam adapts with Yamakan StudioProject / ProjectEvent / GeneratedImageContract host types.",
+  "result": "pass-partial",
+  "notes": [
+    "canvasProjectMutations.ts and canvasMigration.ts compile under Yamakan host Project / staging / controlAdapters shims (proven in proper Q7a throwaway and in-repo tsc).",
+    "Inherited reducer Vitest suite not yet ported at ≥90% (tracked with Q9).",
+    "Engine stays primary; original host reducer not required."
+  ],
+  "passed": true
+}

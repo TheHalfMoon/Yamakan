@@ -1127,5 +1127,2711 @@
     "license": "MIT",
     "authorization": "public-licence",
     "owner": "motion builder"
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/api.ts",
+    "imported": "src/studio/canvas-engine/api.ts",
+    "sha256": "a39444cf8e58ea923aa25f1e8594604d01f7adfc31f8d6a4b2ad724d00b04593",
+    "modifications": [],
+    "importedSha256": "a39444cf8e58ea923aa25f1e8594604d01f7adfc31f8d6a4b2ad724d00b04593",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/applicationHost.ts",
+    "imported": "src/studio/canvas-engine/applicationHost.ts",
+    "sha256": "39a2e4d465ff1bf35f925bd5debd9479ca8af430b72ff7aee8b63e63b2c12920",
+    "modifications": [],
+    "importedSha256": "39a2e4d465ff1bf35f925bd5debd9479ca8af430b72ff7aee8b63e63b2c12920",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/capabilities.ts",
+    "imported": "src/studio/canvas-engine/capabilities.ts",
+    "sha256": "bd72e647fc9791c6c22f9cc6fe2ed4c375b8f16ea382f49ae3217618afde24f2",
+    "modifications": [],
+    "importedSha256": "bd72e647fc9791c6c22f9cc6fe2ed4c375b8f16ea382f49ae3217618afde24f2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/color.ts",
+    "imported": "src/studio/canvas-engine/color.ts",
+    "sha256": "d7b5a0a1d5cb4a7fe3b930cb5beaaf6d5efb1b89841db1661aa542756794cbe7",
+    "modifications": [],
+    "importedSha256": "d7b5a0a1d5cb4a7fe3b930cb5beaaf6d5efb1b89841db1661aa542756794cbe7",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/contracts.ts",
+    "imported": "src/studio/canvas-engine/contracts.ts",
+    "sha256": "8ff618495355d006bee2491caaf04832ea836c388e7c8cc3e844449f7a38889d",
+    "modifications": [],
+    "importedSha256": "8ff618495355d006bee2491caaf04832ea836c388e7c8cc3e844449f7a38889d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/booleanMergeController.ts",
+    "imported": "src/studio/canvas-engine/controllers/booleanMergeController.ts",
+    "sha256": "218fa601817a6187af28e032e752955dd8a5f71d9c0133e32fec094070941ab1",
+    "modifications": [],
+    "importedSha256": "218fa601817a6187af28e032e752955dd8a5f71d9c0133e32fec094070941ab1",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/controlPixelController.ts",
+    "imported": "src/studio/canvas-engine/controllers/controlPixelController.ts",
+    "sha256": "b20810b0c34fd5fe424a87eaa76a132480f9e257507df6672d8b3dbc5008f986",
+    "modifications": [],
+    "importedSha256": "b20810b0c34fd5fe424a87eaa76a132480f9e257507df6672d8b3dbc5008f986",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/copyLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/copyLayerController.ts",
+    "sha256": "01be337dfb5289e527af2d010c0ff7989431d640ffb5b8dcf5215f446e71e2c9",
+    "modifications": [],
+    "importedSha256": "01be337dfb5289e527af2d010c0ff7989431d640ffb5b8dcf5215f446e71e2c9",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/cropLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/cropLayerController.ts",
+    "sha256": "872fb603585ed3d50914d53ab96d128ce1014b8ea0ea56a21cad989dfd06afd0",
+    "modifications": [],
+    "importedSha256": "872fb603585ed3d50914d53ab96d128ce1014b8ea0ea56a21cad989dfd06afd0",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/editingController.ts",
+    "imported": "src/studio/canvas-engine/controllers/editingController.ts",
+    "sha256": "962c6c5e33dc8e4d716a66165e62e90718179cf4b14c36187411613c9c93ffd8",
+    "modifications": [],
+    "importedSha256": "962c6c5e33dc8e4d716a66165e62e90718179cf4b14c36187411613c9c93ffd8",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/editSteps.ts",
+    "imported": "src/studio/canvas-engine/controllers/editSteps.ts",
+    "sha256": "1f308a7b9284cfc3a092726806ed896f1f90e997aade2a2b6d83fb5a3f027a5d",
+    "modifications": [],
+    "importedSha256": "1f308a7b9284cfc3a092726806ed896f1f90e997aade2a2b6d83fb5a3f027a5d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/extractMaskedAreaController.ts",
+    "imported": "src/studio/canvas-engine/controllers/extractMaskedAreaController.ts",
+    "sha256": "1cb5d61be8fa18a8bc322b695bbfa62dc43f1a6a4b422c69dc3ec25fc49f6b59",
+    "modifications": [],
+    "importedSha256": "1cb5d61be8fa18a8bc322b695bbfa62dc43f1a6a4b422c69dc3ec25fc49f6b59",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/filterResultController.ts",
+    "imported": "src/studio/canvas-engine/controllers/filterResultController.ts",
+    "sha256": "7daf4e323d75c44075fe453c5dc4c7362cb787892543f68696f63e8001383fc2",
+    "modifications": [],
+    "importedSha256": "7daf4e323d75c44075fe453c5dc4c7362cb787892543f68696f63e8001383fc2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/floatingSelectionController.ts",
+    "imported": "src/studio/canvas-engine/controllers/floatingSelectionController.ts",
+    "sha256": "c8edf436f99bd8f328b9932a9d712df79ee0fe21e9eb554bbff348305df9871c",
+    "modifications": [],
+    "importedSha256": "c8edf436f99bd8f328b9932a9d712df79ee0fe21e9eb554bbff348305df9871c",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/generatedResultController.ts",
+    "imported": "src/studio/canvas-engine/controllers/generatedResultController.ts",
+    "sha256": "0b71fa210b988fc525068e03377848a42e73dae56b493a31f5490026be16e6f2",
+    "modifications": [],
+    "importedSha256": "0b71fa210b988fc525068e03377848a42e73dae56b493a31f5490026be16e6f2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/historyController.ts",
+    "imported": "src/studio/canvas-engine/controllers/historyController.ts",
+    "sha256": "6d221994f11a2ecf3b1124e3bd963f031a3037a01f2ae9a1ea0dcbd32c71f0d9",
+    "modifications": [],
+    "importedSha256": "6d221994f11a2ecf3b1124e3bd963f031a3037a01f2ae9a1ea0dcbd32c71f0d9",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/interactionController.ts",
+    "imported": "src/studio/canvas-engine/controllers/interactionController.ts",
+    "sha256": "4c4542b0b57c7f3336e59059dc89fc5e82cd7aa42ac1ed6a99b829966337785a",
+    "modifications": [],
+    "importedSha256": "4c4542b0b57c7f3336e59059dc89fc5e82cd7aa42ac1ed6a99b829966337785a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/layerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/layerController.ts",
+    "sha256": "d6ef879c17b8e04258ff442d51628fc21c74fa5c780db43c9d98dcbc52b4b409",
+    "modifications": [],
+    "importedSha256": "d6ef879c17b8e04258ff442d51628fc21c74fa5c780db43c9d98dcbc52b4b409",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/layerMutationController.ts",
+    "imported": "src/studio/canvas-engine/controllers/layerMutationController.ts",
+    "sha256": "4e4ec875e176d1ed28c5b97f44875df7a941d922c8d62c63650692f43e5c2343",
+    "modifications": [],
+    "importedSha256": "4e4ec875e176d1ed28c5b97f44875df7a941d922c8d62c63650692f43e5c2343",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/maskLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/maskLayerController.ts",
+    "sha256": "bf8f460ddeeec69ff0be8c7da4c134b4a97560794d6b2db16e72467f1713df83",
+    "modifications": [],
+    "importedSha256": "bf8f460ddeeec69ff0be8c7da4c134b4a97560794d6b2db16e72467f1713df83",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/maskResultController.ts",
+    "imported": "src/studio/canvas-engine/controllers/maskResultController.ts",
+    "sha256": "96e9599192183decc8548fcb7a1b9d9d898f0687b9ae0f14bf3c014f8042a317",
+    "modifications": [],
+    "importedSha256": "96e9599192183decc8548fcb7a1b9d9d898f0687b9ae0f14bf3c014f8042a317",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/mergeLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/mergeLayerController.ts",
+    "sha256": "2dddff6e76445fa8fc23b860750204e0d3b8ddbc100569973da0737ab96b3537",
+    "modifications": [],
+    "importedSha256": "2dddff6e76445fa8fc23b860750204e0d3b8ddbc100569973da0737ab96b3537",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/mutationContext.ts",
+    "imported": "src/studio/canvas-engine/controllers/mutationContext.ts",
+    "sha256": "d09011d7b91e87712b276da9d33994de8de733a4a687733431e7d2bf042b4ccf",
+    "modifications": [],
+    "importedSha256": "d09011d7b91e87712b276da9d33994de8de733a4a687733431e7d2bf042b4ccf",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/newRasterLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/newRasterLayerController.ts",
+    "sha256": "2bafe4c0225c07f6cd1ed99e95a650f080a84994e3affbf867a3698c449b1565",
+    "modifications": [],
+    "importedSha256": "2bafe4c0225c07f6cd1ed99e95a650f080a84994e3affbf867a3698c449b1565",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/persistenceController.ts",
+    "imported": "src/studio/canvas-engine/controllers/persistenceController.ts",
+    "sha256": "7a01871914f13168e54a659625c642f8c84668c7475944626c1efbec340c845a",
+    "modifications": [],
+    "importedSha256": "7a01871914f13168e54a659625c642f8c84668c7475944626c1efbec340c845a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/previewStateController.ts",
+    "imported": "src/studio/canvas-engine/controllers/previewStateController.ts",
+    "sha256": "b0dc0bed1af6617ac8001f983865fc558dd118b5f2a74bdfaee299b7dc4b3e8a",
+    "modifications": [],
+    "importedSha256": "b0dc0bed1af6617ac8001f983865fc558dd118b5f2a74bdfaee299b7dc4b3e8a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/psdExportController.ts",
+    "imported": "src/studio/canvas-engine/controllers/psdExportController.ts",
+    "sha256": "db6dd9a9f2e907f63e9e8a52510b047c33f10b7ae8deb4f6ff94df5718d6e8a6",
+    "modifications": [],
+    "importedSha256": "db6dd9a9f2e907f63e9e8a52510b047c33f10b7ae8deb4f6ff94df5718d6e8a6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/rasterController.ts",
+    "imported": "src/studio/canvas-engine/controllers/rasterController.ts",
+    "sha256": "99d0213a0b24f8c28cd2d982964f38f2fad099ec0e6d55d88a7b8e80e719281a",
+    "modifications": [],
+    "importedSha256": "99d0213a0b24f8c28cd2d982964f38f2fad099ec0e6d55d88a7b8e80e719281a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/rasterExportController.ts",
+    "imported": "src/studio/canvas-engine/controllers/rasterExportController.ts",
+    "sha256": "9af292deff062ba1a961ebdeb73d7aaceef27caf9f2194a5c853c541296e7d58",
+    "modifications": [],
+    "importedSha256": "9af292deff062ba1a961ebdeb73d7aaceef27caf9f2194a5c853c541296e7d58",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/rasterizeLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/rasterizeLayerController.ts",
+    "sha256": "59ad40eec3a248e38873a3ea621cfd81a693a0e10e826d0c7bbaa0296e928c9d",
+    "modifications": [],
+    "importedSha256": "59ad40eec3a248e38873a3ea621cfd81a693a0e10e826d0c7bbaa0296e928c9d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/rasterMemoryBudgetController.ts",
+    "imported": "src/studio/canvas-engine/controllers/rasterMemoryBudgetController.ts",
+    "sha256": "616f2124b832c52e16e0f9ba3104be3cb12f101d8a142dcfcd32b15bc4f4cf3f",
+    "modifications": [],
+    "importedSha256": "616f2124b832c52e16e0f9ba3104be3cb12f101d8a142dcfcd32b15bc4f4cf3f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/renderController.ts",
+    "imported": "src/studio/canvas-engine/controllers/renderController.ts",
+    "sha256": "751db48dff426ed8f76bf23ff6e4ae8ac7081bb1bd9e5a2f40bae07f75d04730",
+    "modifications": [],
+    "importedSha256": "751db48dff426ed8f76bf23ff6e4ae8ac7081bb1bd9e5a2f40bae07f75d04730",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/selectionImageController.ts",
+    "imported": "src/studio/canvas-engine/controllers/selectionImageController.ts",
+    "sha256": "5fcbd100088cdb4b1facc5d42cff0a6219398a52a7d12f8d9f2f3b1787651861",
+    "modifications": [],
+    "importedSha256": "5fcbd100088cdb4b1facc5d42cff0a6219398a52a7d12f8d9f2f3b1787651861",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/selectionPixelController.ts",
+    "imported": "src/studio/canvas-engine/controllers/selectionPixelController.ts",
+    "sha256": "c6b04d61c13b9a8e897bc1f596227de5b7bc589f82d81a7c3a1cbc2458e77b65",
+    "modifications": [],
+    "importedSha256": "c6b04d61c13b9a8e897bc1f596227de5b7bc589f82d81a7c3a1cbc2458e77b65",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/stagedResultController.ts",
+    "imported": "src/studio/canvas-engine/controllers/stagedResultController.ts",
+    "sha256": "432d753f05b887c624ddd447317abfdec797bea3f0b880ca2c0be1fdf265365f",
+    "modifications": [],
+    "importedSha256": "432d753f05b887c624ddd447317abfdec797bea3f0b880ca2c0be1fdf265365f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/structuralLayerController.ts",
+    "imported": "src/studio/canvas-engine/controllers/structuralLayerController.ts",
+    "sha256": "8cf6ba944b40612a979c8ebe383b796399850f7d32aec3e19be858adb5c2be6b",
+    "modifications": [],
+    "importedSha256": "8cf6ba944b40612a979c8ebe383b796399850f7d32aec3e19be858adb5c2be6b",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/textEditingController.ts",
+    "imported": "src/studio/canvas-engine/controllers/textEditingController.ts",
+    "sha256": "8bc485c08709208eff8dd87f044b88a6cdf62826584e58c69e89433087a85529",
+    "modifications": [],
+    "importedSha256": "8bc485c08709208eff8dd87f044b88a6cdf62826584e58c69e89433087a85529",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/thumbnailController.ts",
+    "imported": "src/studio/canvas-engine/controllers/thumbnailController.ts",
+    "sha256": "7419d7ab0b34f8943d9165549281e7fde5453e958f5d566648bebe65c8822a41",
+    "modifications": [],
+    "importedSha256": "7419d7ab0b34f8943d9165549281e7fde5453e958f5d566648bebe65c8822a41",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/controllers/transformEditingController.ts",
+    "imported": "src/studio/canvas-engine/controllers/transformEditingController.ts",
+    "sha256": "fda3ed7e546747608ced55869a918e6d190037a101ae10e9ce76a88726c755cc",
+    "modifications": [],
+    "importedSha256": "fda3ed7e546747608ced55869a918e6d190037a101ae10e9ce76a88726c755cc",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/diagnostics.ts",
+    "imported": "src/studio/canvas-engine/diagnostics.ts",
+    "sha256": "0b988b227ad751fa01f57f76d146a5230e5b9ee22a38bafdb0d4219e3cedecd0",
+    "modifications": [],
+    "importedSha256": "0b988b227ad751fa01f57f76d146a5230e5b9ee22a38bafdb0d4219e3cedecd0",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/bitmapStore.ts",
+    "imported": "src/studio/canvas-engine/document/bitmapStore.ts",
+    "sha256": "976daa54c6f71f0787b9aaec3fd9bb3608fa3455c58d8999bff0e859a41ed26d",
+    "modifications": [
+      "Cast setTimeout return through unknown for Node/DOM Timeout union under Yamakan @types/node (toolchain type only)."
+    ],
+    "importedSha256": "0314e701e5ceae14950227f591d4d48fcacb098fbc21481455571edf6aff39f5",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/commandRefusal.ts",
+    "imported": "src/studio/canvas-engine/document/commandRefusal.ts",
+    "sha256": "b088cb351687fb08fdaa3633a0ef2c262ab829d7668b746e2f98f7f88319d2cd",
+    "modifications": [],
+    "importedSha256": "b088cb351687fb08fdaa3633a0ef2c262ab829d7668b746e2f98f7f88319d2cd",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/documentIndex.ts",
+    "imported": "src/studio/canvas-engine/document/documentIndex.ts",
+    "sha256": "08ab9ea84ebb48821cb4d197d3ea49e034758d4c3e8502c0f93c5cdbbe40b870",
+    "modifications": [],
+    "importedSha256": "08ab9ea84ebb48821cb4d197d3ea49e034758d4c3e8502c0f93c5cdbbe40b870",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/documentMirror.ts",
+    "imported": "src/studio/canvas-engine/document/documentMirror.ts",
+    "sha256": "9211e460504c27dbffb0756ad21322f3c76a6b580f5a924ddf0412eee324f6aa",
+    "modifications": [],
+    "importedSha256": "9211e460504c27dbffb0756ad21322f3c76a6b580f5a924ddf0412eee324f6aa",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/documentTree.ts",
+    "imported": "src/studio/canvas-engine/document/documentTree.ts",
+    "sha256": "74bba82871dc0e02a182974a8cdcbd2f4d0d1e750fe289345b2bb7e60c4a5177",
+    "modifications": [],
+    "importedSha256": "74bba82871dc0e02a182974a8cdcbd2f4d0d1e750fe289345b2bb7e60c4a5177",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/imageUpload.ts",
+    "imported": "src/studio/canvas-engine/document/imageUpload.ts",
+    "sha256": "e18cac6f0cc45d1a5451004c463d68829e6185715ef439d5256438d4b162b382",
+    "modifications": [],
+    "importedSha256": "e18cac6f0cc45d1a5451004c463d68829e6185715ef439d5256438d4b162b382",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/insertionAnchors.ts",
+    "imported": "src/studio/canvas-engine/document/insertionAnchors.ts",
+    "sha256": "3b3e0cdf0348ca0b536bbe28b4616470d1aef35fd65ce36b221ccb2e787b2aab",
+    "modifications": [],
+    "importedSha256": "3b3e0cdf0348ca0b536bbe28b4616470d1aef35fd65ce36b221ccb2e787b2aab",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/layerChangeDecision.ts",
+    "imported": "src/studio/canvas-engine/document/layerChangeDecision.ts",
+    "sha256": "a5b9a04d3d4c07dd06f73257e494dcc3bc24211b38e9c9c91a6f2b4c8ec74f80",
+    "modifications": [],
+    "importedSha256": "a5b9a04d3d4c07dd06f73257e494dcc3bc24211b38e9c9c91a6f2b4c8ec74f80",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/layerEligibility.ts",
+    "imported": "src/studio/canvas-engine/document/layerEligibility.ts",
+    "sha256": "8041b814325af3ca8b08d0a0c049a6252b70f8e09c142aa5031cc0b0ee760138",
+    "modifications": [],
+    "importedSha256": "8041b814325af3ca8b08d0a0c049a6252b70f8e09c142aa5031cc0b0ee760138",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/layerFactories.ts",
+    "imported": "src/studio/canvas-engine/document/layerFactories.ts",
+    "sha256": "070cd0b785170870706b6f77646828c681af593b7ee3f54bbab1d6dd2f6f64d9",
+    "modifications": [],
+    "importedSha256": "070cd0b785170870706b6f77646828c681af593b7ee3f54bbab1d6dd2f6f64d9",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/layerStacks.ts",
+    "imported": "src/studio/canvas-engine/document/layerStacks.ts",
+    "sha256": "6d47fa8a576dac2e27b11d7299a5e3b67b9313ec97d856b50d795b5ff805babc",
+    "modifications": [],
+    "importedSha256": "6d47fa8a576dac2e27b11d7299a5e3b67b9313ec97d856b50d795b5ff805babc",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/mergeDown.ts",
+    "imported": "src/studio/canvas-engine/document/mergeDown.ts",
+    "sha256": "aa8181d4b605d6c8e6946eee36ee383ae2b381b8ddf56960d6529e974b6865fd",
+    "modifications": [],
+    "importedSha256": "aa8181d4b605d6c8e6946eee36ee383ae2b381b8ddf56960d6529e974b6865fd",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/mergeVisible.ts",
+    "imported": "src/studio/canvas-engine/document/mergeVisible.ts",
+    "sha256": "6a929d7606a885beb7a26e5ace79053d837075c024e5faba9385e23bb5f27c3b",
+    "modifications": [],
+    "importedSha256": "6a929d7606a885beb7a26e5ace79053d837075c024e5faba9385e23bb5f27c3b",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/selectionRepair.ts",
+    "imported": "src/studio/canvas-engine/document/selectionRepair.ts",
+    "sha256": "1e50c652bb9663e9ccef3a7e1239c6e6d108aa2aa408d55618c9b10a1040406e",
+    "modifications": [],
+    "importedSha256": "1e50c652bb9663e9ccef3a7e1239c6e6d108aa2aa408d55618c9b10a1040406e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document/sources.ts",
+    "imported": "src/studio/canvas-engine/document/sources.ts",
+    "sha256": "2b48d82d6c5ff217f06ddaecbfdf1d3ea4545f07b26436be20b209213c3d2476",
+    "modifications": [],
+    "importedSha256": "2b48d82d6c5ff217f06ddaecbfdf1d3ea4545f07b26436be20b209213c3d2476",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/documentCommands.ts",
+    "imported": "src/studio/canvas-engine/document-model/documentCommands.ts",
+    "sha256": "cbff97c5cb9604434e2e8e490c6822c28a108163859dd1f366d0c752a62eb8b8",
+    "modifications": [],
+    "importedSha256": "cbff97c5cb9604434e2e8e490c6822c28a108163859dd1f366d0c752a62eb8b8",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/documentModel.ts",
+    "imported": "src/studio/canvas-engine/document-model/documentModel.ts",
+    "sha256": "d02d57dae4e9d6bb295eb067979109aaeb079a40af89da05ffd016dd7947e1ec",
+    "modifications": [],
+    "importedSha256": "d02d57dae4e9d6bb295eb067979109aaeb079a40af89da05ffd016dd7947e1ec",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/postconditions.ts",
+    "imported": "src/studio/canvas-engine/document-model/postconditions.ts",
+    "sha256": "f1c4f02e7331032026b6c09c278fe61643759309768d360ef08600f5b763283d",
+    "modifications": [],
+    "importedSha256": "f1c4f02e7331032026b6c09c278fe61643759309768d360ef08600f5b763283d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/screenComposition.ts",
+    "imported": "src/studio/canvas-engine/document-model/screenComposition.ts",
+    "sha256": "355d64d5cd13a83156479e33e1f4610a2b3230e3ab5d5406b86de6a12d1061de",
+    "modifications": [],
+    "importedSha256": "355d64d5cd13a83156479e33e1f4610a2b3230e3ab5d5406b86de6a12d1061de",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/semanticLeaf.ts",
+    "imported": "src/studio/canvas-engine/document-model/semanticLeaf.ts",
+    "sha256": "fb96a70cf056413e3d1bb8fa4db75b70dacd2e4b4c0dd44d3307b3e375db4226",
+    "modifications": [],
+    "importedSha256": "fb96a70cf056413e3d1bb8fa4db75b70dacd2e4b4c0dd44d3307b3e375db4226",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/document-model/semanticNode.ts",
+    "imported": "src/studio/canvas-engine/document-model/semanticNode.ts",
+    "sha256": "df9925fb4b646d909a4605caebd9f58919a026f47017c755c8a805cb14db0fba",
+    "modifications": [],
+    "importedSha256": "df9925fb4b646d909a4605caebd9f58919a026f47017c755c8a805cb14db0fba",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/editConcurrency.ts",
+    "imported": "src/studio/canvas-engine/editConcurrency.ts",
+    "sha256": "f10a6d2020a21b413696a71997d3568a378d4ef2bb05aab5a5bfced072c287d9",
+    "modifications": [],
+    "importedSha256": "f10a6d2020a21b413696a71997d3568a378d4ef2bb05aab5a5bfced072c287d9",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/editGate.ts",
+    "imported": "src/studio/canvas-engine/editGate.ts",
+    "sha256": "19e20a704f657b792af6018bcf29af2f16a59d1f75fb5e3b1c241d1ffa4a8154",
+    "modifications": [],
+    "importedSha256": "19e20a704f657b792af6018bcf29af2f16a59d1f75fb5e3b1c241d1ffa4a8154",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/editing/controlPixelEdit.ts",
+    "imported": "src/studio/canvas-engine/editing/controlPixelEdit.ts",
+    "sha256": "6aa60de701e9777096454814beb88acfc96017f368145770573861ed7773a69d",
+    "modifications": [],
+    "importedSha256": "6aa60de701e9777096454814beb88acfc96017f368145770573861ed7773a69d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/engine.ts",
+    "imported": "src/studio/canvas-engine/engine.ts",
+    "sha256": "10059c7f1fd907a7d3bc384a12504e97f6872a3ea16bd9cab257c14a3753d226",
+    "modifications": [],
+    "importedSha256": "10059c7f1fd907a7d3bc384a12504e97f6872a3ea16bd9cab257c14a3753d226",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/engineStores.ts",
+    "imported": "src/studio/canvas-engine/engineStores.ts",
+    "sha256": "ba63257d3857ad6e205351aa6480e25e456e7d332f45fa74980b5444c77ecb6f",
+    "modifications": [],
+    "importedSha256": "ba63257d3857ad6e205351aa6480e25e456e7d332f45fa74980b5444c77ecb6f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/export/psdExport.ts",
+    "imported": "src/studio/canvas-engine/export/psdExport.ts",
+    "sha256": "a7f9c89d64aee94eaa10e244eef952cad1987917233c2443815a847a6e6bb933",
+    "modifications": [],
+    "importedSha256": "a7f9c89d64aee94eaa10e244eef952cad1987917233c2443815a847a6e6bb933",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/exportRasterComposite.ts",
+    "imported": "src/studio/canvas-engine/exportRasterComposite.ts",
+    "sha256": "c21b9da6a475a042a86a069456e1c5d70155a9fbfd454d72490a3b5d6c66b845",
+    "modifications": [],
+    "importedSha256": "c21b9da6a475a042a86a069456e1c5d70155a9fbfd454d72490a3b5d6c66b845",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/filterError.ts",
+    "imported": "src/studio/canvas-engine/filterError.ts",
+    "sha256": "3dd762bf2c37088165cb4856db48ffdc802abaa7d863b97a0a00cb1ce2335d81",
+    "modifications": [],
+    "importedSha256": "3dd762bf2c37088165cb4856db48ffdc802abaa7d863b97a0a00cb1ce2335d81",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/fontReferences.ts",
+    "imported": "src/studio/canvas-engine/fontReferences.ts",
+    "sha256": "a9c57ce0ac3f67b909d8f4d5c6e58dab1f0b6036b72f0cd457cc6efd1e56d772",
+    "modifications": [],
+    "importedSha256": "a9c57ce0ac3f67b909d8f4d5c6e58dab1f0b6036b72f0cd457cc6efd1e56d772",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/freehand.ts",
+    "imported": "src/studio/canvas-engine/freehand.ts",
+    "sha256": "7af61fd643326ef535481229e4ed7ec3b6f385620f961e83a377dd57cfc76deb",
+    "modifications": [],
+    "importedSha256": "7af61fd643326ef535481229e4ed7ec3b6f385620f961e83a377dd57cfc76deb",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/history/documentPatch.ts",
+    "imported": "src/studio/canvas-engine/history/documentPatch.ts",
+    "sha256": "021126b3f020fb86cfddae3c616c995c1c2a53dbb85fa6a04a58fa62afe8c6c6",
+    "modifications": [],
+    "importedSha256": "021126b3f020fb86cfddae3c616c995c1c2a53dbb85fa6a04a58fa62afe8c6c6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/history/history.ts",
+    "imported": "src/studio/canvas-engine/history/history.ts",
+    "sha256": "f46126790c74c149d51d8a6d62adc9a158eeae6f3891a63c854f0a2e329831c0",
+    "modifications": [],
+    "importedSha256": "f46126790c74c149d51d8a6d62adc9a158eeae6f3891a63c854f0a2e329831c0",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/history/imagePatch.ts",
+    "imported": "src/studio/canvas-engine/history/imagePatch.ts",
+    "sha256": "70c8361361dea15f6ecabc00683cd3e18b2604c34315f2bae3091d32a286f1eb",
+    "modifications": [],
+    "importedSha256": "70c8361361dea15f6ecabc00683cd3e18b2604c34315f2bae3091d32a286f1eb",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/history/layerSnapshot.ts",
+    "imported": "src/studio/canvas-engine/history/layerSnapshot.ts",
+    "sha256": "4610adae96dc0e06684003e72d66575f37dceffa8441fb23e0da3a5821d04ce3",
+    "modifications": [],
+    "importedSha256": "4610adae96dc0e06684003e72d66575f37dceffa8441fb23e0da3a5821d04ce3",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/input/pointerPipeline.ts",
+    "imported": "src/studio/canvas-engine/input/pointerPipeline.ts",
+    "sha256": "c814860c04cb18f962fb9f458ac5ab66ef2cc85d4cdf77852b0af0fb1375580f",
+    "modifications": [],
+    "importedSha256": "c814860c04cb18f962fb9f458ac5ab66ef2cc85d4cdf77852b0af0fb1375580f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/input/wheel.ts",
+    "imported": "src/studio/canvas-engine/input/wheel.ts",
+    "sha256": "aabeecf7e7f57c564045adf1d7de95872510ed146c561a821f5d5cb582293fcc",
+    "modifications": [],
+    "importedSha256": "aabeecf7e7f57c564045adf1d7de95872510ed146c561a821f5d5cb582293fcc",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/layerExportGuards.ts",
+    "imported": "src/studio/canvas-engine/layerExportGuards.ts",
+    "sha256": "8ce2fd05ab54ecc054ab820ccce2156f5187faa66b2ed58611c88b2c72f296c2",
+    "modifications": [],
+    "importedSha256": "8ce2fd05ab54ecc054ab820ccce2156f5187faa66b2ed58611c88b2c72f296c2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/layerRasterizer.ts",
+    "imported": "src/studio/canvas-engine/layerRasterizer.ts",
+    "sha256": "ce0c3880a0b0395286292c1e647e9c3e72aa10c6208c40ccaf2bbc11c697662e",
+    "modifications": [],
+    "importedSha256": "ce0c3880a0b0395286292c1e647e9c3e72aa10c6208c40ccaf2bbc11c697662e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/math/mat2d.ts",
+    "imported": "src/studio/canvas-engine/math/mat2d.ts",
+    "sha256": "126859b6935721c4975343db9b14a9598f98fba8c7e8b661f1adca66b20c1891",
+    "modifications": [],
+    "importedSha256": "126859b6935721c4975343db9b14a9598f98fba8c7e8b661f1adca66b20c1891",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/math/rect.ts",
+    "imported": "src/studio/canvas-engine/math/rect.ts",
+    "sha256": "766cb2d0d3400fe7fa43efba963d3c63b88a6d9f13ee0ff4b98ce9d1396ccd41",
+    "modifications": [],
+    "importedSha256": "766cb2d0d3400fe7fa43efba963d3c63b88a6d9f13ee0ff4b98ce9d1396ccd41",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/math/snapping.ts",
+    "imported": "src/studio/canvas-engine/math/snapping.ts",
+    "sha256": "618ffc458229ac54b4baf216dfb0868c7dcfe8a63b2641198b1e0ea92ccd544d",
+    "modifications": [],
+    "importedSha256": "618ffc458229ac54b4baf216dfb0868c7dcfe8a63b2641198b1e0ea92ccd544d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/mutationContracts.ts",
+    "imported": "src/studio/canvas-engine/mutationContracts.ts",
+    "sha256": "9945d1e2f2f7ec65bfbd5e081e6b464150993757808b7ae3e24c635b8997e467",
+    "modifications": [],
+    "importedSha256": "9945d1e2f2f7ec65bfbd5e081e6b464150993757808b7ae3e24c635b8997e467",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/pressureBands.ts",
+    "imported": "src/studio/canvas-engine/pressureBands.ts",
+    "sha256": "34cbc9d0bd33e2f52e9cc0b2c7082dfaa69b2a24bed5f326587e0fe7acff0ec6",
+    "modifications": [],
+    "importedSha256": "34cbc9d0bd33e2f52e9cc0b2c7082dfaa69b2a24bed5f326587e0fe7acff0ec6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/previewPublisher.ts",
+    "imported": "src/studio/canvas-engine/previewPublisher.ts",
+    "sha256": "c761e2a82804d2e8aa89c399588e08c3555622a1d387d51514922e7bea291511",
+    "modifications": [],
+    "importedSha256": "c761e2a82804d2e8aa89c399588e08c3555622a1d387d51514922e7bea291511",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/rasterSnapshotCapture.ts",
+    "imported": "src/studio/canvas-engine/rasterSnapshotCapture.ts",
+    "sha256": "fd16ed9151dfa279dbd549529847bbf73e557473a40d069974789c0e6afcf21a",
+    "modifications": [],
+    "importedSha256": "fd16ed9151dfa279dbd549529847bbf73e557473a40d069974789c0e6afcf21a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/rasterTransactions.ts",
+    "imported": "src/studio/canvas-engine/rasterTransactions.ts",
+    "sha256": "d4e3442ba05f0a587c456c275bc881373f4049cbd031aef78c5f56865e3d0848",
+    "modifications": [],
+    "importedSha256": "d4e3442ba05f0a587c456c275bc881373f4049cbd031aef78c5f56865e3d0848",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/adjustedSurfaceCache.ts",
+    "imported": "src/studio/canvas-engine/render/adjustedSurfaceCache.ts",
+    "sha256": "ee43713e289ba25d1261ed70d2e800e928fe08e716907babfd87a430762bb587",
+    "modifications": [],
+    "importedSha256": "ee43713e289ba25d1261ed70d2e800e928fe08e716907babfd87a430762bb587",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/adjustments.ts",
+    "imported": "src/studio/canvas-engine/render/adjustments.ts",
+    "sha256": "8132ac96fc69484fb317c18d806e4edbb92e97b5f6f3cda3e817d241e5f3db39",
+    "modifications": [],
+    "importedSha256": "8132ac96fc69484fb317c18d806e4edbb92e97b5f6f3cda3e817d241e5f3db39",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/alphaBounds.ts",
+    "imported": "src/studio/canvas-engine/render/alphaBounds.ts",
+    "sha256": "9b4baa0d023fe322853a7fa2ffa1fbfd6f6d3c17646b203889fdde9733950223",
+    "modifications": [],
+    "importedSha256": "9b4baa0d023fe322853a7fa2ffa1fbfd6f6d3c17646b203889fdde9733950223",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/colorSample.ts",
+    "imported": "src/studio/canvas-engine/render/colorSample.ts",
+    "sha256": "fb56c6685a413ab4095a791fdbb75bd9a38c27ba90e30cdbbc7442b369c02a66",
+    "modifications": [],
+    "importedSha256": "fb56c6685a413ab4095a791fdbb75bd9a38c27ba90e30cdbbc7442b369c02a66",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/compositeFrame.ts",
+    "imported": "src/studio/canvas-engine/render/compositeFrame.ts",
+    "sha256": "ac0b749e7b6ba43950a32c3ee298d60bac6c8f156fa05a273ba41913ebf74baa",
+    "modifications": [],
+    "importedSha256": "ac0b749e7b6ba43950a32c3ee298d60bac6c8f156fa05a273ba41913ebf74baa",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/compositor.ts",
+    "imported": "src/studio/canvas-engine/render/compositor.ts",
+    "sha256": "472afea0b2ae7fe0aa7e4516abcb1c56dfad80abdb1cc800a0d7a84a144fccd2",
+    "modifications": [],
+    "importedSha256": "472afea0b2ae7fe0aa7e4516abcb1c56dfad80abdb1cc800a0d7a84a144fccd2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/controlTransparency.ts",
+    "imported": "src/studio/canvas-engine/render/controlTransparency.ts",
+    "sha256": "aadf1944e8a6bbdf23a7093c6e849432f68fbf3bdbd79c7c21b35a26e91bc7c8",
+    "modifications": [],
+    "importedSha256": "aadf1944e8a6bbdf23a7093c6e849432f68fbf3bdbd79c7c21b35a26e91bc7c8",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/decodedBitmapPool.ts",
+    "imported": "src/studio/canvas-engine/render/decodedBitmapPool.ts",
+    "sha256": "d895edc95586907d159c4dc333291537e30b72ad7b9c099250436c1e0c1525b6",
+    "modifications": [],
+    "importedSha256": "d895edc95586907d159c4dc333291537e30b72ad7b9c099250436c1e0c1525b6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/derivedSurfaceCache.ts",
+    "imported": "src/studio/canvas-engine/render/derivedSurfaceCache.ts",
+    "sha256": "5e489fcdae64fa1c8bd21ef506a5957207ac30c21302f3fcd0d178e71527379d",
+    "modifications": [],
+    "importedSha256": "5e489fcdae64fa1c8bd21ef506a5957207ac30c21302f3fcd0d178e71527379d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/floatingSelectionFrame.ts",
+    "imported": "src/studio/canvas-engine/render/floatingSelectionFrame.ts",
+    "sha256": "14e17ad98e094cdef5e4a32d4005180554d3c0a2c1e542418d4420a66d633754",
+    "modifications": [],
+    "importedSha256": "14e17ad98e094cdef5e4a32d4005180554d3c0a2c1e542418d4420a66d633754",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/fontLoader.ts",
+    "imported": "src/studio/canvas-engine/render/fontLoader.ts",
+    "sha256": "703ce99034466e34629c661cb0eeee38830316a3d7c776635aa2c5543baf0de4",
+    "modifications": [],
+    "importedSha256": "703ce99034466e34629c661cb0eeee38830316a3d7c776635aa2c5543baf0de4",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/frameDemand.ts",
+    "imported": "src/studio/canvas-engine/render/frameDemand.ts",
+    "sha256": "0d4a58ea66b75260a52e1d68fdc9618e095ea417295edc7620ff44686e55ae30",
+    "modifications": [],
+    "importedSha256": "0d4a58ea66b75260a52e1d68fdc9618e095ea417295edc7620ff44686e55ae30",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/blend-difference.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/blend-difference.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/blend-multiply.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/blend-multiply.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/blend-screen.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/blend-screen.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/clip-rect.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/clip-rect.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/composition-normal.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/composition-normal.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/generation-base.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/generation-base.json",
+    "sha256": "19e1dc09be0197d9580b209b3b92cf5dd5aed721b5ca99571b7c95a2eee9b789",
+    "modifications": [],
+    "importedSha256": "19e1dc09be0197d9580b209b3b92cf5dd5aed721b5ca99571b7c95a2eee9b789",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/hidden-overlay-isolated.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/hidden-overlay-isolated.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/hidden-overlay.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/hidden-overlay.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/mask-grid.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/mask-grid.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/mask-solid.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/mask-solid.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/opacity-half.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/opacity-half.json",
+    "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "modifications": [],
+    "importedSha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/golden/__golden__/rotation-30.json",
+    "imported": "src/studio/canvas-engine/render/golden/__golden__/rotation-30.json",
+    "sha256": "7a468cb3b1b04d3dab9da6fd47fda019fa9a51623df85ef2c05c131a661cb3c6",
+    "modifications": [],
+    "importedSha256": "7a468cb3b1b04d3dab9da6fd47fda019fa9a51623df85ef2c05c131a661cb3c6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/groupCompositeScopes.ts",
+    "imported": "src/studio/canvas-engine/render/groupCompositeScopes.ts",
+    "sha256": "6917fb85c56804cd2ce2c6093d538ee18c15ea753effa1c4e6db13464d495399",
+    "modifications": [],
+    "importedSha256": "6917fb85c56804cd2ce2c6093d538ee18c15ea753effa1c4e6db13464d495399",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/groupSurfaceCache.ts",
+    "imported": "src/studio/canvas-engine/render/groupSurfaceCache.ts",
+    "sha256": "250ddb3432ea58548bdeb49e63428ee412fa89e1a9943119276675ed08363b99",
+    "modifications": [],
+    "importedSha256": "250ddb3432ea58548bdeb49e63428ee412fa89e1a9943119276675ed08363b99",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/layerCache.ts",
+    "imported": "src/studio/canvas-engine/render/layerCache.ts",
+    "sha256": "2c32a3debee9048b2a70c80ceb4fb82a3c7f321b9070c8136d3e7e2b70d289fa",
+    "modifications": [],
+    "importedSha256": "2c32a3debee9048b2a70c80ceb4fb82a3c7f321b9070c8136d3e7e2b70d289fa",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/layerDisplayEffect.ts",
+    "imported": "src/studio/canvas-engine/render/layerDisplayEffect.ts",
+    "sha256": "13d64a5b93d01ab0faeca4f940144301e43c19e07184cbb13f6ee8cada699f86",
+    "modifications": [],
+    "importedSha256": "13d64a5b93d01ab0faeca4f940144301e43c19e07184cbb13f6ee8cada699f86",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/maskFill.ts",
+    "imported": "src/studio/canvas-engine/render/maskFill.ts",
+    "sha256": "675f4588c7a21639973028f58558b71022ba8a4609006f36218acebf1a85ec00",
+    "modifications": [],
+    "importedSha256": "675f4588c7a21639973028f58558b71022ba8a4609006f36218acebf1a85ec00",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/overlayFrame.ts",
+    "imported": "src/studio/canvas-engine/render/overlayFrame.ts",
+    "sha256": "c10f44ef70edc92dd2eeb8fd4758d3945323745adeee0cfaad6c7e832b7c8a0c",
+    "modifications": [],
+    "importedSha256": "c10f44ef70edc92dd2eeb8fd4758d3945323745adeee0cfaad6c7e832b7c8a0c",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/overlayRenderer.ts",
+    "imported": "src/studio/canvas-engine/render/overlayRenderer.ts",
+    "sha256": "0a779e60b719c904901c9a6b061685b0fa17f2e47203e6d9f43acefe786df078",
+    "modifications": [],
+    "importedSha256": "0a779e60b719c904901c9a6b061685b0fa17f2e47203e6d9f43acefe786df078",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/paintCacheTrim.ts",
+    "imported": "src/studio/canvas-engine/render/paintCacheTrim.ts",
+    "sha256": "c95963c349a4e5949b25e3b652ca79ba36ab2cb6be8d76941e696954b93a9270",
+    "modifications": [],
+    "importedSha256": "c95963c349a4e5949b25e3b652ca79ba36ab2cb6be8d76941e696954b93a9270",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/raster.ts",
+    "imported": "src/studio/canvas-engine/render/raster.ts",
+    "sha256": "e9b819a13a1383ba1bca2871516f2c62c85b21ef57ee27d8e9b006bd96c68a45",
+    "modifications": [],
+    "importedSha256": "e9b819a13a1383ba1bca2871516f2c62c85b21ef57ee27d8e9b006bd96c68a45",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterComposite.ts",
+    "imported": "src/studio/canvas-engine/render/rasterComposite.ts",
+    "sha256": "a3b4a599d01e1b5eab1db6501dac1ad9fb781ce20eccac8dc720b11641f20809",
+    "modifications": [],
+    "importedSha256": "a3b4a599d01e1b5eab1db6501dac1ad9fb781ce20eccac8dc720b11641f20809",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/gradientRasterizer.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/gradientRasterizer.ts",
+    "sha256": "aba1ae95d18e61ca74a67e44822035082a692e16ce280163c6d0cb4bf58e7907",
+    "modifications": [],
+    "importedSha256": "aba1ae95d18e61ca74a67e44822035082a692e16ce280163c6d0cb4bf58e7907",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/imageRasterizer.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/imageRasterizer.ts",
+    "sha256": "58d75aac8969a2549963c3664ecde2a09d834eda7f553a62ca7e2374c26fe430",
+    "modifications": [],
+    "importedSha256": "58d75aac8969a2549963c3664ecde2a09d834eda7f553a62ca7e2374c26fe430",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/index.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/index.ts",
+    "sha256": "b6117f04bc82c3fa2658b023e0083302da5cca8607dad7ef483f627546a4355e",
+    "modifications": [],
+    "importedSha256": "b6117f04bc82c3fa2658b023e0083302da5cca8607dad7ef483f627546a4355e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/paintRasterizer.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/paintRasterizer.ts",
+    "sha256": "fc1b2af684927daa59f092d3b4d90bed4af973fc767afbcac519a9b0e16a37e4",
+    "modifications": [],
+    "importedSha256": "fc1b2af684927daa59f092d3b4d90bed4af973fc767afbcac519a9b0e16a37e4",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/shapeRasterizer.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/shapeRasterizer.ts",
+    "sha256": "523b220d1a27035f68af83fa28c1da39d6543a67357b542e338886a1910c8d17",
+    "modifications": [],
+    "importedSha256": "523b220d1a27035f68af83fa28c1da39d6543a67357b542e338886a1910c8d17",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/textRasterizer.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/textRasterizer.ts",
+    "sha256": "8d70b53882700a7d92f183ba2b9932c6247af9107f5c65620d83bca2b0fb3f6b",
+    "modifications": [],
+    "importedSha256": "8d70b53882700a7d92f183ba2b9932c6247af9107f5c65620d83bca2b0fb3f6b",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/rasterizers/types.ts",
+    "imported": "src/studio/canvas-engine/render/rasterizers/types.ts",
+    "sha256": "73c70038a4540fe40ec754c235879653d1bb27142726257b40a5193ead819ac7",
+    "modifications": [],
+    "importedSha256": "73c70038a4540fe40ec754c235879653d1bb27142726257b40a5193ead819ac7",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/scheduler.ts",
+    "imported": "src/studio/canvas-engine/render/scheduler.ts",
+    "sha256": "96febab79bcfa4b28277aa6c9a3b58abf19091b021ef747184a7c90882a291f9",
+    "modifications": [],
+    "importedSha256": "96febab79bcfa4b28277aa6c9a3b58abf19091b021ef747184a7c90882a291f9",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/render/thumbnail.ts",
+    "imported": "src/studio/canvas-engine/render/thumbnail.ts",
+    "sha256": "20464b23f85bcb9ef5502188674b2835495bfdafe9637137a4a8286346cc9cfa",
+    "modifications": [],
+    "importedSha256": "20464b23f85bcb9ef5502188674b2835495bfdafe9637137a4a8286346cc9cfa",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/samCoordinates.ts",
+    "imported": "src/studio/canvas-engine/samCoordinates.ts",
+    "sha256": "4c39c8c3f3371e02db82fd7ee4de341e8dbe7d7697fbfab0a131df31f82c2950",
+    "modifications": [],
+    "importedSha256": "4c39c8c3f3371e02db82fd7ee4de341e8dbe7d7697fbfab0a131df31f82c2950",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/samInteraction.ts",
+    "imported": "src/studio/canvas-engine/samInteraction.ts",
+    "sha256": "31588360de7928cc4b077fe1f834364d98d0c3d2310de00d04cdc42da4facb6b",
+    "modifications": [],
+    "importedSha256": "31588360de7928cc4b077fe1f834364d98d0c3d2310de00d04cdc42da4facb6b",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/floatingSelection.ts",
+    "imported": "src/studio/canvas-engine/selection/floatingSelection.ts",
+    "sha256": "4d08cc2f75156973ff6d8710d1051356327a0bde030cfd61c1de717a7f7ab686",
+    "modifications": [],
+    "importedSha256": "4d08cc2f75156973ff6d8710d1051356327a0bde030cfd61c1de717a7f7ab686",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/marchingAnts.ts",
+    "imported": "src/studio/canvas-engine/selection/marchingAnts.ts",
+    "sha256": "d7e146a74e8b40965ef496260768de5a249e29bbef433345b154df7db19d0c13",
+    "modifications": [],
+    "importedSha256": "d7e146a74e8b40965ef496260768de5a249e29bbef433345b154df7db19d0c13",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/maskOutline.ts",
+    "imported": "src/studio/canvas-engine/selection/maskOutline.ts",
+    "sha256": "9f59ad36a91d8461c7080e400e424b3c27e9db48277a8233dca94e721dd7c184",
+    "modifications": [],
+    "importedSha256": "9f59ad36a91d8461c7080e400e424b3c27e9db48277a8233dca94e721dd7c184",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/selectionHistory.ts",
+    "imported": "src/studio/canvas-engine/selection/selectionHistory.ts",
+    "sha256": "c1c1a4c2afdfe7f59d6ed0582cd6e5a32e1f17a0c1176a04189da94e1b1a17f0",
+    "modifications": [],
+    "importedSha256": "c1c1a4c2afdfe7f59d6ed0582cd6e5a32e1f17a0c1176a04189da94e1b1a17f0",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/selectionOpMode.ts",
+    "imported": "src/studio/canvas-engine/selection/selectionOpMode.ts",
+    "sha256": "228bd24fc5d1d6d08beaa3ab06ef2e97b0ea83ed4e35f0c246c5c90da7084206",
+    "modifications": [],
+    "importedSha256": "228bd24fc5d1d6d08beaa3ab06ef2e97b0ea83ed4e35f0c246c5c90da7084206",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/selectionOps.ts",
+    "imported": "src/studio/canvas-engine/selection/selectionOps.ts",
+    "sha256": "d21bcde3c0bd0c6a5f52fb7baf5391a5c1c615bbc54b99e78b23a7a755142295",
+    "modifications": [],
+    "importedSha256": "d21bcde3c0bd0c6a5f52fb7baf5391a5c1c615bbc54b99e78b23a7a755142295",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/selectionPaths.ts",
+    "imported": "src/studio/canvas-engine/selection/selectionPaths.ts",
+    "sha256": "6b76db55fccae43da5433bffc365d7c4e21c86cc49d53edde167a048e3faf15e",
+    "modifications": [],
+    "importedSha256": "6b76db55fccae43da5433bffc365d7c4e21c86cc49d53edde167a048e3faf15e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selection/selectionState.ts",
+    "imported": "src/studio/canvas-engine/selection/selectionState.ts",
+    "sha256": "6f128d7699a6d1945fc59c212b413f13a696777464a810c1dc3a2ce78ac089e6",
+    "modifications": [],
+    "importedSha256": "6f128d7699a6d1945fc59c212b413f13a696777464a810c1dc3a2ce78ac089e6",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/selectObjectBridge.ts",
+    "imported": "src/studio/canvas-engine/selectObjectBridge.ts",
+    "sha256": "93cb5f8328ccc174735054b72e183bd71d71612afb4ec6f01013792548f5f2be",
+    "modifications": [],
+    "importedSha256": "93cb5f8328ccc174735054b72e183bd71d71612afb4ec6f01013792548f5f2be",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/stagedPreviewBlobCache.ts",
+    "imported": "src/studio/canvas-engine/stagedPreviewBlobCache.ts",
+    "sha256": "b6444b19087eb5aed83e56fdbd9b643d217c2ab0830e7c09e882543b7685f50f",
+    "modifications": [],
+    "importedSha256": "b6444b19087eb5aed83e56fdbd9b643d217c2ab0830e7c09e882543b7685f50f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/strokeCommit.ts",
+    "imported": "src/studio/canvas-engine/strokeCommit.ts",
+    "sha256": "a90495b5a89415347ebb3050bff24a71be97bcd45781ebc952fd57fd91678405",
+    "modifications": [],
+    "importedSha256": "a90495b5a89415347ebb3050bff24a71be97bcd45781ebc952fd57fd91678405",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/bboxHitTest.ts",
+    "imported": "src/studio/canvas-engine/tools/bboxHitTest.ts",
+    "sha256": "3e5b34ce6ab3ea3b242bbdb59713c3b4d15681ae7466fd3551baf6a2dae3a492",
+    "modifications": [],
+    "importedSha256": "3e5b34ce6ab3ea3b242bbdb59713c3b4d15681ae7466fd3551baf6a2dae3a492",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/bboxTool.ts",
+    "imported": "src/studio/canvas-engine/tools/bboxTool.ts",
+    "sha256": "6af74e67bf1a7d1d98e66c19949753d6577544ff47c1a2e34cabd53673b71acf",
+    "modifications": [],
+    "importedSha256": "6af74e67bf1a7d1d98e66c19949753d6577544ff47c1a2e34cabd53673b71acf",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/brushTool.ts",
+    "imported": "src/studio/canvas-engine/tools/brushTool.ts",
+    "sha256": "a1d0d77a5fa44771703b1a8bd9451e4694061acbb3e91c8c57c5cfc09ceefb5d",
+    "modifications": [],
+    "importedSha256": "a1d0d77a5fa44771703b1a8bd9451e4694061acbb3e91c8c57c5cfc09ceefb5d",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/colorPickerTool.ts",
+    "imported": "src/studio/canvas-engine/tools/colorPickerTool.ts",
+    "sha256": "0225556a95395e400d7564eab2be1b2e8f4e73e69fe01a88d60b8d0a4f7ebe03",
+    "modifications": [],
+    "importedSha256": "0225556a95395e400d7564eab2be1b2e8f4e73e69fe01a88d60b8d0a4f7ebe03",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/eraserTool.ts",
+    "imported": "src/studio/canvas-engine/tools/eraserTool.ts",
+    "sha256": "4d3349f663b1d79494d6b35bf436624826c1dc7907cadfaef289d66d4c563bcc",
+    "modifications": [],
+    "importedSha256": "4d3349f663b1d79494d6b35bf436624826c1dc7907cadfaef289d66d4c563bcc",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/gradientTool.ts",
+    "imported": "src/studio/canvas-engine/tools/gradientTool.ts",
+    "sha256": "195ba9990b1e50c7e09c79b64da03f878807c7fd182f2b91e6bd181e6783d7ee",
+    "modifications": [],
+    "importedSha256": "195ba9990b1e50c7e09c79b64da03f878807c7fd182f2b91e6bd181e6783d7ee",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/gridSnap.ts",
+    "imported": "src/studio/canvas-engine/tools/gridSnap.ts",
+    "sha256": "cae1265f69babfc7be3755cf056e02e8470f712f04759b524b24d89fa7aec10f",
+    "modifications": [],
+    "importedSha256": "cae1265f69babfc7be3755cf056e02e8470f712f04759b524b24d89fa7aec10f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/lassoTool.ts",
+    "imported": "src/studio/canvas-engine/tools/lassoTool.ts",
+    "sha256": "63445c27e59ea751fe595ee4ee828fd69781c6113a674f3d46cce14813d4739e",
+    "modifications": [],
+    "importedSha256": "63445c27e59ea751fe595ee4ee828fd69781c6113a674f3d46cce14813d4739e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/marqueeTool.ts",
+    "imported": "src/studio/canvas-engine/tools/marqueeTool.ts",
+    "sha256": "7b2f60a8b64aecc3b3a13706cb7ea57df3abb4adafd62a4f29f048b48ead95cb",
+    "modifications": [],
+    "importedSha256": "7b2f60a8b64aecc3b3a13706cb7ea57df3abb4adafd62a4f29f048b48ead95cb",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/moveHitTest.ts",
+    "imported": "src/studio/canvas-engine/tools/moveHitTest.ts",
+    "sha256": "1b0efee06b8fbdeeade3e244a72787b462e0a6cff07745955134904f4cc090b8",
+    "modifications": [],
+    "importedSha256": "1b0efee06b8fbdeeade3e244a72787b462e0a6cff07745955134904f4cc090b8",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/moveTool.ts",
+    "imported": "src/studio/canvas-engine/tools/moveTool.ts",
+    "sha256": "de812d3966123f6b676bede9fd75b19fd3ef85738a47719f36d13938bcda0acb",
+    "modifications": [],
+    "importedSha256": "de812d3966123f6b676bede9fd75b19fd3ef85738a47719f36d13938bcda0acb",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/paintConstants.ts",
+    "imported": "src/studio/canvas-engine/tools/paintConstants.ts",
+    "sha256": "4308f65662c689e66163a1c63e8a7f69bc16ccf25fe872f1308c72ab59aab711",
+    "modifications": [],
+    "importedSha256": "4308f65662c689e66163a1c63e8a7f69bc16ccf25fe872f1308c72ab59aab711",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/paintTool.ts",
+    "imported": "src/studio/canvas-engine/tools/paintTool.ts",
+    "sha256": "c91e2ddf10ed0b3ebdc6d26a3c81a6d7a3994c002c12714803cf814df51c3441",
+    "modifications": [],
+    "importedSha256": "c91e2ddf10ed0b3ebdc6d26a3c81a6d7a3994c002c12714803cf814df51c3441",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/polylineSession.ts",
+    "imported": "src/studio/canvas-engine/tools/polylineSession.ts",
+    "sha256": "5d8be9c0ac5ff0a127e772ea4cebae6c74956b2f4c69fb6b65cfafc78b77c879",
+    "modifications": [],
+    "importedSha256": "5d8be9c0ac5ff0a127e772ea4cebae6c74956b2f4c69fb6b65cfafc78b77c879",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/samHitTest.ts",
+    "imported": "src/studio/canvas-engine/tools/samHitTest.ts",
+    "sha256": "d0cefe256c0d399ff6956634b14ca396510ca4da0cd7e047600a9ece049ab539",
+    "modifications": [],
+    "importedSha256": "d0cefe256c0d399ff6956634b14ca396510ca4da0cd7e047600a9ece049ab539",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/samTool.ts",
+    "imported": "src/studio/canvas-engine/tools/samTool.ts",
+    "sha256": "72bb51b03209ad58fa603149f0f5ab70eccef7170bc2bc3c34ecf040e207d4b4",
+    "modifications": [],
+    "importedSha256": "72bb51b03209ad58fa603149f0f5ab70eccef7170bc2bc3c34ecf040e207d4b4",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/shapeTool.ts",
+    "imported": "src/studio/canvas-engine/tools/shapeTool.ts",
+    "sha256": "b72a3d9aa08f4424678f483b81c10877ef9fac87825a0026bd188a90a6b554a2",
+    "modifications": [],
+    "importedSha256": "b72a3d9aa08f4424678f483b81c10877ef9fac87825a0026bd188a90a6b554a2",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/strokeSession.ts",
+    "imported": "src/studio/canvas-engine/tools/strokeSession.ts",
+    "sha256": "05b6114209e35833014bf4ba386433c6d35bf643940b6cd68acba74e0fdfe18f",
+    "modifications": [],
+    "importedSha256": "05b6114209e35833014bf4ba386433c6d35bf643940b6cd68acba74e0fdfe18f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/textTool.ts",
+    "imported": "src/studio/canvas-engine/tools/textTool.ts",
+    "sha256": "b98c02b0f15b514da94bf034d99398d82033bd868c8463bec65c82ce39c60d88",
+    "modifications": [],
+    "importedSha256": "b98c02b0f15b514da94bf034d99398d82033bd868c8463bec65c82ce39c60d88",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/tool.ts",
+    "imported": "src/studio/canvas-engine/tools/tool.ts",
+    "sha256": "b3a92aad0e683ee5fb29bf88a801761bee5bb1e2b6c30cd6748f9a2e837b0566",
+    "modifications": [],
+    "importedSha256": "b3a92aad0e683ee5fb29bf88a801761bee5bb1e2b6c30cd6748f9a2e837b0566",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/transformTool.ts",
+    "imported": "src/studio/canvas-engine/tools/transformTool.ts",
+    "sha256": "a2e4013705ca7e18c2771bd8a91f7a6a44def891de23c4f1df617f4c97c0fc86",
+    "modifications": [],
+    "importedSha256": "a2e4013705ca7e18c2771bd8a91f7a6a44def891de23c4f1df617f4c97c0fc86",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/tools/viewTool.ts",
+    "imported": "src/studio/canvas-engine/tools/viewTool.ts",
+    "sha256": "ab28f24a2358ab85f34ebfa1273ee862dda0fa2a03455d4473cd33df6b81c1b7",
+    "modifications": [],
+    "importedSha256": "ab28f24a2358ab85f34ebfa1273ee862dda0fa2a03455d4473cd33df6b81c1b7",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/transform/transformMath.ts",
+    "imported": "src/studio/canvas-engine/transform/transformMath.ts",
+    "sha256": "ceee940239c1580a902ee61b0c1a04faff023556f6dd5b2a4c4b13af72179757",
+    "modifications": [],
+    "importedSha256": "ceee940239c1580a902ee61b0c1a04faff023556f6dd5b2a4c4b13af72179757",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/types.ts",
+    "imported": "src/studio/canvas-engine/types.ts",
+    "sha256": "c210322568fd95340362bb389b06f17ad4d7dc5f3c366341891f8a2d55602f46",
+    "modifications": [],
+    "importedSha256": "c210322568fd95340362bb389b06f17ad4d7dc5f3c366341891f8a2d55602f46",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvas-engine/viewport.ts",
+    "imported": "src/studio/canvas-engine/viewport.ts",
+    "sha256": "d427fc23387e1c84ac753443e56d5899498ee73905322fe4a64837a1bd8b45a8",
+    "modifications": [],
+    "importedSha256": "d427fc23387e1c84ac753443e56d5899498ee73905322fe4a64837a1bd8b45a8",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/platform/browser/sha256.ts",
+    "imported": "src/studio/platform/browser/sha256.ts",
+    "sha256": "aa6c3289fd3ee36a36579bcfccc8a89d127a93661534be087aacabe64bf22753",
+    "modifications": [],
+    "importedSha256": "aa6c3289fd3ee36a36579bcfccc8a89d127a93661534be087aacabe64bf22753",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/platform/core/json.ts",
+    "imported": "src/studio/platform/core/json.ts",
+    "sha256": "392f1afbea6da03d9506f3e8f5bb5316696f706a0c13c47bce958175f7765b7e",
+    "modifications": [],
+    "importedSha256": "392f1afbea6da03d9506f3e8f5bb5316696f706a0c13c47bce958175f7765b7e",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/platform/ui/modalPresence.ts",
+    "imported": "src/studio/platform/ui/modalPresence.ts",
+    "sha256": "6871c54b1b8df76636c3a121bebc79089cc885b02abfa57e0123fb1318cf49eb",
+    "modifications": [],
+    "importedSha256": "6871c54b1b8df76636c3a121bebc79089cc885b02abfa57e0123fb1318cf49eb",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/mediaReferences.ts",
+    "imported": "src/studio/workbench/mediaReferences.ts",
+    "sha256": "e358587438c239b806c034d71baf48fe904ef17b09d335f8408221d21770fb6f",
+    "modifications": [],
+    "importedSha256": "e358587438c239b806c034d71baf48fe904ef17b09d335f8408221d21770fb6f",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/panZoom.ts",
+    "imported": "src/studio/workbench/panZoom.ts",
+    "sha256": "facd64d59be5250118896c6b21293772372e46a4d519d48b28d9b0395afe80da",
+    "modifications": [],
+    "importedSha256": "facd64d59be5250118896c6b21293772372e46a4d519d48b28d9b0395afe80da",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/projectEventContracts.ts",
+    "imported": "src/studio/workbench/projectEventContracts.ts",
+    "sha256": "6b8dea2ab151e805c63b208eb537c6fc878a261c6bda975849ffad0661deaa67",
+    "modifications": [],
+    "importedSha256": "6b8dea2ab151e805c63b208eb537c6fc878a261c6bda975849ffad0661deaa67",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvasProjectMutations.ts",
+    "imported": "src/studio/workbench/canvasProjectMutations.ts",
+    "sha256": "b1df8a3898fea971f837e7591e695a203f5498165730246cf3184c4be87ac396",
+    "modifications": [],
+    "importedSha256": "b1df8a3898fea971f837e7591e695a203f5498165730246cf3184c4be87ac396",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvasMigration.ts",
+    "imported": "src/studio/workbench/canvasMigration.ts",
+    "sha256": "34313a80a807430d97c09280a1cac3f6a31e7458324269543b9197a0c939ea3a",
+    "modifications": [],
+    "importedSha256": "34313a80a807430d97c09280a1cac3f6a31e7458324269543b9197a0c939ea3a",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvasLoadContracts.ts",
+    "imported": "src/studio/workbench/canvasLoadContracts.ts",
+    "sha256": "ccb87fa5f02f16e71efe930f6c811079c0a8d91d6e62b67994397c554bd8a396",
+    "modifications": [],
+    "importedSha256": "ccb87fa5f02f16e71efe930f6c811079c0a8d91d6e62b67994397c554bd8a396",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvasSchemaVersion.ts",
+    "imported": "src/studio/workbench/canvasSchemaVersion.ts",
+    "sha256": "bec5efdc0ce96e94450f1fd562eae19b41e6cb790204995ca747af1c67e83950",
+    "modifications": [],
+    "importedSha256": "bec5efdc0ce96e94450f1fd562eae19b41e6cb790204995ca747af1c67e83950",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/controlAdapters.ts",
+    "imported": "src/studio/workbench/controlAdapters.ts",
+    "sha256": "c7383b2675be302d91403ace90959d216d9a526682b109f2c6d2052a24289075",
+    "modifications": [
+      "Host replacement: no @features/generation/graph; returns CanvasControlAdapterContract defaults only."
+    ],
+    "importedSha256": "c7383b2675be302d91403ace90959d216d9a526682b109f2c6d2052a24289075",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
+  },
+  {
+    "source": "invoke-ai/InvokeAI",
+    "sha": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+    "original": "invokeai/frontend/webv2/src/workbench/canvasStagingView.ts",
+    "imported": "src/studio/workbench/canvasStagingView.ts",
+    "sha256": "466bbd5c3905cb2db54f5dff7c495e29b916ff9c727a1cf3420398a4fbf326b7",
+    "modifications": [
+      "Host replacement: staging slots over Yamakan canvas state; no workbench queue."
+    ],
+    "importedSha256": "466bbd5c3905cb2db54f5dff7c495e29b916ff9c727a1cf3420398a4fbf326b7",
+    "license": "Apache-2.0",
+    "authorization": "public-licence",
+    "owner": "studio builder",
+    "tests": [
+      "tests/studio.test.ts"
+    ]
   }
 ]

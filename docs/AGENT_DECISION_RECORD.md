@@ -62,12 +62,19 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `tests/cinema.test.ts`; notices `notices/ArtCraft-*` + root `NOTICE`; provenance ledger rows for the four donor paths. Security review must-fix closed (M9 `maxDepth` + 4 MiB bounds before receipt hash). PStack checklist applied manually. Graft keyless build/ask with `--dir` outside the repo. Alibaba OCR not installed locally (delegate-only; no model-backed OCR claimed).
 - **Change rule:** turning `CINEMA_ENABLED` on requires Cinema UI wiring and a new ADR entry.
 
+## 2026-10-21: W11 Studio canvas engine (primary selected)
+
+- **Authority:** frozen plan W11 / M7 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); ADR `0003` amendment; W10 contract already on main.
+- **Decision:** Preserve original Q7a fail receipt (`q7a-studio-tsc.json`, 742 errors). Classification showed 711/742 were test files and missing-deps cascades. Proper production-only Q7a at pin `ffe9e1a` **passed** (`q7a-studio-tsc-proper.json`: `tsc` 0, vite lib build 119.71 KiB gzip). webv1 `controlLayers` evaluated at the same pin (**fail**, 396 errors) and not selected. Import webv2 `canvas-engine` + closure under `src/studio/**` behind Yamakan host port; register `yamakan.studio.{capability,open,commit,export}`; keep `STUDIO_ENABLED = false` until Q8–Q10 targets land on this head. Generative `ENGINE_ENABLED` stays false (E-SEC/F).
+- **Evidence:** `docs/evidence/qualification/q7a-webv2-error-classification.json`, `q7a-studio-tsc-proper.json`, `w11-import-ledger.json`; `tests/studio.test.ts`; `src/studio/boundaries.test.ts`; notices `notices/InvokeAI-*`; provenance ledger rows for InvokeAI pin.
+- **Change rule:** turning `STUDIO_ENABLED` on requires Q8 stroke mount, Q9 ≥90% inherited node tests, and Q10 chunk/latency receipts at an exact head.
+
 ## 2026-10-21: W10 Studio ADR and engine contract
 
 - **Authority:** frozen plan W10 / M7 measurement + M13 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 merged at `33a3cdc`.
 - **Decision:** Record Q7a **fail** (742 `tsc` errors on InvokeAI `ffe9e1a` webv2 canvas-engine in a throwaway TEMP tree). Do **not** select the primary engine for W11 copy. Land `core/engines/{contract,fake}.ts` with `ENGINE_ENABLED = false`; fake covers cancel, fencing retry, and probe quarantine. Q7b–Q10 not run (blocked on Q7a). ADR: `docs/adr/0003-studio-canvas-engine.md`.
 - **Evidence:** `docs/evidence/qualification/q7a-studio-tsc.json`; `tests/engines.test.ts`.
-- **Change rule:** a new Q7a pass (webv1 trial or reduced closure) is required before W11 copies engine sources.
+- **Change rule:** a new Q7a pass (webv1 trial or reduced closure) is required before W11 copies engine sources. **Superseded for selection by the W11 proper Q7a pass above; original fail receipt remains preserved.**
 
 ## 2026-10-21: W9 Mediabunny waveform and OpenCut retime
 

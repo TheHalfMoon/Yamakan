@@ -1,0 +1,69 @@
+{
+  "qualification": "Q7a-classification",
+  "module": "M7",
+  "task": "W11",
+  "checkedAt": "2026-10-21",
+  "donor": "invoke-ai/InvokeAI",
+  "pin": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+  "preservesOriginalReceipt": "docs/evidence/qualification/q7a-studio-tsc.json",
+  "originalResult": {
+    "errorCount": 742,
+    "passed": false,
+    "note": "Original throwaway preserved unchanged. Classification only."
+  },
+  "originalClassification": {
+    "totalErrors": 742,
+    "in_test_files": 711,
+    "in_production_engine": 31,
+    "byCode": {
+      "TS7006": 398,
+      "TS2307": 234,
+      "TS7031": 57,
+      "TS2305": 21,
+      "TS2339": 12
+    },
+    "missingModulesTop": {
+      "vitest": 146,
+      "@workbench/canvasProjectMutations": 28,
+      "@workbench/workbenchState": 13,
+      "ag-psd": 6,
+      "perfect-freehand": 1
+    },
+    "rootCauses": [
+      "throwaway package.json installed only typescript@5.9.3 and zod@4.4.3",
+      "tsconfig included *.test.ts (Q9 scope) which produced most TS2307/TS7006",
+      "path aliases pointed at incomplete host shims rather than copied donor closure files",
+      "TS7006/TS7031 cascaded after failed module resolution under strict mode"
+    ]
+  },
+  "properReproduction": {
+    "throwawayRoot": "D:/yamakan-q7a/webv2-q7a-proper",
+    "excludesTests": true,
+    "dependencies": {
+      "typescript": "5.9.3",
+      "zod": "4.4.3",
+      "vite": "8.3.4",
+      "ag-psd": "31.0.3",
+      "perfect-freehand": "1.2.3"
+    },
+    "tscErrorCount": 0,
+    "viteBuild": {
+      "entry": "canvas-engine/engine.ts",
+      "modulesTransformed": 154,
+      "bundleBytes": 444860,
+      "gzipBytes": 119710,
+      "passed": true
+    },
+    "passed": true
+  },
+  "webv1FallbackMeasurement": {
+    "throwawayRoot": "D:/yamakan-q7a/webv1-q7a-measure",
+    "path": "invokeai/frontend/webv1/src/features/controlLayers",
+    "surface": "konva+store+util+text+contexts",
+    "presentAtPin": true,
+    "tscErrorCount": 396,
+    "passed": false,
+    "note": "Evaluated after primary. Not selected because primary properly configured Q7a passed."
+  },
+  "binding": "Primary InvokeAI webv2 canvas-engine is selected for W11. Original fail receipt preserved. webv1 measured and not required."
+}

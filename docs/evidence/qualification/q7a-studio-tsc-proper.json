@@ -1,0 +1,34 @@
+{
+  "qualification": "Q7a",
+  "module": "M7",
+  "task": "W11",
+  "variant": "proper-reproduction-production-only",
+  "checkedAt": "2026-10-21",
+  "donor": "invoke-ai/InvokeAI",
+  "pin": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+  "throwawayRoot": "D:/yamakan-q7a/webv2-q7a-proper",
+  "toolchain": {
+    "typescript": "5.9.3",
+    "zod": "4.4.3",
+    "vite": "8.3.4",
+    "ag-psd": "31.0.3",
+    "perfect-freehand": "1.2.3"
+  },
+  "claim": "InvokeAI webv2 canvas-engine and M7 closure compile under Yamakan TypeScript 5.9.3 / zod 4.4.3 with host shims and adapted reducer-seam types; vite library build of engine.ts succeeds.",
+  "procedure": [
+    "Copy canvas-engine production files (exclude *.test.ts / *.testing.ts / testStub / goldenHarness)",
+    "Copy donor closure files (platform sha256/json/modalPresence; workbench mediaReferences/panZoom/projectEventContracts; reducer seam)",
+    "Host-shim replaced modules (port, controlAdapters, downloadBlob, gallery, projectContracts, staging view)",
+    "tsc --noEmit",
+    "vite build (lib entry canvas-engine/engine.ts)"
+  ],
+  "result": "pass",
+  "errorCount": 0,
+  "engineFileErrors": 0,
+  "viteBuildPassed": true,
+  "viteBundleGzipKiB": 116.9,
+  "originalFailPreserved": "docs/evidence/qualification/q7a-studio-tsc.json",
+  "classification": "docs/evidence/qualification/q7a-webv2-error-classification.json",
+  "binding": "Primary canvas-engine path selected for W11 copy.",
+  "passed": true
+}

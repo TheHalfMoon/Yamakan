@@ -86,6 +86,9 @@ const en = {
   "tools.intro":
     "The same validated project and render operations power the editor and local REST API.",
   "tools.catalog": "Show the versioned tool catalog",
+  "studio.title": "Studio canvas",
+  "studio.intro":
+    "Layered image editing is imported behind a Yamakan host adapter. It stays off until Studio qualification targets are met.",
   "tools.jobs":
     "Jobs expose progress, cancellation, errors and verified video artifacts. Project paths and arbitrary commands are not accepted by the API.",
   "toolbar.unsaved": "Unsaved changes",
@@ -227,6 +230,9 @@ const ar: Record<MessageKey, string> = {
   "tools.intro":
     "يعتمد المحرِّر وواجهة REST المحلية على عمليات المشروع والتصيير نفسها التي جرى التحقق منها.",
   "tools.catalog": "عرض دليل الأدوات ذي الإصدارات",
+  "studio.title": "لوحة الاستوديو",
+  "studio.intro":
+    "تحرير الصور الطبقي مستورد خلف محوِّل يماكن. يبقى معطّلاً حتى تتحقق أهداف تأهيل الاستوديو.",
   "tools.jobs":
     "تعرض المهام التقدم والإلغاء والأخطاء وملفات الفيديو المتحقَّق منها. لا تقبل الواجهة مسارات المشاريع ولا الأوامر العشوائية.",
   "toolbar.unsaved": "تغييرات غير محفوظة",
