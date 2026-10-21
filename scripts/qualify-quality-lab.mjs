@@ -82,9 +82,7 @@ assert.equal(cmp.result.contentHash, summary.contentHash);
 const explain = explainRoutes({ operation: "generate" });
 assert.equal(explain.providersEnabled, false);
 assert.equal(explain.eligible.length, 0);
-assert.ok(
-  explain.rejected.some((r) => r.reasonCode === "PROVIDERS_DISABLED"),
-);
+assert.ok(explain.rejected.some((r) => r.reasonCode === "PROVIDERS_DISABLED"));
 
 const routerCmd = await execute(ctx, "yamakan.router.explain", {
   operation: "generate",
