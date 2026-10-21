@@ -246,8 +246,9 @@ test("hostile scene is refused (NaN, huge counts, unknown asset, depth, bytes)",
         items: [
           {
             ...sampleScene().items[0],
-            // @ts-expect-error hostile token must be rejected by .strict()
             media_file_token: "nope",
+          } as ReturnType<typeof sampleScene>["items"][number] & {
+            media_file_token: string;
           },
         ],
       }),
