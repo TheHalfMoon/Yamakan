@@ -19,12 +19,14 @@ export const STUDIO_LIMITS = Object.freeze({
   maxMegapixels: 64,
 });
 
-/** Opaque canvas contract bytes as stored by the donor (version 3 or 4). */
-export const StudioCanvasContractSchema = z
-  .object({
-    version: z.union([z.literal(3), z.literal(4)]),
-  })
-  .passthrough();
+/**
+ * Opaque donor canvas contract carried as bounded JSON text so command inputs
+ * stay strict (no open objects). Parsed for version 3|4 inside saveStudioDocument.
+ */
+export const StudioCanvasJsonSchema = z
+  .string()
+  .min(2)
+  .max(STUDIO_LIMITS.maxDocumentBytes);
 
 export const StudioDocumentSchema = z
   .object({
@@ -34,25 +36,40 @@ export const StudioDocumentSchema = z
     name: z.string().min(1).max(120),
     /** Donor canvas schema version as written (3 or 4). */
     canvasSchemaVersion: z.union([z.literal(3), z.literal(4)]),
-    /** Full canvas state JSON (document + staging), validated loosely then hashed. */
-    canvas: StudioCanvasContractSchema,
+    /** Full canvas state as JSON text (document + staging). */
+    canvasJson: StudioCanvasJsonSchema,
     /** Content-addressed bitmap asset ids referenced by the canvas. */
     bitmapAssetIds: z.array(Id).max(STUDIO_LIMITS.maxNodes),
     updatedAt: z.string().datetime(),
   })
-  .strict()
-  .superRefine((doc, ctx) => {
-    const bytes = Buffer.byteLength(JSON.stringify(doc.canvas), "utf8");
-    if (bytes > STUDIO_LIMITS.maxDocumentBytes) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Studio canvas exceeds ${STUDIO_LIMITS.maxDocumentBytes} bytes.`,
-        path: ["canvas"],
-      });
-    }
-  });
+  .strict();
 
 export type StudioDocument = z.infer<typeof StudioDocumentSchema>;
+
+export type StudioCanvasState = {
+  version: 3 | 4;
+  [key: string]: unknown;
+};
+
+export function parseStudioCanvasJson(json: string): StudioCanvasState {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new CommandError("VALIDATION", "Studio canvas JSON is not valid.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CommandError("VALIDATION", "Studio canvas must be an object.");
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (version !== 3 && version !== 4) {
+    throw new CommandError(
+      "VALIDATION",
+      "Studio canvas version must be 3 or 4.",
+    );
+  }
+  return parsed as StudioCanvasState;
+}
 
 export function hashStudioDocument(doc: StudioDocument): string {
   return sha256Hex(canonicalJson(doc));
@@ -107,7 +124,7 @@ export function createEmptyStudioDocument(input: {
     id: input.id,
     name: input.name,
     canvasSchemaVersion: 3,
-    canvas,
+    canvasJson: JSON.stringify(canvas),
     bitmapAssetIds: [],
     updatedAt: new Date().toISOString(),
   });
@@ -131,6 +148,13 @@ export function saveStudioDocument(raw: unknown): {
     );
   }
   const document = parsed.data;
+  const canvas = parseStudioCanvasJson(document.canvasJson);
+  if (canvas.version !== document.canvasSchemaVersion) {
+    throw new CommandError(
+      "VALIDATION",
+      "Studio canvasSchemaVersion does not match canvasJson version.",
+    );
+  }
   return {
     document,
     contentHash: hashStudioDocument(document),

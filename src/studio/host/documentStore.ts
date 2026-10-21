@@ -10,7 +10,7 @@ import type { CanvasStateContractV3 } from "../canvas-engine/contracts";
 export function canvasFromStudioDocument(
   doc: StudioDocument,
 ): CanvasStateContractV3 {
-  return doc.canvas as unknown as CanvasStateContractV3;
+  return JSON.parse(doc.canvasJson) as CanvasStateContractV3;
 }
 
 export function studioDocumentFromCanvas(input: {
@@ -26,7 +26,7 @@ export function studioDocumentFromCanvas(input: {
     id: input.id,
     name: input.name,
     canvasSchemaVersion: version,
-    canvas: input.canvas,
+    canvasJson: JSON.stringify(input.canvas),
     bitmapAssetIds: input.bitmapAssetIds ?? [],
     updatedAt: new Date().toISOString(),
   }).document;

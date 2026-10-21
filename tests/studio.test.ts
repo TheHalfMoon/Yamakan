@@ -27,7 +27,7 @@ test("createEmptyStudioDocument produces a hashable v3 canvas", () => {
     height: 512,
   });
   assert.equal(doc.canvasSchemaVersion, 3);
-  assert.equal(doc.canvas.version, 3);
+  assert.equal(JSON.parse(doc.canvasJson).version, 3);
   const saved = saveStudioDocument(doc);
   assert.equal(saved.contentHash.length, 64);
   assert.equal(saved.studioEnabled, false);
