@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W6 provenance drift uses pin fetch when no local clone
+
+- **Authority:** W6 on branch `chore/provenance-brand` ([08 task card](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#w6--provenance-and-brand-tooling)).
+- **Decision:** `node scripts/provenance.mjs --diff <source>` and `--upstream <source>` are implemented in `scripts/provenance-drift.mjs`. `--diff` reads each ledger `original` at the pinned commit from `docs/provenance/donor-clones.json` / `YAMAKAN_DONOR_CLONE_ROOT` when present, otherwise from `raw.githubusercontent.com` at the pin (same bytes as a checkout at the pin). `--upstream` uses the GitHub compare API (`pin...main`). A scheduled workflow `.github/workflows/provenance-security-monthly.yml` runs `--upstream` for each copied donor, `npm audit --audit-level=high`, and prints a manual FFmpeg CVE review note (binary pin remains W5).
+- **Deferred:** full local-clone-only drift (without network) is optional via `donor-clones.json`; automated FFmpeg CVE ingestion is not implemented in this PR.
+- **Change rule:** new donor sources add clone paths or rely on pin fetch; upstream findings become their own PRs.
+
 ## 2026-10-21: W1 canonical format version 3 (not the frozen card's edit-view label)
 
 - **Authority:** W1 implementation on branch `fix/video-clip-sound`; frozen task card assumed a single schema bump.

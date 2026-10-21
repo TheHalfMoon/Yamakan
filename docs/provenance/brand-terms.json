@@ -1,0 +1,22 @@
+{
+  "policy": "yamakan.brand-terms/v1",
+  "scanRoots": ["src", "cli", "mcp"],
+  "skipPathPrefixes": ["src/donors/"],
+  "terms": [
+    { "pattern": "OpenCut", "reason": "donor product name" },
+    { "pattern": "InvokeAI", "reason": "donor product name" },
+    { "pattern": "ArtCraft", "reason": "donor product name" },
+    { "pattern": "OpenVideoStudio", "reason": "donor product name" },
+    { "pattern": "Open Montage", "reason": "donor product name" },
+    { "pattern": "OpenMontage", "reason": "donor product name" },
+    { "pattern": "ComfyUI", "reason": "donor product name" },
+    { "pattern": "MuAPI", "reason": "donor service name" },
+    { "pattern": "Midjourney", "reason": "third-party consumer service name" },
+    {
+      "pattern": "AI Video Production Editor",
+      "reason": "donor product name"
+    },
+    { "pattern": "Open Generative AI", "reason": "donor product name" },
+    { "pattern": "Darzain", "reason": "retired product name; user surfaces say Yamakan" }
+  ]
+}

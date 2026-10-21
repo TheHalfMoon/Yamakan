@@ -224,6 +224,10 @@ test("import guard accepts the repository and rejects unsafe imports", () => {
     sha256: "b".repeat(64),
     importedSha256: "b".repeat(64),
     modifications: [],
+    license: "MIT",
+    authorization: "public-licence",
+    owner: "editing builder",
+    tests: ["tests/core.test.ts"],
   };
   const run = (files: Record<string, string>, ledger = [entry]) =>
     checkImports({

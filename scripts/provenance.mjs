@@ -1,21 +1,75 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { checkImports } from "./import-guard.mjs";
+import { checkImports, checkExcludedContentHashes } from "./import-guard.mjs";
+import { diffSource, upstreamSource } from "./provenance-drift.mjs";
+
 const ledger = JSON.parse(readFileSync("docs/provenance/imports.json", "utf8"));
 const policy = JSON.parse(
   readFileSync("docs/provenance/import-policy.json", "utf8"),
 );
+const denied = JSON.parse(
+  readFileSync("docs/provenance/excluded-content-hashes.json", "utf8"),
+);
+
+const [mode, sourceArg] = process.argv.slice(2);
+
+if (mode === "--diff") {
+  if (!sourceArg)
+    throw new Error("Usage: node scripts/provenance.mjs --diff <source>");
+  const result = await diffSource(sourceArg, ledger);
+  if (result.drifts.length) {
+    console.error(
+      `Drift for ${result.source} @ ${result.pin} (${result.filesChecked} ledger files, via ${result.cloneRoot}):`,
+    );
+    for (const drift of result.drifts)
+      console.error(
+        `  ${drift.original} -> ${drift.imported}: expected ${drift.expectedSha256}, upstream ${drift.upstreamSha256}`,
+      );
+    process.exit(1);
+  }
+  console.log(
+    `No drift for ${result.source} @ ${result.pin} across ${result.filesChecked} ledger files (${result.cloneRoot}).`,
+  );
+  process.exit(0);
+}
+
+if (mode === "--upstream") {
+  if (!sourceArg)
+    throw new Error("Usage: node scripts/provenance.mjs --upstream <source>");
+  const result = await upstreamSource(sourceArg, ledger);
+  console.log(
+    JSON.stringify(
+      {
+        source: result.source,
+        pin: result.pin,
+        status: result.status,
+        aheadBy: result.aheadBy,
+        behindBy: result.behindBy,
+        commits: result.commits,
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(result.aheadBy > 0 ? 2 : 0);
+}
+
+const errors = [];
 for (const entry of ledger) {
   if (!/^[a-f0-9]{40}$/.test(entry.sha))
-    throw new Error(`Unpinned source: ${entry.imported}`);
+    errors.push(`Unpinned source: ${entry.imported}`);
   const hash = createHash("sha256")
     .update(readFileSync(entry.imported))
     .digest("hex");
   if (hash !== entry.importedSha256)
-    throw new Error(`Unrecorded source change: ${entry.imported}`);
+    errors.push(`Unrecorded source change: ${entry.imported}`);
   if (!entry.modifications.length && hash !== entry.sha256)
-    throw new Error(`Unreported modification: ${entry.imported}`);
+    errors.push(`Unreported modification: ${entry.imported}`);
+  for (const test of entry.tests ?? [])
+    if (!existsSync(test))
+      errors.push(`Ledger test file missing: ${test} (${entry.imported})`);
 }
+
 for (const file of [
   "LICENSE",
   "NOTICE",
@@ -23,24 +77,39 @@ for (const file of [
   "notices/Ninerr-LICENSE",
   "notices/OpenCut-LICENSE",
 ])
-  if (!existsSync(file)) throw new Error(`Missing notice: ${file}`);
-// Pinned fonts: unmodified files whose bytes match the ledger, each with its
-// license notice. Rendering verifies the same hashes before use.
+  if (!existsSync(file)) errors.push(`Missing notice: ${file}`);
+
+const sources = new Set(ledger.map((e) => e.source));
+for (const row of policy.sourceNotices ?? []) {
+  if (!sources.has(row.source)) continue;
+  for (const notice of row.notices)
+    if (!existsSync(notice))
+      errors.push(`Missing source notice for ${row.source}: ${notice}`);
+}
+for (const entry of ledger) {
+  if (entry.authorization !== "public-licence") continue;
+  const row = (policy.sourceNotices ?? []).find(
+    (r) => r.source === entry.source,
+  );
+  if (!row?.notices?.length)
+    errors.push(
+      `public-licence ledger entry lacks sourceNotices mapping: ${entry.source}`,
+    );
+}
+
 const fonts = JSON.parse(readFileSync("docs/provenance/fonts.json", "utf8"));
 let fontFiles = 0;
 for (const family of fonts) {
   if (!existsSync(family.licenseFile))
-    throw new Error(`Missing font license: ${family.licenseFile}`);
+    errors.push(`Missing font license: ${family.licenseFile}`);
   for (const file of family.files) {
     const hash = createHash("sha256")
       .update(readFileSync(file.imported))
       .digest("hex");
-    if (hash !== file.sha256) throw new Error(`Font changed: ${file.imported}`);
+    if (hash !== file.sha256) errors.push(`Font changed: ${file.imported}`);
     fontFiles++;
   }
 }
-// The hashes the renderer verifies at load (core/render/fonts.ts) are the
-// ledger's hashes.
 const pinned = new Set(
   readFileSync("core/render/fonts.ts", "utf8").match(/[a-f0-9]{64}/g) ?? [],
 );
@@ -49,9 +118,8 @@ if (
   pinned.size !== ledgered.size ||
   [...pinned].some((hash) => !ledgered.has(hash))
 )
-  throw new Error(
-    "Font hashes in core/render/fonts.ts differ from the ledger.",
-  );
+  errors.push("Font hashes in core/render/fonts.ts differ from the ledger.");
+
 const skip = new Set([
   ".git",
   "node_modules",
@@ -67,16 +135,26 @@ const files = readdirSync(".", { recursive: true, withFileTypes: true })
     `${d.parentPath}/${d.name}`.replaceAll("\\", "/").replace(/^\.\//, ""),
   )
   .filter((f) => !skip.has(f.split("/")[0]))
-  // Native build outputs are not source.
   .filter((f) => !f.startsWith("native/procd/target/"));
-const violations = checkImports({
-  files,
-  read: (f) => readFileSync(f, "utf8"),
-  ledger,
-  policy,
-});
-if (violations.length)
-  throw new Error(`Import guard failed:\n${violations.join("\n")}`);
+
+const readText = (f) => readFileSync(f, "utf8");
+const hashFile = (f) =>
+  createHash("sha256").update(readFileSync(f)).digest("hex");
+
+const hashScanFiles = files.filter(
+  (f) => !f.startsWith("tests/fixtures/provenance/"),
+);
+errors.push(
+  ...checkImports({ files, read: readText, ledger, policy }),
+  ...checkExcludedContentHashes({
+    files: hashScanFiles,
+    readBytes: hashFile,
+    denied,
+    excludedPaths: policy.excludedPaths,
+  }),
+);
+
+if (errors.length) throw new Error(errors.join("\n"));
 console.log(
-  `Verified ${ledger.length} pinned source records, ${fontFiles} pinned font files, required notices and import guard over ${files.length} files.`,
+  `Verified ${ledger.length} pinned source records, ${denied.length} excluded content hashes, ${fontFiles} pinned font files, required notices and import guard over ${files.length} files.`,
 );
