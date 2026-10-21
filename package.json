@@ -32,7 +32,8 @@
     "qualify:q1": "node scripts/qualify-q1-has-audio.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",
-    "qualify:release": "node scripts/qualify-release.ts"
+    "qualify:release": "node scripts/qualify-release.ts",
+    "bundle": "node scripts/bundle.ts"
   },
   "dependencies": {
     "react": "18.3.1",
