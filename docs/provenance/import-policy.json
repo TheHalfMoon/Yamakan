@@ -12,23 +12,33 @@
   "sourceNotices": [
     {
       "source": "LudwigKienle/ai-video-production-editor",
-      "notices": ["notices/ai-video-production-editor-LICENSE"]
+      "notices": [
+        "notices/ai-video-production-editor-LICENSE"
+      ]
     },
     {
       "source": "TheHalfMoon/Ninerr",
-      "notices": ["notices/Ninerr-LICENSE"]
+      "notices": [
+        "notices/Ninerr-LICENSE"
+      ]
     },
     {
       "source": "OpenCut-app/opencut-classic",
-      "notices": ["notices/OpenCut-LICENSE"]
+      "notices": [
+        "notices/OpenCut-LICENSE"
+      ]
     },
     {
       "source": "Vanilagy/mediabunny",
-      "notices": ["notices/mediabunny-LICENSE"]
+      "notices": [
+        "notices/mediabunny-LICENSE"
+      ]
     },
     {
       "source": "soundtouchjs",
-      "notices": ["notices/soundtouchjs-LICENSE"]
+      "notices": [
+        "notices/soundtouchjs-LICENSE"
+      ]
     },
     {
       "source": "storytold/artcraft",
@@ -47,7 +57,9 @@
     },
     {
       "source": "calesthio/OpenMontage",
-      "notices": ["notices/OpenMontage-LICENSE"]
+      "notices": [
+        "notices/OpenMontage-LICENSE"
+      ]
     }
   ],
   "localFilesInDonorRoots": [
@@ -68,12 +80,24 @@
       "reason": "Yamakan helper building FFmpeg atempo filter chains for rational rates (Q6); not from OpenCut."
     },
     {
+      "path": "core/donors/opencut/animation/media-time.ts",
+      "reason": "Yamakan flick-tick MediaTime helpers replacing OpenCut wasm @/wasm for M6/W16 animation."
+    },
+    {
+      "path": "core/donors/opencut/animation/flags.ts",
+      "reason": "Yamakan feature gate ANIMATION_ENABLED for M6/W16 animation port."
+    },
+    {
       "path": "core/engines/contract.ts",
       "reason": "Yamakan-authored M13 engine adapter contract (W10); no donor copy."
     },
     {
       "path": "core/engines/fake.ts",
       "reason": "Yamakan-authored fake engine for cancel/fencing/quarantine tests (W10); no donor copy."
+    },
+    {
+      "path": "core/donors/opencut/animation/sample.ts",
+      "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
     }
   ],
   "excludedPaths": [
@@ -168,5 +192,12 @@
     "core/process/access.ts",
     "core/render.ts"
   ],
-  "productionRoots": ["core", "server", "cli", "sdk", "mcp", "src"]
+  "productionRoots": [
+    "core",
+    "server",
+    "cli",
+    "sdk",
+    "mcp",
+    "src"
+  ]
 }

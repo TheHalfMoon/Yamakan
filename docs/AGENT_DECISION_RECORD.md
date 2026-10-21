@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W16 Keyframe animation (M6)
+
+- **Authority:** frozen plan W16 / M6 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 prerequisite satisfied; W15 merged at `53f6dab`.
+- **Decision:** Port OpenCut Classic `cf5e79e9` animation modules (excluding effect/graphic/transform) into `core/donors/opencut/animation/` with flick `MediaTime`. Map `@/params` onto `core/timeline/properties.ts` (Q14 pass). Shared sampler `sampleScalarChannelsAtTime` for preview/export. **Q13 selects expression-based** FFmpeg compilation (`colorchannelmixer`/`volume` constants from the sampler); sendcmd deferred. Optional clip `animation` map on canonical/edit view; `ANIMATION_ENABLED = false` until UI/render wiring lands.
+- **Evidence:** `npm run qualify:q13` / `qualify:q14`; `tests/animation-params.test.ts`; receipts under `docs/evidence/qualification/q13-animation-compile.json` and `q14-animation-params.json`.
+- **Change rule:** enabling `ANIMATION_ENABLED` requires plan/preview filters and a new ADR.
+
 ## 2026-10-21: W15 Director identity and stages (M11–M12)
 
 - **Authority:** frozen plan W15 / M11–M12 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W14 merged at `498cf45`; W4/W10 prerequisites satisfied.

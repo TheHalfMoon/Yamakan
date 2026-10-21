@@ -690,6 +690,227 @@
     "owner": "media builder"
   },
   {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/bezier.ts",
+    "imported": "core/donors/opencut/animation/bezier.ts",
+    "sha256": "47a241965828c44ae10634ced94919801b90e812eb2d90b130441a1630c022ac",
+    "importedSha256": "2e42a3fdfee7ca35feabf4a40da61ca70ef575540aa765b98a5566de30fa9ed3",
+    "modifications": [
+      "Relative ./types.ts imports."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/interpolation.ts",
+    "imported": "core/donors/opencut/animation/interpolation.ts",
+    "sha256": "20ca806fd989299c94b184b3c71889ee1c524667c55b0e2df42bedde0d391882",
+    "importedSha256": "81be8ed815e18fdbb623900f96260442d004efee87eddd71b2934578fe01e7d5",
+    "modifications": [
+      "@/wasm to media-time.ts; clamp to clampOpts from properties.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/keyframes.ts",
+    "imported": "core/donors/opencut/animation/keyframes.ts",
+    "sha256": "703a30219a3d079b93ac7eae8659da82b35a5386fb6a000cbae944c8bf2f1d93",
+    "importedSha256": "9c52f51978787102268b1d974e85f255e6502c3f6038a5f0c0818e079fb31f2f",
+    "modifications": [
+      "@/wasm to media-time.ts; generateUUID to crypto.randomUUID."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/keyframe-query.ts",
+    "imported": "core/donors/opencut/animation/keyframe-query.ts",
+    "sha256": "9772306e409f93e24d347292063ae78a3de03f0dec511c867441b63309704b6c",
+    "importedSha256": "9ae0e0efe21747fd9560454425affff05934a499d4c3a23a3be27746061cbd6d",
+    "modifications": [
+      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/resolve.ts",
+    "imported": "core/donors/opencut/animation/resolve.ts",
+    "sha256": "05228937152794b9bef31e32d2c12c2b7972cb38f87510da40e7f4af069f784a",
+    "importedSha256": "2969b476cef1971af9eb2d65623c3034b866d555cacf715d0093695dd10b4f53",
+    "modifications": [
+      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/values.ts",
+    "imported": "core/donors/opencut/animation/values.ts",
+    "sha256": "dd33470ae7d66055a8813a996010c9248171687fea7b6b4e8cf10261cb87e6ee",
+    "importedSha256": "2809cf2a717937680463ba0fa950c2130fac1c05d1e8be5f14afdde352cf4d0b",
+    "modifications": [
+      "Relative .ts module imports."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/types.ts",
+    "imported": "core/donors/opencut/animation/types.ts",
+    "sha256": "266932acec2a28074ee2de9dedb64ff79d6fac48b96752cb498554dcd5695d94",
+    "importedSha256": "70043e89df520332318eacff9e98338e41bbdf275ebb9300f55f08d79a1b8452",
+    "modifications": [
+      "MediaTime from media-time.ts; ParamValue from core/timeline/properties.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/curve-bridge.ts",
+    "imported": "core/donors/opencut/animation/curve-bridge.ts",
+    "sha256": "fe0c41d57d7947e3bf04bd84203a94036989a01c9d28e9ff2a732cc58e5f8793",
+    "importedSha256": "9d4c425b98e902d1eb16678293eec0f127c187483a6eef21efd6d57bd5807a3f",
+    "modifications": [
+      "@/wasm to media-time.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/channel-data.ts",
+    "imported": "core/donors/opencut/animation/channel-data.ts",
+    "sha256": "c47eb1efae64eff665a2aa576f4cd2a6b3503b9dca58133b7a5d9b04e8c1209c",
+    "importedSha256": "122d03ba53f4e280bf68568ce17dd68b2a8548ebcfc5ec9abe0e21714bffec37",
+    "modifications": [
+      "Relative ./types.ts imports."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/graph-channels.ts",
+    "imported": "core/donors/opencut/animation/graph-channels.ts",
+    "sha256": "2ff92d8d3ef099414e008b374d201dc4f34802937f4415be945a5c9cd721cdf5",
+    "importedSha256": "49cebdbb13e448c4ec26e72c0a9e5173b1508f5b69d4f541feb6bcd25059e0c4",
+    "modifications": [
+      "ChannelEasingMode from properties.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/property-groups.ts",
+    "imported": "core/donors/opencut/animation/property-groups.ts",
+    "sha256": "56dd1c4e2a37a819915035e03189747633fcb30bd1d89006e4811558071b716e",
+    "importedSha256": "56956a746f4f5c8e6a50851fc0e4c8f193c8d0e2862e337f769228539ab569ae",
+    "modifications": [
+      "Relative .ts module imports."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/path.ts",
+    "imported": "core/donors/opencut/animation/path.ts",
+    "sha256": "04bd4053a0fcd85a460418f845e29711893e682d22395a1bd78987fc6b550632",
+    "importedSha256": "d9578279e466a8601b891441eafe85cc4671bc92371ab5df4936bfb1a45f35f7",
+    "modifications": [
+      "Inlined graphic/effect path prefix checks; excluded effect/graphic channel modules."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/animation/index.ts",
+    "imported": "core/donors/opencut/animation/index.ts",
+    "sha256": "4f9f8898b9f11e2ee31bdb7133f0996e69b7ab62b28f3f08b5d2ef3353935a81",
+    "importedSha256": "a6fc94397fd2778e8771a0121ccb18a5ae65739414219558ade71d80a95b7c89",
+    "modifications": [
+      "Stripped graphic/effect exports; re-export ANIMATION_ENABLED from flags.ts."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "editing builder"
+  },
+  {
     "source": "storytold/artcraft",
     "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
     "original": "frontend/libs/components/pagescene/src/lib/engine/cameraMath.ts",
@@ -870,5 +1091,39 @@
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "apps/web/src/animation/interpolation.ts",
+    "imported": "core/donors/opencut/animation/sample.ts",
+    "sha256": "81be8ed815e18fdbb623900f96260442d004efee87eddd71b2934578fe01e7d5",
+    "importedSha256": "dace8b996a7af4903b45b567a97a91b85900a08dfe33d286a1e0c01335072a12",
+    "modifications": [
+      "Yamakan shared sampler wrapping getScalarChannelValueAtTime for preview/export parity (Q13)."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "authorization": "public-licence",
+    "owner": "motion builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "apps/web/src/params/index.ts",
+    "imported": "core/timeline/properties.ts",
+    "sha256": "94ef2a3c256d4194c9aaaaf982330de14d3789dcbd6afb6389d8d6a3123500d7",
+    "importedSha256": "a3cf5f11ba42b714038546142fcfcbdc8386a1965bcf131eb3636fd6af9823ef",
+    "modifications": [
+      "Yamakan Q14 property registry replacing @/params; no culori dependency."
+    ],
+    "tests": [
+      "tests/animation-params.test.ts"
+    ],
+    "license": "MIT",
+    "authorization": "public-licence",
+    "owner": "motion builder"
   }
 ]
