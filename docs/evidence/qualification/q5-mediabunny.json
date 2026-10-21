@@ -3,8 +3,8 @@
   "qualification": "Q5",
   "module": "M14",
   "task": "W9",
-  "commit": "3e1dc2018d095cc8bfdfda36df12d51a40f0df52",
-  "measuredAt": "2026-10-21T07:21:20.984Z",
+  "commit": "b8315b2b70fa56de6efdc82aeba99404c5f0434b",
+  "measuredAt": "2026-10-21T07:31:00.304Z",
   "timeoutMs": 2000,
   "mediabunny": "1.61.3",
   "mediabunnyBundleSha256": "ef4af783346b35fb85a32fc17b7cbeba7549129ef5105ae644a9041d414a99a5",
@@ -14,37 +14,37 @@
       "file": "tone.mp4",
       "ok": true,
       "frames": 45056,
-      "ms": 31
+      "ms": 26.59999990463257
     },
     {
       "file": "tone.mov",
       "ok": true,
       "frames": 45056,
-      "ms": 7.399999976158142
+      "ms": 8.399999976158142
     },
     {
       "file": "tone.webm",
       "ok": true,
       "frames": 48648,
-      "ms": 14.899999976158142
+      "ms": 12.199999928474426
     },
     {
       "file": "tone.wav",
       "ok": true,
       "frames": 45056,
-      "ms": 5.100000023841858
+      "ms": 6.299999952316284
     },
     {
       "file": "tone.mp3",
       "ok": true,
       "frames": 44928,
-      "ms": 7.5
+      "ms": 8
     },
     {
       "file": "tone.ogg",
       "ok": true,
       "frames": 44608,
-      "ms": 10.399999976158142
+      "ms": 10.300000071525574
     }
   ],
   "passed": true,
