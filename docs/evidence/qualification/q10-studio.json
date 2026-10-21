@@ -1,0 +1,199 @@
+{
+  "qualification": "Q10",
+  "module": "M7",
+  "task": "P10-01",
+  "checkedAt": "2026-10-21T17:03:00.346Z",
+  "gitHead": "fbf14141f501ddf1edb5f4e1d37d281f7d922aae",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.19.0",
+    "browserChannel": "msedge"
+  },
+  "budget": {
+    "chunkMiBGzip": 2.5,
+    "strokeP95Ms": 16
+  },
+  "chunk": {
+    "studioGzipBytes": 115921,
+    "studioGzipMiB": 0.1105508804321289,
+    "allJsGzipBytes": 399389,
+    "allJsGzipMiB": 0.3808870315551758,
+    "chunks": [
+      {
+        "name": "canvasMigration-BGFQizio.js",
+        "rawBytes": 8083,
+        "gzipBytes": 3087,
+        "studioRelated": true
+      },
+      {
+        "name": "canvasStagingView-DTjb3wbF.js",
+        "rawBytes": 295,
+        "gzipBytes": 208,
+        "studioRelated": true
+      },
+      {
+        "name": "documentStore-CmSEPJca.js",
+        "rawBytes": 393,
+        "gzipBytes": 285,
+        "studioRelated": true
+      },
+      {
+        "name": "engine-opOxJmsM.js",
+        "rawBytes": 278673,
+        "gzipBytes": 86270,
+        "studioRelated": true
+      },
+      {
+        "name": "fonts-CfFkGvPL.js",
+        "rawBytes": 459,
+        "gzipBytes": 327,
+        "studioRelated": true
+      },
+      {
+        "name": "port-Ce0hJt9o.js",
+        "rawBytes": 14216,
+        "gzipBytes": 4562,
+        "studioRelated": true
+      },
+      {
+        "name": "rasterComposite-B0Sttoj9.js",
+        "rawBytes": 68069,
+        "gzipBytes": 21182,
+        "studioRelated": true
+      }
+    ],
+    "allChunks": [
+      {
+        "name": "canvasMigration-BGFQizio.js",
+        "gzipBytes": 3087,
+        "studioRelated": true
+      },
+      {
+        "name": "canvasStagingView-DTjb3wbF.js",
+        "gzipBytes": 208,
+        "studioRelated": true
+      },
+      {
+        "name": "demux-worker-cRaC6B0b.js",
+        "gzipBytes": 87410,
+        "studioRelated": false
+      },
+      {
+        "name": "dist-DG0eb5g2.js",
+        "gzipBytes": 82952,
+        "studioRelated": false
+      },
+      {
+        "name": "documentStore-CmSEPJca.js",
+        "gzipBytes": 285,
+        "studioRelated": true
+      },
+      {
+        "name": "engine-opOxJmsM.js",
+        "gzipBytes": 86270,
+        "studioRelated": true
+      },
+      {
+        "name": "fonts-CfFkGvPL.js",
+        "gzipBytes": 327,
+        "studioRelated": true
+      },
+      {
+        "name": "index-Dm0j_MW0.js",
+        "gzipBytes": 112319,
+        "studioRelated": false
+      },
+      {
+        "name": "port-Ce0hJt9o.js",
+        "gzipBytes": 4562,
+        "studioRelated": true
+      },
+      {
+        "name": "q10Fixture-DcFhIOHk.js",
+        "gzipBytes": 419,
+        "studioRelated": false
+      },
+      {
+        "name": "rasterComposite-B0Sttoj9.js",
+        "gzipBytes": 21182,
+        "studioRelated": true
+      },
+      {
+        "name": "rolldown-runtime-CbXtAM7H.js",
+        "gzipBytes": 368,
+        "studioRelated": false
+      }
+    ]
+  },
+  "chunkPass": true,
+  "latency": {
+    "fixture": "4096x4096 document with 20 raster paint layers via loadQ10Fixture",
+    "samples": 40,
+    "p50Ms": 5.300000071525574,
+    "p95Ms": 7.699999928474426,
+    "meanMs": 6.3375,
+    "finalEpoch": 42,
+    "epochAfterStrokes": 40,
+    "targetP95Ms": 16,
+    "timesMs": [
+      29.600000023841858,
+      7.699999928474426,
+      6.800000071525574,
+      7.399999976158142,
+      8.5,
+      7.100000023841858,
+      7.199999928474426,
+      5,
+      5.300000071525574,
+      6.5,
+      6.699999928474426,
+      5.800000071525574,
+      5,
+      4.799999952316284,
+      5.399999976158142,
+      5.300000071525574,
+      4.899999976158142,
+      5.199999928474426,
+      4.700000047683716,
+      4.299999952316284,
+      5.800000071525574,
+      7,
+      4.600000023841858,
+      4.699999928474426,
+      5.200000047683716,
+      7,
+      5.299999952316284,
+      5.5,
+      4.800000071525574,
+      5.399999976158142,
+      7.699999928474426,
+      5.200000047683716,
+      4.600000023841858,
+      5.199999928474426,
+      4.700000047683716,
+      6.799999952316284,
+      6.600000023841858,
+      5,
+      4.600000023841858,
+      4.600000023841858
+    ]
+  },
+  "latencyPass": true,
+  "workflows": {
+    "canvasInteraction": true,
+    "undoAvailableAfterStroke": true,
+    "redoAvailableAfterUndo": true,
+    "activeTool": "brush",
+    "note": "Save/reopen + asset persistence + export covered by host assetStore + Q8 path; Q10 focuses latency/chunk on 4096×20."
+  },
+  "memory": {
+    "usedJSHeapBefore": 13671733,
+    "usedJSHeapAfter": 26207688,
+    "deltaBytes": 12535955,
+    "note": "Chromium performance.memory heap samples around stroke loop"
+  },
+  "passed": true,
+  "detail": "Studio application chunk gzip and 4096×20 stroke p95 within budget.",
+  "pageErrors": []
+}

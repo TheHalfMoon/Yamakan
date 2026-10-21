@@ -4,7 +4,7 @@ Distinguish: code merged ≠ integration tested ≠ E2E ≠ security reviewed �
 
 | Capability | Flag | Code | Integration | E2E | Security | Perf | Enabled (pre-P10) | P10 enable rule |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Studio canvas | `STUDIO_ENABLED` | merged | host mount | scaffold only | host review done | Q10 open | **false** | Q8+Q9+Q10 pass |
+| Studio canvas | `STUDIO_ENABLED` | merged | host mount | Q8 E2E pass | Q8/Q9 reviews | Q10 pass | **false** (enablement PR next) | Q8+Q9+Q10 pass |
 | Generative engine | `ENGINE_ENABLED` | fake only | n/a | n/a | E-SEC open | n/a | **false** | Founder F + E-SEC (out of P10) |
 | Animation | `ANIMATION_ENABLED` | modules | partial | open | plan compiler | Q13/Q14 | **false** | UI+render E2E pass |
 | Cinema | `CINEMA_ENABLED` | camera/scene | partial | open | asset-id only | n/a | **false** | Preview/persist pass; AI camera stays off |
