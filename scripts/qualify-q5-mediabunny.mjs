@@ -26,7 +26,15 @@ const BUNDLE = path.join(
 );
 
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
-const dirty = git("status", "--porcelain", "--", ".", `:!${RECEIPT}`);
+const Q6_RECEIPT = "docs/evidence/qualification/q6-atempo.json";
+const dirty = git(
+  "status",
+  "--porcelain",
+  "--",
+  ".",
+  `:!${RECEIPT}`,
+  `:!${Q6_RECEIPT}`,
+);
 if (dirty)
   throw new Error(`Commit or stash changes before qualifying:\n${dirty}`);
 const commit = git("rev-parse", "HEAD");

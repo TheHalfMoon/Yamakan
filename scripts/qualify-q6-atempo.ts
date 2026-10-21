@@ -18,7 +18,15 @@ const TOLERANCE_SEC = TOLERANCE_FRAMES / SAMPLE_RATE;
 
 const git = (...args: string[]) =>
   execFileSync("git", args, { encoding: "utf8" }).trim();
-const dirty = git("status", "--porcelain", "--", ".", `:!${RECEIPT}`);
+const Q5_RECEIPT = "docs/evidence/qualification/q5-mediabunny.json";
+const dirty = git(
+  "status",
+  "--porcelain",
+  "--",
+  ".",
+  `:!${RECEIPT}`,
+  `:!${Q5_RECEIPT}`,
+);
 if (dirty)
   throw new Error(`Commit or stash changes before qualifying:\n${dirty}`);
 const commit = git("rev-parse", "HEAD");
