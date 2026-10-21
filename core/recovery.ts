@@ -684,10 +684,7 @@ export async function backupWorkspaceIdempotent(
   );
 }
 
-function idempotentRestoreRef(
-  backupId: string,
-  receipt: RequestReceipt,
-) {
+function idempotentRestoreRef(backupId: string, receipt: RequestReceipt) {
   const id = BackupId.parse(backupId);
   const tag = createHash("sha256")
     .update(`${receipt.principalId}:${receipt.requestId}:${receipt.digest}`)
