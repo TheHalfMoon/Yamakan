@@ -321,15 +321,17 @@
       "Worker read containment (2026-10-13): each render and title-fit worker declares the files it reads (its inputs, titles.ass and the fonts folder), which procd grants to the worker's own AppContainer capability for its lifetime; rendering itself is unchanged.",
       "W5.1 (2026-10-21): title staging writes a pinned fonts.conf (core/render/fontconfig.ts) and passes FONTCONFIG_FILE to FFmpeg workers through procd's allowlisted workerEnv; fit-check and render workers read fonts.conf.",
       "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe.",
-      "W9/M5: setpts and atempo chain for clip speed (rational)."
+      "W9/M5: setpts and atempo chain for clip speed (rational).",
+      "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode."
     ],
-    "importedSha256": "5ec26609bbfbbc25c1e5704c9613159f7ae3db2c395a023d3c7e492304d85718",
+    "importedSha256": "9a900653592b4aa964cd18de38cb289b9dbb2f7795cd33ce39d1e984aba3df94",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
     "tests": [
       "tests/render-plan.test.ts",
-      "tests/export-golden.test.ts"
+      "tests/export-golden.test.ts",
+      "tests/w18-audio-flow.test.ts"
     ]
   },
   {
