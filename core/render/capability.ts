@@ -85,8 +85,15 @@ async function probeTitles(): Promise<TitleCapability> {
         if (log.length < 64_000) log += chunk.toString("utf8");
       },
     });
-    const api = libassApi(log || result.stderr);
-    if (result.code !== 0 || !titlesSupported(api)) throw unavailable();
+    const combined = log || result.stderr;
+    const api = libassApi(combined);
+    if (result.code !== 0 || !titlesSupported(api)) {
+      throw unavailable(
+        new Error(
+          `libass probe code=${result.code} api=0x${api.toString(16)} log=${combined.slice(-1500)}`,
+        ),
+      );
+    }
     return { libassApi: api };
   } catch (e) {
     throw e instanceof CommandError ? e : unavailable(e);

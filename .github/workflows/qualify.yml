@@ -40,6 +40,10 @@ jobs:
   qualify-windows-r8:
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      # Avoid junctioned user TEMP paths that ProjectStore rejects as workspace roots.
+      TEMP: ${{ runner.temp }}\yamakan-tmp
+      TMP: ${{ runner.temp }}\yamakan-tmp
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -49,6 +53,8 @@ jobs:
           node-version: 24.19.0
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      - shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build:native
       - run: node --test tests/typography.test.ts tests/bundle.test.ts
