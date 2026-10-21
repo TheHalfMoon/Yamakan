@@ -69,6 +69,7 @@ function resolveRelativeImport(fromFile, spec) {
 }
 
 function collectImportSpecs(text) {
+  if (typeof text !== "string") return [];
   const specs = [];
   for (const match of text.matchAll(IMPORT_SPEC)) {
     specs.push(match[1] ?? match[2]);
@@ -127,6 +128,10 @@ export function checkImports({ files, read, ledger, policy }) {
       !/\.test\.[cm]?[jt]sx?$/.test(file);
     if (!production) continue;
     const text = read(file);
+    if (typeof text !== "string") {
+      violations.push(`Unreadable production file: ${file}`);
+      continue;
+    }
     const allowed = policy.processSpawnAllowlist.includes(file);
     // Formatters wrap long named imports; judge each import as one statement.
     const statements = text.replace(
@@ -156,6 +161,7 @@ export function checkImports({ files, read, ledger, policy }) {
   for (const file of ledgered) {
     if (!policy.donorRoots.some((r) => file.startsWith(`${r}/`))) continue;
     const text = read(file);
+    if (typeof text !== "string") continue;
     for (const spec of collectImportSpecs(text)) {
       const candidates = resolveRelativeImport(file, spec);
       if (!candidates.length) continue;

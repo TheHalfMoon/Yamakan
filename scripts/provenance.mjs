@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { checkImports, checkExcludedContentHashes } from "./import-guard.mjs";
+import { diffSource, upstreamSource } from "./provenance-drift.mjs";
 
 const ledger = JSON.parse(readFileSync("docs/provenance/imports.json", "utf8"));
 const policy = JSON.parse(
@@ -9,6 +10,49 @@ const policy = JSON.parse(
 const denied = JSON.parse(
   readFileSync("docs/provenance/excluded-content-hashes.json", "utf8"),
 );
+
+const [mode, sourceArg] = process.argv.slice(2);
+
+if (mode === "--diff") {
+  if (!sourceArg)
+    throw new Error("Usage: node scripts/provenance.mjs --diff <source>");
+  const result = await diffSource(sourceArg, ledger);
+  if (result.drifts.length) {
+    console.error(
+      `Drift for ${result.source} @ ${result.pin} (${result.filesChecked} ledger files, via ${result.cloneRoot}):`,
+    );
+    for (const drift of result.drifts)
+      console.error(
+        `  ${drift.original} -> ${drift.imported}: expected ${drift.expectedSha256}, upstream ${drift.upstreamSha256}`,
+      );
+    process.exit(1);
+  }
+  console.log(
+    `No drift for ${result.source} @ ${result.pin} across ${result.filesChecked} ledger files (${result.cloneRoot}).`,
+  );
+  process.exit(0);
+}
+
+if (mode === "--upstream") {
+  if (!sourceArg)
+    throw new Error("Usage: node scripts/provenance.mjs --upstream <source>");
+  const result = await upstreamSource(sourceArg, ledger);
+  console.log(
+    JSON.stringify(
+      {
+        source: result.source,
+        pin: result.pin,
+        status: result.status,
+        aheadBy: result.aheadBy,
+        behindBy: result.behindBy,
+        commits: result.commits,
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(result.aheadBy > 0 ? 2 : 0);
+}
 
 const errors = [];
 for (const entry of ledger) {

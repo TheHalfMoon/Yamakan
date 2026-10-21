@@ -99,6 +99,21 @@
       "pattern": "(^|/)muapi[^/]*\\.(js|ts)$",
       "source": "Anil-matcha/Open-Generative-AI",
       "reason": "Unqualified provider submit/poll proxy with ambiguous billing retries."
+    },
+    {
+      "pattern": "(^|/)core/managers(/|$)",
+      "source": "OpenCut-app/opencut-classic",
+      "reason": "Second persisted authority (OpenCut EditorCore managers)."
+    },
+    {
+      "pattern": "(^|/)services/storage/(indexeddb|opfs)-adapter\\.ts$",
+      "source": "OpenCut-app/opencut-classic",
+      "reason": "Second persisted authority (IndexedDB/OPFS storage adapters)."
+    },
+    {
+      "pattern": "(^|/)services/renderer/scene-exporter\\.ts$",
+      "source": "OpenCut-app/opencut-classic",
+      "reason": "In-memory export authority conflicting with Yamakan render plan."
     }
   ],
   "processSpawnAllowlist": [

@@ -68,5 +68,117 @@
     "original": "src/lib/muapi.js",
     "sha256": "dea747fbda9ddc67aa4374267e8ec50b6db5a3ae69f706e193fc32654d4627e7",
     "reason": "Unqualified provider submit/poll proxy with ambiguous billing retries."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/audio-manager.ts",
+    "sha256": "6b4bc7aeaec138073b38d05e1e5d834ac4f5763e9a5cb0c35af60caa38fba7c8",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/clipboard-manager.ts",
+    "sha256": "746e40870f0a79959857f9a1c65b98b49916f94c3c2757e031aebb23182feb9e",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/commands.ts",
+    "sha256": "af72cecec9dcac10ee30057bbe550bb40d75ef128107a018f1ce8f1bcfc65373",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/diagnostics-manager.ts",
+    "sha256": "ed8e61f423e23a08fb770da5b46d89a8d7699a98f0f8aef6c95f92e7eec82df5",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/media-manager.ts",
+    "sha256": "7f8d05292d1b3e295dfa89a9deaae7157411f0b6689fa53355553a38758e9a37",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/playback-manager.ts",
+    "sha256": "64024433fff85e99cbc84322cdf09b9d7f44b95f3765aa24f260df43471ae72b",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/project-manager.ts",
+    "sha256": "07322206e8b3bad021dc6521c8d2ac8f696a70142fb9a6acadd78a3b7c7caee4",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/renderer-manager.ts",
+    "sha256": "f5530a23894bc21c3b24c5b8f90feb497ad45fcb5ebdc4a64d66e561bcfc7f34",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/save-manager.ts",
+    "sha256": "3211c25b816e35a6cb4e67f1b76d02659eebe9e1a4151485524dff85d27c186c",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/scenes-manager.ts",
+    "sha256": "332a97ffb9dc8fb07de332c199bf56c95271a013b1c3ad69828872503b75444f",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/selection-manager.ts",
+    "sha256": "7b2bbeb7726694a2c807587b4fee468f7872e26b6575efc4999c43462ae699bc",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "core/managers/timeline-manager.ts",
+    "sha256": "34ac23db94d3e8c78762fb168b191e419cf26a4fffa7bf613c03d68b7088549a",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "services/renderer/scene-exporter.ts",
+    "sha256": "512487461a98fc37ddae93de326f56712e1940a8b81ac01cd2dff79f4f976ed1",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "services/storage/indexeddb-adapter.ts",
+    "sha256": "c79c39903fff23ad0253156f7a0661bb157172a4b76feae7183ecf9b2ffbcb3a",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "original": "services/storage/opfs-adapter.ts",
+    "sha256": "54b4961efcc7411df99a7d29e0f28e7d564f4bf065290a990454178db2fcaee0",
+    "reason": "Second persisted or export authority (OpenCut managers/storage/renderer)."
+  },
+  {
+    "source": "Anil-matcha/Open-Generative-AI",
+    "sha": "d8d624dcf48a581fde18102f53d76a01a95ec58c",
+    "original": "electron/lib/localInference.js",
+    "reason": "Silent retrying model downloads without idempotency.",
+    "sha256": "64c1e919550b91a433ce7083a30b4b3d9aee7de11a3de68158ca280cc3ff76aa"
   }
 ]

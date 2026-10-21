@@ -85,6 +85,18 @@ test("ledger import closure rejects excluded dependency", () => {
   assert.ok(violations.some((v) => /closure hits excluded path/.test(v)));
 });
 
+test("ledger closure tolerates unreadable ledger paths", () => {
+  const allowed = "src/donors/x/missing-on-disk.ts";
+  assert.doesNotThrow(() =>
+    checkImports({
+      files: [],
+      read: () => undefined,
+      ledger: [{ ...baseEntry, imported: allowed }],
+      policy,
+    }),
+  );
+});
+
 test("brand check rejects donor strings and allows NOTICE", () => {
   const violations = checkBrand({
     files: ["src/i18n.ts"],
