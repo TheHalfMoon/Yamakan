@@ -409,8 +409,8 @@ try {
     await page.getByLabel("Scene name").inputValue(),
     "Preserved on switch",
   );
-  // Operate through the same real agent API to create overlapping audio and a
-  // portrait video with embedded sound, then verify real preview media instances.
+  // Operate through the same real agent API to layer audio on two tracks and
+  // add a portrait video with embedded sound, then verify preview media.
   const imported = await (
     await page.request.post(`${url}/api/v1/projects/${projectId}/assets`, {
       headers: { ...agent, "X-Asset-Name": "motion-with-sound.mp4" },
@@ -422,20 +422,42 @@ try {
     originalAudio = changed.clips.find((c) =>
       changed.assets.some((a) => a.id === c.assetId && a.kind === "audio"),
     );
+  const pictureTrack = changed.tracks.find((t) => t.kind === "video");
+  assert.ok(pictureTrack, "Picture track must exist");
+  const layeredAudioTrack = {
+    id: crypto.randomUUID(),
+    name: "Layer",
+    kind: "audio",
+    muted: false,
+    locked: false,
+  };
+  changed.tracks.push(layeredAudioTrack);
   changed.clips.push({
     ...originalAudio,
     id: crypto.randomUUID(),
+    trackId: layeredAudioTrack.id,
     sourceFrame: 30,
     durationFrames: 60,
   });
+  // Still-image clips on the picture track would overlap a video at t=0.
+  changed.clips = changed.clips.filter(
+    (c) =>
+      !changed.assets.some((a) => a.id === c.assetId && a.kind === "image"),
+  );
   changed.clips.push({
     id: crypto.randomUUID(),
-    trackId: changed.tracks[0].id,
+    trackId: pictureTrack.id,
     assetId: imported.asset.id,
     startFrame: 0,
     durationFrames: 90,
     sourceFrame: 0,
     title: null,
+    sound: {
+      enabled: true,
+      gainDb: 0,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+    },
   });
   const changedResponse = await page.request.post(`${url}/api/v1/call`, {
     headers: agent,
