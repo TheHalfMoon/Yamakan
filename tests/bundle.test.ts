@@ -102,7 +102,9 @@ test("uninstall does not follow a junction inside the version folder", async (t)
 });
 
 test("install-dev scaffolds into LOCALAPPDATA and verifies", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-install-dev-"));
+  const root = await mkdtemp(
+    path.join(tmpdir(), "yamakan-bundle-install-dev-"),
+  );
   bases.push(root);
   const manifest = await installDevBundle("install-dev-test", root);
   assert.equal(manifest.version, "install-dev-test");

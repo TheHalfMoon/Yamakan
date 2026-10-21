@@ -336,10 +336,7 @@ export const EXTERNAL_BINARY_PINS = {
   node: null as { url: string; sha256: string } | null,
 };
 
-export async function installDevBundle(
-  version: string,
-  root = installRoot(),
-) {
+export async function installDevBundle(version: string, root = installRoot()) {
   const staging = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-stage-"));
   try {
     await scaffoldDevBundle(staging, version);
