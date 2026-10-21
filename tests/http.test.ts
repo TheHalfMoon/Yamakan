@@ -12,6 +12,7 @@ import {
   describeAccess,
   readableByOtherAccounts,
 } from "../core/process/access.ts";
+import { writeLaunchLink } from "../core/launch.ts";
 
 // Every test folder is removed when the file's tests finish; each test
 // waits for its server to exit first.
@@ -64,6 +65,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
   }
   try {
     await start();
+    await writeLaunchLink(root, origin);
     assert.equal((await fetch(`${origin}/api/v1/tools`)).status, 401);
     const token = await readFile(path.join(root, "token"), "utf8");
     const headers = {
@@ -111,9 +113,9 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       null,
       "no cookie for a page load",
     );
-    const launchUrl = (
-      await readFile(path.join(root, "launch"), "utf8")
-    ).trim();
+    const launchUrl = (await readFile(path.join(root, "launch"), "utf8"))
+      .split("\n")[0]
+      .trim();
     const launch = /#launch=([a-f0-9]{64})$/.exec(launchUrl)?.[1];
     assert.ok(launch, "the launch file holds the launch link");
     assert.ok(launchUrl.startsWith(`${origin}/#launch=`));

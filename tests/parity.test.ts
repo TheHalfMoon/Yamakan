@@ -24,6 +24,7 @@ import { once } from "node:events";
 import { createInterface } from "node:readline";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { writeLaunchLink } from "../core/launch.ts";
 
 const F = 23_520_000; // flicks per 30 fps frame
 // Clip, scene and shot identifiers are unique across a workspace, so each
@@ -450,6 +451,7 @@ test(
       );
       server.once("exit", (code) => reject(new Error(`server exited ${code}`)));
     });
+    await writeLaunchLink(env.YAMAKAN_WORKSPACE!, base);
     const wav = path.join(root, "tone.wav");
     execFileSync(
       mediaTools().ffmpeg,
@@ -501,7 +503,7 @@ test(
     ).trim();
     // The launch file holds the link; its fragment carries the secret.
     const launch = /#launch=([a-f0-9]{64})/.exec(
-      await readFile(path.join(workspace, "launch"), "utf8"),
+      (await readFile(path.join(workspace, "launch"), "utf8")).split("\n")[0],
     )![1];
     const session = await (
       await fetch(`${base}/api/v1/session`, {

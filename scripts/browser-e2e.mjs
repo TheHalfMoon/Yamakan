@@ -123,6 +123,8 @@ try {
       reject(new Error(`Server exited ${code}: ${serverError}`));
     });
   });
+  const { writeLaunchLink } = await import("../core/launch.ts");
+  await writeLaunchLink(join(root, "workspace"), url);
   const agent = {
     Authorization: `Bearer ${(await readFile(join(root, "workspace", "token"), "utf8")).trim()}`,
   };
@@ -179,9 +181,9 @@ try {
   await stranger.close();
   // The launch link (from the owner-only launch file) starts the session;
   // its secret is removed from the address bar before the editor starts.
-  const launchUrl = (
-    await readFile(join(root, "workspace", "launch"), "utf8")
-  ).trim();
+  const launchUrl = (await readFile(join(root, "workspace", "launch"), "utf8"))
+    .split("\n")[0]
+    .trim();
   await page.goto(launchUrl);
   await page.waitForFunction(() => location.hash === "");
   assert.equal(page.url(), `${url}/`);

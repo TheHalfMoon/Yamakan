@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ProjectStore } from "../core/store.ts";
 import { CreativeAPI, principals } from "./api.ts";
+import { consumeLaunchSecret } from "../core/launch.ts";
 import { safePath, initializeRoot } from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
@@ -75,8 +76,7 @@ await store.initialize();
 // cannot send headers, use a separate key that only reads media.
 const sessionToken = randomBytes(32).toString("hex");
 const mediaKey = randomBytes(32).toString("hex");
-const clientToken = randomBytes(32).toString("hex");
-const launchSecret = randomBytes(32).toString("hex");
+const cliToken = randomBytes(32).toString("hex");
 // Written fresh each start (a stale file keeps its old mode on POSIX).
 async function writeSecret(name: string, value: string) {
   const file = await safePath(root, name);
@@ -86,7 +86,7 @@ async function writeSecret(name: string, value: string) {
   });
   await writeFile(file, value, { mode: 0o600, flag: "wx" });
 }
-await writeSecret("token", clientToken);
+await writeSecret("token", cliToken);
 // Backups and restored workspaces live outside the workspace folder, and
 // are private to this account too.
 const recoveryHome = path.resolve(env("RECOVERY") || defaultRecoveryHome(root));
@@ -117,9 +117,6 @@ void store
   );
 const port = Number(env("PORT") || 4318);
 const origin = `http://127.0.0.1:${port}`;
-// The secret travels in the fragment, which browsers never send to a server.
-const launchUrl = `${origin}/#launch=${launchSecret}`;
-await writeSecret("launch", `${launchUrl}\n`);
 function sameToken(value: string, expected: string) {
   const a = Buffer.from(value),
     b = Buffer.from(expected);
@@ -136,9 +133,9 @@ function authenticate(
   const authorization = req.headers.authorization;
   if (authorization !== undefined) {
     const bearer = /^Bearer ([a-f0-9]{64})$/.exec(authorization)?.[1];
-    return bearer && sameToken(bearer, clientToken)
-      ? principals["local-client"]
-      : null;
+    if (!bearer) return null;
+    if (sameToken(bearer, cliToken)) return principals["local-client"];
+    return store.principalForAgentToken(bearer);
   }
   // Browser requests must come from the Yamakan page itself: state changes
   // carry our exact Origin; reads reject other sites and loopback ports.
@@ -275,14 +272,20 @@ const server = createServer(async (req, res) => {
       } catch {
         throw new CommandError("VALIDATION", "Invalid session request.");
       }
-      if (
-        typeof launch !== "string" ||
-        !/^[a-f0-9]{64}$/.test(launch) ||
-        !sameToken(launch, launchSecret)
-      )
+      if (typeof launch !== "string" || !/^[a-f0-9]{64}$/.test(launch))
         return fail(
           new CommandError("UNAUTHENTICATED", "The launch link is not valid."),
         );
+      const consumed = await consumeLaunchSecret(root, launch);
+      if (!consumed.ok) {
+        const message =
+          consumed.reason === "missing"
+            ? "This launch link was already used. Open Yamakan again from the launcher."
+            : consumed.reason === "expired"
+              ? "This launch link has expired. Open Yamakan again from the launcher."
+              : "The launch link is not valid.";
+        return fail(new CommandError("UNAUTHENTICATED", message));
+      }
       return json(200, { session: sessionToken, media: mediaKey });
     }
     if (url.pathname.startsWith("/api/")) {
@@ -483,7 +486,7 @@ server.requestTimeout = 0;
 server.setTimeout(120_000);
 server.listen(port, "127.0.0.1", () =>
   console.log(
-    `Yamakan is running at ${origin}; workspace ${root}\nOpen Yamakan with the link in ${path.join(root, "launch")}`,
+    `Yamakan is running at ${origin}; workspace ${root}\nRun npm run open (or your Start-menu shortcut) to sign in in the browser.`,
   ),
 );
 const close = async (code = 0) => {

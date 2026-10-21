@@ -39,6 +39,15 @@ import { applyBatch } from "./timeline/operations.ts";
 import type { Operation } from "./timeline/operations.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { inspectWal } from "./wal.ts";
+import type { Scope } from "./command/registry.ts";
+import type { Principal } from "./command/registry.ts";
+import {
+  encodeAgentScopes,
+  hashAgentToken,
+  newAgentId,
+  newAgentToken,
+  parseAgentScopes,
+} from "./agents.ts";
 
 export type ProjectHistory = {
   projectId: string;
@@ -85,7 +94,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const WORKSPACE_SCOPE = "";
 
 // Asset objects are content-addressed files under a project; a version is a
@@ -164,6 +173,16 @@ CREATE TABLE recovery_receipts(
   effect_ref TEXT NOT NULL,
   result_json TEXT,
   PRIMARY KEY(principal_id, operation, request_id)
+) STRICT;
+`;
+const SCHEMA_V7 = `
+CREATE TABLE agent_tokens(
+  agent_id TEXT PRIMARY KEY CHECK(agent_id GLOB 'agent:*'),
+  token_hash TEXT NOT NULL UNIQUE CHECK(length(token_hash) = 64),
+  scopes TEXT NOT NULL,
+  label TEXT,
+  revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0, 1)),
+  created_at TEXT NOT NULL
 ) STRICT;
 `;
 const SCHEMA_V4 = `
@@ -403,6 +422,7 @@ export class ProjectStore {
         SCHEMA_V4,
         SCHEMA_V5,
         SCHEMA_V6,
+        SCHEMA_V7,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
@@ -2010,5 +2030,45 @@ export class ProjectStore {
       revision: number;
       operation: string;
     }[];
+  }
+  createAgentToken(scopes: ReadonlySet<Scope>, label?: string) {
+    const agentId = newAgentId();
+    const token = newAgentToken();
+    const tokenHash = hashAgentToken(token);
+    this.#database
+      .prepare(
+        "INSERT INTO agent_tokens(agent_id, token_hash, scopes, label, created_at) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(
+        agentId,
+        tokenHash,
+        encodeAgentScopes(scopes),
+        label ?? null,
+        new Date().toISOString(),
+      );
+    return { agentId, token, scopes: [...scopes] };
+  }
+  revokeAgentToken(agentId: string) {
+    const changed = this.#database
+      .prepare(
+        "UPDATE agent_tokens SET revoked = 1 WHERE agent_id = ? AND revoked = 0",
+      )
+      .run(agentId).changes;
+    if (!changed)
+      throw new CommandError("NOT_FOUND", "Agent token was not found.");
+    return { agentId, revoked: true as const };
+  }
+  principalForAgentToken(token: string): Principal | null {
+    const row = this.#database
+      .prepare(
+        "SELECT agent_id, scopes, revoked FROM agent_tokens WHERE token_hash = ?",
+      )
+      .get(hashAgentToken(token)) as
+      { agent_id: string; scopes: string; revoked: number } | undefined;
+    if (!row || row.revoked) return null;
+    return {
+      id: row.agent_id as Principal["id"],
+      scopes: parseAgentScopes(row.scopes),
+    };
   }
 }
