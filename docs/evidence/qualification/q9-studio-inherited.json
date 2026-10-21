@@ -1,0 +1,23 @@
+{
+  "qualification": "Q9",
+  "module": "M7",
+  "task": "P10-01",
+  "checkedAt": "2026-10-21T16:10:00Z",
+  "baseMain": "72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d",
+  "passed": true,
+  "detail": "Inherited 145 engine test files from InvokeAI ffe9e1a. After host workbenchState shim, node-mode remaining pass ratio 120/122 = 98.36% (≥90%). Six files excluded from denominator for uncopied-module imports (see q9-exclusions.json). Seventeen browser-mode files out of node denominator. Two remaining known failures covering kept code are documented residuals (not counted as passes). Limit/loader/seam ownership retained via boundaries.test.ts.",
+  "counts": {
+    "engineTestFilesCopied": 145,
+    "nodeModeFiles": 128,
+    "excludedUncopiedImports": 6,
+    "remainingNodeFiles": 122,
+    "remainingPass": 120,
+    "remainingFail": 2,
+    "passRatio": 0.9836065573770492
+  },
+  "receipts": [
+    "docs/evidence/qualification/q9-exclusions.json",
+    "docs/evidence/qualification/q9-vitest-raw.json"
+  ],
+  "binding": "Q9 threshold met. STUDIO_ENABLED still requires Q10 stroke latency on 4096²×20 layers plus completion of residual exclusion rewrites for enablement honesty."
+}
