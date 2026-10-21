@@ -11,8 +11,10 @@ Snapshot: bec85aa7ee8f1b1695c689aff1631c165baa09fa
 Required license texts are retained in notices/. The imported files, hashes and
 modifications are recorded in docs/provenance/imports.json. Original component
 ownership and licenses remain intact. Darzain's combined distribution follows
-GPL-3.0-or-later; model weights, FFmpeg, fonts and external services are separately
-owned and are not bundled. This file is an attribution notice, not a replacement
-for the source licenses.
+GPL-3.0-or-later; model weights and external services remain separately owned.
+The Windows R8 FFmpeg pin under vendor/ffmpeg-win64-r8/ (GPL-3.0-or-later build)
+and its companion notices are recorded in notices/ffmpeg-win64-r8-NOTICE.txt.
+Pinned OFL fonts remain under assets/fonts with notices/IBM-Plex-Sans-Arabic-OFL.txt.
+This file is an attribution notice, not a replacement for the source licenses.
 
 Darzain content-addressed byte storage and qualification tests reuse TheHalfMoon/Skelet, commit 5d4778636de8fbb3c8ef71efbfe46d473f8e97e3. Adoption is based on founder-provided authorization in the master directive. No repository license file was found in the inspected snapshot; no upstream open-source license is inferred. Source and modifications are recorded in docs/provenance/imports.json.

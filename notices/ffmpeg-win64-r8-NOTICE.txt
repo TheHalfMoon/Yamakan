@@ -1,0 +1,28 @@
+Yamakan vendor/ffmpeg-win64-r8 — Windows x86_64 FFmpeg pin for R8/Q3
+====================================================================
+
+This directory contains a redistributable FFmpeg 7.1.1 + ffprobe build and
+companion MinGW-w64 runtime DLLs. It is built only with free tools
+(scripts/vendor/build-ffmpeg-win64-r8-msys2.sh under MSYS2 mingw64).
+
+Purpose
+-------
+libass 0.17.3 is compiled with DirectWrite disabled and fontconfig enabled so
+title rendering can be confined via FONTCONFIG_FILE (qualification Q3 / gate R8).
+
+Upstream components (non-exhaustive)
+------------------------------------
+- FFmpeg 7.1.1 — GPL-3.0-or-later (this build uses --enable-gpl --enable-version3)
+  https://ffmpeg.org/
+- libass 0.17.3 — ISC
+  https://github.com/libass/libass
+- fontconfig, freetype, harfbuzz, fribidi, libpng, zlib, expat, brotli,
+  graphite2, glib, lame, opus, x264 — licenses of their upstream projects
+  (as packaged by MSYS2 mingw64 at build time); copies of the shared
+  libraries used at runtime are vendored beside ffmpeg.exe / ffprobe.exe.
+
+Exact binary SHA-256 digests are recorded in vendor/ffmpeg-win64-r8/SHA256SUMS
+and vendor/ffmpeg-win64-r8/BUILD.json, and pinned in scripts/bundle.ts
+(EXTERNAL_BINARY_PINS).
+
+This notice is attribution only; it does not replace the upstream licenses.

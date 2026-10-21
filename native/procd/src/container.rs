@@ -369,8 +369,52 @@ pub fn staged_tool(exe: &str) -> Result<String, String> {
                 return Err(format!("publish executable: {e}"));
             }
         }
+        // R8/Q3 mingw pin: companion DLLs must sit beside the staged exe so
+        // the AppContainer loader can resolve them (Windows loads from the
+        // executable directory). Copy only *.dll siblings of the source.
+        if let Some(src_dir) = source.parent() {
+            stage_sibling_dlls(src_dir, &folder)?;
+        }
+    } else if let Some(src_dir) = source.parent() {
+        // Cached exe may predate DLL staging; ensure companions are present.
+        stage_sibling_dlls(src_dir, &folder)?;
     }
     Ok(target.to_string_lossy().to_string())
+}
+
+/// Copy every `*.dll` next to the allowlisted source into the staged tools
+/// folder (byte-identical; skip when already matching).
+fn stage_sibling_dlls(src_dir: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
+    let entries = std::fs::read_dir(src_dir).map_err(|e| format!("list companion DLLs: {e}"))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name() else { continue };
+        let name_str = name.to_string_lossy();
+        if !name_str.to_ascii_lowercase().ends_with(".dll") {
+            continue;
+        }
+        let dest = dest_dir.join(name);
+        if dest.exists() && same_bytes(&path, &dest)? {
+            continue;
+        }
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let partial = dest_dir.join(format!("{name_str}.{}.{nanos}.partial", std::process::id()));
+        std::fs::copy(&path, &partial).map_err(|e| format!("copy companion DLL {name_str}: {e}"))?;
+        if !same_bytes(&path, &partial)? {
+            let _ = std::fs::remove_file(&partial);
+            return Err(format!("companion DLL {name_str} differs from its source"));
+        }
+        if let Err(e) = std::fs::rename(&partial, &dest) {
+            let _ = std::fs::remove_file(&partial);
+            if !dest.exists() {
+                return Err(format!("publish companion DLL {name_str}: {e}"));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn same_bytes(a: &std::path::Path, b: &std::path::Path) -> Result<bool, String> {
