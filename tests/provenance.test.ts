@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import {
-  checkExcludedContentHashes,
-  checkImports,
-} from "../scripts/import-guard.mjs";
+// prettier-ignore
+// @ts-expect-error Plain .mjs modules without declarations.
+import { checkExcludedContentHashes, checkImports } from "../scripts/import-guard.mjs";
+// prettier-ignore
+// @ts-expect-error Plain .mjs modules without declarations.
 import { checkBrand } from "../scripts/brand-check.mjs";
 
 const policy = JSON.parse(
@@ -45,7 +46,7 @@ test("provenance ledger rejects missing extended fields", () => {
     ledger: [incomplete],
     policy,
   });
-  assert.ok(violations.some((v) => /missing license/.test(v)));
+  assert.ok(violations.some((v: string) => /missing license/.test(v)));
 });
 
 test("excluded path and renamed excluded content fail", () => {
@@ -58,7 +59,7 @@ test("excluded path and renamed excluded content fail", () => {
       read: () => "",
       ledger: [baseEntry],
       policy,
-    }).some((v) => /Excluded donor path present/.test(v)),
+    }).some((v: string) => /Excluded donor path present/.test(v)),
   );
   const hashViolations = checkExcludedContentHashes({
     files: [scratch, renamed],
@@ -67,8 +68,9 @@ test("excluded path and renamed excluded content fail", () => {
     excludedPaths: policy.excludedPaths,
   });
   assert.equal(
-    hashViolations.filter((v) => /Excluded donor content present/.test(v))
-      .length,
+    hashViolations.filter((v: string) =>
+      /Excluded donor content present/.test(v),
+    ).length,
     2,
   );
 });
@@ -77,12 +79,14 @@ test("ledger import closure rejects excluded dependency", () => {
   const allowed = "src/donors/x/allowed.ts";
   const violations = checkImports({
     files: [allowed],
-    read: (f) =>
+    read: (f: string) =>
       f === allowed ? 'import "./electron/main.js";' : "export const ok = 1;",
     ledger: [{ ...baseEntry, imported: allowed }],
     policy,
   });
-  assert.ok(violations.some((v) => /closure hits excluded path/.test(v)));
+  assert.ok(
+    violations.some((v: string) => /closure hits excluded path/.test(v)),
+  );
 });
 
 test("ledger closure tolerates unreadable ledger paths", () => {
@@ -103,11 +107,11 @@ test("brand check rejects donor strings and allows NOTICE", () => {
     read: () => 'export const x = "Powered by OpenCut";',
     config: brand,
   });
-  assert.ok(violations.some((v) => /OpenCut/.test(v)));
+  assert.ok(violations.some((v: string) => /OpenCut/.test(v)));
   assert.deepEqual(
     checkBrand({
       files: ["NOTICE"],
-      read: (f) => readFileSync(f, "utf8"),
+      read: (f: string) => readFileSync(f, "utf8"),
       config: brand,
     }),
     [],
