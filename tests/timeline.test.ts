@@ -1161,22 +1161,23 @@ test("E2E journey 2: ripple delete then undo then redo restores snapshot bytes",
     clipId: ids.title2,
   });
   assert.equal(rippled.clips.length, 2);
+  // Commands return the 30 fps edit view (startFrame), not canonical ticks.
   assert.equal(
-    rippled.clips.find((x: { id: string }) => x.id === ids.extra).startTicks,
-    30 * F,
+    rippled.clips.find((x: { id: string }) => x.id === ids.extra).startFrame,
+    30,
   );
   const undone = await call("yamakan.project.undo", {
     projectId: project.id,
     expectedRevision: rippled.revision,
   });
   assert.deepEqual(
-    undone.clips.map((x: { id: string; startTicks: number }) => ({
+    undone.clips.map((x: { id: string; startFrame: number }) => ({
       id: x.id,
-      startTicks: x.startTicks,
+      startFrame: x.startFrame,
     })),
-    beforeRipple.clips.map((x: { id: string; startTicks: number }) => ({
+    beforeRipple.clips.map((x: { id: string; startFrame: number }) => ({
       id: x.id,
-      startTicks: x.startTicks,
+      startFrame: x.startFrame,
     })),
   );
   const redone = await call("yamakan.project.redo", {
@@ -1184,13 +1185,13 @@ test("E2E journey 2: ripple delete then undo then redo restores snapshot bytes",
     expectedRevision: undone.revision,
   });
   assert.deepEqual(
-    redone.clips.map((x: { id: string; startTicks: number }) => ({
+    redone.clips.map((x: { id: string; startFrame: number }) => ({
       id: x.id,
-      startTicks: x.startTicks,
+      startFrame: x.startFrame,
     })),
-    rippled.clips.map((x: { id: string; startTicks: number }) => ({
+    rippled.clips.map((x: { id: string; startFrame: number }) => ({
       id: x.id,
-      startTicks: x.startTicks,
+      startFrame: x.startFrame,
     })),
   );
   store.close();
