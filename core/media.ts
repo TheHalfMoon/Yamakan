@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { CommandError } from "./command/errors.ts";
@@ -152,4 +154,38 @@ export async function probe(file: string) {
       nominal.num * average.den !== average.num * nominal.den,
     ),
   };
+}
+
+export function mediaFailureReason(error: unknown): string {
+  if (error instanceof CommandError) return error.message;
+  if (error instanceof Error && error.message) return error.message;
+  return "Media could not be verified.";
+}
+
+// Re-probes a quarantined object after its bytes on disk are checked against
+// the recorded content address and size.
+export async function verifyAndProbe(
+  file: string,
+  digest: string,
+  bytes: number,
+) {
+  const hash = createHash("sha256");
+  let length = 0;
+  for await (const chunk of createReadStream(file)) {
+    hash.update(chunk as Buffer);
+    length += (chunk as Buffer).length;
+  }
+  if (length !== bytes)
+    return { released: false as const, reason: "Object size does not match." };
+  if (hash.digest("hex") !== digest)
+    return {
+      released: false as const,
+      reason: "Object bytes do not match its content address.",
+    };
+  try {
+    const probed = await probe(file);
+    return { released: true as const, probed };
+  } catch (error) {
+    return { released: false as const, reason: mediaFailureReason(error) };
+  }
 }

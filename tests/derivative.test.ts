@@ -101,6 +101,28 @@ const objectRows = (store: ProjectStore, projectId: string) =>
     ) as { digest: string }[]
   ).map((r) => r.digest);
 
+test("garbage collection removes a hidden VFR original that no revision references", async () => {
+  const { store, project, staged } = await vfrWorkspace();
+  assert.ok((await objectFiles(store, project.id)).includes(staged.asset.hash));
+  const collected = await store.collectGarbage();
+  assert.equal(collected.objects, 1);
+  assert.deepEqual(await objectFiles(store, project.id), []);
+  assert.equal(store.assetVersion(staged.asset.id), null);
+});
+
+test("garbage collection keeps a converted VFR original while lineage still references it", async () => {
+  const { store, project, staged } = await vfrWorkspace();
+  const supervisor = new JobSupervisor(store);
+  handles.push(supervisor);
+  await supervisor.start();
+  const job = await supervisor.submitDerivative(project.id, staged);
+  assert.equal((await settled(supervisor, job.id)).state, "COMPLETED");
+  assert.ok((await objectFiles(store, project.id)).includes(staged.asset.hash));
+  assert.equal((await store.collectGarbage()).objects, 0);
+  assert.ok((await objectFiles(store, project.id)).includes(staged.asset.hash));
+  await supervisor.close();
+});
+
 test("a VFR source becomes an attached constant-rate derivative with recorded lineage", async () => {
   const { store, project, staged } = await vfrWorkspace();
   const supervisor = new JobSupervisor(store);

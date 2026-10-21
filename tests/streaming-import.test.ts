@@ -335,6 +335,69 @@ test("playlist and concat files cannot reach other files or the network", async 
   }
 });
 
+test("repair releases a fixed quarantined object and keeps a still-bad one quarantined", async () => {
+  const { root, store, project } = await workspace();
+  const { execute } = await import("../core/command/registry.ts");
+  const { readFile, writeFile, truncate } = await import("node:fs/promises");
+  const wav = path.join(root, "tone.wav");
+  ffmpeg(["-f", "lavfi", "-i", "sine=frequency=440:duration=1", wav]);
+  const good = await store.importAsset(
+    project.id,
+    "good.wav",
+    await readFile(wav),
+  );
+  ffmpeg(["-f", "lavfi", "-i", "sine=frequency=220:duration=1", wav]);
+  const bad = await store.importAsset(
+    project.id,
+    "bad.wav",
+    await readFile(wav),
+  );
+  const badFile = (await store.assetFile(project.id, bad.asset.id)).file;
+  const originalBytes = await readFile(badFile);
+  store.close();
+  await truncate(badFile, 10);
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.prepare(
+    "UPDATE asset_objects SET state = 'quarantined' WHERE digest = ?",
+  ).run(bad.asset.hash);
+  db.close();
+  const reopened = new ProjectStore(root);
+  handles.push(reopened);
+  await reopened.initialize();
+  const ctx = {
+    store: reopened,
+    queue: null as any,
+    principal: {
+      id: "local-client" as const,
+      scopes: new Set([
+        "project:read",
+        "project:write",
+        "project:recover",
+        "render:execute",
+        "job:read",
+        "job:control",
+      ]),
+    },
+  };
+  const stillBad = await execute(ctx, "yamakan.asset.repair", {
+    projectId: project.id,
+    assetId: bad.asset.id,
+  });
+  assert.equal(stillBad.result.released, false);
+  assert.match(stillBad.result.reason, /size|content address|Media/i);
+  assert.equal(reopened.assetVersion(bad.asset.id)!.state, "quarantined");
+  await writeFile(badFile, originalBytes);
+  const fixed = await execute(ctx, "yamakan.asset.repair", {
+    projectId: project.id,
+    assetId: bad.asset.id,
+  });
+  assert.equal(fixed.result.released, true);
+  assert.equal(reopened.assetVersion(bad.asset.id)!.state, "ready");
+  await reopened.assetFile(project.id, bad.asset.id);
+  await reopened.assetFile(project.id, good.asset.id);
+  reopened.close();
+});
+
 test("upgrading to schema v2 registers existing assets (ready, or quarantined if damaged)", async () => {
   const { root, store, project } = await workspace();
   const wav = path.join(root, "tone.wav");

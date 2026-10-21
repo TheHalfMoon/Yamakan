@@ -271,6 +271,19 @@ export const commands = {
     input: z.object({}).strict(),
     run: ({ store }) => store.collectGarbage(),
   }),
+  "yamakan.asset.repair": define({
+    scope: "project:recover",
+    mutation: true,
+    summary:
+      "Re-probe a quarantined asset object and release it when verification passes.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+      })
+      .strict(),
+    run: ({ store }, a) => store.repairAsset(a.projectId, a.assetId),
+  }),
   "yamakan.export.video": define({
     scope: "render:execute",
     mutation: true,

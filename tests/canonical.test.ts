@@ -100,7 +100,7 @@ test("the 30 fps editing shape round-trips losslessly through canonical v1", () 
 test("canonical values the 30 fps editor cannot hold are refused, not dropped", () => {
   const canonical = fromEditView(richView());
   const misaligned = structuredClone(canonical);
-  misaligned.clips[0].startTicks += 1;
+  misaligned.clips[2].startTicks += 1;
   assert.throws(
     () => toEditView(misaligned),
     (e: unknown) =>
@@ -142,6 +142,18 @@ test("canonical validation enforces refs, safe integers and strict keys", () => 
           value: { polluted: true },
           enumerable: true,
         }),
+    ],
+    [
+      "overlapping clips",
+      (p) => {
+        const track = p.tracks[0].id;
+        p.clips.push({
+          ...structuredClone(p.clips[0]),
+          id: crypto.randomUUID(),
+          trackId: track,
+          startTicks: p.clips[0].startTicks + 1,
+        });
+      },
     ],
   ];
   for (const [label, mutate] of cases) {
@@ -206,6 +218,65 @@ test("a stored v1 canonical snapshot upgrades to v3; v1 with v2 fields is refuse
   }
 });
 
+test("overlapping clips on one track are refused at parse and commit", async () => {
+  const { ProjectStore } = await import("../core/store.ts");
+  const { mkdtemp } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  const overlapping = structuredClone(fromEditView(richView())) as any;
+  const track = overlapping.tracks[0].id;
+  overlapping.clips.push({
+    ...structuredClone(overlapping.clips[0]),
+    id: crypto.randomUUID(),
+    trackId: track,
+    startTicks: overlapping.clips[0].startTicks + 1,
+  });
+  assert.equal(CanonicalProjectSchema.safeParse(overlapping).success, false);
+  assert.throws(() => parseCanonical(overlapping), /cannot overlap/);
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-overlap-"));
+  const store = new ProjectStore(root);
+  await store.initialize();
+  const created = await store.create("Overlap");
+  const head = await store.load(created.id);
+  await assert.rejects(
+    store.save(
+      {
+        ...head,
+        clips: [
+          {
+            id: crypto.randomUUID(),
+            trackId: head.tracks[0].id,
+            assetId: null,
+            startFrame: 0,
+            durationFrames: 30,
+            sourceFrame: 0,
+            title: "One",
+          },
+          {
+            id: crypto.randomUUID(),
+            trackId: head.tracks[0].id,
+            assetId: null,
+            startFrame: 10,
+            durationFrames: 30,
+            sourceFrame: 0,
+            title: "Two",
+          },
+        ],
+      },
+      head.revision,
+    ),
+    /cannot overlap/,
+  );
+  overlapping.id = crypto.randomUUID();
+  overlapping.revision = 0;
+  overlapping.name = "Migrated overlap";
+  assert.throws(
+    () => store.importHistory(overlapping.id, [overlapping]),
+    (e: unknown) => /cannot overlap/.test(String(e)),
+  );
+  store.close();
+});
+
 test("a stored v2 canonical snapshot upgrades to v3 with embedded sound disabled", () => {
   const v3 = fromEditView(richView(), "ar");
   const videoId = crypto.randomUUID();
@@ -226,7 +297,7 @@ test("a stored v2 canonical snapshot upgrades to v3 with embedded sound disabled
     id: crypto.randomUUID(),
     trackId: v3.tracks[0].id,
     assetId: videoId,
-    startTicks: 0,
+    startTicks: 75 * 23_520_000,
     durationTicks: 30 * 23_520_000,
     sourceStartTicks: 0,
     title: null,
