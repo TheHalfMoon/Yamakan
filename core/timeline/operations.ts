@@ -13,6 +13,21 @@ import { CommandError } from "../command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "../donors/opencut/overlap.ts";
 import { resolveTimelineSnap } from "../donors/opencut/snapping.ts";
 import type { SnapPoint } from "../donors/opencut/snapping.ts";
+import {
+  applySceneTracksToProject,
+  projectToSceneTracks,
+} from "../donors/opencut/adapters.ts";
+import {
+  applyRippleAdjustments,
+  computeRippleAdjustments,
+  rippleShiftElements,
+} from "../donors/opencut/ripple/index.ts";
+import {
+  buildMoveGroup,
+  resolveGroupMove,
+  snapGroupEdges,
+} from "../donors/opencut/group-move/index.ts";
+
 
 // The widest snap an operation may ask for: one second.
 const MAX_SNAP_TICKS = 705_600_000;
@@ -143,6 +158,47 @@ export const OperationSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z.object({ type: z.literal("shot.remove"), shotId: Id }).strict(),
+  z
+    .object({
+      type: z.literal("timeline.rippleDelete"),
+      clipId: Id,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("timeline.rippleTrim"),
+      clipId: Id,
+      startTicks: Ticks.optional(),
+      endTicks: Ticks.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("timeline.insert"),
+      clipId: Id,
+      trackId: Id,
+      assetId: Id.nullable(),
+      title: z.string().max(500).nullable(),
+      startTicks: Ticks,
+      durationTicks: Ticks.min(1),
+      sourceStartTicks: Ticks,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("timeline.groupMove"),
+      anchorClipId: Id,
+      clipIds: z.array(Id).min(1).max(64),
+      anchorStartTicks: Ticks,
+      targetTrackId: Id,
+      snapTicks: Ticks.max(MAX_SNAP_TICKS).optional(),
+      playheadTicks: Ticks.optional(),
+      // When set, create one new track per member (same count) instead of
+      // placing onto existing tracks. Ids must be fresh.
+      newTrackIds: z.array(Id).min(1).max(16).optional(),
+      anchorInsertIndex: z.number().int().min(0).max(32).optional(),
+    })
+    .strict(),
 ]);
 export type Operation = z.infer<typeof OperationSchema>;
 export const BatchSchema = z.array(OperationSchema).min(1).max(64);
@@ -465,7 +521,212 @@ function apply(p: CanonicalProject, op: Operation): void {
       scene.shots = scene.shots.filter((x) => x.id !== op.shotId);
       return;
     }
+    case "timeline.rippleDelete": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      const before = projectToSceneTracks(p);
+      p.clips = p.clips.filter((x) => x.id !== c.id);
+      for (const s of p.scenes)
+        for (const shot of s.shots)
+          shot.clipIds = shot.clipIds.filter((id) => id !== c.id);
+      rippleCloseGaps(p, before);
+      return;
+    }
+    case "timeline.rippleTrim": {
+      if (op.startTicks === undefined && op.endTicks === undefined)
+        throw invalid("Ripple trim needs a new start or end.");
+      const before = projectToSceneTracks(p);
+      apply(p, {
+        type: "clip.trim",
+        clipId: op.clipId,
+        startTicks: op.startTicks,
+        endTicks: op.endTicks,
+      });
+      rippleCloseGaps(p, before);
+      return;
+    }
+    case "timeline.insert": {
+      unlocked(p, op.trackId);
+      fresh(p, op.clipId);
+      const tracks = projectToSceneTracks(p);
+      const trackRow =
+        tracks.main.id === op.trackId
+          ? tracks.main
+          : (tracks.overlay.find((t) => t.id === op.trackId) ??
+            tracks.audio.find((t) => t.id === op.trackId));
+      if (!trackRow) throw invalid("Track not found.");
+      // Open room for the new clip, then place it (donor shift with a
+      // negative amount moves later elements to the right).
+      const shifted = {
+        ...tracks,
+        overlay: tracks.overlay.map((t) =>
+          t.id === op.trackId
+            ? {
+                ...t,
+                elements: rippleShiftElements({
+                  elements: t.elements,
+                  afterTime: op.startTicks,
+                  shiftAmount: -op.durationTicks,
+                }),
+              }
+            : t,
+        ),
+        main:
+          tracks.main.id === op.trackId
+            ? {
+                ...tracks.main,
+                elements: rippleShiftElements({
+                  elements: tracks.main.elements,
+                  afterTime: op.startTicks,
+                  shiftAmount: -op.durationTicks,
+                }),
+              }
+            : tracks.main,
+        audio: tracks.audio.map((t) =>
+          t.id === op.trackId
+            ? {
+                ...t,
+                elements: rippleShiftElements({
+                  elements: t.elements,
+                  afterTime: op.startTicks,
+                  shiftAmount: -op.durationTicks,
+                }),
+              }
+            : t,
+        ),
+      };
+      applySceneTracksToProject(p, shifted);
+      apply(p, {
+        type: "clip.add",
+        clipId: op.clipId,
+        trackId: op.trackId,
+        assetId: op.assetId,
+        title: op.title,
+        startTicks: op.startTicks,
+        durationTicks: op.durationTicks,
+        sourceStartTicks: op.sourceStartTicks,
+      });
+      return;
+    }
+    case "timeline.groupMove": {
+      const tracks = projectToSceneTracks(p);
+      const anchorClip = clip(p, op.anchorClipId);
+      unlocked(p, anchorClip.trackId);
+      unlocked(p, op.targetTrackId);
+      const selected = op.clipIds
+        .filter((id) => id !== op.anchorClipId)
+        .map((id) => {
+          const c = clip(p, id);
+          unlocked(p, c.trackId);
+          return { trackId: c.trackId, elementId: c.id };
+        });
+      const group = buildMoveGroup({
+        anchorRef: {
+          trackId: anchorClip.trackId,
+          elementId: anchorClip.id,
+        },
+        selectedElements: selected,
+        tracks,
+      });
+      if (!group) throw invalid("Group move selection is incomplete.");
+      let anchorStart = op.anchorStartTicks;
+      if (op.snapTicks !== undefined && op.snapTicks > 0) {
+        const snapped = snapGroupEdges({
+          group,
+          anchorStartTime: anchorStart,
+          tracks,
+          playheadTime: op.playheadTicks ?? 0,
+          maxSnapDistance: op.snapTicks,
+        });
+        anchorStart = snapped.snappedAnchorStartTime;
+      }
+      if (!Number.isSafeInteger(anchorStart) || anchorStart < 0)
+        throw invalid("Group move start is out of range.");
+      const target =
+        op.newTrackIds && op.newTrackIds.length > 0
+          ? {
+              kind: "newTracks" as const,
+              anchorInsertIndex: op.anchorInsertIndex ?? 0,
+              newTrackIds: op.newTrackIds,
+            }
+          : {
+              kind: "existingTrack" as const,
+              anchorTargetTrackId: op.targetTrackId,
+            };
+      const resolved = resolveGroupMove({
+        group,
+        tracks,
+        anchorStartTime: anchorStart,
+        target,
+      });
+      if (!resolved)
+        throw invalid(
+          "Group move refused (overlap, cross-kind, or no compatible tracks).",
+        );
+      for (const created of resolved.createTracks) {
+        fresh(p, created.id);
+        const insertAt = Math.min(created.index, p.tracks.length);
+        p.tracks.splice(insertAt, 0, {
+          id: created.id,
+          name: created.type === "audio" ? "Audio" : "Video",
+          kind: created.type,
+          muted: false,
+          locked: false,
+          solo: false,
+          targeted: false,
+        });
+      }
+      const movers = new Set(resolved.moves.map((m) => m.elementId));
+      // Overlap against stationary clips only; resolveGroupMove already
+      // checked mover-vs-mover and mover-vs-stationary on existing tracks.
+      for (const move of resolved.moves) {
+        const c = clip(p, move.elementId);
+        unlocked(p, move.targetTrackId);
+        if (track(p, move.targetTrackId).kind !== track(p, c.trackId).kind)
+          throw invalid("Clips move only between tracks of the same kind.");
+        const stationary = p.clips.filter(
+          (x) => x.trackId === move.targetTrackId && !movers.has(x.id),
+        );
+        if (
+          !canPlaceTimeSpansOnTrack({
+            track: { elements: stationary },
+            timeSpans: [
+              {
+                startTime: move.newStartTime,
+                duration: c.durationTicks,
+              },
+            ],
+          })
+        )
+          throw invalid("Clips on a track cannot overlap.");
+      }
+      for (const move of resolved.moves) {
+        const c = clip(p, move.elementId);
+        c.trackId = move.targetTrackId;
+        c.startTicks = move.newStartTime;
+      }
+      return;
+    }
   }
+}
+
+/** Close gaps left by a delete/trim using OpenCut ripple adjustments. */
+function rippleCloseGaps(
+  p: CanonicalProject,
+  before: ReturnType<typeof projectToSceneTracks>,
+) {
+  const after = projectToSceneTracks(p);
+  const adjustments = computeRippleAdjustments({
+    beforeTracks: before,
+    afterTracks: after,
+  }).filter((a) => {
+    const t = p.tracks.find((x) => x.id === a.trackId);
+    return t !== undefined && !t.locked;
+  });
+  applySceneTracksToProject(
+    p,
+    applyRippleAdjustments({ tracks: after, adjustments }),
+  );
 }
 
 // Starts a moved clip may snap to, nearest first: its start or its end on

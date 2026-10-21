@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W8 OpenCut ripple and group-move
+
+- **Authority:** frozen plan W8 / M3–M4 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); M-gate passed at `eaeaf1b`.
+- **Decision:** Import OpenCut Classic `cf5e79e9` ripple and group-move into `core/donors/opencut/{ripple,group-move}/` with flick-tick maths, Yamakan `SceneTracks` projection, and adapters for the five non-copied dependencies. Register `yamakan.timeline.{rippleDelete,rippleTrim,insert,groupMove}`. Omit the donor main-track fill-from-zero clamp (no Yamakan invariant). Q4 property tests and journey-2 undo/redo covered in `tests/ripple.test.ts`, `tests/group-move.test.ts`, `tests/timeline.test.ts`.
+- **Evidence:** `docs/evidence/qualification/q4-flick-ticks.json`; `scripts/bench-edit.ts` (proposed targets).
+- **Change rule:** further edit ops stay behind new task cards; animation snap points land with M6/W16.
+
 ## 2026-10-21: M-gate passed at eaeaf1b
 
 - **Authority:** frozen plan M-gate ([07](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md#m-gate)); founder continuation after R8.

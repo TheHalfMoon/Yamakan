@@ -199,6 +199,131 @@ export const commands = {
         receipt,
       ),
   }),
+  "yamakan.timeline.rippleDelete": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Delete a clip and close the gap (ripple).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [{ type: "timeline.rippleDelete", clipId: a.clipId }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.timeline.rippleTrim": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Trim a clip and close the gap (ripple).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        startTicks: Ticks.optional(),
+        endTicks: Ticks.optional(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "timeline.rippleTrim",
+            clipId: a.clipId,
+            startTicks: a.startTicks,
+            endTicks: a.endTicks,
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.timeline.insert": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Insert a clip, shifting later clips on the track.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        trackId: Id,
+        assetId: Id.nullable(),
+        title: z.string().max(500).nullable(),
+        startTicks: Ticks,
+        durationTicks: Ticks.min(1),
+        sourceStartTicks: Ticks,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "timeline.insert",
+            clipId: a.clipId,
+            trackId: a.trackId,
+            assetId: a.assetId,
+            title: a.title,
+            startTicks: a.startTicks,
+            durationTicks: a.durationTicks,
+            sourceStartTicks: a.sourceStartTicks,
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.timeline.groupMove": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Move a multi-clip selection with optional edge snapping.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        anchorClipId: Id,
+        clipIds: z.array(Id).min(1).max(64),
+        anchorStartTicks: Ticks,
+        targetTrackId: Id,
+        snapTicks: Ticks.max(705_600_000).optional(),
+        playheadTicks: Ticks.optional(),
+        newTrackIds: z.array(Id).min(1).max(16).optional(),
+        anchorInsertIndex: z.number().int().min(0).max(32).optional(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "timeline.groupMove",
+            anchorClipId: a.anchorClipId,
+            clipIds: a.clipIds,
+            anchorStartTicks: a.anchorStartTicks,
+            targetTrackId: a.targetTrackId,
+            snapTicks: a.snapTicks,
+            playheadTicks: a.playheadTicks,
+            newTrackIds: a.newTrackIds,
+            anchorInsertIndex: a.anchorInsertIndex,
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
   "yamakan.project.applyBatch": define({
     scope: "project:write",
     mutation: true,

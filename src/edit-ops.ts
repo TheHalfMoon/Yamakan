@@ -78,6 +78,45 @@ export function deleteClip(p: Project, clipId: string | null): Project {
   return applyLocal(p, [{ type: "clip.remove", clipId: c.id }]);
 }
 
+/** Delete a clip and ripple later clips on unlocked tracks to close the gap. */
+export function rippleDeleteClip(
+  p: Project,
+  clipId: string | null,
+): Project {
+  const c = p.clips.find((c) => c.id === clipId);
+  if (!c || p.tracks.find((t) => t.id === c.trackId)?.locked) return p;
+  return applyLocal(p, [{ type: "timeline.rippleDelete", clipId: c.id }]);
+}
+
+/** Move a multi-clip selection; returns the project unchanged when refused. */
+export function groupMoveClips(
+  p: Project,
+  args: {
+    anchorClipId: string;
+    clipIds: string[];
+    anchorStartTicks: number;
+    targetTrackId: string;
+    snapTicks?: number;
+    playheadTicks?: number;
+  },
+): Project {
+  try {
+    return applyLocal(p, [
+      {
+        type: "timeline.groupMove",
+        anchorClipId: args.anchorClipId,
+        clipIds: args.clipIds,
+        anchorStartTicks: args.anchorStartTicks,
+        targetTrackId: args.targetTrackId,
+        snapTicks: args.snapTicks,
+        playheadTicks: args.playheadTicks,
+      },
+    ]);
+  } catch {
+    return p;
+  }
+}
+
 // Applies drag and trim updates from the timeline component. Clips on locked
 // tracks are not moved; fades are clamped to the new duration.
 export function updateClips(p: Project, updates: TimelineClip[]): Project {
