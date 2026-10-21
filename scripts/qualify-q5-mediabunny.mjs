@@ -34,7 +34,42 @@ const commit = git("rev-parse", "HEAD");
 if (!existsSync(BUNDLE))
   throw new Error(`Mediabunny bundle missing at ${BUNDLE}`);
 
-const { ffmpeg } = mediaTools();
+// Fixture encoding only: the R8 pin may omit libvpx; prefer a host build that
+// can write every accepted container. Decode under test is Mediabunny, not FFmpeg.
+function fixtureFfmpeg() {
+  const pinned = mediaTools().ffmpeg;
+  const candidates = [process.env.YAMAKAN_FFMPEG_FIXTURE, pinned].filter(
+    Boolean,
+  );
+  try {
+    const which = execFileSync("where.exe", ["ffmpeg"], {
+      encoding: "utf8",
+      windowsHide: true,
+    })
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    candidates.push(...which);
+  } catch {
+    /* no PATH ffmpeg */
+  }
+  for (const bin of candidates) {
+    try {
+      const out = execFileSync(bin, ["-hide_banner", "-encoders"], {
+        encoding: "utf8",
+        windowsHide: true,
+        maxBuffer: 4 * 1024 * 1024,
+      });
+      if (out.includes("libvpx-vp9") && out.includes("libopus")) return bin;
+    } catch {
+      /* try next */
+    }
+  }
+  throw new Error(
+    "No FFmpeg with libvpx-vp9+libopus found to build Q5 fixtures (set YAMAKAN_FFMPEG_FIXTURE).",
+  );
+}
+const ffmpeg = fixtureFfmpeg();
 const ffmpegRun = (args) =>
   execFileSync(ffmpeg, ["-hide_banner", "-loglevel", "error", "-y", ...args], {
     windowsHide: true,
