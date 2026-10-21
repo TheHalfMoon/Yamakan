@@ -199,6 +199,32 @@ export const commands = {
         receipt,
       ),
   }),
+  "yamakan.clip.setSpeed": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Set a clip's constant retime rate (rational).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        speed: z
+          .object({
+            num: z.number().int().positive().max(1_000_000),
+            den: z.number().int().positive().max(1_000_000),
+          })
+          .strict(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [{ type: "clip.setSpeed", clipId: a.clipId, speed: a.speed }],
+        principal.id,
+        receipt,
+      ),
+  }),
   "yamakan.timeline.rippleDelete": define({
     scope: "project:write",
     mutation: true,

@@ -72,6 +72,21 @@ export function setClipSound(
   ]);
 }
 
+/** Set a clip's constant retime (rational). Titles are refused by the reducer. */
+export function setClipSpeed(
+  p: Project,
+  clipId: string,
+  speed: { num: number; den: number },
+): Project {
+  const c = p.clips.find((c) => c.id === clipId);
+  if (!c || c.title !== null) return p;
+  try {
+    return applyLocal(p, [{ type: "clip.setSpeed", clipId, speed }]);
+  } catch {
+    return p;
+  }
+}
+
 export function deleteClip(p: Project, clipId: string | null): Project {
   const c = p.clips.find((c) => c.id === clipId);
   if (!c || p.tracks.find((t) => t.id === c.trackId)?.locked) return p;

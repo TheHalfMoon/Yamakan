@@ -1,4 +1,7 @@
-import React from 'react';
+import React from "react";
+
+// Peak arrays may come from the server probe or from Mediabunny via
+// src/media/demux.ts (openAssetPeaks). The renderer is data-source agnostic.
 
 interface WaveformProps {
   data: number[];
@@ -18,7 +21,7 @@ const Waveform: React.FC<WaveformProps> = ({ data, width, height }) => {
       const y2 = height - y;
       return `M${x.toFixed(2)},${y.toFixed(2)} L${x.toFixed(2)},${y2.toFixed(2)}`;
     })
-    .join(' ');
+    .join(" ");
 
   return (
     <svg width={width} height={height} className="absolute inset-0">

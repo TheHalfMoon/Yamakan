@@ -66,6 +66,14 @@ export const ClipSchema = z
     fadeInFrames: frame.optional(),
     fadeOutFrames: frame.optional(),
     sound: ClipSoundSchema.optional(),
+    // W9/M5: optional constant retime (rational). Absent = 1×.
+    speed: z
+      .object({
+        num: z.number().int().positive().max(1_000_000),
+        den: z.number().int().positive().max(1_000_000),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 const ShotSchema = z

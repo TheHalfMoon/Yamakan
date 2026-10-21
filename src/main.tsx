@@ -33,6 +33,8 @@ import {
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
+import { openAssetPeaks } from "./media/demux.ts";
+import type { WaveformCache } from "./donors/film-editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import type {
@@ -92,7 +94,10 @@ function App() {
     ),
     // Workspace backups, loaded on request.
     [backups, setBackups] =
-      useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
+      useState<OperationResult<"yamakan.workspace.backups"> | null>(null),
+    // M14: Mediabunny peaks (Blob-only Worker). Missing entries keep empty
+    // waveforms; server-derived peaks remain the Q5 fallback when decode fails.
+    [waveformCache, setWaveformCache] = useState<WaveformCache>({});
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
   const current = useRef(p);
@@ -192,6 +197,38 @@ function App() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [history]);
+  // Decode waveform peaks for audio-bearing assets via Mediabunny (2 s Worker).
+  useEffect(() => {
+    if (!p) {
+      setWaveformCache({});
+      return;
+    }
+    let cancelled = false;
+    const audioAssets = p.assets.filter(
+      (a) => a.kind === "audio" || a.hasAudio === true,
+    );
+    (async () => {
+      const next: WaveformCache = {};
+      for (const a of audioAssets) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(
+            mediaUrl(`/api/v1/projects/${p.id}/assets/${a.id}`),
+          );
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          const peaks = await openAssetPeaks(blob);
+          if (peaks) next[a.id] = peaks.peaks;
+        } catch {
+          // Q5: keep server-derived / empty peaks for this container.
+        }
+      }
+      if (!cancelled) setWaveformCache(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [p?.id, p?.revision, p?.assets.map((a) => a.id).join(",")]);
   const view = p ? editorView(p) : null;
   const addAsset = (assetId: string, trackId?: string, time?: number) =>
     edit((p) => {
@@ -1032,7 +1069,7 @@ function App() {
                   playheadPosition={playhead}
                   isSnappingEnabled={snapping}
                   trimMode="normal"
-                  waveformCache={{}}
+                  waveformCache={waveformCache}
                   onSelectClip={setSelected}
                   onSetActiveTrack={setActiveTrack}
                   onUpdateClip={(c) => updateClips([c])}

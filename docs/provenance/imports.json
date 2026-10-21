@@ -42,9 +42,10 @@
     "sha256": "665d367de92f9b6389c3b31d6728703bc1d9335b87892446591053e6c7b789ff",
     "modifications": [
       "Use individual media playback elements per clip, dispose detached media/context on removal/unmount, mute embedded video sound to match explicit-audio export, and fit portrait video within the project canvas.",
-      "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity)."
+      "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity).",
+      "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer."
     ],
-    "importedSha256": "2d6e4f7415c72bbe18b20a0bed26a897ae4ba49b4c717999276a00a310cb613b",
+    "importedSha256": "c5138f579fb53ed1ca1e16d92ad85843c29d49d9e1b0ed4ae911090c3621db84",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -58,8 +59,10 @@
     "original": "src/components/Waveform.tsx",
     "imported": "src/donors/film-editor/components/Waveform.tsx",
     "sha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
-    "modifications": [],
-    "importedSha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
+    "modifications": [
+      "W9: note that peaks may come from Mediabunny openAssetPeaks."
+    ],
+    "importedSha256": "43b66c5cae819f66ffcc88a41640ae3f8215c63f977bf5f2c79d4989d89853ba",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -317,9 +320,10 @@
       "Resource policy v2 (agent decision, 2026-10-13): -threads is an FFmpeg per-input option, so every render input now gets renderThreads before its -i (the single global -threads, which bound only the first input, is removed) and the libx264 encoder takes the policy value; decoded frames and the encoder are unchanged, so rendered output and RENDERER_VERSION are unaffected.",
       "Worker read containment (2026-10-13): each render and title-fit worker declares the files it reads (its inputs, titles.ass and the fonts folder), which procd grants to the worker's own AppContainer capability for its lifetime; rendering itself is unchanged.",
       "W5.1 (2026-10-21): title staging writes a pinned fonts.conf (core/render/fontconfig.ts) and passes FONTCONFIG_FILE to FFmpeg workers through procd's allowlisted workerEnv; fit-check and render workers read fonts.conf.",
-      "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe."
+      "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe.",
+      "W9/M5: setpts and atempo chain for clip speed (rational)."
     ],
-    "importedSha256": "597ea0a3624e0f60570c6f0829b61e94f68adbca4126d8e59db5675caad57046",
+    "importedSha256": "5ec26609bbfbbc25c1e5704c9613159f7ae3db2c395a023d3c7e492304d85718",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -582,5 +586,107 @@
     "tests": [
       "tests/group-move.test.ts"
     ]
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/rate.ts",
+    "imported": "core/donors/opencut/retime/rate.ts",
+    "sha256": "05582e0add4c0e084ca04aa9387bb2d27f371d4a9b70513b2ee03073f23937e1",
+    "importedSha256": "2ad8727fa61c35bb90c1517eacb0a42f75e0fb32ccb184a0626771ce1e376a9f",
+    "modifications": [
+      "Float rate → reduced Rational; clamp bounds 1/100..5/1."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/resolve.ts",
+    "imported": "core/donors/opencut/retime/resolve.ts",
+    "sha256": "ca8858a91b645f0d47581c0ef093e3b94b9aced4897fd56b16a3f33e0d978cac",
+    "importedSha256": "bb7045e0d398201da42bfe56c44bf8bba0c9a7e7f9c82a6725e313f614d31ed8",
+    "modifications": [
+      "Flick-tick scale via BigInt; sourceRange/timelineDuration helpers."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/split.ts",
+    "imported": "core/donors/opencut/retime/split.ts",
+    "sha256": "310f09e97263853575350fc7cfd34e43dba90a0323b1ac133579683aa894d536",
+    "importedSha256": "7186cbd5d3476d30cccb068f48a638a1c055665cfc4506c413988ed3b3026455",
+    "modifications": [
+      "RetimeConfig uses Rational."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/presets.ts",
+    "imported": "core/donors/opencut/retime/presets.ts",
+    "sha256": "cf9a79ea56850a6c24e9922a7fc57bac9cdc54f91068c85d1bf830f8bc4013f7",
+    "importedSha256": "427ae0055801b614c4d2d0e43b4ddbde21e8c252a1a898120ca9b5678f4c3aba",
+    "modifications": [
+      "buildConstantRetime takes rational parts."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/index.ts",
+    "imported": "core/donors/opencut/retime/index.ts",
+    "sha256": "180f004aca8665ab0975b4d42b4c12ed22ab3741bea3f98a1d7a1aa436cea41a",
+    "importedSha256": "53d4fb3f348da521ec394abd1cf94a30721b8add11572fba5609160cdd7a931b",
+    "modifications": [
+      "Drops audio-stretch re-export (lives under src/donors/opencut)."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
+  },
+  {
+    "source": "OpenCut-app/opencut-classic",
+    "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+    "authorization": "public-licence",
+    "original": "apps/web/src/retime/audio-stretch.ts",
+    "imported": "src/donors/opencut/audio-stretch.ts",
+    "sha256": "9e1a1da7699be6fba02c10cb2f3663cf0d5123a93ebba7e3536cc4fcf8fb9c5c",
+    "importedSha256": "bf89cedb550930f99b190a30c64976b0e77219db59746f372c37ddc04cd08504",
+    "modifications": [
+      "Rational rates via rateAsFloat for SoundTouch preview path."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
+    "license": "MIT",
+    "owner": "media builder"
   }
 ]

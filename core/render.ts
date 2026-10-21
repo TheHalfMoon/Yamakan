@@ -16,6 +16,12 @@ import type { PinnedFont } from "./render/fonts.ts";
 import { fontconfigEnv, stageTitleFonts } from "./render/fontconfig.ts";
 import { compileTitles } from "./render/ass.ts";
 import { titleCapability } from "./render/capability.ts";
+import {
+  getClipTimeAtSourceTime,
+  getSourceTimeAtClipTime,
+} from "./donors/opencut/retime/resolve.ts";
+import { atempoChain } from "./donors/opencut/retime/atempo.ts";
+import { rateAsFloat } from "./donors/opencut/retime/rate.ts";
 export type RenderJob = {
   id: string;
   projectId: string;
@@ -352,16 +358,39 @@ export async function renderPlan(
         // when that instant falls inside a source frame; frames before the
         // clip or window get earlier (even negative) times and the overlay's
         // enable window hides them.
-        const offset = layer.sourceStartTicks + (from - layer.startTicks);
+        const clipElapsed = from - layer.startTicks;
+        const sourceElapsed = getSourceTimeAtClipTime({
+          clipTime: clipElapsed,
+          retime: { rate: layer.speed },
+        });
+        const offset = layer.sourceStartTicks + sourceElapsed;
         const lead = Math.min(offset, 2 * FRAME);
-        const span = seconds(to - from + lead + FRAME);
+        const windowTicks = to - from;
+        const sourceWindow = getSourceTimeAtClipTime({
+          clipTime: windowTicks,
+          retime: { rate: layer.speed },
+        });
+        const span = seconds(sourceWindow + lead + FRAME);
         const index = await input(layer, [
           "-ss",
           seconds(offset - lead),
           "-t",
           span,
         ]);
-        timed = `[${index}:v]trim=duration=${span},${flicks},setpts=PTS+(${from - lead})`;
+        // setpts maps source (after -ss offset-lead) into timeline time.
+        // Speed 1 keeps the qualified PTS+(from-lead) form (export/preview
+        // goldens). Other rates reset STARTPTS and subtract lead in clip time
+        // so preroll stays before `from` (same enable window as audio).
+        const speed = rateAsFloat(layer.speed);
+        const leadClip = getClipTimeAtSourceTime({
+          sourceTime: lead,
+          retime: { rate: layer.speed },
+        });
+        const setpts =
+          speed === 1
+            ? `setpts=PTS+(${from - lead})`
+            : `setpts=(PTS-STARTPTS)/${speed}+(${from - leadClip})`;
+        timed = `[${index}:v]trim=duration=${span},${flicks},${setpts}`;
       }
       filters.push(
         `${timed},fps=${rate},scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease,setsar=1[${clip}]`,
@@ -378,14 +407,21 @@ export async function renderPlan(
         // The whole clip is read and shaped in its own time (gain and linear
         // fades are plan numbers), then cut to the window, made 48 kHz
         // stereo and placed by an exact sample delay.
+        const sourceDur = getSourceTimeAtClipTime({
+          clipTime: a.durationTicks,
+          retime: { rate: a.speed },
+        });
         const index = await input(a, [
           "-ss",
           seconds(a.sourceStartTicks),
           "-t",
-          seconds(a.durationTicks),
+          seconds(sourceDur),
         ]);
         const label = `a${n++}`;
+        const tempo =
+          a.speed.num === 1 && a.speed.den === 1 ? [] : atempoChain(a.speed);
         const shaping = [
+          ...tempo,
           a.gainDb ? `volume=${a.gainDb}dB` : null,
           a.fadeInTicks ? `afade=t=in:st=0:d=${seconds(a.fadeInTicks)}` : null,
           a.fadeOutTicks
@@ -396,7 +432,7 @@ export async function renderPlan(
           (BigInt(from - wStart) * BigInt(profile.sampleRate)) /
           BigInt(FLICKS_PER_SECOND);
         filters.push(
-          `[${index}:a]atrim=duration=${seconds(a.durationTicks)},asetpts=PTS-STARTPTS,${shaping.map((f) => `${f},`).join("")}atrim=start=${seconds(from - a.startTicks)}:duration=${seconds(to - from)},asetpts=PTS-STARTPTS,aresample=${profile.sampleRate},aformat=channel_layouts=stereo,adelay=${delay}S:all=1[${label}]`,
+          `[${index}:a]atrim=duration=${seconds(sourceDur)},asetpts=PTS-STARTPTS,${shaping.map((f) => `${f},`).join("")}atrim=start=${seconds(from - a.startTicks)}:duration=${seconds(to - from)},asetpts=PTS-STARTPTS,aresample=${profile.sampleRate},aformat=channel_layouts=stereo,adelay=${delay}S:all=1[${label}]`,
         );
         audio.push(label);
       }
