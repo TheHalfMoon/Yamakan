@@ -12,6 +12,7 @@ import {
   describeAccess,
   readableByOtherAccounts,
 } from "../core/process/access.ts";
+import { writeLaunchLink } from "../core/launch.ts";
 
 // Every test folder is removed when the file's tests finish; each test
 // waits for its server to exit first.
@@ -64,6 +65,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
   }
   try {
     await start();
+    await writeLaunchLink(root, origin);
     assert.equal((await fetch(`${origin}/api/v1/tools`)).status, 401);
     const token = await readFile(path.join(root, "token"), "utf8");
     const headers = {
@@ -111,9 +113,9 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       null,
       "no cookie for a page load",
     );
-    const launchUrl = (
-      await readFile(path.join(root, "launch"), "utf8")
-    ).trim();
+    const launchUrl = (await readFile(path.join(root, "launch"), "utf8"))
+      .split("\n")[0]
+      .trim();
     const launch = /#launch=([a-f0-9]{64})$/.exec(launchUrl)?.[1];
     assert.ok(launch, "the launch file holds the launch link");
     assert.ok(launchUrl.startsWith(`${origin}/#launch=`));
@@ -145,6 +147,15 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     });
     assert.equal(noOrigin.status, 403);
     assert.equal(noOrigin.headers.get("set-cookie"), null);
+    const launchPath = path.join(root, "launch");
+    const tokenPath = path.join(root, "token");
+    if (process.platform === "win32") {
+      for (const file of [root, tokenPath, launchPath])
+        assert.equal(await readableByOtherAccounts(file), false, file);
+    } else {
+      assert.equal((await stat(tokenPath)).mode & 0o777, 0o600, tokenPath);
+      assert.equal((await stat(launchPath)).mode & 0o777, 0o600, launchPath);
+    }
     const granted = await session(launch!);
     assert.equal(granted.status, 200);
     // No cookie: browsers would send it to every port of 127.0.0.1.
@@ -155,10 +166,10 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     for (const other of [token.trim(), launch])
       for (const key of [sessionKey, media]) assert.notEqual(key, other);
     assert.notEqual(sessionKey, media);
-    // The client token, the launch link and the database are private to
-    // this account: another account of the machine is denied (Windows), or
-    // the modes exclude everyone else (POSIX).
-    const secrets = ["token", "launch", "workspace.sqlite"].map((name) =>
+    // Single-use exchange removes the launch file; the token and database stay
+    // private to this account.
+    await assert.rejects(() => stat(launchPath), { code: "ENOENT" });
+    const secrets = ["token", "workspace.sqlite"].map((name) =>
       path.join(root, name),
     );
     if (process.platform === "win32") {
@@ -177,8 +188,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
         assert.equal(await readableByOtherAccounts(file), false, file);
     } else {
       assert.equal((await stat(root)).mode & 0o777, 0o700);
-      for (const file of secrets.slice(0, 2))
-        assert.equal((await stat(file)).mode & 0o777, 0o600, file);
+      assert.equal((await stat(tokenPath)).mode & 0o777, 0o600, tokenPath);
     }
     const envelope = JSON.stringify({
       apiVersion: 1,

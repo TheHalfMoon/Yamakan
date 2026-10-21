@@ -29,12 +29,45 @@ export const Scopes = [
   "render:execute",
   "job:read",
   "job:control",
+  "agent:create",
+  "agent:revoke",
+  "director:approve",
+  "consent:grant",
+  "consent:revoke",
 ] as const;
 export type Scope = (typeof Scopes)[number];
 
+export const HumanOnlyScopes = [
+  "agent:create",
+  "agent:revoke",
+  "director:approve",
+  "consent:grant",
+  "consent:revoke",
+] as const satisfies readonly Scope[];
+export type HumanOnlyScope = (typeof HumanOnlyScopes)[number];
+
+const humanOnly = new Set<Scope>(HumanOnlyScopes);
+
+export function assertAgentScopeCeiling(scopes: ReadonlySet<Scope>) {
+  for (const scope of scopes)
+    if (humanOnly.has(scope))
+      throw new CommandError(
+        "VALIDATION",
+        `Scope ${scope} is reserved for the browser session.`,
+      );
+}
+
+export function browserScopes(): ReadonlySet<Scope> {
+  return new Set(Scopes);
+}
+
+export function cliScopes(): ReadonlySet<Scope> {
+  return new Set(Scopes.filter((s) => !humanOnly.has(s))) as ReadonlySet<Scope>;
+}
+
 // Principals are derived from the authenticated transport, never from the request.
 export type Principal = {
-  id: "browser-ui" | "local-client";
+  id: "browser-ui" | "local-client" | `agent:${string}`;
   scopes: ReadonlySet<Scope>;
 };
 
@@ -52,6 +85,7 @@ type RunContext = CommandContext & { receipt?: RequestReceipt };
 type Definition<S extends z.ZodType, R> = {
   scope: Scope;
   mutation: boolean;
+  humanOnly?: boolean;
   summary: string;
   input: S;
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
@@ -330,6 +364,34 @@ export const commands = {
     input: z.object({ jobId: Id }).strict(),
     run: ({ queue }, a) => queue.discard(a.jobId),
   }),
+  "yamakan.agent.create": define({
+    scope: "agent:create",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Create a scoped agent token (shown once). Requires the browser session.",
+    input: z
+      .object({
+        label: z.string().min(1).max(80).optional(),
+        scopes: z.array(z.enum(Scopes)).min(1).max(Scopes.length),
+      })
+      .strict(),
+    run: ({ store }, a) => {
+      const scopes = new Set(a.scopes) as ReadonlySet<Scope>;
+      assertAgentScopeCeiling(scopes);
+      return store.createAgentToken(scopes, a.label);
+    },
+  }),
+  "yamakan.agent.revoke": define({
+    scope: "agent:revoke",
+    mutation: true,
+    humanOnly: true,
+    summary: "Revoke an agent token. Requires the browser session.",
+    input: z
+      .object({ agentId: z.string().regex(/^agent:[0-9a-f-]{36}$/) })
+      .strict(),
+    run: ({ store }, a) => store.revokeAgentToken(a.agentId),
+  }),
 };
 
 export type Operation = keyof typeof commands;
@@ -354,11 +416,16 @@ export function resolveOperation(name: unknown): Operation {
 }
 
 export function authorize(principal: Principal, operation: Operation) {
-  const { scope } = commands[operation];
-  if (!principal.scopes.has(scope))
+  const command = commands[operation];
+  if (command.humanOnly && principal.id !== "browser-ui")
     throw new CommandError(
       "SCOPE_DENIED",
-      `Principal ${principal.id} lacks scope ${scope}.`,
+      "This command requires the browser session.",
+    );
+  if (!principal.scopes.has(command.scope))
+    throw new CommandError(
+      "SCOPE_DENIED",
+      `Principal ${principal.id} lacks scope ${command.scope}.`,
     );
 }
 

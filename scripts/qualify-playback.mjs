@@ -125,6 +125,8 @@ try {
       reject(new Error(`server exited ${code}: ${serverError}`)),
     );
   });
+  const { writeLaunchLink } = await import("../core/launch.ts");
+  await writeLaunchLink(join(root, "workspace"), url);
   const token = readFileSync(join(root, "workspace", "token"), "utf8").trim();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -204,7 +206,9 @@ try {
   const page = await (
     await browser.newContext({ viewport: { width: 1600, height: 1100 } })
   ).newPage();
-  const launch = readFileSync(join(root, "workspace", "launch"), "utf8").trim();
+  const launch = readFileSync(join(root, "workspace", "launch"), "utf8")
+    .split("\n")[0]
+    .trim();
   await page.goto(launch);
   await page.waitForFunction(() => location.hash === "");
   await page.getByRole("button", { name: "Playback 720p" }).click();

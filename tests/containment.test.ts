@@ -27,6 +27,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ProcessOwner } from "../core/process/owner.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { writeLaunchLink } from "../core/launch.ts";
 
 const windows = process.platform === "win32";
 const workerProbe = fileURLToPath(
@@ -104,6 +105,7 @@ test(
         );
         server.once("exit", (code) => reject(new Error(`server ${code}`)));
       });
+      await writeLaunchLink(workspace, `http://127.0.0.1:${port}`);
       // Two imported media objects: one granted to the worker, one not.
       const token = (
         await readFile(path.join(workspace, "token"), "utf8")

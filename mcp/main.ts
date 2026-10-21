@@ -14,12 +14,17 @@ const url = env("URL") || "http://127.0.0.1:4318";
 if (new URL(url).hostname !== "127.0.0.1")
   throw new Error("MCP connects only to the local Yamakan server.");
 const root = path.resolve(env("WORKSPACE") || ".yamakan");
+const tokenFile = env("AGENT_TOKEN_FILE");
+const tokenFromEnv = env("AGENT_TOKEN");
+async function bearerToken() {
+  if (tokenFromEnv) return tokenFromEnv.trim();
+  if (tokenFile)
+    return (await readFile(path.resolve(tokenFile), "utf8")).trim();
+  return (await readFile(path.join(root, "token"), "utf8")).trim();
+}
 // The service rotates its credential on restart, so read it for every call.
 const client = async () =>
-  new YamakanClient({
-    baseUrl: url,
-    token: (await readFile(path.join(root, "token"), "utf8")).trim(),
-  });
+  new YamakanClient({ baseUrl: url, token: await bearerToken() });
 
 // A mutation retried with the same request ID returns its original result,
 // as over REST (the envelope's requestId). MCP has no envelope, so each tool

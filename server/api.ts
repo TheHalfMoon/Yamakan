@@ -3,20 +3,19 @@ import { JobSupervisor } from "../core/jobs.ts";
 import {
   API_VERSION,
   RESOURCE_POLICY_HASH,
-  Scopes,
   catalog,
   execute,
 } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
+import { browserScopes, cliScopes } from "../core/command/registry.ts";
 import { RESOURCE_POLICY } from "../core/command/policy.ts";
 import { ownershipMode } from "../core/process/owner.ts";
 
-// MVP trust model: one local account. Both principals hold the MVP scopes, but
-// they authenticate through separate credentials.
-export const principals: Record<Principal["id"], Principal> = {
-  "browser-ui": { id: "browser-ui", scopes: new Set(Scopes) },
-  "local-client": { id: "local-client", scopes: new Set(Scopes) },
-};
+// Browser and CLI credentials are separate; agent principals come from tokens.
+export const principals = {
+  "browser-ui": { id: "browser-ui" as const, scopes: browserScopes() },
+  "local-client": { id: "local-client" as const, scopes: cliScopes() },
+} satisfies Record<"browser-ui" | "local-client", Principal>;
 
 export class CreativeAPI {
   readonly store: ProjectStore;
