@@ -456,7 +456,7 @@ try {
       "Clean Windows Profile A (fresh user profile, nothing pre-installed): this run used the development profile",
       "Network disabled with a packet-level egress capture: this run had the network enabled and sampled TCP only",
       "Second local Windows account denied: established by a restricted-token proxy in tests, not by a real second account",
-      "Pinned distributable bundle (runtime, FFmpeg, fonts, notices, SBOM) with install, update, rollback and uninstall",
+      "Pinned distributable bundle on clean Profile A: W5 merged a dev scaffold (hash-verified FFmpeg/fonts, install pointer, rollback/uninstall tests); pinned Node runtime, installer, code signing and launch-time verification on the release artifact are still open",
       "Release evidence bundle at the release head: MP4 and canonical hashes, ffprobe JSON, sampled frames and title regions, audio report, UI+MCP transcript, process lifecycle reports",
       "Real constrained-volume disk-full runs on Windows and Linux",
       "Native Arabic review of title goldens and interface strings",
