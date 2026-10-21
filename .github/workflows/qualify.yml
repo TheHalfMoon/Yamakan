@@ -35,3 +35,28 @@ jobs:
           path: work/browser-e2e/
           if-no-files-found: ignore
           retention-days: 7
+
+  # R8/Q3: Windows fontconfig FFmpeg pin (LFS), bundle hash gate, Q3 controls.
+  # spawnSync Q3 + provider probe do not require procd; full typography suite stays local.
+  qualify-windows-r8:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          lfs: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Create clean TEMP for ProjectStore
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "yamakan-tmp"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          echo "TEMP=$dir" >> $env:GITHUB_ENV
+          echo "TMP=$dir" >> $env:GITHUB_ENV
+      - run: node --test tests/bundle.test.ts
+      - run: node --test --test-name-pattern "Q3:" tests/typography.test.ts
+      - run: pwsh -File scripts/vendor/probe-r8-fontconfig.ps1

@@ -2,6 +2,7 @@
 // install/update/rollback/uninstall. Code signing and auto-update servers are
 // intentionally out of scope.
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import {
   copyFile,
   lstat,
@@ -61,6 +62,20 @@ export async function resolvePinnedNode(): Promise<PinnedBinary> {
   };
 }
 
+// W5/R6: pinned Windows FFmpeg (R8/Q3). In-repo vendor pin from
+// scripts/vendor/build-ffmpeg-win64-r8-msys2.sh (fontconfig, no DirectWrite).
+export const EXTERNAL_BINARY_PINS = {
+  ffmpeg: {
+    url: "vendor/ffmpeg-win64-r8/ffmpeg.exe",
+    sha256: "e1ed8eb59f5a1c1d21dc0fe3f57d596452e108252d643074365bcb6e98faaa9c",
+  },
+  ffprobe: {
+    url: "vendor/ffmpeg-win64-r8/ffprobe.exe",
+    sha256: "02e3a14c752bdb6b89d841a05d9647abda930b7918e841154eeed497c0b8ebe9",
+  },
+  node: null as { url: string; sha256: string } | null,
+};
+
 export async function resolvePinnedMediaTools(): Promise<{
   node: PinnedBinary;
   ffmpeg: PinnedBinary;
@@ -70,6 +85,25 @@ export async function resolvePinnedMediaTools(): Promise<{
   const node = await resolvePinnedNode();
   const ffmpeg = await hashFile(tools.ffmpeg);
   const ffprobe = await hashFile(tools.ffprobe);
+  // R8 pin is Windows-only; Linux CI scaffolds against apt FFmpeg.
+  if (process.platform === "win32") {
+    if (
+      EXTERNAL_BINARY_PINS.ffmpeg &&
+      ffmpeg.sha256 !== EXTERNAL_BINARY_PINS.ffmpeg.sha256
+    ) {
+      throw new Error(
+        `Bundle FFmpeg SHA-256 ${ffmpeg.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffmpeg.sha256}). Use the R8 vendor pin.`,
+      );
+    }
+    if (
+      EXTERNAL_BINARY_PINS.ffprobe &&
+      ffprobe.sha256 !== EXTERNAL_BINARY_PINS.ffprobe.sha256
+    ) {
+      throw new Error(
+        `Bundle ffprobe SHA-256 ${ffprobe.sha256} does not match EXTERNAL_BINARY_PINS (${EXTERNAL_BINARY_PINS.ffprobe.sha256}). Use the R8 vendor pin.`,
+      );
+    }
+  }
   return {
     node,
     ffmpeg: {
@@ -317,7 +351,8 @@ async function copyPinnedMedia(
   },
 ) {
   await copyPinnedNode(outDir, pinned.node);
-  await mkdir(path.join(outDir, "ffmpeg"), { recursive: true });
+  const ffmpegDir = path.join(outDir, "ffmpeg");
+  await mkdir(ffmpegDir, { recursive: true });
   await copyFile(
     pinned.ffmpeg.sourcePath,
     path.join(outDir, pinned.ffmpeg.relativePath),
@@ -326,15 +361,44 @@ async function copyPinnedMedia(
     pinned.ffprobe.sourcePath,
     path.join(outDir, pinned.ffprobe.relativePath),
   );
+  // Companion DLLs for the R8 mingw64 pin (loaded from the exe directory).
+  // Only the allowlisted set in companions.txt, each hash-checked vs SHA256SUMS.
+  if (process.platform === "win32") {
+    await copyPinnedCompanions(
+      path.dirname(pinned.ffmpeg.sourcePath),
+      ffmpegDir,
+    );
+  }
 }
 
-// W5/R6: external binary pins belong here before any download is added.
-// FFmpeg must pass Q3 at runtime (fontconfig provider, not DirectWrite-only).
-export const EXTERNAL_BINARY_PINS = {
-  ffmpeg: null as { url: string; sha256: string } | null,
-  ffprobe: null as { url: string; sha256: string } | null,
-  node: null as { url: string; sha256: string } | null,
-};
+async function readSha256Sums(dir: string) {
+  const text = await readFile(path.join(dir, "SHA256SUMS"), "utf8");
+  const map = new Map<string, string>();
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^([0-9a-f]{64})\s+\*?(.+)$/i.exec(line.trim());
+    if (m) map.set(m[2].replace(/^\.\//, ""), m[1].toLowerCase());
+  }
+  return map;
+}
+
+async function copyPinnedCompanions(vendorDir: string, destDir: string) {
+  const listPath = path.join(vendorDir, "companions.txt");
+  if (!existsSync(listPath)) return;
+  const sums = await readSha256Sums(vendorDir);
+  const names = (await readFile(listPath, "utf8"))
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+  for (const name of names) {
+    const src = path.join(vendorDir, name);
+    const expected = sums.get(name);
+    if (!expected) throw new Error(`Companion ${name} missing from SHA256SUMS`);
+    const { sha256 } = await hashFile(src);
+    if (sha256 !== expected)
+      throw new Error(`Companion ${name} SHA-256 ${sha256} != pin ${expected}`);
+    await copyFile(src, path.join(destDir, name));
+  }
+}
 
 export async function installDevBundle(version: string, root = installRoot()) {
   const staging = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-stage-"));
@@ -386,7 +450,7 @@ if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
           version,
           manifest,
           launchHint:
-            "Set YAMAKAN_BUNDLE_INSTALL to the install root before npm start to verify pinned binaries at launch. R8 (title-font substitution) stays open until bundle FFmpeg passes Q3.",
+            "Set YAMAKAN_BUNDLE_INSTALL to the install root before npm start to verify pinned binaries at launch.",
         },
         null,
         2,

@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: R8 closed — vendored fontconfig FFmpeg (DirectWrite off)
+
+- **Authority:** Q3/R8 binding ([08 W5](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q15)); founder continuation to close R8 correctly.
+- **Decision:** Pin a free, redistributable Windows FFmpeg **7.1.1** under `vendor/ffmpeg-win64-r8/` whose **libass 0.17.3** is built with **fontconfig enabled and DirectWrite disabled** (`scripts/vendor/build-ffmpeg-win64-r8-msys2.sh` on MSYS2 mingw64). Companion MinGW DLLs are vendored beside the exes. `mediaTools()` prefers this pin on Windows; `EXTERNAL_BINARY_PINS` records exact SHA-256; procd `staged_tool` copies sibling `*.dll` into the AppContainer tools folder so workers load them. Q3 golden and negative controls (wrong style name; Segoe UI / Windows Fonts) pass without skip-as-pass; DirectWrite detection fails the test instead of returning early.
+- **Evidence:** `vendor/ffmpeg-win64-r8/{BUILD.json,SHA256SUMS,README.md}`; `notices/ffmpeg-win64-r8-NOTICE.txt`; `tests/typography.test.ts` Q3 cases; runtime log `Using font provider fontconfig`.
+- **Change rule:** replace the pin only with a new BUILD.json/SHA256SUMS and matching `EXTERNAL_BINARY_PINS`; re-run Q3 on the new binaries.
+
 ## 2026-10-21: Track 2 waits; close R6/R8 before W8 ripple
 
 - **Authority:** frozen plan M-gate ([07](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md#m-gate)); W7 merged at `9efa8c5` with M-gate **not passed**.

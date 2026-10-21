@@ -487,13 +487,25 @@ test("Q3: confined fontconfig refuses host substitution for a wrong style name",
     "Arial",
   );
   const { log } = await render(ass);
-  if (/font provider directwrite/i.test(log)) {
-    // The development FFmpeg build (gyan.dev) selects DirectWrite, not
-    // fontconfig; R8 stays open until the pinned bundle FFmpeg passes Q3.
-    return;
-  }
+  assert.match(log, /Using font provider fontconfig/i);
+  assert.doesNotMatch(log, /font provider directwrite/i);
+  // Substituted-font negative control: Arial must not be selected under confinement.
   assert.doesNotMatch(log, /fontselect:.*-> Arial/i);
   assert.doesNotMatch(log, /not found, selecting one more font/);
+});
+
+test("Q3: confined fontconfig refuses a Windows system font not in the pin", async () => {
+  fontsCache ??= await titleFonts();
+  // WINDIR\Fonts negative control: Segoe UI lives in the host catalog, not the pin.
+  const ass = compileTitles(cue("Hello"), W, H, fontsCache).ass.replace(
+    "IBM Plex Sans Arabic",
+    "Segoe UI",
+  );
+  const { log } = await render(ass);
+  assert.match(log, /Using font provider fontconfig/i);
+  assert.doesNotMatch(log, /font provider directwrite/i);
+  assert.doesNotMatch(log, /fontselect:.*->.*Segoe/i);
+  assert.doesNotMatch(log, /fontselect:.*Windows[/\\]Fonts/i);
 });
 
 test("Q3: without confinement, a host-only font name can substitute", async () => {
@@ -503,6 +515,7 @@ test("Q3: without confinement, a host-only font name can substitute", async () =
     "Arial",
   );
   const { log } = await render(ass, { confined: false });
+  assert.match(log, /Using font provider fontconfig/i);
   assert.match(log, /fontselect:.*\(Arial, 400, 0\) ->/);
   assert.doesNotMatch(log, /fontselect:.*IBMPlexSansArabic/);
 });

@@ -369,8 +369,72 @@ pub fn staged_tool(exe: &str) -> Result<String, String> {
                 return Err(format!("publish executable: {e}"));
             }
         }
+        // R8/Q3 mingw pin: companion DLLs must sit beside the staged exe so
+        // the AppContainer loader can resolve them (Windows loads from the
+        // executable directory). Copy only *.dll siblings of the source.
+        if let Some(src_dir) = source.parent() {
+            stage_sibling_dlls(src_dir, &folder)?;
+        }
+    } else if let Some(src_dir) = source.parent() {
+        // Cached exe may predate DLL staging; ensure companions are present.
+        stage_sibling_dlls(src_dir, &folder)?;
     }
     Ok(target.to_string_lossy().to_string())
+}
+
+/// Copy allowlisted companion DLLs (from `companions.txt` beside the source
+/// exe) into the staged tools folder. Without companions.txt, nothing is
+/// copied (fully static builds). Never globs arbitrary `*.dll`.
+fn stage_sibling_dlls(src_dir: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
+    let list = src_dir.join("companions.txt");
+    if !list.exists() {
+        return Ok(());
+    }
+    let text = std::fs::read_to_string(&list).map_err(|e| format!("read companions.txt: {e}"))?;
+    for line in text.lines() {
+        let name = line.trim();
+        if name.is_empty() || name.starts_with('#') {
+            continue;
+        }
+        if !name.to_ascii_lowercase().ends_with(".dll")
+            || name.contains('/')
+            || name.contains('\\')
+            || name.contains("..")
+        {
+            return Err(format!("invalid companion name: {name}"));
+        }
+        let path = src_dir.join(name);
+        if !path.is_file() {
+            return Err(format!("companion DLL missing: {name}"));
+        }
+        let dest = dest_dir.join(name);
+        if dest.exists() {
+            if same_bytes(&path, &dest)? {
+                continue;
+            }
+            // Refuse a stale staged DLL the same way we refuse a stale exe.
+            return Err(format!(
+                "staged companion DLL {name} differs from its allowlisted source"
+            ));
+        }
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let partial = dest_dir.join(format!("{name}.{}.{nanos}.partial", std::process::id()));
+        std::fs::copy(&path, &partial).map_err(|e| format!("copy companion DLL {name}: {e}"))?;
+        if !same_bytes(&path, &partial)? {
+            let _ = std::fs::remove_file(&partial);
+            return Err(format!("companion DLL {name} differs from its source"));
+        }
+        if let Err(e) = std::fs::rename(&partial, &dest) {
+            let _ = std::fs::remove_file(&partial);
+            if !(dest.exists() && same_bytes(&path, &dest)?) {
+                return Err(format!("publish companion DLL {name}: {e}"));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn same_bytes(a: &std::path::Path, b: &std::path::Path) -> Result<bool, String> {

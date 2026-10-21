@@ -75,17 +75,25 @@ async function probeTitles(): Promise<TitleCapability> {
       cwd: dir,
       readable: [path.join(dir, "probe.ass")],
       memoryBytes: RESOURCE_POLICY.enforced.workerMemoryBytes,
-      // A hung probe must not hold every title export.
+      // Cold R8 staging copies companion DLLs into worker-tools; allow headroom
+      // above the short media-probe wall without holding exports forever.
       signal: AbortSignal.timeout(
-        RESOURCE_POLICY.enforced.probeWallSeconds * 1000,
+        Math.max(RESOURCE_POLICY.enforced.probeWallSeconds, 60) * 1000,
       ),
       stderrLimit: 64_000,
       onStderr: (chunk: Buffer) => {
         if (log.length < 64_000) log += chunk.toString("utf8");
       },
     });
-    const api = libassApi(log || result.stderr);
-    if (result.code !== 0 || !titlesSupported(api)) throw unavailable();
+    const combined = log || result.stderr;
+    const api = libassApi(combined);
+    if (result.code !== 0 || !titlesSupported(api)) {
+      throw unavailable(
+        new Error(
+          `libass probe code=${result.code} api=0x${api.toString(16)} log=${combined.slice(-1500)}`,
+        ),
+      );
+    }
     return { libassApi: api };
   } catch (e) {
     throw e instanceof CommandError ? e : unavailable(e);
