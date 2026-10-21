@@ -147,6 +147,15 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     });
     assert.equal(noOrigin.status, 403);
     assert.equal(noOrigin.headers.get("set-cookie"), null);
+    const launchPath = path.join(root, "launch");
+    const tokenPath = path.join(root, "token");
+    if (process.platform === "win32") {
+      for (const file of [root, tokenPath, launchPath])
+        assert.equal(await readableByOtherAccounts(file), false, file);
+    } else {
+      assert.equal((await stat(tokenPath)).mode & 0o777, 0o600, tokenPath);
+      assert.equal((await stat(launchPath)).mode & 0o777, 0o600, launchPath);
+    }
     const granted = await session(launch!);
     assert.equal(granted.status, 200);
     // No cookie: browsers would send it to every port of 127.0.0.1.
@@ -157,10 +166,10 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     for (const other of [token.trim(), launch])
       for (const key of [sessionKey, media]) assert.notEqual(key, other);
     assert.notEqual(sessionKey, media);
-    // The client token, the launch link and the database are private to
-    // this account: another account of the machine is denied (Windows), or
-    // the modes exclude everyone else (POSIX).
-    const secrets = ["token", "launch", "workspace.sqlite"].map((name) =>
+    // Single-use exchange removes the launch file; the token and database stay
+    // private to this account.
+    await assert.rejects(() => stat(launchPath), { code: "ENOENT" });
+    const secrets = ["token", "workspace.sqlite"].map((name) =>
       path.join(root, name),
     );
     if (process.platform === "win32") {
@@ -179,7 +188,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
         assert.equal(await readableByOtherAccounts(file), false, file);
     } else {
       assert.equal((await stat(root)).mode & 0o777, 0o700);
-      for (const file of secrets.slice(0, 2))
+      for (const file of secrets)
         assert.equal((await stat(file)).mode & 0o777, 0o600, file);
     }
     const envelope = JSON.stringify({

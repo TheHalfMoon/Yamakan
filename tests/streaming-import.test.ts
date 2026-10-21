@@ -15,7 +15,7 @@ import { PassThrough } from "node:stream";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { ProjectStore } from "../core/store.ts";
+import { ProjectStore, WORKSPACE_SCHEMA_VERSION } from "../core/store.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { probe } from "../core/media.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
@@ -206,7 +206,7 @@ test("a version 2 workspace with imported media upgrades to the current version 
   store.close();
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; PRAGMA user_version = 2",
+    "DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; PRAGMA user_version = 2",
   );
   db.close();
   const reopened = new ProjectStore(root);
@@ -216,7 +216,7 @@ test("a version 2 workspace with imported media upgrades to the current version 
   assert.equal(
     (check.prepare("PRAGMA user_version").get() as { user_version: number })
       .user_version,
-    6,
+    WORKSPACE_SCHEMA_VERSION,
   );
   assert.equal(rows(root, "jobs"), 0);
   assert.equal(rows(root, "supervisor"), 1);
@@ -231,7 +231,7 @@ test("a version 1 workspace database upgrades step by step to the current versio
   store.close();
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
+    "DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
   );
   db.close();
   const reopened = new ProjectStore(root);
@@ -241,7 +241,7 @@ test("a version 1 workspace database upgrades step by step to the current versio
   assert.equal(
     (check.prepare("PRAGMA user_version").get() as { user_version: number })
       .user_version,
-    6,
+    WORKSPACE_SCHEMA_VERSION,
   );
   assert.equal(rows(root, "asset_objects"), 0);
   assert.equal(rows(root, "jobs"), 0);
@@ -425,7 +425,7 @@ test("upgrading to schema v2 registers existing assets (ready, or quarantined if
   await truncate(badFile, 10);
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
+    "DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
   );
   db.close();
   const reopened = new ProjectStore(root);

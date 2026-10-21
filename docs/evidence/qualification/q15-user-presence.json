@@ -1,0 +1,16 @@
+{
+  "receipt": "yamakan.qualification/q15-user-presence/1",
+  "commit": "d11d7faf34848a804df2c16e6e480bac3ce7c406",
+  "measuredAt": "2026-10-21T02:40:00.000Z",
+  "qualification": "q15-user-presence",
+  "outcome": "fallback",
+  "bindingFailApplied": true,
+  "decision": "fallback",
+  "reason": "No native UserConsentVerifier helper is wired in native/procd yet; human-only commands rely on the single-use launch secret (60 s TTL) with residual same-account risk recorded in docs/SECURITY.md.",
+  "probes": [],
+  "documentation": [
+    "docs/SECURITY.md (W4 / Q15 residual)",
+    "tests/agent-principals.test.ts (launch secret single-use and expire)",
+    "tests/http.test.ts (launch exchange consumes the link)"
+  ]
+}

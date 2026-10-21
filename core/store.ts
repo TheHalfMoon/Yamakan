@@ -94,7 +94,8 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-const SCHEMA_VERSION = 7;
+export const WORKSPACE_SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
 // Asset objects are content-addressed files under a project; a version is a
