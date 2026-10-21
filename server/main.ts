@@ -24,6 +24,7 @@ import { closeWorkers } from "../core/process/workers.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import { assertSeparate, defaultRecoveryHome } from "../core/recovery.ts";
 import { restrictToOwner } from "../core/process/access.ts";
+import { verifyInstalledBinaries } from "../scripts/bundle.ts";
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -37,6 +38,17 @@ const root = path.resolve(
 // into the original root. It is migrated into a new root instead.
 const legacyHint = (dir: string) =>
   `npm run migrate -- "${dir}" "<new empty folder>"`;
+const bundleInstall = env("BUNDLE_INSTALL");
+if (bundleInstall) {
+  try {
+    await verifyInstalledBinaries(path.resolve(bundleInstall));
+  } catch (e) {
+    console.error(
+      `Installed bundle verification failed: ${(e as Error).message}`,
+    );
+    process.exit(1);
+  }
+}
 if (await isLegacyWorkspace(root)) {
   console.error(
     `This workspace uses the pre-Yamakan format and was not opened. Migrate it with: ${legacyHint(root)}`,

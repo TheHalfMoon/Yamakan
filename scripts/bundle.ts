@@ -1,10 +1,7 @@
 // Windows distributable bundle (W5): pinned runtime layout, manifest hashes,
 // install/update/rollback/uninstall. Code signing and auto-update servers are
 // intentionally out of scope.
-import {
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   copyFile,
   mkdir,
@@ -16,33 +13,27 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mediaTools } from "../core/process/workers.ts";
+import { TITLE_FONT } from "../core/render/fonts.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const BUNDLE_FORMAT = "yamakan.bundle/1";
 
-// External binaries are recorded before download; hashes must match at build time.
-export const PINNED_ARTIFACTS = Object.freeze({
-  node: Object.freeze({
-    url: "https://nodejs.org/dist/v24.11.0/node-v24.11.0-win-x64.zip",
-    sha256: "0000000000000000000000000000000000000000000000000000000000000000",
-    relativePath: "node/node.exe",
-  }),
-  ffmpeg: Object.freeze({
-    url: "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
-    sha256: "0000000000000000000000000000000000000000000000000000000000000000",
-    relativePath: "ffmpeg/ffmpeg.exe",
-  }),
-  ffprobe: Object.freeze({
-    url: "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
-    sha256: "0000000000000000000000000000000000000000000000000000000000000000",
-    relativePath: "ffmpeg/ffprobe.exe",
-  }),
-});
+export type PinnedBinary = {
+  sourcePath: string;
+  relativePath: string;
+  sha256: string;
+  bytes: number;
+};
 
 export type BundleManifest = {
   format: typeof BUNDLE_FORMAT;
   version: string;
   builtAt: string;
+  pinned: {
+    ffmpeg: PinnedBinary;
+    ffprobe: PinnedBinary;
+  };
   files: { path: string; sha256: string; bytes: number }[];
 };
 
@@ -51,6 +42,27 @@ export async function hashFile(file: string) {
   return {
     sha256: createHash("sha256").update(bytes).digest("hex"),
     bytes: bytes.length,
+  };
+}
+
+export async function resolvePinnedMediaTools(): Promise<{
+  ffmpeg: PinnedBinary;
+  ffprobe: PinnedBinary;
+}> {
+  const tools = mediaTools();
+  const ffmpeg = await hashFile(tools.ffmpeg);
+  const ffprobe = await hashFile(tools.ffprobe);
+  return {
+    ffmpeg: {
+      sourcePath: tools.ffmpeg,
+      relativePath: "ffmpeg/ffmpeg.exe",
+      ...ffmpeg,
+    },
+    ffprobe: {
+      sourcePath: tools.ffprobe,
+      relativePath: "ffmpeg/ffprobe.exe",
+      ...ffprobe,
+    },
   };
 }
 
@@ -66,7 +78,11 @@ async function walk(dir: string, prefix = ""): Promise<string[]> {
   return out;
 }
 
-export async function buildManifest(versionDir: string, version: string) {
+export async function buildManifest(
+  versionDir: string,
+  version: string,
+  pinned: { ffmpeg: PinnedBinary; ffprobe: PinnedBinary },
+) {
   const files: BundleManifest["files"] = [];
   for (const rel of await walk(versionDir)) {
     const { sha256, bytes } = await hashFile(path.join(versionDir, rel));
@@ -77,6 +93,7 @@ export async function buildManifest(versionDir: string, version: string) {
     format: BUNDLE_FORMAT,
     version,
     builtAt: new Date().toISOString(),
+    pinned,
     files,
   };
   return manifest;
@@ -117,19 +134,25 @@ export async function installVersion(
     await mkdir(path.dirname(dest), { recursive: true });
     await copyFile(path.join(bundleDir, rel), dest);
   }
-  const manifest = await buildManifest(target, version);
-  await writeFile(manifestPath(root), JSON.stringify(manifest, null, 2), {
-    encoding: "utf8",
-  });
+  const manifestOnDisk = JSON.parse(
+    await readFile(path.join(bundleDir, "bundle.manifest.json"), "utf8"),
+  ) as BundleManifest;
+  await writeFile(
+    manifestPath(root),
+    JSON.stringify(manifestOnDisk, null, 2),
+    { encoding: "utf8" },
+  );
   await writeFile(currentPointerPath(root), `${version}\n`, "utf8");
-  return manifest;
+  return manifestOnDisk;
 }
 
 export async function switchVersion(version: string, root = installRoot()) {
   const versionDir = path.join(root, version);
   if (!(await stat(versionDir).catch(() => null))?.isDirectory())
     throw new Error(`Version ${version} is not installed.`);
-  const manifest = await buildManifest(versionDir, version);
+  const manifest = JSON.parse(
+    await readFile(path.join(versionDir, "bundle.manifest.json"), "utf8"),
+  ) as BundleManifest;
   await writeFile(manifestPath(root), JSON.stringify(manifest, null, 2), {
     encoding: "utf8",
   });
@@ -161,7 +184,6 @@ export async function uninstallBinaries(root = installRoot()) {
     const full = path.join(root, entry.name);
     const info = await stat(full);
     if (!info.isDirectory()) continue;
-    // Never follow reparse points: skip non-directories and junctions.
     if (info.isSymbolicLink()) continue;
     await rm(full, { recursive: true, force: true });
     removed.push(entry.name);
@@ -179,7 +201,8 @@ export async function verifyInstalledBinaries(root = installRoot()) {
   if (!current) throw new Error("No current version.");
   const versionDir = path.join(root, current);
   for (const entry of manifest.files) {
-    if (!/^(node|ffmpeg|procd|bundle-version\.txt)/.test(entry.path)) continue;
+    if (!/^(node|ffmpeg|procd|bundle-version\.txt|fonts\/)/.test(entry.path))
+      continue;
     const file = path.join(versionDir, entry.path);
     const { sha256 } = await hashFile(file);
     if (sha256 !== entry.sha256)
@@ -188,25 +211,101 @@ export async function verifyInstalledBinaries(root = installRoot()) {
   return true;
 }
 
+async function sbomFromPackageLock(version: string) {
+  const lock = JSON.parse(
+    await readFile(path.join(ROOT, "package-lock.json"), "utf8"),
+  ) as {
+    packages?: Record<
+      string,
+      { version?: string; license?: string; name?: string }
+    >;
+  };
+  const components: {
+    type: string;
+    name: string;
+    version: string;
+    purl?: string;
+  }[] = [
+    {
+      type: "application",
+      name: "yamakan",
+      version,
+      purl: `pkg:npm/yamakan@${version}`,
+    },
+  ];
+  for (const [pkgPath, meta] of Object.entries(lock.packages ?? {})) {
+    if (!pkgPath || !meta.version) continue;
+    const name = pkgPath.replace(/^node_modules\//, "");
+    if (name === "") continue;
+    components.push({
+      type: "library",
+      name,
+      version: meta.version,
+      purl: `pkg:npm/${name}@${meta.version}`,
+    });
+  }
+  components.sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    bomFormat: "CycloneDX",
+    specVersion: "1.5",
+    version: 1,
+    metadata: {
+      component: {
+        type: "application",
+        name: "yamakan",
+        version,
+      },
+    },
+    components,
+  };
+}
+
+async function copyPinnedFonts(outDir: string) {
+  for (const font of TITLE_FONT.files) {
+    const dest = path.join(outDir, "fonts", path.basename(font.file));
+    await mkdir(path.dirname(dest), { recursive: true });
+    await copyFile(path.join(ROOT, font.file), dest);
+  }
+}
+
+async function copyPinnedMedia(outDir: string, pinned: {
+  ffmpeg: PinnedBinary;
+  ffprobe: PinnedBinary;
+}) {
+  await mkdir(path.join(outDir, "ffmpeg"), { recursive: true });
+  await copyFile(
+    pinned.ffmpeg.sourcePath,
+    path.join(outDir, pinned.ffmpeg.relativePath),
+  );
+  await copyFile(
+    pinned.ffprobe.sourcePath,
+    path.join(outDir, pinned.ffprobe.relativePath),
+  );
+}
+
 export async function scaffoldDevBundle(outDir: string, version: string) {
   await mkdir(outDir, { recursive: true });
+  const pinned = await resolvePinnedMediaTools();
+  await copyPinnedMedia(outDir, pinned);
+  await copyPinnedFonts(outDir);
   const marker = path.join(outDir, "bundle-version.txt");
   await writeFile(marker, `${version}\n`, "utf8");
   await copyFile(path.join(ROOT, "NOTICE"), path.join(outDir, "NOTICE")).catch(
     () => writeFile(path.join(outDir, "NOTICE"), "Yamakan bundle\n", "utf8"),
   );
-  const sbom = {
-    bomFormat: "CycloneDX",
-    specVersion: "1.5",
-    version: 1,
-    components: [{ type: "application", name: "yamakan", version }],
-  };
+  const sbom = await sbomFromPackageLock(version);
   await writeFile(
     path.join(outDir, "sbom.cdx.json"),
     JSON.stringify(sbom, null, 2),
     "utf8",
   );
-  return buildManifest(outDir, version);
+  const manifest = await buildManifest(outDir, version, pinned);
+  await writeFile(
+    path.join(outDir, "bundle.manifest.json"),
+    JSON.stringify(manifest, null, 2),
+    "utf8",
+  );
+  return manifest;
 }
 
 if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {

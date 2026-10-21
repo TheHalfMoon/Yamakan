@@ -9,8 +9,8 @@ import {
   readCurrentVersion,
   rollback,
   scaffoldDevBundle,
-  switchVersion,
   uninstallBinaries,
+  resolvePinnedMediaTools,
   verifyInstalledBinaries,
 } from "../scripts/bundle.ts";
 
@@ -18,6 +18,18 @@ const bases: string[] = [];
 after(() =>
   Promise.all(bases.map((b) => rm(b, { recursive: true, force: true }))),
 );
+
+test("pinned media tools match manifest ffmpeg and ffprobe hashes", async () => {
+  const pinned = await resolvePinnedMediaTools();
+  const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-pin-"));
+  bases.push(bundle);
+  const manifest = await scaffoldDevBundle(bundle, "pin-test");
+  assert.equal(manifest.pinned.ffmpeg.sha256, pinned.ffmpeg.sha256);
+  assert.equal(manifest.pinned.ffprobe.sha256, pinned.ffprobe.sha256);
+  assert.ok(
+    manifest.files.some((f) => f.path === "fonts/IBMPlexSansArabic-Regular.ttf"),
+  );
+});
 
 test("bundle manifest records file hashes and install switches pointer", async () => {
   const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-src-"));
