@@ -381,9 +381,7 @@ test("repair releases a fixed quarantined object and keeps a still-bad one quara
       scopes: repairScopes,
     },
   };
-  type RepairResult =
-    | { released: false; reason: string }
-    | { released: true };
+  type RepairResult = { released: false; reason: string } | { released: true };
   const stillBad = await execute(ctx, "yamakan.asset.repair", {
     projectId: project.id,
     assetId: bad.asset.id,
