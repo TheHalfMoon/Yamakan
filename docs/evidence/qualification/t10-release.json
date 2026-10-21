@@ -1,8 +1,8 @@
 {
-  "receipt": "yamakan.release-qualification/2",
-  "measuredAt": "2026-10-13T03:41:54.308Z",
+  "receipt": "yamakan.release-qualification/3",
+  "measuredAt": "2026-10-21T02:56:43.992Z",
   "environment": {
-    "commit": "df3b11c1a2967d23ff0feb671c5aec7b7a2e5c30",
+    "commit": "11976a046b2f53be25add2e822bd7ccd439db56c",
     "os": "Windows_NT 10.0.26300 (Windows 11 Home)",
     "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
     "logicalCores": 12,
@@ -12,8 +12,8 @@
       "sha256": "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237"
     },
     "browser": {
-      "version": "155.0.4283.45",
-      "sha256": "4bb4545b4ab80a3cf463a588ce570ca42de38fe6db16e3baeb0798ac75b4648b"
+      "version": "155.0.4283.62",
+      "sha256": "c2451a012ff88e82449834de5b526ebb42b5a3fc25958d795910d2b172c975b6"
     },
     "ffmpeg": {
       "version": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
@@ -23,8 +23,8 @@
       "version": "ffprobe version 8.1.1-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers",
       "sha256": "a6618e99bb58869ded3c6f37b53aa1a8d701c3591dbb7b5b317d47369c112be2"
     },
-    "procd": "b9b2ff2e2a9de961faf086bdadff5091f35542b89a9ecfcc03423d8e42733b44",
-    "aclHelper": "c108b2357dc7c6e174b9de9e20653392708df31f863718e472226c89bb052c69",
+    "procd": "03c22b8b8d248669def5cdafda253e913bece5d4fcb7ec6af2aa1498e5a82f28",
+    "aclHelper": "05133fb488a11e5847320a999c8e47d503d653609f5423592b65e4a86a4bfb60",
     "fonts": [
       {
         "file": "assets/fonts/IBMPlexSansArabic-Regular.ttf",
@@ -39,34 +39,42 @@
     ],
     "interface": {
       "files": 3,
-      "sha256": "cb15efac18d70c6ce7fb0b0c6f3385fbda99965b79a7ca40cdf096bbb44cdc0a"
+      "sha256": "235ae3091531900927ff7ff69c644d17f588f8cc7eecdde08af40d4da6de9504"
     }
   },
-  "targets": {
-    "note": "Proposed targets from the plan; they are not yet a frozen, founder-approved hardware/fixture policy",
-    "coldLaunchMs": 5000,
-    "reopenMs": 2000
+  "policy": {
+    "version": "yamakan.qualification-policy/v1",
+    "approved": "2026-10-13, founder (approval I)",
+    "hardware": {
+      "os": "Windows 11 (10.0.26300)",
+      "cpu": "13th Gen Intel Core i5-13420H, 12 logical cores",
+      "memoryGiB": 16,
+      "storage": "512 GB NVMe SSD (WD PC SN740)"
+    },
+    "coldLaunchP95Ms": 5000,
+    "reopenP95Ms": 2000,
+    "hardwareMatches": true
   },
   "coldLaunch": {
     "method": "service start to its ready line on a fresh workspace, 5 runs; the OS file cache is warm after the build (fresh workspace, not a cold OS cache); with 5 runs p95 is the maximum",
     "runs": 5,
-    "p50": 394,
-    "p95": 460,
-    "max": 460,
-    "metTarget": true
+    "p50": 485,
+    "p95": 563,
+    "max": 563,
+    "metThreshold": true
   },
   "reopen": {
     "fixture": "one 10 s 1280x720 H.264/AAC clip, 200 saved revisions; service start to project open over the authenticated API, 5 runs",
     "runs": 5,
-    "p50": 456,
-    "p95": 492,
-    "max": 492,
-    "metTarget": true
+    "p50": 498,
+    "p95": 614,
+    "max": 614,
+    "metThreshold": true
   },
   "tests": {
     "exitCode": 0,
-    "total": 203,
-    "pass": 201,
+    "total": 244,
+    "pass": 242,
     "fail": 0,
     "skipped": 2
   },
@@ -77,14 +85,14 @@
   "offline": {
     "browserPages": {
       "method": "every request made by the journey's browser pages, recorded by the E2E (page.on('request')); allowed: 127.0.0.1, blob:, data:, and the browser's own built-in pages (about:, edge:, chrome:, such as its download panel), which are not network requests",
-      "requests": 142,
+      "requests": 143,
       "external": 0
     },
     "serviceTree": {
       "method": "Get-NetTCPConnection for the service process and every descendant, sampled during the browser E2E; UDP (DNS) is not captured, and a connection shorter than the sample gap can be missed",
-      "samples": 9,
-      "meanSampleGapMs": 1138,
-      "connections": 13,
+      "samples": 10,
+      "meanSampleGapMs": 1266,
+      "connections": 12,
       "external": [],
       "exposedListeners": []
     },
@@ -95,7 +103,7 @@
     "Clean Windows Profile A (fresh user profile, nothing pre-installed): this run used the development profile",
     "Network disabled with a packet-level egress capture: this run had the network enabled and sampled TCP only",
     "Second local Windows account denied: established by a restricted-token proxy in tests, not by a real second account",
-    "Pinned distributable bundle (runtime, FFmpeg, fonts, notices, SBOM) with install, update, rollback and uninstall",
+    "Pinned distributable bundle on clean Profile A: W5 merged a dev scaffold (hash-verified FFmpeg/fonts, install pointer, rollback/uninstall tests); pinned Node runtime, installer, code signing and launch-time verification on the release artifact are still open",
     "Release evidence bundle at the release head: MP4 and canonical hashes, ffprobe JSON, sampled frames and title regions, audio report, UI+MCP transcript, process lifecycle reports",
     "Real constrained-volume disk-full runs on Windows and Linux",
     "Native Arabic review of title goldens and interface strings",
