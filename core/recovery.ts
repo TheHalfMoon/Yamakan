@@ -635,10 +635,6 @@ async function restore(
   }
 }
 
-// Restores a backup of a recovery home into a fresh folder of that home.
-const restoreTargetRef = (backupId: string, slot: number) =>
-  `restored/${backupId}-${slot}`;
-
 async function resumeBackupSummary(home: string, backupId: string) {
   try {
     const manifest = await readManifest(
