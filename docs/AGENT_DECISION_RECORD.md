@@ -34,6 +34,14 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: Track 2 waits; close R6/R8 before W8 ripple
+
+- **Authority:** frozen plan M-gate ([07](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md#m-gate)); W7 merged at `9efa8c5` with M-gate **not passed**.
+- **Decision:** Do **not** start W8–W18 donor product imports (OpenCut ripple, Studio, and other M3–M17 modules) until M-gate is declared on main with exact-head `qualify:release` and R1–R8 satisfied. W6-style provenance/brand tooling remains exempt. Next engineering is follow-up **W5.1** (pinned Node in bundle, Q3/R8 fontconfig confinement) and **W7.1** (remaining R7 evidence artifacts), then re-run `qualify:release` and update this record.
+- **Note (W5.1 in progress):** Q3 plumbing (`FONTCONFIG_FILE` via procd, per-render `fonts.conf`) is in flight; the current Windows dev FFmpeg (DirectWrite provider) does **not** satisfy R8 until the pinned bundle FFmpeg is chosen and passes Q3.
+- **Rationale:** M-gate is not satisfied by “qualify:release green on dev profile” alone while R6/R7/R8 remain open; starting schema-changing imports would multiply migrations and invalidate release evidence.
+- **Change rule:** founder scope change or a new entry recording M-gate passed at a named SHA.
+
 ## 2026-10-21: W6 provenance drift uses pin fetch when no local clone
 
 - **Authority:** W6 on branch `chore/provenance-brand` ([08 task card](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#w6--provenance-and-brand-tooling)).

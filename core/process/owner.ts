@@ -42,6 +42,8 @@ export type RunOptions = {
   onStderr?: (chunk: Buffer) => void;
   // Bound on retained stderr, returned with the result.
   stderrLimit?: number;
+  // Extra variables for the worker environment (Windows: allowlisted in procd).
+  workerEnv?: Record<string, string>;
 };
 export type RunResult = {
   code: number;
@@ -315,6 +317,11 @@ export class ProcessOwner {
             ...(options.readable ?? []).map((p) => hex(path.resolve(p))),
             String(options.args.length),
             ...options.args.map(hex),
+            String(Object.keys(options.workerEnv ?? {}).length),
+            ...Object.entries(options.workerEnv ?? {}).flatMap(([k, v]) => [
+              hex(k),
+              hex(v),
+            ]),
           ].join("\t"),
         );
         if (!sent) {
@@ -341,6 +348,7 @@ export class ProcessOwner {
       const env: NodeJS.ProcessEnv = {};
       for (const key of ["PATH", "TMPDIR", "LANG"])
         if (process.env[key]) env[key] = process.env[key];
+      Object.assign(env, options.workerEnv);
       const child = spawn(path.resolve(options.executable), options.args, {
         cwd: options.cwd,
         env,
