@@ -14,9 +14,9 @@ import { CommandError } from "../core/command/errors.ts";
 
 const DOC_ID = "00000000-0000-4000-8000-000000000001";
 
-test("STUDIO_ENABLED stays false until Q8–Q10 targets are met", () => {
-  assert.equal(STUDIO_ENABLED, false);
-  assert.equal(studioCapability().available, false);
+test("STUDIO_ENABLED is true after Q8–Q10 activation", () => {
+  assert.equal(STUDIO_ENABLED, true);
+  assert.equal(studioCapability().available, true);
 });
 
 test("createEmptyStudioDocument produces a hashable v3 canvas", () => {
@@ -30,7 +30,7 @@ test("createEmptyStudioDocument produces a hashable v3 canvas", () => {
   assert.equal(JSON.parse(doc.canvasJson).version, 3);
   const saved = saveStudioDocument(doc);
   assert.equal(saved.contentHash.length, 64);
-  assert.equal(saved.studioEnabled, false);
+  assert.equal(saved.studioEnabled, true);
   assert.equal(hashStudioDocument(doc), saved.contentHash);
 });
 
@@ -61,12 +61,12 @@ test("yamakan.studio.open returns a validated document", async () => {
     document: { name: string };
     contentHash: string;
   };
-  assert.equal(result.studioEnabled, false);
+  assert.equal(result.studioEnabled, true);
   assert.equal(result.document.name, "Brush study");
   assert.match(result.contentHash, /^[a-f0-9]{64}$/);
 });
 
-test("yamakan.studio.capability reports unavailable while flag is off", async () => {
+test("yamakan.studio.capability reports available when flag is on", async () => {
   const ctx = {
     store: {} as CommandContext["store"],
     queue: {} as CommandContext["queue"],
@@ -78,5 +78,5 @@ test("yamakan.studio.capability reports unavailable while flag is off", async ()
   const out = await execute(ctx, "yamakan.studio.capability", {});
   assert.equal(out.operation, "yamakan.studio.capability");
   const result = out.result as { available: boolean };
-  assert.equal(result.available, false);
+  assert.equal(result.available, true);
 });

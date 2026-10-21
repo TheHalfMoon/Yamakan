@@ -90,15 +90,16 @@ export function StudioCanvas({ forceMount = false }: Props) {
         });
 
         composition.engine.surface.attach(screen, overlay);
+        const exposeMeasurement = STUDIO_ENABLED || forceMount;
         destroy = () => {
-          if (forceMount && window.__yamakanStudioQ8) {
+          if (exposeMeasurement && window.__yamakanStudioQ8) {
             delete window.__yamakanStudioQ8;
           }
           composition.engine.lifecycle.dispose();
           assets.dispose();
         };
 
-        if (forceMount) {
+        if (exposeMeasurement) {
           const { interaction, tools, history } = composition.engine;
           const { createQ10StudioCanvasState } =
             await import("./host/q10Fixture.ts");

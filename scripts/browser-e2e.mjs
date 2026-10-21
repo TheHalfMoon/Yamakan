@@ -316,11 +316,18 @@ try {
   // The tool catalog is read with the page's session and shown in place
   // (a new tab would hold no session).
   await page.getByRole("button", { name: "Agent tools", exact: true }).click();
-  // W11: Studio is imported but disabled until Q8–Q10; show the gate reason.
+  // P10-01: Studio enabled after Q8–Q10; canvas mounts without forceMount.
   const studio = page.getByTestId("studio-canvas");
   await studio.waitFor();
-  assert.equal(await studio.getAttribute("data-studio-enabled"), "false");
-  await page.getByTestId("studio-disabled-reason").waitFor();
+  assert.equal(await studio.getAttribute("data-studio-enabled"), "true");
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="studio-canvas"]')
+        ?.getAttribute("data-studio-status") === "mounted",
+    null,
+    { timeout: 60000 },
+  );
   await page
     .getByRole("button", {
       name: "Show the versioned tool catalog",

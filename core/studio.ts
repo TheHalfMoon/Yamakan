@@ -9,8 +9,11 @@ import { Id } from "./project.ts";
 export const STUDIO_FORMAT = "yamakan.studio-document";
 export const STUDIO_FORMAT_VERSION = 1 as const;
 
-/** Studio UI/runtime stays off until Q8–Q10 pass on this head. */
-export const STUDIO_ENABLED = false;
+/**
+ * Studio UI/runtime. Enabled after Q8–Q10 pass on exact heads
+ * (Q8 #57, Q9 #59, Q10 #60) with activation evidence on this branch.
+ */
+export const STUDIO_ENABLED = true;
 
 export const STUDIO_LIMITS = Object.freeze({
   maxDocumentBytes: 8 * 1024 * 1024,
@@ -180,7 +183,11 @@ export function studioCapability(): {
         "Studio canvas is imported but disabled until Q8–Q10 targets are met on this head.",
     };
   }
-  return { id: "studio", available: true };
+  return {
+    id: "studio",
+    available: true,
+    reason: "Q8–Q10 qualified; Studio activation evidence bound to this head.",
+  };
 }
 
 /** Dimension gate before decode (M7 field 10). */
