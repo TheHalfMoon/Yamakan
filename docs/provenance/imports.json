@@ -688,5 +688,67 @@
     ],
     "license": "MIT",
     "owner": "media builder"
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "frontend/libs/components/pagescene/src/lib/engine/cameraMath.ts",
+    "imported": "src/cinema/camera/cameraMath.ts",
+    "sha256": "89c5501ea9033f42ca2b468382fd9ac62f67ecb0185efd8df0eae68a2a472a37",
+    "importedSha256": "89c5501ea9033f42ca2b468382fd9ac62f67ecb0185efd8df0eae68a2a472a37",
+    "modifications": [],
+    "tests": [
+      "tests/cinema.test.ts"
+    ],
+    "license": "Apache-2.0 OR MIT",
+    "authorization": "public-licence",
+    "owner": "cinema builder"
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "frontend/libs/components/pagescene/src/lib/engine/EditorState/EditorStateJSON/object_3d_json.ts",
+    "imported": "src/cinema/types/object_3d_json.ts",
+    "sha256": "bf17dd776a37f7ae4d77db1545972ba0599b6e5a211b24063c98d98d66c0210c",
+    "importedSha256": "bf17dd776a37f7ae4d77db1545972ba0599b6e5a211b24063c98d98d66c0210c",
+    "modifications": [],
+    "tests": [
+      "tests/cinema.test.ts"
+    ],
+    "license": "Apache-2.0 OR MIT",
+    "authorization": "public-licence",
+    "owner": "cinema builder"
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "frontend/libs/components/pagescene/src/lib/engine/EditorState/EditorStateJSON/scene_state_json.ts",
+    "imported": "src/cinema/types/scene_state_json.ts",
+    "sha256": "9703bb440a015f09689f18775756d79bd5caa2ca50389e712e6b784c89e09eb2",
+    "importedSha256": "9703bb440a015f09689f18775756d79bd5caa2ca50389e712e6b784c89e09eb2",
+    "modifications": [],
+    "tests": [
+      "tests/cinema.test.ts"
+    ],
+    "license": "Apache-2.0 OR MIT",
+    "authorization": "public-licence",
+    "owner": "cinema builder"
+  },
+  {
+    "source": "storytold/artcraft",
+    "sha": "28a39a0de4a2fc2eccc237df2046c24245bd12ab",
+    "original": "frontend/libs/components/pagescene/src/lib/engine/editor/CameraController.ts",
+    "imported": "src/cinema/camera/CameraController.ts",
+    "sha256": "7d67aeee17ce45d3809eac912cff60ddeff1b884ca0292c48ec8f456b2735e25",
+    "importedSha256": "ba412a0e66dac2e8075b0a9b57c483c684ce349b2f2471f5819ef63d6a0cd887",
+    "modifications": [
+      "Replace EngineEventBus with onCameraUpdated callback; drop @storyteller/* and EditorStates enums; local CameraAspectRatio union; add OrbitControls fallback helper; import cameraMath via relative .ts path."
+    ],
+    "tests": [
+      "tests/cinema.test.ts"
+    ],
+    "license": "Apache-2.0 OR MIT",
+    "authorization": "public-licence",
+    "owner": "cinema builder"
   }
 ]
