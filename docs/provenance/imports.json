@@ -12,7 +12,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -28,7 +30,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -45,7 +49,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -60,7 +66,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -73,7 +81,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -86,7 +96,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -99,7 +111,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -112,7 +126,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -125,7 +141,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -138,7 +156,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -151,7 +171,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -164,7 +186,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["src/donors/film-editor/utils/historyState.test.ts"]
+    "tests": [
+      "src/donors/film-editor/utils/historyState.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -177,7 +201,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -190,7 +216,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["src/donors/film-editor/utils/exportSettings.test.ts"]
+    "tests": [
+      "src/donors/film-editor/utils/exportSettings.test.ts"
+    ]
   },
   {
     "source": "TheHalfMoon/Ninerr",
@@ -220,7 +248,9 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "persistence builder",
-    "tests": ["tests/core.test.ts"]
+    "tests": [
+      "tests/core.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -233,7 +263,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -246,7 +278,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -261,7 +295,9 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/journey.test.ts"]
+    "tests": [
+      "tests/journey.test.ts"
+    ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -287,11 +323,14 @@
       "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe.",
       "W9/M5: setpts and atempo chain for clip speed (rational)."
     ],
-    "importedSha256": "20ddcdfa2c7167c52b1cff4218740873d929d4ed0b4ed5c779c94c0667ae2c51",
+    "importedSha256": "5ec26609bbfbbc25c1e5704c9613159f7ae3db2c395a023d3c7e492304d85718",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": ["tests/render-plan.test.ts", "tests/export-golden.test.ts"]
+    "tests": [
+      "tests/render-plan.test.ts",
+      "tests/export-golden.test.ts"
+    ]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -304,7 +343,9 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": ["tests/skelet-storage.test.mjs"]
+    "tests": [
+      "tests/skelet-storage.test.mjs"
+    ]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -320,7 +361,9 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": ["tests/skelet-storage.test.mjs"]
+    "tests": [
+      "tests/skelet-storage.test.mjs"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -335,7 +378,9 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/donor-opencut.test.ts"]
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -350,7 +395,9 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/donor-opencut.test.ts"]
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -366,7 +413,9 @@
     "importedSha256": "56d0629bd8f19b517644df9ae4205b8166bda5521c8c81d6e1b54a4a0ac01ef7",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/donor-opencut.test.ts"]
+    "tests": [
+      "tests/donor-opencut.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -381,7 +430,9 @@
     "importedSha256": "338eaea8d4ab3f94593b5937262fcae87e3a690532c81e0754d826191800dc8a",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -396,7 +447,9 @@
     "importedSha256": "ec36344bd93d5fcc21f77a40805e0086aaf71df2d2304cb3c48a6a719fa1ce5c",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -411,7 +464,9 @@
     "importedSha256": "801b6b26096f43b513e2ae8f9beeb453d9707b9452dbe3297bcfb2e7b37ec224",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -420,11 +475,15 @@
     "original": "apps/web/src/ripple/index.ts",
     "imported": "core/donors/opencut/ripple/index.ts",
     "sha256": "9012aa42d40beac820efddfda4fccc3ea8e35bc1b11176145d0624d9e5841630",
-    "modifications": ["Re-exports use .ts extensions."],
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
     "importedSha256": "9bd8f4666644fb04472e6d2ff874d1936f6c133f09e72cf3fef63503efc5e36d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -439,7 +498,9 @@
     "importedSha256": "b5a5e0eda931ba204b97fff17f079ed7dd81bf7d765bd87851591432650397c7",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -454,7 +515,9 @@
     "importedSha256": "2dd966b83e2d9b6ad15103c756f68805df5a045f6587ee380a072887eb7df683",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -469,7 +532,9 @@
     "importedSha256": "ec5cf16a98594598859510ed8559233a4f80f7d82061471a12805d5cbdccbe40",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -484,7 +549,9 @@
     "importedSha256": "dea818caac683d5a44900f0a4504a75fa28a235cad302729cb1efe1d9113aafa",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -499,7 +566,9 @@
     "importedSha256": "58a76a7198a99844bada071ab58fe8568d8017b6dde4662345edb2d9e912a87d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -508,11 +577,15 @@
     "original": "apps/web/src/timeline/group-move/index.ts",
     "imported": "core/donors/opencut/group-move/index.ts",
     "sha256": "276581b341b3499227d1cc97d83bb2d539be0a962aa5914a6c80c5c372762069",
-    "modifications": ["Re-exports use .ts extensions."],
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
     "importedSha256": "7775a20be0c2c22692a03861424b6a220a7bb77935cddf0c899bddbbe2489a99",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -525,7 +598,9 @@
     "modifications": [
       "Float rate → reduced Rational; clamp bounds 1/100..5/1."
     ],
-    "tests": ["tests/retime.test.ts"],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -540,7 +615,9 @@
     "modifications": [
       "Flick-tick scale via BigInt; sourceRange/timelineDuration helpers."
     ],
-    "tests": ["tests/retime.test.ts"],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -552,8 +629,12 @@
     "imported": "core/donors/opencut/retime/split.ts",
     "sha256": "310f09e97263853575350fc7cfd34e43dba90a0323b1ac133579683aa894d536",
     "importedSha256": "7186cbd5d3476d30cccb068f48a638a1c055665cfc4506c413988ed3b3026455",
-    "modifications": ["RetimeConfig uses Rational."],
-    "tests": ["tests/retime.test.ts"],
+    "modifications": [
+      "RetimeConfig uses Rational."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -565,8 +646,12 @@
     "imported": "core/donors/opencut/retime/presets.ts",
     "sha256": "cf9a79ea56850a6c24e9922a7fc57bac9cdc54f91068c85d1bf830f8bc4013f7",
     "importedSha256": "427ae0055801b614c4d2d0e43b4ddbde21e8c252a1a898120ca9b5678f4c3aba",
-    "modifications": ["buildConstantRetime takes rational parts."],
-    "tests": ["tests/retime.test.ts"],
+    "modifications": [
+      "buildConstantRetime takes rational parts."
+    ],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -581,7 +666,9 @@
     "modifications": [
       "Drops audio-stretch re-export (lives under src/donors/opencut)."
     ],
-    "tests": ["tests/retime.test.ts"],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -596,7 +683,9 @@
     "modifications": [
       "Rational rates via rateAsFloat for SoundTouch preview path."
     ],
-    "tests": ["tests/retime.test.ts"],
+    "tests": [
+      "tests/retime.test.ts"
+    ],
     "license": "MIT",
     "owner": "media builder"
   }

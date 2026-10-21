@@ -378,14 +378,18 @@ export async function renderPlan(
           span,
         ]);
         // setpts maps source (after -ss offset-lead) into timeline time.
-        // Lead is compensated in clip time so preroll stays before `from`
-        // under every rate (matches the speed=1 form PTS+(from-lead)).
+        // Speed 1 keeps the qualified PTS+(from-lead) form (export/preview
+        // goldens). Other rates reset STARTPTS and subtract lead in clip time
+        // so preroll stays before `from` (same enable window as audio).
         const speed = rateAsFloat(layer.speed);
         const leadClip = getClipTimeAtSourceTime({
           sourceTime: lead,
           retime: { rate: layer.speed },
         });
-        const setpts = `setpts=(PTS-STARTPTS)/${speed}+(${from - leadClip})`;
+        const setpts =
+          speed === 1
+            ? `setpts=PTS+(${from - lead})`
+            : `setpts=(PTS-STARTPTS)/${speed}+(${from - leadClip})`;
         timed = `[${index}:v]trim=duration=${span},${flicks},${setpts}`;
       }
       filters.push(
