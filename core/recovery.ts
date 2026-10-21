@@ -37,6 +37,7 @@ import { CommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { inspectWal } from "./wal.ts";
 import { restrictToOwner } from "./process/access.ts";
+import type { ProjectStore, RequestReceipt } from "./store.ts";
 
 export const BACKUP_FORMAT = "yamakan.backup/1";
 export const RESTORE_FORMAT = "yamakan.restore/1";
@@ -320,17 +321,20 @@ async function exclusive<T>(work: () => Promise<T>) {
 export function backupWorkspace(
   source: BackupSource,
   home: string,
-  options: { now?: Date } = {},
+  options: { now?: Date; backupId?: string } = {},
 ) {
   return exclusive(async () => {
     const release = source.holdObjects();
     let dir: string | null = null;
     try {
       const now = options.now ?? new Date();
-      const backupId = `${now
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d{3}/, "")}-${randomBytes(4).toString("hex")}`;
+      const backupId =
+        options.backupId ??
+        `${now
+          .toISOString()
+          .replace(/[-:]/g, "")
+          .replace(/\.\d{3}/, "")}-${randomBytes(4).toString("hex")}`;
+      BackupId.parse(backupId);
       await assertSeparate(source.root, home);
       await mkdir(home, { recursive: true });
       // Backups hold the whole workspace: private to this account too.
@@ -631,7 +635,88 @@ async function restore(
   }
 }
 
-// Restores a backup of a recovery home into a fresh folder of that home.
+async function resumeBackupSummary(home: string, backupId: string) {
+  try {
+    const manifest = await readManifest(
+      await safePath(home, "backups", BackupId.parse(backupId)),
+    );
+    if (manifest.backupId !== backupId) return null;
+    return summary(manifest);
+  } catch {
+    return null;
+  }
+}
+
+async function resumeRestoreResult(home: string, effectRef: string) {
+  try {
+    const root = await safePath(home, ...effectRef.split("/"));
+    const receipt = JSON.parse(
+      await readFile(path.join(root, "restore.json"), "utf8"),
+    );
+    return { root, ...receipt };
+  } catch {
+    return null;
+  }
+}
+
+export async function backupWorkspaceIdempotent(
+  store: ProjectStore,
+  home: string,
+  receipt: RequestReceipt,
+  options: { now?: Date } = {},
+) {
+  const now = options.now ?? new Date();
+  const stamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
+  const suffix = createHash("sha256")
+    .update(`${receipt.principalId}:${receipt.requestId}:${receipt.digest}`)
+    .digest("hex")
+    .slice(0, 8);
+  const backupId = `${stamp}-${suffix}`;
+  return store.runIdempotentRecovery(
+    receipt,
+    "yamakan.workspace.backup",
+    backupId,
+    (ref) => resumeBackupSummary(home, ref),
+    (ref) => backupWorkspace(store, home, { ...options, now, backupId: ref }),
+  );
+}
+
+function idempotentRestoreRef(backupId: string, receipt: RequestReceipt) {
+  const id = BackupId.parse(backupId);
+  const tag = createHash("sha256")
+    .update(`${receipt.principalId}:${receipt.requestId}:${receipt.digest}`)
+    .digest("hex");
+  // One folder per request id; sequential slots stay for non-idempotent restores.
+  return `restored/${id}-req-${tag}`;
+}
+
+export async function restoreFromHomeIdempotent(
+  store: ProjectStore,
+  home: string,
+  backupId: string,
+  receipt: RequestReceipt,
+  options: { reservedBytes?: number } = {},
+) {
+  const id = BackupId.parse(backupId);
+  const effectRef = idempotentRestoreRef(id, receipt);
+  return store.runIdempotentRecovery(
+    receipt,
+    "yamakan.workspace.restore",
+    effectRef,
+    (ref) => resumeRestoreResult(home, ref),
+    async (ref) => {
+      const dir = await safePath(home, "backups", id);
+      if (!(await lstat(dir).catch(() => null))?.isDirectory())
+        throw new CommandError("NOT_FOUND", "Backup not found.");
+      const target = await safePath(home, ...ref.split("/"));
+      return restoreWorkspace(dir, target, options);
+    },
+  );
+}
+
 export async function restoreFromHome(
   home: string,
   backupId: string,
@@ -641,12 +726,10 @@ export async function restoreFromHome(
   const dir = await safePath(home, "backups", id);
   if (!(await lstat(dir).catch(() => null))?.isDirectory())
     throw new CommandError("NOT_FOUND", "Backup not found.");
-  const restored = await safePath(home, "restored");
-  await mkdir(restored, { recursive: true });
+  await mkdir(await safePath(home, "restored"), { recursive: true });
   for (let n = 1; n <= MAX_RESTORES_PER_BACKUP; n++) {
     const target = await safePath(home, "restored", `${id}-${n}`);
     if (await lstat(target).catch(() => null)) continue;
-    // A failed restore removes the folder it created.
     return restoreWorkspace(dir, target, options);
   }
   throw new CommandError(

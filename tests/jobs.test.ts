@@ -647,3 +647,98 @@ test("running out of space while publishing an export publishes nothing", async 
   await supervisor.close();
   store.close();
 });
+
+test("a reconciliation job can be retried or discarded without changing revisions", async () => {
+  const { store, project } = await workspace();
+  const jobId = crypto.randomUUID();
+  store.transaction((db) => {
+    db.prepare(
+      "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', ?, ?, 'retry-me', ?, 'reconciliationRequired')",
+    ).run(
+      jobId,
+      project.id,
+      project.revision,
+      JSON.stringify({ format: "export/1" }),
+    );
+  });
+  const supervisor = new JobSupervisor(store);
+  await supervisor.start();
+  const beforeRev = (await store.load(project.id)).revision;
+  const discarded = supervisor.discard(jobId);
+  assert.equal(discarded.state, "CANCELLED");
+  assert.equal(discarded.detail, "cancelled");
+  assert.equal((await store.load(project.id)).revision, beforeRev);
+  store.transaction((db) => {
+    db.prepare(
+      "UPDATE jobs SET state = 'reconciliationRequired', error = 'needs help' WHERE job_id = ?",
+    ).run(jobId);
+  });
+  const retried = supervisor.retry(jobId);
+  assert.equal(retried.detail, "queued");
+  assert.equal((await settled(supervisor, jobId)).state, "COMPLETED");
+  assert.equal((await store.load(project.id)).revision, beforeRev);
+  await supervisor.close();
+  store.close();
+});
+
+test("discard refuses a running job", async () => {
+  const { store, project } = await workspace(3000);
+  const supervisor = new JobSupervisor(store);
+  await supervisor.start();
+  const job = await supervisor.submit(project.id, "running-discard");
+  for (
+    let t = 0;
+    t < 30000 && attempts(store, job.id)[0]?.state !== "running";
+    t += 20
+  )
+    await new Promise((r) => setTimeout(r, 20));
+  assert.throws(
+    () => supervisor.discard(job.id),
+    (e: unknown) => e instanceof CommandError && e.code === "VALIDATION",
+  );
+  await supervisor.cancel(job.id);
+  await settled(supervisor, job.id);
+  await supervisor.close();
+  store.close();
+});
+
+test("a retry after a stale lease cannot publish", async () => {
+  const { store, project } = await workspace();
+  const jobId = crypto.randomUUID();
+  store.transaction((db) => {
+    db.prepare(
+      "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', ?, ?, 'stale-retry', ?, 'reconciliationRequired')",
+    ).run(
+      jobId,
+      project.id,
+      project.revision,
+      JSON.stringify({ format: "export/1" }),
+    );
+  });
+  let fenced = false;
+  const supervisor = new JobSupervisor(store, {
+    fault: (point) => {
+      if (point === "before-succeed") {
+        store.transaction((db) =>
+          db.prepare("UPDATE supervisor SET generation = generation + 1").run(),
+        );
+        fenced = true;
+      }
+    },
+  });
+  await supervisor.start();
+  supervisor.retry(jobId);
+  for (let t = 0; t < 30000 && !fenced; t += 50)
+    await new Promise((r) => setTimeout(r, 50));
+  assert.ok(fenced);
+  await supervisor.close();
+  assert.notEqual(supervisor.status(jobId).state, "COMPLETED");
+  assert.equal(
+    await exists(
+      await store.file(project.id, "exports", jobId, "render-1.mp4"),
+    ),
+    false,
+  );
+  await supervisor.close();
+  store.close();
+});

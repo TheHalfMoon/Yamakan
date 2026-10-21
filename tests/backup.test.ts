@@ -22,6 +22,7 @@ import {
   backupWorkspace,
   diagnoseWorkspace,
   healthy,
+  listBackups,
   offlineSource,
   restoreFromHome,
   restoreWorkspace,
@@ -632,5 +633,103 @@ test("restores are refused without disk space, run one at a time and never nest 
     code: "VALIDATION",
   });
   await assert.rejects(stat(path.join(backupDir, "x")));
+  store.close();
+});
+
+test("replaying a backup during concurrent edits returns the first backup manifest", async () => {
+  const { home, store, project } = await workspace();
+  const api = new CreativeAPI(store, { recoveryHome: home });
+  const first = (await api.call(
+    "yamakan.workspace.backup",
+    {},
+    undefined,
+    "backup-replay-1",
+  )) as { backupId: string; objects: number };
+  const head = await store.load(project.id);
+  await store.save({ ...head, name: "Edited after backup" }, head.revision);
+  const again = (await api.call(
+    "yamakan.workspace.backup",
+    {},
+    undefined,
+    "backup-replay-1",
+  )) as { backupId: string; objects: number };
+  assert.equal(again.backupId, first.backupId);
+  assert.equal(again.objects, first.objects);
+  const complete = (await listBackups(home)).filter((b) => b.complete);
+  assert.equal(complete.filter((b) => b.backupId === first.backupId).length, 1);
+  store.close();
+});
+
+test("a lost response after backup still replays the original result", async () => {
+  const base = await mkdtemp(path.join(tmpdir(), "yamakan-backup-"));
+  bases.push(base);
+  const root = path.join(base, "workspace");
+  const home = path.join(base, "recovery");
+  let receipts = 0;
+  const store = new ProjectStore(root, {
+    recoveryFault: (point) => {
+      if (point === "before-recovery-receipt" && receipts++ === 0)
+        throw new Error("Injected lost response");
+    },
+  });
+  await store.initialize();
+  await store.create("Replay");
+  const api = new CreativeAPI(store, { recoveryHome: home });
+  await assert.rejects(
+    api.call("yamakan.workspace.backup", {}, undefined, "lost-response"),
+    /lost response/,
+  );
+  const healed = (await api.call(
+    "yamakan.workspace.backup",
+    {},
+    undefined,
+    "lost-response",
+  )) as { backupId: string; complete: true };
+  assert.equal(healed.complete, true);
+  assert.equal((await listBackups(home)).filter((b) => b.complete).length, 1);
+  store.close();
+});
+
+test("the same request id with different backup input is rejected", async () => {
+  const { home, store } = await workspace();
+  const made = (await backupWorkspace(store, home)) as { backupId: string };
+  const api = new CreativeAPI(store, { recoveryHome: home });
+  await api.call(
+    "yamakan.workspace.restore",
+    { backupId: made.backupId },
+    undefined,
+    "restore-id-1",
+  );
+  await assert.rejects(
+    api.call(
+      "yamakan.workspace.restore",
+      { backupId: "20260101T000000Z-0000abcd" },
+      undefined,
+      "restore-id-1",
+    ),
+    code("IDEMPOTENCY_MISMATCH"),
+  );
+  store.close();
+});
+
+test("distinct request ids restoring the same backup use separate restored folders", async () => {
+  const { home, store } = await workspace();
+  const made = (await backupWorkspace(store, home)) as { backupId: string };
+  const api = new CreativeAPI(store, { recoveryHome: home });
+  const first = (await api.call(
+    "yamakan.workspace.restore",
+    { backupId: made.backupId },
+    undefined,
+    "restore-a",
+  )) as { root: string };
+  const second = (await api.call(
+    "yamakan.workspace.restore",
+    { backupId: made.backupId },
+    undefined,
+    "restore-b",
+  )) as { root: string };
+  assert.notEqual(first.root, second.root);
+  assert.match(path.basename(first.root), /^.+-req-[0-9a-f]{64}$/);
+  assert.match(path.basename(second.root), /^.+-req-[0-9a-f]{64}$/);
   store.close();
 });
