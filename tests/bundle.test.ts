@@ -27,7 +27,9 @@ test("pinned media tools match manifest ffmpeg and ffprobe hashes", async () => 
   assert.equal(manifest.pinned.ffmpeg.sha256, pinned.ffmpeg.sha256);
   assert.equal(manifest.pinned.ffprobe.sha256, pinned.ffprobe.sha256);
   assert.ok(
-    manifest.files.some((f) => f.path === "fonts/IBMPlexSansArabic-Regular.ttf"),
+    manifest.files.some(
+      (f) => f.path === "fonts/IBMPlexSansArabic-Regular.ttf",
+    ),
   );
 });
 
@@ -65,7 +67,9 @@ test("downgrade without confirmation is refused", async () => {
 
 test("tampered bundle file fails verification", async () => {
   const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-tamper-"));
-  const root = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-tamper-root-"));
+  const root = await mkdtemp(
+    path.join(tmpdir(), "yamakan-bundle-tamper-root-"),
+  );
   bases.push(bundle, root);
   await scaffoldDevBundle(bundle, "1.0.0-test");
   await installVersion(bundle, "1.0.0-test", root);

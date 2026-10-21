@@ -137,11 +137,9 @@ export async function installVersion(
   const manifestOnDisk = JSON.parse(
     await readFile(path.join(bundleDir, "bundle.manifest.json"), "utf8"),
   ) as BundleManifest;
-  await writeFile(
-    manifestPath(root),
-    JSON.stringify(manifestOnDisk, null, 2),
-    { encoding: "utf8" },
-  );
+  await writeFile(manifestPath(root), JSON.stringify(manifestOnDisk, null, 2), {
+    encoding: "utf8",
+  });
   await writeFile(currentPointerPath(root), `${version}\n`, "utf8");
   return manifestOnDisk;
 }
@@ -168,8 +166,7 @@ export async function rollback(root = installRoot(), confirm = true) {
     .map((e) => e.name)
     .sort();
   const index = versions.indexOf(current);
-  if (index <= 0)
-    throw new Error("No older version to roll back to.");
+  if (index <= 0) throw new Error("No older version to roll back to.");
   const target = versions[index - 1];
   await switchVersion(target, root);
   return target;
@@ -268,10 +265,13 @@ async function copyPinnedFonts(outDir: string) {
   }
 }
 
-async function copyPinnedMedia(outDir: string, pinned: {
-  ffmpeg: PinnedBinary;
-  ffprobe: PinnedBinary;
-}) {
+async function copyPinnedMedia(
+  outDir: string,
+  pinned: {
+    ffmpeg: PinnedBinary;
+    ffprobe: PinnedBinary;
+  },
+) {
   await mkdir(path.join(outDir, "ffmpeg"), { recursive: true });
   await copyFile(
     pinned.ffmpeg.sourcePath,
