@@ -1,6 +1,6 @@
 {
   "receipt": "yamakan.qualification/q15-user-presence/1",
-  "commit": "d11d7faf34848a804df2c16e6e480bac3ce7c406",
+  "commit": "09539bf5243b8fcdbf800a1275af5c3af1940462",
   "measuredAt": "2026-10-21T02:40:00.000Z",
   "qualification": "q15-user-presence",
   "outcome": "fallback",
