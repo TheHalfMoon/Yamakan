@@ -144,8 +144,16 @@ export function compilePlan(
         fadeInTicks: c.fadeInTicks,
         fadeOutTicks: c.fadeOutTicks,
       });
-    else
+    else {
       layers.push({ ...timing, kind: a.kind === "image" ? "image" : "video" });
+      if (a.kind === "video" && c.sound?.enabled)
+        audio.push({
+          ...timing,
+          gainDb: c.sound.gainDb,
+          fadeInTicks: c.sound.fadeInTicks,
+          fadeOutTicks: c.sound.fadeOutTicks,
+        });
+    }
   }
   if (!layers.length && !cues.length)
     throw new CommandError(

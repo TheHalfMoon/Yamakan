@@ -39,6 +39,7 @@ const idSet = (run: string) => {
     title2: id(4),
     tone: id(5),
     late: id(6),
+    video: id(7),
   };
 };
 const port = 24331;
@@ -136,7 +137,12 @@ function mcp(env: NodeJS.ProcessEnv): Transport & {
   };
 }
 
-function tenOperations(tracks: string[], audioId: string, ids: Ids) {
+function tenOperations(
+  tracks: string[],
+  audioId: string,
+  videoId: string,
+  ids: Ids,
+) {
   const [picture, sound] = tracks;
   return [
     { type: "scene.add", sceneId: ids.scene, name: "Opening" },
@@ -167,6 +173,22 @@ function tenOperations(tracks: string[], audioId: string, ids: Ids) {
       durationTicks: 90 * F,
       sourceStartTicks: 0,
     },
+    {
+      type: "clip.add",
+      clipId: ids.video,
+      trackId: picture,
+      assetId: videoId,
+      title: null,
+      startTicks: 150 * F,
+      durationTicks: 30 * F,
+      sourceStartTicks: 0,
+    },
+    {
+      type: "clip.setSound",
+      clipId: ids.video,
+      enabled: true,
+      gainDb: -6,
+    },
     { type: "clip.trim", clipId: ids.tone, startTicks: 15 * F },
     {
       type: "clip.setAudio",
@@ -193,6 +215,7 @@ async function journey(
   t: Transport,
   token: string,
   wav: Buffer,
+  videoMp4: Buffer,
   uiHeaders: Record<string, string>,
   ids: Ids,
 ) {
@@ -229,13 +252,26 @@ async function journey(
   });
   assert.equal(upload.status, 200);
   const { asset } = await upload.json();
+  const videoUpload = await fetch(
+    `${base}/api/v1/projects/${project.id}/assets`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Asset-Name": "tone-video.mp4",
+      },
+      body: new Uint8Array(videoMp4),
+    },
+  );
+  assert.equal(videoUpload.status, 200);
+  const { asset: videoAsset } = await videoUpload.json();
   const head = await must("yamakan.project.open", { projectId: project.id });
   record("open after import", head);
   const tracks = head.tracks.map((x: { id: string }) => x.id);
   const batch = {
     projectId: project.id,
     expectedRevision: head.revision,
-    operations: tenOperations(tracks, asset.id, ids),
+    operations: tenOperations(tracks, asset.id, videoAsset.id, ids),
   };
   record(
     "batch",
@@ -382,7 +418,7 @@ async function journey(
     projectId: project.id,
   });
   record("canonical export", canonical);
-  return { log, project, asset, tracks, job, mp4, canonical };
+  return { log, project, asset, videoAsset, tracks, job, mp4, canonical };
 }
 
 test(
@@ -431,6 +467,34 @@ test(
       { windowsHide: true },
     );
     const wavBytes = await readFile(wav);
+    const toneVideo = path.join(root, "tone-video.mp4");
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=gray:s=320x180:r=30:d=2",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=1000:duration=2",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        "-shortest",
+        toneVideo,
+      ],
+      { windowsHide: true },
+    );
+    const videoBytes = await readFile(toneVideo);
     const workspace = env.YAMAKAN_WORKSPACE;
     const token = (
       await readFile(path.join(workspace, "token"), "utf8")
@@ -484,8 +548,22 @@ test(
 
       const idsA = idSet("a");
       const idsB = idSet("b");
-      const a = await journey(rest(token), token, wavBytes, uiHeaders, idsA);
-      const b = await journey(viaMcp, token, wavBytes, uiHeaders, idsB);
+      const a = await journey(
+        rest(token),
+        token,
+        wavBytes,
+        videoBytes,
+        uiHeaders,
+        idsA,
+      );
+      const b = await journey(
+        viaMcp,
+        token,
+        wavBytes,
+        videoBytes,
+        uiHeaders,
+        idsB,
+      );
 
       // Request IDs belong to the principal, not the transport: the REST
       // run's create, replayed over MCP, returns the same project.
@@ -501,6 +579,7 @@ test(
       const mapping = new Map<string, string>([
         [b.project.id, a.project.id],
         [b.asset.id, a.asset.id],
+        [b.videoAsset.id, a.videoAsset.id],
         [b.job.id, a.job.id],
         ...Object.keys(idsA).map(
           (k) =>

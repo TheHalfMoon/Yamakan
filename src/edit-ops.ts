@@ -44,6 +44,34 @@ export function splitClip(
 }
 
 // Removes a clip (and its place in any shot) unless its track is locked.
+export function setClipSound(
+  p: Project,
+  clipId: string,
+  patch: {
+    enabled?: boolean;
+    gainDb?: number;
+    fadeInFrames?: number;
+    fadeOutFrames?: number;
+  },
+): Project {
+  return applyLocal(p, [
+    {
+      type: "clip.setSound",
+      clipId,
+      enabled: patch.enabled,
+      gainDb: patch.gainDb,
+      fadeInTicks:
+        patch.fadeInFrames !== undefined
+          ? patch.fadeInFrames * FRAME_TICKS
+          : undefined,
+      fadeOutTicks:
+        patch.fadeOutFrames !== undefined
+          ? patch.fadeOutFrames * FRAME_TICKS
+          : undefined,
+    },
+  ]);
+}
+
 export function deleteClip(p: Project, clipId: string | null): Project {
   const c = p.clips.find((c) => c.id === clipId);
   if (!c || p.tracks.find((t) => t.id === c.trackId)?.locked) return p;

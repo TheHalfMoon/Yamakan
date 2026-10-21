@@ -349,6 +349,8 @@ export type TimelineClip = {
   speed: number;
   sourceIn?: number;
   sourceOut?: number;
+  /** When true, an embedded video element plays its soundtrack in preview. */
+  soundEnabled?: boolean;
   volume?: number;
   blendMode?: 'normal' | 'screen' | 'overlay' | 'multiply' | 'darken' | 'lighten' | 'color-dodge' | 'soft-light' | 'difference';
   effect: EffectType | null;

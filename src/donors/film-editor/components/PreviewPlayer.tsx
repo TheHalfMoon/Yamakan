@@ -381,7 +381,7 @@ const PreviewPlayer = forwardRef<PreviewPlayerHandle, PreviewPlayerProps>(({
                     const vid = document.createElement('video');
                     vid.src = item.url;
                     vid.crossOrigin = "anonymous";
-                    vid.muted = true; // Canonical export mixes only explicit audio clips.
+                    vid.muted = !clip.soundEnabled;
                     vid.preload = 'auto';
                     vid.playsInline = true;
                     const onVideoReady = () => requestRedraw();

@@ -104,6 +104,16 @@ export const OperationSchema = z.discriminatedUnion("type", [
       fadeOutTicks: Ticks.optional(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("clip.setSound"),
+      clipId: Id,
+      enabled: z.boolean().optional(),
+      gainDb: z.number().min(-60).max(12).optional(),
+      fadeInTicks: Ticks.optional(),
+      fadeOutTicks: Ticks.optional(),
+    })
+    .strict(),
   z.object({ type: z.literal("scene.add"), sceneId: Id, name: Name }).strict(),
   z
     .object({
@@ -233,10 +243,29 @@ function apply(p: CanonicalProject, op: Operation): void {
         throw invalid("Only an empty track can be removed.");
       p.tracks = p.tracks.filter((t) => t.id !== op.trackId);
       return;
-    case "clip.add":
+    case "clip.add": {
       fresh(p, op.clipId);
       unlocked(p, op.trackId);
       placeable(p, op.trackId, op.startTicks, op.durationTicks);
+      const tr = track(p, op.trackId);
+      const asset =
+        op.assetId === null
+          ? null
+          : p.assets.find((a) => a.id === op.assetId) ?? null;
+      if (op.title === null && op.assetId !== null && !asset)
+        throw invalid("Clip asset is missing.");
+      let sound: CanonicalProject["clips"][number]["sound"] = null;
+      if (
+        op.title === null &&
+        tr.kind === "video" &&
+        asset?.kind === "video"
+      )
+        sound = {
+          enabled: asset.hasAudio === true,
+          gainDb: 0,
+          fadeInTicks: 0,
+          fadeOutTicks: 0,
+        };
       p.clips.push({
         id: op.clipId,
         trackId: op.trackId,
@@ -248,8 +277,10 @@ function apply(p: CanonicalProject, op: Operation): void {
         gainDb: 0,
         fadeInTicks: 0,
         fadeOutTicks: 0,
+        sound,
       });
       return;
+    }
     case "clip.trim": {
       const c = clip(p, op.clipId);
       unlocked(p, c.trackId);
@@ -269,6 +300,13 @@ function apply(p: CanonicalProject, op: Operation): void {
         c.fadeInTicks,
         c.fadeOutTicks,
       );
+      if (c.sound) {
+        [c.sound.fadeInTicks, c.sound.fadeOutTicks] = clampFades(
+          c.durationTicks,
+          c.sound.fadeInTicks,
+          c.sound.fadeOutTicks,
+        );
+      }
       return;
     }
     case "clip.split": {
@@ -278,6 +316,16 @@ function apply(p: CanonicalProject, op: Operation): void {
         throw invalid("Split point must fall inside the clip.");
       fresh(p, op.newClipId);
       const first = op.atTicks - c.startTicks;
+      const secondSound = c.sound
+        ? {
+            ...c.sound,
+            fadeInTicks: 0,
+            fadeOutTicks: Math.min(
+              c.sound.fadeOutTicks,
+              c.durationTicks - first,
+            ),
+          }
+        : null;
       const second = {
         ...c,
         id: op.newClipId,
@@ -288,10 +336,15 @@ function apply(p: CanonicalProject, op: Operation): void {
           : addTicks(c.sourceStartTicks, first),
         fadeInTicks: 0,
         fadeOutTicks: Math.min(c.fadeOutTicks, c.durationTicks - first),
+        sound: secondSound,
       };
       c.durationTicks = first;
       c.fadeOutTicks = 0;
       c.fadeInTicks = Math.min(c.fadeInTicks, first);
+      if (c.sound)
+        c.sound.fadeOutTicks = 0;
+      if (c.sound)
+        c.sound.fadeInTicks = Math.min(c.sound.fadeInTicks, first);
       p.clips.push(second);
       // The new clip joins the same shot as the clip it came from.
       for (const s of p.scenes)
@@ -337,9 +390,31 @@ function apply(p: CanonicalProject, op: Operation): void {
     case "clip.setAudio": {
       const c = clip(p, op.clipId);
       unlocked(p, c.trackId);
+      if (track(p, c.trackId).kind !== "audio")
+        throw invalid("Gain and fades apply to audio clips only.");
       if (op.gainDb !== undefined) c.gainDb = op.gainDb;
       if (op.fadeInTicks !== undefined) c.fadeInTicks = op.fadeInTicks;
       if (op.fadeOutTicks !== undefined) c.fadeOutTicks = op.fadeOutTicks;
+      [c.fadeInTicks, c.fadeOutTicks] = clampFades(
+        c.durationTicks,
+        c.fadeInTicks,
+        c.fadeOutTicks,
+      );
+      return;
+    }
+    case "clip.setSound": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (!c.sound) throw invalid("Only a video clip has embedded sound.");
+      if (op.enabled !== undefined) c.sound.enabled = op.enabled;
+      if (op.gainDb !== undefined) c.sound.gainDb = op.gainDb;
+      if (op.fadeInTicks !== undefined) c.sound.fadeInTicks = op.fadeInTicks;
+      if (op.fadeOutTicks !== undefined) c.sound.fadeOutTicks = op.fadeOutTicks;
+      [c.sound.fadeInTicks, c.sound.fadeOutTicks] = clampFades(
+        c.durationTicks,
+        c.sound.fadeInTicks,
+        c.sound.fadeOutTicks,
+      );
       return;
     }
     case "scene.add":

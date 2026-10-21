@@ -171,6 +171,7 @@ test("revision conflicts prevent concurrent overwrite and immutable assets canno
     width: 100,
     height: 100,
     durationFrames: 0,
+    hasAudio: false,
   });
   await assert.rejects(store.save(forged, 1), /Assets must/);
 });
@@ -187,7 +188,7 @@ test("malicious paths, disguised playlists, schema versions and missing referenc
     /signature/,
   );
   assert.equal(
-    ProjectSchema.safeParse({ ...project, schemaVersion: 2 }).success,
+    ProjectSchema.safeParse({ ...project, schemaVersion: 3 as never }).success,
     false,
   );
   assert.equal(

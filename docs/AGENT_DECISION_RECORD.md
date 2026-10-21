@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W1 canonical format version 3 (not the frozen card's edit-view label)
+
+- **Authority:** W1 implementation on branch `fix/video-clip-sound`; frozen task card assumed a single schema bump.
+- **Decision:** canonical **`formatVersion` 3** adds `hasAudio` and clip `sound`. The 30 fps edit view uses **`schemaVersion` 2** (not to be confused with canonical v2, which already carried gain/fades/shots). `upgradeV1` still lands on canonical **format version 2** before `upgradeV2` reaches 3.
+- **Evidence:** `tests/canonical.test.ts`, `tests/render-plan.test.ts`, Q1 receipt from `npm run qualify:q1`.
+- **Change rule:** a new canonical format version and migration path; never rewrite stored v3 snapshots as v2.
+
 ## 2026-10-18: M-gate for major integrations; migrated video clips keep their export
 
 - **Authority:** the founder's 2026-10-18 planning instruction asked the agent to "define when the MVP is qualified enough to start major integrations"; the continuation directive of 2026-10-13 delegates engineering order.

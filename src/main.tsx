@@ -29,6 +29,7 @@ import {
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
   deleteClip,
+  setClipSound,
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
@@ -215,22 +216,27 @@ function App() {
                 .map((c) => c.startFrame + c.durationFrames),
             )
           : Math.round(time * 30);
-      return {
-        ...p,
-        clips: [
-          ...p.clips,
-          {
-            id: crypto.randomUUID(),
-            trackId: track.id,
-            assetId: a.id,
-            startFrame: start,
-            durationFrames:
-              a.kind === "image" ? 90 : Math.min(a.durationFrames, 150),
-            sourceFrame: 0,
-            title: null,
-          },
-        ],
+      const clip = {
+        id: crypto.randomUUID(),
+        trackId: track.id,
+        assetId: a.id,
+        startFrame: start,
+        durationFrames:
+          a.kind === "image" ? 90 : Math.min(a.durationFrames, 150),
+        sourceFrame: 0,
+        title: null as string | null,
+        ...(a.kind === "video"
+          ? {
+              sound: {
+                enabled: a.hasAudio === true,
+                gainDb: 0,
+                fadeInFrames: 0,
+                fadeOutFrames: 0,
+              },
+            }
+          : {}),
       };
+      return { ...p, clips: [...p.clips, clip] };
     });
   const updateClips = (updates: TimelineClip[]) =>
     edit((p) => applyClipUpdates(p, updates));
@@ -874,6 +880,68 @@ function App() {
                     </div>
                   ))}
                   <p className="hint">{t("hint.camera")}</p>
+                  <h2>{t("clip.sound.heading")}</h2>
+                  {(() => {
+                    const clip = p.clips.find((c) => c.id === selected);
+                    const asset = clip?.assetId
+                      ? p.assets.find((a) => a.id === clip.assetId)
+                      : null;
+                    const track = clip
+                      ? p.tracks.find((tr) => tr.id === clip.trackId)
+                      : null;
+                    if (
+                      !clip ||
+                      clip.title !== null ||
+                      track?.kind !== "video" ||
+                      asset?.kind !== "video"
+                    )
+                      return <p className="hint">{t("clip.sound.notVideo")}</p>;
+                    if (asset.hasAudio === false)
+                      return <p className="hint">{t("clip.sound.noAudio")}</p>;
+                    const sound = clip.sound ?? {
+                      enabled: false,
+                      gainDb: 0,
+                      fadeInFrames: 0,
+                      fadeOutFrames: 0,
+                    };
+                    return (
+                      <>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={sound.enabled}
+                            disabled={busy}
+                            onChange={(e) =>
+                              edit((proj) =>
+                                setClipSound(proj, clip.id, {
+                                  enabled: e.target.checked,
+                                }),
+                              )
+                            }
+                          />{" "}
+                          {t("clip.sound.enable")}
+                        </label>
+                        <label>
+                          {t("clip.sound.gain")}
+                          <input
+                            type="number"
+                            min={-60}
+                            max={12}
+                            step={0.5}
+                            disabled={busy || !sound.enabled}
+                            value={sound.gainDb ?? 0}
+                            onChange={(e) =>
+                              edit((proj) =>
+                                setClipSound(proj, clip.id, {
+                                  gainDb: Number(e.target.value),
+                                }),
+                              )
+                            }
+                          />
+                        </label>
+                      </>
+                    );
+                  })()}
                   <h2>{t("title.heading")}</h2>
                   <label>
                     {t("title.text")}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ProjectSchema, Id } from "../project.ts";
 import { BatchSchema } from "../timeline/operations.ts";
+import { Ticks } from "../time.ts";
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../donors/ninerr/canonical.ts";
@@ -126,6 +127,39 @@ export const commands = {
         a.projectId,
         a.revision,
         a.expectedHeadFingerprint,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.setSound": define({
+    scope: "project:write",
+    mutation: true,
+    summary: "Toggle or adjust embedded sound on a video clip.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        enabled: z.boolean().optional(),
+        gainDb: z.number().min(-60).max(12).optional(),
+        fadeInTicks: Ticks.optional(),
+        fadeOutTicks: Ticks.optional(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "clip.setSound",
+            clipId: a.clipId,
+            enabled: a.enabled,
+            gainDb: a.gainDb,
+            fadeInTicks: a.fadeInTicks,
+            fadeOutTicks: a.fadeOutTicks,
+          },
+        ],
+        principal.id,
         receipt,
       ),
   }),

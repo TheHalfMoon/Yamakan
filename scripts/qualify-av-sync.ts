@@ -55,9 +55,7 @@ async function measure(clickPeriod: number) {
   // Closed on any failure, so the temporary workspace can be removed.
   const open: { store?: ProjectStore; supervisor?: JobSupervisor } = {};
   try {
-    // Picture and sound as separate media, as the timeline carries them: a
-    // video clip's own sound is not rendered (sound comes from sound-track
-    // clips of audio assets).
+    // Picture and sound on separate tracks (audio asset on the sound track).
     const videoFile = path.join(root, "flash-600s.mp4");
     ffmpeg([
       "-f",
@@ -260,8 +258,187 @@ async function measure(clickPeriod: number) {
   }
 }
 
-const fixture = await measure(10);
+// Shorter fixture: clicks live in the video file's audio stream and mix through
+// clip.sound on the picture track (W1 embedded sound).
+async function measureEmbeddedVideoSound(clickPeriod = 10) {
+  const durationSeconds = 29.9;
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-avsync-embedded-"));
+  const open: { store?: ProjectStore; supervisor?: JobSupervisor } = {};
+  try {
+    const mediaFile = path.join(root, "flash-embedded-30s.mp4");
+    ffmpeg([
+      "-f",
+      "lavfi",
+      "-i",
+      `color=c=0x202020:s=640x360:r=30:d=${durationSeconds},drawbox=x=0:y=0:w=640:h=360:color=white:t=fill:enable='eq(mod(floor(t*30+0.001)\\,300)\\,0)'`,
+      "-f",
+      "lavfi",
+      "-i",
+      `aevalsrc='if(lt(mod(t\\,${clickPeriod})\\,0.01)\\,0.8*sin(2*PI*1000*t)\\,0)':s=48000:d=${durationSeconds}`,
+      "-pix_fmt",
+      "yuv420p",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-c:a",
+      "aac",
+      "-shortest",
+      mediaFile,
+    ]);
+    const mediaBytes = await readFile(mediaFile);
+    const store = (open.store = new ProjectStore(path.join(root, "workspace")));
+    await store.initialize();
+    const supervisor = (open.supervisor = new JobSupervisor(store));
+    await supervisor.start();
+    const created = await store.create("Embedded A/V sync");
+    const picture = (
+      await store.importAsset(created.id, "flash-embedded-30s.mp4", mediaBytes)
+    ).asset;
+    const head = await store.load(created.id);
+    const total = Math.min(
+      picture.durationFrames,
+      Math.floor(durationSeconds * 30),
+    );
+    await store.save(
+      {
+        ...head,
+        width: 640,
+        height: 360,
+        clips: [
+          {
+            id: crypto.randomUUID(),
+            trackId: head.tracks[0].id,
+            assetId: picture.id,
+            startFrame: 0,
+            durationFrames: total,
+            sourceFrame: 0,
+            title: null,
+            sound: {
+              enabled: true,
+              gainDb: 0,
+              fadeInFrames: 0,
+              fadeOutFrames: 0,
+            },
+          },
+        ],
+      },
+      head.revision,
+    );
+    const started = performance.now();
+    const job = await supervisor.submit(created.id, "av-sync-embedded");
+    let status = supervisor.status(job.id);
+    while (!["COMPLETED", "FAILED", "CANCELLED"].includes(status.state)) {
+      if (performance.now() - started > 120_000)
+        throw new Error("The embedded export did not finish within 2 minutes.");
+      await new Promise((r) => setTimeout(r, 250));
+      status = supervisor.status(job.id);
+    }
+    if (status.state !== "COMPLETED")
+      throw new Error(`Export ${status.state}: ${status.error}`);
+    const file = await store.file(created.id, status.artifact!);
+    const exported = await readFile(file);
+    await supervisor.close();
+    store.close();
+    open.supervisor = open.store = undefined;
+    closeWorkers();
+
+    const luma = ffmpeg([
+      "-i",
+      file,
+      "-vf",
+      "scale=16:9,format=gray",
+      "-f",
+      "rawvideo",
+      "-",
+    ]);
+    const frameCount = luma.length / 144;
+    const bright = (n: number) => {
+      let sum = 0;
+      for (let i = 0; i < 144; i++) sum += luma[n * 144 + i];
+      return sum / 144 > 128;
+    };
+    const flashes: number[] = [];
+    for (let n = 0; n < frameCount; n++)
+      if (bright(n) && (n === 0 || !bright(n - 1))) flashes.push(n);
+    const clicks = clickTimes(file);
+    const marks = Math.floor((total - 1) / 300) + 1;
+    const rows = [];
+    for (let k = 0; k < marks; k++) {
+      const instant = k * 10;
+      const c = clicks.find((t) => Math.abs(t - instant) < 1);
+      const flash = flashes.find((n) => Math.abs(n / 30 - instant) < 1);
+      rows.push({
+        mark: k,
+        instantSeconds: instant,
+        clickOffsetMs:
+          c === undefined ? null : Number(((c - instant) * 1000).toFixed(2)),
+        flashOffsetFrames: flash === undefined ? null : flash - instant * 30,
+      });
+    }
+    const audio = rows.map((r) => r.clickOffsetMs);
+    const video = rows.map((r) => r.flashOffsetFrames);
+    const present = (xs: (number | null)[]) => xs.every((x) => x !== null);
+    const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+    const drift = (xs: number[]) =>
+      xs.length >= 20 ? mean(xs.slice(-10)) - mean(xs.slice(0, 10)) : 0;
+    const a = audio as number[];
+    const v = video as number[];
+    const checks = [
+      {
+        check: "every mark has a click and a flash",
+        measured: `${audio.filter((x) => x !== null).length}/${marks} clicks, ${video.filter((x) => x !== null).length}/${marks} flashes`,
+        metThreshold: present(audio) && present(video) && marks >= 3,
+      },
+      {
+        check: `every click within ${LIMITS.clickOffsetMs} ms of its instant`,
+        measured: present(audio) ? Math.max(...a.map(Math.abs)) : null,
+        metThreshold:
+          present(audio) && a.every((x) => Math.abs(x) <= LIMITS.clickOffsetMs),
+      },
+      {
+        check: `audio drift (last ten minus first ten) within ${LIMITS.audioDriftMs} ms when enough marks`,
+        measured: present(audio) ? Number(drift(a).toFixed(2)) : null,
+        metThreshold:
+          !present(audio) ||
+          marks < 20 ||
+          Math.abs(drift(a)) <= LIMITS.audioDriftMs,
+      },
+      {
+        check: `every flash within ${LIMITS.flashOffsetFrames} frame of its instant`,
+        measured: present(video) ? Math.max(...v.map(Math.abs)) : null,
+        metThreshold:
+          present(video) &&
+          v.every((x) => Math.abs(x) <= LIMITS.flashOffsetFrames),
+      },
+    ];
+    return {
+      fixture: {
+        clickPeriodSeconds: clickPeriod,
+        durationSeconds,
+        mediaSha256: sha256(mediaBytes),
+        exportSha256: sha256(exported),
+        exportSeconds:
+          Math.round(((performance.now() - started) / 1000) * 10) / 10,
+        exportFrames: frameCount,
+      },
+      marks: rows,
+      checks,
+      passed: checks.every((c) => c.metThreshold),
+    };
+  } finally {
+    await open.supervisor?.close().catch(() => {});
+    try {
+      open.store?.close();
+    } catch {}
+    closeWorkers();
+    await rm(root, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+const separateTracks = await measure(10);
 const control = await measure(CONTROL_CLICK_PERIOD);
+const embeddedVideoSound = await measureEmbeddedVideoSound(10);
 // Caught for the right reason: the audio checks fail, everything else holds.
 const controlDetected = control.checks.every((c) =>
   c.check.startsWith("every click") || c.check.startsWith("audio drift")
@@ -269,7 +446,7 @@ const controlDetected = control.checks.every((c) =>
     : c.metThreshold,
 );
 const receipt = {
-  receipt: "yamakan.av-sync-qualification/1",
+  receipt: "yamakan.av-sync-qualification/2",
   commit,
   measuredAt: new Date().toISOString(),
   environment: {
@@ -279,23 +456,36 @@ const receipt = {
     node: process.version,
     ffmpegSha256: sha256(await readFile(mediaTools().ffmpeg)),
   },
-  description:
-    "599.9 s of 640x360 30000/1001 fps H.264 (a white flash frame every 10 s) and 599.9 s of 44.1 kHz WAV (a 10 ms 1 kHz click at the same instants), each cut into two clips at 300 s on the picture and sound tracks; exported at 30 fps, 48 kHz",
   limits: LIMITS,
-  ...fixture,
-  // The same run with clicks every 10.002 s must be caught.
+  separateTracks: {
+    description:
+      "599.9 s of 640x360 30000/1001 fps H.264 (flash every 10 s) and 599.9 s of 44.1 kHz WAV (click every 10 s), each cut into two clips at 300 s on picture and sound tracks; export at 30 fps / 48 kHz",
+    fixture: separateTracks.fixture,
+    marks: separateTracks.marks,
+    checks: separateTracks.checks,
+    passed: separateTracks.passed,
+  },
   negativeControl: {
     ...control.fixture,
     checks: control.checks,
     detected: controlDetected,
   },
-  passed: fixture.passed && controlDetected,
+  embeddedVideoSound: {
+    description:
+      "29.9 s of 640x360 30 fps H.264/AAC with embedded clicks every 10 s; one picture-track clip with clip.sound enabled (W1)",
+    fixture: embeddedVideoSound.fixture,
+    marks: embeddedVideoSound.marks,
+    checks: embeddedVideoSound.checks,
+    passed: embeddedVideoSound.passed,
+  },
+  passed: separateTracks.passed && controlDetected && embeddedVideoSound.passed,
 };
 await writeFile(RECEIPT, `${JSON.stringify(receipt, null, 2)}\n`);
 console.log(
   JSON.stringify(
     {
-      checks: receipt.checks,
+      separateTracks: receipt.separateTracks.passed,
+      embeddedVideoSound: receipt.embeddedVideoSound.passed,
       negativeControlDetected: receipt.negativeControl.detected,
       passed: receipt.passed,
     },

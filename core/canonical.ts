@@ -20,7 +20,7 @@ import {
 import { CommandError } from "./command/errors.ts";
 
 export const FORMAT = "yamakan.project";
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -53,6 +53,16 @@ const CanonicalAsset = z
     durationTicks: Ticks.max(MAX_TIMELINE_TICKS),
     // Stream time base from probing; null when imported before probing recorded it.
     timebase: RationalSchema.nullable(),
+    // Whether the source carries an audio stream; null when unknown (migration).
+    hasAudio: z.boolean().nullable(),
+  })
+  .strict();
+const CanonicalClipSound = z
+  .object({
+    enabled: z.boolean(),
+    gainDb: z.number().min(-60).max(12),
+    fadeInTicks: Ticks,
+    fadeOutTicks: Ticks,
   })
   .strict();
 const CanonicalTrack = z
@@ -80,6 +90,8 @@ const CanonicalClip = z
     gainDb: z.number().min(-60).max(12),
     fadeInTicks: Ticks,
     fadeOutTicks: Ticks,
+    // v3: embedded sound on video-track video clips only; null elsewhere.
+    sound: CanonicalClipSound.nullable(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -172,6 +184,20 @@ const ProjectBody = z
       if (!audible && (c.gainDb !== 0 || c.fadeInTicks || c.fadeOutTicks))
         fail("Gain and fades apply to audio clips only.");
       const asset = p.assets.find((a) => a.id === c.assetId);
+      const videoMedia =
+        c.title === null && track?.kind === "video" && asset?.kind === "video";
+      if (videoMedia) {
+        const sound = c.sound;
+        if (sound === null) {
+          fail("Video clips require sound settings.");
+          continue;
+        }
+        if (
+          sound.enabled &&
+          sound.fadeInTicks + sound.fadeOutTicks > c.durationTicks
+        )
+          fail("Sound fades are longer than the clip.");
+      } else if (c.sound !== null) fail("Sound applies to video clips only.");
       if (!track) fail("Clip track is missing.");
       let end: number;
       try {
@@ -267,7 +293,7 @@ function upgradeV1(value: Record<string, unknown>) {
     );
   return {
     ...value,
-    formatVersion: FORMAT_VERSION,
+    formatVersion: 2,
     clips: clips.map((c) =>
       c && typeof c === "object"
         ? { ...c, gainDb: 0, fadeInTicks: 0, fadeOutTicks: 0 }
@@ -276,6 +302,64 @@ function upgradeV1(value: Record<string, unknown>) {
     scenes: scenes.map((sc) =>
       sc && typeof sc === "object" ? { ...sc, shots: [] } : sc,
     ),
+  };
+}
+
+// v3 adds asset hasAudio and clip sound. Migrated clips keep export intent:
+// embedded video sound stays off until the editor enables it.
+function upgradeV2(value: Record<string, unknown>) {
+  const assets = Array.isArray(value.assets) ? value.assets : [];
+  const clips = Array.isArray(value.clips) ? value.clips : [];
+  const tracks = Array.isArray(value.tracks) ? value.tracks : [];
+  const has = (x: unknown, keys: string[]) =>
+    Boolean(x) && typeof x === "object" && keys.some((k) => k in (x as object));
+  if (
+    assets.some((a) => has(a, ["hasAudio"])) ||
+    clips.some((c) => has(c, ["sound"]))
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "A version 2 project cannot contain version 3 fields.",
+    );
+  const trackKind = new Map(
+    tracks
+      .filter((t) => t && typeof t === "object" && "id" in t && "kind" in t)
+      .map((t) => [(t as { id: string }).id, (t as { kind: string }).kind]),
+  );
+  const assetKind = new Map(
+    assets
+      .filter((a) => a && typeof a === "object" && "id" in a && "kind" in a)
+      .map((a) => [(a as { id: string }).id, (a as { kind: string }).kind]),
+  );
+  return {
+    ...value,
+    formatVersion: 3,
+    assets: assets.map((a) =>
+      a && typeof a === "object" ? { ...a, hasAudio: null } : a,
+    ),
+    clips: clips.map((c) => {
+      if (!c || typeof c !== "object") return c;
+      const clip = c as Record<string, unknown>;
+      const trackId = clip.trackId as string;
+      const assetId = clip.assetId as string | null;
+      const title = clip.title;
+      if (
+        trackKind.get(trackId) === "video" &&
+        title === null &&
+        assetId !== null &&
+        assetKind.get(assetId) === "video"
+      )
+        return {
+          ...clip,
+          sound: {
+            enabled: false,
+            gainDb: 0,
+            fadeInTicks: 0,
+            fadeOutTicks: 0,
+          },
+        };
+      return { ...clip, sound: null };
+    }),
   };
 }
 
@@ -289,11 +373,10 @@ export function parseCanonical(value: unknown): CanonicalProject {
       );
     throw new CommandError("VALIDATION", "Not a Yamakan project snapshot.");
   }
-  return CanonicalProjectSchema.parse(
-    info.formatVersion === 1
-      ? upgradeV1(value as Record<string, unknown>)
-      : value,
-  );
+  let doc = value as Record<string, unknown>;
+  if (info.formatVersion === 1) doc = upgradeV1(doc);
+  if (doc.formatVersion === 2) doc = upgradeV2(doc);
+  return CanonicalProjectSchema.parse(doc);
 }
 
 const EDIT_FPS = rational(30, 1);
@@ -334,6 +417,7 @@ export function fromEditView(
       height: a.height,
       durationTicks: toTicks(a.durationFrames),
       timebase: null,
+      hasAudio: a.hasAudio,
     })),
     scenes: p.scenes.map((sc) => ({ ...sc, shots: sc.shots ?? [] })),
     tracks: p.tracks.map((t) => ({
@@ -341,20 +425,41 @@ export function fromEditView(
       solo: Boolean(t.solo),
       targeted: Boolean(t.targeted),
     })),
-    clips: p.clips.map((c) => ({
-      id: c.id,
-      trackId: c.trackId,
-      assetId: c.assetId,
-      startTicks: toTicks(c.startFrame),
-      durationTicks: toTicks(c.durationFrames),
-      // Titles have no source media: the renderer never reads their offset,
-      // so a stray editor value carries no meaning and is not preserved.
-      sourceStartTicks: c.title === null ? toTicks(c.sourceFrame) : 0,
-      title: c.title,
-      gainDb: c.gainDb ?? 0,
-      fadeInTicks: toTicks(c.fadeInFrames ?? 0),
-      fadeOutTicks: toTicks(c.fadeOutFrames ?? 0),
-    })),
+    clips: p.clips.map((c) => {
+      const track = p.tracks.find((t) => t.id === c.trackId);
+      const asset = p.assets.find((a) => a.id === c.assetId);
+      const videoMedia =
+        c.title === null && track?.kind === "video" && asset?.kind === "video";
+      let sound: {
+        enabled: boolean;
+        gainDb: number;
+        fadeInTicks: number;
+        fadeOutTicks: number;
+      } | null = null;
+      if (videoMedia) {
+        sound = {
+          enabled: c.sound?.enabled ?? false,
+          gainDb: c.sound?.gainDb ?? 0,
+          fadeInTicks: toTicks(c.sound?.fadeInFrames ?? 0),
+          fadeOutTicks: toTicks(c.sound?.fadeOutFrames ?? 0),
+        };
+      }
+      return {
+        id: c.id,
+        trackId: c.trackId,
+        assetId: c.assetId,
+        startTicks: toTicks(c.startFrame),
+        durationTicks: toTicks(c.durationFrames),
+        // Titles have no source media: the renderer never reads their offset,
+        // so a stray editor value carries no meaning and is not preserved.
+        sourceStartTicks: c.title === null ? toTicks(c.sourceFrame) : 0,
+        title: c.title,
+        gainDb: c.gainDb ?? 0,
+        fadeInTicks: toTicks(c.fadeInFrames ?? 0),
+        fadeOutTicks: toTicks(c.fadeOutFrames ?? 0),
+        sound,
+      };
+    }),
   });
 }
 
@@ -375,7 +480,7 @@ export function toEditView(project: CanonicalProject): Project {
       );
     }
   return ProjectSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: p.id,
     name: p.name,
     revision: p.revision,
@@ -392,6 +497,7 @@ export function toEditView(project: CanonicalProject): Project {
       durationFrames: toFrames(a.durationTicks, "Asset duration"),
       width: a.width,
       height: a.height,
+      hasAudio: a.hasAudio,
     })),
     scenes: p.scenes.map(({ shots, ...sc }) =>
       shots.length ? { ...sc, shots } : sc,
@@ -419,6 +525,30 @@ export function toEditView(project: CanonicalProject): Project {
         : {}),
       ...(c.fadeOutTicks
         ? { fadeOutFrames: toFrames(c.fadeOutTicks, "Clip fade-out") }
+        : {}),
+      ...(c.sound
+        ? {
+            sound: {
+              enabled: c.sound.enabled,
+              ...(c.sound.gainDb !== 0 ? { gainDb: c.sound.gainDb } : {}),
+              ...(c.sound.fadeInTicks
+                ? {
+                    fadeInFrames: toFrames(
+                      c.sound.fadeInTicks,
+                      "Clip sound fade-in",
+                    ),
+                  }
+                : {}),
+              ...(c.sound.fadeOutTicks
+                ? {
+                    fadeOutFrames: toFrames(
+                      c.sound.fadeOutTicks,
+                      "Clip sound fade-out",
+                    ),
+                  }
+                : {}),
+            },
+          }
         : {}),
     })),
   });
