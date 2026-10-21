@@ -1,6 +1,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -11,6 +11,7 @@ import {
   scaffoldDevBundle,
   uninstallBinaries,
   resolvePinnedMediaTools,
+  resolvePinnedNode,
   verifyInstalledBinaries,
 } from "../scripts/bundle.ts";
 
@@ -19,13 +20,16 @@ after(() =>
   Promise.all(bases.map((b) => rm(b, { recursive: true, force: true }))),
 );
 
-test("pinned media tools match manifest ffmpeg and ffprobe hashes", async () => {
+test("pinned node and media tools match manifest hashes", async () => {
   const pinned = await resolvePinnedMediaTools();
+  const node = await resolvePinnedNode();
   const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-pin-"));
   bases.push(bundle);
   const manifest = await scaffoldDevBundle(bundle, "pin-test");
+  assert.equal(manifest.pinned.node.sha256, node.sha256);
   assert.equal(manifest.pinned.ffmpeg.sha256, pinned.ffmpeg.sha256);
   assert.equal(manifest.pinned.ffprobe.sha256, pinned.ffprobe.sha256);
+  assert.ok(manifest.files.some((f) => f.path === "node/node.exe"));
   assert.ok(
     manifest.files.some(
       (f) => f.path === "fonts/IBMPlexSansArabic-Regular.ttf",
@@ -63,6 +67,25 @@ test("downgrade without confirmation is refused", async () => {
   await scaffoldDevBundle(bundle, "1.0.1-test");
   await installVersion(bundle, "1.0.1-test", root);
   await assert.rejects(() => rollback(root, false), /confirmation/i);
+});
+
+test("uninstall does not follow a junction inside the version folder", async (t) => {
+  if (process.platform !== "win32") {
+    t.skip("Windows junction uninstall");
+    return;
+  }
+  const bundle = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-"));
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-root-"));
+  const outside = await mkdtemp(path.join(tmpdir(), "yamakan-bundle-junc-out-"));
+  bases.push(bundle, root, outside);
+  await writeFile(path.join(outside, "keep.txt"), "survive\n", "utf8");
+  await scaffoldDevBundle(bundle, "1.0.0-test");
+  await installVersion(bundle, "1.0.0-test", root);
+  const versionDir = path.join(root, "1.0.0-test");
+  await mkdir(path.join(versionDir, "trap"), { recursive: true });
+  await symlink(outside, path.join(versionDir, "trap", "link"), "junction");
+  await uninstallBinaries(root);
+  assert.equal(await readFile(path.join(outside, "keep.txt"), "utf8"), "survive\n");
 });
 
 test("tampered bundle file fails verification", async () => {

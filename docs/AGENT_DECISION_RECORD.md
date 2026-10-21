@@ -42,6 +42,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Rationale:** M-gate is not satisfied by “qualify:release green on dev profile” alone while R6/R7/R8 remain open; starting schema-changing imports would multiply migrations and invalidate release evidence.
 - **Change rule:** founder scope change or a new entry recording M-gate passed at a named SHA.
 
+## 2026-10-21: Q3 / R8 — DirectWrite on pinned winget FFmpeg; R8 stays open
+
+- **Authority:** W5.1 Q3 binding ([08 W5](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#w5--pinned-distributable-bundle)); `tests/typography.test.ts` Q3 controls.
+- **Decision:** The host and bundle-scaffold FFmpeg build (gyan.dev full build on Windows) selects **DirectWrite**, not fontconfig, even when `FONTCONFIG_FILE` points at a pinned `fonts.conf`. **`fontsdir=` on the libass filter is kept** for pinned font bytes, but it does **not** exclude host substitution by family name under DirectWrite (Q3 negative control still substitutes Arial without confinement). **R8 remains open** and release stays **NO-GO** for title-font substitution until a fontconfig-capable FFmpeg is pinned in the bundle without paid services (e.g. a self-built or freely redistributable Windows build that passes Q3). No libass-only workaround is frozen as satisfying R8.
+- **Evidence:** Q3 tests skip the confined case when DirectWrite is detected; fontconfig plumbing merged in PR #39 (`FONTCONFIG_FILE` allowlisted in procd).
+- **Change rule:** R8 closes only when Q3 passes on the bundle FFmpeg at an exact main head with committed receipts.
+
 ## 2026-10-21: W6 provenance drift uses pin fetch when no local clone
 
 - **Authority:** W6 on branch `chore/provenance-brand` ([08 task card](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#w6--provenance-and-brand-tooling)).
