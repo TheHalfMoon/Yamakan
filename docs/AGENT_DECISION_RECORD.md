@@ -62,6 +62,12 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `tests/cinema.test.ts`; notices `notices/ArtCraft-*` + root `NOTICE`; provenance ledger rows for the four donor paths. Security review must-fix closed (M9 `maxDepth` + 4 MiB bounds before receipt hash). PStack checklist applied manually. Graft keyless build/ask with `--dir` outside the repo. Alibaba OCR not installed locally (delegate-only; no model-backed OCR claimed).
 - **Change rule:** turning `CINEMA_ENABLED` on requires Cinema UI wiring and a new ADR entry.
 
+## 2026-10-21: W17 Agents and Quality (in progress)
+
+- **Authority:** frozen plan W17 / M17 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W4, M-gate, W11 prerequisites on main.
+- **Decision:** Translate Gomrey `5f299a7a` job kernel to `core/donors/gomrey/jobs.ts` (8 inherited tests); apply Yamakan JobState table inside SQLite transitions. Ascout `ca6b6f51` independence lineage under `core/agents/lineage.ts`. Original Quality Lab (`QUALITY_LAB_ENABLED = false`) and router explain (`ROUTER_PROVIDERS_ENABLED = false` — ranks nothing). Commands `yamakan.quality.*`, `yamakan.router.explain`, `yamakan.lineage.evaluate`.
+- **Change rule:** enabling Quality Lab or providers needs acceptance receipts and a new ADR.
+
 ## 2026-10-21: W11 Studio canvas engine (primary selected)
 
 - **Authority:** frozen plan W11 / M7 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); ADR `0003` amendment; W10 contract already on main.

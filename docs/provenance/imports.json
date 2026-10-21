@@ -3833,5 +3833,57 @@
     "tests": [
       "tests/studio.test.ts"
     ]
+  },
+  {
+    "source": "TheHalfMoon/Gomrey",
+    "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
+    "original": "servers/fastapi/gomrey/jobs.py",
+    "imported": "core/donors/gomrey/jobs.ts",
+    "sha256": "804a7b291d832048665b5737a006db0e414458613a15525ca3b91429df3f8921",
+    "modifications": [
+      "Translated Python durable job kernel to TypeScript (IllegalTransition class, ReadonlySet tables, camelCase API).",
+      "Applied inside Yamakan SQLite job transactions via yamakan-transitions.ts adapter."
+    ],
+    "importedSha256": "d48e8af6bdc7404f1ad6ef34c5caeb170711eed339f923302fa4ffd00a8e0daf",
+    "license": "Apache-2.0",
+    "authorization": "founder-attested",
+    "owner": "runtime builder",
+    "tests": [
+      "tests/gomrey-jobs.test.ts"
+    ]
+  },
+  {
+    "source": "TheHalfMoon/Gomrey",
+    "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
+    "original": "servers/fastapi/tests/test_gomrey_jobs.py",
+    "imported": "tests/gomrey-jobs.test.ts",
+    "sha256": "3602241e8eb636051baecfdda56623ee0c3e98c803127287b1c73434b47b312e",
+    "modifications": [
+      "Translated eight pytest cases to node:test; Yamakan-style assert API; added Yamakan transition extension case."
+    ],
+    "importedSha256": "bafaeb106f5c05ae13dfbe77588c17d38838367d3ce82e76cd91cd03f3d419f2",
+    "license": "Apache-2.0",
+    "authorization": "founder-attested",
+    "owner": "runtime builder",
+    "tests": [
+      "tests/gomrey-jobs.test.ts"
+    ]
+  },
+  {
+    "source": "TheHalfMoon/Ascout",
+    "sha": "ca6b6f514e5a8881e2cfa2789b5e5ea43e3aaaad",
+    "original": "src/assurance/review/independence-policy.ts",
+    "imported": "core/agents/lineage.ts",
+    "sha256": "f72262e498b15b0475002301bb8099a55e8197f4b7d57e9cbfff7fa4f17e31e6",
+    "modifications": [
+      "Relocated under core/agents/lineage.ts; concepts-only (not review execution); Prettier format."
+    ],
+    "importedSha256": "df25730aab7db9290a1ff0b2d1be86a3aeed589cf9e3cc13bc433f3fe25433cd",
+    "license": "Apache-2.0",
+    "authorization": "founder-attested",
+    "owner": "runtime builder",
+    "tests": [
+      "tests/w17-quality-agents.test.ts"
+    ]
   }
 ]
