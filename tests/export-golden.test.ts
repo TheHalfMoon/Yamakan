@@ -21,6 +21,7 @@ import { JobSupervisor } from "../core/jobs.ts";
 import { preview } from "../core/render/preview.ts";
 import { closeWorkers, mediaTools } from "../core/process/workers.ts";
 import {
+  audioOnset,
   checkExport,
   decodeFrames,
   decodeStill,
@@ -383,6 +384,87 @@ test(
           `${name}: expected ${reason}, got ${JSON.stringify(failures)}`,
         );
       }
+    } finally {
+      await ctx.supervisor.close();
+      ctx.store.close();
+    }
+  },
+);
+
+test(
+  "embedded video sound is mixed at the expected onset",
+  { timeout: 180_000 },
+  async () => {
+    const ctx = await build();
+    try {
+      const toneVideo = path.join(ctx.root, "tone-video.mp4");
+      ffmpeg([
+        "-f",
+        "lavfi",
+        "-i",
+        `color=c=gray:s=${W}x${H}:r=30:d=4`,
+        "-f",
+        "lavfi",
+        "-i",
+        "aevalsrc='if(between(t,0.5,0.51),0.8*sin(2*PI*1000*t),0)':s=48000:d=4",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        "-shortest",
+        toneVideo,
+      ]);
+      ctx.files["tone-video.mp4"] = toneVideo;
+      const created = await ctx.store.create("Video sound");
+      const imported = await ctx.store.importAsset(
+        created.id,
+        "tone-video.mp4",
+        await readFile(toneVideo),
+      );
+      const head = await ctx.store.load(created.id);
+      const picture = head.tracks[0].id;
+      const saved = await ctx.store.save(
+        {
+          ...head,
+          width: W,
+          height: H,
+          clips: [
+            {
+              id: crypto.randomUUID(),
+              trackId: picture,
+              assetId: imported.asset.id,
+              startFrame: 0,
+              durationFrames: 120,
+              sourceFrame: 0,
+              title: null,
+              sound: {
+                enabled: true,
+                gainDb: 0,
+                fadeInFrames: 0,
+                fadeOutFrames: 0,
+              },
+            },
+          ],
+        },
+        head.revision,
+      );
+      const job = await ctx.supervisor.submit(created.id, "video-sound");
+      let state = ctx.supervisor.status(job.id);
+      for (
+        let i = 0;
+        i < 1200 && !["COMPLETED", "FAILED", "CANCELLED"].includes(state.state);
+        i++
+      ) {
+        await new Promise((r) => setTimeout(r, 100));
+        state = ctx.supervisor.status(job.id);
+      }
+      assert.equal(state.state, "COMPLETED", state.error ?? "");
+      const file = await ctx.store.file(created.id, state.artifact!);
+      const onset = audioOnset(file);
+      assert.ok(onset !== null && Math.abs(onset - 0.5) * 1000 <= 20);
+      void saved;
     } finally {
       await ctx.supervisor.close();
       ctx.store.close();

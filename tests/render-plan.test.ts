@@ -29,6 +29,7 @@ function build(): Project {
       durationFrames: 300,
       width: 1280,
       height: 720,
+      hasAudio: true,
     },
     {
       id: audio,
@@ -40,6 +41,7 @@ function build(): Project {
       durationFrames: 300,
       width: 0,
       height: 0,
+      hasAudio: true,
     },
   );
   p.clips.push(
@@ -51,6 +53,7 @@ function build(): Project {
       durationFrames: 60,
       sourceFrame: 15,
       title: null,
+      sound: { enabled: false, gainDb: 0, fadeInFrames: 0, fadeOutFrames: 0 },
     },
     {
       id: "44444444-4444-4444-8444-444444444444",
@@ -168,4 +171,22 @@ test("plans refuse invalid snapshot hashes and untitled, pictureless timelines",
     () => compilePlan(fromEditView(empty), SNAPSHOT, fonts),
     /no active picture or title/,
   );
+});
+
+test("enabled video clip sound emits a second audio instruction; disabled does not", async () => {
+  const fonts = await titleFonts();
+  const silent = compilePlan(fromEditView(view()), SNAPSHOT, fonts).plan.audio;
+  assert.equal(silent.length, 1);
+  const loud = view();
+  loud.clips[0].sound = {
+    enabled: true,
+    gainDb: -3,
+    fadeInFrames: 5,
+    fadeOutFrames: 0,
+  };
+  const audio = compilePlan(fromEditView(loud), SNAPSHOT, fonts).plan.audio;
+  assert.equal(audio.length, 2);
+  const embedded = audio.find((x) => x.assetSha256[0] === "a");
+  assert.ok(embedded);
+  assert.deepEqual([embedded!.gainDb, embedded!.fadeInTicks / F], [-3, 5]);
 });

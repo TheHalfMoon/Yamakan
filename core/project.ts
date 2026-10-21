@@ -29,6 +29,16 @@ export const AssetSchema = z
     durationFrames: frame,
     width: z.number().int().min(0).max(mediaDimension),
     height: z.number().int().min(0).max(mediaDimension),
+    // Recorded at import from the probe; null means unknown (pre-v3 migration).
+    hasAudio: z.boolean().nullable(),
+  })
+  .strict();
+const ClipSoundSchema = z
+  .object({
+    enabled: z.boolean(),
+    gainDb: z.number().min(-60).max(12).optional(),
+    fadeInFrames: frame.optional(),
+    fadeOutFrames: frame.optional(),
   })
   .strict();
 export const TrackSchema = z
@@ -55,6 +65,7 @@ export const ClipSchema = z
     gainDb: z.number().min(-60).max(12).optional(),
     fadeInFrames: frame.optional(),
     fadeOutFrames: frame.optional(),
+    sound: ClipSoundSchema.optional(),
   })
   .strict();
 const ShotSchema = z
@@ -79,9 +90,9 @@ const SceneSchema = z
     shots: z.array(ShotSchema).max(100).optional(),
   })
   .strict();
-export const ProjectSchema = z
+const ProjectBody = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     id: Id,
     name: z.string().min(1).max(120),
     revision: z.number().int().nonnegative(),
@@ -141,12 +152,28 @@ export const ProjectSchema = z
       }
     }
   });
-export type Project = z.infer<typeof ProjectSchema>;
+
+function upgradeEditView(value: unknown) {
+  if (!value || typeof value !== "object") return value;
+  const v = value as Record<string, unknown>;
+  if (v.schemaVersion !== 1) return value;
+  const assets = Array.isArray(v.assets)
+    ? v.assets.map((a) =>
+        a && typeof a === "object"
+          ? { ...(a as Record<string, unknown>), hasAudio: null }
+          : a,
+      )
+    : v.assets;
+  return { ...v, schemaVersion: 2, assets };
+}
+
+export const ProjectSchema = z.preprocess(upgradeEditView, ProjectBody);
+export type Project = z.infer<typeof ProjectBody>;
 export type Asset = z.infer<typeof AssetSchema>;
 export type Clip = z.infer<typeof ClipSchema>;
 export function createProject(name: string): Project {
   return ProjectSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: crypto.randomUUID(),
     name,
     revision: 0,

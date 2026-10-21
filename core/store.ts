@@ -1545,6 +1545,12 @@ export class ProjectStore {
         width: metadata.width,
         height: metadata.height,
         durationFrames: kind === "image" ? 0 : metadata.durationFrames,
+        hasAudio:
+          kind === "video"
+            ? metadata.hasAudio
+            : kind === "audio"
+              ? true
+              : false,
       });
       // Publish by streaming the staged bytes; the store re-hashes them. The
       // handle opens eagerly and closes before cleanup, so no deferred open

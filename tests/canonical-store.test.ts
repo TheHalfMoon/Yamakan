@@ -44,7 +44,7 @@ test("snapshots are stored in the canonical format", async () => {
   const stored = JSON.parse(Buffer.from(row.bytes).toString("utf8"));
   assert.deepEqual(
     [stored.format, stored.formatVersion, stored.language],
-    ["yamakan.project", 2, "en"],
+    ["yamakan.project", 3, "en"],
   );
   assert.deepEqual(stored, await store.exportProject(project.id));
   db.close();
@@ -55,7 +55,7 @@ test("a newer project format is inspectable but never edited or rewritten", asyn
   const { store, project, db, plant } = await workspace();
   const future = {
     ...fromEditView({ ...project, revision: 1 }),
-    formatVersion: 3,
+    formatVersion: 4,
     futureTimeline: { tracks: ["kept"] },
   };
   const planted = plant("yamakan.project/1", future, 1);
@@ -117,7 +117,7 @@ test("restore never overwrites a head written in a newer format", async () => {
   const { store, project, db, plant } = await workspace();
   const future = {
     ...fromEditView({ ...project, revision: 1 }),
-    formatVersion: 3,
+    formatVersion: 4,
   };
   const planted = plant("yamakan.project/1", future, 1);
   const history = await store.history(project.id);

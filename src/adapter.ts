@@ -34,6 +34,11 @@ export function editorView(p: Project) {
     sourceIn: c.sourceFrame / 30,
     sourceOut: (c.sourceFrame + c.durationFrames) / 30,
     effect: null,
+    soundEnabled: Boolean(c.sound?.enabled),
+    volume:
+      c.sound?.enabled && c.sound.gainDb !== undefined
+        ? Math.min(1, Math.max(0, 10 ** (c.sound.gainDb / 20)))
+        : undefined,
     ...(c.title !== null
       ? {
           textConfig: {

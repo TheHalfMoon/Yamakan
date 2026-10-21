@@ -391,6 +391,12 @@ export class LegacyProjectStore {
           width: metadata.width,
           height: metadata.height,
           durationFrames: kind === "image" ? 0 : metadata.durationFrames,
+          hasAudio:
+            kind === "video"
+              ? metadata.hasAudio
+              : kind === "audio"
+                ? true
+                : false,
         });
         const objects = await this.objects(id);
         const stored = await objects.put(
