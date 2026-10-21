@@ -57,8 +57,12 @@ export type FaultPoint =
   | "after-snapshot-insert"
   | "before-commit"
   | "after-commit";
+export type RecoveryFaultPoint =
+  | "after-recovery-effect"
+  | "before-recovery-receipt";
 export type StoreOptions = {
   fault?: (point: FaultPoint) => void;
+  recoveryFault?: (point: RecoveryFaultPoint) => void;
   // Test seam: can only lower the policy's snapshot byte limit.
   snapshotBytes?: number;
   // Test seam: can only shorten the 60 s grace added to every upload deadline.
@@ -73,7 +77,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 const WORKSPACE_SCOPE = "";
 
 // Asset objects are content-addressed files under a project; a version is a
@@ -141,6 +145,18 @@ INSERT INTO supervisor(id, generation) VALUES (1, 0);
 const SCHEMA_V5 = `
 ALTER TABLE jobs ADD COLUMN plan_hash TEXT CHECK(plan_hash IS NULL OR length(plan_hash) = 64);
 ALTER TABLE attempts ADD COLUMN receipt TEXT;
+`;
+// Replay-safe workspace backup/restore (W2): result stored with the request digest.
+const SCHEMA_V6 = `
+CREATE TABLE recovery_receipts(
+  principal_id TEXT NOT NULL,
+  operation TEXT NOT NULL CHECK(length(operation) BETWEEN 1 AND 80),
+  request_id TEXT NOT NULL CHECK(length(request_id) BETWEEN 1 AND 80),
+  request_digest TEXT NOT NULL CHECK(length(request_digest) = 64),
+  effect_ref TEXT NOT NULL,
+  result_json TEXT,
+  PRIMARY KEY(principal_id, operation, request_id)
+) STRICT;
 `;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
@@ -372,7 +388,7 @@ export class ProjectStore {
         "PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;",
       );
       // Versioned, transactional schema steps; each commits on its own.
-      const steps = [SCHEMA, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5];
+      const steps = [SCHEMA, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
         db.exec("BEGIN IMMEDIATE");
@@ -978,6 +994,114 @@ export class ProjectStore {
     } finally {
       source.close();
     }
+  }
+
+  // Runs a workspace recovery command once per request id (W2). The effect
+  // reference is reserved in SQLite before filesystem work so a retry after
+  // a lost response can return or resume the original result.
+  async runIdempotentRecovery<T>(
+    receipt: RequestReceipt,
+    operation: string,
+    effectRef: string,
+    resume: (ref: string) => Promise<T | null>,
+    effect: (ref: string) => Promise<T>,
+  ): Promise<T> {
+    const replay = this.transaction((db) =>
+      this.#recoveryReceiptRow(db, receipt, operation),
+    );
+    if (replay?.result !== undefined) return replay.result as T;
+    if (replay?.effectRef) {
+      const healed = await resume(replay.effectRef);
+      if (healed !== null)
+        return this.#finishRecoveryReceipt(receipt, operation, healed);
+    }
+    const reserved = this.transaction((db) => {
+      const existing = this.#recoveryReceiptRow(db, receipt, operation);
+      if (existing?.result !== undefined) return { done: existing.result as T };
+      if (existing?.effectRef) return { ref: existing.effectRef };
+      try {
+        db.prepare(
+          "INSERT INTO recovery_receipts(principal_id, operation, request_id, request_digest, effect_ref) VALUES (?, ?, ?, ?, ?)",
+        ).run(
+          receipt.principalId,
+          operation,
+          receipt.requestId,
+          receipt.digest,
+          effectRef,
+        );
+      } catch (e) {
+        if (!/UNIQUE constraint failed/i.test(String(e))) throw e;
+        const raced = this.#recoveryReceiptRow(db, receipt, operation);
+        if (raced?.result !== undefined) return { done: raced.result as T };
+        if (raced?.effectRef) return { ref: raced.effectRef };
+        throw e;
+      }
+      return { ref: effectRef };
+    });
+    if ("done" in reserved) return reserved.done;
+    const ref = reserved.ref ?? effectRef;
+    const resumed = await resume(ref);
+    if (resumed !== null) return this.#finishRecoveryReceipt(receipt, operation, resumed);
+    const result = await effect(ref);
+    this.#options.recoveryFault?.("after-recovery-effect");
+    return this.#finishRecoveryReceipt(receipt, operation, result);
+  }
+
+  #recoveryReceiptRow(
+    db: DatabaseSync,
+    receipt: RequestReceipt,
+    operation: string,
+  ): { effectRef: string; result?: unknown } | null {
+    const row = db
+      .prepare(
+        "SELECT request_digest, effect_ref, result_json FROM recovery_receipts WHERE principal_id = ? AND operation = ? AND request_id = ?",
+      )
+      .get(receipt.principalId, operation, receipt.requestId) as
+      | {
+          request_digest: string;
+          effect_ref: string;
+          result_json: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    if (row.request_digest !== receipt.digest)
+      throw new CommandError(
+        "IDEMPOTENCY_MISMATCH",
+        "Request ID was already used for a different request.",
+      );
+    if (row.result_json !== null)
+      return { effectRef: row.effect_ref, result: JSON.parse(row.result_json) };
+    return { effectRef: row.effect_ref };
+  }
+
+  #finishRecoveryReceipt<T>(
+    receipt: RequestReceipt,
+    operation: string,
+    result: T,
+  ): T {
+    this.#options.recoveryFault?.("before-recovery-receipt");
+    return this.transaction((db) => {
+      const row = this.#recoveryReceiptRow(db, receipt, operation);
+      if (row?.result !== undefined) return row.result as T;
+      const moved = db
+        .prepare(
+          "UPDATE recovery_receipts SET result_json = ? WHERE principal_id = ? AND operation = ? AND request_id = ? AND request_digest = ? AND result_json IS NULL",
+        )
+        .run(
+          JSON.stringify(result),
+          receipt.principalId,
+          operation,
+          receipt.requestId,
+          receipt.digest,
+        );
+      if (moved.changes === 1) return result;
+      const again = this.#recoveryReceiptRow(db, receipt, operation);
+      if (again?.result !== undefined) return again.result as T;
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "Recovery receipt could not be recorded.",
+      );
+    });
   }
   // Bytes promised to in-flight imports on this volume.
   get reservedBytes() {

@@ -11,9 +11,11 @@ import { RESOURCE_POLICY } from "./policy.ts";
 import {
   BackupId,
   backupWorkspace,
+  backupWorkspaceIdempotent,
   defaultRecoveryHome,
   listBackups,
   restoreFromHome,
+  restoreFromHomeIdempotent,
 } from "../recovery.ts";
 
 export const RESOURCE_POLICY_HASH = sha256Hex(canonicalJson(RESOURCE_POLICY));
@@ -230,7 +232,10 @@ export const commands = {
     summary:
       "Back up the workspace (database and verified media) into the service's recovery folder while work continues.",
     input: z.object({}).strict(),
-    run: (ctx) => backupWorkspace(ctx.store, home(ctx)),
+    run: (ctx, _a) =>
+      ctx.receipt
+        ? backupWorkspaceIdempotent(ctx.store, home(ctx), ctx.receipt)
+        : backupWorkspace(ctx.store, home(ctx)),
   }),
   "yamakan.workspace.backups": define({
     scope: "project:read",
@@ -246,9 +251,17 @@ export const commands = {
       "Restore a backup into a new workspace folder (the current workspace is not changed).",
     input: z.object({ backupId: BackupId }).strict(),
     run: (ctx, a) =>
-      restoreFromHome(home(ctx), a.backupId, {
-        reservedBytes: ctx.store.reservedBytes,
-      }),
+      ctx.receipt
+        ? restoreFromHomeIdempotent(
+            ctx.store,
+            home(ctx),
+            a.backupId,
+            ctx.receipt,
+            { reservedBytes: ctx.store.reservedBytes },
+          )
+        : restoreFromHome(home(ctx), a.backupId, {
+            reservedBytes: ctx.store.reservedBytes,
+          }),
   }),
   "yamakan.workspace.collectGarbage": define({
     scope: "project:recover",
@@ -287,6 +300,22 @@ export const commands = {
     summary: "List render jobs of this service session.",
     input: z.object({}).strict(),
     run: ({ queue }) => queue.list(),
+  }),
+  "yamakan.job.retry": define({
+    scope: "job:control",
+    mutation: true,
+    summary:
+      "Re-queue a job that needs reconciliation after too many interruptions.",
+    input: z.object({ jobId: Id }).strict(),
+    run: ({ queue }, a) => queue.retry(a.jobId),
+  }),
+  "yamakan.job.discard": define({
+    scope: "job:control",
+    mutation: true,
+    summary:
+      "Cancel a job that needs reconciliation without changing project revisions.",
+    input: z.object({ jobId: Id }).strict(),
+    run: ({ queue }, a) => queue.discard(a.jobId),
   }),
 };
 

@@ -239,6 +239,52 @@ export class JobSupervisor {
 
   // Queued jobs cancel at once. Running ones are marked, their worker's job is
   // terminated, and the terminal state follows once the worker has exited.
+  retry(jobId: string) {
+    this.#current();
+    const row = this.store.transaction((db) => {
+      const row = this.#row(db, jobId);
+      if (!row) throw new Error("Job not found.");
+      if (row.state !== "reconciliationRequired")
+        throw new CommandError(
+          "VALIDATION",
+          "Only jobs awaiting reconciliation can be retried.",
+        );
+      db.prepare(
+        "UPDATE jobs SET state = 'queued', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
+      ).run(jobId);
+      return this.#row(db, jobId)!;
+    });
+    this.#pump();
+    return this.#view(row);
+  }
+
+  discard(jobId: string) {
+    this.#current();
+    const row = this.store.transaction((db) => {
+      const row = this.#row(db, jobId);
+      if (!row) throw new Error("Job not found.");
+      if (
+        ["preparing", "running", "validating", "cancelRequested"].includes(
+          row.state,
+        )
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "A running job cannot be discarded; cancel it first.",
+        );
+      if (row.state !== "reconciliationRequired")
+        throw new CommandError(
+          "VALIDATION",
+          "Only jobs awaiting reconciliation can be discarded.",
+        );
+      db.prepare(
+        "UPDATE jobs SET state = 'cancelled', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
+      ).run(jobId);
+      return this.#row(db, jobId)!;
+    });
+    return this.#view(row);
+  }
+
   cancel(jobId: string) {
     const row = this.store.transaction((db) => {
       const row = this.#row(db, jobId);
