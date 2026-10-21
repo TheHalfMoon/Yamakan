@@ -711,3 +711,25 @@ test("the same request id with different backup input is rejected", async () => 
   );
   store.close();
 });
+
+test("distinct request ids restoring the same backup use separate restored folders", async () => {
+  const { home, store } = await workspace();
+  const made = (await backupWorkspace(store, home)) as { backupId: string };
+  const api = new CreativeAPI(store, { recoveryHome: home });
+  const first = (await api.call(
+    "yamakan.workspace.restore",
+    { backupId: made.backupId },
+    undefined,
+    "restore-a",
+  )) as { root: string };
+  const second = (await api.call(
+    "yamakan.workspace.restore",
+    { backupId: made.backupId },
+    undefined,
+    "restore-b",
+  )) as { root: string };
+  assert.notEqual(first.root, second.root);
+  assert.match(path.basename(first.root), /^.+-req-[0-9a-f]{64}$/);
+  assert.match(path.basename(second.root), /^.+-req-[0-9a-f]{64}$/);
+  store.close();
+});

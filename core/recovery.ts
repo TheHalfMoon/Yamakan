@@ -688,6 +688,18 @@ export async function backupWorkspaceIdempotent(
   );
 }
 
+function idempotentRestoreRef(
+  backupId: string,
+  receipt: RequestReceipt,
+) {
+  const id = BackupId.parse(backupId);
+  const tag = createHash("sha256")
+    .update(`${receipt.principalId}:${receipt.requestId}:${receipt.digest}`)
+    .digest("hex");
+  // One folder per request id; sequential slots stay for non-idempotent restores.
+  return `restored/${id}-req-${tag}`;
+}
+
 export async function restoreFromHomeIdempotent(
   store: ProjectStore,
   home: string,
@@ -696,17 +708,7 @@ export async function restoreFromHomeIdempotent(
   options: { reservedBytes?: number } = {},
 ) {
   const id = BackupId.parse(backupId);
-  const slot =
-    1 +
-    (parseInt(
-      createHash("sha256")
-        .update(`${receipt.principalId}:${receipt.requestId}:${receipt.digest}`)
-        .digest("hex")
-        .slice(0, 6),
-      16,
-    ) %
-      MAX_RESTORES_PER_BACKUP);
-  const effectRef = restoreTargetRef(id, slot);
+  const effectRef = idempotentRestoreRef(id, receipt);
   return store.runIdempotentRecovery(
     receipt,
     "yamakan.workspace.restore",
