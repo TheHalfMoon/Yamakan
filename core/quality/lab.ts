@@ -6,8 +6,11 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 
-/** Quality Lab UI/runtime stays off until acceptance is recorded. */
-export const QUALITY_LAB_ENABLED = false;
+/**
+ * Deterministic Quality Lab (blinded compare / summarize) enabled after P10-05.
+ * Paid/provider ranking stays off via ROUTER_PROVIDERS_ENABLED.
+ */
+export const QUALITY_LAB_ENABLED = true;
 
 export const QUALITY_LAB_FORMAT = "yamakan.quality-lab/v1";
 
@@ -65,7 +68,12 @@ export function qualityLabCapability(): {
         "Quality Lab is imported but disabled until acceptance tests pass on this head.",
     };
   }
-  return { id: "quality-lab", available: true };
+  return {
+    id: "quality-lab",
+    available: true,
+    reason:
+      "Deterministic blinded compare enabled; generative/provider quality claims remain out of scope.",
+  };
 }
 
 /** Deterministic blinded summary: slot averages only; system ids omitted. */

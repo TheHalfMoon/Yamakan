@@ -1,39 +1,34 @@
 # P10 progress
 
-**Last verified main SHA:** `16f8154a1d0b9dd50350a16498878b2f8f70df92` (pre-activation)  
+**Last verified main SHA:** `42b2fde4e4ebd034132b389d45e972526578c0fc`  
 **Updated:** 2026-10-21  
-**Open PRs:** Studio activation (in flight)  
-**Next task:** Merge activation; continue Animation → Cinema → Director → Lab → Router → W12 → bundle → R6/R7.
+**Open PRs:** P10-05 Quality Lab + router explain qualify (in flight)  
+**Next task:** Cinema / Director / W12 packet / bundle / R6–R7 / security / release evidence; Animation remains residual (flag false).
 
 ## Completed cards
 
 | Card | PR | Merge SHA | Notes |
 | --- | --- | --- | --- |
-| P10-00 | #58 | `c19c01e` | Plan package + founder auth |
-| P10-01 Q8 | #57 | `72bc193` | Host assets + Playwright stroke PASS |
-| P10-01 Q9 | #59 | `fbf1414` | 120/122=98.36%; residuals documented |
-| P10-01 Q10 | #60 | `16f8154` | chunk 0.111 MiB; p95 7.7 ms on 4096×20 |
+| P10-00 | #58 | `c19c01e` | Plan package |
+| P10-01 Q8 | #57 | `72bc193` | Stroke E2E |
+| P10-01 Q9 | #59 | `fbf1414` | 98.36% node-mode |
+| P10-01 Q10 | #60 | `16f8154` | chunk+latency PASS |
+| P10-01 Studio activate | #61 | `65451bd` | `STUDIO_ENABLED=true` |
+| P10-02 Animation residual | #62 | `42b2fde` | Q13/Q14 PASS; flag stays false |
 
 ## Active work
 
 | Card | Branch / PR | Status |
 | --- | --- | --- |
-| P10-01 Studio activate | `feat/p10-01-studio-activate` | Local activation E2E PASS; flag flip pending merge |
+| P10-05 / P10-06 | `feat/p10-05-quality-lab` | Lab enabled deterministic; providers stay false |
 
-## Test outcomes (session)
+## Enabled capabilities (post-merge expected)
 
-| Command / check | Result | Bound SHA |
-| --- | --- | --- |
-| `node --test tests/studio.test.ts` | 5/5 PASS (flag true) | activation branch |
-| `npm run qualify:studio-activation` | PASS | activation branch |
+- `STUDIO_ENABLED=true`
+- `QUALITY_LAB_ENABLED=true` (deterministic only)
+- `ROUTER_PROVIDERS_ENABLED=false` (explain available)
+- Animation / Cinema / Director / JASSUB / engines: **false**
 
-## Open external gates
+## Release
 
-- H1–H5, E-SEC/F/G, Q15 residual as previously recorded
-- Release remains **NO-GO** until founder ship gate
-
-## Continuation instructions
-
-1. Merge activation PR on exact-head CI.  
-2. Start Animation qualification/activation next per DEPENDENCY_GRAPH.  
-3. Keep paid engines/providers disabled.
+**NO-GO** — H1–H5 + founder ship required.

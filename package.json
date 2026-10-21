@@ -40,6 +40,7 @@
     "qualify:q8": "node scripts/qualify-q8-studio.mjs",
     "qualify:q10": "node scripts/qualify-q10-studio.mjs",
     "qualify:studio-activation": "node scripts/qualify-studio-activation.mjs",
+    "qualify:quality-lab": "node scripts/qualify-quality-lab.mjs",
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",
