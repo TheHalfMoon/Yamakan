@@ -2,8 +2,8 @@
 
 **Last verified main SHA:** `c6d10f7a82fc17c0d39e1536331b6287b2dfa99e`  
 **Updated:** 2026-10-21  
-**Open PRs:** (planning PR in flight)  
-**Next task:** Merge P10-00 plan, then begin **P10-01 Studio canvas**.
+**Open PRs:** #56 (P10-00 plan), #57 (P10-01 Studio Q8 — stacked on main)  
+**Next task:** Merge P10-00 (#56) when exact-head CI green; land P10-01 Q8 host fixes; continue Q9/Q10 before enablement.
 
 ## Completed cards
 
@@ -15,7 +15,8 @@
 
 | Card | Branch / PR | Status |
 | --- | --- | --- |
-| P10-00 | `docs/p10-qualification-plan` | In progress |
+| P10-00 | #56 `docs/p10-qualification-plan` | Awaiting exact-head CI (prior run cancelled after long queue) |
+| P10-01 | #57 `feat/p10-01-studio-q8` | Q8 PASS locally; Q9/Q10 open; flag still false |
 
 ## Test outcomes (session)
 
