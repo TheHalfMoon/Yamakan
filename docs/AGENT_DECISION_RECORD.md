@@ -34,6 +34,12 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: M-gate passed at eaeaf1b
+
+- **Authority:** frozen plan M-gate ([07](research/rea-source-reuse/07_OPTIMIZED_MASTER_PLAN.md#m-gate)); founder continuation after R8.
+- **Decision:** Declare **M-gate passed** on main `eaeaf1b` after R8 (#41/#42) and exact-head `npm run qualify:release` (247/249 pass, 0 fail, E2E green; receipt `docs/evidence/qualification/t10-release.json`). Track 2 W8–W18 may start. **Release remains NO-GO:** H1–H5 and R6/R7 release residuals (Profile A installer/launch verify; MCP/UI parity transcript) stay open and do not undo the M-gate.
+- **Change rule:** a new entry if M-gate is revoked or re-declared at a different SHA.
+
 ## 2026-10-21: R8 closed — vendored fontconfig FFmpeg (DirectWrite off)
 
 - **Authority:** Q3/R8 binding ([08 W5](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md#bounded-qualification-tests-q1q15)); founder continuation to close R8 correctly.
