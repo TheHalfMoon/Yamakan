@@ -7,11 +7,17 @@
 import { createHash } from "node:crypto";
 import type { CanonicalProject } from "../canonical.ts";
 import type { Rational } from "../time.ts";
-import { addTicks } from "../time.ts";
+import { addTicks, rational } from "../time.ts";
 import { CommandError } from "../command/errors.ts";
 import { ASS_COMPILER_VERSION, compileTitles } from "./ass.ts";
 import type { TitleCue } from "./ass.ts";
 import type { PinnedFont } from "./fonts.ts";
+import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
+
+const UNITY = rational(1, 1);
+function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
+  return c.speed ? clampRetimeRate({ rate: c.speed }) : UNITY;
+}
 
 export const RENDER_PLAN_FORMAT = "yamakan.render-plan/v1";
 export const COMPILER_VERSION = "yamakan.render-compiler/1";
@@ -38,6 +44,8 @@ export type VideoLayer = {
   startTicks: number;
   durationTicks: number;
   sourceStartTicks: number;
+  /** Source-over-timeline rate (2/1 = twice as fast). Default 1/1. */
+  speed: Rational;
 };
 
 export type AudioInstruction = {
@@ -53,6 +61,7 @@ export type AudioInstruction = {
   gainDb: number;
   fadeInTicks: number;
   fadeOutTicks: number;
+  speed: Rational;
 };
 
 export type RenderPlan = {
@@ -126,6 +135,7 @@ export function compilePlan(
       continue;
     }
     const a = asset(c.assetId!);
+    const speed = clipSpeed(c);
     const timing = {
       clipId: c.id,
       track,
@@ -136,6 +146,7 @@ export function compilePlan(
       startTicks: c.startTicks,
       durationTicks: c.durationTicks,
       sourceStartTicks: c.sourceStartTicks,
+      speed,
     };
     if (kindOf(c.trackId) === "audio" || a.kind === "audio")
       audio.push({

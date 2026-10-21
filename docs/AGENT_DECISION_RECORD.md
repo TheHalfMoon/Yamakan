@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W9 Mediabunny waveform and OpenCut retime
+
+- **Authority:** frozen plan W9 / M14–M5 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W8 merged at `efdf591`.
+- **Decision:** Pin `mediabunny@1.61.3` (MPL-2.0) and `soundtouchjs@0.3.0` (LGPL-2.1). Decode peaks in a Vite-bundled Worker (`src/media/demux{,-worker}.ts`) on Blob input only, terminated after 2 s; failures keep empty/server peaks (Q5). Port OpenCut Classic `cf5e79e9` retime into `core/donors/opencut/retime/` with rational rates; preview pitch path via `src/donors/opencut/audio-stretch.ts`; export uses `setpts` + Yamakan `atempo` chain (no rubberband on the pinned Windows FFmpeg). Optional clip `speed` Rational on canonical/edit view; register `yamakan.clip.setSpeed`.
+- **Evidence:** `npm run qualify:q5` / `qualify:q6`; `tests/retime.test.ts`, `tests/set-speed.test.ts`; notices under `notices/{mediabunny,soundtouchjs}-LICENSE`.
+- **Change rule:** rate set or demux path changes require new Q5/Q6 receipts at an exact head.
+
 ## 2026-10-21: W8 OpenCut ripple and group-move
 
 - **Authority:** frozen plan W8 / M3–M4 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); M-gate passed at `eaeaf1b`.

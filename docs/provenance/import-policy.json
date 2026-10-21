@@ -21,6 +21,14 @@
     {
       "source": "OpenCut-app/opencut-classic",
       "notices": ["notices/OpenCut-LICENSE"]
+    },
+    {
+      "source": "Vanilagy/mediabunny",
+      "notices": ["notices/mediabunny-LICENSE"]
+    },
+    {
+      "source": "soundtouchjs",
+      "notices": ["notices/soundtouchjs-LICENSE"]
     }
   ],
   "localFilesInDonorRoots": [
@@ -35,6 +43,10 @@
     {
       "path": "core/donors/opencut/adapters.ts",
       "reason": "Yamakan adapters replacing the five non-copied OpenCut group-move dependencies (track lookup, kind compatibility, snap sources) and SceneTracks projection."
+    },
+    {
+      "path": "core/donors/opencut/retime/atempo.ts",
+      "reason": "Yamakan helper building FFmpeg atempo filter chains for rational rates (Q6); not from OpenCut."
     }
   ],
   "excludedPaths": [

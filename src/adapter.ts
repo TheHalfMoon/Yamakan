@@ -30,9 +30,16 @@ export function editorView(p: Project) {
     start: c.startFrame / 30,
     end: (c.startFrame + c.durationFrames) / 30,
     duration: c.durationFrames / 30,
-    speed: 1,
+    // TimelineClip.speed is a float for the donor UI; canonical keeps Rational.
+    speed: c.speed ? c.speed.num / c.speed.den : 1,
     sourceIn: c.sourceFrame / 30,
-    sourceOut: (c.sourceFrame + c.durationFrames) / 30,
+    // Retimed clips still map source span via speed (sourceOut = in + duration*speed).
+    sourceOut:
+      (c.sourceFrame +
+        Math.round(
+          c.durationFrames * (c.speed ? c.speed.num / c.speed.den : 1),
+        )) /
+      30,
     effect: null,
     soundEnabled: Boolean(c.sound?.enabled),
     volume:

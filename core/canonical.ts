@@ -93,6 +93,8 @@ const CanonicalClip = z
     fadeOutTicks: Ticks,
     // v3: embedded sound on video-track video clips only; null elsewhere.
     sound: CanonicalClipSound.nullable(),
+    // W9/M5: constant retime. Absent means 1/1 (no migration required).
+    speed: RationalSchema.optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -487,6 +489,7 @@ export function fromEditView(
         fadeInTicks: toTicks(c.fadeInFrames ?? 0),
         fadeOutTicks: toTicks(c.fadeOutFrames ?? 0),
         sound,
+        ...(c.speed ? { speed: c.speed } : {}),
       };
     }),
   });
@@ -578,6 +581,9 @@ export function toEditView(project: CanonicalProject): Project {
                 : {}),
             },
           }
+        : {}),
+      ...(c.speed && !(c.speed.num === 1 && c.speed.den === 1)
+        ? { speed: c.speed }
         : {}),
     })),
   });

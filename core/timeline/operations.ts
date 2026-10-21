@@ -27,6 +27,7 @@ import {
   resolveGroupMove,
   snapGroupEdges,
 } from "../donors/opencut/group-move/index.ts";
+import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
 
 // The widest snap an operation may ask for: one second.
 const MAX_SNAP_TICKS = 705_600_000;
@@ -126,6 +127,19 @@ export const OperationSchema = z.discriminatedUnion("type", [
       gainDb: z.number().min(-60).max(12).optional(),
       fadeInTicks: Ticks.optional(),
       fadeOutTicks: Ticks.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.setSpeed"),
+      clipId: Id,
+      // Rational source/timeline rate in [1/100, 5/1].
+      speed: z
+        .object({
+          num: z.number().int().positive().max(1_000_000),
+          den: z.number().int().positive().max(1_000_000),
+        })
+        .strict(),
     })
     .strict(),
   z.object({ type: z.literal("scene.add"), sceneId: Id, name: Name }).strict(),
@@ -464,6 +478,13 @@ function apply(p: CanonicalProject, op: Operation): void {
         c.sound.fadeInTicks,
         c.sound.fadeOutTicks,
       );
+      return;
+    }
+    case "clip.setSpeed": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (c.title !== null) throw invalid("Titles do not support retime.");
+      c.speed = clampRetimeRate({ rate: op.speed });
       return;
     }
     case "scene.add":

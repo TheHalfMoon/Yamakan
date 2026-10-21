@@ -18,3 +18,7 @@ Pinned OFL fonts remain under assets/fonts with notices/IBM-Plex-Sans-Arabic-OFL
 This file is an attribution notice, not a replacement for the source licenses.
 
 Darzain content-addressed byte storage and qualification tests reuse TheHalfMoon/Skelet, commit 5d4778636de8fbb3c8ef71efbfe46d473f8e97e3. Adoption is based on founder-provided authorization in the master directive. No repository license file was found in the inspected snapshot; no upstream open-source license is inferred. Source and modifications are recorded in docs/provenance/imports.json.
+
+OpenCut Classic retime (MIT) — see notices/OpenCut-LICENSE.
+Mediabunny 1.61.3 (MPL-2.0, unmodified npm) — notices/mediabunny-LICENSE.
+soundtouchjs 0.3.0 (LGPL-2.1, unmodified npm) — notices/soundtouchjs-LICENSE.
