@@ -165,3 +165,26 @@ test("cross-kind placement is refused", () => {
       e instanceof CommandError && /refused|kind|compatible/i.test(e.message),
   );
 });
+
+test("group move onto new tracks appends tracks of the member kinds", () => {
+  const v = title(id(50), videoA.id, 0, 20);
+  const before = projectWith([videoA, audioA], [v]);
+  const newId = id(51);
+  const after = applyBatch(before, [
+    {
+      type: "timeline.groupMove",
+      anchorClipId: v.id,
+      clipIds: [v.id],
+      anchorStartTicks: 40 * F30,
+      targetTrackId: videoA.id,
+      newTrackIds: [newId],
+      anchorInsertIndex: 0,
+    },
+  ]);
+  const created = after.tracks.find((t) => t.id === newId);
+  assert.ok(created);
+  assert.equal(created!.kind, "video");
+  assert.equal(after.tracks.at(-1)!.id, newId, "new track is appended");
+  assert.equal(after.clips.find((c) => c.id === v.id)!.trackId, newId);
+  assert.equal(after.clips.find((c) => c.id === v.id)!.startTicks, 40 * F30);
+});

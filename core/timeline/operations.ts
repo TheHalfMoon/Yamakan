@@ -657,9 +657,10 @@ function apply(p: CanonicalProject, op: Operation): void {
           "Group move refused (overlap, cross-kind, or no compatible tracks).",
         );
       for (const created of resolved.createTracks) {
+        // OpenCut's createTracks[].index is a SceneTracks display index, not a
+        // Yamakan flat-array index. Append in member order; kind stays correct.
         fresh(p, created.id);
-        const insertAt = Math.min(created.index, p.tracks.length);
-        p.tracks.splice(insertAt, 0, {
+        p.tracks.push({
           id: created.id,
           name: created.type === "audio" ? "Audio" : "Video",
           kind: created.type,
