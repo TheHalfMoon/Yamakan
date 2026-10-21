@@ -10,7 +10,7 @@ Baseline head at plan creation: `c6d10f7a82fc17c0d39e1536331b6287b2dfa99e`.
 | Q7b | Studio | Reducer seam | partial (host port) | Close if gaps |
 | Q8 | Studio | Real React host stroke | scaffolded / **fail** | **pass** or keep flag off |
 | Q9 | Studio | ≥90% inherited node tests | partial | **pass** or keep flag off |
-| Q10 | Studio | App chunk ≤2.5 MiB gz; stroke p95 ≤16 ms | not-run | **pass** or keep flag off |
+| Q10 | Studio | App chunk ≤2.5 MiB gz; stroke p95 ≤16 ms | not-run | **pass** @ evidence `q10-studio.json` (p95 7.7 ms; chunk 0.11 MiB) |
 | Q11 | JASSUB | ≤4 ms/frame; SSIM ≥0.95 | not-run | eng prep; enable blocked on H1 |
 | Q13 | Animation | Expression vs sampler parity | pass (W16) | Re-verify after wiring |
 | Q14 | Animation | Params closure | pass (W16) | Re-verify after wiring |

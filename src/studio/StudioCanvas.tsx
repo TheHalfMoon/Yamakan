@@ -7,13 +7,29 @@ type Props = {
   forceMount?: boolean;
 };
 
-/** Q8 measurement handle exposed only while forceMount is active. */
+/** Q8/Q10 measurement handle exposed only while forceMount is active. */
 export type YamakanStudioQ8Handle = {
   setBrushTool: () => void;
   getActiveTool: () => string;
   getLayerPixelEpoch: () => number;
   getDocumentEpoch: () => number;
   canUndo: () => boolean;
+  canRedo: () => boolean;
+  undo: () => void;
+  redo: () => void;
+  /** Replace host canvas with 4096² × 20-layer Q10 fixture; returns geometry. */
+  loadQ10Fixture: () => {
+    width: number;
+    height: number;
+    layerCount: number;
+    selectedLayerId: string | null;
+  };
+  getCanvasGeometry: () => {
+    width: number;
+    height: number;
+    layerCount: number;
+    selectedLayerId: string | null;
+  };
   sampleScreenPixel: (x: number, y: number) => number[] | null;
 };
 
@@ -44,7 +60,8 @@ export function StudioCanvas({ forceMount = false }: Props) {
     const assets = createStudioAssetStore();
     (async () => {
       try {
-        const { createCanvasEngine } = await import("./canvas-engine/engine.ts");
+        const { createCanvasEngine } =
+          await import("./canvas-engine/engine.ts");
         const { createStudioHostPort } = await import("./host/port.ts");
         const { canvasFromStudioDocument, newStudioSession } =
           await import("./host/documentStore.ts");
@@ -62,7 +79,8 @@ export function StudioCanvas({ forceMount = false }: Props) {
           projectId: session.document.id,
           mutationPort: port,
           uploadImage: (blob) => assets.uploadImage(blob),
-          uploadIntermediateImage: (blob) => assets.uploadIntermediateImage(blob),
+          uploadIntermediateImage: (blob) =>
+            assets.uploadIntermediateImage(blob),
           reportError: (report) => {
             setError(String(report.message));
           },
@@ -81,18 +99,48 @@ export function StudioCanvas({ forceMount = false }: Props) {
         };
 
         if (forceMount) {
-          const { interaction, tools } = composition.engine;
+          const { interaction, tools, history } = composition.engine;
+          const { createQ10StudioCanvasState } =
+            await import("./host/q10Fixture.ts");
+          const geometryOf = () => {
+            const canvas = port.getCanvasState();
+            const doc = canvas?.document;
+            const layerCount = doc
+              ? Object.values(doc.stacks).reduce(
+                  (n, roots) => n + roots.length,
+                  0,
+                )
+              : 0;
+            return {
+              width: doc?.width ?? 0,
+              height: doc?.height ?? 0,
+              layerCount,
+              selectedLayerId: doc?.selectedLayerId ?? null,
+            };
+          };
           window.__yamakanStudioQ8 = {
             setBrushTool: () => tools.setTool("brush"),
             getActiveTool: () => interaction.get("activeTool"),
             getLayerPixelEpoch: () => interaction.get("layerPixelEpoch"),
             getDocumentEpoch: () => interaction.get("documentEpoch"),
             canUndo: () => interaction.get("canUndo"),
+            canRedo: () => interaction.get("canRedo"),
+            undo: () => history.undo(),
+            redo: () => history.redo(),
+            loadQ10Fixture: () => {
+              port.replaceCanvas(createQ10StudioCanvasState(4096, 4096, 20));
+              return geometryOf();
+            },
+            getCanvasGeometry: () => geometryOf(),
             sampleScreenPixel: (x, y) => {
               const ctx = screen.getContext("2d");
               if (!ctx) return null;
-              const px = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1)
-                .data;
+              const px = ctx.getImageData(
+                Math.floor(x),
+                Math.floor(y),
+                1,
+                1,
+              ).data;
               return [px[0], px[1], px[2], px[3]];
             },
           };
@@ -156,9 +204,7 @@ export function StudioCanvas({ forceMount = false }: Props) {
         </p>
       ) : null}
       {!STUDIO_ENABLED && !forceMount ? (
-        <p data-testid="studio-disabled-reason">
-          {studioCapability().reason}
-        </p>
+        <p data-testid="studio-disabled-reason">{studioCapability().reason}</p>
       ) : null}
     </section>
   );

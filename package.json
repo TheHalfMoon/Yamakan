@@ -38,6 +38,7 @@
     "qualify:q14": "node scripts/qualify-q14-animation-params.ts",
     "qualify:q15": "node scripts/qualify-q15-user-presence.ts",
     "qualify:q8": "node scripts/qualify-q8-studio.mjs",
+    "qualify:q10": "node scripts/qualify-q10-studio.mjs",
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",
