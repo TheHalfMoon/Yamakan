@@ -218,9 +218,10 @@
     "original": "packages/storage/tests/storage.test.mjs",
     "imported": "tests/skelet-storage.test.mjs",
     "sha256": "55699dfdd4ca300e2b71eb2e8303fafac32bd0ba31addcfb94d80abbfd6acd4c",
-    "importedSha256": "0e8d6d0785377b0671ec5e71618f71a972602a4462d3b55fc4fbe458ad3ba2ba",
+    "importedSha256": "fbe681bf38bebb773007f17eb35cfac6a0ef7e92e98dd8f95a0885b57faf209f",
     "modifications": [
-      "Use Darzain module import; verify absolute generated temporary fixture paths before recursive cleanup on Windows; format test source."
+      "Use Darzain module import; verify absolute generated temporary fixture paths before recursive cleanup on Windows; format test source.",
+      "Module-level after hook removes mkdtemp fixture roots left by failed tests (Yamakan test temp cleanup)."
     ],
     "authorization": "Founder-provided authorization in the Darzain master directive. No repository license file was found in this pinned snapshot; no third-party license is inferred."
   },
