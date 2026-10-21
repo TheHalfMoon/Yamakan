@@ -6,7 +6,7 @@
 // editor or from an agent.
 import { z } from "zod";
 import { Id } from "../project.ts";
-import { Ticks, addTicks } from "../time.ts";
+import { Ticks, addTicks, rational } from "../time.ts";
 import { CanonicalProjectSchema } from "../canonical.ts";
 import type { CanonicalProject } from "../canonical.ts";
 import { CommandError } from "../command/errors.ts";
@@ -28,6 +28,12 @@ import {
   snapGroupEdges,
 } from "../donors/opencut/group-move/index.ts";
 import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
+import { getSourceTimeAtClipTime } from "../donors/opencut/retime/resolve.ts";
+
+const UNITY = rational(1, 1);
+function clipRetime(c: CanonicalProject["clips"][number]) {
+  return { rate: c.speed ?? UNITY };
+}
 
 // The widest snap an operation may ask for: one second.
 const MAX_SNAP_TICKS = 705_600_000;
@@ -353,7 +359,14 @@ function apply(p: CanonicalProject, op: Operation): void {
       const newEnd = op.endTicks ?? end(c);
       if (newEnd <= newStart) throw invalid("A clip must keep a duration.");
       const still = unsourced(p, c);
-      const source = still ? 0 : c.sourceStartTicks + (newStart - c.startTicks);
+      // Retimed clips advance source by rate×timeline delta, not 1:1 ticks.
+      const source = still
+        ? 0
+        : c.sourceStartTicks +
+          getSourceTimeAtClipTime({
+            clipTime: newStart - c.startTicks,
+            retime: clipRetime(c),
+          });
       if (!Number.isSafeInteger(source) || source < 0)
         throw invalid("Trim extends before the source.");
       placeable(p, c.trackId, newStart, newEnd - newStart, c.id);
@@ -398,7 +411,13 @@ function apply(p: CanonicalProject, op: Operation): void {
         durationTicks: c.durationTicks - first,
         sourceStartTicks: unsourced(p, c)
           ? 0
-          : addTicks(c.sourceStartTicks, first),
+          : addTicks(
+              c.sourceStartTicks,
+              getSourceTimeAtClipTime({
+                clipTime: first,
+                retime: clipRetime(c),
+              }),
+            ),
         fadeInTicks: 0,
         fadeOutTicks: Math.min(c.fadeOutTicks, c.durationTicks - first),
         sound: secondSound,

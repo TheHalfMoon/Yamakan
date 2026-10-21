@@ -83,6 +83,37 @@ test("compilePlan carries speed onto video and embedded sound layers", () => {
   assert.deepEqual(plan.audio[0]!.speed, rational(2, 1));
 });
 
+test("trim and split advance source by rate×timeline delta", () => {
+  const p = baseProject();
+  const clipId = p.clips[0]!.id;
+  const sped = applyBatch(fromEditView(p), [
+    { type: "clip.setSpeed", clipId, speed: { num: 2, den: 1 } },
+  ]);
+  const F = 23_520_000; // one frame at 30 fps
+  const trimmed = applyBatch(sped, [
+    {
+      type: "clip.trim",
+      clipId,
+      startTicks: 10 * F,
+      endTicks: 90 * F,
+    },
+  ]);
+  const c = trimmed.clips.find((x) => x.id === clipId)!;
+  // 10 frames of timeline at 2× → 20 frames of source.
+  assert.equal(c.sourceStartTicks, 20 * F);
+  const rightId = crypto.randomUUID();
+  const split = applyBatch(trimmed, [
+    {
+      type: "clip.split",
+      clipId,
+      atTicks: c.startTicks + 30 * F,
+      newClipId: rightId,
+    },
+  ]);
+  const right = split.clips.find((x) => x.id === rightId)!;
+  assert.equal(right.sourceStartTicks, 20 * F + 60 * F);
+});
+
 test("titles refuse retime", () => {
   const p = baseProject();
   const titleTrack = crypto.randomUUID();

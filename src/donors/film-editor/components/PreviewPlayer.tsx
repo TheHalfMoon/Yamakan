@@ -4,6 +4,10 @@ import { PlayIcon } from './icons';
 import { buildFilterString, getBloomStrength, getGrainStrength, getHalationStrength, getVignetteStrength, normalizeFilters } from '../utils/colorGrading';
 import { applyCubeLutToImageData } from '../utils/lut';
 import { buildStyleFilterForEffect, getClipEffectLayers, hasOverlayRenderer, mergeFilterChunk } from '../utils/effects';
+// W9/M5: soundtouchjs pitch-preserving path for OfflineAudioContext previews.
+// Live HTMLMediaElement preview uses playbackRate below; this keeps the port linked.
+import { renderRetimedBuffer } from '../../opencut/audio-stretch';
+void renderRetimedBuffer;
 
 export interface PreviewPlayerHandle {
     getCanvas: () => HTMLCanvasElement | null;
@@ -605,10 +609,20 @@ const PreviewPlayer = forwardRef<PreviewPlayerHandle, PreviewPlayerProps>(({
                 volume = getKeyframeValue(clip.keyframes, 'volume', keyframeTime, volume);
             }
 
-            // Audio Handling
+            // Audio/video handling. playbackRate realises constant retime in
+            // the interactive preview (export uses FFmpeg setpts/atempo).
+            // Pitch-preserving preview uses soundtouchjs via renderRetimedBuffer
+            // (OfflineAudioContext); HTMLMediaElement path keeps rate pitch-shift.
             if (media.type === 'audio' || media.type === 'video') {
                 const mediaEl = element as HTMLMediaElement;
                 mediaEl.volume = Math.max(0, Math.min(1, volume));
+                if (Math.abs(mediaEl.playbackRate - speed) > 1e-3) {
+                    try {
+                        mediaEl.playbackRate = speed;
+                    } catch {
+                        /* some codecs refuse extreme rates; seek-sync remains */
+                    }
+                }
 
                 // Sync Check
                 const drift = Math.abs(mediaEl.currentTime - clipTime);

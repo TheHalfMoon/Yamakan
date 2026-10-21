@@ -16,7 +16,10 @@ import type { PinnedFont } from "./render/fonts.ts";
 import { fontconfigEnv, stageTitleFonts } from "./render/fontconfig.ts";
 import { compileTitles } from "./render/ass.ts";
 import { titleCapability } from "./render/capability.ts";
-import { getSourceTimeAtClipTime } from "./donors/opencut/retime/resolve.ts";
+import {
+  getClipTimeAtSourceTime,
+  getSourceTimeAtClipTime,
+} from "./donors/opencut/retime/resolve.ts";
 import { atempoChain } from "./donors/opencut/retime/atempo.ts";
 import { rateAsFloat } from "./donors/opencut/retime/rate.ts";
 export type RenderJob = {
@@ -374,13 +377,15 @@ export async function renderPlan(
           "-t",
           span,
         ]);
-        // setpts compresses source time into the timeline window (speed>1 → faster).
-        // Do not shadow profile `rate` (used by fps= below).
+        // setpts maps source (after -ss offset-lead) into timeline time.
+        // Lead is compensated in clip time so preroll stays before `from`
+        // under every rate (matches the speed=1 form PTS+(from-lead)).
         const speed = rateAsFloat(layer.speed);
-        const setpts =
-          speed === 1
-            ? `setpts=PTS+(${from - lead})`
-            : `setpts=(PTS-STARTPTS)/${speed}+${from}`;
+        const leadClip = getClipTimeAtSourceTime({
+          sourceTime: lead,
+          retime: { rate: layer.speed },
+        });
+        const setpts = `setpts=(PTS-STARTPTS)/${speed}+(${from - leadClip})`;
         timed = `[${index}:v]trim=duration=${span},${flicks},${setpts}`;
       }
       filters.push(
