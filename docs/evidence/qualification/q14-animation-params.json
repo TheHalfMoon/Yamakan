@@ -1,0 +1,19 @@
+{
+  "qualification": "q14-animation-params",
+  "head": "53f6dab68b5c0bddd1bbfe7692a91966d64b4f07",
+  "animationEnabled": false,
+  "propertyRegistryIds": [
+    "transform.positionX",
+    "transform.positionY",
+    "transform.scaleX",
+    "transform.scaleY",
+    "transform.rotate",
+    "opacity",
+    "volume"
+  ],
+  "colorRoundTrip": "#ff0000",
+  "inheritedTests": "tests/animation-params.test.ts",
+  "verdict": "pass",
+  "method": "yamakan-property-registry",
+  "note": "Culori not pulled; hex linear-RGBA helpers in core/timeline/properties.ts."
+}

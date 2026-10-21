@@ -74,6 +74,13 @@ export const ClipSchema = z
       })
       .strict()
       .optional(),
+    // W16/M6: optional animation channel map (path → channel). Absent when unused.
+    animation: z
+      .record(z.string().min(1).max(120), z.unknown())
+      .refine((m) => Object.keys(m).length <= 32, {
+        message: "At most 32 animation channels per clip.",
+      })
+      .optional(),
   })
   .strict();
 const ShotSchema = z

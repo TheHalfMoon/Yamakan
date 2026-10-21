@@ -33,6 +33,8 @@
     "qualify:q1": "node scripts/qualify-q1-has-audio.ts",
     "qualify:q5": "node scripts/qualify-q5-mediabunny.mjs",
     "qualify:q6": "node scripts/qualify-q6-atempo.ts",
+    "qualify:q13": "node scripts/qualify-q13-animation.ts",
+    "qualify:q14": "node scripts/qualify-q14-animation-params.ts",
     "qualify:q15": "node scripts/qualify-q15-user-presence.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",

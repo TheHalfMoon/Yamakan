@@ -95,6 +95,14 @@ const CanonicalClip = z
     sound: CanonicalClipSound.nullable(),
     // W9/M5: constant retime. Absent means 1/1 (no migration required).
     speed: RationalSchema.optional(),
+    // W16/M6: OpenCut-shaped animation channel map (path → channel). Absent when unused.
+    // Validated loosely here; the animation module enforces keyframe structure when sampling.
+    animation: z
+      .record(z.string().min(1).max(120), z.unknown())
+      .refine((m) => Object.keys(m).length <= 32, {
+        message: "At most 32 animation channels per clip.",
+      })
+      .optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -490,6 +498,7 @@ export function fromEditView(
         fadeOutTicks: toTicks(c.fadeOutFrames ?? 0),
         sound,
         ...(c.speed ? { speed: c.speed } : {}),
+        ...(c.animation ? { animation: c.animation } : {}),
       };
     }),
   });
@@ -585,6 +594,7 @@ export function toEditView(project: CanonicalProject): Project {
       ...(c.speed && !(c.speed.num === 1 && c.speed.den === 1)
         ? { speed: c.speed }
         : {}),
+      ...(c.animation ? { animation: c.animation } : {}),
     })),
   });
 }
