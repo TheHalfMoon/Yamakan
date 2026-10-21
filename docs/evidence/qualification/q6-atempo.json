@@ -1,0 +1,50 @@
+{
+  "receipt": "yamakan.qualification/q6-atempo/1",
+  "qualification": "Q6",
+  "module": "M5",
+  "task": "W9",
+  "commit": "1c07e5fb7245e6a04a6e3b5862feb15dcf8e1ed0",
+  "measuredAt": "2026-10-21T07:22:29.496Z",
+  "sampleRate": 48000,
+  "toleranceAudioFrames": 1,
+  "toleranceSec": 0.000020833333333333333,
+  "rubberband": false,
+  "claim": "Export at 0.5×, 2× and 3/2× keeps timeline duration within ±1 audio frame via atempo.",
+  "ffmpegSha256": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+  "rows": [
+    {
+      "label": "0.5x",
+      "speed": {
+        "num": 1,
+        "den": 2
+      },
+      "expectedSec": 6,
+      "measuredSec": 6,
+      "deltaSec": 0,
+      "withinTolerance": true
+    },
+    {
+      "label": "2x",
+      "speed": {
+        "num": 2,
+        "den": 1
+      },
+      "expectedSec": 6,
+      "measuredSec": 6,
+      "deltaSec": 0,
+      "withinTolerance": true
+    },
+    {
+      "label": "1.5x",
+      "speed": {
+        "num": 3,
+        "den": 2
+      },
+      "expectedSec": 6,
+      "measuredSec": 6,
+      "deltaSec": 0,
+      "withinTolerance": true
+    }
+  ],
+  "passed": true
+}
