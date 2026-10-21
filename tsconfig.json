@@ -9,7 +9,52 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@workbench/canvas-engine/*": ["src/studio/canvas-engine/*"],
+      "@workbench/canvasProjectMutations": [
+        "src/studio/workbench/canvasProjectMutations.ts"
+      ],
+      "@workbench/canvasMigration": ["src/studio/workbench/canvasMigration.ts"],
+      "@workbench/canvasLoadContracts": [
+        "src/studio/workbench/canvasLoadContracts.ts"
+      ],
+      "@workbench/canvasSchemaVersion": [
+        "src/studio/workbench/canvasSchemaVersion.ts"
+      ],
+      "@workbench/mediaReferences": ["src/studio/workbench/mediaReferences.ts"],
+      "@workbench/panZoom": ["src/studio/workbench/panZoom.ts"],
+      "@workbench/projectEventContracts": [
+        "src/studio/workbench/projectEventContracts.ts"
+      ],
+      "@workbench/canvasProjectMutationPort": [
+        "src/studio/host/workbench/canvasProjectMutationPort.ts"
+      ],
+      "@workbench/controlAdapters": [
+        "src/studio/workbench/controlAdapters.ts"
+      ],
+      "@workbench/projectContracts": [
+        "src/studio/host/workbench/projectContracts.ts"
+      ],
+      "@workbench/projectEvents": ["src/studio/host/workbench/projectEvents.ts"],
+      "@workbench/canvasStagingView": [
+        "src/studio/workbench/canvasStagingView.ts"
+      ],
+      "@workbench/workbenchState": [
+        "src/studio/host/workbench/workbenchState.ts"
+      ],
+      "@workbench/workbenchStore": [
+        "src/studio/host/workbench/workbenchStore.ts"
+      ],
+      "@platform/browser/sha256": ["src/studio/platform/browser/sha256.ts"],
+      "@platform/core/json": ["src/studio/platform/core/json.ts"],
+      "@platform/ui/modalPresence": ["src/studio/platform/ui/modalPresence.ts"],
+      "@platform/browser/downloadBlob": [
+        "src/studio/host/platform/browser/downloadBlob.ts"
+      ],
+      "@features/gallery": ["src/studio/host/features/gallery.ts"]
+    }
   },
   "include": [
     "core",

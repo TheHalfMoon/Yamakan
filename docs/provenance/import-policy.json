@@ -4,7 +4,8 @@
     "src/donors",
     "core/donors",
     "src/studio/canvas-engine",
-    "src/studio/host",
+    "src/studio/workbench",
+    "src/studio/platform",
     "src/cinema",
     "core/director",
     "core/engines"
@@ -59,6 +60,13 @@
       "source": "calesthio/OpenMontage",
       "notices": [
         "notices/OpenMontage-LICENSE"
+      ]
+    },
+    {
+      "source": "invoke-ai/InvokeAI",
+      "notices": [
+        "notices/InvokeAI-LICENSE",
+        "notices/InvokeAI-NOTICE"
       ]
     }
   ],

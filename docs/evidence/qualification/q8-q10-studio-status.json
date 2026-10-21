@@ -1,0 +1,24 @@
+{
+  "qualification": ["Q8", "Q9", "Q10"],
+  "module": "M7",
+  "task": "W11",
+  "checkedAt": "2026-10-21",
+  "results": {
+    "Q8": {
+      "status": "scaffolded",
+      "detail": "StudioCanvas mounts createCanvasEngine behind host port (forceMount path). Full one-stroke browser proof deferred to enablement PR; STUDIO_ENABLED remains false.",
+      "passed": false
+    },
+    "Q9": {
+      "status": "partial",
+      "detail": "Vitest scoped to src/studio/**; boundaries.test.ts passes (2/2). Full 145 inherited node-mode suite not yet imported (production-only copy for Q7a).",
+      "passed": false
+    },
+    "Q10": {
+      "status": "not-run",
+      "detail": "Chunk/latency measurement requires enabled Studio mount. Proper Q7a vite gzip was 119.71 KiB for engine-only lib entry (under 2.5 MiB budget) but is not the Studio app chunk.",
+      "passed": false
+    }
+  },
+  "binding": "STUDIO_ENABLED stays false until Q8–Q10 pass on an exact head."
+}

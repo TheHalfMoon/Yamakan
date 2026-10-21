@@ -18,6 +18,12 @@ import {
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
 import { Scene3DSchema, saveScene3D } from "../scene3d.ts";
+import {
+  StudioDocumentSchema,
+  createEmptyStudioDocument,
+  saveStudioDocument,
+  studioCapability,
+} from "../studio.ts";
 import { ConsentPurposeSchema } from "../identity.ts";
 import {
   advanceStage,
@@ -605,6 +611,67 @@ export const commands = {
       })
       .strict(),
     run: (_ctx, a) => saveScene3D(a.scene),
+  }),
+  "yamakan.studio.capability": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Report Studio canvas availability (STUDIO_ENABLED / Q8–Q10 gate).",
+    input: z.object({}).strict(),
+    run: () => studioCapability(),
+  }),
+  "yamakan.studio.open": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Create an empty Studio document (durable project attach behind STUDIO_ENABLED).",
+    input: z
+      .object({
+        name: z.string().min(1).max(120).optional(),
+        width: z.number().int().positive().max(16384).optional(),
+        height: z.number().int().positive().max(16384).optional(),
+      })
+      .strict(),
+    run: (_ctx, a) => {
+      const document = createEmptyStudioDocument({
+        id: crypto.randomUUID(),
+        name: a.name ?? "Untitled studio",
+        width: a.width,
+        height: a.height,
+      });
+      return saveStudioDocument(document);
+    },
+  }),
+  "yamakan.studio.commit": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Validate and content-hash a Studio document revision (attach behind STUDIO_ENABLED).",
+    input: z
+      .object({
+        document: StudioDocumentSchema,
+      })
+      .strict(),
+    run: (_ctx, a) => saveStudioDocument(a.document),
+  }),
+  "yamakan.studio.export": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Return Studio document JSON and content hash for host-controlled export naming.",
+    input: z
+      .object({
+        document: StudioDocumentSchema,
+      })
+      .strict(),
+    run: (_ctx, a) => {
+      const saved = saveStudioDocument(a.document);
+      return {
+        contentHash: saved.contentHash,
+        format: saved.document.format,
+        canvasSchemaVersion: saved.document.canvasSchemaVersion,
+        studioEnabled: saved.studioEnabled,
+      };
+    },
   }),
   "yamakan.consent.grant": define({
     scope: "consent:grant",

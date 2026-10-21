@@ -37,6 +37,7 @@ import { openAssetPeaks } from "./media/demux.ts";
 import type { WaveformCache } from "./donors/film-editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
+import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type {
   Operation,
   OperationInput,
@@ -644,6 +645,9 @@ function App() {
             <section className="tools">
               <h1>{t("tools.title")}</h1>
               <p>{t("tools.intro")}</p>
+              <h2>{t("studio.title")}</h2>
+              <p>{t("studio.intro")}</p>
+              <StudioCanvas />
               <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
               {/* Shown here: a new tab would hold no session. */}
               <p>
