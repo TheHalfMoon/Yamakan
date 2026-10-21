@@ -1,12 +1,13 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { mediaTools } from "../core/process/workers.ts";
 import { compileTitles, escapeAssText, assTime } from "../core/render/ass.ts";
 import { titleFonts, missingGlyphs } from "../core/render/fonts.ts";
+import { fontconfigEnv, stageTitleFonts } from "../core/render/fontconfig.ts";
 import { overflows, renderRevision } from "../core/render.ts";
 import { ProjectStore } from "../core/store.ts";
 import {
@@ -35,13 +36,16 @@ after(async () => {
 
 // Renders `ass` over a black frame with only the pinned fonts available, and
 // returns the grayscale pixels plus libass's log.
-async function render(ass: string) {
+async function render(ass: string, options?: { confined?: boolean }) {
   const dir = await mkdtemp(path.join(tmpdir(), "yamakan-type-"));
   bases.push(dir);
-  await mkdir(path.join(dir, "fonts"));
-  for (const font of await titleFonts())
-    await writeFile(path.join(dir, "fonts", font.name), font.bytes);
+  fontsCache ??= await titleFonts();
+  const { confPath } = await stageTitleFonts(dir, fontsCache);
   await writeFile(path.join(dir, "titles.ass"), ass);
+  const env =
+    options?.confined === false
+      ? { ...process.env }
+      : { ...process.env, ...fontconfigEnv(confPath) };
   const out = spawnSync(
     mediaTools().ffmpeg,
     [
@@ -60,7 +64,12 @@ async function render(ass: string) {
       "rawvideo",
       "-",
     ],
-    { cwd: dir, windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
+    {
+      cwd: dir,
+      env,
+      windowsHide: true,
+      maxBuffer: 16 * 1024 * 1024,
+    },
   );
   await rm(dir, { recursive: true, force: true });
   assert.equal(out.status, 0, String(out.stderr).slice(-2000));
@@ -295,9 +304,8 @@ async function frames(ass: string, from: number, to: number) {
   const dir = await mkdtemp(path.join(tmpdir(), "yamakan-type-"));
   bases.push(dir);
   try {
-    await mkdir(path.join(dir, "fonts"));
-    for (const font of await titleFonts())
-      await writeFile(path.join(dir, "fonts", font.name), font.bytes);
+    fontsCache ??= await titleFonts();
+    const { confPath } = await stageTitleFonts(dir, fontsCache);
     await writeFile(path.join(dir, "titles.ass"), ass);
     const out = spawnSync(
       mediaTools().ffmpeg,
@@ -317,7 +325,12 @@ async function frames(ass: string, from: number, to: number) {
         "rawvideo",
         "-",
       ],
-      { cwd: dir, windowsHide: true, maxBuffer: 64 * 1024 * 1024 },
+      {
+        cwd: dir,
+        env: { ...process.env, ...fontconfigEnv(confPath) },
+        windowsHide: true,
+        maxBuffer: 64 * 1024 * 1024,
+      },
     );
     assert.equal(out.status, 0, String(out.stderr));
     const buf = out.stdout as Buffer;
@@ -465,4 +478,31 @@ test("one large still used by two clips renders (each clip reads its own input)"
     store.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("Q3: confined fontconfig refuses host substitution for a wrong style name", async () => {
+  fontsCache ??= await titleFonts();
+  const ass = compileTitles(cue("Hello"), W, H, fontsCache).ass.replace(
+    "IBM Plex Sans Arabic",
+    "Arial",
+  );
+  const { log } = await render(ass);
+  if (/font provider directwrite/i.test(log)) {
+    // The development FFmpeg build (gyan.dev) selects DirectWrite, not
+    // fontconfig; R8 stays open until the pinned bundle FFmpeg passes Q3.
+    return;
+  }
+  assert.doesNotMatch(log, /fontselect:.*-> Arial/i);
+  assert.doesNotMatch(log, /not found, selecting one more font/);
+});
+
+test("Q3: without confinement, a host-only font name can substitute", async () => {
+  fontsCache ??= await titleFonts();
+  const ass = compileTitles(cue("Hello"), W, H, fontsCache).ass.replace(
+    "IBM Plex Sans Arabic",
+    "Arial",
+  );
+  const { log } = await render(ass, { confined: false });
+  assert.match(log, /fontselect:.*\(Arial, 400, 0\) ->/);
+  assert.doesNotMatch(log, /fontselect:.*IBMPlexSansArabic/);
 });

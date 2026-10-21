@@ -4,11 +4,14 @@
 import { createHash } from "node:crypto";
 import {
   copyFile,
+  lstat,
   mkdir,
   readFile,
   readdir,
   rm,
+  rmdir,
   stat,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -31,6 +34,7 @@ export type BundleManifest = {
   version: string;
   builtAt: string;
   pinned: {
+    node: PinnedBinary;
     ffmpeg: PinnedBinary;
     ffprobe: PinnedBinary;
   };
@@ -45,14 +49,27 @@ export async function hashFile(file: string) {
   };
 }
 
+export async function resolvePinnedNode(): Promise<PinnedBinary> {
+  const sourcePath = process.execPath;
+  const hashed = await hashFile(sourcePath);
+  return {
+    sourcePath,
+    relativePath: "node/node.exe",
+    ...hashed,
+  };
+}
+
 export async function resolvePinnedMediaTools(): Promise<{
+  node: PinnedBinary;
   ffmpeg: PinnedBinary;
   ffprobe: PinnedBinary;
 }> {
   const tools = mediaTools();
+  const node = await resolvePinnedNode();
   const ffmpeg = await hashFile(tools.ffmpeg);
   const ffprobe = await hashFile(tools.ffprobe);
   return {
+    node,
     ffmpeg: {
       sourcePath: tools.ffmpeg,
       relativePath: "ffmpeg/ffmpeg.exe",
@@ -81,7 +98,11 @@ async function walk(dir: string, prefix = ""): Promise<string[]> {
 export async function buildManifest(
   versionDir: string,
   version: string,
-  pinned: { ffmpeg: PinnedBinary; ffprobe: PinnedBinary },
+  pinned: {
+    node: PinnedBinary;
+    ffmpeg: PinnedBinary;
+    ffprobe: PinnedBinary;
+  },
 ) {
   const files: BundleManifest["files"] = [];
   for (const rel of await walk(versionDir)) {
@@ -172,6 +193,21 @@ export async function rollback(root = installRoot(), confirm = true) {
   return target;
 }
 
+// Removes a version tree without following junctions or symlinks (W5).
+async function removeInstallTree(dir: string) {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const info = await lstat(full);
+    if (info.isSymbolicLink()) {
+      await unlink(full);
+      continue;
+    }
+    if (info.isDirectory()) await removeInstallTree(full);
+    else await unlink(full);
+  }
+  await rmdir(dir);
+}
+
 export async function uninstallBinaries(root = installRoot()) {
   const current = await readCurrentVersion(root);
   if (!current) return { removed: [] as string[] };
@@ -179,10 +215,10 @@ export async function uninstallBinaries(root = installRoot()) {
   for (const entry of await readdir(root, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const full = path.join(root, entry.name);
-    const info = await stat(full);
-    if (!info.isDirectory()) continue;
+    const info = await lstat(full);
     if (info.isSymbolicLink()) continue;
-    await rm(full, { recursive: true, force: true });
+    if (!info.isDirectory()) continue;
+    await removeInstallTree(full);
     removed.push(entry.name);
   }
   await rm(currentPointerPath(root), { force: true });
@@ -265,13 +301,20 @@ async function copyPinnedFonts(outDir: string) {
   }
 }
 
+async function copyPinnedNode(outDir: string, pinned: PinnedBinary) {
+  await mkdir(path.join(outDir, "node"), { recursive: true });
+  await copyFile(pinned.sourcePath, path.join(outDir, pinned.relativePath));
+}
+
 async function copyPinnedMedia(
   outDir: string,
   pinned: {
+    node: PinnedBinary;
     ffmpeg: PinnedBinary;
     ffprobe: PinnedBinary;
   },
 ) {
+  await copyPinnedNode(outDir, pinned.node);
   await mkdir(path.join(outDir, "ffmpeg"), { recursive: true });
   await copyFile(
     pinned.ffmpeg.sourcePath,

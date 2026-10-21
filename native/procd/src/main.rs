@@ -20,7 +20,7 @@
 //! is relayed to the service; no named object is ever opened.
 //!
 //! Protocol (tab-separated; strings and data are hex-encoded):
-//!   SPAWN id exe cwd jobMemoryBytes writableCount dir... readableCount path... argc arg...
+//!   SPAWN id exe cwd jobMemoryBytes writableCount dir... readableCount path... argc arg... envCount key value...
 //!       -> CREATED id pid       (suspended, inside its job)
 //!   RESUME id                   -> RESUMED id
 //!   KILL id                     -> (EXITED follows)
@@ -414,7 +414,7 @@ fn null_input() -> Result<Owned, String> {
     Ok(Owned(handle))
 }
 
-fn environment(temp: Option<&str>) -> Vec<u16> {
+fn environment(temp: Option<&str>, extra: &[(String, String)]) -> Vec<u16> {
     // A minimal, explicit environment: nothing from the service leaks
     // through. The worker's temporary folder is its own writable folder
     // (the user's is closed to the container), or none.
@@ -434,6 +434,12 @@ fn environment(temp: Option<&str>) -> Vec<u16> {
     if let Some(temp) = temp {
         add("TEMP", temp);
         add("TMP", temp);
+    }
+    for (key, value) in extra {
+        if key != "FONTCONFIG_FILE" {
+            continue;
+        }
+        add(key, value);
     }
     block.push(0);
     block
@@ -842,8 +848,30 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
         return Err("SPAWN needs argc".into());
     }
     let argc: usize = fields[0].parse().map_err(|_| "bad argc")?;
-    if argc > 4096 || fields.len() != 1 + argc {
+    if argc > 4096 || fields.len() < 1 + argc {
         return Err("argument count mismatch".into());
+    }
+    let mut idx = 1 + argc;
+    let mut extra_env: Vec<(String, String)> = Vec::new();
+    if idx < fields.len() {
+        let env_count: usize = fields[idx].parse().map_err(|_| "bad env count")?;
+        idx += 1;
+        if env_count > 8 || fields.len() != idx + env_count * 2 {
+            return Err("env pair count mismatch".into());
+        }
+        for _ in 0..env_count {
+            let key = hex_decode(fields[idx])?;
+            let val = hex_decode(fields[idx + 1])?;
+            idx += 2;
+            if key != "FONTCONFIG_FILE" {
+                return Err("env key is not allowlisted".into());
+            }
+            readable_path(&val)?;
+            extra_env.push((key, val));
+        }
+    }
+    if idx != fields.len() {
+        return Err("trailing spawn fields".into());
     }
     for dir in &writable {
         writable_dir(dir)?;
@@ -857,7 +885,7 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
     // The worker runs the container's copy of the allowlisted executable.
     let exe = container::staged_tool(&exe)?;
     let mut line = quote(&exe);
-    for field in &fields[1..] {
+    for field in &fields[1..1 + argc] {
         line.push(' ');
         line.push_str(&quote(&hex_decode(field)?));
     }
@@ -876,6 +904,9 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
         Ok(())
     };
     let granted = (|| -> Result<(), String> {
+        for (_, path) in &extra_env {
+            grant(path, 0, container::FILE_GENERIC_READ, &mut grants)?;
+        }
         for path in &readable {
             grant(path, 0, container::FILE_GENERIC_READ, &mut grants)?;
             // A folder's grant reaches only its existing files when each is
@@ -923,7 +954,16 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
             let _ = release_label(dir);
         }
     };
-    let result = launch(&exe, &cwd, &line, memory, &token, &capability, writable.first().map(String::as_str));
+    let result = launch(
+        &exe,
+        &cwd,
+        &line,
+        memory,
+        &token,
+        &capability,
+        writable.first().map(String::as_str),
+        &extra_env,
+    );
     match result {
         Ok((job, process)) => {
             if std::env::var("YAMAKAN_PROCD_FAULT").as_deref() == Ok("after-create") {
@@ -956,6 +996,7 @@ fn launch(
     token: &Owned,
     capability: &container::Sid,
     temp: Option<&str>,
+    extra_env: &[(String, String)],
 ) -> Result<(Owned, Launched), String> {
     unsafe {
         let job = Owned(CreateJobObjectW(null_mut(), std::ptr::null()));
@@ -1070,7 +1111,7 @@ fn launch(
             let exe_w = wide(exe);
             let cwd_w = wide(cwd);
             let mut command = wide(line);
-            let mut env = environment(temp);
+            let mut env = environment(temp, extra_env);
             if CreateProcessAsUserW(
                 token.0,
                 exe_w.as_ptr(),

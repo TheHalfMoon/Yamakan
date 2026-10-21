@@ -1,0 +1,24 @@
+{
+  "receipt": "yamakan.release-export-hashes/1",
+  "commit": "259db962f54ac934916da5abf6992f808d0265e8",
+  "measuredAt": "2026-10-21T03:29:20.384Z",
+  "export": {
+    "path": "exports/w7/export.mp4",
+    "sha256": "9e6f9469fd519670ea86775fde985e112195eeb3d721efa3dde8f9337cb7e93b",
+    "bytes": 6168,
+    "planHash": "5f96224d43dea03f42dfd371c268c2aa87584ff7235ffe5706c39bbcf029cb02",
+    "renderReceipt": {
+      "planHash": "5f96224d43dea03f42dfd371c268c2aa87584ff7235ffe5706c39bbcf029cb02",
+      "width": 1280,
+      "height": 720,
+      "durationFrames": 60,
+      "hasAudio": false,
+      "libassApi": 24133632
+    }
+  },
+  "canonical": {
+    "projectId": "350225e9-d267-47c6-b890-72b52ba1abd8",
+    "revision": 1,
+    "sha256": "b9e5ff6342283ccf23227cc3439c52f7207b2b09c85bcf523bbc56f06917a591"
+  }
+}

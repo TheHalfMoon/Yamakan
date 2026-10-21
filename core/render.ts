@@ -13,6 +13,7 @@ import { compilePlan } from "./render/plan.ts";
 import type { RenderPlan } from "./render/plan.ts";
 import { titleFonts } from "./render/fonts.ts";
 import type { PinnedFont } from "./render/fonts.ts";
+import { fontconfigEnv, stageTitleFonts } from "./render/fontconfig.ts";
 import { compileTitles } from "./render/ass.ts";
 import { titleCapability } from "./render/capability.ts";
 export type RenderJob = {
@@ -84,6 +85,7 @@ async function assertTitlesFit(
   const w = Math.ceil(width / FIT_SCALE);
   const h = Math.ceil(height / FIT_SCALE);
   const chunks: Buffer[] = [];
+  const confPath = path.join(dir, "fonts.conf");
   const result = await workers().run({
     executable: mediaTools().ffmpeg,
     args: [
@@ -102,7 +104,12 @@ async function assertTitlesFit(
       "-",
     ],
     cwd: dir,
-    readable: [path.join(dir, "measure.ass"), path.join(dir, "fonts")],
+    readable: [
+      path.join(dir, "measure.ass"),
+      path.join(dir, "fonts"),
+      confPath,
+    ],
+    workerEnv: fontconfigEnv(confPath),
     memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
     signal,
     stderrLimit: 8000,
@@ -241,6 +248,7 @@ export async function renderPlan(
     if (signal.aborted) throw new Error("Cancelled.");
     await mkdir(work, { recursive: true });
     let libassApi: number | null = null;
+    let titleFontconfig: Record<string, string> | undefined;
     if (plan.titles) {
       if (
         ass === null ||
@@ -263,12 +271,9 @@ export async function renderPlan(
           "RECOVERY_REQUIRED",
           "The plan was compiled with different title fonts.",
         );
-      await mkdir(path.join(dir, "fonts"));
-      for (const font of fonts)
-        await writeFile(path.join(dir, "fonts", font.name), font.bytes, {
-          flag: "wx",
-        });
+      const { confPath } = await stageTitleFonts(dir, fonts);
       await writeFile(path.join(dir, "titles.ass"), ass, { flag: "wx" });
+      titleFontconfig = fontconfigEnv(confPath);
       await assertTitlesFit(dir, plan, fonts, controller.signal);
     }
     const args = [
@@ -464,8 +469,14 @@ export async function renderPlan(
       writable: [work],
       // The title files exist exactly when the plan has titles.
       readable: plan.titles
-        ? [...readable, path.join(dir, "titles.ass"), path.join(dir, "fonts")]
+        ? [
+            ...readable,
+            path.join(dir, "titles.ass"),
+            path.join(dir, "fonts"),
+            path.join(dir, "fonts.conf"),
+          ]
         : readable,
+      workerEnv: titleFontconfig,
       memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
       signal: controller.signal,
       onCreated,
