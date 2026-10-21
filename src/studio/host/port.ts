@@ -1,10 +1,12 @@
 // Yamakan implementation of CanvasProjectMutationPort. SQLite revisions are
 // the only persistent authority; this port holds session canvas state only.
 import type { CanvasStateContractV3 } from "../canvas-engine/contracts";
+import type { CanvasProjectMutation } from "../canvas-engine/mutationContracts";
+import { applyCanvasProjectMutation } from "../workbench/canvasProjectMutations";
+import type { Project } from "./workbench/projectContracts";
 import type {
   CanvasEditIntent,
   CanvasMutationOrigin,
-  CanvasProjectMutation,
   CanvasProjectMutationPort,
 } from "./workbench/canvasProjectMutationPort";
 
@@ -16,12 +18,28 @@ export type StudioHostPort = CanvasProjectMutationPort & {
   /** Snapshot dirty marker for host commit coalescing. */
   isDirty(): boolean;
   clearDirty(): void;
+  getProject(): Project | null;
 };
+
+function projectFromCanvas(
+  id: string,
+  canvas: CanvasStateContractV3,
+): Project {
+  return {
+    id,
+    canvas,
+    events: [],
+    queue: { items: [] },
+  };
+}
 
 export function createStudioHostPort(
   initial: CanvasStateContractV3 | null = null,
+  projectId = "studio-session",
 ): StudioHostPort {
-  let canvas = initial;
+  let project: Project | null = initial
+    ? projectFromCanvas(projectId, initial)
+    : null;
   let dirty = false;
   const listeners = new Set<StudioPortListener>();
 
@@ -30,24 +48,28 @@ export function createStudioHostPort(
   };
 
   return {
-    getCanvasState: () => canvas,
+    getCanvasState: () => project?.canvas ?? null,
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    dispatch: (_mutation: CanvasProjectMutation, _origin?: CanvasMutationOrigin) => {
-      // Full mutation application is the adapted reducer seam (Q7b). Until that
-      // seam is wired for every mutation kind, structural no-ops stay false.
-      dirty = true;
-      notify();
-      return false;
+    dispatch: (mutation: CanvasProjectMutation, _origin?: CanvasMutationOrigin) => {
+      if (!project) return false;
+      try {
+        project = applyCanvasProjectMutation(project, mutation);
+        dirty = true;
+        notify();
+        return true;
+      } catch {
+        return false;
+      }
     },
     commitEdit: (_intent: CanvasEditIntent) => {
       dirty = true;
       notify();
     },
     replaceCanvas: (next) => {
-      canvas = next;
+      project = next ? projectFromCanvas(projectId, next) : null;
       dirty = true;
       notify();
     },
@@ -55,5 +77,6 @@ export function createStudioHostPort(
     clearDirty: () => {
       dirty = false;
     },
+    getProject: () => project,
   };
 }
