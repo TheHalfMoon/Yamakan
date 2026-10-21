@@ -208,12 +208,42 @@ test("a stored v1 canonical snapshot upgrades to v3; v1 with v2 fields is refuse
 
 test("a stored v2 canonical snapshot upgrades to v3 with embedded sound disabled", () => {
   const v3 = fromEditView(richView(), "ar");
+  const videoId = crypto.randomUUID();
+  v3.assets.push({
+    id: videoId,
+    name: "cam.mp4",
+    kind: "video",
+    hash: "c".repeat(64),
+    extension: "mp4",
+    bytes: 300,
+    durationTicks: 90 * 23_520_000,
+    width: 640,
+    height: 360,
+    timebase: null,
+    hasAudio: true,
+  });
+  v3.clips.push({
+    id: crypto.randomUUID(),
+    trackId: v3.tracks[0].id,
+    assetId: videoId,
+    startTicks: 0,
+    durationTicks: 30 * 23_520_000,
+    sourceStartTicks: 0,
+    title: null,
+    gainDb: 0,
+    fadeInTicks: 0,
+    fadeOutTicks: 0,
+    sound: { enabled: true, gainDb: 0, fadeInTicks: 0, fadeOutTicks: 0 },
+  });
   const v2 = JSON.parse(JSON.stringify(v3));
   v2.formatVersion = 2;
   for (const a of v2.assets) delete a.hasAudio;
   for (const c of v2.clips) delete c.sound;
   const parsed = parseCanonical(v2);
   assert.equal(parsed.formatVersion, 3);
-  assert.equal(parsed.assets[0].hasAudio, null);
-  for (const c of parsed.clips) assert.equal(c.sound, null);
+  assert.equal(parsed.assets.find((a) => a.id === videoId)?.hasAudio, null);
+  const migratedVideo = parsed.clips.find((c) => c.assetId === videoId)!;
+  assert.equal(migratedVideo.sound?.enabled, false);
+  for (const c of parsed.clips.filter((c) => c.assetId !== videoId))
+    assert.equal(c.sound, null);
 });

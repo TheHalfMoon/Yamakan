@@ -190,3 +190,27 @@ test("enabled video clip sound emits a second audio instruction; disabled does n
   assert.ok(embedded);
   assert.deepEqual([embedded!.gainDb, embedded!.fadeInTicks / F], [-3, 5]);
 });
+
+test("a muted picture track drops embedded video sound from the plan", async () => {
+  const fonts = await titleFonts();
+  const loud = view();
+  const overlay = "77777777-7777-4777-8777-777777777777";
+  loud.tracks.push({
+    id: overlay,
+    name: "Overlay",
+    kind: "video",
+    muted: false,
+    locked: false,
+  });
+  loud.clips[1].trackId = overlay;
+  loud.clips[0].sound = {
+    enabled: true,
+    gainDb: 0,
+    fadeInFrames: 0,
+    fadeOutFrames: 0,
+  };
+  loud.tracks[0].muted = true;
+  const audio = compilePlan(fromEditView(loud), SNAPSHOT, fonts).plan.audio;
+  assert.equal(audio.length, 1);
+  assert.equal(audio[0].assetSha256[0], "b");
+});

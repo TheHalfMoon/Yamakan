@@ -187,10 +187,14 @@ const ProjectBody = z
       const videoMedia =
         c.title === null && track?.kind === "video" && asset?.kind === "video";
       if (videoMedia) {
-        if (c.sound === null) fail("Video clips require sound settings.");
+        const sound = c.sound;
+        if (sound === null) {
+          fail("Video clips require sound settings.");
+          continue;
+        }
         if (
-          c.sound.enabled &&
-          c.sound.fadeInTicks + c.sound.fadeOutTicks > c.durationTicks
+          sound.enabled &&
+          sound.fadeInTicks + sound.fadeOutTicks > c.durationTicks
         )
           fail("Sound fades are longer than the clip.");
       } else if (c.sound !== null) fail("Sound applies to video clips only.");

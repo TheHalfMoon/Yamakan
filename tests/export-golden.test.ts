@@ -465,6 +465,57 @@ test(
       const onset = audioOnset(file);
       assert.ok(onset !== null && Math.abs(onset - 0.5) * 1000 <= 20);
       void saved;
+
+      const late = await ctx.store.create("Video sound late");
+      const lateImported = await ctx.store.importAsset(
+        late.id,
+        "tone-video.mp4",
+        await readFile(toneVideo),
+      );
+      const lateHead = await ctx.store.load(late.id);
+      await ctx.store.save(
+        {
+          ...lateHead,
+          width: W,
+          height: H,
+          clips: [
+            {
+              id: crypto.randomUUID(),
+              trackId: lateHead.tracks[0].id,
+              assetId: lateImported.asset.id,
+              startFrame: 0,
+              durationFrames: 105,
+              sourceFrame: 15,
+              title: null,
+              sound: {
+                enabled: true,
+                gainDb: 0,
+                fadeInFrames: 0,
+                fadeOutFrames: 0,
+              },
+            },
+          ],
+        },
+        lateHead.revision,
+      );
+      const lateJob = await ctx.supervisor.submit(late.id, "video-sound-late");
+      let lateState = ctx.supervisor.status(lateJob.id);
+      for (
+        let i = 0;
+        i < 1200 &&
+        !["COMPLETED", "FAILED", "CANCELLED"].includes(lateState.state);
+        i++
+      ) {
+        await new Promise((r) => setTimeout(r, 100));
+        lateState = ctx.supervisor.status(lateJob.id);
+      }
+      assert.equal(lateState.state, "COMPLETED", lateState.error ?? "");
+      const lateFile = await ctx.store.file(late.id, lateState.artifact!);
+      const lateOnset = audioOnset(lateFile);
+      assert.ok(
+        lateOnset === null || Math.abs(lateOnset - 0.5) * 1000 > 20,
+        `expected late onset, got ${lateOnset}`,
+      );
     } finally {
       await ctx.supervisor.close();
       ctx.store.close();

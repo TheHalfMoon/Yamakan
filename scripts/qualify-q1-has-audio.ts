@@ -12,8 +12,10 @@ const RECEIPT = "docs/evidence/qualification/q1-has-audio.json";
 const git = (...args: string[]) =>
   execFileSync("git", args, { encoding: "utf8" }).trim();
 const dirty = git("status", "--porcelain", "--", ".", `:!${RECEIPT}`);
-if (dirty && !process.env.YAMAKAN_QUALIFY_DIRTY)
+if (dirty)
   throw new Error(`Commit or stash changes before qualifying:\n${dirty}`);
+// Code measured at run time (receipt may be committed in a follow-up commit).
+const commit = git("rev-parse", "HEAD");
 
 const ffmpeg = (args: string[]) =>
   execFileSync(
@@ -137,7 +139,7 @@ try {
   const passed = rows.every((r) => r.match);
   const receipt = {
     receipt: "yamakan.qualification/q1-has-audio/1",
-    commit: git("rev-parse", "HEAD"),
+    commit,
     measuredAt: new Date().toISOString(),
     ffprobeSha256: createHash("sha256")
       .update(await readFile(mediaTools().ffprobe))
