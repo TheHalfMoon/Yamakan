@@ -28,7 +28,6 @@ import {
   snapGroupEdges,
 } from "../donors/opencut/group-move/index.ts";
 
-
 // The widest snap an operation may ask for: one second.
 const MAX_SNAP_TICKS = 705_600_000;
 
@@ -307,15 +306,11 @@ function apply(p: CanonicalProject, op: Operation): void {
       const asset =
         op.assetId === null
           ? null
-          : p.assets.find((a) => a.id === op.assetId) ?? null;
+          : (p.assets.find((a) => a.id === op.assetId) ?? null);
       if (op.title === null && op.assetId !== null && !asset)
         throw invalid("Clip asset is missing.");
       let sound: CanonicalProject["clips"][number]["sound"] = null;
-      if (
-        op.title === null &&
-        tr.kind === "video" &&
-        asset?.kind === "video"
-      )
+      if (op.title === null && tr.kind === "video" && asset?.kind === "video")
         sound = {
           enabled: asset.hasAudio === true,
           gainDb: 0,
@@ -397,10 +392,8 @@ function apply(p: CanonicalProject, op: Operation): void {
       c.durationTicks = first;
       c.fadeOutTicks = 0;
       c.fadeInTicks = Math.min(c.fadeInTicks, first);
-      if (c.sound)
-        c.sound.fadeOutTicks = 0;
-      if (c.sound)
-        c.sound.fadeInTicks = Math.min(c.sound.fadeInTicks, first);
+      if (c.sound) c.sound.fadeOutTicks = 0;
+      if (c.sound) c.sound.fadeInTicks = Math.min(c.sound.fadeInTicks, first);
       p.clips.push(second);
       // The new clip joins the same shot as the clip it came from.
       for (const s of p.scenes)

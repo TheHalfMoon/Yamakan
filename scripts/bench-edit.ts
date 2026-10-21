@@ -1,6 +1,6 @@
 // M3/M4 edit benchmarks (proposed targets in docs/research/rea-source-reuse/10).
- // Reports p95 for ripple and group-move; does not fail the build until
- // thresholds are frozen into qualification-policy.
+// Reports p95 for ripple and group-move; does not fail the build until
+// thresholds are frozen into qualification-policy.
 import { performance } from "node:perf_hooks";
 import {
   CanonicalProjectSchema,
@@ -96,7 +96,7 @@ measure("m3-ripple-delete", 50, () => {
 });
 
 // OpenCut group-move places one member per track (vertical stack). Pick the
- // first clip on each of eight video tracks.
+// first clip on each of eight video tracks.
 const stacked = base.tracks.slice(0, 8).map((t) => {
   const clip = base.clips.find(
     (c) => c.trackId === t.id && c.startTicks === 0,

@@ -1,6 +1,6 @@
 // Adapted from OpenCut Classic (MIT) apps/web/src/timeline/group-move/snap.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: snap adapters;
- // MediaTime helpers → addTicks; maxSnapDistance passed in (no zoom).
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: snap adapters;
+// MediaTime helpers → addTicks; maxSnapDistance passed in (no zoom).
 import { addTicks } from "../../../time.ts";
 import type { SceneTracks } from "../timeline-types.ts";
 import {

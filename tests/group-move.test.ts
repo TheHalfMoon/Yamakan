@@ -162,7 +162,6 @@ test("cross-kind placement is refused", () => {
         },
       ]),
     (e: unknown) =>
-      e instanceof CommandError &&
-      /refused|kind|compatible/i.test(e.message),
+      e instanceof CommandError && /refused|kind|compatible/i.test(e.message),
   );
 });

@@ -79,10 +79,7 @@ export function deleteClip(p: Project, clipId: string | null): Project {
 }
 
 /** Delete a clip and ripple later clips on unlocked tracks to close the gap. */
-export function rippleDeleteClip(
-  p: Project,
-  clipId: string | null,
-): Project {
+export function rippleDeleteClip(p: Project, clipId: string | null): Project {
   const c = p.clips.find((c) => c.id === clipId);
   if (!c || p.tracks.find((t) => t.id === c.trackId)?.locked) return p;
   return applyLocal(p, [{ type: "timeline.rippleDelete", clipId: c.id }]);

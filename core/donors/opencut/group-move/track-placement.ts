@@ -1,7 +1,7 @@
 // Adapted from OpenCut Classic (MIT)
- // apps/web/src/timeline/group-move/track-placement.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
- // adapters; TimelineTrack.type is video|audio.
+// apps/web/src/timeline/group-move/track-placement.ts
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
+// adapters; TimelineTrack.type is video|audio.
 import type { SceneTracks, TimelineTrack } from "../timeline-types.ts";
 import type { GroupTrackSection } from "./types.ts";
 

@@ -144,8 +144,7 @@ test("locked tracks are not shifted by ripple", () => {
   const before = baseProject([a, b]);
   before.tracks[0]!.locked = true;
   assert.throws(
-    () =>
-      applyBatch(before, [{ type: "timeline.rippleDelete", clipId: a.id }]),
+    () => applyBatch(before, [{ type: "timeline.rippleDelete", clipId: a.id }]),
     (e: unknown) => e instanceof CommandError && /locked/i.test(e.message),
   );
 });
@@ -173,10 +172,7 @@ test("Q4: ripple delete+insert conserves total duration and stays safe integers"
         durationTicks: 40 * frame,
       },
     ]);
-    const totalBefore = project.clips.reduce(
-      (s, c) => s + c.durationTicks,
-      0,
-    );
+    const totalBefore = project.clips.reduce((s, c) => s + c.durationTicks, 0);
     project = applyBatch(project, [
       { type: "timeline.rippleDelete", clipId: id(51) },
     ]);

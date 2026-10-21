@@ -1,6 +1,6 @@
 // Adapted from OpenCut Classic (MIT) apps/web/src/ripple/apply.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
- // adapters; integer flick ticks.
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
+// adapters; integer flick ticks.
 import type { SceneTracks, TimelineTrack } from "../timeline-types.ts";
 import { rippleShiftElements } from "./shift.ts";
 

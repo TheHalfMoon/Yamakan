@@ -1,10 +1,10 @@
 // Local timeline types for OpenCut Classic ports (ripple, group-move).
 // Mirrors the donor `@/timeline/types` fields these modules read, with
- // Yamakan integer flick ticks instead of wasm MediaTime.
+// Yamakan integer flick ticks instead of wasm MediaTime.
 //
 // SceneTracks keeps the donor overlay/main/audio shape so group-move track
 // placement stays close to the pin; Yamakan projects project into it via
- // `adapters.ts` (videos: first → main, rest → overlay; audios → audio).
+// `adapters.ts` (videos: first → main, rest → overlay; audios → audio).
 
 export type TrackKind = "video" | "audio";
 

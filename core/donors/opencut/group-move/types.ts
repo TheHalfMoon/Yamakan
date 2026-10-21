@@ -1,11 +1,7 @@
 // Adapted from OpenCut Classic (MIT) apps/web/src/timeline/group-move/types.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: MediaTime → flick
- // ticks; TrackType → video|audio; ElementRef from local timeline-types.
-import type {
-  ElementRef,
-  ElementType,
-  TrackKind,
-} from "../timeline-types.ts";
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: MediaTime → flick
+// ticks; TrackType → video|audio; ElementRef from local timeline-types.
+import type { ElementRef, ElementType, TrackKind } from "../timeline-types.ts";
 
 export type GroupTrackSection = "overlay" | "main" | "audio";
 

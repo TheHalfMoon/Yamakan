@@ -423,10 +423,12 @@
     "modifications": [
       "SceneTracks projected from Yamakan tracks via adapters; integer flick ticks; formatted for the repo."
     ],
-    "importedSha256": "24cb377ee484eebe15600c73f7d9865317abed73b180ccc5777510349e697bee",
+    "importedSha256": "338eaea8d4ab3f94593b5937262fcae87e3a690532c81e0754d826191800dc8a",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -438,10 +440,12 @@
     "modifications": [
       "Element ends use checked addTicks; shift amounts asserted Number.isSafeInteger; flick ticks."
     ],
-    "importedSha256": "6540a5357239694237991410575169f006a9735ff8352bed8479d1a154f78318",
+    "importedSha256": "ec36344bd93d5fcc21f77a40805e0086aaf71df2d2304cb3c48a6a719fa1ce5c",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -453,10 +457,12 @@
     "modifications": [
       "startTime updates via addTicks(start, -shiftAmount); signed shiftAmount allowed for insert."
     ],
-    "importedSha256": "9bc8782c743056897e213408979ad889a1b38fcdd5481e7a3eb8bf4810f0473e",
+    "importedSha256": "801b6b26096f43b513e2ae8f9beeb453d9707b9452dbe3297bcfb2e7b37ec224",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -465,11 +471,15 @@
     "original": "apps/web/src/ripple/index.ts",
     "imported": "core/donors/opencut/ripple/index.ts",
     "sha256": "9012aa42d40beac820efddfda4fccc3ea8e35bc1b11176145d0624d9e5841630",
-    "modifications": ["Re-exports use .ts extensions."],
-    "importedSha256": "addb3131eea5a4d0b9ba7e5005c10eb2818703a3503372c17e688e9a31c79eb9",
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
+    "importedSha256": "9bd8f4666644fb04472e6d2ff874d1936f6c133f09e72cf3fef63503efc5e36d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/ripple.test.ts"]
+    "tests": [
+      "tests/ripple.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -481,10 +491,12 @@
     "modifications": [
       "MediaTime → number (flick ticks); TrackType → video|audio; ElementRef from local timeline-types."
     ],
-    "importedSha256": "69ab1e2af99e41af6b18d64101156864c847a9d75cd6d416331cb6e1aa864609",
+    "importedSha256": "b5a5e0eda931ba204b97fff17f079ed7dd81bf7d765bd87851591432650397c7",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -493,11 +505,15 @@
     "original": "apps/web/src/timeline/group-move/track-placement.ts",
     "imported": "core/donors/opencut/group-move/track-placement.ts",
     "sha256": "e8b4a0a2d3de5c1d80ead54aa659822d4028d15388f97bac037086fd9fdfc0be",
-    "modifications": ["SceneTracks from Yamakan adapters; track.type is video|audio."],
-    "importedSha256": "ead0ebc577a04fea4aea64f6ff9440482a455657ed9a720cf21ef627f32eb867",
+    "modifications": [
+      "SceneTracks from Yamakan adapters; track.type is video|audio."
+    ],
+    "importedSha256": "2dd966b83e2d9b6ad15103c756f68805df5a045f6587ee380a072887eb7df683",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -509,10 +525,12 @@
     "modifications": [
       "findTrackInSceneTracks from adapters; subMediaTime → addTicks(a, -b)."
     ],
-    "importedSha256": "e9fc3a8698567d8ad3bd93032fd5e5e10a16fb18d3b1c89770ca8dd12a6c6bde",
+    "importedSha256": "ec5cf16a98594598859510ed8559233a4f80f7d82061471a12805d5cbdccbe40",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -524,10 +542,12 @@
     "modifications": [
       "Snap sources from adapters (edges, playhead; animation empty until M6); maxSnapDistance passed in (no zoom); MediaTime → addTicks."
     ],
-    "importedSha256": "b5deb0de3ef01a0fce1cc7a6dca104cc144a3535c8aa4bac4e4514e86ca31449",
+    "importedSha256": "dea818caac683d5a44900f0a4504a75fa28a235cad302729cb1efe1d9113aafa",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -539,10 +559,12 @@
     "modifications": [
       "MediaTime → flick ticks via addTicks; compatibility/overlap from adapters; overlap call maps startTime/duration to startTicks/durationTicks; donor main-track fill-from-zero clamp omitted (Yamakan has no such invariant)."
     ],
-    "importedSha256": "2797f570e3df8b97778aa408df7b2c1a35f1fc825701cf573b9e573c9c528e8e",
+    "importedSha256": "58a76a7198a99844bada071ab58fe8568d8017b6dde4662345edb2d9e912a87d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -551,10 +573,14 @@
     "original": "apps/web/src/timeline/group-move/index.ts",
     "imported": "core/donors/opencut/group-move/index.ts",
     "sha256": "276581b341b3499227d1cc97d83bb2d539be0a962aa5914a6c80c5c372762069",
-    "modifications": ["Re-exports use .ts extensions."],
-    "importedSha256": "5e71ed8773c62521ecdb66ca14b217feef535cb632d8b874717bf31345497173",
+    "modifications": [
+      "Re-exports use .ts extensions."
+    ],
+    "importedSha256": "7775a20be0c2c22692a03861424b6a220a7bb77935cddf0c899bddbbe2489a99",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": ["tests/group-move.test.ts"]
+    "tests": [
+      "tests/group-move.test.ts"
+    ]
   }
 ]

@@ -1,8 +1,8 @@
 // Adapted from OpenCut Classic (MIT)
- // apps/web/src/timeline/group-move/resolve-move.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: MediaTime → flick
- // ticks via addTicks; compatibility/overlap from local adapters; main-track
- // clamp kept for the projected primary video track.
+// apps/web/src/timeline/group-move/resolve-move.ts
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: MediaTime → flick
+// ticks via addTicks; compatibility/overlap from local adapters; main-track
+// clamp kept for the projected primary video track.
 import { addTicks } from "../../../time.ts";
 import type { SceneTracks } from "../timeline-types.ts";
 import { getTrackTypeForElementType } from "../adapters.ts";

@@ -1,6 +1,6 @@
 // Yamakan adapters for OpenCut group-move dependencies that are not copied
- // (M4): track lookup, placement compatibility, and snap sources. Animation
- // keyframe snaps stay empty until M6.
+// (M4): track lookup, placement compatibility, and snap sources. Animation
+// keyframe snaps stay empty until M6.
 import { addTicks } from "../../time.ts";
 import type { CanonicalProject } from "../../canonical.ts";
 import type { SnapPoint } from "./snapping.ts";
@@ -105,11 +105,7 @@ export function getElementEdgeSnapPoints({
   excludeElementIds: ReadonlySet<string>;
 }): SnapPoint[] {
   const points: SnapPoint[] = [];
-  for (const track of [
-    ...tracks.overlay,
-    tracks.main,
-    ...tracks.audio,
-  ]) {
+  for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
     for (const element of track.elements) {
       if (excludeElementIds.has(element.id)) continue;
       points.push({
@@ -149,11 +145,7 @@ export function applySceneTracksToProject(
   tracks: SceneTracks,
 ): void {
   const byId = new Map<string, { trackId: string; startTime: number }>();
-  for (const track of [
-    ...tracks.overlay,
-    tracks.main,
-    ...tracks.audio,
-  ]) {
+  for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
     if (track.id === EMPTY_MAIN.id) continue;
     for (const element of track.elements) {
       byId.set(element.id, {

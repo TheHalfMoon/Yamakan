@@ -1,7 +1,7 @@
 // Adapted from OpenCut Classic (MIT)
- // apps/web/src/timeline/group-move/build-group.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: findTrack adapter;
- // subMediaTime → addTicks(a, -b); flick ticks.
+// apps/web/src/timeline/group-move/build-group.ts
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: findTrack adapter;
+// subMediaTime → addTicks(a, -b); flick ticks.
 import { addTicks } from "../../../time.ts";
 import type { ElementRef, SceneTracks } from "../timeline-types.ts";
 import { findTrackInSceneTracks } from "../adapters.ts";

@@ -1,6 +1,6 @@
 // Adapted from OpenCut Classic (MIT) apps/web/src/ripple/diff.ts
- // @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
- // adapters; end times via checked addTicks; integer flick ticks.
+// @ cf5e79e919144200294fb9fed22a222592a0aeea. Yamakan: SceneTracks from
+// adapters; end times via checked addTicks; integer flick ticks.
 import { addTicks } from "../../../time.ts";
 import type { SceneTracks, TimelineElement } from "../timeline-types.ts";
 import type { RippleAdjustment } from "./apply.ts";
