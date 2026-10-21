@@ -47,6 +47,14 @@
     {
       "path": "core/donors/opencut/retime/atempo.ts",
       "reason": "Yamakan helper building FFmpeg atempo filter chains for rational rates (Q6); not from OpenCut."
+    },
+    {
+      "path": "core/engines/contract.ts",
+      "reason": "Yamakan-authored M13 engine adapter contract (W10); no donor copy."
+    },
+    {
+      "path": "core/engines/fake.ts",
+      "reason": "Yamakan-authored fake engine for cancel/fencing/quarantine tests (W10); no donor copy."
     }
   ],
   "excludedPaths": [

@@ -34,6 +34,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `scripts/qualify-resources.ts` writes `docs/evidence/qualification/resource-policy.json`, and `tests/resource-policy.test.ts` covers the behaviour above.
 - **Change rule:** a value changes only with a new policy version, a new entry here and a re-measurement. A threshold is never raised to make a run pass.
 
+## 2026-10-21: W10 Studio ADR and engine contract
+
+- **Authority:** frozen plan W10 / M7 measurement + M13 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 merged at `33a3cdc`.
+- **Decision:** Record Q7a **fail** (742 `tsc` errors on InvokeAI `ffe9e1a` webv2 canvas-engine in a throwaway TEMP tree). Do **not** select the primary engine for W11 copy. Land `core/engines/{contract,fake}.ts` with `ENGINE_ENABLED = false`; fake covers cancel, fencing retry, and probe quarantine. Q7b–Q10 not run (blocked on Q7a). ADR: `docs/adr/0003-studio-canvas-engine.md`.
+- **Evidence:** `docs/evidence/qualification/q7a-studio-tsc.json`; `tests/engines.test.ts`.
+- **Change rule:** a new Q7a pass (webv1 trial or reduced closure) is required before W11 copies engine sources.
+
 ## 2026-10-21: W9 Mediabunny waveform and OpenCut retime
 
 - **Authority:** frozen plan W9 / M14–M5 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W8 merged at `efdf591`.

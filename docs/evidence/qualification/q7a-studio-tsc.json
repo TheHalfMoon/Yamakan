@@ -1,0 +1,27 @@
+{
+  "qualification": "Q7a",
+  "module": "M7",
+  "task": "W10",
+  "checkedAt": "2026-10-21",
+  "donor": "invoke-ai/InvokeAI",
+  "pin": "ffe9e1a98b19640388d72f88ae0ecadf1bee1717",
+  "throwawayRoot": "%TEMP%/yamakan-w10-q7a-measure",
+  "toolchain": {
+    "typescript": "5.9.3",
+    "zod": "4.4.3"
+  },
+  "claim": "InvokeAI webv2 canvas-engine compiles under Yamakan TypeScript 5.9.3 with at most 50 ledgered syntax-only engine fixes.",
+  "result": "fail",
+  "errorCount": 742,
+  "filesWithErrors": 161,
+  "topCodes": {
+    "TS7006": 398,
+    "TS2307": 234,
+    "TS7031": 57,
+    "TS2305": 21,
+    "TS2339": 12
+  },
+  "binding": "Primary canvas-engine path not selected. webv1 controlLayers not present in this sparse checkout (webv2 only); interim ladder C. W11 blocked until a passing Q7a.",
+  "webv1ControlLayers": "not-present-in-sparse-checkout",
+  "passed": false
+}

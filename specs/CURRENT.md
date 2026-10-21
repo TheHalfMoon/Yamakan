@@ -4,11 +4,11 @@ Updated: 2026-10-21. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **Phase:** Frozen reuse plan active (Architecture B). Founder start authorization of 2026-10-21 covers Track 1 (W1–W7) and Track 2 (W8–W18) under [PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f` (tag `plan-freeze-2026-10-18`). Task cards: [08_IMPLEMENTATION_TASKS](../docs/research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `efdf591` (W8 OpenCut ripple/group-move). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`. Track 1 W1–W7 plus W5.1/W7.1, R8, and W8 merged. `qualify:release` green at `eaeaf1b` (247/249 tests, E2E; receipt committed).
+**Verified main:** `33a3cdc` (W9 Mediabunny + retime). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`. Track 1 W1–W7 plus W5.1/W7.1, R8, W8, and W9 merged. `qualify:release` green at `eaeaf1b` (247/249 tests, E2E; receipt committed).
 
 **M-gate:** **passed** at `eaeaf1b` (R1–R8 engineering on main with exact-head CI; `qualify:release` receipt committed). R6/R7 **residuals for release only** (not M-gate): Windows installer / Profile A launch-time bundle verify; MCP/UI parity transcript and clean Profile A evidence re-run. Human gates H1–H5 still block release. **Release verdict: NO-GO.**
 
-**Next eligible:** Track 2 W10 (Studio ADR + engine contract) after W9 merges. W9 in flight on `feat/w9-mediabunny-retime`.
+**Next eligible:** Track 2 W10 (Studio ADR + engine contract). W11 blocked until a passing Q7a. W13+ may proceed in parallel where prerequisites allow.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
