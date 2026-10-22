@@ -23,6 +23,12 @@ OpenCut Classic retime (MIT) — see notices/OpenCut-LICENSE.
 Mediabunny 1.61.3 (MPL-2.0, unmodified npm) — notices/mediabunny-LICENSE.
 soundtouchjs 0.3.0 (LGPL-2.1, unmodified npm) — notices/soundtouchjs-LICENSE.
 
+JASSUB 2.5.20 (ThaUnknown/jassub dea3d2d398569a591cf0c767d945d84e9f120484),
+unmodified npm. SPDX: LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT
+AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0.
+Yamakan elects GPL-2.0-or-later for FreeType; fribidi stays LGPL-replaceable.
+See notices/jassub-LICENSE and notices/jassub-NOTICE.
+
 ArtCraft (storytold/artcraft) camera math, scene JSON types, and adapted
 CameraController: Apache-2.0 OR MIT, pin 28a39a0de4a2fc2eccc237df2046c24245bd12ab.
 Licence texts and NOTICE: notices/ArtCraft-LICENSE-MIT,

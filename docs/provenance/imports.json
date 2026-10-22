@@ -6182,5 +6182,28 @@
     ],
     "license": "Apache-2.0",
     "owner": "studio builder"
+  },
+  {
+    "source": "ThaUnknown/jassub",
+    "sha": "dea3d2d398569a591cf0c767d945d84e9f120484",
+    "authorization": "public-licence",
+    "original": "LICENSE",
+    "imported": "notices/jassub-LICENSE",
+    "sha256": "f300758600ecf59b736407f80f6dc8338a9879a062c6bcb16cc739d14814ec75",
+    "importedSha256": "f300758600ecf59b736407f80f6dc8338a9879a062c6bcb16cc739d14814ec75",
+    "modifications": [],
+    "tests": [
+      "tests/jassub-preview.test.ts"
+    ],
+    "license": "LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0",
+    "owner": "media builder",
+    "npm": {
+      "package": "jassub",
+      "version": "2.5.20",
+      "integrity": "sha512-uUE0YoUnw/pdgFVoefRN0leLu5iFS39hfOikouCqHUffLCAU3wqRU5VkpBbY1piV8WWlFcHCz3HEPzvyxbAJTw==",
+      "runtime": "unmodified node_modules/jassub (no source copy into Yamakan trees)",
+      "freeTypeElection": "GPL-2.0-or-later",
+      "notice": "notices/jassub-NOTICE"
+    }
   }
 ]

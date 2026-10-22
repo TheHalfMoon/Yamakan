@@ -1,15 +1,83 @@
 {
   "qualification": "Q11_JASSUB_ENG",
   "task": "P10-07",
-  "checkedAt": "2026-10-22T04:05:27.370Z",
-  "gitHead": "6cc6838506558d756c8ff7b9166d9bda14c1743c",
+  "checkedAt": "2026-10-22T06:03:14.254Z",
+  "gitHead": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
   "jassubEnabled": false,
+  "h1Signed": false,
+  "engComplete": true,
+  "eng": {
+    "npmPin": "jassub@2.5.20",
+    "gitPin": "dea3d2d398569a591cf0c767d945d84e9f120484",
+    "lockfileIntegrity": "sha512-uUE0YoUnw/pdgFVoefRN0leLu5iFS39hfOikouCqHUffLCAU3wqRU5VkpBbY1piV8WWlFcHCz3HEPzvyxbAJTw==",
+    "notices": [
+      "notices/jassub-LICENSE",
+      "notices/jassub-NOTICE"
+    ],
+    "provenanceLedger": "docs/provenance/imports.json (ThaUnknown/jassub)",
+    "constructionRefusesWhenDisabled": true,
+    "forcedOptions": {
+      "queryFonts": false,
+      "defaultFont": "ibm plex sans arabic",
+      "availableFontKeys": [
+        "ibm plex sans arabic"
+      ],
+      "libassMemoryLimit": 64,
+      "libassGlyphLimit": 10000
+    },
+    "productionCspUnchanged": true,
+    "jassubEnabled": false
+  },
   "performanceClaimed": false,
   "ssimClaimed": false,
-  "h1Signed": false,
-  "npmPinStatus": "not-installed-pending-notices",
+  "perf": {
+    "measured": true,
+    "budgetMsPerFrame": 4,
+    "budgetSsim": 0.95,
+    "msPerFrame": 15.62,
+    "maxMsPerFrame": 41,
+    "timesMs": [
+      18.8,
+      41,
+      11.4,
+      3.9,
+      3
+    ],
+    "ssimByFixture": {
+      "punctuation": 0.4003,
+      "bidi-isolates": 0.9951,
+      "diacritics": 0.9966,
+      "mixed-lines": 0.9978,
+      "latin-only": 0.9982
+    },
+    "minSsim": 0.4003,
+    "budgetsMet": false,
+    "method": "playwright-msedge + locally rewritten non-threaded jassub (bare imports → /nm/); qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
+    "qualifyOnlyCspIncludesWasmUnsafeEval": true,
+    "productionCspHasWasmUnsafeEval": false,
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "detail": "Q11 budgets NOT met (mean 15.620 ms/frame, min SSIM 0.4003); keep server libass reference still.",
+    "fixtures": [
+      "punctuation",
+      "bidi-isolates",
+      "diacritics",
+      "mixed-lines",
+      "latin-only"
+    ],
+    "resolution": "1280x720"
+  },
+  "npmPinStatus": "installed-jassub@2.5.20",
   "targetPin": "jassub@2.5.20 (dea3d2d3)",
-  "cspWasmUnsafeEval": "not-applied",
+  "cspWasmUnsafeEval": "not-applied-in-production",
+  "enablementBlockedOn": [
+    "H1-native-arabic-review",
+    "CSP-wasm-unsafe-eval-security-review",
+    "Q11-perf-or-ssim-budget"
+  ],
+  "fallback": "server-libass-reference-still",
+  "publicRelease": "NO-GO",
   "passed": true,
-  "detail": "Engineering gate only: flag false, preview construction refuses, H1 unsigned, no Q11 perf/SSIM claim."
+  "detail": "Engineering complete; Q11 budgets not claimed (Q11 budgets NOT met (mean 15.620 ms/frame, min SSIM 0.4003); keep server libass reference still.); JASSUB_ENABLED remains false; server reference still primary."
 }

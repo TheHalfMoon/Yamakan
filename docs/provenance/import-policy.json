@@ -42,6 +42,13 @@
       ]
     },
     {
+      "source": "ThaUnknown/jassub",
+      "notices": [
+        "notices/jassub-LICENSE",
+        "notices/jassub-NOTICE"
+      ]
+    },
+    {
       "source": "storytold/artcraft",
       "notices": [
         "notices/ArtCraft-LICENSE-MIT",
