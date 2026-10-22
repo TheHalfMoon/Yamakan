@@ -4,17 +4,17 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **Phase:** **P10 — Qualification, Activation, and Release Readiness** (Architecture B preserved). Founder P10 authorization of 2026-10-21 covers qualifying and activating already-merged Track 1/Track 2 capabilities under [P10 master plan](../docs/plans/P10-qualification-activation/MASTER_PLAN.md). Frozen plan W1–W18 remains the capability baseline ([PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f`, tag `plan-freeze-2026-10-18`). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `7472a06858308def0638c6daf38a2cc72a718a86` (P10-05/06 Lab+Router; post-merge CI [39645507559](https://github.com/TheHalfMoon/Yamakan/actions/runs/39645507559) SUCCESS). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 remains H1-blocked). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`.
+**Verified main:** `6cc6838506558d756c8ff7b9166d9bda14c1743c` (P10-03/04 Cinema+Director via #64; post-merge CI [39719917065](https://github.com/TheHalfMoon/Yamakan/actions/runs/39719917065) SUCCESS). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 remains H1-blocked). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`.
 
 **M-gate:** **passed** at `eaeaf1b`. R6/R7 residuals and human gates H1–H5 still block release. **Release verdict: NO-GO.**
 
-**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), audio unlink / loudnorm / Flow. **Cinema / Director:** local activation E2E PASS on `feat/p10-03-cinema-docs` (`CINEMA_ENABLED` / `DIRECTOR_ENABLED` true; AI camera and model stages stay unsupported). **Providers / Animation / JASSUB / engines:** false until their gates pass.
+**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported preview/persist; AI camera off), `DIRECTOR_ENABLED` (manual framework-smoke; model stages off), audio unlink / loudnorm / Flow. **Providers / Animation / JASSUB / engines:** false until their gates pass.
 
-**Next eligible:** Merge Cinema+Director after exact-head CI and independent reviews; then Animation UI→render only if E2E-ready; W12 eng+H1 packet (unsigned); Windows bundle R6; R6/R7 evidence. No new W19+ without founder decision.
+**Next eligible:** Animation UI→render only if genuine E2E-ready; W12 eng+H1 packet (unsigned); Windows bundle R6; R6/R7 evidence. No new W19+ without founder decision.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P10-03/04 Cinema + Director activation         | **Local E2E PASS** (`feat/p10-03-cinema-docs`) | `cinema-activation.json` / `director-activation.json`; flags true; AI/model stages off |
+| P10-03/04 Cinema + Director activation         | **Merged** (#64, `6cc68385`) | `CINEMA_ENABLED`/`DIRECTOR_ENABLED` true; activation E2E + UUID path gate; AI/model stages off |
 | P10-05/06 Quality Lab + Router explain         | **Merged** (#63, `7472a06`)  | `QUALITY_LAB_ENABLED=true`; providers false; `p10-05-quality-lab.json` |
 | P10-02 Animation residual                      | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; `ANIMATION_ENABLED=false` |
 | P10-01 Studio activation                       | **Merged** (#61, `65451bd`)  | `STUDIO_ENABLED=true` |
