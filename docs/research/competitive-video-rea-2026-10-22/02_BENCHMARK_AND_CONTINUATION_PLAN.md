@@ -1,8 +1,8 @@
 # Yamakan — Reproducible Competitor Benchmark and REA Continuation Protocol
-**Status:** research protocol PROPOSED; no independent model-vs-model experiment run.  
+**Status:** research protocol **LOCKED** for future runs; REA-01–06 **CLOSED as research deliverables** in this package; **no** independent model-vs-model experiment run.  
 **Date:** 2026-10-22.  
 **Baseline:** a3c3ce91815aee35ce5b91b4a483dd85766a4429.  
-**Read first:** [01_COMPETITOR_AND_SOURCE_REA.md](01_COMPETITOR_AND_SOURCE_REA.md).
+**Read first:** [00_INDEX.md](00_INDEX.md), [01_COMPETITOR_AND_SOURCE_REA.md](01_COMPETITOR_AND_SOURCE_REA.md).
 
 ## Principle: superiority is a test result, not a build target
 There is no rational meaning of "100% better than Higgsfield and every other tool" without defining tasks, versions, sample generation, time/cost budget, and quality metrics. Higgsfield, Runway and Kling sell different products and aggregate multiple model backends. **Never fill missing scores with guesses or assign points for a feature based solely on a vendor marketing statement.** All currently unverified AI-generation cells are UNKNOWN/NOT TESTED.
@@ -32,46 +32,18 @@ For each competitor and Yamakan, measure the same job to completion on the same 
 9. Propose win declaration per category only when Yamakan achieves required thresholds and superiority with confidence, supported by same-task matched evidence. For example: >50% blind preference with conservative 95% lower bound >50% on specified population. Other dimensions have separately stated pass/fail. Never infer a global 100% win from a subset.
 10. Avoid API spend and model downloads until budget/hardware/source approvals. Public demo artifacts may inform capability mapping but cannot serve as matched blind benchmark evidence.
 
-## 2. Deep source REA backlog — ready for Cursor/Opus investigation, NOT implementation
-R = Research exact source, E = Extract qualified narrow algorithm/contract, A = Adapt to Yamakan if authorized later.
+## 2. Deep source REA backlog — closure status (research deliverables)
 
-### REA-01: Product reality map
-- Freeze Higgsfield Cinema Studio, Soul ID, Canvas, Supercomputer, Marketing Studio, CLI/MCP; Runway Agent/Aleph/catalog/MCP; Kling video/motion/Canvas; Luma Ray3 Modify; one conventional NLE baseline.
-- For every feature record: confirmed official docs URL/date, what the feature actually does, inputs/outputs, paid/free/offline availability, exact tested version, evidence grade (documentation, demo, independently executed).
-- No reliance on contradictory marketing counts such as "30 seconds" vs "one minute" without version-specific resolution.
-- Deliver: PRODUCT_CAPABILITY_MATRIX.csv and PRODUCT_EVIDENCE.md; unresolved cells explicit.
+| ID | Topic | Status | Deliverable in this package |
+| --- | --- | --- | --- |
+| REA-01 | Product reality map | **CLOSED (research)** | [05_PRODUCT_CAPABILITY_MATRIX.md](05_PRODUCT_CAPABILITY_MATRIX.md) + §1 of [01](01_COMPETITOR_AND_SOURCE_REA.md); API-verified HF Cinema 4.0 / Runway catalog / Kling map 2026-10-20 / Luma Ray-2 |
+| REA-02 | ComfyUI ↔ EngineAdapter | **CLOSED (research)** | [03](03_SOURCE_TRANSPLANT_AND_COPY_VS_BUILD.md) §1; pin `1a82e6d…`; adapter tests listed; **no code integration** |
+| REA-03 | Open model qualification | **CLOSED (research)** | [03](03_SOURCE_TRANSPLANT_AND_COPY_VS_BUILD.md) §§2–7; first candidate Wan **ti2v-5B**; CogVideoX-2B alternate; LTX/Hunyuan DEFER; **no downloads** |
+| REA-04 | Cinema / consistency gap | **CLOSED (research)** | [04](04_TARGET_ARCHITECTURE_AND_ROADMAP.md) §§4–5; metadata ≠ conditioning; control compiler planned |
+| REA-05 | Editorial agent | **CLOSED (research)** | [04](04_TARGET_ARCHITECTURE_AND_ROADMAP.md) §7; reuse command registry; no new authority |
+| REA-06 | Benchmarks / reviews | **PROTOCOL LOCKED; runs NOT EXECUTED** | Categories A–G below; D1/Alibaba/PStack/Graft **NOT RUN** (honest absence) |
 
-### REA-02: ComfyUI engine contract, code-level closure
-- Pin currently checked source 1a82e6d01f395b43275c77acd289af1eb7090bb9.
-- Inspect server.py: prompt submission, job history/status/cancel, uploads/views, WS; execution.py scheduler/cache, node graph schema; nodes.py/related validators; security boundaries of custom nodes, paths and authentication.
-- Trace call graph for one allowed request; identify exact source files, dependency closure, entrypoints and ability to run WITHOUT shared state in Yamakan.
-- Compare against core/engines/contract.ts: job IDs, typed inputs, sha256 checks, allowlisted class_type, cancel/idempotency/fencing, output verification/quarantine.
-- Deliver exact file/line/function transplant candidate matrix + threat model + red/green tests, not a whole-app copy proposal. **Do not run arbitrary Comfy custom nodes.**
-
-### REA-03: Open video-model candidate qualification
-- Start with Wan2.2 TI2V-5B/T2V-A14B/I2V-A14B; compare Diffusers wrapper and official generate.py; inspect config, schedulers, VAE, memory management, runtime and model-card licenses.
-- Independently review LTX-2.5 audio-video and keyframe capabilities; note LTX Community licenses and >20B model resource needs.
-- Optionally consider HunyuanVideo-1.5 and Wan-Animate for character motions only after resource and license evaluation.
-- For each: repo+pin+code path, license including WEIGHTS, inference hardware minima, memory/disk, sample commands, reproducible prompt/seed/output fields, supported controls, latency, test plan and blockers.
-- NO assumption that proprietary Wan3.0 API/catalog item is an available open-source checkpoint. Public Wan GitHub source reviewed here was Wan2.2.
-- Deliver MODEL_SELECTION_MATRIX, WEIGHT_RESOURCE_BUDGET, DATA_AND_RIGHTS_LEDGER. No checkpoint downloads.
-
-### REA-04: Cinema control and consistency gap
-- Trace the exact Yamakan camera and Director metadata flow; differentiate editable optics metadata from conditioned AI video generation.
-- REA candidates for shot-by-shot references, first/last frame, pose/depth/control, consistent character and location, audio and shot stitching.
-- Build prototype TEST FIXTURES ONLY after research permission; no generative model activation.
-- Require measured reference adherence and output fidelity, not "camera field exists" PASS.
-
-### REA-05: Fully automated editorial agent
-- Research competitor brief-to-storyboard-to-multi-shot pipeline, human approvals, resumable retry and corrections.
-- Reuse Yamakan's typed command registry, durable jobs and project revisions. Define planning/approval/shot/media registry without new authority.
-- Evaluate full brief→editable-scene/timeline→export→reopen journey, with counters for intervention and evidence.
-
-### REA-06: Benchmarks and independent review
-- Standard prompts + ethically sourced reference assets, blinded matchups, VBench-2.0 18 dims (where feasible), human scores, anti-cherry-picking.
-- Every evidence cell labels TESTED / DOCUMENTED / INFERRED / BLOCKED / UNKNOWN.
-- Run static REA and architecture/security review with local D1, Alibaba OCR if actually configured, PStack, Graft, E2E as appropriate; never fabricate a result.
-- Deliver reproducible harness SPEC and compact 3-way scorecard, not competitive ranking claims.
+**Still open (require compute/spend/F):** live paid competitor generations; local weight inference; blind human study; official VBench GPU evaluators.
 
 ## 3. Proposed architecture if founder later authorizes implementation
 1. **Yamakan Studio/Timeline remains canonical**. A user creates a script and scene, chooses source assets and allowed engine capability; generates into a separate immutable content-addressed media object, attaches via typed operations, then edits/exports deterministically.
@@ -87,26 +59,27 @@ Founder-authorized Windows QA machine reported Intel UHD Graphics, no nvidia-smi
 Rights: the founder attests permission to copy/adapt/rebrand source code, but that does not automatically grant access to a closed platform's private backend, weights, paid compute or waive mandatory open-source attribution. Preserve license records and source notice hashes when integrating.
 
 ## 5. Decision and sequencing
-**Current verdict:** Research can start now; **not a GO for real inference model deployment or a public release**.
+**Current verdict:** Competitive REA **research package complete**; **not a GO** for real inference deployment or public release.
 
-Recommended priorities:
-- R1: full **product comparison** and verified feature matrix (high value, no spending).
-- R2: ComfyUI **engine-adapter** closure + E-SEC preflight against current Yamakan contracts.
-- R3: Wan2.2 **first open checkpoint candidate** + LTX2.5 alternate; resource and license feasibility. No automatic downloads.
-- R4: a **matched benchmark protocol** with reliable consent-safe samples and blind scoring.
-- R5: REA findings → engineering milestones with actual acceptance and release gates; seek explicit founder F/G/model-weight authorization before implementing generation.
+Completed in #85 (this package):
+- R1 product comparison + graded matrix  
+- R2 ComfyUI adapter research closure (no integration)  
+- R3 Wan TI2V-5B first candidate + CogVideoX-2B alternate; LTX deferred  
+- R4 matched benchmark protocol locked  
+- R5 architecture/roadmap + outperform/gap/path  
 
-After these, if research proves feasibility, open a **separate engineering plan PR** for founder approval. Do not reopen closed P10 or claim release is ready. Report hard NO-GO if quality/hardware/resource limitations cannot be overcome under the no-cost constraint.
+**Next (separate PR, still flag-off until F):** E0–E2 adapter + containment design under E-SEC; Category A edit expansion (no engine). Do not reopen closed P10. Public release **NO-GO**.
 
 ## 6. Definition of done for REA
-- Every current first-party product capability and non-feature is represented without hype.
-- All competitor claims have dated links, limitations and evidence levels.
-- At least ComfyUI, Wan2.2, LTX-2, Diffusers, VBench have pinned source plans and module-level import/reuse decision, with binary/weights/license boundaries.
-- Concrete architecture diff and risks tied to Yamakan code files.
-- Same-task fair benchmark plan + optional consent-safe real tests if available at **zero authorized cost**.
-- Exactly what would prove a win, what remains UNKNOWN, and what cannot currently be compared.
-- Reproducible code/commands/fixtures only if actually run; no fabricated metrics or reviews.
-- A plan ready for a separate explicit implementation decision; zero unwanted feature activation or public deployment.
+- [x] First-party capabilities represented without hype ([05](05_PRODUCT_CAPABILITY_MATRIX.md), [06](06_OUTPERFORM_GAPS_AND_PATH.md)).
+- [x] Competitor claims dated with official API links and evidence grades ([01](01_COMPETITOR_AND_SOURCE_REA.md), [05](05_PRODUCT_CAPABILITY_MATRIX.md)).
+- [x] ComfyUI, Wan2.2, LTX-2, Diffusers, VBench, CogVideo pinned with copy-vs-build ([03](03_SOURCE_TRANSPLANT_AND_COPY_VS_BUILD.md)).
+- [x] Architecture tied to `core/engines/contract.ts` and authority rules ([04](04_TARGET_ARCHITECTURE_AND_ROADMAP.md)).
+- [x] Fair benchmark protocol locked (Categories A–G above).
+- [x] Win/UNKNOWN/cannot-compare explicit ([06](06_OUTPERFORM_GAPS_AND_PATH.md)).
+- [x] No fabricated metrics/reviews; D1/Alibaba/Graft recorded as NOT RUN.
+- [x] Zero engine enablement; public release NO-GO.
+- [ ] Live paid or local model benchmarks — **deferred** pending F/compute/spend.
 
 ## Current baseline references
 - https://github.com/TheHalfMoon/Yamakan/blob/main/core/engines/contract.ts
