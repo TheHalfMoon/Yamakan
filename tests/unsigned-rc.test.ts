@@ -30,7 +30,9 @@ test("assertSafeUnsignedRcInstallRoot refuses Program Files", () => {
 });
 
 test("packUnsignedRc writes marker and layout (and zip on Windows)", async () => {
-  const outBase = await mkdtemp(path.join(tmpdir(), "yamakan-unsigned-rc-pack-"));
+  const outBase = await mkdtemp(
+    path.join(tmpdir(), "yamakan-unsigned-rc-pack-"),
+  );
   bases.push(outBase);
   const artifact = await packUnsignedRc("1.0.0-unsigned-rc", outBase);
   assert.equal(artifact.kind, "unsigned-rc");
@@ -43,9 +45,7 @@ test("packUnsignedRc writes marker and layout (and zip on Windows)", async () =>
   );
   assert.match(marker, /NOT a public release/i);
   assert.match(marker, /NOT code-signed/i);
-  assert.ok(
-    artifact.manifest.files.some((f) => f.path === UNSIGNED_RC_MARKER),
-  );
+  assert.ok(artifact.manifest.files.some((f) => f.path === UNSIGNED_RC_MARKER));
   if (process.platform === "win32") {
     assert.ok(artifact.zipPath);
     const zipStat = await stat(artifact.zipPath!);
@@ -60,17 +60,21 @@ test("unsigned RC install → launch-verify → update → rollback → uninstal
   const outBase = await mkdtemp(
     path.join(tmpdir(), "yamakan-unsigned-rc-life-"),
   );
-  const root = await mkdtemp(
-    path.join(tmpdir(), "yamakan-unsigned-rc-root-"),
-  );
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-unsigned-rc-root-"));
   bases.push(outBase, root);
 
-  const v1 = await packUnsignedRc("1.0.0-unsigned-rc", path.join(outBase, "v1"));
+  const v1 = await packUnsignedRc(
+    "1.0.0-unsigned-rc",
+    path.join(outBase, "v1"),
+  );
   await installUnsignedRcFromLayout(v1.layoutDir, "1.0.0-unsigned-rc", root);
   assert.equal(await readCurrentVersion(root), "1.0.0-unsigned-rc");
   await launchVerifyUnsignedRc(root);
 
-  const v2 = await packUnsignedRc("1.0.1-unsigned-rc", path.join(outBase, "v2"));
+  const v2 = await packUnsignedRc(
+    "1.0.1-unsigned-rc",
+    path.join(outBase, "v2"),
+  );
   await installUnsignedRcFromLayout(v2.layoutDir, "1.0.1-unsigned-rc", root);
   assert.equal(await readCurrentVersion(root), "1.0.1-unsigned-rc");
   await verifyInstalledBinaries(root);

@@ -445,7 +445,8 @@ export async function scaffoldDevBundle(outDir: string, version: string) {
 }
 
 export function unsignedRcInstallRoot(base = process.env.LOCALAPPDATA) {
-  if (!base) throw new Error("LOCALAPPDATA is required for unsigned RC install.");
+  if (!base)
+    throw new Error("LOCALAPPDATA is required for unsigned RC install.");
   return path.join(base, UNSIGNED_RC_INSTALL_DIRNAME);
 }
 
@@ -501,12 +502,18 @@ async function writeUnsignedRcMarker(outDir: string, version: string) {
 
 function zipUnsignedRcLayout(layoutDir: string, zipPath: string) {
   if (process.platform !== "win32") {
-    throw new Error("ZIP packaging for unsigned RC is Windows-only (PowerShell Compress-Archive).");
+    throw new Error(
+      "ZIP packaging for unsigned RC is Windows-only (PowerShell Compress-Archive).",
+    );
   }
   if (existsSync(zipPath)) {
     execFileSync(
       "powershell.exe",
-      ["-NoProfile", "-Command", `Remove-Item -LiteralPath ${JSON.stringify(zipPath)} -Force`],
+      [
+        "-NoProfile",
+        "-Command",
+        `Remove-Item -LiteralPath ${JSON.stringify(zipPath)} -Force`,
+      ],
       { windowsHide: true },
     );
   }
@@ -525,7 +532,9 @@ export async function extractUnsignedRcZip(
   destDir: string,
 ): Promise<string> {
   if (process.platform !== "win32") {
-    throw new Error("Unsigned RC ZIP extract is Windows-only (PowerShell Expand-Archive).");
+    throw new Error(
+      "Unsigned RC ZIP extract is Windows-only (PowerShell Expand-Archive).",
+    );
   }
   await mkdir(destDir, { recursive: true });
   const ps = `
