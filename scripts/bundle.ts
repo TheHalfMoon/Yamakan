@@ -1,8 +1,13 @@
 // Windows distributable bundle (W5): pinned runtime layout, manifest hashes,
 // install/update/rollback/uninstall. Code signing and auto-update servers are
 // intentionally out of scope.
+//
+// P10-08 residual: unsigned RC packaging (zip + per-user test install root) is
+// allowed for internal/test use. It is NOT a release installer, NOT signed,
+// and must NOT claim Profile A or public ship.
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import {
   copyFile,
   lstat,
@@ -24,6 +29,10 @@ import { TITLE_FONT } from "../core/render/fonts.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const BUNDLE_FORMAT = "yamakan.bundle/1";
+/** Marker file name written into every unsigned RC artifact. */
+export const UNSIGNED_RC_MARKER = "UNSIGNED-RC.txt";
+/** Default per-user test root — distinct from production installRoot(). */
+export const UNSIGNED_RC_INSTALL_DIRNAME = "Yamakan-unsigned-rc";
 
 export type PinnedBinary = {
   sourcePath: string;
@@ -435,8 +444,197 @@ export async function scaffoldDevBundle(outDir: string, version: string) {
   return manifest;
 }
 
+export function unsignedRcInstallRoot(base = process.env.LOCALAPPDATA) {
+  if (!base)
+    throw new Error("LOCALAPPDATA is required for unsigned RC install.");
+  return path.join(base, UNSIGNED_RC_INSTALL_DIRNAME);
+}
+
+/** Refuse admin/system install locations for unsigned RC test installs. */
+export function assertSafeUnsignedRcInstallRoot(root: string) {
+  // Use win32 semantics so Linux CI can still assert Windows protected paths.
+  const resolved = path.win32.resolve(root);
+  const lower = resolved.toLowerCase();
+  const blocked = [
+    process.env.ProgramFiles,
+    process.env["ProgramFiles(x86)"],
+    process.env.ProgramW6432,
+    process.env.SystemRoot,
+    process.env.windir,
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\Windows",
+  ]
+    .filter(Boolean)
+    .map((p) => path.win32.resolve(p!).toLowerCase());
+  for (const prefix of blocked) {
+    if (lower === prefix || lower.startsWith(prefix + path.win32.sep)) {
+      throw new Error(
+        `Unsigned RC install root must not be under a protected system path (${prefix}). Use a per-user test root such as %LOCALAPPDATA%\\${UNSIGNED_RC_INSTALL_DIRNAME}.`,
+      );
+    }
+  }
+  return path.resolve(root);
+}
+
+export type UnsignedRcArtifact = {
+  kind: "unsigned-rc";
+  version: string;
+  layoutDir: string;
+  zipPath: string | null;
+  manifest: BundleManifest;
+  claims: {
+    release: false;
+    signed: false;
+    profileA: false;
+  };
+};
+
+async function writeUnsignedRcMarker(outDir: string, version: string) {
+  const body = [
+    "Yamakan UNSIGNED release-candidate (RC) bundle artifact",
+    "",
+    "This is NOT a public release. It is NOT code-signed.",
+    "Do not claim Profile A or a ship decision from this artifact.",
+    `version: ${version}`,
+    `format: ${BUNDLE_FORMAT}`,
+    `builtAt: ${new Date().toISOString()}`,
+    "",
+  ].join("\n");
+  await writeFile(path.join(outDir, UNSIGNED_RC_MARKER), body, "utf8");
+}
+
+function zipUnsignedRcLayout(layoutDir: string, zipPath: string) {
+  if (process.platform !== "win32") {
+    throw new Error(
+      "ZIP packaging for unsigned RC is Windows-only (PowerShell Compress-Archive).",
+    );
+  }
+  if (existsSync(zipPath)) {
+    execFileSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Remove-Item -LiteralPath ${JSON.stringify(zipPath)} -Force`,
+      ],
+      { windowsHide: true },
+    );
+  }
+  // Compress contents (not the parent folder name) so Expand-Archive yields the layout files.
+  const ps = `
+    $ErrorActionPreference = 'Stop'
+    Compress-Archive -Path (Join-Path ${JSON.stringify(layoutDir)} '*') -DestinationPath ${JSON.stringify(zipPath)} -Force
+  `;
+  execFileSync("powershell.exe", ["-NoProfile", "-Command", ps], {
+    windowsHide: true,
+  });
+}
+
+export async function extractUnsignedRcZip(
+  zipPath: string,
+  destDir: string,
+): Promise<string> {
+  if (process.platform !== "win32") {
+    throw new Error(
+      "Unsigned RC ZIP extract is Windows-only (PowerShell Expand-Archive).",
+    );
+  }
+  await mkdir(destDir, { recursive: true });
+  const ps = `
+    $ErrorActionPreference = 'Stop'
+    Expand-Archive -LiteralPath ${JSON.stringify(zipPath)} -DestinationPath ${JSON.stringify(destDir)} -Force
+  `;
+  execFileSync("powershell.exe", ["-NoProfile", "-Command", ps], {
+    windowsHide: true,
+  });
+  return destDir;
+}
+
+/**
+ * Pack an unsigned RC artifact from the existing scaffold layout/manifest.
+ * Produces a directory under dist-unsigned-rc/<version>/layout and, on Windows, a ZIP.
+ */
+export async function packUnsignedRc(
+  version: string,
+  outBase = path.join(ROOT, "dist-unsigned-rc", version),
+): Promise<UnsignedRcArtifact> {
+  const layoutDir = path.join(outBase, "layout");
+  await rm(outBase, { recursive: true, force: true });
+  await mkdir(layoutDir, { recursive: true });
+  const scaffolded = await scaffoldDevBundle(layoutDir, version);
+  await writeUnsignedRcMarker(layoutDir, version);
+  // Drop scaffold manifest, rebuild so UNSIGNED-RC.txt is in files[] and
+  // bundle.manifest.json itself is written after the walk (same as scaffold).
+  await rm(path.join(layoutDir, "bundle.manifest.json"), { force: true });
+  const pinned = {
+    node: scaffolded.pinned.node,
+    ffmpeg: scaffolded.pinned.ffmpeg,
+    ffprobe: scaffolded.pinned.ffprobe,
+  };
+  const withMarker = await buildManifest(layoutDir, version, pinned);
+  await writeFile(
+    path.join(layoutDir, "bundle.manifest.json"),
+    JSON.stringify(withMarker, null, 2),
+    "utf8",
+  );
+  let zipPath: string | null = null;
+  if (process.platform === "win32") {
+    zipPath = path.join(outBase, `yamakan-unsigned-rc-${version}.zip`);
+    zipUnsignedRcLayout(layoutDir, zipPath);
+  }
+  return {
+    kind: "unsigned-rc",
+    version,
+    layoutDir,
+    zipPath,
+    manifest: withMarker,
+    claims: { release: false, signed: false, profileA: false },
+  };
+}
+
+export async function installUnsignedRcFromLayout(
+  layoutDir: string,
+  version: string,
+  root: string,
+) {
+  assertSafeUnsignedRcInstallRoot(root);
+  const marker = path.join(layoutDir, UNSIGNED_RC_MARKER);
+  if (!existsSync(marker)) {
+    throw new Error(
+      `Refusing install: missing ${UNSIGNED_RC_MARKER}. Use pack-unsigned-rc artifacts only.`,
+    );
+  }
+  return installVersion(layoutDir, version, root);
+}
+
+/** Install from a packed ZIP into a safe test root (Windows). */
+export async function installUnsignedRcFromZip(
+  zipPath: string,
+  version: string,
+  root: string,
+) {
+  assertSafeUnsignedRcInstallRoot(root);
+  const extractRoot = await mkdtemp(
+    path.join(tmpdir(), "yamakan-unsigned-rc-extract-"),
+  );
+  try {
+    await extractUnsignedRcZip(zipPath, extractRoot);
+    return await installUnsignedRcFromLayout(extractRoot, version, root);
+  } finally {
+    await rm(extractRoot, { recursive: true, force: true });
+  }
+}
+
+/** Same check server/main.ts runs when YAMAKAN_BUNDLE_INSTALL is set. */
+export async function launchVerifyUnsignedRc(root: string) {
+  assertSafeUnsignedRcInstallRoot(root);
+  return verifyInstalledBinaries(root);
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
-  const [cmd = "scaffold", version = "0.0.0-dev"] = process.argv.slice(2);
+  const [cmd = "scaffold", version = "0.0.0-dev", ...rest] =
+    process.argv.slice(2);
   const out = path.join(ROOT, "dist-bundle", version);
   if (cmd === "scaffold") {
     const manifest = await scaffoldDevBundle(out, version);
@@ -451,6 +649,42 @@ if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
           manifest,
           launchHint:
             "Set YAMAKAN_BUNDLE_INSTALL to the install root before npm start to verify pinned binaries at launch.",
+        },
+        null,
+        2,
+      ),
+    );
+  } else if (cmd === "pack-unsigned-rc") {
+    const rcVersion = version.includes("unsigned")
+      ? version
+      : `${version}-unsigned-rc`;
+    const artifact = await packUnsignedRc(rcVersion);
+    console.log(JSON.stringify(artifact, null, 2));
+  } else if (cmd === "install-unsigned-rc") {
+    const layoutOrZip = rest[0];
+    const root = rest[1] || unsignedRcInstallRoot();
+    if (!layoutOrZip) {
+      throw new Error(
+        "Usage: bundle.ts install-unsigned-rc <version> <layoutDir|zipPath> [installRoot]",
+      );
+    }
+    const rcVersion = version.includes("unsigned")
+      ? version
+      : `${version}-unsigned-rc`;
+    const st = await stat(layoutOrZip);
+    const manifest = st.isDirectory()
+      ? await installUnsignedRcFromLayout(layoutOrZip, rcVersion, root)
+      : await installUnsignedRcFromZip(layoutOrZip, rcVersion, root);
+    console.log(
+      JSON.stringify(
+        {
+          kind: "unsigned-rc",
+          installRoot: path.resolve(root),
+          version: rcVersion,
+          claims: { release: false, signed: false, profileA: false },
+          manifest,
+          launchHint:
+            "Set YAMAKAN_BUNDLE_INSTALL to the unsigned RC install root before npm start.",
         },
         null,
         2,
