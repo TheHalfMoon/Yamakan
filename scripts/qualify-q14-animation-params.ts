@@ -7,7 +7,7 @@ import {
   parseColorToLinearRgba,
   formatLinearRgba,
 } from "../core/timeline/properties.ts";
-import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 
 execFileSync(process.execPath, ["--test", "tests/animation-params.test.ts"], {
   stdio: "inherit",

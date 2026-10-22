@@ -19,16 +19,16 @@ import { titleCapability } from "./render/capability.ts";
 import {
   getClipTimeAtSourceTime,
   getSourceTimeAtClipTime,
-} from "./donors/opencut/retime/resolve.ts";
-import { atempoChain } from "./donors/opencut/retime/atempo.ts";
-import { rateAsFloat } from "./donors/opencut/retime/rate.ts";
+} from "./retime/resolve.ts";
+import { atempoChain } from "./retime/atempo.ts";
+import { rateAsFloat } from "./retime/rate.ts";
 import {
   applyPassFilter,
   measurePassFilter,
   parseLoudnormJson,
 } from "./audio/loudnorm.ts";
 import { withMeasuredLoudnorm } from "./render/plan.ts";
-import { ANIMATION_ENABLED } from "./donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "./animation/flags.ts";
 import {
   opacityFilterChain,
   renderableAnimationChannels,

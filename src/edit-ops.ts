@@ -8,7 +8,7 @@ import { fromEditView, toEditView } from "../core/canonical.ts";
 import { applyBatch, clampFades } from "../core/timeline/operations.ts";
 import type { Operation } from "../core/timeline/operations.ts";
 import type { ClipAnimation } from "../core/timeline/animation-schema.ts";
-import type { TimelineClip } from "./donors/film-editor/types";
+import type { TimelineClip } from "./editor/types";
 
 // Flicks per frame of the 30 fps edit view.
 export const FRAME_TICKS = 23_520_000;

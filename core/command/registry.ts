@@ -8,7 +8,7 @@ import {
 import { Ticks } from "../time.ts";
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
-import { canonicalJson, sha256Hex } from "../donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import type { JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
 import { RESOURCE_POLICY } from "./policy.ts";
@@ -986,7 +986,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Evaluate Ascout-style review lineage independence (concepts only).",
+      "Evaluate review lineage independence (concepts only).",
     input: z
       .object({
         author: z

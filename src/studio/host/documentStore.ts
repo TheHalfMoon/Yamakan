@@ -41,7 +41,7 @@ export function newStudioSession(name = "Untitled studio"): {
   const canvas = createEmptyCanvasState(1024, 1024);
   const document = createEmptyStudioDocument({ id, name, width: 1024, height: 1024 });
   document.canvasJson = JSON.stringify(canvas);
-  // Do not call hashStudioDocument here: core/donors/ninerr uses node:crypto,
+  // Do not call hashStudioDocument here: core/hash uses node:crypto,
   // which Vite externalizes and is not available in the browser bundle.
   // Durable hashes are computed on the service when committing studio.* commands.
   return { document, contentHash: "session-unhashed" };

@@ -26,11 +26,11 @@ import {
   SCENE3D_FORMAT,
   SCENE3D_FORMAT_VERSION,
   SCENE3D_LIMITS,
-  artCraftItemsFromScene3D,
+  cinemaItemsFromScene3D,
   parseScene3D,
   saveScene3D,
   scene3dContentHash,
-  scene3dFromArtCraft,
+  scene3dFromCinemaJson,
 } from "../core/scene3d.ts";
 import { execute, type CommandContext } from "../core/command/registry.ts";
 
@@ -117,7 +117,7 @@ test("free-cam math stays finite at the poles", () => {
   assert.ok(Number.isFinite(move.length()));
 });
 
-test("scene3d round-trips ArtCraft Object3DJSON without media_file_token", () => {
+test("scene3d round-trips Cinema Object3DJSON without media_file_token", () => {
   const art = {
     version: 1,
     sceneItems: [
@@ -138,12 +138,12 @@ test("scene3d round-trips ArtCraft Object3DJSON without media_file_token", () =>
       },
     ],
   };
-  const scene = scene3dFromArtCraft(art, {
+  const scene = scene3dFromCinemaJson(art, {
     id: SCENE_ID,
     assetIdsByObjectUuid: new Map([[ITEM_ID, ASSET_ID]]),
   });
   assert.equal(scene.items[0]!.assetId, ASSET_ID);
-  const back = artCraftItemsFromScene3D(scene);
+  const back = cinemaItemsFromScene3D(scene);
   assert.equal(back[0]!.object_uuid, ITEM_ID);
   assert.equal("media_file_token" in back[0]!, false);
   const again = parseScene3D(scene);
@@ -167,7 +167,7 @@ test("hostile scene is refused (NaN, huge counts, unknown asset, depth, bytes)",
 
   assert.throws(
     () =>
-      scene3dFromArtCraft(
+      scene3dFromCinemaJson(
         {
           version: 1,
           sceneItems: Array.from(
@@ -194,7 +194,7 @@ test("hostile scene is refused (NaN, huge counts, unknown asset, depth, bytes)",
 
   assert.throws(
     () =>
-      scene3dFromArtCraft(
+      scene3dFromCinemaJson(
         {
           version: 1,
           sceneItems: [

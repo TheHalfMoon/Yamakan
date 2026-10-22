@@ -11,7 +11,7 @@ import { renderRevision } from "../core/render.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { safePath } from "../core/paths.ts";
 import { CreativeAPI } from "../server/api.ts";
-import { canonicalJson } from "../core/donors/ninerr/canonical.ts";
+import { canonicalJson } from "../core/hash/canonical.ts";
 const ffmpeg = process.env.DARZAIN_FFMPEG || "ffmpeg";
 // Every test folder is removed when the file's tests finish, after the
 // stores and queues opened in it close (Windows cannot delete them open).
@@ -123,7 +123,7 @@ test("project import, scene, timeline, title, audio, render and reopen preserve 
       startFrame: 0,
       durationFrames: 90,
       sourceFrame: 0,
-      title: "Darzain 100%: product",
+      title: "Yamakan 100%: product",
     },
   );
   const saved = await store.save(p, p.revision);

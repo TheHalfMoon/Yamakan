@@ -29,7 +29,7 @@ Founder source-code authorization does not cure the issues below, because they c
 | feat/durable-jobs draft (998f50c7…) | `core/job-journal.ts` as job authority | Review T5 |
 | OpenCut @ e6680107; Kodac @ 406b3352 | Whole; auth helper | Placeholder; development-secret authentication |
 
-Narrow reuse retained from the draft: `core/donors/gomrey/job-transitions.ts` (transition table, to be extended) and the rule that completion requires artifact validation.
+Narrow reuse retained from the draft: `core/jobs/rules/job-transitions.ts` (transition table, to be extended) and the rule that completion requires artifact validation.
 
 ## Final selection and qualification
 

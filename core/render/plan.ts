@@ -12,13 +12,13 @@ import { CommandError } from "../command/errors.ts";
 import { ASS_COMPILER_VERSION, compileTitles } from "./ass.ts";
 import type { TitleCue } from "./ass.ts";
 import type { PinnedFont } from "./fonts.ts";
-import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
+import { clampRetimeRate } from "../retime/rate.ts";
 import {
   DEFAULT_LOUDNORM_TARGET,
   LOUDNORM_ENABLED,
   type LoudnormSpec,
 } from "../audio/loudnorm.ts";
-import { ANIMATION_ENABLED } from "../donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 
 const UNITY = rational(1, 1);

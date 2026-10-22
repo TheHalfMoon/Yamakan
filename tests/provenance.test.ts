@@ -23,7 +23,7 @@ const baseEntry = {
   source: "owner/repo",
   sha: "a".repeat(40),
   original: "src/a.ts",
-  imported: "src/donors/x/a.ts",
+  imported: "src/editor/x/a.ts",
   sha256: "b".repeat(64),
   importedSha256: "b".repeat(64),
   modifications: [],
@@ -76,7 +76,7 @@ test("excluded path and renamed excluded content fail", () => {
 });
 
 test("ledger import closure rejects excluded dependency", () => {
-  const allowed = "src/donors/x/allowed.ts";
+  const allowed = "src/editor/x/allowed.ts";
   const violations = checkImports({
     files: [allowed],
     read: (f: string) =>
@@ -90,7 +90,7 @@ test("ledger import closure rejects excluded dependency", () => {
 });
 
 test("ledger closure tolerates unreadable ledger paths", () => {
-  const allowed = "src/donors/x/missing-on-disk.ts";
+  const allowed = "src/editor/x/missing-on-disk.ts";
   assert.doesNotThrow(() =>
     checkImports({
       files: [],

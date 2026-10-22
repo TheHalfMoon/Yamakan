@@ -4,9 +4,9 @@ import { FLICKS_PER_SECOND, type Rational } from "../time.ts";
 import {
   sampleScalarChannelsAtTime,
   scalarExpressionConstant,
-} from "../donors/opencut/animation/sample.ts";
-import { mediaTime } from "../donors/opencut/animation/media-time.ts";
-import type { Channel } from "../donors/opencut/animation/types.ts";
+} from "../animation/sample.ts";
+import { mediaTime } from "../animation/media-time.ts";
+import type { Channel } from "../animation/types.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 import { CommandError } from "../command/errors.ts";
 

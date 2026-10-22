@@ -7,7 +7,7 @@ import {
   access,
 } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
@@ -19,7 +19,7 @@ import {
   fingerprintFile,
   preserveFile,
 } from "./durable.ts";
-import { LocalContentAddressedStorage } from "./donors/skelet/storage.ts";
+import { LocalContentAddressedStorage } from "./storage/storage.ts";
 import { z } from "zod";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 const HeadSchema = z

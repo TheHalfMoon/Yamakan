@@ -9,7 +9,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../core/store.ts";
-import { canonicalJson } from "../core/donors/ninerr/canonical.ts";
+import { canonicalJson } from "../core/hash/canonical.ts";
 import { closeWorkers, mediaTools } from "../core/process/workers.ts";
 
 const bases: string[] = [];

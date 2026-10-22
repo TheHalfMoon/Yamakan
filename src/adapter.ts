@@ -4,7 +4,7 @@ import type {
   TimelineClip,
   TimelineTrack,
   MediaItem,
-} from "./donors/film-editor/types";
+} from "./editor/types";
 export function editorView(p: Project) {
   const tracks: TimelineTrack[] = p.tracks.map((t) => ({
     id: t.id,

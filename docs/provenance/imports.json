@@ -3,7 +3,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/types.ts",
-    "imported": "src/donors/film-editor/types.ts",
+    "imported": "src/editor/types.ts",
     "sha256": "be796c82d49d2e2a50ec56b00363c8b5a7f0a8dd041479c18ec4580603e4075c",
     "modifications": [
       "Add optional TimelineClip.soundEnabled for W1 preview parity with export."
@@ -20,7 +20,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/components/Timeline.tsx",
-    "imported": "src/donors/film-editor/components/Timeline.tsx",
+    "imported": "src/editor/components/Timeline.tsx",
     "sha256": "ad0e74169a035125d7aeefa575aee30be4649312523a7315adf665ffd63bf900",
     "modifications": [
       "Use isolated LibraryAsset type; omit cloud-backed library hook.",
@@ -38,14 +38,15 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/components/PreviewPlayer.tsx",
-    "imported": "src/donors/film-editor/components/PreviewPlayer.tsx",
+    "imported": "src/editor/components/PreviewPlayer.tsx",
     "sha256": "665d367de92f9b6389c3b31d6728703bc1d9335b87892446591053e6c7b789ff",
     "modifications": [
       "Use individual media playback elements per clip, dispose detached media/context on removal/unmount, mute embedded video sound to match explicit-audio export, and fit portrait video within the project canvas.",
       "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity).",
-      "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer."
+      "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "c5138f579fb53ed1ca1e16d92ad85843c29d49d9e1b0ed4ae911090c3621db84",
+    "importedSha256": "b4f0f5a3cb921c14433aacdddf7e3eb26033118bbfc4043e61424dda3b59459f",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -57,7 +58,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/components/Waveform.tsx",
-    "imported": "src/donors/film-editor/components/Waveform.tsx",
+    "imported": "src/editor/components/Waveform.tsx",
     "sha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
     "modifications": [
       "W9: note that peaks may come from Mediabunny openAssetPeaks."
@@ -74,7 +75,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/components/icons.tsx",
-    "imported": "src/donors/film-editor/components/icons.tsx",
+    "imported": "src/editor/components/icons.tsx",
     "sha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1",
     "modifications": [],
     "importedSha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1",
@@ -89,7 +90,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/timecode.ts",
-    "imported": "src/donors/film-editor/utils/timecode.ts",
+    "imported": "src/editor/utils/timecode.ts",
     "sha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064",
     "modifications": [],
     "importedSha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064",
@@ -104,7 +105,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/colorGrading.ts",
-    "imported": "src/donors/film-editor/utils/colorGrading.ts",
+    "imported": "src/editor/utils/colorGrading.ts",
     "sha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c",
     "modifications": [],
     "importedSha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c",
@@ -119,7 +120,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/colorWheels.ts",
-    "imported": "src/donors/film-editor/utils/colorWheels.ts",
+    "imported": "src/editor/utils/colorWheels.ts",
     "sha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041",
     "modifications": [],
     "importedSha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041",
@@ -134,7 +135,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/lut.ts",
-    "imported": "src/donors/film-editor/utils/lut.ts",
+    "imported": "src/editor/utils/lut.ts",
     "sha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969",
     "modifications": [],
     "importedSha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969",
@@ -149,7 +150,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/effects.ts",
-    "imported": "src/donors/film-editor/utils/effects.ts",
+    "imported": "src/editor/utils/effects.ts",
     "sha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43",
     "modifications": [],
     "importedSha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43",
@@ -164,7 +165,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/historyState.ts",
-    "imported": "src/donors/film-editor/utils/historyState.ts",
+    "imported": "src/editor/utils/historyState.ts",
     "sha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a",
     "modifications": [],
     "importedSha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a",
@@ -179,7 +180,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/historyState.test.ts",
-    "imported": "src/donors/film-editor/utils/historyState.test.ts",
+    "imported": "src/editor/utils/historyState.test.ts",
     "sha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123",
     "modifications": [],
     "importedSha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123",
@@ -187,14 +188,14 @@
     "authorization": "public-licence",
     "owner": "editing builder",
     "tests": [
-      "src/donors/film-editor/utils/historyState.test.ts"
+      "src/editor/utils/historyState.test.ts"
     ]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/exportSettings.ts",
-    "imported": "src/donors/film-editor/utils/exportSettings.ts",
+    "imported": "src/editor/utils/exportSettings.ts",
     "sha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d",
     "modifications": [],
     "importedSha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d",
@@ -209,7 +210,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/utils/exportSettings.test.ts",
-    "imported": "src/donors/film-editor/utils/exportSettings.test.ts",
+    "imported": "src/editor/utils/exportSettings.test.ts",
     "sha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc",
     "modifications": [],
     "importedSha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc",
@@ -217,14 +218,14 @@
     "authorization": "public-licence",
     "owner": "editing builder",
     "tests": [
-      "src/donors/film-editor/utils/exportSettings.test.ts"
+      "src/editor/utils/exportSettings.test.ts"
     ]
   },
   {
     "source": "TheHalfMoon/Ninerr",
     "sha": "bec85aa7ee8f1b1695c689aff1631c165baa09fa",
     "original": "packages/persistence/src/canonical.ts",
-    "imported": "core/donors/ninerr/canonical.ts",
+    "imported": "core/hash/canonical.ts",
     "sha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039",
     "modifications": [],
     "importedSha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039",
@@ -241,7 +242,7 @@
     "source": "TheHalfMoon/Ninerr",
     "sha": "bec85aa7ee8f1b1695c689aff1631c165baa09fa",
     "original": "packages/persistence/src/errors.ts",
-    "imported": "core/donors/ninerr/errors.ts",
+    "imported": "core/hash/errors.ts",
     "sha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74",
     "modifications": [],
     "importedSha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74",
@@ -256,7 +257,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/data/moodboardTypes.ts",
-    "imported": "src/donors/film-editor/data/moodboardTypes.ts",
+    "imported": "src/editor/data/moodboardTypes.ts",
     "sha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865",
     "modifications": [],
     "importedSha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865",
@@ -271,7 +272,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "src/data/productionFormats.ts",
-    "imported": "src/donors/film-editor/data/productionFormats.ts",
+    "imported": "src/editor/data/productionFormats.ts",
     "sha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476",
     "modifications": [],
     "importedSha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476",
@@ -286,7 +287,7 @@
     "source": "LudwigKienle/ai-video-production-editor",
     "sha": "752cd43d3af6421d2bd6d4ce27f2d9815f7acba3",
     "original": "index.css",
-    "imported": "src/donors/film-editor/editor.css",
+    "imported": "src/editor/editor.css",
     "sha256": "6ebee23322e375c52cf27ca5b59ba035d42a0d03e197ee71cc42219a1448533f",
     "modifications": [
       "Extract timeline/editor CSS and tokens only; omit remote fonts and unrelated global rules; scope tokens to Darzain app."
@@ -323,9 +324,10 @@
       "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe.",
       "W9/M5: setpts and atempo chain for clip speed (rational).",
       "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode.",
-      "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled."
+      "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "c027b78ca8254175efe52867bd19ab773b1dd10d7b3be7212ca411778dd9bd27",
+    "importedSha256": "33d7cc257259a08c03aca174d0e145e7dc215e15a6741f65feca68c3dc825654",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -340,7 +342,7 @@
     "source": "TheHalfMoon/Skelet",
     "sha": "5d4778636de8fbb3c8ef71efbfe46d473f8e97e3",
     "original": "packages/storage/src/storage.ts",
-    "imported": "core/donors/skelet/storage.ts",
+    "imported": "core/storage/storage.ts",
     "sha256": "67deb21124c581eb5b099a073f11b71c47eb3aa0892e7aabb8835570fbaf3e20",
     "importedSha256": "67deb21124c581eb5b099a073f11b71c47eb3aa0892e7aabb8835570fbaf3e20",
     "modifications": [],
@@ -357,10 +359,11 @@
     "original": "packages/storage/tests/storage.test.mjs",
     "imported": "tests/skelet-storage.test.mjs",
     "sha256": "55699dfdd4ca300e2b71eb2e8303fafac32bd0ba31addcfb94d80abbfd6acd4c",
-    "importedSha256": "fbe681bf38bebb773007f17eb35cfac6a0ef7e92e98dd8f95a0885b57faf209f",
+    "importedSha256": "a90d59c15f6cbfd889aeea2f9073f5557ea862d60a1c46de138ba8cc582ccf70",
     "modifications": [
       "Use Darzain module import; verify absolute generated temporary fixture paths before recursive cleanup on Windows; format test source.",
-      "Module-level after hook removes mkdtemp fixture roots left by failed tests (Yamakan test temp cleanup)."
+      "Module-level after hook removes mkdtemp fixture roots left by failed tests (Yamakan test temp cleanup).",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
@@ -374,7 +377,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/snapping/build.ts",
-    "imported": "core/donors/opencut/snapping.ts",
+    "imported": "core/timeline/snapping.ts",
     "sha256": "7cf9b8dc203a691af38e99d16ceb401cb881055b93244f9f6afa65338ef46e1a",
     "modifications": [
       "Combined with snapping/resolve.ts and types.ts into one module; integer flick ticks replace the wasm MediaTime brand; formatted with Prettier."
@@ -383,7 +386,7 @@
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
-      "tests/donor-opencut.test.ts"
+      "tests/timeline-placement.test.ts"
     ]
   },
   {
@@ -391,7 +394,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/snapping/resolve.ts",
-    "imported": "core/donors/opencut/snapping.ts",
+    "imported": "core/timeline/snapping.ts",
     "sha256": "73f7865940cd914b09070ca3daa03325b03a31bd33ebb6766dc0975736c6fc0d",
     "modifications": [
       "Combined with snapping/build.ts and types.ts into one module; integer flick ticks replace the wasm MediaTime brand; formatted with Prettier."
@@ -400,7 +403,7 @@
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
-      "tests/donor-opencut.test.ts"
+      "tests/timeline-placement.test.ts"
     ]
   },
   {
@@ -408,17 +411,18 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/placement/overlap.ts",
-    "imported": "core/donors/opencut/overlap.ts",
+    "imported": "core/timeline/overlap.ts",
     "sha256": "0ed2ec979ea29d56a2dbbc3f456a8e4bee0850eddb342ad9dbaa6742c16d0001",
     "modifications": [
       "Elements are Yamakan clips ({ id, startTicks, durationTicks }) in integer flick ticks; PlacementTimeSpan inlined; formatted with Prettier.",
-      "T6 review: element and span ends use checked tick addition (addTicks)."
+      "T6 review: element and span ends use checked tick addition (addTicks).",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "56d0629bd8f19b517644df9ae4205b8166bda5521c8c81d6e1b54a4a0ac01ef7",
+    "importedSha256": "5857de68f1cbc484d1cd5e9fdc5efff068c8e85b14e92b49db44aa7fdbd9518e",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
-      "tests/donor-opencut.test.ts"
+      "tests/timeline-placement.test.ts"
     ]
   },
   {
@@ -426,7 +430,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/ripple/apply.ts",
-    "imported": "core/donors/opencut/ripple/apply.ts",
+    "imported": "core/timeline/ripple/apply.ts",
     "sha256": "d3cb81af1520bd813a2d292105746b8c2c539aed08478093e0d04955c2cc5446",
     "modifications": [
       "SceneTracks projected from Yamakan tracks via adapters; integer flick ticks; formatted for the repo."
@@ -443,12 +447,13 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/ripple/diff.ts",
-    "imported": "core/donors/opencut/ripple/diff.ts",
+    "imported": "core/timeline/ripple/diff.ts",
     "sha256": "8fcdd474e6dd0d93a1aaf0d0dfbe7519fd0faae5d1bfc8966fd1e965dc2fdfcc",
     "modifications": [
-      "Element ends use checked addTicks; shift amounts asserted Number.isSafeInteger; flick ticks."
+      "Element ends use checked addTicks; shift amounts asserted Number.isSafeInteger; flick ticks.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "ec36344bd93d5fcc21f77a40805e0086aaf71df2d2304cb3c48a6a719fa1ce5c",
+    "importedSha256": "9a07750e1c6b18fbba23ea67aab1d7485938479a74606b66b6bcdd34c1f4297b",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
@@ -460,12 +465,13 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/ripple/shift.ts",
-    "imported": "core/donors/opencut/ripple/shift.ts",
+    "imported": "core/timeline/ripple/shift.ts",
     "sha256": "2648c4ea38ac51ece842656670e167623132f0aa7a5a4c8bec14a254a48528f5",
     "modifications": [
-      "startTime updates via addTicks(start, -shiftAmount); signed shiftAmount allowed for insert."
+      "startTime updates via addTicks(start, -shiftAmount); signed shiftAmount allowed for insert.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "801b6b26096f43b513e2ae8f9beeb453d9707b9452dbe3297bcfb2e7b37ec224",
+    "importedSha256": "070dbd189d150bb15374d19a7ad94de3333d589e809745c4c721d076447adab5",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
@@ -477,7 +483,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/ripple/index.ts",
-    "imported": "core/donors/opencut/ripple/index.ts",
+    "imported": "core/timeline/ripple/index.ts",
     "sha256": "9012aa42d40beac820efddfda4fccc3ea8e35bc1b11176145d0624d9e5841630",
     "modifications": [
       "Re-exports use .ts extensions."
@@ -494,7 +500,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/types.ts",
-    "imported": "core/donors/opencut/group-move/types.ts",
+    "imported": "core/timeline/group-move/types.ts",
     "sha256": "e93d30c22fc91f51bbca112c5bab991182a47048325a587cbeb853174156157c",
     "modifications": [
       "MediaTime → number (flick ticks); TrackType → video|audio; ElementRef from local timeline-types."
@@ -511,7 +517,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/track-placement.ts",
-    "imported": "core/donors/opencut/group-move/track-placement.ts",
+    "imported": "core/timeline/group-move/track-placement.ts",
     "sha256": "e8b4a0a2d3de5c1d80ead54aa659822d4028d15388f97bac037086fd9fdfc0be",
     "modifications": [
       "SceneTracks from Yamakan adapters; track.type is video|audio."
@@ -528,12 +534,13 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/build-group.ts",
-    "imported": "core/donors/opencut/group-move/build-group.ts",
+    "imported": "core/timeline/group-move/build-group.ts",
     "sha256": "5fb71e4a41be149f85a71c7da838ae195273c44c644d80992b53420c8e7bbb58",
     "modifications": [
-      "findTrackInSceneTracks from adapters; subMediaTime → addTicks(a, -b)."
+      "findTrackInSceneTracks from adapters; subMediaTime → addTicks(a, -b).",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "ec5cf16a98594598859510ed8559233a4f80f7d82061471a12805d5cbdccbe40",
+    "importedSha256": "aefc384abb8cdea5d690915e6d7b50eb1786f4fd1b2de951aac35be04f4437b2",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
@@ -545,12 +552,13 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/snap.ts",
-    "imported": "core/donors/opencut/group-move/snap.ts",
+    "imported": "core/timeline/group-move/snap.ts",
     "sha256": "fe9bc3fed428deba33e25c94aca2d84edff0e7a5ebfa66c254a70521e7b6a88a",
     "modifications": [
-      "Snap sources from adapters (edges, playhead; animation empty until M6); maxSnapDistance passed in (no zoom); MediaTime → addTicks."
+      "Snap sources from adapters (edges, playhead; animation empty until M6); maxSnapDistance passed in (no zoom); MediaTime → addTicks.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "dea818caac683d5a44900f0a4504a75fa28a235cad302729cb1efe1d9113aafa",
+    "importedSha256": "3fe19ae7047ef7d7b7ab09922ddbc9b760b00287afd4eb8458101f0a4119045d",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
@@ -562,12 +570,13 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/resolve-move.ts",
-    "imported": "core/donors/opencut/group-move/resolve-move.ts",
+    "imported": "core/timeline/group-move/resolve-move.ts",
     "sha256": "07d195708d07df3792417c03363e4e31d4f7ecaa561cf8d4deaaf25be78a304f",
     "modifications": [
-      "MediaTime → flick ticks via addTicks; compatibility/overlap from adapters; overlap call maps startTime/duration to startTicks/durationTicks; donor main-track fill-from-zero clamp omitted (Yamakan has no such invariant)."
+      "MediaTime → flick ticks via addTicks; compatibility/overlap from adapters; overlap call maps startTime/duration to startTicks/durationTicks; donor main-track fill-from-zero clamp omitted (Yamakan has no such invariant).",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "58a76a7198a99844bada071ab58fe8568d8017b6dde4662345edb2d9e912a87d",
+    "importedSha256": "e9c386528ba846933d1f65fdc0edcb95d369b0022e738b838a54469441c3ce09",
     "license": "MIT",
     "owner": "editing builder",
     "tests": [
@@ -579,7 +588,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/timeline/group-move/index.ts",
-    "imported": "core/donors/opencut/group-move/index.ts",
+    "imported": "core/timeline/group-move/index.ts",
     "sha256": "276581b341b3499227d1cc97d83bb2d539be0a962aa5914a6c80c5c372762069",
     "modifications": [
       "Re-exports use .ts extensions."
@@ -596,11 +605,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/rate.ts",
-    "imported": "core/donors/opencut/retime/rate.ts",
+    "imported": "core/retime/rate.ts",
     "sha256": "05582e0add4c0e084ca04aa9387bb2d27f371d4a9b70513b2ee03073f23937e1",
-    "importedSha256": "2ad8727fa61c35bb90c1517eacb0a42f75e0fb32ccb184a0626771ce1e376a9f",
+    "importedSha256": "ea91fdfce5accf6e20b1d730fe2bc40b5fffa830a59b2212dda22097b3400ad5",
     "modifications": [
-      "Float rate → reduced Rational; clamp bounds 1/100..5/1."
+      "Float rate → reduced Rational; clamp bounds 1/100..5/1.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/retime.test.ts"
@@ -613,11 +623,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/resolve.ts",
-    "imported": "core/donors/opencut/retime/resolve.ts",
+    "imported": "core/retime/resolve.ts",
     "sha256": "ca8858a91b645f0d47581c0ef093e3b94b9aced4897fd56b16a3f33e0d978cac",
-    "importedSha256": "bb7045e0d398201da42bfe56c44bf8bba0c9a7e7f9c82a6725e313f614d31ed8",
+    "importedSha256": "8b546e961463974c33647e9a5db712761c34ebaf9a8ac24bbda6c0d704117cd2",
     "modifications": [
-      "Flick-tick scale via BigInt; sourceRange/timelineDuration helpers."
+      "Flick-tick scale via BigInt; sourceRange/timelineDuration helpers.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/retime.test.ts"
@@ -630,7 +641,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/split.ts",
-    "imported": "core/donors/opencut/retime/split.ts",
+    "imported": "core/retime/split.ts",
     "sha256": "310f09e97263853575350fc7cfd34e43dba90a0323b1ac133579683aa894d536",
     "importedSha256": "7186cbd5d3476d30cccb068f48a638a1c055665cfc4506c413988ed3b3026455",
     "modifications": [
@@ -647,11 +658,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/presets.ts",
-    "imported": "core/donors/opencut/retime/presets.ts",
+    "imported": "core/retime/presets.ts",
     "sha256": "cf9a79ea56850a6c24e9922a7fc57bac9cdc54f91068c85d1bf830f8bc4013f7",
-    "importedSha256": "427ae0055801b614c4d2d0e43b4ddbde21e8c252a1a898120ca9b5678f4c3aba",
+    "importedSha256": "f09315541d968b9abce1f4c04caa20ab2b6c727e721138456bacdad18fe35a8e",
     "modifications": [
-      "buildConstantRetime takes rational parts."
+      "buildConstantRetime takes rational parts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/retime.test.ts"
@@ -664,11 +676,11 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/index.ts",
-    "imported": "core/donors/opencut/retime/index.ts",
+    "imported": "core/retime/index.ts",
     "sha256": "180f004aca8665ab0975b4d42b4c12ed22ab3741bea3f98a1d7a1aa436cea41a",
     "importedSha256": "53d4fb3f348da521ec394abd1cf94a30721b8add11572fba5609160cdd7a931b",
     "modifications": [
-      "Drops audio-stretch re-export (lives under src/donors/opencut)."
+      "Drops audio-stretch re-export (lives under src/audio)."
     ],
     "tests": [
       "tests/retime.test.ts"
@@ -681,11 +693,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/retime/audio-stretch.ts",
-    "imported": "src/donors/opencut/audio-stretch.ts",
+    "imported": "src/audio/audio-stretch.ts",
     "sha256": "9e1a1da7699be6fba02c10cb2f3663cf0d5123a93ebba7e3536cc4fcf8fb9c5c",
-    "importedSha256": "bf89cedb550930f99b190a30c64976b0e77219db59746f372c37ddc04cd08504",
+    "importedSha256": "a6dac619eb1764b6f2fb6bccdba72db76b416bc2c5528c2532793051b0291080",
     "modifications": [
-      "Rational rates via rateAsFloat for SoundTouch preview path."
+      "Rational rates via rateAsFloat for SoundTouch preview path.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/retime.test.ts"
@@ -698,7 +711,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/bezier.ts",
-    "imported": "core/donors/opencut/animation/bezier.ts",
+    "imported": "core/animation/bezier.ts",
     "sha256": "47a241965828c44ae10634ced94919801b90e812eb2d90b130441a1630c022ac",
     "importedSha256": "2e42a3fdfee7ca35feabf4a40da61ca70ef575540aa765b98a5566de30fa9ed3",
     "modifications": [
@@ -715,11 +728,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/interpolation.ts",
-    "imported": "core/donors/opencut/animation/interpolation.ts",
+    "imported": "core/animation/interpolation.ts",
     "sha256": "20ca806fd989299c94b184b3c71889ee1c524667c55b0e2df42bedde0d391882",
-    "importedSha256": "81be8ed815e18fdbb623900f96260442d004efee87eddd71b2934578fe01e7d5",
+    "importedSha256": "356689d7551c6e931d81ae97758abf081398c1b2102447ca06a9d1ceda8f44bf",
     "modifications": [
-      "@/wasm to media-time.ts; clamp to clampOpts from properties.ts."
+      "@/wasm to media-time.ts; clamp to clampOpts from properties.ts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -732,11 +746,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/keyframes.ts",
-    "imported": "core/donors/opencut/animation/keyframes.ts",
+    "imported": "core/animation/keyframes.ts",
     "sha256": "703a30219a3d079b93ac7eae8659da82b35a5386fb6a000cbae944c8bf2f1d93",
-    "importedSha256": "9c52f51978787102268b1d974e85f255e6502c3f6038a5f0c0818e079fb31f2f",
+    "importedSha256": "202f696253dbbc51d6722b693558ce72002891f6fd6bbe8cc9482f5588cc0d20",
     "modifications": [
-      "@/wasm to media-time.ts; generateUUID to crypto.randomUUID."
+      "@/wasm to media-time.ts; generateUUID to crypto.randomUUID.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -749,11 +764,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/keyframe-query.ts",
-    "imported": "core/donors/opencut/animation/keyframe-query.ts",
+    "imported": "core/animation/keyframe-query.ts",
     "sha256": "9772306e409f93e24d347292063ae78a3de03f0dec511c867441b63309704b6c",
-    "importedSha256": "9ae0e0efe21747fd9560454425affff05934a499d4c3a23a3be27746061cbd6d",
+    "importedSha256": "1db769d9081e70b52779326cc68fe367db584595630e7b509b61fbd77184e6ef",
     "modifications": [
-      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts."
+      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -766,11 +782,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/resolve.ts",
-    "imported": "core/donors/opencut/animation/resolve.ts",
+    "imported": "core/animation/resolve.ts",
     "sha256": "05228937152794b9bef31e32d2c12c2b7972cb38f87510da40e7f4af069f784a",
-    "importedSha256": "2969b476cef1971af9eb2d65623c3034b866d555cacf715d0093695dd10b4f53",
+    "importedSha256": "0e502582af4225c2dd51cdb4d12eb3b12d2171234a81b71a3fac8047476c7914",
     "modifications": [
-      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts."
+      "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -783,7 +800,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/values.ts",
-    "imported": "core/donors/opencut/animation/values.ts",
+    "imported": "core/animation/values.ts",
     "sha256": "dd33470ae7d66055a8813a996010c9248171687fea7b6b4e8cf10261cb87e6ee",
     "importedSha256": "2809cf2a717937680463ba0fa950c2130fac1c05d1e8be5f14afdde352cf4d0b",
     "modifications": [
@@ -800,11 +817,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/types.ts",
-    "imported": "core/donors/opencut/animation/types.ts",
+    "imported": "core/animation/types.ts",
     "sha256": "266932acec2a28074ee2de9dedb64ff79d6fac48b96752cb498554dcd5695d94",
-    "importedSha256": "70043e89df520332318eacff9e98338e41bbdf275ebb9300f55f08d79a1b8452",
+    "importedSha256": "48ab7372c07c5d70549ed9b1b0ab1e965d081b5d257d4ae99af7199ba565b9d0",
     "modifications": [
-      "MediaTime from media-time.ts; ParamValue from core/timeline/properties.ts."
+      "MediaTime from media-time.ts; ParamValue from core/timeline/properties.ts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -817,7 +835,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/curve-bridge.ts",
-    "imported": "core/donors/opencut/animation/curve-bridge.ts",
+    "imported": "core/animation/curve-bridge.ts",
     "sha256": "fe0c41d57d7947e3bf04bd84203a94036989a01c9d28e9ff2a732cc58e5f8793",
     "importedSha256": "9d4c425b98e902d1eb16678293eec0f127c187483a6eef21efd6d57bd5807a3f",
     "modifications": [
@@ -834,7 +852,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/channel-data.ts",
-    "imported": "core/donors/opencut/animation/channel-data.ts",
+    "imported": "core/animation/channel-data.ts",
     "sha256": "c47eb1efae64eff665a2aa576f4cd2a6b3503b9dca58133b7a5d9b04e8c1209c",
     "importedSha256": "122d03ba53f4e280bf68568ce17dd68b2a8548ebcfc5ec9abe0e21714bffec37",
     "modifications": [
@@ -851,11 +869,12 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/graph-channels.ts",
-    "imported": "core/donors/opencut/animation/graph-channels.ts",
+    "imported": "core/animation/graph-channels.ts",
     "sha256": "2ff92d8d3ef099414e008b374d201dc4f34802937f4415be945a5c9cd721cdf5",
-    "importedSha256": "49cebdbb13e448c4ec26e72c0a9e5173b1508f5b69d4f541feb6bcd25059e0c4",
+    "importedSha256": "3c40195b3deb0a8a7e8de9eb4cbba47531274b6862027d28b7f8d879af4b7080",
     "modifications": [
-      "ChannelEasingMode from properties.ts."
+      "ChannelEasingMode from properties.ts.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/animation-params.test.ts"
@@ -868,7 +887,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/property-groups.ts",
-    "imported": "core/donors/opencut/animation/property-groups.ts",
+    "imported": "core/animation/property-groups.ts",
     "sha256": "56dd1c4e2a37a819915035e03189747633fcb30bd1d89006e4811558071b716e",
     "importedSha256": "56956a746f4f5c8e6a50851fc0e4c8f193c8d0e2862e337f769228539ab569ae",
     "modifications": [
@@ -885,7 +904,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/path.ts",
-    "imported": "core/donors/opencut/animation/path.ts",
+    "imported": "core/animation/path.ts",
     "sha256": "04bd4053a0fcd85a460418f845e29711893e682d22395a1bd78987fc6b550632",
     "importedSha256": "d9578279e466a8601b891441eafe85cc4671bc92371ab5df4936bfb1a45f35f7",
     "modifications": [
@@ -902,7 +921,7 @@
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "authorization": "public-licence",
     "original": "apps/web/src/animation/index.ts",
-    "imported": "core/donors/opencut/animation/index.ts",
+    "imported": "core/animation/index.ts",
     "sha256": "4f9f8898b9f11e2ee31bdb7133f0996e69b7ab62b28f3f08b5d2ef3353935a81",
     "importedSha256": "a6fc94397fd2778e8771a0121ccb18a5ae65739414219558ade71d80a95b7c89",
     "modifications": [
@@ -965,9 +984,10 @@
     "original": "frontend/libs/components/pagescene/src/lib/engine/editor/CameraController.ts",
     "imported": "src/cinema/camera/CameraController.ts",
     "sha256": "7d67aeee17ce45d3809eac912cff60ddeff1b884ca0292c48ec8f456b2735e25",
-    "importedSha256": "ba412a0e66dac2e8075b0a9b57c483c684ce349b2f2471f5819ef63d6a0cd887",
+    "importedSha256": "49a3881b1f413abf1266eed1c99753315e7d87bad5533abdc4a81d1c0048b67b",
     "modifications": [
-      "Replace EngineEventBus with onCameraUpdated callback; drop @storyteller/* and EditorStates enums; local CameraAspectRatio union; add OrbitControls fallback helper; import cameraMath via relative .ts path."
+      "Replace EngineEventBus with onCameraUpdated callback; drop @storyteller/* and EditorStates enums; local CameraAspectRatio union; add OrbitControls fallback helper; import cameraMath via relative .ts path.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
     "tests": [
       "tests/cinema.test.ts"
@@ -1102,7 +1122,7 @@
     "source": "OpenCut-app/opencut-classic",
     "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
     "original": "apps/web/src/animation/interpolation.ts",
-    "imported": "core/donors/opencut/animation/sample.ts",
+    "imported": "core/animation/sample.ts",
     "sha256": "81be8ed815e18fdbb623900f96260442d004efee87eddd71b2934578fe01e7d5",
     "importedSha256": "dace8b996a7af4903b45b567a97a91b85900a08dfe33d286a1e0c01335072a12",
     "modifications": [
@@ -3842,7 +3862,7 @@
     "source": "TheHalfMoon/Gomrey",
     "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
     "original": "servers/fastapi/gomrey/jobs.py",
-    "imported": "core/donors/gomrey/jobs.ts",
+    "imported": "core/jobs/rules/jobs.ts",
     "sha256": "804a7b291d832048665b5737a006db0e414458613a15525ca3b91429df3f8921",
     "modifications": [
       "Translated Python durable job kernel to TypeScript (IllegalTransition class, ReadonlySet tables, camelCase API).",
@@ -3853,24 +3873,25 @@
     "authorization": "founder-attested",
     "owner": "runtime builder",
     "tests": [
-      "tests/gomrey-jobs.test.ts"
+      "tests/job-transitions.test.ts"
     ]
   },
   {
     "source": "TheHalfMoon/Gomrey",
     "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
     "original": "servers/fastapi/tests/test_gomrey_jobs.py",
-    "imported": "tests/gomrey-jobs.test.ts",
+    "imported": "tests/job-transitions.test.ts",
     "sha256": "3602241e8eb636051baecfdda56623ee0c3e98c803127287b1c73434b47b312e",
     "modifications": [
-      "Translated eight pytest cases to node:test; Yamakan-style assert API; added Yamakan transition extension case."
+      "Translated eight pytest cases to node:test; Yamakan-style assert API; added Yamakan transition extension case.",
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "bafaeb106f5c05ae13dfbe77588c17d38838367d3ce82e76cd91cd03f3d419f2",
+    "importedSha256": "cbff016f958bae8f86676b9cd3e2b2ebec9dd33678df79586f7adab6048d34bb",
     "license": "Apache-2.0",
     "authorization": "founder-attested",
     "owner": "runtime builder",
     "tests": [
-      "tests/gomrey-jobs.test.ts"
+      "tests/job-transitions.test.ts"
     ]
   },
   {

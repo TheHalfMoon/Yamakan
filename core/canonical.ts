@@ -18,7 +18,7 @@ import {
   ticksToFrames,
 } from "./time.ts";
 import { CommandError } from "./command/errors.ts";
-import { canPlaceTimeSpansOnTrack } from "./donors/opencut/overlap.ts";
+import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 
 export const FORMAT = "yamakan.project";

@@ -17,7 +17,7 @@ import type { Principal, Scope } from "../core/command/registry.ts";
 import { parseEnvelope } from "../core/command/envelope.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
 import { RESOURCE_POLICY } from "../core/command/policy.ts";
-import { canonicalJson, sha256Hex } from "../core/donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 // @ts-expect-error The guard is a plain .mjs module without declarations.
@@ -232,7 +232,7 @@ test("import guard accepts the repository and rejects unsafe imports", () => {
     source: "owner/repo",
     sha: "a".repeat(40),
     original: "src/a.ts",
-    imported: "src/donors/x/a.ts",
+    imported: "src/editor/x/a.ts",
     sha256: "b".repeat(64),
     importedSha256: "b".repeat(64),
     modifications: [],
@@ -249,7 +249,7 @@ test("import guard accepts the repository and rejects unsafe imports", () => {
       policy,
     }) as string[];
   const clean = {
-    "src/donors/x/a.ts": "export const a = /x/.exec('x');",
+    "src/editor/x/a.ts": "export const a = /x/.exec('x');",
     "core/process/owner.ts": 'import { execFile } from "node:child_process";',
   };
   assert.deepEqual(run(clean), []);
@@ -272,7 +272,7 @@ test("import guard accepts the repository and rejects unsafe imports", () => {
     /Excluded donor path present/,
   );
   expectViolation(
-    { "src/donors/x/unrecorded.ts": "" },
+    { "src/editor/x/unrecorded.ts": "" },
     /Unrecorded file in donor root/,
   );
   expectViolation(
@@ -298,14 +298,14 @@ test("import guard accepts the repository and rejects unsafe imports", () => {
   );
   expectViolation({}, /Excluded donor path in ledger/, [
     entry,
-    { ...entry, original: "electron/main.js", imported: "src/donors/x/a.ts" },
+    { ...entry, original: "electron/main.js", imported: "src/editor/x/a.ts" },
   ]);
   expectViolation({}, /missing sha256/, [
     { ...entry, sha256: undefined } as never,
   ]);
   expectViolation({}, /missing file/, [
     entry,
-    { ...entry, imported: "src/donors/x/gone.ts" },
+    { ...entry, imported: "src/editor/x/gone.ts" },
   ]);
   // Bypass attempts reported by the independent T1 reviews.
   const bypasses: Record<string, string> = {

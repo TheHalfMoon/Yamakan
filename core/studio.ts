@@ -2,7 +2,7 @@
 // Persistent authority is Yamakan SQLite revisions; the InvokeAI engine owns
 // pixels and session history only. Feature flag stays off until Q10 targets.
 import { z } from "zod";
-import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { CommandError } from "./command/errors.ts";
 import { Id } from "./project.ts";
 

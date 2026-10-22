@@ -9,8 +9,8 @@ import {
   sourceRange,
   timelineDuration,
   splitRetimeAtClipTime,
-} from "../core/donors/opencut/retime/index.ts";
-import { atempoChain } from "../core/donors/opencut/retime/atempo.ts";
+} from "../core/retime/index.ts";
+import { atempoChain } from "../core/retime/atempo.ts";
 import { framesToTicks } from "../core/time.ts";
 
 const F = framesToTicks(1, rational(30, 1));

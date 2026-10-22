@@ -14,4 +14,4 @@
 ## Remaining residual (documented, not a flag blocker)
 
 - **Transform** channels (`position` / `scale` / `rotate`) may be stored on the plan but are **not** compiled into the FFmpeg filtergraph yet (opacity + volume MVP per Q13).
-- Donor film-editor keyframe UI under `src/donors/film-editor/**` remains a separate surface; the gated path is the main editor Animation panel.
+- Donor film-editor keyframe UI under `src/editor/**` remains a separate surface; the gated path is the main editor Animation panel.
