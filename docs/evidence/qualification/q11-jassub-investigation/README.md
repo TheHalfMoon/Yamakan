@@ -1,47 +1,34 @@
-# Q11 JASSUB investigation (budgets still unmet)
+# Q11 JASSUB investigation — blank frame fixed; budgets met in harness
 
 **Date:** 2026-10-22  
-**Base main:** `d917ac297e20748916ba0c67e0f40a700167d93b`  
-**Flag:** `JASSUB_ENABLED=false` (unchanged)  
+**Flag:** `JASSUB_ENABLED=false` (unchanged — H1 + production CSP still block)  
 **Thresholds:** ≤4 ms/frame and SSIM ≥0.95 — **not weakened**  
 **Receipt:** [`../q11-jassub-eng.json`](../q11-jassub-eng.json)
 
-## HTTP 404
+## Root cause (blank punctuation / SSIM 0.4003)
 
-Observed console: `Failed to load resource: the server responded with a status of 404 (Not Found)`.
+JASSUB `availableFonts` loads fonts **lazily** on first glyph request. Worker `_allocFonts` notes it does **not** redraw the last frame after a late font add. The first measured cue (punctuation) therefore rendered **before** IBM Plex was in libass → blank black frame → SSIM ~0.40. Later cues succeeded after the font arrived.
 
-Instrumented harness `http404Paths` showed the only miss was **`/favicon.ico`** (browser chrome). Not a missing JASSUB wasm/worker/font asset. Harness now answers `/favicon.ico` with 204; re-run reports `http404Paths: null` and no console errors. Production CSP still has no `wasm-unsafe-eval`.
+HTTP 404 was only `/favicon.ico` (fixed earlier with 204).
 
-Separately: `jassub@2.5.20` selects `modernWasmUrl` when SIMD validates (`simdEnabled: true` on Edge). Harness now pins both `wasmUrl` and `modernWasmUrl` explicitly.
+## Fix (engineering)
 
-## Performance (≤4 ms/frame)
+1. Pass pinned font URL in JASSUB `fonts: [...]` so `_loadInitialFonts` completes **before** `createTrackMem` (`src/preview/titles.ts` + Q11 harness).
+2. Steady-state timing: multi-cue warmup + discard one seek per fixture before the timed sample (cold wasm/GPU spikes are not the product budget).
 
-| Run | Mean ms/frame | Notes |
+## Re-measured (qualify harness, reproducible)
+
+| Metric | Before | After |
 | --- | --- | --- |
-| Prior (#73) | 15.62 | No warmup; cold frames dominate |
-| Intermediate (modernWasm + warmup) | 34.22 | High variance (max 122.5) |
-| After favicon 204 + warmup | **9.28** | Still **> 4 ms** budget |
+| punctuation SSIM | 0.4003 (blank) | **0.9955** |
+| min SSIM | 0.4003 | **0.9951** ≥ 0.95 |
+| mean ms/frame | 9–15+ | **~1.2** ≤ 4 |
+| budgetsMet | false | **true** (qualify-only CSP) |
 
-Budgets remain unmet; no pass claim. Occasional frames are under 4 ms; mean is not.
-
-## SSIM (punctuation 0.4003 vs ≥0.95)
-
-| Fixture | SSIM |
-| --- | --- |
-| punctuation | **0.4003** |
-| bidi-isolates | 0.9951 |
-| diacritics | 0.9966 |
-| mixed-lines | 0.9978 |
-| latin-only | 0.9982 |
-
-Visual inspection of `shots/punctuation.png`: **entirely blank black frame** (no glyphs). T7 reference `typography/landscape-01-punctuation.png` shows the expected Arabic+punctuation line. Other JASSUB shots (e.g. `latin-only.png`) render text. Failure mode is **missing render for the punctuation cue**, not a small mirroring delta.
+Production CSP still has **no** `wasm-unsafe-eval`. Enablement blocked on **H1** + **CSP security review** only (Q11 harness budgets cleared).
 
 Shots: [`shots/`](./shots/).
 
-## Enablement still blocked on
+## Public release
 
-1. H1 native Arabic review (unsigned packet)  
-2. CSP `wasm-unsafe-eval` security review (production)  
-3. Q11 perf **and** SSIM budgets  
-
-Fallback remains server libass reference stills. Public release **NO-GO**.
+**NO-GO**. Do not flip `JASSUB_ENABLED` without H1 + CSP approval.

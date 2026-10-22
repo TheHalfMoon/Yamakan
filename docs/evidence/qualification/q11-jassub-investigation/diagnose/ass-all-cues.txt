@@ -1,0 +1,20 @@
+[Script Info]
+; yamakan.ass/1
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: None
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,IBM Plex Sans Arabic,48,&H00FFFFFF,&H00FFFFFF,&H5A000000,&H5A000000,0,0,0,0,100,100,0,0,3,10,0,2,64,64,27,-1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.99,Default,,0,0,0,,مرحبًا، كيف حالك؟ «اقتباس» — نعم! (أقواس) ؛ نقطة.
+Dialogue: 0,0:00:00.99,0:00:01.99,Default,,0,0,0,,الإصدار ⁨Yamakan 2.0⁩ جاهز، والملف ⁦report-final.mp4⁩ محفوظ.
+Dialogue: 0,0:00:01.99,0:00:02.99,Default,,0,0,0,,بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ — شَدَّة وتَنْوِينٌ وسُكُون.
+Dialogue: 0,0:00:02.99,0:00:03.99,Default,,0,0,0,,Opening scene: الفصل الأول\Nالفصل الأول: Opening scene
+Dialogue: 0,0:00:03.99,0:00:04.99,Default,,0,0,0,,Final cut: Scene 4, take 12 (approved).

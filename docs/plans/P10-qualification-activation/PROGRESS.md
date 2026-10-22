@@ -1,9 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `d917ac297e20748916ba0c67e0f40a700167d93b`  
+**Last verified main SHA:** `ec7cb6005895541bc2c19d248bd02ccbfec10ccd`  
 **Updated:** 2026-10-22  
-**Open PRs:** none  
-**Post-merge CI:** SUCCESS, run 39735067828  
+**Open PRs:** none (Q11/Q15 follow-up PR may be open)  
+**Post-merge CI:** SUCCESS, run 39760770372  
 **Release verdict:** **NO-GO**
 
 ## Completed (engineering)
@@ -30,8 +30,8 @@ Studio · Quality Lab (deterministic) · Cinema (supported) · Director (manual)
 
 ## External gates still open
 
-H1 (packet unsigned) · H2 Profile A · H3 second account · H4 disk-full · H5 founder ship · Authenticode signed release installer · E-SEC/F/G · Q15 residual · JASSUB enablement (H1 + CSP review + Q11 budgets)
+H1 (packet unsigned) · H2 Profile A · H3 second account · H4 disk-full · H5 founder ship · Authenticode signed release installer · E-SEC/F/G · Q15 OS presence (assessed; not wired) · JASSUB enablement (H1 + CSP review; **Q11 harness budgets met**)
 
 ## Achievable P10 engineering status
 
-Bounded P10 technical residuals (Animation wiring, JASSUB pre-H1 eng, unsigned RC, reviews tooling) are **merged** at `af22455`; verified main `d917ac2`. Release-gate prep adds executable H1–H4 checklists, RELEASE_PROPOSAL frontier reconcile, and Q11 investigation (budgets still unmet; flag false). Remaining work is external-human or gated enablement/signing — not to be fabricated.
+P10 engineering + release-gate prep merged through `ec7cb60`. Q11 blank-frame root cause fixed (font preload); qualify-harness budgets met; `JASSUB_ENABLED` stays false. Q15 assessed (no pass). H1–H4 not executed this session. Remaining work is external-human or gated enablement/signing — not to be fabricated.

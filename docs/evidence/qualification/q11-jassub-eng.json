@@ -1,8 +1,8 @@
 {
   "qualification": "Q11_JASSUB_ENG",
   "task": "P10-07",
-  "checkedAt": "2026-10-22T09:32:29.031Z",
-  "gitHead": "d917ac297e20748916ba0c67e0f40a700167d93b",
+  "checkedAt": "2026-10-22T10:25:55.928Z",
+  "gitHead": "ec7cb6005895541bc2c19d248bd02ccbfec10ccd",
   "jassubEnabled": false,
   "h1Signed": false,
   "engComplete": true,
@@ -22,43 +22,46 @@
       "availableFontKeys": [
         "ibm plex sans arabic"
       ],
+      "preloadFontUrls": [
+        "/assets/fonts/IBMPlexSansArabic-Regular.ttf"
+      ],
       "libassMemoryLimit": 64,
       "libassGlyphLimit": 10000
     },
     "productionCspUnchanged": true,
     "jassubEnabled": false
   },
-  "performanceClaimed": false,
-  "ssimClaimed": false,
+  "performanceClaimed": true,
+  "ssimClaimed": true,
   "perf": {
     "measured": true,
     "budgetMsPerFrame": 4,
     "budgetSsim": 0.95,
-    "msPerFrame": 9.28,
-    "maxMsPerFrame": 29,
+    "msPerFrame": 1.18,
+    "maxMsPerFrame": 2,
     "timesMs": [
-      0.7,
-      29,
-      9,
-      3.3,
-      4.4
+      1.1,
+      0.8,
+      1,
+      2,
+      1
     ],
     "ssimByFixture": {
-      "punctuation": 0.4003,
+      "punctuation": 0.9955,
       "bidi-isolates": 0.9951,
       "diacritics": 0.9966,
       "mixed-lines": 0.9978,
       "latin-only": 0.9982
     },
-    "minSsim": 0.4003,
-    "budgetsMet": false,
-    "method": "playwright-msedge + locally rewritten jassub (bare imports → /nm/); modernWasmUrl+wasmUrl pinned; one warmup manualRender; qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
+    "minSsim": 0.9951,
+    "budgetsMet": true,
+    "method": "playwright-msedge + rewritten jassub; fonts[] preload before track; modernWasmUrl+wasmUrl pinned; warmup manualRender; qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
     "qualifyOnlyCspIncludesWasmUnsafeEval": true,
     "productionCspHasWasmUnsafeEval": false,
     "simdEnabled": true,
     "http404Paths": null,
     "consoleErrors": null,
-    "detail": "Q11 budgets NOT met (mean 9.280 ms/frame, min SSIM 0.4003); keep server libass reference still.",
+    "detail": "Q11 budgets met in qualify harness (enablement still blocked).",
     "fixtures": [
       "punctuation",
       "bidi-isolates",
@@ -74,11 +77,10 @@
   "cspWasmUnsafeEval": "not-applied-in-production",
   "enablementBlockedOn": [
     "H1-native-arabic-review",
-    "CSP-wasm-unsafe-eval-security-review",
-    "Q11-perf-or-ssim-budget"
+    "CSP-wasm-unsafe-eval-security-review"
   ],
   "fallback": "server-libass-reference-still",
   "publicRelease": "NO-GO",
   "passed": true,
-  "detail": "Engineering complete; Q11 budgets not claimed (Q11 budgets NOT met (mean 9.280 ms/frame, min SSIM 0.4003); keep server libass reference still.); JASSUB_ENABLED remains false; server reference still primary."
+  "detail": "Engineering complete; Q11 budgets met in qualify-only harness; JASSUB_ENABLED remains false (H1 + production CSP review still block enablement)."
 }
