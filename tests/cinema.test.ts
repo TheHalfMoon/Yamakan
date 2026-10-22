@@ -1,8 +1,12 @@
 // W14 / M8–M10: camera math, scene3d schema, adapted CameraController.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import * as THREE from "three";
 import { MathUtils, PerspectiveCamera, Scene, Vector3 } from "three";
+import { ProjectStore } from "../core/store.ts";
 import {
   createFreeCamControlState,
   emptyMoveKeys,
@@ -60,8 +64,8 @@ function sampleScene() {
   };
 }
 
-test("CINEMA_ENABLED stays false until M8–M10 acceptance ships", () => {
-  assert.equal(CINEMA_ENABLED, false);
+test("CINEMA_ENABLED is true after supported Cinema activation", () => {
+  assert.equal(CINEMA_ENABLED, true);
 });
 
 test("lerpVelocity endpoints are exact", () => {
@@ -293,26 +297,49 @@ test("scripted free-cam sequence updates camera pose via CameraController", () =
   assert.equal(typeof createOrbitControlsFallback, "function");
 });
 
-test("yamakan.scene.save validates and hashes", async () => {
+test("yamakan.scene.save validates, hashes, and persists when Cinema is on", async () => {
   const saved = saveScene3D(sampleScene());
-  assert.equal(saved.cinemaEnabled, false);
+  assert.equal(saved.cinemaEnabled, true);
   assert.match(saved.contentHash, /^[a-f0-9]{64}$/);
 
-  const ctx = {
-    store: {} as CommandContext["store"],
-    queue: {} as CommandContext["queue"],
-    principal: {
-      id: "local-client",
-      scopes: new Set(["project:write"]),
-    },
-  } satisfies CommandContext;
+  const root = await mkdtemp(join(tmpdir(), "yamakan-cinema-"));
+  const store = new ProjectStore(root);
+  await store.initialize();
+  try {
+    const ctx = {
+      store,
+      queue: {} as CommandContext["queue"],
+      principal: {
+        id: "local-client",
+        scopes: new Set(["project:write", "project:read"]),
+      },
+    } satisfies CommandContext;
 
-  const out = await execute(ctx, "yamakan.scene.save", {
-    scene: sampleScene(),
-  });
-  assert.equal(out.operation, "yamakan.scene.save");
-  assert.equal(
-    (out.result as { contentHash: string }).contentHash,
-    saved.contentHash,
-  );
+    const out = await execute(ctx, "yamakan.scene.save", {
+      scene: sampleScene(),
+    });
+    assert.equal(out.operation, "yamakan.scene.save");
+    assert.equal(
+      (out.result as { contentHash: string }).contentHash,
+      saved.contentHash,
+    );
+
+    const opened = await execute(ctx, "yamakan.scene.open", {
+      sceneId: SCENE_ID,
+    });
+    assert.equal(
+      (opened.result as { contentHash: string }).contentHash,
+      saved.contentHash,
+    );
+
+    const listed = await execute(ctx, "yamakan.scene.list", {});
+    assert.ok(
+      (listed.result as { scenes: { id: string }[] }).scenes.some(
+        (s) => s.id === SCENE_ID,
+      ),
+    );
+  } finally {
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });

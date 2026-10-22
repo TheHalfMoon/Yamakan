@@ -38,6 +38,8 @@ import type { WaveformCache } from "./donors/film-editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
+import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
+import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type {
   Operation,
   OperationInput,
@@ -653,6 +655,18 @@ function App() {
                     "studioQ8",
                   ) === "1"
                 }
+              />
+              <h2>{t("cinema.title")}</h2>
+              <p>{t("cinema.intro")}</p>
+              <CinemaViewport />
+              <h2>{t("director.title")}</h2>
+              <p>{t("director.intro")}</p>
+              <DirectorPanel
+                projectId={p?.id ?? null}
+                client={{
+                  call: (operation, parameters) =>
+                    client.call(operation as never, parameters as never),
+                }}
               />
               <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
               {/* Shown here: a new tab would hold no session. */}

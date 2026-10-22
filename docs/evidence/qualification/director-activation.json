@@ -1,0 +1,15 @@
+{
+  "qualification": "DIRECTOR_ACTIVATION",
+  "task": "P10-04",
+  "checkedAt": "2026-10-22T02:12:26.213Z",
+  "gitHead": "7472a06858308def0638c6daf38a2cc72a718a86",
+  "directorEnabled": true,
+  "passed": true,
+  "detail": "Director panel start+next on framework-smoke; model stages listed unsupported.",
+  "approveProbe": {
+    "hasError": true,
+    "code": "NOT_FOUND"
+  },
+  "runId": "3c0f3dea-aa56-4e58-954a-36c3d39f83ce",
+  "pageErrors": []
+}

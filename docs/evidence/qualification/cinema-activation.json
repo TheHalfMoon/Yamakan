@@ -1,0 +1,26 @@
+{
+  "qualification": "CINEMA_ACTIVATION",
+  "task": "P10-03",
+  "checkedAt": "2026-10-22T02:11:14.765Z",
+  "gitHead": "7472a06858308def0638c6daf38a2cc72a718a86",
+  "cinemaEnabled": true,
+  "passed": true,
+  "detail": "Cinema mounted; orbit interaction; scene.save/open/list across reload; AI camera disabled.",
+  "before": {
+    "items": 1,
+    "pose": {
+      "x": 2.5,
+      "y": 2.0000000000000004,
+      "z": 4
+    },
+    "ai": false,
+    "sceneId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+  },
+  "afterPose": {
+    "x": 0.5241992098040339,
+    "y": 2.7887123218873335,
+    "z": 4.265946410140964
+  },
+  "contentHash": "431a5f2bc3024010df74046e4fd48a594fd5db820dac2b65069af1dc4f736ff3",
+  "pageErrors": []
+}
