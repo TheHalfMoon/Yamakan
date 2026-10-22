@@ -1,7 +1,7 @@
 {
   "receipt": "yamakan.release-session-transcript/1",
-  "commit": "259db962f54ac934916da5abf6992f808d0265e8",
-  "measuredAt": "2026-10-21T03:29:20.388Z",
+  "commit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+  "measuredAt": "2026-10-22T04:25:34.603Z",
   "entries": [
     {
       "channel": "cli",
@@ -10,7 +10,7 @@
         "name": "W7 evidence"
       },
       "outcome": "ok",
-      "projectId": "350225e9-d267-47c6-b890-72b52ba1abd8"
+      "projectId": "c15fe537-4e29-4849-a2b1-ac8399c18a2a"
     },
     {
       "channel": "cli",
@@ -25,10 +25,10 @@
       "channel": "render",
       "operation": "yamakan.render.export",
       "parameters": {
-        "planHash": "5f96224d43dea03f42dfd371c268c2aa87584ff7235ffe5706c39bbcf029cb02"
+        "planHash": "8442cb4853bd4eab786c5ec310e81bbcf9422c14604f323447513c6a888f5229"
       },
       "outcome": "ok",
-      "artifactSha256": "9e6f9469fd519670ea86775fde985e112195eeb3d721efa3dde8f9337cb7e93b"
+      "artifactSha256": "529cbfd2ae7ef12301e407bf1ca0b1c41f68f18a0a38ba8f27a6ab970810eb78"
     }
   ],
   "mcp": "MCP parity replay for journey steps 2–11 remains open; this transcript records the export fixture path only."

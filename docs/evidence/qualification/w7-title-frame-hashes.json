@@ -1,11 +1,11 @@
 {
   "receipt": "yamakan.release-title-frames/1",
-  "commit": "259db962f54ac934916da5abf6992f808d0265e8",
+  "commit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
   "frames": [
     {
       "atSeconds": 0.5,
-      "sha256": "118ee1b67ed1959ba49117ce4fd3c8ad6850279469138d4ef4059aa3cb2f6485",
-      "bytes": 10696,
+      "sha256": "981124af22102c07b2e9525fc1ca4f95a16fdfe98cd85c06fe48a94434e8a9c4",
+      "bytes": 7354,
       "note": "PNG extracted from the W7 export; not committed (hash only)."
     }
   ]
