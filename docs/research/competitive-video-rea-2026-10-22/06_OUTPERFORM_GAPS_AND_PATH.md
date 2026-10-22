@@ -58,7 +58,7 @@ Ordered for maximum learning per unit risk/cost:
 
 ### Path P1 — requires founder F + capable GPU host (not the UHD laptop)
 
-1. Land `EngineAdapter` real implementation behind `ENGINE_ENABLED=false` (E0–E1).  
+1. Propose a **Diffusers-first** E0 adapter with bounded stdio/job dirs, flag still OFF; validate E1 containment and E2 missing-weights behavior. See [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md).  
 2. Authorize **one** small Apache-friendly checkpoint: **Wan2.2 TI2V-5B** preferred; **CogVideoX-2B** alternate.  
 3. Smoke three seeded prompts; quarantine/cancel tests; ledger hashes.  
 4. Run **Category B/C subset** locally; label results TESTED.  
@@ -96,3 +96,6 @@ A category win requires matched tasks, frozen versions, blinded human preference
 ## 7. One-sentence strategy
 
 **Own the editable, recoverable, agent-driven offline film; bolt on one small open generator when hardware and F exist; treat closed platforms as optional quality ceiling, never as something to pirate or pretend to have beaten without tests.**
+
+
+**Compute and fallback correction:** No no-cost GPU with ≥24GB reference VRAM and adequate checkpoint disk (~34.2GB Diffusers repo) has been verified. ComfyUI remains a fallback, not a second authority. Keep inference BLOCKED until F and real E-SEC tests.
