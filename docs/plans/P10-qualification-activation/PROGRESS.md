@@ -1,9 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `7472a06858308def0638c6daf38a2cc72a718a86`  
+**Last verified main SHA:** `6cc6838506558d756c8ff7b9166d9bda14c1743c`  
 **Updated:** 2026-10-22  
-**Open PRs:** Cinema/Director activation (`feat/p10-03-cinema-docs`) pending merge onto `7472a06`  
-**Post-merge CI:** [39645507559](https://github.com/TheHalfMoon/Yamakan/actions/runs/39645507559) SUCCESS on `7472a06`
+**Open PRs:** none  
+**Post-merge CI:** [39719917065](https://github.com/TheHalfMoon/Yamakan/actions/runs/39719917065) **SUCCESS** on `6cc68385`
 
 ## Completed cards
 
@@ -16,8 +16,9 @@
 | P10-01 Studio activate | #61 | `65451bd` | `STUDIO_ENABLED=true` |
 | P10-02 Animation residual | #62 | `42b2fde` | Q13/Q14 PASS; `ANIMATION_ENABLED=false` (UI→render gap) |
 | P10-05 / P10-06 Lab+Router | #63 | `7472a06` | `QUALITY_LAB_ENABLED=true`; providers stay false |
+| P10-03 / P10-04 Cinema+Director | #64 | `6cc68385` | Supported Cinema + manual Director; AI/model stages off |
 
-## Enabled capabilities (exact main `7472a06`; Cinema/Director true on this branch pending merge)
+## Enabled capabilities (exact main `6cc68385`)
 
 | Flag | Value |
 | --- | --- |
@@ -25,8 +26,8 @@
 | `QUALITY_LAB_ENABLED` | **true** (deterministic only) |
 | `ROUTER_PROVIDERS_ENABLED` | **false** (explain qualified) |
 | `AUDIO_UNLINK_ENABLED` / `LOUDNORM_ENABLED` / `FLOW_ENABLED` | **true** (preserved) |
-| `CINEMA_ENABLED` | **true** on this branch (supported preview/persist; AI camera off) |
-| `DIRECTOR_ENABLED` | **true** on this branch (manual framework-smoke only) |
+| `CINEMA_ENABLED` | **true** (preview/persist; AI camera unsupported) |
+| `DIRECTOR_ENABLED` | **true** (manual framework-smoke; model stages unsupported) |
 | `ANIMATION_ENABLED` | **false** (UI→render residual) |
 | Engines / JASSUB | **false** |
 
@@ -34,9 +35,7 @@
 
 | Card | Status |
 | --- | --- |
-| P10-03 Cinema | Local E2E PASS (`cinema-activation.json`); awaiting exact-head CI + merge |
-| P10-04 Director | Local E2E PASS (`director-activation.json`); awaiting exact-head CI + merge |
-| P10-02 Animation UI→render | Residual until E2E parity |
+| P10-02 Animation UI→render | Residual until genuine UI→render-plan E2E |
 | P10-07 W12 / H1 packet | Eng prep; no fabricated Arabic approval |
 | P10-08 / P10-09 / P10-10 | Bundle R6, release evidence, security |
 
@@ -52,12 +51,19 @@
 
 ## Review note
 
-Independent correctness/architecture subagents for #59 hit usage limits and did **not** approve. Manual receipts under `docs/evidence/qualification/q9-*-review.md` stand; fresh independent review when resources permit. Cinema/Director PR gets fresh independent correctness + security review before merge.
+Independent correctness/architecture subagents for #59 and #64 hit usage limits and did **not** approve. Manual receipts: `docs/evidence/qualification/q9-*-review.md`, `cinema-director-correctness-review.md`, `cinema-director-security-review.md`. Fresh independent agent review when resources permit; material findings via forward-fix PRs.
+
+## Tooling truthfulness (this session)
+
+- Graft `build` (no `--deep`): ran locally on Cinema/Director branch.
+- Alibaba OCR / D1: not on PATH as executable CLI for this agent; CURRENT still records Alibaba delegate-only and no Jev key.
+- PStack: playbook discipline only.
+- npm registry: minor outage caused audit flakes; CI gained bounded audit retries without skipping the audit gate.
 
 ## Continuation
 
-1. Merge Cinema/Director after exact-head CI + reviews.  
-2. Animation only if UI→render E2E exists.  
+1. Confirm post-merge CI SUCCESS on `6cc68385`.  
+2. Animation only if UI→render E2E exists (do not flip flag otherwise).  
 3. W12 eng + H1 packet (unsigned).  
 4. Bundle install/update/rollback/uninstall.  
 5. R6/R7 evidence refresh; release stays **NO-GO**.
