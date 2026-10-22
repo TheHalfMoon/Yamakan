@@ -26,7 +26,8 @@ Compete on **complete editable outcome ownership, privacy, cost transparency, an
                 ▼                             ▼
         Attach / edit / export      ┌─────────────────────┐
                                     │ Sidecar (optional)  │
-                                    │ Comfy OR Diffusers  │
+                                    │ Diffusers first
+                                    │ ComfyUI fallback only  │
                                     │ allowlisted graphs  │
                                     │ local loopback only │
                                     └─────────────────────┘
@@ -119,10 +120,10 @@ Before any real sidecar:
 | --- | --- | --- | --- |
 | **R0** | This REA package | Docs merged on research branch; NO-GO | Done in #85 |
 | **R1** | Engineering plan PR (no enablement) | Founder-approved milestone list, resource budget | Founder read |
-| **E0** | Adapter skeleton behind flag | `comfyui.ts` or `diffusers_worker` implements contract; still `ENGINE_ENABLED=false`; tests vs fake parity | E-SEC design review |
+| **E0** | Adapter skeleton behind flag | `diffusers_worker` implements bounded stdio/file contract; `ENGINE_ENABLED=false`; tests vs fake/absent parity. ComfyUI only if evidence-backed fallback | E-SEC design review |
 | **E1** | Containment | Sidecar launches under isolation; egress tests pass | E-SEC |
 | **E2** | First model dry-run | Capability reports `BLOCKED: weights absent` cleanly | No download yet |
-| **F** | Founder decision F | Explicit written authorization for weights + compute host | **Required** |
+| **F** | Founder decision F | Explicit written authorization for exact weight files + capable GPU/storage host | **Required** |
 | **E3** | Download + pin one checkpoint | Wan TI2V-5B **or** CogVideoX-2B only; ledger hash | F + disk/GPU |
 | **E4** | Local generation smoke | 3 fixed seeds; artifacts hashed; quarantine paths | Capable GPU host |
 | **B1** | Category A expand | Longer real-media edit suite (no AI needed) | Can start now |
@@ -151,3 +152,8 @@ Before any real sidecar:
 | Independent research reviewers | Human founder + this REA; no third-party blind study |
 
 Absence is recorded as **NOT RUN**, not pass.
+
+
+## Post-review engine/spend decision (2026-10-22)
+
+**Diffusers is the proposed first sidecar** for one pinned Wan2.2 TI2V-5B path (ComfyUI is a gated fallback); a framed stdio+job-dir boundary reduces exposed network surface. This still requires actual E0–E2 isolation tests, pin compatibility, model-card checks and an independent threat assessment. Wan's offload reference needs ≥24GB VRAM; Diffusers checkpoint repo ~34.2GB files. No zero-cost GPU entitlement or inference has been demonstrated. See [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md). Keep engines/providers OFF and public release NO-GO.
