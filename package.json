@@ -43,6 +43,7 @@
     "qualify:quality-lab": "node scripts/qualify-quality-lab.mjs",
     "qualify:cinema-activation": "node scripts/qualify-cinema-activation.mjs",
     "qualify:director-activation": "node scripts/qualify-director-activation.mjs",
+    "qualify:q11-jassub-eng": "node scripts/qualify-q11-jassub-eng.mjs",
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",
