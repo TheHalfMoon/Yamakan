@@ -238,6 +238,11 @@ export default function throughput(seconds) {
   const fontRegular = join(REPO, TITLE_FONT.files[0].file);
   const workerUrl = "/jassub/worker/worker.js";
   const mainUrl = "/jassub/jassub.js";
+  // Pin both SIMD and non-SIMD wasm URLs. jassub@2.5.20 selects modernWasmUrl when
+  // WebAssembly SIMD validates; omitting it left a relative modern URL that could 404
+  // depending on import.meta resolution. Still qualify-only; production CSP unchanged.
+  const wasmUrl = "/jassub/wasm/jassub-worker.wasm";
+  const modernWasmUrl = "/jassub/wasm/jassub-worker-modern.wasm";
   // Qualify-only CSP: allows wasm compile for this harness. Not production.
   // Qualify-only CSP. Includes wasm-unsafe-eval for this harness only.
   // Script is an external module (not inline) so 'unsafe-inline' is unnecessary.
@@ -257,11 +262,13 @@ try {
     libassMemoryLimit: ${JASSUB_LIBASS_MEMORY_LIMIT_MIB},
     libassGlyphLimit: ${JASSUB_LIBASS_GLYPH_LIMIT},
     workerUrl: "${workerUrl}",
-    wasmUrl: "/jassub/wasm/jassub-worker.wasm",
+    wasmUrl: "${wasmUrl}",
+    modernWasmUrl: "${modernWasmUrl}",
   });
   await window.__jassub.ready;
   window.__q11ready = true;
   window.__q11error = null;
+  window.__q11simd = !!JASSUB._supportsSIMD;
 } catch (e) {
   window.__q11ready = false;
   window.__q11error = String(e && e.stack ? e.stack : e);
@@ -296,6 +303,8 @@ try {
     return full;
   };
 
+  /** @type {string[]} */
+  const missingPaths = [];
   const server = createServer((req, res) => {
     const url = new URL(req.url || "/", "http://127.0.0.1");
     if (url.pathname === "/" || url.pathname === "/index.html") {
@@ -321,6 +330,12 @@ try {
       createReadStream(fontRegular).pipe(res);
       return;
     }
+    // Browsers request /favicon.ico; serving empty avoids a spurious 404 console error.
+    if (url.pathname === "/favicon.ico") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     let file = null;
     if (url.pathname.startsWith("/jassub/")) {
       file = safeJoin(jassubDist, url.pathname.slice("/jassub/".length));
@@ -331,6 +346,7 @@ try {
       );
     }
     if (!file || !existsSync(file)) {
+      missingPaths.push(url.pathname);
       res.writeHead(404);
       res.end("missing " + url.pathname);
       return;
@@ -369,10 +385,11 @@ try {
     const boot = await page.evaluate(() => ({
       ready: window.__q11ready,
       error: window.__q11error ?? null,
+      simd: window.__q11simd ?? null,
     }));
     if (!boot.ready) {
       throw new Error(
-        `JASSUB harness failed to become ready: ${boot.error ?? "unknown"}; pageErrors=${pageErrors.join("; ")}`,
+        `JASSUB harness failed to become ready: ${boot.error ?? "unknown"}; pageErrors=${pageErrors.join("; ")}; missingPaths=${missingPaths.join(",")}`,
       );
     }
 
@@ -381,6 +398,24 @@ try {
     const ssimByFixture = {};
     const shotDir = join(workDir, "shots");
     mkdirSync(shotDir, { recursive: true });
+    const evidenceShotDir = join(
+      REPO,
+      "docs/evidence/qualification/q11-jassub-investigation/shots",
+    );
+    mkdirSync(evidenceShotDir, { recursive: true });
+
+    // Warmup render so cold-start wasm compile is not counted as a fixture frame.
+    await page.evaluate(async () => {
+      await window.__jassub.manualRender(
+        {
+          expectedDisplayTime: performance.now(),
+          mediaTime: 0.1,
+          width: 1280,
+          height: 720,
+        },
+        true,
+      );
+    });
 
     for (let i = 0; i < MEASURE_FIXTURES.length; i++) {
       const name = MEASURE_FIXTURES[i];
@@ -402,6 +437,7 @@ try {
 
       const shotPath = join(shotDir, `${name}.png`);
       await page.locator("#c").screenshot({ path: shotPath });
+      cpSync(shotPath, join(evidenceShotDir, `${name}.png`));
 
       const fixtureIndex = TYPOGRAPHY_FIXTURES.findIndex(
         (f) => f.name === name,
@@ -426,6 +462,7 @@ try {
     const maxMs = Math.max(...timesMs);
     const minSsim = Math.min(...Object.values(ssimByFixture));
     const budgetsMet = meanMs <= TARGET_MS && minSsim >= TARGET_SSIM;
+    const uniqueMissing = [...new Set(missingPaths)];
 
     perf = {
       measured: true,
@@ -438,15 +475,18 @@ try {
       minSsim: Number(minSsim.toFixed(4)),
       budgetsMet,
       method:
-        "playwright-msedge + locally rewritten non-threaded jassub (bare imports → /nm/); qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
+        "playwright-msedge + locally rewritten jassub (bare imports → /nm/); modernWasmUrl+wasmUrl pinned; one warmup manualRender; qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
       qualifyOnlyCspIncludesWasmUnsafeEval: true,
       productionCspHasWasmUnsafeEval: false,
+      simdEnabled: boot.simd,
+      http404Paths: uniqueMissing.length ? uniqueMissing : null,
       consoleErrors: pageErrors.length ? pageErrors : null,
       detail: budgetsMet
         ? "Q11 budgets met in qualify harness (enablement still blocked)."
         : `Q11 budgets NOT met (mean ${meanMs.toFixed(3)} ms/frame, min SSIM ${minSsim.toFixed(4)}); keep server libass reference still.`,
       fixtures: MEASURE_FIXTURES,
       resolution: `${MEASURE_W}x${MEASURE_H}`,
+      investigationShots: "docs/evidence/qualification/q11-jassub-investigation/shots/",
     };
   } finally {
     await browser?.close();

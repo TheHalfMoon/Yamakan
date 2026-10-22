@@ -4,7 +4,7 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **Phase:** **P10 — Qualification, Activation, and Release Readiness** (Architecture B preserved). Founder P10 authorization of 2026-10-21 covers qualifying and activating already-merged Track 1/Track 2 capabilities under [P10 master plan](../docs/plans/P10-qualification-activation/MASTER_PLAN.md). Frozen plan W1–W18 remains the capability baseline ([PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f`, tag `plan-freeze-2026-10-18`). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `ca04d10eab7f8fc1bc7b220c69e5602f57bf26a5` (frontier docs #74; residual eng merges #70–#73 at `af22455`; post-merge CI SUCCESS run 39734506769). Track 1/2 engineering merged. W12/JASSUB **enablement** remains H1-blocked + Q11 budgets unmet + CSP review. Exact-head `t10-release.json` lineage still `c3cc1d58` (dev profile; Profile A open).
+**Verified main:** `d917ac297e20748916ba0c67e0f40a700167d93b` (docs #75; residual eng #70–#73 at `af22455`; post-merge CI SUCCESS run 39735067828). Track 1/2 engineering merged. W12/JASSUB **enablement** remains H1-blocked + Q11 budgets unmet + CSP review. Exact-head `t10-release.json` lineage still `c3cc1d58` (dev profile; Profile A open). Executable H1–H4 checklists: `docs/evidence/h1-arabic-review-packet/CHECKLIST.md`, `docs/evidence/h2-h4-escalation-packet/CHECKLIST.md`.
 
 **M-gate:** **passed** at `eaeaf1b`. Human gates H1–H5 and signed release installer/Profile A still block release. **Release verdict: NO-GO.**
 
@@ -14,6 +14,7 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P10 release-gate prep (docs/H1–H4/Q11 invest/RC) | **In flight** | Executable H1–H4 checklists; Q11 404=/favicon.ico + blank punctuation frame; unsigned-rc + bundle-r6 re-PASS @ `d917ac2`; release NO-GO |
 | P10 residual closure (Animation/JASSUB/RC/reviews) | **Merged** (#70–#73 → `af22455`) | Animation enabled (opacity+volume); JASSUB eng complete flag false; unsigned RC; reviews tooling |
 | P10-09 R7 release evidence refresh             | **Merged** (#68, `50993234`) | `t10-release.json` @ `c3cc1d58`; 335/337 tests; E2E green; NO-GO residuals explicit |
 | P10-08 Bundle R6 eng (lifecycle)               | **Merged** (#67, `c3cc1d58`) | `qualify:bundle-r6` PASS; H2–H4 escalation packet; Profile A residual |

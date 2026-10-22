@@ -1,7 +1,8 @@
 # H2–H4 escalation packet (external gates)
 
 **Status:** Requirements packet only. **Not executed** on this machine as release evidence.  
-**Do not** treat absent runs as passes.
+**Do not** treat absent runs as passes.  
+**Executable checklists:** [CHECKLIST.md](./CHECKLIST.md) (H2 Profile A, H3 second account, H4 disk-full; H5 reminder).
 
 ## H2 — Clean Profile A + offline packet capture
 

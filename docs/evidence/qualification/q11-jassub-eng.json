@@ -1,8 +1,8 @@
 {
   "qualification": "Q11_JASSUB_ENG",
   "task": "P10-07",
-  "checkedAt": "2026-10-22T06:03:14.254Z",
-  "gitHead": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "checkedAt": "2026-10-22T09:32:29.031Z",
+  "gitHead": "d917ac297e20748916ba0c67e0f40a700167d93b",
   "jassubEnabled": false,
   "h1Signed": false,
   "engComplete": true,
@@ -34,14 +34,14 @@
     "measured": true,
     "budgetMsPerFrame": 4,
     "budgetSsim": 0.95,
-    "msPerFrame": 15.62,
-    "maxMsPerFrame": 41,
+    "msPerFrame": 9.28,
+    "maxMsPerFrame": 29,
     "timesMs": [
-      18.8,
-      41,
-      11.4,
-      3.9,
-      3
+      0.7,
+      29,
+      9,
+      3.3,
+      4.4
     ],
     "ssimByFixture": {
       "punctuation": 0.4003,
@@ -52,13 +52,13 @@
     },
     "minSsim": 0.4003,
     "budgetsMet": false,
-    "method": "playwright-msedge + locally rewritten non-threaded jassub (bare imports → /nm/); qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
+    "method": "playwright-msedge + locally rewritten jassub (bare imports → /nm/); modernWasmUrl+wasmUrl pinned; one warmup manualRender; qualify-only CSP with wasm-unsafe-eval; SSIM vs T7 landscape PNGs (glyph box)",
     "qualifyOnlyCspIncludesWasmUnsafeEval": true,
     "productionCspHasWasmUnsafeEval": false,
-    "consoleErrors": [
-      "Failed to load resource: the server responded with a status of 404 (Not Found)"
-    ],
-    "detail": "Q11 budgets NOT met (mean 15.620 ms/frame, min SSIM 0.4003); keep server libass reference still.",
+    "simdEnabled": true,
+    "http404Paths": null,
+    "consoleErrors": null,
+    "detail": "Q11 budgets NOT met (mean 9.280 ms/frame, min SSIM 0.4003); keep server libass reference still.",
     "fixtures": [
       "punctuation",
       "bidi-isolates",
@@ -66,7 +66,8 @@
       "mixed-lines",
       "latin-only"
     ],
-    "resolution": "1280x720"
+    "resolution": "1280x720",
+    "investigationShots": "docs/evidence/qualification/q11-jassub-investigation/shots/"
   },
   "npmPinStatus": "installed-jassub@2.5.20",
   "targetPin": "jassub@2.5.20 (dea3d2d3)",
@@ -79,5 +80,5 @@
   "fallback": "server-libass-reference-still",
   "publicRelease": "NO-GO",
   "passed": true,
-  "detail": "Engineering complete; Q11 budgets not claimed (Q11 budgets NOT met (mean 15.620 ms/frame, min SSIM 0.4003); keep server libass reference still.); JASSUB_ENABLED remains false; server reference still primary."
+  "detail": "Engineering complete; Q11 budgets not claimed (Q11 budgets NOT met (mean 9.280 ms/frame, min SSIM 0.4003); keep server libass reference still.); JASSUB_ENABLED remains false; server reference still primary."
 }
