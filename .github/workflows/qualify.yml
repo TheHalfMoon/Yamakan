@@ -25,11 +25,14 @@ jobs:
       # Same gate: audit must pass. Retries only cover transient registry 5xx/timeouts
       # (npm status outages); never treats audit failure or skipped scan as success.
       - name: npm audit (high, bounded registry retry)
+        env:
+          npm_config_fetch_timeout: "60000"
+          npm_config_fetch_retries: "1"
         run: |
           set -euo pipefail
           attempt=1
-          max=5
-          delay=30
+          max=6
+          delay=20
           while true; do
             if npm audit --audit-level=high; then
               exit 0
@@ -41,7 +44,7 @@ jobs:
             echo "npm audit attempt ${attempt}/${max} failed (likely registry); retry in ${delay}s" >&2
             sleep "$delay"
             attempt=$((attempt + 1))
-            delay=$((delay * 2))
+            delay=$((delay + 20))
           done
       - run: npm test
       - run: npm run build
