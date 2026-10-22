@@ -105,9 +105,7 @@ assert.equal(forced.queryFonts, false);
 assert.equal(forced.defaultFont, JASSUB_PINNED_FONT_KEY);
 assert.equal(forced.libassMemoryLimit, JASSUB_LIBASS_MEMORY_LIMIT_MIB);
 assert.equal(forced.libassGlyphLimit, JASSUB_LIBASS_GLYPH_LIMIT);
-assert.deepEqual(forced.fonts, [
-  "/assets/fonts/IBMPlexSansArabic-Regular.ttf",
-]);
+assert.deepEqual(forced.fonts, ["/assets/fonts/IBMPlexSansArabic-Regular.ttf"]);
 assert.ok(!("liberation sans" in forced.availableFonts));
 assert.equal(JASSUB_ENABLED, false);
 
@@ -415,17 +413,20 @@ try {
     // Warmup: fonts are preloaded, but first wasm/GPU path still spikes.
     // Run several seeks across the track before timed samples.
     for (let w = 0; w < 5; w++) {
-      await page.evaluate(async (t) => {
-        await window.__jassub.manualRender(
-          {
-            expectedDisplayTime: performance.now(),
-            mediaTime: t,
-            width: 1280,
-            height: 720,
-          },
-          true,
-        );
-      }, (w % MEASURE_FIXTURES.length) + 0.5);
+      await page.evaluate(
+        async (t) => {
+          await window.__jassub.manualRender(
+            {
+              expectedDisplayTime: performance.now(),
+              mediaTime: t,
+              width: 1280,
+              height: 720,
+            },
+            true,
+          );
+        },
+        (w % MEASURE_FIXTURES.length) + 0.5,
+      );
     }
 
     for (let i = 0; i < MEASURE_FIXTURES.length; i++) {
@@ -538,8 +539,7 @@ const enablementBlockedOn = ["H1-native-arabic-review"];
 if (!mainTs.includes("wasm-unsafe-eval")) {
   enablementBlockedOn.push("CSP-wasm-unsafe-eval-security-review");
 }
-const ssimOk =
-  typeof perf.minSsim === "number" && perf.minSsim >= TARGET_SSIM;
+const ssimOk = typeof perf.minSsim === "number" && perf.minSsim >= TARGET_SSIM;
 const perfOk =
   typeof perf.msPerFrame === "number" && perf.msPerFrame <= TARGET_MS;
 if (!ssimOk) enablementBlockedOn.push("Q11-ssim-budget");
