@@ -30,6 +30,11 @@ import {
 import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
 import { getSourceTimeAtClipTime } from "../donors/opencut/retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
+import { ANIMATION_ENABLED } from "../donors/opencut/animation/flags.ts";
+import {
+  AnimationPathSchema,
+  ClipAnimationSchema,
+} from "./animation-schema.ts";
 
 const UNITY = rational(1, 1);
 function clipRetime(c: CanonicalProject["clips"][number]) {
@@ -147,6 +152,25 @@ export const OperationSchema = z.discriminatedUnion("type", [
           den: z.number().int().positive().max(1_000_000),
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.setAnimation"),
+      clipId: Id,
+      /** Full channel map; null clears clip.animation. */
+      animation: ClipAnimationSchema.nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.upsertAnimationKeyframe"),
+      clipId: Id,
+      path: AnimationPathSchema,
+      timeTicks: Ticks,
+      value: z.number().finite(),
+      easing: z.enum(["step", "linear", "bezier"]).optional(),
+      keyId: z.string().min(1).max(80).optional(),
     })
     .strict(),
   z
@@ -534,6 +558,60 @@ function apply(p: CanonicalProject, op: Operation): void {
       unlocked(p, c.trackId);
       if (c.title !== null) throw invalid("Titles do not support retime.");
       c.speed = clampRetimeRate({ rate: op.speed });
+      return;
+    }
+    case "clip.setAnimation": {
+      if (!ANIMATION_ENABLED)
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Clip animation is off.",
+        );
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (c.title !== null)
+        throw invalid("Titles do not support keyframe animation.");
+      if (op.animation === null) {
+        delete c.animation;
+        return;
+      }
+      c.animation = ClipAnimationSchema.parse(op.animation);
+      return;
+    }
+    case "clip.upsertAnimationKeyframe": {
+      if (!ANIMATION_ENABLED)
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Clip animation is off.",
+        );
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (c.title !== null)
+        throw invalid("Titles do not support keyframe animation.");
+      const path = op.path;
+      const current = c.animation ? { ...c.animation } : {};
+      const existingChannel = current[path];
+      const keys = existingChannel ? [...existingChannel.keys] : [];
+      const keyId = op.keyId ?? `k-${path}-${op.timeTicks}`;
+      const nextKey = {
+        id: keyId,
+        time: op.timeTicks,
+        value: op.value,
+        segmentToNext: op.easing ?? ("linear" as const),
+        tangentMode: "auto" as const,
+      };
+      const atId = keys.findIndex((k) => k.id === keyId);
+      const atTime = keys.findIndex((k) => k.time === op.timeTicks);
+      if (atId >= 0) keys[atId] = { ...keys[atId]!, ...nextKey };
+      else if (atTime >= 0) keys[atTime] = { ...keys[atTime]!, ...nextKey };
+      else keys.push(nextKey);
+      keys.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id));
+      current[path] = {
+        ...(existingChannel?.extrapolation
+          ? { extrapolation: existingChannel.extrapolation }
+          : {}),
+        keys,
+      };
+      c.animation = ClipAnimationSchema.parse(current);
       return;
     }
     case "clip.unlinkSound": {

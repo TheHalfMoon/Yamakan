@@ -48,6 +48,13 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence:** `npm run qualify:q13` / `qualify:q14`; `tests/animation-params.test.ts`; receipts under `docs/evidence/qualification/q13-animation-compile.json` and `q14-animation-params.json`.
 - **Change rule:** enabling `ANIMATION_ENABLED` requires plan/preview filters and a new ADR.
 
+## 2026-10-22: P10-02 Animation UI→render enablement
+
+- **Authority:** P10-02 ([TASKS](plans/P10-qualification-activation/TASKS.md)); W16 modules + Q13/Q14 already on main.
+- **Decision:** Wire `clip.setAnimation` / `clip.upsertAnimationKeyframe` (commands + reducer, gated by `ANIMATION_ENABLED`), attach `animation` on render-plan video/audio, apply opacity (`colorchannelmixer`) and volume piecewise filters via the shared sampler, add the main-editor Animation panel. Set **`ANIMATION_ENABLED = true`** after `qualify:animation-e2e` plus unit wiring tests. Transform position/scale/rotate remain stored-only (no FFmpeg compile) as an explicit residual.
+- **Evidence:** `tests/animation-wiring.test.ts`; `npm run qualify:animation-e2e` → `docs/evidence/qualification/p10-02-animation-e2e.json`; refreshed Q13/Q14 receipts.
+- **Change rule:** compiling transform filters or changing the sampler/filter contract needs a new ADR entry.
+
 ## 2026-10-21: W15 Director identity and stages (M11–M12)
 
 - **Authority:** frozen plan W15 / M11–M12 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W14 merged at `498cf45`; W4/W10 prerequisites satisfied.

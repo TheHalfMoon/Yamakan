@@ -1,19 +1,17 @@
-# P10-02 Animation residual
+# P10-02 Animation residual — CLOSED
 
-**Main base:** `65451bd06fde091a54efea9c5db5acd387746735`  
-**Checked:** 2026-10-21  
-**`ANIMATION_ENABLED`:** remains **false**
+**Checked:** 2026-10-22  
+**`ANIMATION_ENABLED`:** **true** (after UI→render E2E)
 
 ## Verified
 
-- `npm run qualify:q13` **PASS** (expression compile; receipt refreshed).
-- `npm run qualify:q14` **PASS** (11/11 animated params tests; receipt refreshed).
-- OpenCut animation modules present under `core/donors/opencut/animation/*`.
+- `yamakan.clip.setAnimation` / `yamakan.clip.upsertAnimationKeyframe` → canonical `clip.animation`.
+- `compilePlan` attaches animation to video layers and audio when the flag is on.
+- Preview/export share `sampleScalarChannelsAtTime` (opacity + volume piecewise FFmpeg filters).
+- Editor Animation panel (`data-testid="clip-animation-panel"`) drives `setClipAnimation`.
+- `npm run qualify:q13` / `qualify:q14` / `qualify:animation-e2e` PASS.
 
-## Blocker (honest)
+## Remaining residual (documented, not a flag blocker)
 
-User-visible timeline keyframe edit → preview/export parity through Yamakan’s canonical render plan is **not** wired. Donor film-editor keyframe UI exists under `src/donors/film-editor/**` but is not the gated OpenCut/`ANIMATION_ENABLED` path.
-
-## Policy
-
-Do **not** flip `ANIMATION_ENABLED` until UI + render-plan E2E pass. Continue other P10 cards in parallel.
+- **Transform** channels (`position` / `scale` / `rotate`) may be stored on the plan but are **not** compiled into the FFmpeg filtergraph yet (opacity + volume MVP per Q13).
+- Donor film-editor keyframe UI under `src/donors/film-editor/**` remains a separate surface; the gated path is the main editor Animation panel.

@@ -37,6 +37,18 @@ export const ScalarChannelSchema = z
   })
   .strict();
 
+/** Paths writable on clip.animation (M6; effects/graphics excluded). */
+export const AnimationPathSchema = z.enum([
+  "transform.positionX",
+  "transform.positionY",
+  "transform.scaleX",
+  "transform.scaleY",
+  "transform.rotate",
+  "opacity",
+  "volume",
+]);
+export type AnimationPath = z.infer<typeof AnimationPathSchema>;
+
 /** M6 transform / opacity / volume channels only (effects/graphics excluded). */
 export const ClipAnimationSchema = z
   .object({
@@ -49,3 +61,6 @@ export const ClipAnimationSchema = z
     volume: ScalarChannelSchema.optional(),
   })
   .strict();
+
+export type ClipAnimation = z.infer<typeof ClipAnimationSchema>;
+export type ScalarChannel = z.infer<typeof ScalarChannelSchema>;

@@ -29,10 +29,13 @@ import {
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
   deleteClip,
+  FRAME_TICKS,
+  setClipAnimation,
   setClipSound,
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
+import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
 import { openAssetPeaks } from "./media/demux.ts";
 import type { WaveformCache } from "./donors/film-editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
@@ -1003,6 +1006,194 @@ function App() {
                       </>
                     );
                   })()}
+                  {ANIMATION_ENABLED ? (
+                    <>
+                      <h2>{t("clip.animation.heading")}</h2>
+                      {(() => {
+                        const clip = p.clips.find((c) => c.id === selected);
+                        if (!clip || clip.title !== null)
+                          return (
+                            <p className="hint">{t("clip.animation.none")}</p>
+                          );
+                        const opacity = clip.animation?.opacity?.keys ?? [];
+                        const volume = clip.animation?.volume?.keys ?? [];
+                        const startOp =
+                          opacity.find((k) => k.time === 0)?.value ?? 1;
+                        const endOp =
+                          opacity.find(
+                            (k) =>
+                              k.time ===
+                              Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                          )?.value ??
+                          opacity[opacity.length - 1]?.value ??
+                          1;
+                        const startVol =
+                          volume.find((k) => k.time === 0)?.value ?? 1;
+                        const endVol =
+                          volume.find(
+                            (k) =>
+                              k.time ===
+                              Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                          )?.value ??
+                          volume[volume.length - 1]?.value ??
+                          1;
+                        const endTicks =
+                          Math.max(0, clip.durationFrames - 1) * FRAME_TICKS;
+                        return (
+                          <div data-testid="clip-animation-panel" key={clip.id}>
+                            <p className="hint">{t("clip.animation.hint")}</p>
+                            <label>
+                              {t("clip.animation.startOpacity")}
+                              <input
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                disabled={busy}
+                                defaultValue={startOp}
+                                id="anim-start-opacity"
+                              />
+                            </label>
+                            <label>
+                              {t("clip.animation.endOpacity")}
+                              <input
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                disabled={busy}
+                                defaultValue={endOp}
+                                id="anim-end-opacity"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => {
+                                const startEl = document.getElementById(
+                                  "anim-start-opacity",
+                                ) as HTMLInputElement | null;
+                                const endEl = document.getElementById(
+                                  "anim-end-opacity",
+                                ) as HTMLInputElement | null;
+                                const s = Number(startEl?.value ?? 1);
+                                const e = Number(endEl?.value ?? 1);
+                                edit((proj) => {
+                                  const live = proj.clips.find(
+                                    (c) => c.id === clip.id,
+                                  );
+                                  return setClipAnimation(proj, clip.id, {
+                                    opacity: {
+                                      keys: [
+                                        {
+                                          id: "opacity-start",
+                                          time: 0,
+                                          value: s,
+                                          segmentToNext: "linear",
+                                          tangentMode: "auto",
+                                        },
+                                        {
+                                          id: "opacity-end",
+                                          time: endTicks,
+                                          value: e,
+                                          segmentToNext: "linear",
+                                          tangentMode: "auto",
+                                        },
+                                      ],
+                                    },
+                                    ...(live?.animation?.volume
+                                      ? { volume: live.animation.volume }
+                                      : {}),
+                                  });
+                                });
+                              }}
+                            >
+                              {t("clip.animation.apply")}
+                            </button>
+                            <label>
+                              {t("clip.animation.startVolume")}
+                              <input
+                                type="number"
+                                min={0}
+                                max={4}
+                                step={0.05}
+                                disabled={busy}
+                                defaultValue={startVol}
+                                id="anim-start-volume"
+                              />
+                            </label>
+                            <label>
+                              {t("clip.animation.endVolume")}
+                              <input
+                                type="number"
+                                min={0}
+                                max={4}
+                                step={0.05}
+                                disabled={busy}
+                                defaultValue={endVol}
+                                id="anim-end-volume"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => {
+                                const startEl = document.getElementById(
+                                  "anim-start-volume",
+                                ) as HTMLInputElement | null;
+                                const endEl = document.getElementById(
+                                  "anim-end-volume",
+                                ) as HTMLInputElement | null;
+                                const s = Number(startEl?.value ?? 1);
+                                const e = Number(endEl?.value ?? 1);
+                                edit((proj) => {
+                                  const live = proj.clips.find(
+                                    (c) => c.id === clip.id,
+                                  );
+                                  return setClipAnimation(proj, clip.id, {
+                                    ...(live?.animation?.opacity
+                                      ? { opacity: live.animation.opacity }
+                                      : {}),
+                                    volume: {
+                                      keys: [
+                                        {
+                                          id: "volume-start",
+                                          time: 0,
+                                          value: s,
+                                          segmentToNext: "linear",
+                                          tangentMode: "auto",
+                                        },
+                                        {
+                                          id: "volume-end",
+                                          time: endTicks,
+                                          value: e,
+                                          segmentToNext: "linear",
+                                          tangentMode: "auto",
+                                        },
+                                      ],
+                                    },
+                                  });
+                                });
+                              }}
+                            >
+                              {t("clip.animation.applyVolume")}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy || !clip.animation}
+                              onClick={() =>
+                                edit((proj) =>
+                                  setClipAnimation(proj, clip.id, null),
+                                )
+                              }
+                            >
+                              {t("clip.animation.clear")}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  ) : null}
                   <h2>{t("title.heading")}</h2>
                   <label>
                     {t("title.text")}

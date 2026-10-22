@@ -1,7 +1,7 @@
 {
   "qualification": "q13-animation-compile",
-  "head": "65451bd06fde091a54efea9c5db5acd387746735",
-  "animationEnabled": false,
+  "head": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "animationEnabled": true,
   "methodSelected": "expression",
   "alternative": "sendcmd",
   "maxDelta": 0,

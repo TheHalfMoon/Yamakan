@@ -7,6 +7,7 @@ import type { Clip, Project } from "../core/project.ts";
 import { fromEditView, toEditView } from "../core/canonical.ts";
 import { applyBatch, clampFades } from "../core/timeline/operations.ts";
 import type { Operation } from "../core/timeline/operations.ts";
+import type { ClipAnimation } from "../core/timeline/animation-schema.ts";
 import type { TimelineClip } from "./donors/film-editor/types";
 
 // Flicks per frame of the 30 fps edit view.
@@ -82,6 +83,52 @@ export function setClipSpeed(
   if (!c || c.title !== null) return p;
   try {
     return applyLocal(p, [{ type: "clip.setSpeed", clipId, speed }]);
+  } catch {
+    return p;
+  }
+}
+
+/** Replace or clear clip.animation (gated by ANIMATION_ENABLED in the reducer). */
+export function setClipAnimation(
+  p: Project,
+  clipId: string,
+  animation: ClipAnimation | null,
+): Project {
+  const c = p.clips.find((x) => x.id === clipId);
+  if (!c || c.title !== null) return p;
+  try {
+    return applyLocal(p, [{ type: "clip.setAnimation", clipId, animation }]);
+  } catch {
+    return p;
+  }
+}
+
+/** Upsert one opacity/volume (or transform) keyframe on a clip. */
+export function upsertClipAnimationKeyframe(
+  p: Project,
+  args: {
+    clipId: string;
+    path: "opacity" | "volume";
+    timeTicks: number;
+    value: number;
+    easing?: "step" | "linear" | "bezier";
+    keyId?: string;
+  },
+): Project {
+  const c = p.clips.find((x) => x.id === args.clipId);
+  if (!c || c.title !== null) return p;
+  try {
+    return applyLocal(p, [
+      {
+        type: "clip.upsertAnimationKeyframe",
+        clipId: args.clipId,
+        path: args.path,
+        timeTicks: args.timeTicks,
+        value: args.value,
+        easing: args.easing,
+        keyId: args.keyId,
+      },
+    ]);
   } catch {
     return p;
   }
