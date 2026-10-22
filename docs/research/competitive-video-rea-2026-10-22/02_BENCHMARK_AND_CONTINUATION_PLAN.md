@@ -47,7 +47,7 @@ For each competitor and Yamakan, measure the same job to completion on the same 
 
 ## 3. Proposed architecture if founder later authorizes implementation
 1. **Yamakan Studio/Timeline remains canonical**. A user creates a script and scene, chooses source assets and allowed engine capability; generates into a separate immutable content-addressed media object, attaches via typed operations, then edits/exports deterministically.
-2. One **local sidecar generative engine** with narrow allowlisted graph capability; adapter boundary wraps ComfyUI or Diffusers, never exposes open arbitrary graph/function to the browser or agent, and never becomes a second timeline/persistence owner.
+2. One **local sidecar generative engine** with narrow allowlisted graph capability; adapter boundary initially proposes pinned Diffusers and reserves ComfyUI as a gated fallback, never exposes open arbitrary graph/function to the browser or agent, and never becomes a second timeline/persistence owner.
 3. Capability registry distinguishes NO_ENGINE, ENGINE_PRESENT_UNQUALIFIED, LOCAL_APPROVED, PROVIDER_REQUIRES_AUTH, and REFUSED; no ranker returns success with zero eligible engines.
 4. Keep output/weights/consent review and real Win AppContainer, network and GPU safety within E-SEC. No published version claims real-generation until it actually passes tests.
 5. Optional remote provider marketplace remains separate and **disabled**, requires founder budget/authorization, per-provider terms, SSRF controls and user opt-in.
@@ -88,3 +88,6 @@ Completed in #85 (this package):
 - https://github.com/TheHalfMoon/Yamakan/blob/main/docs/FOUNDER_DECISION_RECORD.md
 - https://github.com/TheHalfMoon/Yamakan/issues/77
 - https://github.com/TheHalfMoon/Yamakan/blob/main/docs/evidence/qualification/windows-ux-qa-final-report.md
+
+
+**Resource/adapter note:** See [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md). Wan TI2V-5B offload reference ≥24GB VRAM, Diffusers repo ~34.2GB checkpoint contents; no free GPU allocation confirmed. E0–E2 are no-weights engineering tests, not inference wins.
