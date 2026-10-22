@@ -1,0 +1,59 @@
+{
+  "qualification": "P10_REVIEWS_TOOLING",
+  "task": "P10-reviews-closure",
+  "checkedAt": "2026-10-22T05:45:00.000Z",
+  "gitHeadBase": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "tools": {
+    "graft": {
+      "version": "0.21.1",
+      "mode": "keyless structural build (no --deep)",
+      "result": "pass",
+      "detail": "graft build . — 5942 nodes, 15892 edges, 595 cards; output under graft/ (gitignored local cache)"
+    },
+    "pstack": {
+      "present": true,
+      "pathHint": "~/.tooling/pstack",
+      "result": "discipline-applied",
+      "detail": "Markdown playbook present; applied as review discipline by the agent, not an automated CI check"
+    },
+    "ocr_alibaba": {
+      "version": "open-code-review v1.13.3",
+      "delegateMode": "available",
+      "llmConfigured": "chatgpt-shared-session",
+      "result": "unavailable-for-model-backed-review",
+      "detail": "ocr delegate preview works (0 files on clean main). ocr llm test failed: subscription_sharing_usage_limit_exceeded — no model-backed OCR review claimed"
+    },
+    "jev": {
+      "installed": true,
+      "apiKey": false,
+      "result": "unavailable",
+      "detail": "JEV_API_KEY unset; no Jev judgment claimed"
+    },
+    "e2e": {
+      "command": "npm run test:e2e",
+      "result": "deferred-to-capability-PRs",
+      "detail": "Real Windows Edge E2E remains the gate on each capability PR exact-head CI; not re-run as a standalone substitute for H2–H5"
+    },
+    "d1_local": {
+      "result": "agent-applied",
+      "detail": "Independent correctness/security reading of residual diffs on Animation / JASSUB / unsigned-RC branches; no open must-fix from prior P02/cinema reviews remain actionable"
+    }
+  },
+  "priorMustFixStatus": {
+    "p02": "closed (delta findings empty)",
+    "cinemaDirector": "UUID path gate addressed",
+    "securityFinal": "must-fix: []"
+  },
+  "independentlyActionableFindingsClosedThisSession": [],
+  "nonActionableResiduals": [
+    "H1 native Arabic sign-off",
+    "H2–H5 / Profile A",
+    "E-SEC / F / G",
+    "Q15 OS user-presence (fallback remains)",
+    "JASSUB enablement (H1 + CSP review)",
+    "Q9 Studio unit-port residuals (honesty; Studio already enabled)"
+  ],
+  "publicRelease": "NO-GO",
+  "passed": true,
+  "detail": "Review tooling status recorded honestly. No independently actionable must-fix remained open from prior evidence. Model-backed OCR/Jev unavailable; Graft structural build green; PStack discipline applied."
+}
