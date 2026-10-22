@@ -1,8 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `af224554eea444c28cb085463a9d8964ea7511a4`  
+**Last verified main SHA:** `ca04d10eab7f8fc1bc7b220c69e5602f57bf26a5`  
 **Updated:** 2026-10-22  
-**Open PRs:** none (frontier docs PR may follow)  
+**Open PRs:** none  
+**Post-merge CI:** SUCCESS, run 39734506769  
 **Release verdict:** **NO-GO**
 
 ## Completed (engineering)
@@ -33,4 +34,4 @@ H1 (packet unsigned) · H2 Profile A · H3 second account · H4 disk-full · H5 
 
 ## Achievable P10 engineering status
 
-Bounded P10 technical residuals (Animation wiring, JASSUB pre-H1 eng, unsigned RC, reviews tooling) are **merged** at `af22455`. Remaining work is external-human or gated enablement/signing — not to be fabricated.
+Bounded P10 technical residuals (Animation wiring, JASSUB pre-H1 eng, unsigned RC, reviews tooling) are **merged** at `af22455`; frontier recorded at `ca04d10`. Remaining work is external-human or gated enablement/signing — not to be fabricated.
