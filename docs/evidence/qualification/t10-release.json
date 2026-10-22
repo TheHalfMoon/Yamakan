@@ -1,8 +1,8 @@
 {
   "receipt": "yamakan.release-qualification/3",
-  "measuredAt": "2026-10-22T04:25:03.121Z",
+  "measuredAt": "2026-10-22T09:58:39.871Z",
   "environment": {
-    "commit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+    "commit": "5c6658d589ac36bd08725fef9233872865a7030e",
     "os": "Windows_NT 10.0.26300 (Windows 11 Home)",
     "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
     "logicalCores": 12,
@@ -23,8 +23,8 @@
       "version": "ffprobe version 7.1.1 Copyright (c) 2007-2025 the FFmpeg developers",
       "sha256": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171"
     },
-    "procd": "ae1672e19993809da794025fe78f7c04f3993b8773dceb6881fc84f0af9b7bc9",
-    "aclHelper": "758c97b48bd2d3e41856339562b291915b84f639ea4fff4c784b5f4fea84cd6f",
+    "procd": "265c07abcc45e85a1295356945373ba0850b12e1ac857e95c9ff638cc1ed0f64",
+    "aclHelper": "466aebf6942f9b2d2385ba6c7bc9a99f4e35923ba534a4008afa839682754383",
     "fonts": [
       {
         "file": "assets/fonts/IBMPlexSansArabic-Regular.ttf",
@@ -39,7 +39,7 @@
     ],
     "interface": {
       "files": 14,
-      "sha256": "b6e1af06db33563a79a491afd72c70dc778296fb1f9e14d0bcb558cc1f092a0e"
+      "sha256": "e7fc239b8dc68283bb6654b8faa4c222265e6a575a8877258b2954ae001c5a89"
     }
   },
   "policy": {
@@ -58,23 +58,23 @@
   "coldLaunch": {
     "method": "service start to its ready line on a fresh workspace, 5 runs; the OS file cache is warm after the build (fresh workspace, not a cold OS cache); with 5 runs p95 is the maximum",
     "runs": 5,
-    "p50": 763,
-    "p95": 864,
-    "max": 864,
+    "p50": 723,
+    "p95": 1087,
+    "max": 1087,
     "metThreshold": true
   },
   "reopen": {
     "fixture": "one 10 s 1280x720 H.264/AAC clip, 200 saved revisions; service start to project open over the authenticated API, 5 runs",
     "runs": 5,
-    "p50": 797,
-    "p95": 1113,
-    "max": 1113,
+    "p50": 789,
+    "p95": 1012,
+    "max": 1012,
     "metThreshold": true
   },
   "tests": {
     "exitCode": 0,
-    "total": 337,
-    "pass": 335,
+    "total": 358,
+    "pass": 356,
     "fail": 0,
     "skipped": 2
   },
@@ -85,13 +85,13 @@
   "offline": {
     "browserPages": {
       "method": "every request made by the journey's browser pages, recorded by the E2E (page.on('request')); allowed: 127.0.0.1, blob:, data:, and the browser's own built-in pages (about:, edge:, chrome:, such as its download panel), which are not network requests",
-      "requests": 184,
+      "requests": 203,
       "external": 0
     },
     "serviceTree": {
       "method": "Get-NetTCPConnection for the service process and every descendant, sampled during the browser E2E; UDP (DNS) is not captured, and a connection shorter than the sample gap can be missed",
-      "samples": 25,
-      "meanSampleGapMs": 1456,
+      "samples": 18,
+      "meanSampleGapMs": 1758,
       "connections": 22,
       "external": [],
       "exposedListeners": []

@@ -8,13 +8,14 @@
 
 | Action | Result |
 | --- | --- |
-| Reconcile `RELEASE_PROPOSAL.md` / `CURRENT.md` / `PROGRESS.md` to verified main `d917ac2` | Done; `t10-release.json` lineage still `c3cc1d58` until fresh `qualify:release` |
+| Reconcile `RELEASE_PROPOSAL.md` / `CURRENT.md` / `PROGRESS.md` to verified main `d917ac2` | Done |
 | Executable H1 checklist | `docs/evidence/h1-arabic-review-packet/CHECKLIST.md` (unsigned) |
 | Executable H2–H4 checklists | `docs/evidence/h2-h4-escalation-packet/CHECKLIST.md` (not executed) |
 | Q11 investigation | `docs/evidence/qualification/q11-jassub-investigation/` — 404=`/favicon.ico`; punctuation blank frame SSIM 0.4003; mean 9.28 ms/frame; budgets unmet; `JASSUB_ENABLED=false` |
 | `qualify:unsigned-rc` | PASS @ `d917ac2` |
 | `qualify:bundle-r6` | PASS @ `d917ac2` |
-| Review tools | Graft keyless available; OCR LLM usage-limited; Jev no API key — see reviews note |
+| `qualify:release` | PASS @ `5c6658d` — 356/358 tests, E2E green, cold/reopen under policy (dev profile only) |
+| Review tools | Graft keyless 5985/16091; OCR LLM usage-limited; Jev no API key — see `p10-release-gate-reviews.md` |
 
 ## Not done (external / gated)
 

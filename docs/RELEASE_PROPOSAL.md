@@ -2,13 +2,13 @@
 
 **Verified main (2026-10-22):** `d917ac297e20748916ba0c67e0f40a700167d93b` — post-merge CI SUCCESS [run 39735067828](https://github.com/TheHalfMoon/Yamakan/actions/runs/39735067828). Open PRs: none. P10 residual engineering (#70–#73) and frontier docs (#74–#75) are merged. Public release remains **NO-GO**.
 
-**Latest committed `qualify:release` receipt:** [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) was measured at commit `c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c` (dev profile; 335/337 tests). Re-run `npm run qualify:release` on a clean tree at the exact ship candidate before any founder H5 decision; do not treat the `c3cc1d58` receipt as Profile A evidence.
+**Latest committed `qualify:release` receipt:** [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) measured at branch commit `5c6658d589ac36bd08725fef9233872865a7030e` (dev profile; 356/358 tests, 2 skips; E2E green). Do not treat this as Profile A / H2 evidence. Re-run on the exact signed ship artifact before any founder H5 decision.
 
 **Historical T10 narrative below** was written against earlier heads (originally `11976a0`). Journey/fault rows remain authoritative for *what* must pass; binding SHA/hashes for a ship decision are the verified main above plus a fresh receipt and signed artifact.
 
 **Verdict: NO-GO for release.** T1–T10 MVP engineering and P10 qualification/activation are largely merged. Dev-profile `qualify:release` has passed on recorded heads, but [MVP acceptance](E2E_ACCEPTANCE.md) requires every row to pass on the exact release commit **and artifact hashes, on clean Windows Profile A**. Still open: signed installer / Authenticode, Profile A + offline capture (H2), second account (H3), constrained-volume disk-full (H4), native Arabic review (H1), founder ship (H5), JASSUB enablement (H1 + CSP review + Q11 budgets), Q15 OS presence, E-SEC/F/G. Worker read containment is merged but must still be shown on the **release** artifact. This document is the gate-by-gate account behind the ship decision.
 
-**Measured at commit `c3cc1d58` (receipt lineage; not Profile A):** receipt [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) (`yamakan.release-qualification/3`), produced by `npm run qualify:release` on a clean tree at that head. The run rebuilds the native helpers and the interface before hashing.
+**Measured at commit `5c6658d` (receipt lineage; not Profile A):** receipt [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) (`yamakan.release-qualification/3`), produced by `npm run qualify:release` on a clean tree at that head. The run rebuilds the native helpers and the interface before hashing.
 
 ## Measured on this machine (development profile, network enabled)
 
