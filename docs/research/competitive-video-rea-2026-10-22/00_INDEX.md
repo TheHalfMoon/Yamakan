@@ -18,6 +18,7 @@
 | 04 | [04_TARGET_ARCHITECTURE_AND_ROADMAP.md](04_TARGET_ARCHITECTURE_AND_ROADMAP.md) | Strongest achievable architecture preserving Yamakan authority |
 | 05 | [05_PRODUCT_CAPABILITY_MATRIX.md](05_PRODUCT_CAPABILITY_MATRIX.md) | Feature × evidence-grade matrix |
 | 06 | [06_OUTPERFORM_GAPS_AND_PATH.md](06_OUTPERFORM_GAPS_AND_PATH.md) | What Yamakan can/cannot match; shortest credible path |
+| 07 | [07_ENGINE_DECISION_AND_E0_E2_GATES.md](07_ENGINE_DECISION_AND_E0_E2_GATES.md) | Diffusers-first choice, ≥24GB GPU / ~34.2GB checkpoint budget and E0–E2 tests |
 
 ## Evidence grades (mandatory)
 
