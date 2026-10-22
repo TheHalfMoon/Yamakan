@@ -3,8 +3,9 @@
  * Only used from the command registry (Node). Browser UI talks via commands.
  */
 import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { ProjectStore } from "./store.ts";
+import { Id } from "./project.ts";
 import { CommandError } from "./command/errors.ts";
 import {
   CINEMA_ENABLED,
@@ -19,6 +20,18 @@ async function cinemaDir(store: ProjectStore): Promise<string> {
   return dir;
 }
 
+/** UUID-only filenames under cinema/; rejects path segments. */
+function scenePath(dir: string, sceneId: string): string {
+  const id = Id.parse(sceneId);
+  const root = resolve(dir);
+  const expected = join(root, `${id}.json`);
+  const path = resolve(root, `${id}.json`);
+  if (path !== expected) {
+    throw new CommandError("VALIDATION", "Cinema scene path escaped store.");
+  }
+  return path;
+}
+
 export async function persistCinemaScene(
   store: ProjectStore,
   scene: Scene3D,
@@ -31,7 +44,7 @@ export async function persistCinemaScene(
   }
   const dir = await cinemaDir(store);
   const contentHash = scene3dContentHash(scene);
-  const path = join(dir, `${scene.id}.json`);
+  const path = scenePath(dir, scene.id);
   await writeFile(path, `${JSON.stringify(scene, null, 2)}\n`, {
     encoding: "utf8",
     mode: 0o600,
@@ -49,7 +62,7 @@ export async function loadCinemaScene(
       "Cinema load is disabled.",
     );
   }
-  const path = join(await cinemaDir(store), `${sceneId}.json`);
+  const path = scenePath(await cinemaDir(store), sceneId);
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
@@ -60,7 +73,7 @@ export async function loadCinemaScene(
     throw error;
   }
   const scene = parseScene3D(JSON.parse(raw));
-  if (scene.id !== sceneId) {
+  if (scene.id !== Id.parse(sceneId)) {
     throw new CommandError(
       "VALIDATION",
       "Persisted scene id does not match requested id.",
@@ -85,8 +98,10 @@ export async function listCinemaScenes(
   for (const name of names) {
     if (!name.endsWith(".json")) continue;
     const id = name.slice(0, -".json".length);
-    const loaded = await loadCinemaScene(store, id);
-    out.push({ id, contentHash: loaded.contentHash });
+    const parsed = Id.safeParse(id);
+    if (!parsed.success) continue;
+    const loaded = await loadCinemaScene(store, parsed.data);
+    out.push({ id: parsed.data, contentHash: loaded.contentHash });
   }
   return out;
 }
