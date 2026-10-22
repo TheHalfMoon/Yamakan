@@ -52,7 +52,7 @@ Python 3 + PyTorch + CUDA (or CPU — impractical for video) + aiohttp websocket
 
 ### GPL note
 
-Running ComfyUI as a **separate process** and speaking HTTP avoids linking GPL into Yamakan’s Node binary. Do not statically import Comfy Python into the product package without legal review. Retain upstream notices if any files are ever adapted.
+Out-of-process HTTP avoids direct Python linking but does **not** automatically remove GPL, attribution or distribution obligations. Evaluate the actual bundled/released combination and keep required provenance and notices.
 
 ---
 
@@ -98,12 +98,12 @@ Map one pinned pipeline to a single allowlisted EngineGraph template, e.g. `yama
 | Docs inspected | Wan pipeline docs under `docs/source/en/api/pipelines/wan.md` |
 | Copy-vs-build | **ADAPTER** — prefer Diffusers sidecar **or** Comfy, **not both as dual authorities** |
 
-**Recommendation:** For first Yamakan enablement, prefer **one** path:
+**Updated proposed choice:** Prefer exactly one implementation spine; see [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md). This is not proof of real inference or safety.
 
-1. **Path A (simpler contract):** Diffusers + Wan2.2 TI2V-5B (or CogVideoX-2B) as a locked Python worker.  
-2. **Path B (graph UX later):** ComfyUI with a single allowlisted workflow JSON.
+1. **PRIMARY Path A:** Diffusers + Wan2.2 TI2V-5B as a pinned Python worker behind bounded stdio and job-scoped files; CogVideoX-2B only after independent qualification.  
+2. **FALLBACK Path B:** ComfyUI with one allowlisted workflow JSON, port/WS isolation and no unreviewed custom nodes; adopt only with a reasoned decision.
 
-Do not ship both as simultaneous production authorities.
+Do not ship both as simultaneous production authorities. Official Wan TI2V-5B offload reference requires **at least 24GB VRAM**, and the Diffusers checkpoint repository lists **~34.2GB**. No GPU slot/disk allocation has been confirmed and no inference has run.
 
 ---
 
