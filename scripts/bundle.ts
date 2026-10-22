@@ -452,7 +452,8 @@ export function unsignedRcInstallRoot(base = process.env.LOCALAPPDATA) {
 
 /** Refuse admin/system install locations for unsigned RC test installs. */
 export function assertSafeUnsignedRcInstallRoot(root: string) {
-  const resolved = path.resolve(root);
+  // Use win32 semantics so Linux CI can still assert Windows protected paths.
+  const resolved = path.win32.resolve(root);
   const lower = resolved.toLowerCase();
   const blocked = [
     process.env.ProgramFiles,
@@ -460,17 +461,20 @@ export function assertSafeUnsignedRcInstallRoot(root: string) {
     process.env.ProgramW6432,
     process.env.SystemRoot,
     process.env.windir,
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\Windows",
   ]
     .filter(Boolean)
-    .map((p) => path.resolve(p!).toLowerCase());
+    .map((p) => path.win32.resolve(p!).toLowerCase());
   for (const prefix of blocked) {
-    if (lower === prefix || lower.startsWith(prefix + path.sep)) {
+    if (lower === prefix || lower.startsWith(prefix + path.win32.sep)) {
       throw new Error(
         `Unsigned RC install root must not be under a protected system path (${prefix}). Use a per-user test root such as %LOCALAPPDATA%\\${UNSIGNED_RC_INSTALL_DIRNAME}.`,
       );
     }
   }
-  return resolved;
+  return path.resolve(root);
 }
 
 export type UnsignedRcArtifact = {

@@ -22,9 +22,8 @@ after(() =>
 );
 
 test("assertSafeUnsignedRcInstallRoot refuses Program Files", () => {
-  const pf = process.env.ProgramFiles || "C:\\Program Files";
   assert.throws(
-    () => assertSafeUnsignedRcInstallRoot(path.join(pf, "Yamakan")),
+    () => assertSafeUnsignedRcInstallRoot("C:\\Program Files\\Yamakan"),
     /protected system path/i,
   );
 });
