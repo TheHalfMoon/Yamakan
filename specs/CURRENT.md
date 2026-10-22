@@ -4,23 +4,26 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **Phase:** **P10 — Qualification, Activation, and Release Readiness** (Architecture B preserved). Founder P10 authorization of 2026-10-21 covers qualifying and activating already-merged Track 1/Track 2 capabilities under [P10 master plan](../docs/plans/P10-qualification-activation/MASTER_PLAN.md). Frozen plan W1–W18 remains the capability baseline ([PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f`, tag `plan-freeze-2026-10-18`). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `50993234a921c1319122c96227e18b85cadc7757` (P10-09 R7 evidence #68; Bundle R6 #67; W12 eng #66; Cinema/Director #64). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 enablement remains H1-blocked; JASSUB flag false). Exact-head `t10-release.json` at lineage `c3cc1d58` (dev profile; Profile A still open).
+**Verified main:** `af224554eea444c28cb085463a9d8964ea7511a4` (P10 residual closure: Animation #70, JASSUB eng #73, unsigned RC #71, reviews #72). Track 1/2 engineering merged. W12/JASSUB **enablement** remains H1-blocked + Q11 budgets unmet + CSP review. Exact-head `t10-release.json` lineage still `c3cc1d58` (dev profile; Profile A open).
 
-**M-gate:** **passed** at `eaeaf1b`. Human gates H1–H5 and release installer/Profile A still block release. **Release verdict: NO-GO.**
+**M-gate:** **passed** at `eaeaf1b`. Human gates H1–H5 and signed release installer/Profile A still block release. **Release verdict: NO-GO.**
 
-**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported preview/persist; AI camera off), `DIRECTOR_ENABLED` (manual framework-smoke; model stages off), audio unlink / loudnorm / Flow. **Providers / JASSUB / engines:** false (`JASSUB_ENABLED` eng-gated; H1 unsigned). **Animation:** enabling on `feat/p10-02-animation-ui-render` (opacity+volume; transform filters residual) pending merge.
+**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported), `DIRECTOR_ENABLED` (manual), `ANIMATION_ENABLED` (opacity+volume; transform filters residual), audio unlink / loudnorm / Flow. **Providers / JASSUB / engines:** false.
 
-**Next eligible:** External-only — H1 native Arabic sign-off, H2–H5, release installer/signing, JASSUB npm pin+notices after H1. No new W19+ without founder decision. No public production release.
+**Next eligible:** External-only — H1 native Arabic sign-off, H2–H5, Authenticode signing, Profile A, JASSUB enablement (H1 + CSP `wasm-unsafe-eval` review + Q11 budgets). No new W19+ without founder decision. No public production release.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P10 residual closure (Animation/JASSUB/RC/reviews) | **Merged** (#70–#73 → `af22455`) | Animation enabled (opacity+volume); JASSUB eng complete flag false; unsigned RC; reviews tooling |
 | P10-09 R7 release evidence refresh             | **Merged** (#68, `50993234`) | `t10-release.json` @ `c3cc1d58`; 335/337 tests; E2E green; NO-GO residuals explicit |
 | P10-08 Bundle R6 eng (lifecycle)               | **Merged** (#67, `c3cc1d58`) | `qualify:bundle-r6` PASS; H2–H4 escalation packet; Profile A residual |
-| P10-07 W12/H1 eng gate                         | **Merged** (#66, `008e8e9`) | `JASSUB_ENABLED=false`; unsigned H1 packet; Q11 eng only (no perf claim) |
+| P10-08 unsigned RC residual                    | **Merged** (#71, `e1c802e`) | Assessment + pack/install lifecycle; signing/Profile A open |
+| P10-07 W12/H1 eng gate                         | **Merged** (#66, `008e8e9`) | Initial eng gate |
+| P10-07 JASSUB eng residual                     | **Merged** (#73, `4c93291`) | npm pin 2.5.20, notices, provenance; Q11 measured fail budgets; flag false |
 | P10-03/04 Cinema + Director activation         | **Merged** (#64, `6cc68385`) | `CINEMA_ENABLED`/`DIRECTOR_ENABLED` true; activation E2E + UUID path gate; AI/model stages off |
 | P10-05/06 Quality Lab + Router explain         | **Merged** (#63, `7472a06`)  | `QUALITY_LAB_ENABLED=true`; providers false; `p10-05-quality-lab.json` |
-| P10-02 Animation UI→render                     | **In progress** (`feat/p10-02-animation-ui-render`) | Ops+plan+render+UI; `qualify:animation-e2e`; flag true (opacity+volume) |
-| P10-02 Animation residual (modules)            | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; residual closed by wiring branch |
+| P10-02 Animation UI→render                     | **Merged** (#70, `af22455`) | Ops+plan+render+UI; `qualify:animation-e2e`; `ANIMATION_ENABLED=true` |
+| P10-02 Animation residual (modules)            | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; residual closed by #70 |
 | P10-01 Studio activation                       | **Merged** (#61, `65451bd`)  | `STUDIO_ENABLED=true` |
 | P10-01 Studio Q10                              | **Merged** (#60, `16f8154`)  | App chunk 0.111 MiB gzip; stroke p95 7.7 ms on 4096×20 |
 | P10-01 Studio Q9                               | **Merged** (#59, `fbf1414`)  | 120/122 = 98.36% node-mode; exclusions honest |
