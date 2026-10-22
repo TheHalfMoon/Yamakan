@@ -199,19 +199,15 @@ export default function throughput(seconds) {
   };
   const rewriteBareImports = (source) =>
     source
-      .replace(
-        /\bfrom\s*['"]([^'"]+)['"]/g,
-        (full, spec) =>
-          Object.prototype.hasOwnProperty.call(bareToUrl, spec)
-            ? `from '${bareToUrl[spec]}'`
-            : full,
+      .replace(/\bfrom\s*['"]([^'"]+)['"]/g, (full, spec) =>
+        Object.prototype.hasOwnProperty.call(bareToUrl, spec)
+          ? `from '${bareToUrl[spec]}'`
+          : full,
       )
-      .replace(
-        /^import\s*['"]([^'"]+)['"]\s*;?/gm,
-        (full, spec) =>
-          Object.prototype.hasOwnProperty.call(bareToUrl, spec)
-            ? `import '${bareToUrl[spec]}';`
-            : full,
+      .replace(/^import\s*['"]([^'"]+)['"]\s*;?/gm, (full, spec) =>
+        Object.prototype.hasOwnProperty.call(bareToUrl, spec)
+          ? `import '${bareToUrl[spec]}';`
+          : full,
       );
 
   const jassubDist = join(workDir, "jassub");
@@ -407,7 +403,9 @@ try {
       const shotPath = join(shotDir, `${name}.png`);
       await page.locator("#c").screenshot({ path: shotPath });
 
-      const fixtureIndex = TYPOGRAPHY_FIXTURES.findIndex((f) => f.name === name);
+      const fixtureIndex = TYPOGRAPHY_FIXTURES.findIndex(
+        (f) => f.name === name,
+      );
       const refName = `landscape-${String(fixtureIndex + 1).padStart(2, "0")}-${name}.png`;
       const refPath = join(TYPO_DIR, refName);
       if (!existsSync(refPath)) {
@@ -415,10 +413,11 @@ try {
       }
       const rendered = decodeStill(shotPath, MEASURE_W, MEASURE_H);
       const reference = decodeStill(refPath, MEASURE_W, MEASURE_H);
-      const box =
-        glyphBox(reference, { x: 0, y: 0, w: MEASURE_W, h: MEASURE_H }, [
-          0, 0, 0,
-        ]) ?? { x: 0, y: 0, w: MEASURE_W, h: MEASURE_H };
+      const box = glyphBox(
+        reference,
+        { x: 0, y: 0, w: MEASURE_W, h: MEASURE_H },
+        [0, 0, 0],
+      ) ?? { x: 0, y: 0, w: MEASURE_W, h: MEASURE_H };
       ssimByFixture[name] = Number(ssim(rendered, reference, box).toFixed(4));
     }
 

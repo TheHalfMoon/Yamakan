@@ -52,10 +52,7 @@ describe("JASSUB preview gate (P10-07)", () => {
     assert.deepEqual(Object.keys(opts.availableFonts).sort(), [
       JASSUB_PINNED_FONT_KEY,
     ]);
-    assert.equal(
-      opts.availableFonts[JASSUB_PINNED_FONT_KEY],
-      pinnedFont.url,
-    );
+    assert.equal(opts.availableFonts[JASSUB_PINNED_FONT_KEY], pinnedFont.url);
     assert.equal(opts.libassMemoryLimit, JASSUB_LIBASS_MEMORY_LIMIT_MIB);
     assert.ok(opts.libassMemoryLimit > 0);
     assert.equal(opts.libassGlyphLimit, JASSUB_LIBASS_GLYPH_LIMIT);
