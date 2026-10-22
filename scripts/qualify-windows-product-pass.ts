@@ -165,7 +165,7 @@ try {
           trackId: picture,
           assetId: a.asset.id,
           startFrame: 0,
-          durationFrames: 120,
+          durationFrames: 90,
           sourceFrame: 0,
           title: null,
           sound: {

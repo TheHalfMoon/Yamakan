@@ -1,0 +1,35 @@
+{
+  "policy": "yamakan.windows-product-pass/v1",
+  "commit": "fd9a51a2b62ad990533ed1fba355c2150bcf8c75",
+  "runId": "2026-10-22T13-45-53-023Z",
+  "qaRoot": "D:\\yamakan-qa-product-pass\\2026-10-22T13-45-53-023Z",
+  "elapsedMs": 20989,
+  "animationEnabled": true,
+  "clipsAfterSplit": 5,
+  "export": {
+    "bytes": 2386154,
+    "sha256": "ebf7a0d2293fc768ffaa45cd6fd4b81805d0ea73a64c8d5741ae9dead545f4c1",
+    "duration": 6,
+    "video": {
+      "codec": "h264",
+      "width": 1280,
+      "height": 720
+    },
+    "audio": {
+      "codec": "aac",
+      "sampleRate": 48000,
+      "channels": 2
+    },
+    "decodePass": true
+  },
+  "previewFrameBytes": 178083,
+  "exportFrameBytes": 207615,
+  "arabicTitle": "يماكن · اختبار الجودة",
+  "verdict": "PASS",
+  "limitations": [
+    "Dev-profile workspace on isolated QA root; not H2 Profile A.",
+    "Does not satisfy H1 native Arabic human sign-off.",
+    "Single-frame preview/export presence check; not full SSIM campaign.",
+    "Public release remains NO-GO."
+  ]
+}
