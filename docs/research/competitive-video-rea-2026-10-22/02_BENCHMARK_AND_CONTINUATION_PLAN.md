@@ -57,7 +57,7 @@ R = Research exact source, E = Extract qualified narrow algorithm/contract, A = 
 - Deliver MODEL_SELECTION_MATRIX, WEIGHT_RESOURCE_BUDGET, DATA_AND_RIGHTS_LEDGER. No checkpoint downloads.
 
 ### REA-04: Cinema control and consistency gap
-- Trace the exact Yamaha/Yamakan camera and Director metadata flow; differentiate editable optics metadata from conditioned AI video generation.
+- Trace the exact Yamakan camera and Director metadata flow; differentiate editable optics metadata from conditioned AI video generation.
 - REA candidates for shot-by-shot references, first/last frame, pose/depth/control, consistent character and location, audio and shot stitching.
 - Build prototype TEST FIXTURES ONLY after research permission; no generative model activation.
 - Require measured reference adherence and output fidelity, not "camera field exists" PASS.
