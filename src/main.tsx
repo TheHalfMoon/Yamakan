@@ -287,7 +287,9 @@ function App() {
     <div className="app">
       <header>
         <div className="identity">
-          <span className="mark">D</span>
+          <span className="mark" aria-hidden="true">
+            Y
+          </span>
           <div>
             <strong>YAMAKAN</strong>
             <small>{t("brand.tagline")}</small>
@@ -479,67 +481,83 @@ function App() {
                 {t("assets.title")}{" "}
                 <span>{formatNumber(lang, p.assets.length)}</span>
               </h2>
-              <input
-                ref={input}
-                type="file"
-                aria-label={t("assets.import")}
-                accept=".png,.jpg,.jpeg,.webp,.mp4,.mov,.webm,.wav,.mp3,.ogg"
-                disabled={busy}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file) return;
-                  run(async () => {
-                    await save();
-                    const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
-                      method: "POST",
-                      headers: {
-                        ...sessionHeaders(),
-                        "X-Asset-Name": encodeURIComponent(file.name),
-                      },
-                      body: file,
-                    });
-                    const v = await r.json();
-                    if (!r.ok)
-                      throw new Error(v.error?.message || t("import.failed"));
-                    if (v.job) {
-                      // Variable-frame-rate video: wait for its constant-rate version.
-                      setMessage(msg("import.converting", { name: file.name }));
-                      let job = v.job;
-                      // Stop waiting (the job continues) after twice the
-                      // conversion time limit, queueing included.
-                      const deadline =
-                        Date.now() +
-                        2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
-                      while (
-                        job.state === "QUEUED" ||
-                        job.state === "RUNNING"
-                      ) {
-                        if (Date.now() > deadline)
-                          throw new Error(
-                            t("import.stillConverting", { name: file.name }),
-                          );
-                        await new Promise((resolve) =>
-                          setTimeout(resolve, 500),
+              <div className="file-import">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => input.current?.click()}
+                >
+                  {t("assets.import")}
+                </button>
+                <input
+                  ref={input}
+                  type="file"
+                  className="file-import__native"
+                  aria-label={t("assets.import")}
+                  accept=".png,.jpg,.jpeg,.webp,.mp4,.mov,.webm,.wav,.mp3,.ogg"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    run(async () => {
+                      await save();
+                      const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
+                        method: "POST",
+                        headers: {
+                          ...sessionHeaders(),
+                          "X-Asset-Name": encodeURIComponent(file.name),
+                        },
+                        body: file,
+                      });
+                      const v = await r.json();
+                      if (!r.ok)
+                        throw new Error(v.error?.message || t("import.failed"));
+                      if (v.job) {
+                        // Variable-frame-rate video: wait for its constant-rate version.
+                        setMessage(
+                          msg("import.converting", { name: file.name }),
                         );
-                        job = await call("yamakan.job.status", {
-                          jobId: job.id,
-                        });
+                        let job = v.job;
+                        // Stop waiting (the job continues) after twice the
+                        // conversion time limit, queueing included.
+                        const deadline =
+                          Date.now() +
+                          2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
+                        while (
+                          job.state === "QUEUED" ||
+                          job.state === "RUNNING"
+                        ) {
+                          if (Date.now() > deadline)
+                            throw new Error(
+                              t("import.stillConverting", { name: file.name }),
+                            );
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 500),
+                          );
+                          job = await call("yamakan.job.status", {
+                            jobId: job.id,
+                          });
+                        }
+                        if (job.state !== "COMPLETED")
+                          throw new Error(job.error || t("import.incomplete"));
+                        accept(
+                          await call("yamakan.project.open", {
+                            projectId: p.id,
+                          }),
+                        );
+                        setMessage(
+                          msg("import.converted", { name: file.name }),
+                        );
+                      } else {
+                        accept(v.project);
+                        setMessage(msg("import.done", { name: v.asset.name }));
                       }
-                      if (job.state !== "COMPLETED")
-                        throw new Error(job.error || t("import.incomplete"));
-                      accept(
-                        await call("yamakan.project.open", { projectId: p.id }),
-                      );
-                      setMessage(msg("import.converted", { name: file.name }));
-                    } else {
-                      accept(v.project);
-                      setMessage(msg("import.done", { name: v.asset.name }));
-                    }
-                    await refresh();
-                  });
-                }}
-              />
+                      await refresh();
+                    });
+                  }}
+                />
+              </div>
               <div className="asset-list">
                 {p.assets.map((a) => (
                   <button
@@ -766,6 +784,9 @@ function App() {
                     canvasHeight={p.height}
                     aspectStyle={{ aspectRatio: `${p.width}/${p.height}` }}
                     showControls
+                    clipStatusLabel={t("preview.clipStatus", {
+                      count: view.clips.length,
+                    })}
                   />
                   <div className="transport">
                     <button
@@ -822,7 +843,9 @@ function App() {
                           ...p.scenes,
                           {
                             id: crypto.randomUUID(),
-                            name: `Scene ${p.scenes.length + 1}`,
+                            name: t("scene.default", {
+                              n: p.scenes.length + 1,
+                            }),
                             referenceAssetId:
                               p.assets.find((a) => a.kind === "image")?.id ||
                               null,
@@ -1338,7 +1361,9 @@ function App() {
             </>
           ) : (
             <section className="empty">
-              <span className="large-mark">D</span>
+              <span className="large-mark" aria-hidden="true">
+                Y
+              </span>
               <h1>{t("empty.title")}</h1>
               <p>{t("empty.body")}</p>
               <p>{t("empty.persist")}</p>

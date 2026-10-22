@@ -26,6 +26,8 @@ interface PreviewPlayerProps {
     aspectClassName?: string;
     aspectStyle?: React.CSSProperties;
     showControls?: boolean;
+    /** Localized status under the transport (clip count + renderer). */
+    clipStatusLabel?: string;
 }
 
 const interpolate = (start: number, end: number, progress: number, easing: string) => {
@@ -312,6 +314,7 @@ const drawGlitchOverlay = (ctx: CanvasRenderingContext2D, width: number, height:
 };
 
 const PreviewPlayer = forwardRef<PreviewPlayerHandle, PreviewPlayerProps>(({
+    clipStatusLabel,
     timelineClips,
     timelineTracks,
     mediaItems,
@@ -1254,7 +1257,8 @@ const PreviewPlayer = forwardRef<PreviewPlayerHandle, PreviewPlayerProps>(({
                         </div>
                     </div>
                     <div className="text-xs text-gray-500">
-                        {timelineClips.length} Clips • Canvas Renderer
+                        {clipStatusLabel ??
+                            `${timelineClips.length} Clips • Canvas Renderer`}
                     </div>
                 </div>
             )}

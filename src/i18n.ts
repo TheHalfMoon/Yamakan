@@ -52,6 +52,7 @@ const en = {
   "assets.kind.video": "video",
   "assets.kind.audio": "audio",
   "assets.size": "{kb} KB",
+  "preview.clipStatus": "{count} clips · Canvas renderer",
   "import.failed": "Import failed.",
   "import.converting":
     "Converting {name} to a constant frame rate before editing…",
@@ -78,7 +79,8 @@ const en = {
   "clip.animation.clear": "Clear animation",
   "clip.animation.hint":
     "Two keyframes from clip start to end. Preview and export share the same sampler.",
-  "clip.animation.none": "Select a media clip to edit opacity or volume keyframes.",
+  "clip.animation.none":
+    "Select a media clip to edit opacity or volume keyframes.",
   "history.label": "Project history",
   "history.title": "Project history & recovery",
   "history.current": "Project {id} · Current revision {revision}",
@@ -151,7 +153,7 @@ const en = {
     "Create a local project, import media, plan a shot, edit the timeline and export a playable video.",
   "empty.persist":
     "Projects remain editable after closing and reopening Yamakan.",
-  footer: "Yamakan engineering preview · Offline workflows",
+  footer: "Yamakan engineering preview · Not a public release",
   "reference.region": "Reference preview",
   "reference.title": "Reference preview",
   "reference.empty": "Add a clip or title to see the reference preview.",
@@ -214,6 +216,7 @@ const ar: Record<MessageKey, string> = {
   "assets.kind.video": "فيديو",
   "assets.kind.audio": "صوت",
   "assets.size": "{kb} ك.ب",
+  "preview.clipStatus": "{count} مقاطع · مُصيِّر اللوحة",
   "import.failed": "تعذّر الاستيراد.",
   "import.converting": "جارٍ تحويل {name} إلى معدل إطارات ثابت قبل التحرير…",
   "import.stillConverting":
@@ -264,8 +267,7 @@ const ar: Record<MessageKey, string> = {
   "cinema.intro":
     "معاينة المشهد المدعومة والحفظ. كاميرا الذكاء الاصطناعي تبقى متوقفة.",
   "director.title": "المخرج",
-  "director.intro":
-    "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
+  "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "studio.intro":
     "تحرير الصور الطبقي مستورد خلف محوِّل يماكن. يبقى معطّلاً حتى تتحقق أهداف تأهيل الاستوديو.",
   "tools.jobs":
@@ -312,7 +314,7 @@ const ar: Record<MessageKey, string> = {
   "empty.body":
     "أنشئ مشروعًا محليًا، واستورد الوسائط، وخطّط للقطة، وحرّر الخط الزمني، وصدّر فيديو قابلًا للتشغيل.",
   "empty.persist": "تبقى المشاريع قابلة للتحرير بعد إغلاق يماكن وإعادة فتحه.",
-  footer: "معاينة هندسية من يماكن · سير عمل دون اتصال",
+  footer: "معاينة هندسية من يماكن · ليست إصدارًا عامًا",
   "reference.region": "المعاينة المرجعية",
   "reference.title": "المعاينة المرجعية",
   "reference.empty": "أضف مقطعًا أو عنوانًا لرؤية المعاينة المرجعية.",

@@ -46,7 +46,7 @@
       "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "importedSha256": "b4f0f5a3cb921c14433aacdddf7e3eb26033118bbfc4043e61424dda3b59459f",
+    "importedSha256": "171ace099f199e54dde42ae293c60cb232a106cf461bc2e25e23ceb40eb58d1e",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
