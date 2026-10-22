@@ -1,0 +1,15 @@
+{
+  "qualification": "Q11_JASSUB_ENG",
+  "task": "P10-07",
+  "checkedAt": "2026-10-22T04:05:27.370Z",
+  "gitHead": "6cc6838506558d756c8ff7b9166d9bda14c1743c",
+  "jassubEnabled": false,
+  "performanceClaimed": false,
+  "ssimClaimed": false,
+  "h1Signed": false,
+  "npmPinStatus": "not-installed-pending-notices",
+  "targetPin": "jassub@2.5.20 (dea3d2d3)",
+  "cspWasmUnsafeEval": "not-applied",
+  "passed": true,
+  "detail": "Engineering gate only: flag false, preview construction refuses, H1 unsigned, no Q11 perf/SSIM claim."
+}
