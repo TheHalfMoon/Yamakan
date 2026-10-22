@@ -303,7 +303,7 @@ export const commands = {
         projectId: Id,
         expectedRevision: z.number().int().nonnegative(),
         clipId: Id,
-        path: AnimationPathSchema,
+        channel: AnimationPathSchema,
         timeTicks: Ticks,
         value: z.number().finite(),
         easing: z.enum(["step", "linear", "bezier"]).optional(),
@@ -318,7 +318,7 @@ export const commands = {
           {
             type: "clip.upsertAnimationKeyframe",
             clipId: a.clipId,
-            path: a.path,
+            channel: a.channel,
             timeTicks: a.timeTicks,
             value: a.value,
             easing: a.easing,

@@ -108,7 +108,7 @@ export function upsertClipAnimationKeyframe(
   p: Project,
   args: {
     clipId: string;
-    path: "opacity" | "volume";
+    channel: "opacity" | "volume";
     timeTicks: number;
     value: number;
     easing?: "step" | "linear" | "bezier";
@@ -122,7 +122,7 @@ export function upsertClipAnimationKeyframe(
       {
         type: "clip.upsertAnimationKeyframe",
         clipId: args.clipId,
-        path: args.path,
+        channel: args.channel,
         timeTicks: args.timeTicks,
         value: args.value,
         easing: args.easing,

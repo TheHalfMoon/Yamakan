@@ -166,7 +166,8 @@ export const OperationSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("clip.upsertAnimationKeyframe"),
       clipId: Id,
-      path: AnimationPathSchema,
+      // Named "channel" (not "path") — command schema forbids executable/path keys.
+      channel: AnimationPathSchema,
       timeTicks: Ticks,
       value: z.number().finite(),
       easing: z.enum(["step", "linear", "bezier"]).optional(),
@@ -587,11 +588,11 @@ function apply(p: CanonicalProject, op: Operation): void {
       unlocked(p, c.trackId);
       if (c.title !== null)
         throw invalid("Titles do not support keyframe animation.");
-      const path = op.path;
+      const channel = op.channel;
       const current = c.animation ? { ...c.animation } : {};
-      const existingChannel = current[path];
+      const existingChannel = current[channel];
       const keys = existingChannel ? [...existingChannel.keys] : [];
-      const keyId = op.keyId ?? `k-${path}-${op.timeTicks}`;
+      const keyId = op.keyId ?? `k-${channel}-${op.timeTicks}`;
       const nextKey = {
         id: keyId,
         time: op.timeTicks,
@@ -605,7 +606,7 @@ function apply(p: CanonicalProject, op: Operation): void {
       else if (atTime >= 0) keys[atTime] = { ...keys[atTime]!, ...nextKey };
       else keys.push(nextKey);
       keys.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id));
-      current[path] = {
+      current[channel] = {
         ...(existingChannel?.extrapolation
           ? { extrapolation: existingChannel.extrapolation }
           : {}),
@@ -617,7 +618,12 @@ function apply(p: CanonicalProject, op: Operation): void {
     case "clip.unlinkSound": {
       unlocked(p, clip(p, op.clipId).trackId);
       unlocked(p, op.audioTrackId);
-      placeable(p, op.audioTrackId, clip(p, op.clipId).startTicks, clip(p, op.clipId).durationTicks);
+      placeable(
+        p,
+        op.audioTrackId,
+        clip(p, op.clipId).startTicks,
+        clip(p, op.clipId).durationTicks,
+      );
       const next = unlinkVideoSound(p, {
         videoClipId: op.clipId,
         audioTrackId: op.audioTrackId,

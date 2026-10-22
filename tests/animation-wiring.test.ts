@@ -121,14 +121,14 @@ test("clip.upsertAnimationKeyframe inserts and updates", () => {
   const clipId = p.clips[0]!.id;
   const via = upsertClipAnimationKeyframe(p, {
     clipId,
-    path: "opacity",
+    channel: "opacity",
     timeTicks: 0,
     value: 0.25,
   });
   assert.equal(via.clips[0]!.animation?.opacity?.keys[0]?.value, 0.25);
   const updated = upsertClipAnimationKeyframe(via, {
     clipId,
-    path: "opacity",
+    channel: "opacity",
     timeTicks: 0,
     value: 0.75,
     keyId: via.clips[0]!.animation!.opacity!.keys[0]!.id,
