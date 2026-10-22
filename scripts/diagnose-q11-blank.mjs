@@ -232,7 +232,13 @@ window.__ready = true;
           return { readable: false, nonBlack: -1, error: String(e) };
         }
       });
-      results.push({ name, mediaTime: t, ms: Number(ms.toFixed(2)), ...pixels, shot });
+      results.push({
+        name,
+        mediaTime: t,
+        ms: Number(ms.toFixed(2)),
+        ...pixels,
+        shot,
+      });
     }
     report.modes[mode] = results;
   } finally {
