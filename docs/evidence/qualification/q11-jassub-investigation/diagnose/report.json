@@ -1,0 +1,74 @@
+{
+  "modes": {
+    "all-cues": [
+      {
+        "name": "punctuation",
+        "mediaTime": 0.5,
+        "ms": 1.3,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\all-cues-punctuation.png"
+      },
+      {
+        "name": "bidi-isolates",
+        "mediaTime": 1.5,
+        "ms": 31,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\all-cues-bidi-isolates.png"
+      },
+      {
+        "name": "diacritics",
+        "mediaTime": 2.5,
+        "ms": 7.5,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\all-cues-diacritics.png"
+      },
+      {
+        "name": "mixed-lines",
+        "mediaTime": 3.5,
+        "ms": 2.3,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\all-cues-mixed-lines.png"
+      },
+      {
+        "name": "latin-only",
+        "mediaTime": 4.5,
+        "ms": 1.8,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\all-cues-latin-only.png"
+      }
+    ],
+    "punct-alone": [
+      {
+        "name": "punctuation",
+        "mediaTime": 0.5,
+        "ms": 0.8,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\punct-alone-punctuation.png"
+      }
+    ],
+    "latin-alone": [
+      {
+        "name": "latin-only",
+        "mediaTime": 0.5,
+        "ms": 0.8,
+        "readable": false,
+        "nonBlack": -1,
+        "error": "InvalidStateError: Failed to execute 'getContext' on 'HTMLCanvasElement': Cannot get context from a canvas that has transferred its control to offscreen.",
+        "shot": "C:\\Users\\Shehr\\OneDrive\\Desktop\\New folder\\Yamakan-p10-q11q15\\docs\\evidence\\qualification\\q11-jassub-investigation\\diagnose\\latin-alone-latin-only.png"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-22T10:22:38.939Z"
+}

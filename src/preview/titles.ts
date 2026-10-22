@@ -51,6 +51,12 @@ export type JassubConstructOptions = {
   queryFonts: false;
   defaultFont: string;
   availableFonts: Record<string, string>;
+  /**
+   * Same-origin font URLs loaded before createTrackMem. Required so the first
+   * frame is not drawn before glyphs exist (jassub does not redraw after
+   * lazy availableFonts fetch — see worker `_allocFonts` TODO).
+   */
+  fonts: string[];
   libassMemoryLimit: number;
   libassGlyphLimit: number;
   workerUrl: string;
@@ -107,8 +113,10 @@ export function buildJassubConstructOptions(
     );
   }
   const availableFonts: Record<string, string> = {};
+  const fontUrls: string[] = [];
   for (const font of options.fonts) {
     availableFonts[font.family.toLowerCase()] = font.url;
+    fontUrls.push(font.url);
   }
   // Never leave Liberation Sans / system fallback in place.
   delete availableFonts["liberation sans"];
@@ -118,6 +126,7 @@ export function buildJassubConstructOptions(
     queryFonts: false,
     defaultFont: JASSUB_PINNED_FONT_KEY,
     availableFonts,
+    fonts: fontUrls,
     libassMemoryLimit: JASSUB_LIBASS_MEMORY_LIMIT_MIB,
     libassGlyphLimit: JASSUB_LIBASS_GLYPH_LIMIT,
     workerUrl: options.workerUrl,

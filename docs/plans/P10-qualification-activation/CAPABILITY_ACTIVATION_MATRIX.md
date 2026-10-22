@@ -11,7 +11,7 @@ Distinguish: code merged ≠ integration tested ≠ E2E ≠ security reviewed �
 | Director | `DIRECTOR_ENABLED` | identity/stages | panel | activation E2E (#64) | human-only | n/a | **true** (manual) | Manual path E2E; no model stages |
 | Quality Lab | `QUALITY_LAB_ENABLED` | lab+lineage | unit | command E2E | no paid egress | n/a | **true** (deterministic) | Deterministic subset only |
 | Router providers | `ROUTER_PROVIDERS_ENABLED` | explain | unit | explain E2E | no paid routes | n/a | **false** (explain qualified) | Stays false; explain may stay available |
-| JASSUB titles | `JASSUB_ENABLED` | pin+notices+opts | eng tests | harness | CSP unchanged | Q11 measured fail | **false** | H1 + CSP review + Q11 budgets |
+| JASSUB titles | `JASSUB_ENABLED` | pin+notices+opts | eng tests | harness | CSP unchanged | Q11 harness budgets **met** (font preload) | **false** | H1 + CSP `wasm-unsafe-eval` review (Q11 harness cleared) |
 | Audio unlink | `AUDIO_UNLINK_ENABLED` | merged | yes | yes | — | — | **true** | Preserve |
 | Loudnorm | `LOUDNORM_ENABLED` | merged | yes | yes | — | — | **true** | Preserve |
 | Flow view | `FLOW_ENABLED` | merged | yes | yes | — | — | **true** | Preserve |
