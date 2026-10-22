@@ -21,7 +21,27 @@ jobs:
       - run: npm run format:check
       - run: npm run provenance:check
       - run: npm run brand:check
-      - run: npm audit --audit-level=high
+      # Same gate: audit must pass. Retries only cover transient registry 5xx/timeouts
+      # (npm status outages); never treats audit failure or skipped scan as success.
+      - name: npm audit (high, bounded registry retry)
+        run: |
+          set -euo pipefail
+          attempt=1
+          max=5
+          delay=30
+          while true; do
+            if npm audit --audit-level=high; then
+              exit 0
+            fi
+            if [ "$attempt" -ge "$max" ]; then
+              echo "npm audit failed after ${max} attempts" >&2
+              exit 1
+            fi
+            echo "npm audit attempt ${attempt}/${max} failed (likely registry); retry in ${delay}s" >&2
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+          done
       - run: npm test
       - run: npm run build
       - run: npx playwright-core install --with-deps chromium
