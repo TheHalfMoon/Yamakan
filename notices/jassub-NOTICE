@@ -1,0 +1,40 @@
+JASSUB (ThaUnknown/jassub) — provenance and licence election notice
+====================================================================
+
+Pin: npm jassub@2.5.20 corresponding to git commit
+     dea3d2d398569a591cf0c767d945d84e9f120484
+Origin: https://github.com/ThaUnknown/jassub
+Lockfile integrity (package-lock.json):
+  sha512-uUE0YoUnw/pdgFVoefRN0leLu5iFS39hfOikouCqHUffLCAU3wqRU5VkpBbY1piV8WWlFcHCz3HEPzvyxbAJTw==
+
+Declared SPDX expression (pinned package.json):
+  LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND
+  MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0
+
+Yamakan elections and obligations
+---------------------------------
+* FreeType is dual-licensed (FTL OR GPL-2.0-or-later). Yamakan elects
+  GPL-2.0-or-later for FreeType (FTL credit clause is treated as
+  GPL-incompatible for this combined work).
+* fribidi remains under LGPL-2.1-or-later inside the WebAssembly module
+  and stays replaceable as a separate module (notice retained; source
+  offer / replaceability satisfied by shipping the unmodified npm
+  package and this notice).
+* The JASSUB JavaScript wrapper itself is MIT (see notices/jassub-LICENSE).
+* Bundled native stack components (libass, fribidi, FreeType, HarfBuzz,
+  Expat, Brotli, and related notices) travel with the wasm build under
+  the SPDX expression above. No Yamakan copy of those sources is made;
+  runtime is the unmodified npm dependency under node_modules/jassub.
+
+Modifications
+-------------
+None. Consumed unmodified from npm with lockfile integrity.
+
+Use in Yamakan
+--------------
+Live title preview (W12 / M15) behind JASSUB_ENABLED. Construction uses
+queryFonts:false, pinned OFL fonts only (IBM Plex Sans Arabic), and
+non-zero libassMemoryLimit / libassGlyphLimit. Worker and wasm are
+served locally. Production CSP does not add 'wasm-unsafe-eval' until a
+separate security-reviewed commit. Non-threaded wasm is preferred
+(avoids COOP/COEP).
