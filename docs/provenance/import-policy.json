@@ -124,6 +124,10 @@
     {
       "path": "core/donors/opencut/animation/sample.ts",
       "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
+    },
+    {
+      "path": "src/cinema/CinemaViewport.tsx",
+      "reason": "Yamakan-authored Cinema preview viewport and activation test handle; not an ArtCraft file copy."
     }
   ],
   "excludedPaths": [

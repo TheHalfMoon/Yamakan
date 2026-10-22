@@ -1,19 +1,24 @@
 # Yamakan current frontier
 
-Updated: 2026-10-21. Canonical repository: `TheHalfMoon/Yamakan` (default branch `main`).
+Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch `main`).
 
 **Phase:** **P10 — Qualification, Activation, and Release Readiness** (Architecture B preserved). Founder P10 authorization of 2026-10-21 covers qualifying and activating already-merged Track 1/Track 2 capabilities under [P10 master plan](../docs/plans/P10-qualification-activation/MASTER_PLAN.md). Frozen plan W1–W18 remains the capability baseline ([PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f`, tag `plan-freeze-2026-10-18`). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `16f8154` (P10-01 Q10 merge; Q8 #57 / Q9 #59 / Q10 #60). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 remains H1-blocked). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`. `qualify:release` green at `eaeaf1b` (247/249 tests, E2E; receipt committed).
+**Verified main:** `7472a06858308def0638c6daf38a2cc72a718a86` (P10-05/06 Lab+Router; post-merge CI [39645507559](https://github.com/TheHalfMoon/Yamakan/actions/runs/39645507559) SUCCESS). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 remains H1-blocked). M-gate docs + `t10-release.json` on R8 lineage `eaeaf1b`.
 
-**M-gate:** **passed** at `eaeaf1b` (R1–R8 engineering on main with exact-head CI; `qualify:release` receipt committed). R6/R7 **residuals for release only** (not M-gate): Windows installer / Profile A launch-time bundle verify; MCP/UI parity transcript and clean Profile A evidence re-run. Human gates H1–H5 still block release. **Release verdict: NO-GO.**
+**M-gate:** **passed** at `eaeaf1b`. R6/R7 residuals and human gates H1–H5 still block release. **Release verdict: NO-GO.**
 
-**Next eligible:** **Studio activation merge**, then Animation/Cinema/Director/Quality/Router activation cards per [P10 TASKS](../docs/plans/P10-qualification-activation/TASKS.md). No new W19+ feature cards without a further founder decision. Open residuals: W12 (H1 native Arabic review); Q9 two residual unit files documented (not counted as passes); Quality Lab / router / Animation / Cinema / Director flags remain off where recorded. Release stays **NO-GO**.
+**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), audio unlink / loudnorm / Flow. **Cinema / Director:** local activation E2E PASS on `feat/p10-03-cinema-docs` (`CINEMA_ENABLED` / `DIRECTOR_ENABLED` true; AI camera and model stages stay unsupported). **Providers / Animation / JASSUB / engines:** false until their gates pass.
+
+**Next eligible:** Merge Cinema+Director after exact-head CI and independent reviews; then Animation UI→render only if E2E-ready; W12 eng+H1 packet (unsigned); Windows bundle R6; R6/R7 evidence. No new W19+ without founder decision.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P10-01 Studio activation                       | **In flight** (`feat/p10-01-studio-activate`) | `STUDIO_ENABLED=true`; `qualify:studio-activation` PASS; security receipt |
-| P10-01 Studio Q10                              | **Merged** (#60, `16f8154`)  | App chunk 0.111 MiB gzip; stroke p95 7.7 ms on 4096×20; `q10-studio.json` |
+| P10-03/04 Cinema + Director activation         | **Local E2E PASS** (`feat/p10-03-cinema-docs`) | `cinema-activation.json` / `director-activation.json`; flags true; AI/model stages off |
+| P10-05/06 Quality Lab + Router explain         | **Merged** (#63, `7472a06`)  | `QUALITY_LAB_ENABLED=true`; providers false; `p10-05-quality-lab.json` |
+| P10-02 Animation residual                      | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; `ANIMATION_ENABLED=false` |
+| P10-01 Studio activation                       | **Merged** (#61, `65451bd`)  | `STUDIO_ENABLED=true` |
+| P10-01 Studio Q10                              | **Merged** (#60, `16f8154`)  | App chunk 0.111 MiB gzip; stroke p95 7.7 ms on 4096×20 |
 | P10-01 Studio Q9                               | **Merged** (#59, `fbf1414`)  | 120/122 = 98.36% node-mode; exclusions honest |
 | P10-01 Studio Q8 host                          | **Merged** (#57, `72bc193`)  | Real asset store; empty-doc stack keys; `npm run qualify:q8` PASS |
 | P10 plan package                               | **Merged** (#58, `c19c01e`)  | [docs/plans/P10-qualification-activation/](../docs/plans/P10-qualification-activation/MASTER_PLAN.md); founder auth in [FOUNDER_DECISION_RECORD](../docs/FOUNDER_DECISION_RECORD.md#2026-10-21-p10-qualification-activation-and-release-readiness) |

@@ -1,16 +1,16 @@
 // M9 / W14: canonical Cinema scene3d entity (ArtCraft Object3DJSON / SceneStateJson
-// adapted to zod). Feature flag stays off until M8–M10 acceptance is on main.
+// adapted to zod).
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
 import { CommandError } from "./command/errors.ts";
 import { Id } from "./project.ts";
+import { CINEMA_ENABLED } from "./scene3d-flags.ts";
+
+export { CINEMA_ENABLED, cinemaCapability } from "./scene3d-flags.ts";
 
 export const SCENE3D_FORMAT = "yamakan.scene3d";
 export const SCENE3D_FORMAT_VERSION = 1 as const;
-
-/** Cinema runtime stays off until M8–M10 pass on main; schema/commands still qualify. */
-export const CINEMA_ENABLED = false;
 
 export const SCENE3D_LIMITS = Object.freeze({
   maxBytes: 4 * 1024 * 1024,

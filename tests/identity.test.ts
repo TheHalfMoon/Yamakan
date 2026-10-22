@@ -45,8 +45,8 @@ async function withStore(fn: (store: ProjectStore) => Promise<void>) {
   }
 }
 
-test("DIRECTOR_ENABLED stays false until Director UI attaches", () => {
-  assert.equal(DIRECTOR_ENABLED, false);
+test("DIRECTOR_ENABLED is true after manual Director UI attaches", () => {
+  assert.equal(DIRECTOR_ENABLED, true);
 });
 
 test("formatters are deterministic", () => {

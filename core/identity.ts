@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Id } from "./project.ts";
 import { CommandError } from "./command/errors.ts";
 
-export const DIRECTOR_ENABLED = false;
+export { DIRECTOR_ENABLED, directorCapability } from "./director-flags.ts";
 
 export const REFERENCE_VIEWS = [
   "front",

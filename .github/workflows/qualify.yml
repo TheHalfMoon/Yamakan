@@ -8,7 +8,8 @@ permissions:
 jobs:
   qualify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Extra headroom for bounded npm audit retries during registry outages.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -21,7 +22,30 @@ jobs:
       - run: npm run format:check
       - run: npm run provenance:check
       - run: npm run brand:check
-      - run: npm audit --audit-level=high
+      # Same gate: audit must pass. Retries only cover transient registry 5xx/timeouts
+      # (npm status outages); never treats audit failure or skipped scan as success.
+      - name: npm audit (high, bounded registry retry)
+        env:
+          npm_config_fetch_timeout: "60000"
+          npm_config_fetch_retries: "1"
+        run: |
+          set -euo pipefail
+          attempt=1
+          max=6
+          delay=20
+          while true; do
+            if npm audit --audit-level=high; then
+              exit 0
+            fi
+            if [ "$attempt" -ge "$max" ]; then
+              echo "npm audit failed after ${max} attempts" >&2
+              exit 1
+            fi
+            echo "npm audit attempt ${attempt}/${max} failed (likely registry); retry in ${delay}s" >&2
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay + 20))
+          done
       - run: npm test
       - run: npm run build
       - run: npx playwright-core install --with-deps chromium

@@ -17,7 +17,13 @@ import {
   restoreFromHome,
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
-import { Scene3DSchema, saveScene3D } from "../scene3d.ts";
+import { Scene3DSchema, cinemaCapability, saveScene3D } from "../scene3d.ts";
+import {
+  listCinemaScenes,
+  loadCinemaScene,
+  persistCinemaScene,
+} from "../cinema-store.ts";
+import { directorCapability } from "../director-flags.ts";
 import {
   StudioDocumentSchema,
   createEmptyStudioDocument,
@@ -610,17 +616,44 @@ export const commands = {
     input: z.object({ jobId: Id }).strict(),
     run: ({ queue }, a) => queue.discard(a.jobId),
   }),
+  "yamakan.scene.capability": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Report Cinema availability and unsupported generative surfaces.",
+    input: z.object({}).strict(),
+    run: () => cinemaCapability(),
+  }),
   "yamakan.scene.save": define({
     scope: "project:write",
     mutation: true,
     summary:
-      "Validate and content-hash a Cinema scene3d document (durable attach behind CINEMA_ENABLED).",
+      "Validate, content-hash, and (when Cinema is enabled) persist a scene3d document.",
     input: z
       .object({
         scene: Scene3DSchema,
       })
       .strict(),
-    run: (_ctx, a) => saveScene3D(a.scene),
+    run: async ({ store }, a) => {
+      const saved = saveScene3D(a.scene);
+      if (saved.cinemaEnabled) {
+        await persistCinemaScene(store, saved.scene);
+      }
+      return saved;
+    },
+  }),
+  "yamakan.scene.open": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Load a persisted Cinema scene3d by id.",
+    input: z.object({ sceneId: Id }).strict(),
+    run: ({ store }, a) => loadCinemaScene(store, a.sceneId),
+  }),
+  "yamakan.scene.list": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "List persisted Cinema scene ids and content hashes.",
+    input: z.object({}).strict(),
+    run: ({ store }) => listCinemaScenes(store).then((scenes) => ({ scenes })),
   }),
   "yamakan.studio.capability": define({
     scope: "project:read",
@@ -740,6 +773,13 @@ export const commands = {
         method: a.method,
         payloadHash: a.payloadHash,
       }),
+  }),
+  "yamakan.director.capability": define({
+    scope: "project:read",
+    mutation: false,
+    summary: "Report Director availability and unsupported model stages.",
+    input: z.object({}).strict(),
+    run: () => directorCapability(),
   }),
   "yamakan.director.start": define({
     scope: "project:write",
