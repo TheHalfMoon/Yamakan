@@ -32,10 +32,14 @@ const commit = git("rev-parse", "HEAD");
 const ffmpegBin = mediaTools().ffmpeg;
 const ffprobeBin = mediaTools().ffprobe;
 const ffmpeg = (args: string[], maxBuffer = 64 * 1024 * 1024) =>
-  execFileSync(ffmpegBin, ["-hide_banner", "-loglevel", "error", "-y", ...args], {
-    windowsHide: true,
-    maxBuffer,
-  });
+  execFileSync(
+    ffmpegBin,
+    ["-hide_banner", "-loglevel", "error", "-y", ...args],
+    {
+      windowsHide: true,
+      maxBuffer,
+    },
+  );
 const ffprobeJson = (file: string) =>
   JSON.parse(
     execFileSync(
@@ -112,9 +116,21 @@ try {
   ]);
   ffmpeg(["-f", "lavfi", "-i", "sine=frequency=220:duration=5", tone]);
 
-  const a = await store.importAsset(created.id, "clip-a.mp4", await readFile(clipA));
-  const b = await store.importAsset(created.id, "clip-b.mp4", await readFile(clipB));
-  const s = await store.importAsset(created.id, "tone.wav", await readFile(tone));
+  const a = await store.importAsset(
+    created.id,
+    "clip-a.mp4",
+    await readFile(clipA),
+  );
+  const b = await store.importAsset(
+    created.id,
+    "clip-b.mp4",
+    await readFile(clipB),
+  );
+  const s = await store.importAsset(
+    created.id,
+    "tone.wav",
+    await readFile(tone),
+  );
 
   const titles = crypto.randomUUID();
   const picture = s.project.tracks.find((t) => t.kind === "video")!.id;
