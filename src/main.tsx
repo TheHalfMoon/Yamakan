@@ -1023,7 +1023,8 @@ function App() {
                           opacity.find(
                             (k) =>
                               k.time ===
-                              Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                              Math.max(0, clip.durationFrames - 1) *
+                                FRAME_TICKS,
                           )?.value ??
                           opacity[opacity.length - 1]?.value ??
                           1;
@@ -1033,7 +1034,8 @@ function App() {
                           volume.find(
                             (k) =>
                               k.time ===
-                              Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                              Math.max(0, clip.durationFrames - 1) *
+                                FRAME_TICKS,
                           )?.value ??
                           volume[volume.length - 1]?.value ??
                           1;

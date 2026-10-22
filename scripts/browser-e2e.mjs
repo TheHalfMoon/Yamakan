@@ -390,8 +390,9 @@ try {
     const undone = await getProject();
     const clip = undone.clips.find(
       (c) =>
-        undone.assets.some((a) => a.id === c.assetId && a.name === "reference.png") &&
-        c.startFrame === 0,
+        undone.assets.some(
+          (a) => a.id === c.assetId && a.name === "reference.png",
+        ) && c.startFrame === 0,
     );
     assert.ok(clip, "reference.png clip present after undo-save");
     assert.equal(
