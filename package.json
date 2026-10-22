@@ -45,13 +45,15 @@
     "qualify:director-activation": "node scripts/qualify-director-activation.mjs",
     "qualify:q11-jassub-eng": "node scripts/qualify-q11-jassub-eng.mjs",
     "qualify:bundle-r6": "node scripts/qualify-bundle-r6.mjs",
+    "qualify:unsigned-rc": "node scripts/qualify-unsigned-rc.mjs",
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:playback": "node scripts/qualify-playback.mjs",
     "qualify:release": "node scripts/qualify-release.ts",
     "qualify:release-evidence": "node scripts/qualify-release-evidence.ts",
     "bundle": "node scripts/bundle.ts",
-    "bundle:install-dev": "node scripts/bundle.ts install-dev"
+    "bundle:install-dev": "node scripts/bundle.ts install-dev",
+    "bundle:pack-unsigned-rc": "node scripts/bundle.ts pack-unsigned-rc"
   },
   "dependencies": {
     "ag-psd": "31.0.3",

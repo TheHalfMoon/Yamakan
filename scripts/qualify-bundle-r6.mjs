@@ -52,7 +52,7 @@ const receipt = {
   },
   residuals: [
     "Clean Profile A install (H2) — external",
-    "Windows release installer / code signing — open",
+    "Windows release installer / Authenticode signing — open (unsigned RC path: qualify:unsigned-rc; not a release)",
     "Auto-update servers — out of scope",
     "Do not claim Profile A from this dev-root suite",
   ],

@@ -1,0 +1,32 @@
+{
+  "qualification": "P10_08_UNSIGNED_RC",
+  "task": "P10-08-residual",
+  "checkedAt": "2026-10-22T05:52:22.574Z",
+  "gitHead": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "passed": true,
+  "suite": "tests/unsigned-rc.test.ts",
+  "assessment": "docs/evidence/qualification/p10-08-unsigned-rc-assessment.md",
+  "covered": [
+    "assessment: unsigned RC without signing cert is feasible for internal/test",
+    "packUnsignedRc layout + UNSIGNED-RC.txt marker (+ zip on Windows)",
+    "safe install root refuses Program Files",
+    "install → launch-verify → update → rollback → uninstall",
+    "zip install round-trip (Windows)",
+    "refuse install without marker"
+  ],
+  "claims": {
+    "release": false,
+    "signed": false,
+    "profileA": false,
+    "publicShip": false
+  },
+  "residuals": [
+    "Windows release installer / Authenticode code signing — open (cert not authorized)",
+    "Clean Profile A install (H2) — external",
+    "Public release / H5 founder ship — NO-GO",
+    "Auto-update servers — out of scope"
+  ],
+  "profileAClaimed": false,
+  "detail": "Unsigned RC pack/install lifecycle PASS on safe test roots; signing, Profile A, and public release remain open.",
+  "testOutputTail": "✔ assertSafeUnsignedRcInstallRoot refuses Program Files (3.2824ms)\n✔ packUnsignedRc writes marker and layout (and zip on Windows) (84522.3637ms)\n✔ unsigned RC install → launch-verify → update → rollback → uninstall (76735.7088ms)\n✔ unsigned RC zip install round-trip (Windows) (45674.3651ms)\n✔ installUnsignedRcFromLayout refuses missing marker (10.6361ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 207773.3053\n"
+}
