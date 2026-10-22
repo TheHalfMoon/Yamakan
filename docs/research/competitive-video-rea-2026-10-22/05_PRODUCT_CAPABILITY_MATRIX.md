@@ -15,7 +15,7 @@
 
 | Capability | Higgsfield | Runway | Kling | Luma | Y-now | Y-target | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Text-to-video | DOCUMENTED Cinema Studio 4.0 API: prompt-only when refs empty; duration 4–30; 480p/720p | DOCUMENTED Gen-4.5 + multi-lab catalog | DOCUMENTED Kling 3.0/4.0 family; Omni multimodal | DOCUMENTED Ray-2 / ray-flash-2; 540p–4k listed | BLOCKED (`ENGINE_ENABLED=false`) | Local Wan TI2V-5B or CogVideoX-2B behind adapter | No Yamakan T2V TESTED |
+| Text-to-video | DOCUMENTED Cinema Studio 4.0 API: prompt-only when refs empty; duration 4–30; 480p/720p | DOCUMENTED Gen-4.5 + multi-lab catalog | DOCUMENTED Kling 3.0/4.0 family; Omni multimodal | DOCUMENTED legacy Dream Machine Ray-2; newer Luma Agents API Ray 3.2 (different endpoint/model) | BLOCKED (`ENGINE_ENABLED=false`) | Local Wan TI2V-5B or CogVideoX-2B behind adapter | No Yamakan T2V TESTED |
 | Image-to-video | DOCUMENTED refs `image_urls` ≤30 | DOCUMENTED Gen-4.5 I2V; catalog peers | DOCUMENTED I2V endpoints; first/last varies by model | DOCUMENTED keyframes frame0/frame1 | BLOCKED | I2V template when model supports | |
 | Video-to-video / edit | DOCUMENTED separate Seedance 2.5 for edit/extend; Genjutsu motion-transfer example | DOCUMENTED Aleph 2.0 in-context edit | DOCUMENTED Omni ref + multi-element edit | DOCUMENTED extend / interpolate / reverse extend | Deterministic edit TESTED; generative UNKNOWN | Generative V2V deferred | |
 | Native audio in generation | DOCUMENTED `audio_urls` refs ≤10 on Cinema 4.0 | DOCUMENTED many catalog models with native audio | DOCUMENTED native audio on select models (capability map 2026-10-20) | UNKNOWN for Ray-2 API (docs emphasize video assets) | Deterministic audio mix TESTED | LTX deferred; providers off | |
@@ -28,9 +28,9 @@
 | --- | --- | --- |
 | Higgsfield | https://docs.higgsfield.ai/docs/models/cinema-studio-4/generate | `POST .../cinema-studio/4.0`; duration 4–30 default 5; resolution 480p\|720p; refs ≤30 img / ≤10 vid / ≤10 audio / ≤50 total; creative enums for era/genre/light/pacing/lens/camera/color |
 | Higgsfield platform | https://docs.higgsfield.ai/ | Async request_id + status/cancel URLs; outputs retained ≥7 days |
-| Runway | https://dev.runwayml.com/models/catalog | 58 models listed; Gen-4.5, Aleph 2.0, Seedance, Kling, WAN 3.0, Veo, audio suite |
+| Runway | https://dev.runwayml.com/models/catalog | dynamic catalog (count varies); Gen-4.5, Aleph 2.0, Seedance, Kling, WAN 3.0, Veo, audio suite |
 | Kling | https://kling.ai/document-api/guides/capability-map/video.md | Updated 2026-10-20; models 2.5–4.0; Omni ref limits; motion control on 3.0 & 2.6 |
-| Luma | https://docs.lumalabs.ai/docs/video-generation | Models `ray-2`, `ray-flash-2`; concepts; camera_motion list; keyframe extend |
+| Luma | https://docs.lumalabs.ai/docs/video-generation | Legacy `ray-2` / `ray-flash-2`; newer Agents API `ray-3.2`; compare versioned parameters |
 
 ---
 
@@ -82,3 +82,6 @@
 - Whether Yamakan Cinema enums can match HF Cinema adherence  
 
 **Do not fill these with guesses.**
+
+
+**Dated correction 2026-10-22:** Runway's displayed model count is mutable and disagreed across snapshots (57/58/59); never present a static live count as a capability. Luma's legacy Dream Machine docs point to newer Agents API (Ray 3.2). Wan TI2V-5B offload requires ≥24GB VRAM; the Diffusers checkpoint repo lists ~34.2GB. No model inference or benchmark of it was run. See [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md).
