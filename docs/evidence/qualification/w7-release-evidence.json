@@ -1,7 +1,7 @@
 {
   "receipt": "yamakan.release-evidence-bundle/1",
-  "commit": "259db962f54ac934916da5abf6992f808d0265e8",
-  "measuredAt": "2026-10-21T03:29:20.389Z",
+  "commit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+  "measuredAt": "2026-10-22T04:25:34.604Z",
   "artifacts": {
     "exportHashes": "docs/evidence/qualification/w7-export-hashes.json",
     "ffprobe": "docs/evidence/qualification/w7-export-ffprobe.json",
