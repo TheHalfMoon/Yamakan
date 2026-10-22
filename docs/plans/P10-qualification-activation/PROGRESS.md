@@ -1,9 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `ee37440a2a4d687fb81d93fbeb4731846f3ae328` (docs sync after Cinema/Director `6cc68385`)  
+**Last verified main SHA:** `008e8e9d088cdf7ccad8e3979d03e5b7fffcdbff`  
 **Updated:** 2026-10-22  
-**Open PRs:** W12/H1 eng (#66)  
-**Post-merge CI:** [39719917065](https://github.com/TheHalfMoon/Yamakan/actions/runs/39719917065) SUCCESS on `6cc68385`
+**Open PRs:** Bundle R6 eng (this branch)  
+**Post-merge CI:** confirm on `008e8e9` after W12 #66
 
 ## Completed cards
 
@@ -14,50 +14,41 @@
 | P10-01 Q9 | #59 | `fbf1414` | 120/122 = 98.36%; residuals documented |
 | P10-01 Q10 | #60 | `16f8154` | chunk 0.111 MiB; p95 7.7 ms on 4096×20 |
 | P10-01 Studio activate | #61 | `65451bd` | `STUDIO_ENABLED=true` |
-| P10-02 Animation residual | #62 | `42b2fde` | Q13/Q14 PASS; `ANIMATION_ENABLED=false` (UI→render gap) |
+| P10-02 Animation residual | #62 | `42b2fde` | Q13/Q14 PASS; `ANIMATION_ENABLED=false` |
 | P10-05 / P10-06 Lab+Router | #63 | `7472a06` | `QUALITY_LAB_ENABLED=true`; providers stay false |
-| P10-03 / P10-04 Cinema+Director | #64 | `6cc68385` | Supported Cinema + manual Director; AI/model stages off |
+| P10-03 / P10-04 Cinema+Director | #64 | `6cc68385` | Supported Cinema + manual Director |
 | P10 docs sync | #65 | `ee37440` | CURRENT/PROGRESS to `6cc68385` |
+| P10-07 W12/H1 eng gate | #66 | `008e8e9` | `JASSUB_ENABLED=false`; unsigned H1 packet; Q11 eng only |
+| P10-08 Bundle R6 eng | (this PR) | pending | Lifecycle suite PASS; Profile A / release installer residual |
 
-## Enabled capabilities (exact Cinema/Director main `6cc68385` lineage)
+## Enabled capabilities
 
 | Flag | Value |
 | --- | --- |
-| `STUDIO_ENABLED` | **true** |
-| `QUALITY_LAB_ENABLED` | **true** (deterministic only) |
-| `ROUTER_PROVIDERS_ENABLED` | **false** (explain qualified) |
-| `AUDIO_UNLINK_ENABLED` / `LOUDNORM_ENABLED` / `FLOW_ENABLED` | **true** (preserved) |
-| `CINEMA_ENABLED` | **true** (preview/persist; AI camera unsupported) |
-| `DIRECTOR_ENABLED` | **true** (manual framework-smoke; model stages unsupported) |
-| `ANIMATION_ENABLED` | **false** (UI→render residual; reaffirmed) |
-| `JASSUB_ENABLED` | **false** (eng gate + unsigned H1 packet on #66) |
-| Engines | **false** |
+| `STUDIO_ENABLED` / `QUALITY_LAB_ENABLED` / `CINEMA_ENABLED` / `DIRECTOR_ENABLED` | **true** (scoped) |
+| Audio unlink / loudnorm / Flow | **true** |
+| `ANIMATION_ENABLED` / `JASSUB_ENABLED` / providers / engines | **false** |
 
 ## Active work
 
 | Card | Status |
 | --- | --- |
-| P10-02 Animation UI→render | Residual; no enable without E2E |
-| P10-07 W12 / H1 packet | Flag+stub+unsigned packet+Q11 eng receipt (#66); npm pin pending notices |
-| P10-08 / P10-09 / P10-10 | Bundle R6, release evidence, security |
+| P10-09 R7 release evidence | Next after this PR |
+| P10-10 security (achievable) | Escalation packets for H2–H4 |
+| Animation UI→render | Residual |
 
 ## Open external gates (release NO-GO)
 
-- H1 native Arabic review (W12 enable) — packet unsigned
+- H1 native Arabic review (packet unsigned)
 - H2 Profile A offline + packet capture
 - H3 second Windows account + clean-profile restore
 - H4 constrained-volume disk-full
 - H5 founder artifact-bound ship
-- E-SEC / F / G (real engines, paid providers)
-- Q15 OS user-presence residual (fallback remains)
-
-## Review note
-
-Independent review subagents hit usage limits (#59, #64) and did **not** approve. Manual receipts stand; fresh agent review when resources permit.
+- Release installer / code signing
+- E-SEC / F / G; Q15 OS user-presence residual
 
 ## Continuation
 
-1. Land W12 eng (#66) without enabling JASSUB.  
-2. Pin `jassub@2.5.20` only with notices + provenance.  
-3. Bundle R6 install/update/rollback/uninstall.  
-4. R6/R7 evidence refresh; release stays **NO-GO**.
+1. Land Bundle R6 eng receipt.  
+2. Refresh R7 evidence at exact head; keep Profile A external.  
+3. Release stays **NO-GO**.
