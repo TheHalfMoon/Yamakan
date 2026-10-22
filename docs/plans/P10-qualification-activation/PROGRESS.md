@@ -1,33 +1,32 @@
 # P10 progress
 
-**Last verified main SHA:** `c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c`  
+**Last verified main SHA:** `50993234a921c1319122c96227e18b85cadc7757`  
 **Updated:** 2026-10-22  
-**Open PRs:** R7 evidence (this branch)  
-**Release verdict:** **NO-GO** (H1–H5 + release installer / Profile A open)
+**Open PRs:** none  
+**Release verdict:** **NO-GO**
 
-## Completed cards
+## Completed (engineering)
 
-| Card | PR | Merge SHA | Notes |
-| --- | --- | --- | --- |
-| P10-00 … P10-06 | #57–#63 | through `7472a06` | Studio/Q8–Q10/Lab/Router |
-| P10-03/04 Cinema+Director | #64 | `6cc68385` | Supported Cinema + manual Director |
-| P10 docs sync | #65 | `ee37440` | Frontier docs |
-| P10-07 W12/H1 eng gate | #66 | `008e8e9` | JASSUB off; H1 unsigned |
-| P10-08 Bundle R6 eng | #67 | `c3cc1d58` | Lifecycle qualify PASS; Profile A residual |
-| P10-09 R7 evidence refresh | (this PR) | pending | `t10-release.json` + w7 companions at `c3cc1d58` |
+| Card | PR | Merge SHA |
+| --- | --- | --- |
+| Studio Q8–Q10 + activate | #57–#61 | through `65451bd` |
+| Animation residual (flag false) | #62 | `42b2fde` |
+| Quality Lab + Router explain | #63 | `7472a06` |
+| Cinema + Director activation | #64 | `6cc68385` |
+| Docs sync | #65 | `ee37440` |
+| W12/H1 eng gate (JASSUB off) | #66 | `008e8e9` |
+| Bundle R6 lifecycle + H2–H4 packet | #67 | `c3cc1d58` |
+| R7 evidence refresh | #68 | `50993234` |
 
-## Enabled capabilities
+## Enabled flags
 
-Studio, Quality Lab (deterministic), Cinema (supported), Director (manual), audio unlink/loudnorm/Flow. Animation / JASSUB / providers / engines **false**.
+Studio · Quality Lab (deterministic) · Cinema (supported) · Director (manual) · audio unlink/loudnorm/Flow  
+**False:** Animation · JASSUB · providers · engines
 
-## External gates (still NO-GO)
+## External gates still open
 
-H1 unsigned · H2 Profile A · H3 second account · H4 disk-full · H5 founder ship · release installer/signing · E-SEC/F/G · Q15 residual
+H1 (packet unsigned) · H2 Profile A · H3 second account · H4 disk-full · H5 founder ship · release installer/signing · E-SEC/F/G · Q15 residual · JASSUB npm pin pending notices
 
-## Review note
+## Achievable P10 engineering status
 
-Independent review agents hit usage limits earlier; manual receipts preserved. Fresh agent review when quota returns.
-
-## Continuation after this PR
-
-P10 engineering that does not need external humans is largely closed. Remaining enablement/release work waits on H1–H5 and release packaging.
+Legitimate non-external P10 engineering for this phase is complete. Remaining work is external-human or gated packaging/enablement — not to be fabricated.

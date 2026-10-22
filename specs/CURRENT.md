@@ -4,17 +4,17 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **Phase:** **P10 — Qualification, Activation, and Release Readiness** (Architecture B preserved). Founder P10 authorization of 2026-10-21 covers qualifying and activating already-merged Track 1/Track 2 capabilities under [P10 master plan](../docs/plans/P10-qualification-activation/MASTER_PLAN.md). Frozen plan W1–W18 remains the capability baseline ([PLAN_FREEZE_MANIFEST](../docs/PLAN_FREEZE_MANIFEST.md) content commit `651733ab7f83ccb178523741b887016a12df6d4f`, tag `plan-freeze-2026-10-18`). T1–T10 MVP gates and [RELEASE_PROPOSAL](../docs/RELEASE_PROPOSAL.md) stay authoritative for release. Release verdict: **NO-GO**.
 
-**Verified main:** `c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c` (P10-08 Bundle R6 via #67; W12 eng #66; Cinema/Director #64). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 enablement remains H1-blocked; JASSUB flag false). Exact-head `t10-release.json` refreshed on this lineage (dev profile; Profile A still open).
+**Verified main:** `50993234a921c1319122c96227e18b85cadc7757` (P10-09 R7 evidence #68; Bundle R6 #67; W12 eng #66; Cinema/Director #64). Track 1 W1–W7 plus W5.1/W7.1, R8, and Track 2 W8–W18 **engineering merged** (W12 enablement remains H1-blocked; JASSUB flag false). Exact-head `t10-release.json` at lineage `c3cc1d58` (dev profile; Profile A still open).
 
 **M-gate:** **passed** at `eaeaf1b`. Human gates H1–H5 and release installer/Profile A still block release. **Release verdict: NO-GO.**
 
 **Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported preview/persist; AI camera off), `DIRECTOR_ENABLED` (manual framework-smoke; model stages off), audio unlink / loudnorm / Flow. **Providers / Animation / JASSUB / engines:** false (`JASSUB_ENABLED` eng-gated; H1 unsigned).
 
-**Next eligible:** Land R7 evidence PR; then only external H1–H5 / release packaging / Animation UI→render E2E if built. No new W19+ without founder decision. No public production release.
+**Next eligible:** External-only — H1 native Arabic sign-off, H2–H5, release installer/signing, optional Animation UI→render E2E, JASSUB npm pin+notices after H1. No new W19+ without founder decision. No public production release.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P10-09 R7 release evidence refresh             | **In flight** (`feat/p10-09-r7-evidence`) | `t10-release.json` @ `c3cc1d58`; 335/337 tests; E2E green; NO-GO residuals explicit |
+| P10-09 R7 release evidence refresh             | **Merged** (#68, `50993234`) | `t10-release.json` @ `c3cc1d58`; 335/337 tests; E2E green; NO-GO residuals explicit |
 | P10-08 Bundle R6 eng (lifecycle)               | **Merged** (#67, `c3cc1d58`) | `qualify:bundle-r6` PASS; H2–H4 escalation packet; Profile A residual |
 | P10-07 W12/H1 eng gate                         | **Merged** (#66, `008e8e9`) | `JASSUB_ENABLED=false`; unsigned H1 packet; Q11 eng only (no perf claim) |
 | P10-03/04 Cinema + Director activation         | **Merged** (#64, `6cc68385`) | `CINEMA_ENABLED`/`DIRECTOR_ENABLED` true; activation E2E + UUID path gate; AI/model stages off |
