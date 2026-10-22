@@ -10,7 +10,7 @@ Yamakan is a tested offline-first media editor/production workspace, with canoni
 
 Recommended differentiated product: **offline-first, agent-native, reproducible cinematic production studio**, unifying generation (when legitimately enabled), deterministic timeline editing, exact projects, Arabic-first workflows, export, privacy, and inspectable quality evidence. Compete against closed providers by controlling the *complete editable outcome* and true cost, not by pretending a free model beats every proprietary video model.
 
-**Architecture recommendation (detail in [04](04_TARGET_ARCHITECTURE_AND_ROADMAP.md)):** keep Yamakan as sole project authority; out-of-process Comfy **or** Diffusers sidecar behind `EngineAdapter`; first open checkpoint **Wan2.2 TI2V-5B** (Apache code) with **CogVideoX-2B** alternate; LTX/14B deferred; providers off until F.
+**Architecture recommendation (detail in [04](04_TARGET_ARCHITECTURE_AND_ROADMAP.md)):** keep Yamakan as sole project authority; out-of-process **Diffusers-first** sidecar (ComfyUI as qualified fallback) behind `EngineAdapter`; first open checkpoint **Wan2.2 TI2V-5B** (Apache code) with **CogVideoX-2B** alternate; LTX/14B deferred; providers off until F.
 
 ## 1. Verified competitor capability map
 Unless marked **TESTED**, rows below are **DOCUMENTED** from official APIs/docs on 2026-10-22, not independently generated outputs.
@@ -21,9 +21,9 @@ Unless marked **TESTED**, rows below are **DOCUMENTED** from official APIs/docs 
 | [Higgsfield Cinema Studio 4.0 API](https://docs.higgsfield.ai/docs/models/cinema-studio-4/generate) | **DOCUMENTED:** `POST /higgsfield/cinema-studio/4.0`; duration **4–30s** (default 5); resolution **480p\|720p**; refs ≤**30** images / **10** videos / **10** audio / **50** total; enums for era, genre, light, pacing, camera_lens, camera_model, color_palette, aspect_ratio; prompt tokens `<<<image_1>>>` etc.; edit/extend via **separate Seedance 2.5** endpoints | Camera metadata ≠ model conditioning | Measure enum→pixel adherence; do not use marketing “1 minute” without API confirmation |
 | [Higgsfield platform API](https://docs.higgsfield.ai/) | Async `request_id` + status/cancel; Key auth; SDKs; outputs ≥7 days | Durable jobs exist; no HF provider | Optional future provider adapter (OFF) |
 | [Higgsfield CLI/MCP](https://higgsfield.ai/creator-hub/help-center/tools/which-higgsfield-tool-should-i-use) | Agent-directed generation from coding tools | Typed offline MCP, no inference | End-to-end agent task completion |
-| [Runway model catalog](https://dev.runwayml.com/models/catalog) | **DOCUMENTED:** Gen-4.5, Aleph 2.0, Seedance 2.x/2.5, Kling 3.0/O3 SKUs, WAN 3.0, Veo 3.1, Gemini Omni, audio/ElevenLabs, Ruby HDR, Model Router; **58 models** listed | Real timeline; no generative routing | Marketplace + generative edit fidelity |
+| [Runway model catalog](https://dev.runwayml.com/models/catalog) | **DOCUMENTED:** Gen-4.5, Aleph 2.0, Seedance 2.x/2.5, Kling 3.0/O3 SKUs, WAN 3.0, Veo 3.1, Gemini Omni, audio/ElevenLabs, Ruby HDR, Model Router; live model catalog (count varies) | Real timeline; no generative routing | Marketplace + generative edit fidelity |
 | [Kling API capability map](https://kling.ai/document-api/guides/capability-map/video.md) (updated **2026-10-20**) | **DOCUMENTED:** Kling 4.0 (3–30s, 720P–4K), 3.0/Omni/Turbo, O1, 2.6, 2.5; Omni refs; Elements; Motion Control on 3.0 & 2.6; native audio rows vary by model | Local timeline only | Motion control, elements, native audio |
-| [Luma Dream Machine API](https://docs.lumalabs.ai/docs/video-generation) | **DOCUMENTED:** `ray-2` / `ray-flash-2`; T2V/I2V; start/end keyframes; extend/interpolate; concepts; camera_motion list; resolutions include 540p–4k | Opacity/volume keyframes; no AI V2V | Controlled ref edit, extend quality |
+| [Luma Dream Machine API](https://docs.lumalabs.ai/docs/video-generation) | **DOCUMENTED:** legacy Dream Machine: `ray-2` / `ray-flash-2`; current **Luma Agents API: `ray-3.2`**, with separate endpoint, generation and editing controls | Opacity/volume keyframes; no AI V2V | Controlled ref edit, extend quality |
 | Conventional NLE (Resolve, CapCut) | Professional editing depth | 1280×720 H.264/AAC short path TESTED | Long-timeline, color, format breadth |
 
 **Provenance:** Official API docs fetched 2026-10-22. Help-center marketing may still conflict with API enums — **API schema wins** for engineering limits. No paid generations executed.
@@ -95,3 +95,6 @@ Pins re-checked via GitHub API on 2026-10-22; no code copied into production pat
 - https://arena.ai/leaderboard/video/text-to-video
 
 **Qualification of this record:** live paid product accounts, proprietary backend source, reproducible competitors' paid outputs, GPU execution of public models, D1/Alibaba/Graft formal reviews, and independent blinded human evaluation were *not performed*. Do not represent this source review as code qualification or proof of superiority. Public release remains **NO-GO**.
+
+
+**Follow-up 2026-10-22:** Live Runway model counts varied between snapshots (57, 58 and 59); the number is not a frozen capability. Older Luma Dream Machine docs now refer to newer Luma Agents API/Ray 3.2. Wan TI2V-5B's official offload example requires ≥24GB VRAM; the Diffusers checkpoint repository lists ~34.2GB. No compatible free GPU/storage slot has been verified. See [07](07_ENGINE_DECISION_AND_E0_E2_GATES.md).
