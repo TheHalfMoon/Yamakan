@@ -26,10 +26,10 @@ Compete on **complete editable outcome ownership, privacy, cost transparency, an
                 ▼                             ▼
         Attach / edit / export      ┌─────────────────────┐
                                     │ Sidecar (optional)  │
-                                    │ Diffusers first
-                                    │ ComfyUI fallback only  │
-                                    │ allowlisted graphs  │
-                                    │ local loopback only │
+                                    │ Diffusers primary   │
+                                    │ ComfyUI fallback    │
+                                    │ allowlisted inputs  │
+                                    │ job-scoped stdio    │
                                     └─────────────────────┘
                                               │
                                               ▼
@@ -152,7 +152,6 @@ Before any real sidecar:
 | Independent research reviewers | Human founder + this REA; no third-party blind study |
 
 Absence is recorded as **NOT RUN**, not pass.
-
 
 ## Post-review engine/spend decision (2026-10-22)
 
