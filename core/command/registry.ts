@@ -17,11 +17,7 @@ import {
   restoreFromHome,
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
-import {
-  Scene3DSchema,
-  cinemaCapability,
-  saveScene3D,
-} from "../scene3d.ts";
+import { Scene3DSchema, cinemaCapability, saveScene3D } from "../scene3d.ts";
 import {
   listCinemaScenes,
   loadCinemaScene,
