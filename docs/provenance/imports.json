@@ -981,7 +981,8 @@
     "imported": "core/identity.ts",
     "sha256": "160268fce36d2dfc31a8454c4c474b487031005598a65ccea04a862f66435364",
     "modifications": [
-      "Translated Python dataclasses to zod; paths become asset ids; bible_version becomes bibleRevision; added likeness consent schemas."
+      "Translated Python dataclasses to zod; paths become asset ids; bible_version becomes bibleRevision; added likeness consent schemas.",
+      "Re-export DIRECTOR_ENABLED and directorCapability from core/director-flags.ts (P10 manual Director activation)."
     ],
     "tests": [
       "tests/identity.test.ts"
@@ -989,7 +990,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "director builder",
-    "importedSha256": "f28717d0b7b3ff814c903133b3236a9fc97b8ffdc11e93d77cd84e51ba0a768e"
+    "importedSha256": "2d0c82b8de9c158ea3ee5af7dc578853910b43971f0c8feaa06863f91495612c"
   },
   {
     "source": "mne03005-png/OpenVideoStudio",
@@ -998,7 +999,8 @@
     "imported": "core/identity.ts",
     "sha256": "c7a08f5520efea1053992e88a2465c10d654aab03fbab30bf5b26bcf4cc3d3bb",
     "modifications": [
-      "Translated Character Bible loader rules into zod CharacterAsset and assertReferenceIsImageAsset (shared identity.ts)."
+      "Translated Character Bible loader rules into zod CharacterAsset and assertReferenceIsImageAsset (shared identity.ts).",
+      "Re-export DIRECTOR_ENABLED and directorCapability from core/director-flags.ts (P10 manual Director activation)."
     ],
     "tests": [
       "tests/identity.test.ts"
@@ -1006,7 +1008,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "director builder",
-    "importedSha256": "f28717d0b7b3ff814c903133b3236a9fc97b8ffdc11e93d77cd84e51ba0a768e"
+    "importedSha256": "2d0c82b8de9c158ea3ee5af7dc578853910b43971f0c8feaa06863f91495612c"
   },
   {
     "source": "mne03005-png/OpenVideoStudio",
