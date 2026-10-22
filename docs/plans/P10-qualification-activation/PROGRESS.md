@@ -1,9 +1,9 @@
 # P10 progress
 
-**Last verified main SHA:** `ca04d10eab7f8fc1bc7b220c69e5602f57bf26a5`  
+**Last verified main SHA:** `d917ac297e20748916ba0c67e0f40a700167d93b`  
 **Updated:** 2026-10-22  
 **Open PRs:** none  
-**Post-merge CI:** SUCCESS, run 39734506769  
+**Post-merge CI:** SUCCESS, run 39735067828  
 **Release verdict:** **NO-GO**
 
 ## Completed (engineering)
@@ -34,4 +34,4 @@ H1 (packet unsigned) · H2 Profile A · H3 second account · H4 disk-full · H5 
 
 ## Achievable P10 engineering status
 
-Bounded P10 technical residuals (Animation wiring, JASSUB pre-H1 eng, unsigned RC, reviews tooling) are **merged** at `af22455`; frontier recorded at `ca04d10`. Remaining work is external-human or gated enablement/signing — not to be fabricated.
+Bounded P10 technical residuals (Animation wiring, JASSUB pre-H1 eng, unsigned RC, reviews tooling) are **merged** at `af22455`; verified main `d917ac2`. Release-gate prep adds executable H1–H4 checklists, RELEASE_PROPOSAL frontier reconcile, and Q11 investigation (budgets still unmet; flag false). Remaining work is external-human or gated enablement/signing — not to be fabricated.

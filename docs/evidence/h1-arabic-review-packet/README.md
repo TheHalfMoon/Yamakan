@@ -38,6 +38,8 @@ Receipt: `docs/evidence/qualification/t7-typography.json` (Arabic review pending
 
 ## Checklist (reviewer fills)
 
+Executable procedure with binding fields: **[CHECKLIST.md](./CHECKLIST.md)**.
+
 | Item | Pass? | Initials | Date | Notes |
 | --- | --- | --- | --- | --- |
 | Export Arabic titles read correctly (base direction) | | | | |

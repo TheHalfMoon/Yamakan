@@ -1,10 +1,14 @@
 # Yamakan offline MVP — release proposal (T10)
 
-**Frontier:** main `11976a0` (2026-10-21), with W1 (clip sound), W4 (transport-bound principals, PR #36), W5 (bundle scaffold, PR #37), containment (#29), and journey/interruption fixes (#22, #24, #19) on main. Rows changed since T10 cite their PR or task.
+**Verified main (2026-10-22):** `d917ac297e20748916ba0c67e0f40a700167d93b` — post-merge CI SUCCESS [run 39735067828](https://github.com/TheHalfMoon/Yamakan/actions/runs/39735067828). Open PRs: none. P10 residual engineering (#70–#73) and frontier docs (#74–#75) are merged. Public release remains **NO-GO**.
 
-**Verdict: NO-GO for release.** T1–T10 MVP engineering is largely merged and `npm run qualify:release` passes on the current main head on this development profile, but the [MVP acceptance](E2E_ACCEPTANCE.md) requires every row to pass on the exact release commit **and artifact hashes, on clean Windows Profile A**. Several rows still need the full pinned bundle (not the W5 dev scaffold alone), a clean profile, a second account, a native Arabic reviewer, title-font substitution excluded (R8), the full release evidence bundle (W7), or open recovery/integrity work (W2/W3). Worker read containment is merged (#29) but must still be shown on the release artifact. This document is the gate-by-gate account behind the ship decision.
+**Latest committed `qualify:release` receipt:** [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) measured at branch commit `5c6658d589ac36bd08725fef9233872865a7030e` (dev profile; 356/358 tests, 2 skips; E2E green). Do not treat this as Profile A / H2 evidence. Re-run on the exact signed ship artifact before any founder H5 decision.
 
-**Measured at commit `11976a0`:** receipt [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) (`yamakan.release-qualification/3`), produced by `npm run qualify:release` on a clean tree at this head. The run rebuilds the native helpers and the interface before hashing.
+**Historical T10 narrative below** was written against earlier heads (originally `11976a0`). Journey/fault rows remain authoritative for *what* must pass; binding SHA/hashes for a ship decision are the verified main above plus a fresh receipt and signed artifact.
+
+**Verdict: NO-GO for release.** T1–T10 MVP engineering and P10 qualification/activation are largely merged. Dev-profile `qualify:release` has passed on recorded heads, but [MVP acceptance](E2E_ACCEPTANCE.md) requires every row to pass on the exact release commit **and artifact hashes, on clean Windows Profile A**. Still open: signed installer / Authenticode, Profile A + offline capture (H2), second account (H3), constrained-volume disk-full (H4), native Arabic review (H1), founder ship (H5), JASSUB enablement (H1 + CSP review + Q11 budgets), Q15 OS presence, E-SEC/F/G. Worker read containment is merged but must still be shown on the **release** artifact. This document is the gate-by-gate account behind the ship decision.
+
+**Measured at commit `5c6658d` (receipt lineage; not Profile A):** receipt [`docs/evidence/qualification/t10-release.json`](evidence/qualification/t10-release.json) (`yamakan.release-qualification/3`), produced by `npm run qualify:release` on a clean tree at that head. The run rebuilds the native helpers and the interface before hashing.
 
 ## Measured on this machine (development profile, network enabled)
 

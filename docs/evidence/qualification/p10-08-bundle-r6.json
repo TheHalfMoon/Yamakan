@@ -1,8 +1,8 @@
 {
   "qualification": "P10_08_BUNDLE_R6",
   "task": "P10-08",
-  "checkedAt": "2026-10-22T04:13:34.579Z",
-  "gitHead": "008e8e9d088cdf7ccad8e3979d03e5b7fffcdbff",
+  "checkedAt": "2026-10-22T09:32:27.378Z",
+  "gitHead": "d917ac297e20748916ba0c67e0f40a700167d93b",
   "passed": true,
   "suite": "tests/bundle.test.ts",
   "covered": [
@@ -19,11 +19,11 @@
   },
   "residuals": [
     "Clean Profile A install (H2) — external",
-    "Windows release installer / code signing — open",
+    "Windows release installer / Authenticode signing — open (unsigned RC path: qualify:unsigned-rc; not a release)",
     "Auto-update servers — out of scope",
     "Do not claim Profile A from this dev-root suite"
   ],
   "profileAClaimed": false,
   "detail": "Bundle lifecycle unit suite PASS in temp install roots; Profile A and release installer remain open.",
-  "testOutputTail": "✔ pinned node and media tools match manifest hashes (1853.9272ms)\n✔ bundle manifest records file hashes and install switches pointer (3951.9151ms)\n✔ downgrade without confirmation is refused (3401.665ms)\n✔ uninstall does not follow a junction inside the version folder (1706.3791ms)\n✔ install-dev scaffolds into LOCALAPPDATA and verifies (1891.2716ms)\n✔ tampered bundle file fails verification (1753.9865ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 15261.9219\n"
+  "testOutputTail": "✔ pinned node and media tools match manifest hashes (1508.3134ms)\n✔ bundle manifest records file hashes and install switches pointer (11454.5212ms)\n✔ downgrade without confirmation is refused (5419.8349ms)\n✔ uninstall does not follow a junction inside the version folder (2857.6164ms)\n✔ install-dev scaffolds into LOCALAPPDATA and verifies (3819.5626ms)\n✔ tampered bundle file fails verification (4776.5101ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 30704.9109\n"
 }
