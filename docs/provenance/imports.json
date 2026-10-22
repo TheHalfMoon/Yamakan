@@ -322,16 +322,18 @@
       "W5.1 (2026-10-21): title staging writes a pinned fonts.conf (core/render/fontconfig.ts) and passes FONTCONFIG_FILE to FFmpeg workers through procd's allowlisted workerEnv; fit-check and render workers read fonts.conf.",
       "R8 (2026-10-21): Windows mediaTools prefer vendor/ffmpeg-win64-r8 (libass fontconfig, DirectWrite disabled); EXTERNAL_BINARY_PINS hash-gate the bundle; procd stages sibling DLLs with the exe.",
       "W9/M5: setpts and atempo chain for clip speed (rational).",
-      "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode."
+      "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode.",
+      "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled."
     ],
-    "importedSha256": "9a900653592b4aa964cd18de38cb289b9dbb2f7795cd33ce39d1e984aba3df94",
+    "importedSha256": "c027b78ca8254175efe52867bd19ab773b1dd10d7b3be7212ca411778dd9bd27",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
     "tests": [
       "tests/render-plan.test.ts",
       "tests/export-golden.test.ts",
-      "tests/w18-audio-flow.test.ts"
+      "tests/w18-audio-flow.test.ts",
+      "tests/animation-wiring.test.ts"
     ]
   },
   {

@@ -8,9 +8,9 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 
 **M-gate:** **passed** at `eaeaf1b`. Human gates H1–H5 and release installer/Profile A still block release. **Release verdict: NO-GO.**
 
-**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported preview/persist; AI camera off), `DIRECTOR_ENABLED` (manual framework-smoke; model stages off), audio unlink / loudnorm / Flow. **Providers / Animation / JASSUB / engines:** false (`JASSUB_ENABLED` eng-gated; H1 unsigned).
+**Enabled on main:** `STUDIO_ENABLED`, `QUALITY_LAB_ENABLED` (deterministic), `CINEMA_ENABLED` (supported preview/persist; AI camera off), `DIRECTOR_ENABLED` (manual framework-smoke; model stages off), audio unlink / loudnorm / Flow. **Providers / JASSUB / engines:** false (`JASSUB_ENABLED` eng-gated; H1 unsigned). **Animation:** enabling on `feat/p10-02-animation-ui-render` (opacity+volume; transform filters residual) pending merge.
 
-**Next eligible:** External-only — H1 native Arabic sign-off, H2–H5, release installer/signing, optional Animation UI→render E2E, JASSUB npm pin+notices after H1. No new W19+ without founder decision. No public production release.
+**Next eligible:** External-only — H1 native Arabic sign-off, H2–H5, release installer/signing, JASSUB npm pin+notices after H1. No new W19+ without founder decision. No public production release.
 
 | Task                                           | Status                       | Evidence                                                                                                                                                                                                                                                                    |
 | ---------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -19,7 +19,8 @@ Updated: 2026-10-22. Canonical repository: `TheHalfMoon/Yamakan` (default branch
 | P10-07 W12/H1 eng gate                         | **Merged** (#66, `008e8e9`) | `JASSUB_ENABLED=false`; unsigned H1 packet; Q11 eng only (no perf claim) |
 | P10-03/04 Cinema + Director activation         | **Merged** (#64, `6cc68385`) | `CINEMA_ENABLED`/`DIRECTOR_ENABLED` true; activation E2E + UUID path gate; AI/model stages off |
 | P10-05/06 Quality Lab + Router explain         | **Merged** (#63, `7472a06`)  | `QUALITY_LAB_ENABLED=true`; providers false; `p10-05-quality-lab.json` |
-| P10-02 Animation residual                      | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; `ANIMATION_ENABLED=false` |
+| P10-02 Animation UI→render                     | **In progress** (`feat/p10-02-animation-ui-render`) | Ops+plan+render+UI; `qualify:animation-e2e`; flag true (opacity+volume) |
+| P10-02 Animation residual (modules)            | **Merged** (#62, `42b2fde`)  | Q13/Q14 PASS; residual closed by wiring branch |
 | P10-01 Studio activation                       | **Merged** (#61, `65451bd`)  | `STUDIO_ENABLED=true` |
 | P10-01 Studio Q10                              | **Merged** (#60, `16f8154`)  | App chunk 0.111 MiB gzip; stroke p95 7.7 ms on 4096×20 |
 | P10-01 Studio Q9                               | **Merged** (#59, `fbf1414`)  | 120/122 = 98.36% node-mode; exclusions honest |

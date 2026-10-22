@@ -1,7 +1,7 @@
 {
   "qualification": "q14-animation-params",
-  "head": "65451bd06fde091a54efea9c5db5acd387746735",
-  "animationEnabled": false,
+  "head": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "animationEnabled": true,
   "propertyRegistryIds": [
     "transform.positionX",
     "transform.positionY",

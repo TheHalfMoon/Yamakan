@@ -1,0 +1,23 @@
+{
+  "qualification": "animation-ui-render-e2e",
+  "task": "P10-02",
+  "checkedAt": "2026-10-22T05:46:12.599Z",
+  "gitHead": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+  "animationEnabled": true,
+  "path": {
+    "setAnimation": true,
+    "clearAndRestore": true,
+    "editViewPersist": true,
+    "compilePlanOpacity": true,
+    "compilePlanVolume": true,
+    "samplerParityPreviewExport": true,
+    "opacityFilterCompile": true,
+    "volumeFilterCompile": true,
+    "uiPanelPresent": true
+  },
+  "midOpacity": 0.5,
+  "residual": {
+    "transformFilters": "transform.position/scale/rotate stored on plan but not compiled to FFmpeg (opacity+volume MVP)."
+  },
+  "verdict": "pass"
+}

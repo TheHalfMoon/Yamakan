@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { ProjectSchema, Id } from "../project.ts";
 import { BatchSchema } from "../timeline/operations.ts";
+import {
+  AnimationPathSchema,
+  ClipAnimationSchema,
+} from "../timeline/animation-schema.ts";
 import { Ticks } from "../time.ts";
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
@@ -257,6 +261,70 @@ export const commands = {
         a.projectId,
         a.expectedRevision,
         [{ type: "clip.setSpeed", clipId: a.clipId, speed: a.speed }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.setAnimation": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Replace or clear a clip's animation channel map (gated by ANIMATION_ENABLED).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        animation: ClipAnimationSchema.nullable(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "clip.setAnimation",
+            clipId: a.clipId,
+            animation: a.animation,
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.upsertAnimationKeyframe": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Insert or update one scalar keyframe on a clip animation path (gated by ANIMATION_ENABLED).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        channel: AnimationPathSchema,
+        timeTicks: Ticks,
+        value: z.number().finite(),
+        easing: z.enum(["step", "linear", "bezier"]).optional(),
+        keyId: z.string().min(1).max(80).optional(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [
+          {
+            type: "clip.upsertAnimationKeyframe",
+            clipId: a.clipId,
+            channel: a.channel,
+            timeTicks: a.timeTicks,
+            value: a.value,
+            easing: a.easing,
+            keyId: a.keyId,
+          },
+        ],
         principal.id,
         receipt,
       ),

@@ -20,8 +20,12 @@
 
 ## Enabled flags
 
-Studio · Quality Lab (deterministic) · Cinema (supported) · Director (manual) · audio unlink/loudnorm/Flow  
-**False:** Animation · JASSUB · providers · engines
+Studio · Quality Lab (deterministic) · Cinema (supported) · Director (manual) · Animation (opacity+volume) · audio unlink/loudnorm/Flow  
+**False:** JASSUB · providers · engines
+
+## P10-02 note (branch)
+
+Animation UI→render wiring closed on `feat/p10-02-animation-ui-render`: commands, plan, render filters, editor panel, `qualify:animation-e2e`. Transform FFmpeg filters remain residual.
 
 ## External gates still open
 

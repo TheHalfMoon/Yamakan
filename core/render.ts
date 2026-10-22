@@ -28,6 +28,12 @@ import {
   parseLoudnormJson,
 } from "./audio/loudnorm.ts";
 import { withMeasuredLoudnorm } from "./render/plan.ts";
+import { ANIMATION_ENABLED } from "./donors/opencut/animation/flags.ts";
+import {
+  opacityFilterChain,
+  renderableAnimationChannels,
+  volumeFilterChain,
+} from "./render/animation-filters.ts";
 export type RenderJob = {
   id: string;
   projectId: string;
@@ -401,7 +407,25 @@ export async function renderPlan(
       }
       filters.push(
         `${timed},fps=${rate},scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease,setsar=1[${clip}]`,
-        `[${visual}][${clip}]overlay=x=(W-w)/2:y=(H-h)/2:enable='gte(t,${start})*lt(t,${end})':eof_action=pass[${next}]`,
+      );
+      let picture = clip;
+      if (ANIMATION_ENABLED && layer.animation) {
+        const channels = renderableAnimationChannels(layer.animation);
+        if (channels.opacity) {
+          const faded = `${clip}a`;
+          filters.push(
+            ...opacityFilterChain(clip, faded, channels.opacity, {
+              clipStartTicks: layer.startTicks,
+              rangeStartTicks: from,
+              rangeEndTicks: to,
+              fps: profile.fps,
+            }),
+          );
+          picture = faded;
+        }
+      }
+      filters.push(
+        `[${visual}][${picture}]overlay=x=(W-w)/2:y=(H-h)/2:enable='gte(t,${start})*lt(t,${end})':eof_action=pass[${next}]`,
       );
       visual = next;
     }
@@ -427,9 +451,17 @@ export async function renderPlan(
         const label = `a${n++}`;
         const tempo =
           a.speed.num === 1 && a.speed.den === 1 ? [] : atempoChain(a.speed);
+        const animVol =
+          ANIMATION_ENABLED && a.animation
+            ? renderableAnimationChannels(a.animation).volume
+            : undefined;
+        const volumeAnim = animVol
+          ? volumeFilterChain(animVol, a.durationTicks, profile.fps)
+          : [];
         const shaping = [
           ...tempo,
           a.gainDb ? `volume=${a.gainDb}dB` : null,
+          ...volumeAnim,
           a.fadeInTicks ? `afade=t=in:st=0:d=${seconds(a.fadeInTicks)}` : null,
           a.fadeOutTicks
             ? `afade=t=out:st=${seconds(a.durationTicks - a.fadeOutTicks)}:d=${seconds(a.fadeOutTicks)}`

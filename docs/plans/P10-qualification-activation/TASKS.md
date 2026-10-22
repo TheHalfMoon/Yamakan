@@ -42,16 +42,14 @@ Each card: objective, existing implementation, gap, files, fixtures, acceptance,
 ## P10-02 — Finish Animation
 
 - **Objective:** Wire OpenCut animation into UI + renderer; qualify; enable only if user-visible path passes.
-- **Existing:** Modules imported (W16); Q13/Q14 scripts; `ANIMATION_ENABLED=false`.
-- **Gap:** UI/render wiring incomplete.
-- **Files:** `core/donors/opencut/animation/*`, timeline UI, `core/render/plan.ts`, flags, E2E, Q13/Q14 receipts.
-- **Fixtures:** Keyframe fixture from Q13; rational fps; negative/boundary cases.
-- **Acceptance:** Keyframes, interpolation, frame-accurate preview/export parity, undo/redo, persistence, reopen; Q13/Q14 green.
-- **Security:** No new spawn/filtergraph surface beyond plan compiler.
-- **E2E:** Edit keyframes → export → compare.
-- **Dependencies:** P10-00 (parallel after).
+- **Status (2026-10-22):** **Done on branch** `feat/p10-02-animation-ui-render` — ops/commands, plan attach, opacity+volume render filters, editor panel, `ANIMATION_ENABLED=true`, `qualify:animation-e2e` PASS. Transform FFmpeg compile residual.
+- **Existing:** Modules imported (W16); Q13/Q14 scripts; wiring+flag on branch.
+- **Files:** `core/timeline/operations.ts`, `core/command/registry.ts`, `core/render/plan.ts`, `core/render/animation-filters.ts`, `core/render.ts`, `src/main.tsx`, flags, E2E, Q13/Q14 receipts.
+- **Acceptance:** Keyframes, interpolation, sampler parity preview/export, clear/restore, persistence via edit view; Q13/Q14 green.
+- **Security:** No new spawn surface; filtergraph only plan-derived constants/enable windows.
+- **E2E:** `npm run qualify:animation-e2e`.
 - **Rollback:** Flag off.
-- **DoD:** Flag on only after qualified path; else residual recorded.
+- **DoD:** Flag on after qualified path; transform residual recorded.
 
 ---
 

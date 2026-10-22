@@ -18,6 +18,8 @@ import {
   LOUDNORM_ENABLED,
   type LoudnormSpec,
 } from "../audio/loudnorm.ts";
+import { ANIMATION_ENABLED } from "../donors/opencut/animation/flags.ts";
+import type { ClipAnimation } from "../timeline/animation-schema.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -51,6 +53,11 @@ export type VideoLayer = {
   sourceStartTicks: number;
   /** Source-over-timeline rate (2/1 = twice as fast). Default 1/1. */
   speed: Rational;
+  /**
+   * Present only when ANIMATION_ENABLED and the clip has animation.
+   * Render applies opacity; transform paths are residual.
+   */
+  animation?: ClipAnimation;
 };
 
 export type AudioInstruction = {
@@ -67,8 +74,9 @@ export type AudioInstruction = {
   fadeInTicks: number;
   fadeOutTicks: number;
   speed: Rational;
+  /** Present only when ANIMATION_ENABLED; render applies volume. */
+  animation?: ClipAnimation;
 };
-
 export type RenderPlan = {
   format: typeof RENDER_PLAN_FORMAT;
   compilerVersion: typeof COMPILER_VERSION;
@@ -161,21 +169,29 @@ export function compilePlan(
       sourceStartTicks: c.sourceStartTicks,
       speed,
     };
+    const anim =
+      ANIMATION_ENABLED && c.animation ? { animation: c.animation } : {};
     if (kindOf(c.trackId) === "audio" || a.kind === "audio")
       audio.push({
         ...timing,
         gainDb: c.gainDb,
         fadeInTicks: c.fadeInTicks,
         fadeOutTicks: c.fadeOutTicks,
+        ...anim,
       });
     else {
-      layers.push({ ...timing, kind: a.kind === "image" ? "image" : "video" });
+      layers.push({
+        ...timing,
+        kind: a.kind === "image" ? "image" : "video",
+        ...anim,
+      });
       if (a.kind === "video" && c.sound?.enabled)
         audio.push({
           ...timing,
           gainDb: c.sound.gainDb,
           fadeInTicks: c.sound.fadeInTicks,
           fadeOutTicks: c.sound.fadeOutTicks,
+          ...anim,
         });
     }
   }

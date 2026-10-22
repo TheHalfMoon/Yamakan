@@ -367,8 +367,71 @@ try {
     "Locked duplication must not add a clip",
   );
   await page.getByTitle("Unlock track (Alt+L)").first().click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved revision" })
+    .waitFor();
+  // P10-02 Animation: OpenCut-gated panel → local undo/redo → persist.
+  await page.getByTitle("reference.png · 00:00:00:00 → 00:00:01:00").click();
+  await page.getByTestId("clip-animation-panel").waitFor({ timeout: 15000 });
+  await page.locator("#anim-start-opacity").fill("0.2");
+  await page.locator("#anim-end-opacity").fill("0.8");
+  await page
+    .getByRole("button", { name: "Apply opacity keyframes", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved revision" })
+    .waitFor();
+  {
+    const undone = await getProject();
+    const clip = undone.clips.find(
+      (c) =>
+        undone.assets.some(
+          (a) => a.id === c.assetId && a.name === "reference.png",
+        ) && c.startFrame === 0,
+    );
+    assert.ok(clip, "reference.png clip present after undo-save");
+    assert.equal(
+      clip.animation,
+      undefined,
+      "Undo before save must not persist animation",
+    );
+  }
+  await page.getByTitle("reference.png · 00:00:00:00 → 00:00:01:00").click();
+  await page.locator("#anim-start-opacity").fill("0.2");
+  await page.locator("#anim-end-opacity").fill("0.8");
+  await page
+    .getByRole("button", { name: "Apply opacity keyframes", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved revision" })
+    .waitFor();
+  {
+    const afterAnim = await getProject();
+    const animClip = afterAnim.clips.find(
+      (c) =>
+        afterAnim.assets.some(
+          (a) => a.id === c.assetId && a.name === "reference.png",
+        ) &&
+        c.startFrame === 0 &&
+        c.animation?.opacity?.keys?.length >= 2,
+    );
+    assert.ok(animClip, "Redo+save must persist opacity keyframes");
+    assert.equal(animClip.animation.opacity.keys[0].value, 0.2);
+    assert.equal(animClip.animation.opacity.keys.at(-1).value, 0.8);
+  }
   // Reference preview: the saved revision's frame, rendered by the export's
   // plan compiler, and marked stale while the unlock is unsaved.
+  await page.getByTitle("Lock track (Alt+L)").first().click();
+  await page.getByTitle("Unlock track (Alt+L)").first().click();
   await page.getByText(/Stale: save to include your latest edits/).waitFor();
   await page.waitForFunction(
     () => {
