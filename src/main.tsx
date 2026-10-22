@@ -5,15 +5,15 @@ import { RESOURCE_POLICY } from "../core/command/policy.ts";
 import type { Project } from "../core/project.ts";
 import type { RenderJob } from "../core/render.ts";
 import type { ProjectHistory } from "../core/store.ts";
-import Timeline from "./donors/film-editor/components/Timeline";
-import PreviewPlayer from "./donors/film-editor/components/PreviewPlayer";
-import type { TimelineClip } from "./donors/film-editor/types";
+import Timeline from "./editor/components/Timeline";
+import PreviewPlayer from "./editor/components/PreviewPlayer";
+import type { TimelineClip } from "./editor/types";
 import {
   createHistoryState,
   pushHistoryState,
   undoHistoryState,
   redoHistoryState,
-} from "./donors/film-editor/utils/historyState";
+} from "./editor/utils/historyState";
 import { editorView } from "./adapter";
 import { ReferencePreview } from "./reference.tsx";
 import {
@@ -35,9 +35,9 @@ import {
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
-import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { openAssetPeaks } from "./media/demux.ts";
-import type { WaveformCache } from "./donors/film-editor/types";
+import type { WaveformCache } from "./editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
@@ -48,7 +48,7 @@ import type {
   OperationInput,
   OperationResult,
 } from "../sdk/client.ts";
-import "./donors/film-editor/editor.css";
+import "./editor/editor.css";
 import "./style.css";
 // The UI is a same-origin client of the shared command registry; its session
 // cookie identifies the browser-ui principal.

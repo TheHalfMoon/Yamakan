@@ -6,7 +6,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "../core/store.ts";
 import { fromEditView } from "../core/canonical.ts";
-import { canonicalJson, sha256Hex } from "../core/donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { CommandError } from "../core/command/errors.ts";
 
 // Every test folder is removed when the file's tests finish, after the

@@ -1,8 +1,14 @@
 {
   "policy": "yamakan.import-policy/v1",
   "donorRoots": [
-    "src/donors",
-    "core/donors",
+    "core/animation",
+    "core/retime",
+    "core/timeline",
+    "core/jobs/rules",
+    "core/hash",
+    "core/storage",
+    "src/audio",
+    "src/editor",
     "src/studio/canvas-engine",
     "src/studio/workbench",
     "src/studio/platform",
@@ -93,31 +99,43 @@
   ],
   "localFilesInDonorRoots": [
     {
-      "path": "core/donors/gomrey/yamakan-transitions.ts",
-      "reason": "Yamakan JobState transition table extending Gomrey closed-machine style with preparing/validating/cancelRequested/reconciliationRequired/succeeded."
+      "path": "core/jobs/rules/yamakan-transitions.ts",
+      "reason": "Yamakan JobState transition table extending closed-machine style with preparing/validating/cancelRequested/reconciliationRequired/succeeded."
     },
     {
-      "path": "src/donors/film-editor/libraryAsset.ts",
+      "path": "src/editor/libraryAsset.ts",
       "reason": "Yamakan-authored type shim isolating the donor LibraryAsset type from its cloud-backed library hook (see Timeline.tsx ledger modification)."
     },
     {
-      "path": "core/donors/opencut/timeline-types.ts",
-      "reason": "Yamakan-authored type surface for OpenCut ripple/group-move ports (M3/M4); replaces donor @/timeline/types."
+      "path": "core/timeline/timeline-types.ts",
+      "reason": "Yamakan-authored type surface for ripple/group-move ports (M3/M4); replaces donor @/timeline/types."
     },
     {
-      "path": "core/donors/opencut/adapters.ts",
-      "reason": "Yamakan adapters replacing the five non-copied OpenCut group-move dependencies (track lookup, kind compatibility, snap sources) and SceneTracks projection."
+      "path": "core/timeline/adapters.ts",
+      "reason": "Yamakan adapters replacing the five non-copied group-move dependencies (track lookup, kind compatibility, snap sources) and SceneTracks projection."
     },
     {
-      "path": "core/donors/opencut/retime/atempo.ts",
-      "reason": "Yamakan helper building FFmpeg atempo filter chains for rational rates (Q6); not from OpenCut."
+      "path": "core/timeline/operations.ts",
+      "reason": "Yamakan canonical timeline command reducers; not a donor file copy."
     },
     {
-      "path": "core/donors/opencut/animation/media-time.ts",
-      "reason": "Yamakan flick-tick MediaTime helpers replacing OpenCut wasm @/wasm for M6/W16 animation."
+      "path": "core/timeline/animation-schema.ts",
+      "reason": "Yamakan Zod schemas for animation channels on the canonical project."
     },
     {
-      "path": "core/donors/opencut/animation/flags.ts",
+      "path": "core/timeline/properties.ts",
+      "reason": "Yamakan property registry (Q14); not a donor file copy."
+    },
+    {
+      "path": "core/retime/atempo.ts",
+      "reason": "Yamakan helper building FFmpeg atempo filter chains for rational rates (Q6)."
+    },
+    {
+      "path": "core/animation/media-time.ts",
+      "reason": "Yamakan flick-tick MediaTime helpers for M6/W16 animation."
+    },
+    {
+      "path": "core/animation/flags.ts",
       "reason": "Yamakan feature gate ANIMATION_ENABLED for M6/W16 animation port."
     },
     {
@@ -129,12 +147,12 @@
       "reason": "Yamakan-authored fake engine for cancel/fencing/quarantine tests (W10); no donor copy."
     },
     {
-      "path": "core/donors/opencut/animation/sample.ts",
+      "path": "core/animation/sample.ts",
       "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
     },
     {
       "path": "src/cinema/CinemaViewport.tsx",
-      "reason": "Yamakan-authored Cinema preview viewport and activation test handle; not an ArtCraft file copy."
+      "reason": "Yamakan-authored Cinema preview viewport and activation test handle; not a donor file copy."
     }
   ],
   "excludedPaths": [

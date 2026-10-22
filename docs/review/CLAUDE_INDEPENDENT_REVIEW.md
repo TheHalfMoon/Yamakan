@@ -93,8 +93,8 @@ Ratings use only measured or inspected facts. "Unq." means unqualified.
 
 | Source @ pin | Paths | Use |
 |---|---|---|
-| Darzain main @ 0d3bdacb | `core/donors/skelet/storage.ts`, `core/donors/ninerr/canonical.ts`, `src/donors/film-editor/**` | Keep; Skelet `put()` already streams, so use it for streaming import |
-| Gomrey @ 5f299a7a (via draft) | `core/donors/gomrey/job-transitions.ts` | Extend with `cancelRequested`, `reconciliationRequired` |
+| Darzain main @ 0d3bdacb | `core/storage/storage.ts`, `core/hash/canonical.ts`, `src/editor/**` | Keep; Skelet `put()` already streams, so use it for streaming import |
+| Gomrey @ 5f299a7a (via draft) | `core/jobs/rules/job-transitions.ts` | Extend with `cancelRequested`, `reconciliationRequired` |
 | opencut-classic @ cf5e79e9 | `apps/web/src/wasm/media-time.ts` (pattern), `timeline/snapping/**`, `timeline/placement/**`, `animation/**`, `retime/**`, `services/storage/migrations/**` (framework and fixtures pattern), `commands/base-command.ts`, `commands/batch-command.ts` | v1 editing depth, after its tests run under Bun on a host with disk space |
 | ThaUnknown/jassub @ dea3d2d3 (MIT; libass ISC) | Package | Preview title/subtitle rendering identical to export libass |
 | OpenMontage @ 9327439d | Stage prerequisites/manifests/gates (Codex receipts) | P06, out of process if AGPL obligations are not accepted |
@@ -172,7 +172,7 @@ Each finding lists its location, evidence, impact, correction, verification meth
 *Blocks:* v1 (Profile B). The MVP's direct FFmpeg children are already covered by libuv.
 
 **H6. Preview and export are two renderers with no parity contract.**
-*Location:* `src/donors/film-editor/components/PreviewPlayer.tsx` against `core/render.ts`.
+*Location:* `src/editor/components/PreviewPlayer.tsx` against `core/render.ts`.
 *Correction:* A render-plan IR compiled from a frozen revision, with FFmpeg as the export backend and preview consuming the same IR. The MVP effect set is limited to what both implement: fit/scale, position, opacity, cut, crossfade, gain, fades, and libass titles. Everything else fails preflight.
 *Verification:* An automated parity harness compares N timestamps (exported frame against captured preview canvas, SSIM ≥ 0.95, plus audio onset ±1 frame).
 *Blocks:* MVP.

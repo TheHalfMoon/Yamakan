@@ -1,7 +1,69 @@
 {
-  "policy": "yamakan.brand-terms/v1",
-  "scanRoots": ["src", "cli", "mcp"],
-  "skipPathPrefixes": ["src/donors/"],
+  "policy": "yamakan.brand-terms/v2",
+  "scanRoots": [
+    "core",
+    "src",
+    "cli",
+    "mcp",
+    "server",
+    "sdk",
+    "scripts",
+    "tests"
+  ],
+  "skipPathPrefixes": [
+    "docs/history/",
+    "docs/research/",
+    "docs/evidence/",
+    "docs/review/",
+    "docs/provenance/imports.json",
+    "notices/",
+    "node_modules/",
+    "vendor/",
+    "tests/fixtures/provenance/"
+  ],
+  "skipExactFiles": [
+    "docs/provenance/REBRAND_INVENTORY.md",
+    "docs/provenance/brand-terms.json",
+    "NOTICE",
+    "scripts/brand-check.mjs",
+    "scripts/rewrite-rebrand-imports.mjs",
+    "tests/brand-check.test.ts",
+    "tests/provenance.test.ts"
+  ],
+  "allowLiteralPatterns": [
+    {
+      "pattern": "formerly.*Darzain",
+      "reason": "one-line historical rename note in README"
+    },
+    {
+      "pattern": "darzain\\.",
+      "reason": "legacy command-prefix compatibility alias / migration tests"
+    },
+    {
+      "pattern": "DARZAIN_",
+      "reason": "transitional environment alias for YAMAKAN_*"
+    },
+    {
+      "pattern": "darzain-",
+      "reason": "temp-directory prefixes in tests"
+    },
+    {
+      "pattern": "\\.darzain",
+      "reason": "legacy workspace folder name skipped by scanners"
+    },
+    {
+      "pattern": "OpenCut-LICENSE",
+      "reason": "notice file path reference"
+    },
+    {
+      "pattern": "notices/(OpenCut|ArtCraft|OpenVideoStudio|OpenMontage|Gomrey|Ascout|Ninerr)",
+      "reason": "required attribution path references"
+    },
+    {
+      "pattern": "src/editor/x/",
+      "reason": "fictional provenance negative-test path"
+    }
+  ],
   "terms": [
     { "pattern": "OpenCut", "reason": "donor product name" },
     { "pattern": "InvokeAI", "reason": "donor product name" },
@@ -17,6 +79,12 @@
       "reason": "donor product name"
     },
     { "pattern": "Open Generative AI", "reason": "donor product name" },
-    { "pattern": "Darzain", "reason": "retired product name; user surfaces say Yamakan" }
+    { "pattern": "Gomrey", "reason": "donor product name" },
+    { "pattern": "Ascout", "reason": "donor product name" },
+    { "pattern": "Ninerr", "reason": "donor product name" },
+    {
+      "pattern": "Darzain",
+      "reason": "retired product name; user surfaces say Yamakan"
+    }
   ]
 }

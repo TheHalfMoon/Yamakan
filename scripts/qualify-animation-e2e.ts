@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { resolve, join } from "node:path";
 import assert from "node:assert/strict";
-import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { applyBatch } from "../core/timeline/operations.ts";
 import { fromEditView, toEditView } from "../core/canonical.ts";
 import { compilePlan } from "../core/render/plan.ts";
@@ -18,7 +18,7 @@ import {
   volumeFilterChain,
 } from "../core/render/animation-filters.ts";
 import { FLICKS_PER_SECOND, rational } from "../core/time.ts";
-import type { Channel } from "../core/donors/opencut/animation/types.ts";
+import type { Channel } from "../core/animation/types.ts";
 import type { Project } from "../core/project.ts";
 
 assert.equal(ANIMATION_ENABLED, true, "ANIMATION_ENABLED must be true");

@@ -1,10 +1,6 @@
 import { mediaUrl } from "./session.ts";
 import type { Project } from "../core/project.ts";
-import type {
-  TimelineClip,
-  TimelineTrack,
-  MediaItem,
-} from "./donors/film-editor/types";
+import type { TimelineClip, TimelineTrack, MediaItem } from "./editor/types";
 export function editorView(p: Project) {
   const tracks: TimelineTrack[] = p.tracks.map((t) => ({
     id: t.id,

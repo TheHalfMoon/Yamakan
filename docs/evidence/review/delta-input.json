@@ -5,7 +5,7 @@
     "core/render.ts",
     "server/main.ts",
     "src/main.tsx",
-    "src/donors/film-editor/components/PreviewPlayer.tsx",
+    "src/editor/components/PreviewPlayer.tsx",
     "tests/core.test.ts",
     "tests/http.test.ts",
     "scripts/browser-e2e.mjs"

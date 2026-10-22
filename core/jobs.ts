@@ -28,11 +28,11 @@ import { keepMainStream, renderRevision } from "./render.ts";
 import type { RenderJob } from "./render.ts";
 import { CommandError, toCommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
-import { IllegalTransition } from "./donors/gomrey/jobs.ts";
+import { IllegalTransition } from "./jobs/rules/jobs.ts";
 import {
   transitionYamakanJob,
   type YamakanJobState,
-} from "./donors/gomrey/yamakan-transitions.ts";
+} from "./jobs/rules/yamakan-transitions.ts";
 
 /** Assert Gomrey-style legal transition, then run the UPDATE inside the caller transaction. */
 function assertAndApplyJobState(

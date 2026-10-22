@@ -10,27 +10,27 @@ import { Ticks, addTicks, rational } from "../time.ts";
 import { CanonicalProjectSchema } from "../canonical.ts";
 import type { CanonicalProject } from "../canonical.ts";
 import { CommandError } from "../command/errors.ts";
-import { canPlaceTimeSpansOnTrack } from "../donors/opencut/overlap.ts";
-import { resolveTimelineSnap } from "../donors/opencut/snapping.ts";
-import type { SnapPoint } from "../donors/opencut/snapping.ts";
+import { canPlaceTimeSpansOnTrack } from "./overlap.ts";
+import { resolveTimelineSnap } from "./snapping.ts";
+import type { SnapPoint } from "./snapping.ts";
 import {
   applySceneTracksToProject,
   projectToSceneTracks,
-} from "../donors/opencut/adapters.ts";
+} from "./adapters.ts";
 import {
   applyRippleAdjustments,
   computeRippleAdjustments,
   rippleShiftElements,
-} from "../donors/opencut/ripple/index.ts";
+} from "./ripple/index.ts";
 import {
   buildMoveGroup,
   resolveGroupMove,
   snapGroupEdges,
-} from "../donors/opencut/group-move/index.ts";
-import { clampRetimeRate } from "../donors/opencut/retime/rate.ts";
-import { getSourceTimeAtClipTime } from "../donors/opencut/retime/resolve.ts";
+} from "./group-move/index.ts";
+import { clampRetimeRate } from "../retime/rate.ts";
+import { getSourceTimeAtClipTime } from "../retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
-import { ANIMATION_ENABLED } from "../donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import {
   AnimationPathSchema,
   ClipAnimationSchema,

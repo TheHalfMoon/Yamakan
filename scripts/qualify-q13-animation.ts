@@ -3,13 +3,13 @@ import { writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { FLICKS_PER_SECOND } from "../core/time.ts";
-import { mediaTime } from "../core/donors/opencut/animation/media-time.ts";
+import { mediaTime } from "../core/animation/media-time.ts";
 import {
   sampleScalarChannelsAtTime,
   scalarExpressionConstant,
-} from "../core/donors/opencut/animation/sample.ts";
-import type { Channel } from "../core/donors/opencut/animation/types.ts";
-import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
+} from "../core/animation/sample.ts";
+import type { Channel } from "../core/animation/types.ts";
+import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 
 const fps = 30;
 const frameTicks = Math.round(FLICKS_PER_SECOND / fps);

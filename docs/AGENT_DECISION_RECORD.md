@@ -44,7 +44,7 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 ## 2026-10-21: W16 Keyframe animation (M6)
 
 - **Authority:** frozen plan W16 / M6 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W9 prerequisite satisfied; W15 merged at `53f6dab`.
-- **Decision:** Port OpenCut Classic `cf5e79e9` animation modules (excluding effect/graphic/transform) into `core/donors/opencut/animation/` with flick `MediaTime`. Map `@/params` onto `core/timeline/properties.ts` (Q14 pass). Shared sampler `sampleScalarChannelsAtTime` for preview/export. **Q13 selects expression-based** FFmpeg compilation (`colorchannelmixer`/`volume` constants from the sampler); sendcmd deferred. Optional clip `animation` map on canonical/edit view; `ANIMATION_ENABLED = false` until UI/render wiring lands.
+- **Decision:** Port OpenCut Classic `cf5e79e9` animation modules (excluding effect/graphic/transform) into `core/animation/` with flick `MediaTime`. Map `@/params` onto `core/timeline/properties.ts` (Q14 pass). Shared sampler `sampleScalarChannelsAtTime` for preview/export. **Q13 selects expression-based** FFmpeg compilation (`colorchannelmixer`/`volume` constants from the sampler); sendcmd deferred. Optional clip `animation` map on canonical/edit view; `ANIMATION_ENABLED = false` until UI/render wiring lands.
 - **Evidence:** `npm run qualify:q13` / `qualify:q14`; `tests/animation-params.test.ts`; receipts under `docs/evidence/qualification/q13-animation-compile.json` and `q14-animation-params.json`.
 - **Change rule:** enabling `ANIMATION_ENABLED` requires plan/preview filters and a new ADR.
 
@@ -72,7 +72,7 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 ## 2026-10-21: W17 Agents and Quality
 
 - **Authority:** frozen plan W17 / M17 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W4, M-gate, W11 prerequisites on main.
-- **Decision:** Translate Gomrey `5f299a7a` job kernel to `core/donors/gomrey/jobs.ts` (8 inherited tests); apply Yamakan JobState table inside SQLite transitions. Ascout `ca6b6f51` independence lineage under `core/agents/lineage.ts`. Original Quality Lab (`QUALITY_LAB_ENABLED = false`) and router explain (`ROUTER_PROVIDERS_ENABLED = false` — ranks nothing). Commands `yamakan.quality.*`, `yamakan.router.explain`, `yamakan.lineage.evaluate`.
+- **Decision:** Translate Gomrey `5f299a7a` job kernel to `core/jobs/rules/jobs.ts` (8 inherited tests); apply Yamakan JobState table inside SQLite transitions. Ascout `ca6b6f51` independence lineage under `core/agents/lineage.ts`. Original Quality Lab (`QUALITY_LAB_ENABLED = false`) and router explain (`ROUTER_PROVIDERS_ENABLED = false` — ranks nothing). Commands `yamakan.quality.*`, `yamakan.router.explain`, `yamakan.lineage.evaluate`.
 - **Merged:** PR #54 at main `03ddee4` (exact head `7c27fbc`; CI run `39614105234` green). Architecture + security: APPROVE_WITH_RESIDUALS (flags off). Alibaba OCR not installed (delegate-only).
 - **Change rule:** enabling Quality Lab or providers needs acceptance receipts and a new ADR. Track 2 W-cards are otherwise complete; W12 still needs H1.
 
@@ -95,7 +95,7 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 ## 2026-10-21: W9 Mediabunny waveform and OpenCut retime
 
 - **Authority:** frozen plan W9 / M14–M5 ([08](research/rea-source-reuse/08_IMPLEMENTATION_TASKS.md)); W8 merged at `efdf591`.
-- **Decision:** Pin `mediabunny@1.61.3` (MPL-2.0) and `soundtouchjs@0.3.0` (LGPL-2.1). Decode peaks in a Vite-bundled Worker (`src/media/demux{,-worker}.ts`) on Blob input only, terminated after 2 s; failures keep empty/server peaks (Q5). Port OpenCut Classic `cf5e79e9` retime into `core/donors/opencut/retime/` with rational rates; preview pitch path via `src/donors/opencut/audio-stretch.ts`; export uses `setpts` + Yamakan `atempo` chain (no rubberband on the pinned Windows FFmpeg). Optional clip `speed` Rational on canonical/edit view; register `yamakan.clip.setSpeed`.
+- **Decision:** Pin `mediabunny@1.61.3` (MPL-2.0) and `soundtouchjs@0.3.0` (LGPL-2.1). Decode peaks in a Vite-bundled Worker (`src/media/demux{,-worker}.ts`) on Blob input only, terminated after 2 s; failures keep empty/server peaks (Q5). Port OpenCut Classic `cf5e79e9` retime into `core/retime/` with rational rates; preview pitch path via `src/audio/audio-stretch.ts`; export uses `setpts` + Yamakan `atempo` chain (no rubberband on the pinned Windows FFmpeg). Optional clip `speed` Rational on canonical/edit view; register `yamakan.clip.setSpeed`.
 - **Evidence:** `npm run qualify:q5` / `qualify:q6`; `tests/retime.test.ts`, `tests/set-speed.test.ts`; notices under `notices/{mediabunny,soundtouchjs}-LICENSE`.
 - **Change rule:** rate set or demux path changes require new Q5/Q6 receipts at an exact head.
 

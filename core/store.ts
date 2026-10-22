@@ -10,7 +10,7 @@ import {
 import { createReadStream, statfsSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync, backup } from "node:sqlite";
-import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
@@ -24,7 +24,7 @@ import {
   isHiddenVfrOriginal,
   referencedDigestsInRetention,
 } from "./recovery.ts";
-import { LocalContentAddressedStorage } from "./donors/skelet/storage.ts";
+import { LocalContentAddressedStorage } from "./storage/storage.ts";
 import { CommandError } from "./command/errors.ts";
 import {
   FORMAT,

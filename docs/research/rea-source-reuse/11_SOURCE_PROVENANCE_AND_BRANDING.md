@@ -48,7 +48,7 @@ These keep their own rights, as the [source reuse ledger](../../SOURCE_REUSE_LED
   "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
   "original": "apps/web/src/ripple/apply.ts",
   "sha256": "<upstream file sha256>",
-  "imported": "core/donors/opencut/ripple/apply.ts",
+  "imported": "core/timeline/ripple/apply.ts",
   "importedSha256": "<imported file sha256>",
   "modifications": [
     "MediaTime -> flick ticks with checked addTicks",

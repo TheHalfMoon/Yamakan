@@ -96,7 +96,7 @@ describe("W17 Quality Lab and router explain", () => {
     assert.equal(result.providersEnabled, false);
   });
 
-  it("Ascout lineage independence detects self-review", () => {
+  it("lineage independence detects self-review", () => {
     const author = {
       model_family: "composer",
       provider_identity: "cursor",

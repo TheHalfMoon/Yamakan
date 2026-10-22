@@ -101,7 +101,7 @@ for (let shot = 0; shot < 3; shot++) {
     startFrame: shot * 300,
     durationFrames: 300,
     sourceFrame: 0,
-    title: `Darzain | Shot ${shot + 1} | Test fixture`,
+    title: `Yamakan | Shot ${shot + 1} | Test fixture`,
   });
 }
 p.clips.push({
@@ -141,7 +141,7 @@ const dest = path.resolve(
   process.env.DARZAIN_BENCHMARK_OUTPUT || "work/benchmark",
 );
 await mkdir(dest, { recursive: true });
-await writeFile(path.join(dest, "darzain-30-second-production.mp4"), bytes);
+await writeFile(path.join(dest, "yamakan-30-second-production.mp4"), bytes);
 const receipt = {
   fixture:
     "FFmpeg test pattern, motion pattern and sine audio; not AI generation",

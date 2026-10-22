@@ -16,7 +16,7 @@ import test, { after } from "node:test";
 import {
   LocalContentAddressedStorage,
   StorageError,
-} from "../core/donors/skelet/storage.ts";
+} from "../core/storage/storage.ts";
 
 // Tests remove their own folders; these catch what a failed test leaves.
 const bases = [];

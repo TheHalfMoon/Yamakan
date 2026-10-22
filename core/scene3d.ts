@@ -1,8 +1,8 @@
-// M9 / W14: canonical Cinema scene3d entity (ArtCraft Object3DJSON / SceneStateJson
+// M9 / W14: canonical Cinema scene3d entity (interchange Object3DJSON / SceneStateJson
 // adapted to zod).
 import { z } from "zod";
 import { createHash } from "node:crypto";
-import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { CommandError } from "./command/errors.ts";
 import { Id } from "./project.ts";
 import { CINEMA_ENABLED } from "./scene3d-flags.ts";
@@ -68,7 +68,7 @@ export const Scene3DItemSchema = z
     position: Vec3Schema,
     rotation: Vec3Schema,
     scale: Vec3Schema,
-    /** Yamakan asset id (replaces ArtCraft media_file_token). */
+    /** Yamakan asset id (replaces interchange media_file_token). */
     assetId: Id.nullable(),
     color: z.string().max(64).optional(),
     metalness: Finite.min(0).max(1).optional(),
@@ -155,8 +155,8 @@ export const Scene3DSchema = z.preprocess((raw, ctx) => {
 }, Scene3DObjectSchema);
 export type Scene3D = z.infer<typeof Scene3DObjectSchema>;
 
-/** ArtCraft-format object row (donor shape; media_file_token excluded on import). */
-export type ArtCraftObject3DJson = {
+/** Cinema interchange object row (donor-shaped; media_file_token excluded on import). */
+export type CinemaObject3DJson = {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
   scale: { x: number; y: number; z: number };
@@ -172,9 +172,9 @@ export type ArtCraftObject3DJson = {
   visible?: boolean;
 };
 
-export type ArtCraftSceneStateJson = {
+export type CinemaSceneStateJson = {
   version: number;
-  sceneItems: ArtCraftObject3DJson[];
+  sceneItems: CinemaObject3DJson[];
 };
 
 function assertFiniteVec(
@@ -200,10 +200,10 @@ function clampString(s: string, field: string): string {
 }
 
 /**
- * Import ArtCraft SceneStateJson into a Yamakan scene3d.
+ * Import Cinema SceneStateJson into a Yamakan scene3d.
  * `media_file_token` is dropped; callers map known UUIDs to asset ids.
  */
-export function scene3dFromArtCraft(
+export function scene3dFromCinemaJson(
   raw: unknown,
   opts: {
     id: string;
@@ -217,7 +217,7 @@ export function scene3dFromArtCraft(
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     throw new CommandError("VALIDATION", "Scene must be a JSON object.");
 
-  const doc = raw as ArtCraftSceneStateJson;
+  const doc = raw as CinemaSceneStateJson;
   if (!Array.isArray(doc.sceneItems))
     throw new CommandError("VALIDATION", "sceneItems must be an array.");
   if (doc.sceneItems.length > SCENE3D_LIMITS.maxItems)
@@ -292,10 +292,8 @@ export function scene3dFromArtCraft(
   });
 }
 
-/** Export Yamakan scene3d items back to ArtCraft-shaped Object3DJSON (no token). */
-export function artCraftItemsFromScene3D(
-  scene: Scene3D,
-): ArtCraftObject3DJson[] {
+/** Export Yamakan scene3d items back to Cinema interchange Object3DJSON (no token). */
+export function cinemaItemsFromScene3D(scene: Scene3D): CinemaObject3DJson[] {
   return scene.items.map((item) => ({
     position: { ...item.position },
     rotation: { ...item.rotation },

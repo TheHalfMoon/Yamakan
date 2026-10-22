@@ -101,7 +101,7 @@ flowchart LR
   - `core/render/plan.ts`;
   - `core/timeline/operations.ts`;
   - `core/command/registry.ts` (`yamakan.clip.setSound`);
-  - `src/donors/film-editor/components/PreviewPlayer.tsx` (unmute, recorded in the ledger);
+  - `src/editor/components/PreviewPlayer.tsx` (unmute, recorded in the ledger);
   - `src/edit-ops.ts`, `src/main.tsx` and `src/i18n.ts`;
   - `tests/export-golden.test.ts`, `tests/migrate.test.ts`, `tests/render-plan.test.ts` and `tests/parity.test.ts`.
 - **Donor sources:** none (original work, ladder E; M1 in [04](04_EXACT_SOURCE_IMPORT_BLUEPRINT.md)).
@@ -364,7 +364,7 @@ Each module ships behind a capability flag that turns on only when its acceptanc
 - **Donor:** OpenCut Classic `cf5e79e919144200294fb9fed22a222592a0aeea`.
   - Copied: `apps/web/src/ripple/{apply,diff,shift,index}.ts`; `apps/web/src/timeline/group-move/{build-group,resolve-move,snap,track-placement,types,index}.ts`.
   - **Replaced by adapters, not copied:** `timeline/{track-element-update,playhead-snap-source,element-snap-source,animation-snap-points}.ts` and `timeline/placement/compatibility.ts` (see M4).
-- **Starting files:** `core/donors/opencut/ripple/*` (new), `core/donors/opencut/group-move/*` (new), `core/donors/opencut/{snapping,overlap}.ts` (existing), `core/timeline/operations.ts`, `core/command/registry.ts`, `src/edit-ops.ts`, `tests/ripple.test.ts` (new), `tests/group-move.test.ts` (new), `tests/donor-opencut.test.ts`.
+- **Starting files:** `core/timeline/ripple/*` (new), `core/timeline/group-move/*` (new), `core/donors/opencut/{snapping,overlap}.ts` (existing), `core/timeline/operations.ts`, `core/command/registry.ts`, `src/edit-ops.ts`, `tests/ripple.test.ts` (new), `tests/group-move.test.ts` (new), `tests/donor-opencut.test.ts`.
 - **Prerequisites:** M-gate and W6.
 - **Instructions:**
   1. Run Q4.
@@ -382,7 +382,7 @@ Each module ships behind a capability flag that turns on only when its acceptanc
   - `mediabunny@1.61.3`, exact pin with integrity.
   - OpenCut `apps/web/src/retime/{rate,resolve,split,presets,index,audio-stretch}.ts` and the tests `retime/__tests__/{resolve,split}.test.ts` (ported from `bun:test` to `node:test`).
   - `soundtouchjs@0.3.0`, exact pin.
-- **Starting files:** `package.json`, `src/media/demux.ts` (new), `src/donors/film-editor/components/Waveform.tsx`, `core/donors/opencut/retime/*` (new), `src/donors/opencut/audio-stretch.ts` (new), `core/canonical.ts` (clip `speed`), `core/render/plan.ts`, `core/render.ts`, `tests/retime.test.ts` (new).
+- **Starting files:** `package.json`, `src/media/demux.ts` (new), `src/editor/components/Waveform.tsx`, `core/retime/*` (new), `src/audio/audio-stretch.ts` (new), `core/canonical.ts` (clip `speed`), `core/render/plan.ts`, `core/render.ts`, `tests/retime.test.ts` (new).
 - **Prerequisites:** W8.
 - **Instructions:**
   1. Run Q5 and Q6.
@@ -443,7 +443,7 @@ Each module ships behind a capability flag that turns on only when its acceptanc
 
 - **Prerequisites:** W9, and **H1** (native Arabic review of the T7 goldens) recorded as passed.
 - **Donor:** `jassub@2.5.20` (pin `dea3d2d3`), exact pin.
-- **Starting files:** `src/preview/titles.ts` (new), `src/donors/film-editor/components/PreviewPlayer.tsx`, `core/render/ass.ts` (unchanged contract), `server/main.ts` (only for a CSP change that Q11 approves).
+- **Starting files:** `src/preview/titles.ts` (new), `src/editor/components/PreviewPlayer.tsx`, `core/render/ass.ts` (unchanged contract), `server/main.ts` (only for a CSP change that Q11 approves).
 - **Instructions:**
   1. Run Q11.
   2. Construct JASSUB with:
@@ -518,7 +518,7 @@ Each module ships behind a capability flag that turns on only when its acceptanc
 
 - **Prerequisites:** W9.
 - **Donor:** the OpenCut `apps/web/src/animation/` files listed in M6, plus the test `__tests__/animated-params.test.ts`.
-- **Starting files:** `core/donors/opencut/animation/*` (new), `core/timeline/properties.ts` (new), `core/canonical.ts` (`animation`), `core/render/plan.ts`, `src/donors/film-editor/components/PreviewPlayer.tsx`.
+- **Starting files:** `core/animation/*` (new), `core/timeline/properties.ts` (new), `core/canonical.ts` (`animation`), `core/render/plan.ts`, `src/editor/components/PreviewPlayer.tsx`.
 - **Instructions:**
   1. Run Q13 and Q14.
   2. Use one shared sampler for both preview and export.

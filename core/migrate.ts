@@ -38,7 +38,7 @@ import type { CanonicalProject } from "./canonical.ts";
 import type { Asset, Project } from "./project.ts";
 import { Id, ProjectSchema } from "./project.ts";
 import { acquireServiceLock } from "./service-lock.ts";
-import { canonicalJson, sha256Hex } from "./donors/ninerr/canonical.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { CommandError, toCommandError } from "./command/errors.ts";
 
 const MAX_SOURCE_FILES = 200_000;
@@ -443,7 +443,7 @@ export async function migrateLegacyWorkspace(
   if (!(await isLegacyWorkspace(source)))
     throw new CommandError(
       "VALIDATION",
-      "Source is not a legacy Darzain workspace.",
+      "Source is not a legacy Yamakan workspace (.darzain).",
     );
   await assertSeparate(source, destination);
   if ((await exists(destination)) && (await readdir(destination)).length)

@@ -53,7 +53,7 @@ export type CameraControllerDeps = {
   hideObjectPanel: () => void;
   getCameras: () => CinemaCameraEntry[];
   getSelectedCameraId: () => string;
-  /** Replaces ArtCraft EngineEventBus CameraUpdatedEvent. */
+  /** Camera change callback (replaces donor EngineEventBus CameraUpdatedEvent). */
   onCameraUpdated: (cameraId: string, pose: CameraPose) => void;
 };
 

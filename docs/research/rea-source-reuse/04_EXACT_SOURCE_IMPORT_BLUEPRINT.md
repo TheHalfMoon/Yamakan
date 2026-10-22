@@ -60,7 +60,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
   - **W6 closes it:** it adds every new destination root used below (`src/studio/canvas-engine`, `src/studio/host`, `src/cinema`, `core/director`, `core/engines`, `core/identity*.ts`, `core/scene3d.ts`, `core/donors/opencut/*`) and one pattern per row of the [mandatory do-not-import list](../../SOURCE_REUSE_LEDGER.md#mandatory-do-not-import-list-independent-review-2026-10-11). A test copies each excluded path at its pin into a scratch tree and expects the check to fail.
 - **Dependencies.** Every new npm dependency is pinned to an exact version with its lockfile integrity hash. Its own dependency tree is reviewed in the PR that adds it. No `^` or `~` ranges.
 - **Upstream security fixes.** A frozen pin does not track upstream fixes, because `--diff` finds only local drift. For each copied subtree (above all M7), W6 adds a monthly check of upstream commits and advisories since the pin. The module's named owner is responsible for security patches, which land as their own PRs.
-- **Time.** Donor time units are converted to integer flick ticks with checked arithmetic, following the `core/donors/opencut/snapping.ts` pattern. One OpenCut tick is 5,880 flicks.
+- **Time.** Donor time units are converted to integer flick ticks with checked arithmetic, following the `core/timeline/snapping.ts` pattern. One OpenCut tick is 5,880 flicks.
 - **No donor state.** No donor module may own state that survives a reload. Everything persistent is a canonical revision, an asset or a job.
 
 ---
@@ -80,7 +80,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - `core/render/plan.ts` (emit `AudioInstruction` for an enabled video clip whose asset has audio);
    - `core/timeline/operations.ts` (set gain, fades and enabled);
    - `core/command/*` (registry entries);
-   - `src/donors/film-editor/components/PreviewPlayer.tsx` (unmute when enabled; recorded as a modification in the ledger);
+   - `src/editor/components/PreviewPlayer.tsx` (unmute when enabled; recorded as a modification in the ledger);
    - `src/edit-ops.ts` and `src/main.tsx` (controls);
    - `tests/export-golden.test.ts`, `tests/migrate.test.ts` and `tests/parity.test.ts`.
 7. **Ladder level:** E (justified: the defect lives in Yamakan's own plan compiler, and no donor shares its model).
@@ -161,7 +161,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - `apps/web/src/ripple/shift.ts` (17);
    - `apps/web/src/ripple/index.ts` (4).
 6. **Yamakan paths:**
-   - `core/donors/opencut/ripple/{apply,diff,shift,index}.ts`;
+   - `core/timeline/ripple/{apply,diff,shift,index}.ts`;
    - commands in `core/timeline/operations.ts` (`yamakan.timeline.rippleDelete`, `rippleTrim`, `insert`).
 7. **Ladder level:** B.
 8. **Dependency closure:** `@/timeline/types` only (REA). Mapped to a local `types.ts` exposing the canonical clip fields that ripple reads (track id, start, duration, source start).
@@ -206,7 +206,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - `apps/web/src/timeline/group-move/track-placement.ts` (83);
    - `apps/web/src/timeline/group-move/types.ts` (37);
    - `apps/web/src/timeline/group-move/index.ts` (12).
-6. **Yamakan paths:** `core/donors/opencut/group-move/*`, reusing the already-imported `core/donors/opencut/{snapping,overlap}.ts`.
+6. **Yamakan paths:** `core/timeline/group-move/*`, reusing the already-imported `core/donors/opencut/{snapping,overlap}.ts`.
 7. **Ladder level:** B.
 8. **Dependency closure:**
    - Imports at the pin: `@/timeline`, `@/wasm` (`MediaTime`, `addMediaTime`, `subMediaTime`), `timeline/snapping` and `timeline/placement/overlap` (both already imported), plus `timeline/track-element-update.ts` (147 lines), `timeline/playhead-snap-source.ts` (10), `timeline/element-snap-source.ts` (39), `timeline/animation-snap-points.ts` (36) and `timeline/placement/compatibility.ts` (51).
@@ -250,8 +250,8 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - `apps/web/src/retime/audio-stretch.ts` (182; preview only);
    - tests `apps/web/src/retime/__tests__/resolve.test.ts` (61) and `split.test.ts` (31).
 6. **Yamakan paths:**
-   - `core/donors/opencut/retime/*`;
-   - `src/donors/opencut/audio-stretch.ts`;
+   - `core/retime/*`;
+   - `src/audio/audio-stretch.ts`;
    - canonical clip `speed` (rational);
    - `core/render/plan.ts`: video `setpts`, audio `atempo` chain, exact durations.
 7. **Ladder level:** B.
@@ -303,7 +303,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - Test `__tests__/animated-params.test.ts` (241).
    - Not imported: `effect-param-channel.ts`, `graphic-param-channel.ts` and `transform.ts` (coupled to OpenCut effects and graphics).
 6. **Yamakan paths:**
-   - `core/donors/opencut/animation/*`;
+   - `core/animation/*`;
    - canonical `animation` map on clips;
    - `core/render/plan.ts` compiles channels to FFmpeg expressions sampled per frame (`overlay` x/y, `scale`, `colorchannelmixer` alpha, `volume` with `eval=frame`).
 7. **Ladder level:** B.
@@ -698,7 +698,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
 6. **Yamakan paths:**
    - `package.json` dependency;
    - `src/media/demux.ts` (new wrapper);
-   - `src/donors/film-editor/components/Waveform.tsx` (modification: a data source from Mediabunny-decoded samples instead of a full `decodeAudioData`).
+   - `src/editor/components/Waveform.tsx` (modification: a data source from Mediabunny-decoded samples instead of a full `decodeAudioData`).
 7. **Ladder level:** A.
 8. **Dependency closure:** none (REA).
 9. **Excluded:**
@@ -730,7 +730,7 @@ Render (FFmpeg + libass), storage (Skelet), serialization (Ninerr), the film-edi
    - **fribidi (LGPL-2.1-or-later):** the notice, plus replaceability of the WebAssembly module.
    - **Everything else:** all notices are copied into `notices/`.
 5. **Donor paths:** npm (no copy).
-6. **Yamakan paths:** `src/preview/titles.ts`; `src/donors/film-editor/components/PreviewPlayer.tsx` (overlay canvas).
+6. **Yamakan paths:** `src/preview/titles.ts`; `src/editor/components/PreviewPlayer.tsx` (overlay canvas).
 7. **Ladder level:** A.
 8. **Dependency closure:** WebAssembly; the font files are the same pinned IBM Plex Sans Arabic bytes served by the service.
 9. **Excluded:** system-font fallback. Only the pinned fonts are provided, through options that load fonts from the service alone. JASSUB is constructed with `queryFonts: false`, `defaultFont` and `availableFonts` set to the pinned fonts only (its default would query local fonts and fall back to a bundled Liberation Sans), and non-zero `libassMemoryLimit` and `libassGlyphLimit`. The worker and wasm are served locally. The wasm needs `'wasm-unsafe-eval'` in the CSP, a reviewed change (Q11). The threaded build needs COOP/COEP headers, which would change the service's headers, so step 1 chooses between the non-threaded build and a reviewed header change.

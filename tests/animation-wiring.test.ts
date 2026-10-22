@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { applyBatch } from "../core/timeline/operations.ts";
 import { fromEditView, toEditView } from "../core/canonical.ts";
 import { compilePlan } from "../core/render/plan.ts";
-import { ANIMATION_ENABLED } from "../core/donors/opencut/animation/flags.ts";
+import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import {
   opacityConstantAtLocalTime,
   opacityFilterChain,
@@ -18,8 +18,8 @@ import {
 import type { Project } from "../core/project.ts";
 import { FLICKS_PER_SECOND, rational } from "../core/time.ts";
 import { CommandError } from "../core/command/errors.ts";
-import type { Channel } from "../core/donors/opencut/animation/types.ts";
-import { mediaTime } from "../core/donors/opencut/animation/media-time.ts";
+import type { Channel } from "../core/animation/types.ts";
+import { mediaTime } from "../core/animation/media-time.ts";
 
 const F = 23_520_000; // one frame @ 30 fps
 
