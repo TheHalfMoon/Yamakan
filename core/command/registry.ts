@@ -985,8 +985,7 @@ export const commands = {
   "yamakan.lineage.evaluate": define({
     scope: "project:read",
     mutation: false,
-    summary:
-      "Evaluate review lineage independence (concepts only).",
+    summary: "Evaluate review lineage independence (concepts only).",
     input: z
       .object({
         author: z

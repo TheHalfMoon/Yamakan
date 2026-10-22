@@ -293,9 +293,7 @@ export function scene3dFromCinemaJson(
 }
 
 /** Export Yamakan scene3d items back to Cinema interchange Object3DJSON (no token). */
-export function cinemaItemsFromScene3D(
-  scene: Scene3D,
-): CinemaObject3DJson[] {
+export function cinemaItemsFromScene3D(scene: Scene3D): CinemaObject3DJson[] {
   return scene.items.map((item) => ({
     position: { ...item.position },
     rotation: { ...item.rotation },

@@ -33,7 +33,9 @@ test("brand check rejects donor path segments under src/", () => {
     read: () => "export const ok = 1;",
     config: brand,
   });
-  assert.ok(violations.some((v: string) => /path/.test(v) && /OpenCut/i.test(v)));
+  assert.ok(
+    violations.some((v: string) => /path/.test(v) && /OpenCut/i.test(v)),
+  );
 });
 
 test("brand check allows NOTICE attribution content", () => {
