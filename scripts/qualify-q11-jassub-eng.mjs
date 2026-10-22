@@ -486,7 +486,8 @@ try {
         : `Q11 budgets NOT met (mean ${meanMs.toFixed(3)} ms/frame, min SSIM ${minSsim.toFixed(4)}); keep server libass reference still.`,
       fixtures: MEASURE_FIXTURES,
       resolution: `${MEASURE_W}x${MEASURE_H}`,
-      investigationShots: "docs/evidence/qualification/q11-jassub-investigation/shots/",
+      investigationShots:
+        "docs/evidence/qualification/q11-jassub-investigation/shots/",
     };
   } finally {
     await browser?.close();
