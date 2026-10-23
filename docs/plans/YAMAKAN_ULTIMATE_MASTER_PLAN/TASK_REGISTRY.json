@@ -1,0 +1,4205 @@
+{
+  "format": "yamakan.ultimate-task-registry/v1",
+  "planningDate": "2026-10-23",
+  "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "implementationAuthorized": false,
+  "authorizationNote": "Research/planning branch only. All tasks remain future work; no READY without separate founder scope and verified dependencies.",
+  "tasks": [
+    {
+      "id": "YU-000",
+      "phase": 0,
+      "priority": "P0",
+      "objective": "Freeze artifact-bound baseline and capability evidence",
+      "currentStatus": "Source flags/receipts exist; narrative heads differ",
+      "userValue": "Avoid repeating completed work or promoting stale evidence",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "specs/CURRENT.md",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "core/command/registry.ts",
+        "core/qualification-policy.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/baseline.json",
+          "proposed": true
+        },
+        {
+          "path": "scripts/qualify-ultimate-baseline.mjs",
+          "proposed": true
+        }
+      ],
+      "dependencies": [],
+      "instructions": [
+        "Capture main/open PR/issues and exact candidate SHA; preserve PR85 separately",
+        "Extract flags/catalog/profile/compiler/native/font hashes and bind each historical receipt to its own commit",
+        "Record unsupported source areas and baseline failures; no blanket rewrite of old receipts"
+      ],
+      "interfaceChanges": [
+        "Versioned capability evidence manifest only"
+      ],
+      "dataModelChanges": [
+        "No production schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "specs/CURRENT.md",
+          "docs/IMPLEMENTATION_PLAN.md",
+          "core/command/registry.ts",
+          "core/qualification-policy.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Strip secrets/local tokens from public receipts"
+      ],
+      "performanceCriteria": [
+        "Small metadata-only capture; no media/model downloads"
+      ],
+      "tests": [
+        "Manifest detects historical-head mismatch and disabled engines",
+        "Existing completed W1–W18/P10 receipts preserved"
+      ],
+      "negativeTests": [
+        "Malformed/stale receipt cannot produce current-head PASS"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-000 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Remove new report generator; preserve all historical evidence",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Manifest detects historical-head mismatch and disabled engines",
+        "Evidence demonstrates: Existing completed W1–W18/P10 receipts preserved",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-001",
+      "phase": 0,
+      "priority": "P0",
+      "objective": "Reproduce dependency/native/browser baseline in an isolated test workspace",
+      "currentStatus": "Fresh clone missing zod and native helper",
+      "userValue": "Make later regression claims meaningful",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/browser-e2e.mjs",
+        "native/procd/Cargo.toml"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/environment.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-000"
+      ],
+      "instructions": [
+        "Use existing approved pinned runtime and lockfile; inspect lifecycle scripts before isolated install if needed",
+        "Build qualified native helper only under later implementation scope; capture hashes",
+        "Run existing typecheck/lint/tests/build/provenance/brand and affected Edge E2E; record real disk budget"
+      ],
+      "interfaceChanges": [
+        "No API change"
+      ],
+      "dataModelChanges": [
+        "None"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "package.json",
+          "package-lock.json",
+          "scripts/browser-e2e.mjs",
+          "native/procd/Cargo.toml"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No unapproved lifecycle downloads; no weights or provider keys"
+      ],
+      "performanceCriteria": [
+        "Reserve dependency/build/staging space; abort before disk exhaustion"
+      ],
+      "tests": [
+        "Required existing scripts have exact logs and environment profile",
+        "Failures/skips are retained with reason"
+      ],
+      "negativeTests": [
+        "Missing helper/FFmpeg or dependency produces BLOCKED, never pass"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-001 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Discard isolated test environment only; no user-workspace deletion",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Required existing scripts have exact logs and environment profile",
+        "Evidence demonstrates: Failures/skips are retained with reason",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-002",
+      "phase": 0,
+      "priority": "P1",
+      "objective": "Make Quality Lab evidence validation and digest complete",
+      "currentStatus": "Duplicate A/B slots allowed; summary omits output identity",
+      "userValue": "Prevent invalid summaries and evidence equivalence",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/quality/lab.ts",
+        "tests/w17-quality-agents.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/quality/lab.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/w17-quality-agents.test.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-001"
+      ],
+      "instructions": [
+        "Require exactly one A and one B, failures<=attempts and declared rater/rubric uniqueness",
+        "Version a complete private evidence digest binding systems/models/output/input/latency/consent; keep blinded presentation separate",
+        "Migrate accepted v1 summaries explicitly; do not relabel historical data"
+      ],
+      "interfaceChanges": [
+        "Versioned full evidence digest and blinded result"
+      ],
+      "dataModelChanges": [
+        "Version comparison evidence format; backward read policy"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/quality/lab.ts",
+          "tests/w17-quality-agents.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Do not leak system identity in blinded view"
+      ],
+      "performanceCriteria": [
+        "Bounded arrays, no model evaluator invoked"
+      ],
+      "tests": [
+        "A/B comparison roundtrip and changed output changes evidence hash"
+      ],
+      "negativeTests": [
+        "A/A,B/B,duplicate rater,invalid counts -> structured VALIDATION"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-002 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep v1 reader and reject new writes if rolled back; preserve evidence",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: A/B comparison roundtrip and changed output changes evidence hash",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-003",
+      "phase": 0,
+      "priority": "P1",
+      "objective": "Bound MCP frames and concurrent requests",
+      "currentStatus": "Complete newline frame can evade current buffer bound",
+      "userValue": "Keep local automation responsive under hostile input",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "mcp/main.ts",
+        "tests/mcp.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "mcp/main.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/mcp.test.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-001"
+      ],
+      "instructions": [
+        "Check UTF8 bytes of every complete line before JSON.parse",
+        "Add bounded admission for in-flight requests/responses and explicit backpressure/errors",
+        "Preserve protocol shutdown and registry parity"
+      ],
+      "interfaceChanges": [
+        "Document frame/concurrency limits and refusal codes"
+      ],
+      "dataModelChanges": [
+        "None"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "mcp/main.ts",
+          "tests/mcp.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Authorize each command after parse; no unbounded retained responses"
+      ],
+      "performanceCriteria": [
+        "Peak RSS bounded by declared frame+queue caps under flood"
+      ],
+      "tests": [
+        "Valid multi-frame stream and clean shutdown work at limits"
+      ],
+      "negativeTests": [
+        "Oversized newline-terminated JSON,many lines/chunk,10k concurrent calls remain bounded"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-003 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Revert transport change; clients continue existing schema",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Valid multi-frame stream and clean shutdown work at limits",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-010",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Add immutable creative document references to canonical v5",
+      "currentStatus": "Project v4 omits creative documents",
+      "userValue": "One recoverable creative project",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/canonical.ts",
+        "core/store.ts",
+        "core/studio.ts",
+        "core/scene3d.ts",
+        "core/command/registry.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/canonical.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/store.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/documents.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/creative-documents.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-001"
+      ],
+      "instructions": [
+        "Implement10 document tables/ref schema in existing DB; strict byte and nested-reference validators",
+        "Commit document bytes/ref index/head/history/receipt/outbox atomically through ProjectStore",
+        "Define document.get/list/commit with project ownership and expected document hash; no disk await in transaction"
+      ],
+      "interfaceChanges": [
+        "yamakan.document.get/list/commit; revision/hash/CAS return"
+      ],
+      "dataModelChanges": [
+        "Canonical v5 + creative_documents + snapshot_document_refs; derive media closure"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/canonical.ts",
+          "core/store.ts",
+          "core/studio.ts",
+          "core/scene3d.ts",
+          "core/command/registry.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Project-scoped refs,ready-object validation,receipt digest and transactional outbox"
+      ],
+      "performanceCriteria": [
+        "Measure dedup/write/backup costs at8MiB bounded canvas; retain existing snapshot cap"
+      ],
+      "tests": [
+        "Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision",
+        "Crash before/after commit retains only acknowledged complete document"
+      ],
+      "negativeTests": [
+        "Unknown schema,huge UTF8/depth,foreign asset,hash mismatch reject"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-010 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Restore verified pre-v5 workspace copy; old reader refuses v5 rather than drops docs",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision",
+        "Evidence demonstrates: Crash before/after commit retains only acknowledged complete document",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-011",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Persist Studio canvas and bitmap assets through document commands",
+      "currentStatus": "Canvas and Blob map are session-local",
+      "userValue": "Drawing survives reload and backup",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/studio.ts",
+        "src/studio/StudioCanvas.tsx",
+        "src/studio/host/assetStore.ts",
+        "src/studio/host/documentStore.ts",
+        "src/studio/host/port.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/studio.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/studio/StudioCanvas.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/studio/host/assetStore.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/studio/host/documentStore.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/studio-persistence.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-010"
+      ],
+      "instructions": [
+        "Bind selected project/document lifecycle to registry; open committed document rather than always empty",
+        "Import bitmap bytes into existing managed storage before doc attach; translate engine IDs deterministically",
+        "Show pending/committed/conflict states; dispose only caches, never acknowledged assets"
+      ],
+      "interfaceChanges": [
+        "Host async load/commit and managed bitmap resolver"
+      ],
+      "dataModelChanges": [
+        "Studio doc refs and snapshot media-index closure"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/studio.ts",
+          "src/studio/StudioCanvas.tsx",
+          "src/studio/host/assetStore.ts",
+          "src/studio/host/documentStore.ts",
+          "src/studio/host/port.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Reject unlisted nested external media/URLs and oversized canvas"
+      ],
+      "performanceCriteria": [
+        "No duplicate bitmap upload for same digest; rerun Q8–Q10 affected fixtures"
+      ],
+      "tests": [
+        "Draw+import+commit+restart yields exact canvas/bitmap hashes",
+        "Undo/reopen and two-window conflict preserve committed state"
+      ],
+      "negativeTests": [
+        "Worker/browser dies between bitmap import and doc commit; no phantom ready doc"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-011 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Retain imported assets and v5 snapshot; rollback UI does not erase documents",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Draw+import+commit+restart yields exact canvas/bitmap hashes",
+        "Evidence demonstrates: Undo/reopen and two-window conflict preserve committed state",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-012",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Migrate Cinema sidecars with explicit project assignment",
+      "currentStatus": "Mutable workspace/cinema JSON lacks project CAS",
+      "userValue": "Scenes become recoverable project content",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/cinema-store.ts",
+        "core/scene3d.ts",
+        "core/command/registry.ts",
+        "src/cinema/CinemaViewport.tsx"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/cinema-store.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/documents-legacy.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/cinema-migration.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-010"
+      ],
+      "instructions": [
+        "Inventory sidecars read-only with hashes and validate UUID/schema/bytes",
+        "Stage unassigned scenes; require explicit project selection; never infer ownership",
+        "Import idempotently to canonical document refs; preserve originals and migration receipts"
+      ],
+      "interfaceChanges": [
+        "scene commands gain projectId/expectedRevision/document hash; explicit legacy import"
+      ],
+      "dataModelChanges": [
+        "Cinema doc kind and migration receipt map in same DB"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/cinema-store.ts",
+          "core/scene3d.ts",
+          "core/command/registry.ts",
+          "src/cinema/CinemaViewport.tsx"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No new absolute client paths; project ownership checks"
+      ],
+      "performanceCriteria": [
+        "Bound inventory and imports; no automatic large asset loading"
+      ],
+      "tests": [
+        "Scene save/reopen/undo and migration retry preserve exact content",
+        "Two simultaneous scene saves conflict safely"
+      ],
+      "negativeTests": [
+        "Truncated/duplicate/reparse/case alias/foreign IDs cannot overwrite originals"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-012 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Restore pre-migration workspace; retained sidecars remain original",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Scene save/reopen/undo and migration retry preserve exact content",
+        "Evidence demonstrates: Two simultaneous scene saves conflict safely",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-013",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Move Director attempts and consent/revocations into existing SQLite",
+      "currentStatus": "JSON read-modify-write state has no uniform CAS",
+      "userValue": "Reliable approvals and no consent resurrection",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/director/runtime.ts",
+        "core/director/stages.ts",
+        "core/identity.ts",
+        "core/store.ts",
+        "core/command/registry.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/director/runtime.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/store.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/director-durability.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-010"
+      ],
+      "instructions": [
+        "Add run/version/stage attempt and append-only consent/revocation/encoding ledger tables in same DB",
+        "Use receipts/CAS for every mutation; verify actual managed outputs instead of trusting hashes",
+        "Map legacy runs by existing project IDs; restored consents require revalidation; integrate JobSupervisor references"
+      ],
+      "interfaceChanges": [
+        "Versioned run CAS; approvals bind revision/proposal/output/expiry"
+      ],
+      "dataModelChanges": [
+        "Run/attempt/security ledger tables; story data remains canonical documents"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/director/runtime.ts",
+          "core/director/stages.ts",
+          "core/identity.ts",
+          "core/store.ts",
+          "core/command/registry.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Human-only grants,revocation monotonicity,immutable effects receipts"
+      ],
+      "performanceCriteria": [
+        "Bound run history queries; no second queue or scheduler"
+      ],
+      "tests": [
+        "Concurrent advance/approve and lost-response replay retain one result",
+        "Revoke and dependent invalidation atomic; old project restore cannot un-revoke"
+      ],
+      "negativeTests": [
+        "Missing output,stale approval,agent human-scope,revocation race refuse"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-013 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Restore verified DB backup under fail-closed consent policy; no permissive sidecar fallback",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Concurrent advance/approve and lost-response replay retain one result",
+        "Evidence demonstrates: Revoke and dependent invalidation atomic; old project restore cannot un-revoke",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-014",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Prove complete creative backup/restore closure",
+      "currentStatus": "Backup currently DB+managed media only",
+      "userValue": "Recover complete film not only timeline",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/recovery.ts",
+        "core/store.ts",
+        "tests/backup.test.ts",
+        "tests/recovery.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/recovery.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/backup.test.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/recovery.test.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/creative-recovery.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-011",
+        "YU-012",
+        "YU-013"
+      ],
+      "instructions": [
+        "Derive backup refs from destination snapshot including all creative docs and nested media",
+        "Seal security/run state with explicit restore/revalidation policy; retain backup pins/barrier invariants",
+        "Add concurrent edit/import/GC and kill-seam restoration fixtures"
+      ],
+      "interfaceChanges": [
+        "Version manifest to declare complete creative scope and limitations"
+      ],
+      "dataModelChanges": [
+        "Backup manifest version; no second DB"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/recovery.ts",
+          "core/store.ts",
+          "tests/backup.test.ts",
+          "tests/recovery.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No credentials exported; old artistic snapshot cannot restore authorization"
+      ],
+      "performanceCriteria": [
+        "Measure barrier duration/bytes and restore latency on S/M; no weakened existing policy"
+      ],
+      "tests": [
+        "Canvas pixels,scene,story,run and revoked-consent state survive verified restore",
+        "Destination-snapshot closure stable during concurrent live edits"
+      ],
+      "negativeTests": [
+        "Missing blob,corrupt doc,ENOSPC,junction,partial publication -> safe failure"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-014 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep old backups readable with explicit incomplete-creative label; retain source workspace",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Canvas pixels,scene,story,run and revoked-consent state survive verified restore",
+        "Evidence demonstrates: Destination-snapshot closure stable during concurrent live edits",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-015",
+      "phase": 1,
+      "priority": "P0",
+      "objective": "Route browser editing through canonical operations and durable undo",
+      "currentStatus": "Local UI drafts/full save differ from per-writer DB undo",
+      "userValue": "Same edits through humans and agents",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "src/main.tsx",
+        "src/edit-ops.ts",
+        "src/adapter.ts",
+        "core/timeline/operations.ts",
+        "core/store.ts",
+        "sdk/client.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "src/main.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/edit-ops.ts",
+          "proposed": false
+        },
+        {
+          "path": "sdk/client.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/parity.test.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/browser-command-history.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-010"
+      ],
+      "instructions": [
+        "Map each edit gesture to bounded existing/new typed operation; keep drag preview ephemeral",
+        "Commit on gesture completion and reconcile server head; preserve unsaved draft UX during migration",
+        "Use server writer-scoped undo/redo for committed edits; explicit conflict recovery, not overwrite"
+      ],
+      "interfaceChanges": [
+        "Typed operation coverage and stable request IDs in browser"
+      ],
+      "dataModelChanges": [
+        "No new authority; document history joins edit history"
+      ],
+      "primaryApproach": "ADAPT",
+      "donor": {
+        "repo": "https://github.com/OpenCut-app/opencut-classic",
+        "pin": "cf5e79e919144200294fb9fed22a222592a0aeea",
+        "paths": [
+          "apps/web/src/animation/interpolation.ts",
+          "apps/web/src/ripple/shift.ts",
+          "apps/web/src/timeline/snapping/resolve.ts"
+        ],
+        "approach": "ADAPT"
+      },
+      "securityControls": [
+        "No bypass via project.save; scoped expected revision checked"
+      ],
+      "performanceCriteria": [
+        "Candidate edit feedback/ack budgets in12; measure before optimize"
+      ],
+      "tests": [
+        "UI/CLI/MCP edit sequences yield equal canonical hashes",
+        "Undo after restart cannot undo another writer;100gestures produce expected receipts"
+      ],
+      "negativeTests": [
+        "Lost response,replay mismatch,concurrent agent edit,crash mid-drag safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-015 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Feature-gated migration can retain old draft workflow with honest limitations; no lost acknowledged edits",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: UI/CLI/MCP edit sequences yield equal canonical hashes",
+        "Evidence demonstrates: Undo after restart cannot undo another writer;100gestures produce expected receipts",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-016",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Generate bounded immutable waveform peak tiles",
+      "currentStatus": "Browser fetches full media on revision changes",
+      "userValue": "Large media remains responsive",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "src/main.tsx",
+        "src/editor/components/Waveform.tsx",
+        "core/jobs.ts",
+        "core/media.ts",
+        "src/media/demux.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "src/main.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/editor/components/Waveform.tsx",
+          "proposed": false
+        },
+        {
+          "path": "core/jobs.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/audio/peaks.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/waveform-cache.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-001"
+      ],
+      "instructions": [
+        "Key peak derivatives by asset hash/decode version/profile; generate with owned bounded worker",
+        "Expose bounded tiles/ranges; abort superseded browser requests; reuse across edits",
+        "Retain source and evict only rebuildable cache"
+      ],
+      "interfaceChanges": [
+        "Read-only peak-tile API plus derivative job kind"
+      ],
+      "dataModelChanges": [
+        "Derivative provenance/cache keys using existing jobs/store"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/FFmpeg/FFmpeg",
+        "pin": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+        "paths": [
+          "fftools/ffmpeg_filter.c",
+          "libavfilter/af_loudnorm.c"
+        ],
+        "approach": "WRAP",
+        "note": "These inspected graph/audio entrypoints establish the wrapper boundary, not every proposed filter. Each new filter/codec kernel and actual binary/build closure must be inspected/qualified before use; current upstream pin does not prove bundled binary correspondence."
+      },
+      "securityControls": [
+        "Server-selected paths and quotas; hostile decoder under existing containment"
+      ],
+      "performanceCriteria": [
+        "Browser RSS scales with visible tiles; bounded response bytes; record p95"
+      ],
+      "tests": [
+        "100edits of same media cause no repeated full original fetch",
+        "Long file tile/zoom fidelity and peak extrema match reference"
+      ],
+      "negativeTests": [
+        "Fetch timeout,cancel,invalid stream,cache corruption,ENOSPC safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-016 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Drop peak cache and use bounded placeholder; never delete originals",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: 100edits of same media cause no repeated full original fetch",
+        "Evidence demonstrates: Long file tile/zoom fidelity and peak extrema match reference",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-017",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Add indexed thumbnails and proxy policy",
+      "currentStatus": "CFR derivatives exist; general proxy workflow incomplete",
+      "userValue": "Smooth edit on ordinary Windows host",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/jobs.ts",
+        "core/media.ts",
+        "core/store.ts",
+        "src/editor/components/PreviewPlayer.tsx"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/jobs.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/store.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/editor/components/PreviewPlayer.tsx",
+          "proposed": false
+        },
+        {
+          "path": "core/media/proxies.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/proxy-timing.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-016"
+      ],
+      "instructions": [
+        "Reuse durable derivatives with source/profile/compiler keys; record exact sourcePTS mapping",
+        "Select proxy for interactive preview; final/reference export resolves original/qualified CFR source",
+        "Budget disk and request cancellation; immutable original retained"
+      ],
+      "interfaceChanges": [
+        "Proxy capability/profile/status and bounded thumbnail reads"
+      ],
+      "dataModelChanges": [
+        "Derivative manifest/source-time mapping"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/FFmpeg/FFmpeg",
+        "pin": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+        "paths": [
+          "fftools/ffmpeg_filter.c",
+          "libavfilter/af_loudnorm.c"
+        ],
+        "approach": "WRAP",
+        "note": "These inspected graph/audio entrypoints establish the wrapper boundary, not every proposed filter. Each new filter/codec kernel and actual binary/build closure must be inspected/qualified before use; current upstream pin does not prove bundled binary correspondence."
+      },
+      "securityControls": [
+        "Cache GC cannot collect retained original or active derivative"
+      ],
+      "performanceCriteria": [
+        "S/M playback and disk reserve measurements; no4K promise from thumbnail"
+      ],
+      "tests": [
+        "Proxy toggle preserves trims/PTS/audio and final render source",
+        "Restart completes or quarantines partial proxy"
+      ],
+      "negativeTests": [
+        "Missing proxy,relinked wrong source,VFR rotation/corruption refuse misleading preview"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-017 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable proxy selection; regenerate caches from retained source",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Proxy toggle preserves trims/PTS/audio and final render source",
+        "Evidence demonstrates: Restart completes or quarantines partial proxy",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-018",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Qualify preview cache/audio clock and visible parity subset",
+      "currentStatus": "Canvas and reference renderer differ",
+      "userValue": "Trust playback while editing",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/render/preview.ts",
+        "src/reference.tsx",
+        "src/editor/components/PreviewPlayer.tsx",
+        "scripts/qualify-playback.mjs"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/render/preview.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/reference.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/editor/components/PreviewPlayer.tsx",
+          "proposed": false
+        },
+        {
+          "path": "scripts/qualify-playback.mjs",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-017",
+        "YU-015"
+      ],
+      "instructions": [
+        "Key segment caches by full plan/assets/fonts/profile versions",
+        "Cancel stale preview work and synchronize audio clock diagnostics",
+        "Expose unsupported/stale parity explicitly; preserve reference-view access"
+      ],
+      "interfaceChanges": [
+        "Preview status/qualified effect subset metadata"
+      ],
+      "dataModelChanges": [
+        "Cache key version only"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/render/preview.ts",
+          "src/reference.tsx",
+          "src/editor/components/PreviewPlayer.tsx",
+          "scripts/qualify-playback.mjs"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Bound queue/cache bytes and owned worker lifetimes"
+      ],
+      "performanceCriteria": [
+        "Preserve frozen still/segment/playback budgets; report frame drops"
+      ],
+      "tests": [
+        "Reference/interactive parity on supported fixtures; revision invalidates stale frame",
+        "Audio drift and minimum-window playback recorded under background export"
+      ],
+      "negativeTests": [
+        "Rapid scrubs,cache eviction,cancel/restart,missing font show honest state"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-018 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Revert optimization and evict new cache keys; keep reference path",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Reference/interactive parity on supported fixtures; revision invalidates stale frame",
+        "Evidence demonstrates: Audio drift and minimum-window playback recorded under background export",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-019",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Qualify rational project fps across view/edit/render",
+      "currentStatus": "Canonical rational core projects through30fps view",
+      "userValue": "Correct cinematic and broadcast timing",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/time.ts",
+        "core/canonical.ts",
+        "core/project.ts",
+        "core/render/plan.ts",
+        "src/adapter.ts",
+        "core/interchange/otio.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/project.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/canonical.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render/plan.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/adapter.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/time.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/time.test.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/otio.test.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-015",
+        "YU-018"
+      ],
+      "instructions": [
+        "Introduce24000/1001 profile first with explicit rounding at view boundary",
+        "Audit every frame conversion,retime/trim/title/audio/output path with BigInt rational intermediates",
+        "Retain old30fps projects exactly; expand other rates only by same qualification"
+      ],
+      "interfaceChanges": [
+        "Versioned editing view/rate-aware commands and render profile"
+      ],
+      "dataModelChanges": [
+        "Rate-aware view format migration; canonical v5 preserved"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/time.ts",
+          "core/canonical.ts",
+          "core/project.ts",
+          "core/render/plan.ts",
+          "src/adapter.ts",
+          "core/interchange/otio.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Strict schema; no silent frame rounding or source reinterpretation"
+      ],
+      "performanceCriteria": [
+        "No O(duration) arithmetic expansion; S/M baseline comparison"
+      ],
+      "tests": [
+        "Boundary frames at long timestamps and mixed source rates roundtrip",
+        "Video/audio duration and title cues match rational golden fixtures"
+      ],
+      "negativeTests": [
+        "Unsafe integer,invalid rationals,unsupported rate or lossy old view refuse"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-019 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Old projects remain supported; new unsupported-rate projects read-only in rollback",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Boundary frames at long timestamps and mixed source rates roundtrip",
+        "Evidence demonstrates: Video/audio duration and title cues match rational golden fixtures",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-020",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Implement a typed transform/crop effect with preview/export parity",
+      "currentStatus": "Effects UI utilities are not canonical/export stack",
+      "userValue": "Reliable basic finishing",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/canonical.ts",
+        "core/render/plan.ts",
+        "core/render.ts",
+        "src/adapter.ts",
+        "src/editor/utils/effects.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/canonical.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render/plan.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render.ts",
+          "proposed": false
+        },
+        {
+          "path": "src/adapter.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/effects/registry.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/effect-parity.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-019"
+      ],
+      "instructions": [
+        "Add bounded versioned transform/crop schema to canonical clip",
+        "Compile same semantics to reference/export and qualified interactive subset",
+        "Expose only supported controls and persistent undo; retain source notices"
+      ],
+      "interfaceChanges": [
+        "Typed effect registry and clip effect operations"
+      ],
+      "dataModelChanges": [
+        "Versioned clip effect stack; unsupported effect fail preflight"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/FFmpeg/FFmpeg",
+        "pin": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+        "paths": [
+          "fftools/ffmpeg_filter.c",
+          "libavfilter/af_loudnorm.c"
+        ],
+        "approach": "WRAP",
+        "note": "These inspected graph/audio entrypoints establish the wrapper boundary, not every proposed filter. Each new filter/codec kernel and actual binary/build closure must be inspected/qualified before use; current upstream pin does not prove bundled binary correspondence."
+      },
+      "securityControls": [
+        "No raw filters/JS or user-selected filesystem path"
+      ],
+      "performanceCriteria": [
+        "Bound effect count/filter complexity; S/M parity/latency"
+      ],
+      "tests": [
+        "Persist/undo/reopen/export transform matches golden ROIs",
+        "Preview identity/noop preserves old project output"
+      ],
+      "negativeTests": [
+        "NaN/huge scale/unknown effect/ASS-filter injection refused"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-020 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable new effect writes; preserve versioned read/preflight, never silently drop effects",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Persist/undo/reopen/export transform matches golden ROIs",
+        "Evidence demonstrates: Preview identity/noop preserves old project output",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-021",
+      "phase": 1,
+      "priority": "P2",
+      "objective": "Add one frame-exact crossfade transition",
+      "currentStatus": "No qualified transition contract",
+      "userValue": "Polished cuts without hidden effects",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/timeline/operations.ts",
+        "core/render/plan.ts",
+        "core/render.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/timeline/operations.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render/plan.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/transitions.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-020"
+      ],
+      "instructions": [
+        "Define adjacency/overlap/source-handle semantics explicitly",
+        "Compile one video dissolve and audio equal-power option under named policy",
+        "Enforce exact duration and undo/reopen behavior"
+      ],
+      "interfaceChanges": [
+        "transition.set/remove typed commands"
+      ],
+      "dataModelChanges": [
+        "Bounded transition refs between clips"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/FFmpeg/FFmpeg",
+        "pin": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+        "paths": [
+          "fftools/ffmpeg_filter.c",
+          "libavfilter/af_loudnorm.c"
+        ],
+        "approach": "WRAP",
+        "note": "These inspected graph/audio entrypoints establish the wrapper boundary, not every proposed filter. Each new filter/codec kernel and actual binary/build closure must be inspected/qualified before use; current upstream pin does not prove bundled binary correspondence."
+      },
+      "securityControls": [
+        "Finite enums/parameters; no arbitrary xfade expressions"
+      ],
+      "performanceCriteria": [
+        "Compact filter graph and parity at supported rates"
+      ],
+      "tests": [
+        "Cut/dissolve boundaries and audio duration golden tests"
+      ],
+      "negativeTests": [
+        "Insufficient handles,locked tracks,negative overlap,missing clip reject"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-021 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Clear only through explicit undo or migration; rollback reader refuses unsupported transition",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Cut/dissolve boundaries and audio duration golden tests",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-022",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Replace frame-sized animation filter chains with bounded compilation",
+      "currentStatus": "Opacity/volume chain cost grows per frame",
+      "userValue": "Usable animated long clips",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/animation/interpolation.ts",
+        "core/render/animation-filters.ts",
+        "core/render/plan.ts",
+        "tests/animation-params.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/render/animation-filters.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render/plan.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/animation-params.test.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/animation-complexity.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-019"
+      ],
+      "instructions": [
+        "Compile bounded piecewise curves or bounded segments with explicit tolerance",
+        "Preserve exact hold/linear/Bezier semantics against current sampler",
+        "Add transform channels only after020 parity and complexity gate"
+      ],
+      "interfaceChanges": [
+        "Versioned animation compiler/profile capability"
+      ],
+      "dataModelChanges": [
+        "No curve schema change unless explicit versioned migration"
+      ],
+      "primaryApproach": "ADAPT",
+      "donor": {
+        "repo": "https://github.com/OpenCut-app/opencut-classic",
+        "pin": "cf5e79e919144200294fb9fed22a222592a0aeea",
+        "paths": [
+          "apps/web/src/animation/interpolation.ts",
+          "apps/web/src/ripple/shift.ts",
+          "apps/web/src/timeline/snapping/resolve.ts"
+        ],
+        "approach": "ADAPT"
+      },
+      "securityControls": [
+        "Generated expressions server-owned and bounded"
+      ],
+      "performanceCriteria": [
+        "K profile filter size scales with keys/segments not frames; measure render startup/RSS"
+      ],
+      "tests": [
+        "Sampled curve/video/audio matches reference over keys,steps and ends"
+      ],
+      "negativeTests": [
+        "Duplicate/nonfinite keys,oversized graph,unsupported channel fail early"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-022 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Retain old compiler for old bounded profiles and version receipts",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Sampled curve/video/audio matches reference over keys,steps and ends",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-023",
+      "phase": 1,
+      "priority": "P2",
+      "objective": "Qualify SDR color metadata and bounded LUT import",
+      "currentStatus": "No canonical color pipeline/LUT parity",
+      "userValue": "Predictable finishing colors",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/render/plan.ts",
+        "core/render.ts",
+        "src/editor/utils/lut.ts",
+        "src/editor/utils/colorGrading.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/render/plan.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/effects/color.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/color-pipeline.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-020"
+      ],
+      "instructions": [
+        "Freeze SDR Rec709/range/transfer/profile policy; metadata capture and explicit unsupported HDR refusal",
+        "Add bounded parsed LUT asset format; no file references from LUT",
+        "Compare test charts across reference/export/preview display path"
+      ],
+      "interfaceChanges": [
+        "Typed color profile/LUT reference operations"
+      ],
+      "dataModelChanges": [
+        "Color policy/version and immutable LUT object refs"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/render/plan.ts",
+          "core/render.ts",
+          "src/editor/utils/lut.ts",
+          "src/editor/utils/colorGrading.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Parser complexity limits and color/profile integrity"
+      ],
+      "performanceCriteria": [
+        "Measure per-frame overhead and retain cache version keys"
+      ],
+      "tests": [
+        "Legal/full range and known color chart roundtrip within frozen tolerance"
+      ],
+      "negativeTests": [
+        "Malformed/huge LUT,unknown transfer/HDR,external include refuses"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-023 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Revert to qualified SDR defaults; unsupported edits remain visible/read-only",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Legal/full range and known color chart roundtrip within frozen tolerance",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-024",
+      "phase": 1,
+      "priority": "P1",
+      "objective": "Add editable imported caption tracks",
+      "currentStatus": "ASS titles exist; subtitle editor/ASR absent",
+      "userValue": "Bilingual finishing without model inference",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/render/ass.ts",
+        "core/canonical.ts",
+        "src/i18n.ts",
+        "tests/typography.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/canonical.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/render/ass.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/captions.ts",
+          "proposed": true
+        },
+        {
+          "path": "src/editor/components/Captions.tsx",
+          "proposed": true
+        },
+        {
+          "path": "tests/captions.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-019",
+        "YU-015"
+      ],
+      "instructions": [
+        "Bound SRT/VTT parser into timed canonical cues; preserve original text/offsets",
+        "Editable caption track and export/burn-in options through same typography path",
+        "Native Arabic fixture packet independent of automated tests"
+      ],
+      "interfaceChanges": [
+        "Caption import/edit/split/export commands"
+      ],
+      "dataModelChanges": [
+        "Versioned timed-text document/cue refs in canonical project"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/render/ass.ts",
+          "core/canonical.ts",
+          "src/i18n.ts",
+          "tests/typography.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Plain text escaping/fonts pinned; H1 required for language quality"
+      ],
+      "performanceCriteria": [
+        "Bound cues and parser bytes; no full audio/model needed"
+      ],
+      "tests": [
+        "Cue times/escaping/mixed-script roundtrip and preview/export golden frames"
+      ],
+      "negativeTests": [
+        "Malformed timestamps,huge cues,ASS markup/URL injection,overlap policy rejects"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-024 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep original subtitle asset and cue document; rollback read-only rather than drops",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Cue times/escaping/mixed-script roundtrip and preview/export golden frames",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-025",
+      "phase": 1,
+      "priority": "P2",
+      "objective": "Implement verified relink and batch aspect/export variants",
+      "currentStatus": "Repair exists; polished relink/batch journey incomplete",
+      "userValue": "Finish deliverables without rebuilding edits",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/store.ts",
+        "core/jobs.ts",
+        "core/command/registry.ts",
+        "core/render/plan.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/store.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/jobs.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/relink-variants.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-014",
+        "YU-020"
+      ],
+      "instructions": [
+        "Relink by hash/probe compatibility or explicit approved source replacement revision",
+        "Freeze one plan/profile per batch variant; reuse source pins safely",
+        "Show per-output errors,actual profiles and no success for partial batch"
+      ],
+      "interfaceChanges": [
+        "Relink proposal/apply and bounded exportBatch"
+      ],
+      "dataModelChanges": [
+        "Source-replacement provenance and batch manifest refs"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/store.ts",
+          "core/jobs.ts",
+          "core/command/registry.ts",
+          "core/render/plan.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No client paths or silent original replacement"
+      ],
+      "performanceCriteria": [
+        "Bound batch queue/disk; interactive latency under one active render"
+      ],
+      "tests": [
+        "Missing-media repair and three aspect variants reopen/re-export deterministically"
+      ],
+      "negativeTests": [
+        "Same filename wrong bytes,partial relink,late cancel,ENOSPC safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-025 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Undo source replacement; cancel batch leaves old exports and source untouched",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Missing-media repair and three aspect variants reopen/re-export deterministically",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-026",
+      "phase": 1,
+      "priority": "P2",
+      "objective": "Qualify scale profiles before raising project limits",
+      "currentStatus": "200clips/16tracks/10min/1080p output bounds",
+      "userValue": "Credible long/highres editing scope",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/command/policy.ts",
+        "core/qualification-policy.ts",
+        "core/project.ts",
+        "core/canonical.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "scripts/qualify-editor-scale.mjs",
+          "proposed": true
+        },
+        {
+          "path": "core/command/policy.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/project.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/canonical.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-018",
+        "YU-019",
+        "YU-022",
+        "YU-016"
+      ],
+      "instructions": [
+        "Run S/M plus expected-refusal L/H/A/K profiles from12",
+        "Measure full snapshots,history,UI virtualization,decode/cache/export and recovery costs",
+        "Only propose a new reviewed policy/version once measured; do not simply increase limits"
+      ],
+      "interfaceChanges": [
+        "Named supported profile matrix"
+      ],
+      "dataModelChanges": [
+        "Any limit expansion versioned,old bounds/history preserved"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/command/policy.ts",
+          "core/qualification-policy.ts",
+          "core/project.ts",
+          "core/canonical.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No weakening admission/worker caps to meet a benchmark"
+      ],
+      "performanceCriteria": [
+        "Frozen candidate budgets selected before qualifying; include p95/RSS/disk"
+      ],
+      "tests": [
+        "Named profiles pass or refuse exactly; no hidden clamp",
+        "Backup/open/edit/restore under stress retain acknowledged state"
+      ],
+      "negativeTests": [
+        "Oversized unsupported projects and exhausted disk fail safely"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-026 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Revert profile availability; preserve new projects for safe read/explicit migration",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Named profiles pass or refuse exactly; no hidden clamp",
+        "Evidence demonstrates: Backup/open/edit/restore under stress retain acknowledged state",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-030",
+      "phase": 2,
+      "priority": "P1",
+      "objective": "Unify Story/Edit/Finish navigation and project selection",
+      "currentStatus": "Creative panels disconnected from full lifecycle",
+      "userValue": "Cohesive accessible workspace",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "src/main.tsx",
+        "src/style.css",
+        "src/editor/editor.css",
+        "src/director/DirectorPanel.tsx",
+        "src/studio/StudioCanvas.tsx"
+      ],
+      "targetFiles": [
+        {
+          "path": "src/main.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/style.css",
+          "proposed": false
+        },
+        {
+          "path": "src/director/DirectorPanel.tsx",
+          "proposed": false
+        },
+        {
+          "path": "src/workspaces/ProjectShell.tsx",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-015"
+      ],
+      "instructions": [
+        "Implement11 workspace shell with shared project/selection/history/job tray",
+        "Consolidate existing design tokens before new visual styling",
+        "Contextual Studio/Cinema/Director/Quality tools; no duplicate project selector"
+      ],
+      "interfaceChanges": [
+        "Projection state only; commands unchanged"
+      ],
+      "dataModelChanges": [
+        "Persist UI preference only,not another project model"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "src/main.tsx",
+          "src/style.css",
+          "src/editor/editor.css",
+          "src/director/DirectorPanel.tsx",
+          "src/studio/StudioCanvas.tsx"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No model/backend implementation details exposed as user-flow clutter"
+      ],
+      "performanceCriteria": [
+        "No regression in current startup bundle/interaction fixtures"
+      ],
+      "tests": [
+        "Six journeys reach same project/assets; reload preserves selection policy",
+        "Keyboard/focus/RTL/zoom/error/empty states reviewed"
+      ],
+      "negativeTests": [
+        "Unsaved/conflicted doc navigation cannot silently discard work"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-030 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep prior shell behind bounded UI flag; canonical docs unchanged",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Six journeys reach same project/assets; reload preserves selection policy",
+        "Evidence demonstrates: Keyboard/focus/RTL/zoom/error/empty states reviewed",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-031",
+      "phase": 2,
+      "priority": "P1",
+      "objective": "Add story/shot/reference pack lifecycle",
+      "currentStatus": "Scenes/shots metadata exist; reusable packs incomplete",
+      "userValue": "Plan repeatable cinematic sequences",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/canonical.ts",
+        "core/identity.ts",
+        "core/director/manifest.ts",
+        "src/director/DirectorPanel.tsx"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/story.ts",
+          "proposed": true
+        },
+        {
+          "path": "src/director/DirectorPanel.tsx",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/story-packs.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-010",
+        "YU-013",
+        "YU-030"
+      ],
+      "instructions": [
+        "Persist story document with stable scene/shot/take IDs and timings",
+        "Reference packs use role-tagged immutable media versions and purpose/consent links",
+        "Manual storyboard works with imported stills/footage and unavailable generator"
+      ],
+      "interfaceChanges": [
+        "story/shot/referencePack typed commands"
+      ],
+      "dataModelChanges": [
+        "Story document schema and pack versions"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/canonical.ts",
+          "core/identity.ts",
+          "core/director/manifest.ts",
+          "src/director/DirectorPanel.tsx"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Security ledger separate from artistic undo; no claim of identity fidelity"
+      ],
+      "performanceCriteria": [
+        "Bound shot/ref counts and payload bytes"
+      ],
+      "tests": [
+        "Three-shot manual storyboard->timeline->reopen preserves refs and timings"
+      ],
+      "negativeTests": [
+        "Missing media,revoked consent,duplicate IDs or unsupported refs refuse"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-031 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Retain story documents and existing scenes; new writes can be disabled",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Three-shot manual storyboard->timeline->reopen preserves refs and timings",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-032",
+      "phase": 2,
+      "priority": "P1",
+      "objective": "Implement non-destructive take compare/replace",
+      "currentStatus": "No coherent take-to-timeline revision workflow",
+      "userValue": "Revise one shot without losing edit",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/timeline/operations.ts",
+        "core/store.ts",
+        "core/quality/lab.ts",
+        "src/adapter.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/takes.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/timeline/operations.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/take-replace.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-031",
+        "YU-020",
+        "YU-002"
+      ],
+      "instructions": [
+        "Store alternative take metadata and immutable input/output lineage",
+        "Compare takes without mutating timeline; propose exact replacement clip mappings",
+        "Apply one revision-bound batch preserving original takes and unrelated clips"
+      ],
+      "interfaceChanges": [
+        "take.list/compare/proposeReplace/apply"
+      ],
+      "dataModelChanges": [
+        "Take/version refs in story doc"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/timeline/operations.ts",
+          "core/store.ts",
+          "core/quality/lab.ts",
+          "src/adapter.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Output probes and expected revision required before attach"
+      ],
+      "performanceCriteria": [
+        "Comparison thumbnails/proxies bounded,not full originals"
+      ],
+      "tests": [
+        "Replace one of three shots; unrelated project bytes/semantics preserved",
+        "Undo/reopen returns exact old take"
+      ],
+      "negativeTests": [
+        "Stale proposal,wrong duration/missing artifact,revoked ref refuse"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-032 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Undo creates new revision; old media remains rooted",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Replace one of three shots; unrelated project bytes/semantics preserved",
+        "Evidence demonstrates: Undo/reopen returns exact old take",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-040",
+      "phase": 3,
+      "priority": "P1",
+      "objective": "Introduce operation-based EngineAdapter v2 with artifact handles",
+      "currentStatus": "v1 graph/class_type and whole byte arrays",
+      "userValue": "Portable future local/hosted/Plume integration",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/engines/contract.ts",
+        "core/engines/fake.ts",
+        "core/jobs.ts",
+        "tests/engines.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/engines/contract-v2.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/engines/v1-bridge.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/engines/fake.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/engines.test.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-010",
+        "YU-003"
+      ],
+      "instructions": [
+        "Implement strict per-operation schema/capability constraints from10",
+        "Keep v1 fake compatibility via server-owned recipe lowering only",
+        "Stream/handle media; durable service owns job/attempt/cancel publication"
+      ],
+      "interfaceChanges": [
+        "EngineAdapter/v2 plus reason codes,reconcile/artifact observations"
+      ],
+      "dataModelChanges": [
+        "Immutable recipe/model/qualification manifest refs; no second scheduler"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/engines/contract.ts",
+          "core/engines/fake.ts",
+          "core/jobs.ts",
+          "tests/engines.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No real engines enabled; schema validation before resource access"
+      ],
+      "performanceCriteria": [
+        "Bound control frame/diagnostics and avoid media-sized arrays"
+      ],
+      "tests": [
+        "Fake/absent/v1 parity and bounded handle IO",
+        "Unsupported controls fail before spawn"
+      ],
+      "negativeTests": [
+        "Raw graph,URL,path,class/plugin input,stale attempt reject"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-040 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep v1 reader/fake tests; disable v2 routes without data loss",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Fake/absent/v1 parity and bounded handle IO",
+        "Evidence demonstrates: Unsupported controls fail before spawn",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-041",
+      "phase": 3,
+      "priority": "P1",
+      "objective": "Qualify new worker profile using no-model stand-ins",
+      "currentStatus": "Existing single-process policy not Python tree proof",
+      "userValue": "Safe future media/engine workers",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "native/procd/src/main.rs",
+        "native/procd/src/container.rs",
+        "core/process/owner.ts",
+        "tests/containment.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "native/procd/src/main.rs",
+          "proposed": false
+        },
+        {
+          "path": "native/procd/src/container.rs",
+          "proposed": false
+        },
+        {
+          "path": "core/process/owner.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/engine-worker-profile.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-040",
+        "YU-001"
+      ],
+      "instructions": [
+        "Specify allowed descendant/process/GPU needs before changing limits",
+        "Use stand-in child tree for owned spawn/cancel/death/publication seams",
+        "Test actual Windows file/network/handle escape negatives and cleanup; fail closed if unsupported"
+      ],
+      "interfaceChanges": [
+        "Versioned process profile/hash requested by job policy"
+      ],
+      "dataModelChanges": [
+        "No project schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "native/procd/src/main.rs",
+          "native/procd/src/container.rs",
+          "core/process/owner.ts",
+          "tests/containment.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Independent security/native FFI review mandatory; no privilege relaxation fallback"
+      ],
+      "performanceCriteria": [
+        "Enforce declared memory/wall/process/disk/diagnostic budgets"
+      ],
+      "tests": [
+        "Service/helper/worker death leaves no live/suspended orphan",
+        "Read sentinels and outbound DNS/TCP/HTTP denied on target profile"
+      ],
+      "negativeTests": [
+        "WMI/task scheduler/foreign file/junction/inherited handle/AV lock fail safely"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-041 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable new profile and retain existing FFmpeg profile; quarantine incomplete attempts",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Service/helper/worker death leaves no live/suspended orphan",
+        "Evidence demonstrates: Read sentinels and outbound DNS/TCP/HTTP denied on target profile",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-042",
+      "phase": 3,
+      "priority": "P1",
+      "objective": "Prove missing-weights and qualification discovery without downloads",
+      "currentStatus": "Absent capability exists only at scaffold",
+      "userValue": "Honest no-engine experience",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/engines/contract.ts",
+        "core/router/explain.ts",
+        "core/command/registry.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/engines/manifests.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/router/explain.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/engine-absence.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-040",
+        "YU-041"
+      ],
+      "instructions": [
+        "Discover only pinned local manifest metadata with byte/hash/rights checks",
+        "Return WEIGHTS_ABSENT/HARDWARE_UNQUALIFIED/ENGINE_DISABLED distinctly",
+        "No import/install/network fallback; wire plain user reason into operation UI"
+      ],
+      "interfaceChanges": [
+        "Operation capability discovery with version/qualification expiry"
+      ],
+      "dataModelChanges": [
+        "Manifest schema only"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/engines/contract.ts",
+          "core/router/explain.ts",
+          "core/command/registry.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "OS offline boundary plus no-download code path; flags unchanged"
+      ],
+      "performanceCriteria": [
+        "Bound manifest IO and no recursive large scans"
+      ],
+      "tests": [
+        "Absent/corrupt files refuse before inference; offline editor remains usable"
+      ],
+      "negativeTests": [
+        "HF/pip/update attempt,unapproved model path/symlink/hash mismatch denied"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-042 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable discovery; engineAbsentCapability remains safe fallback",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Absent/corrupt files refuse before inference; offline editor remains usable",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-043",
+      "phase": 3,
+      "priority": "P2",
+      "objective": "Close first-engine source/runtime manifest and qualification choice",
+      "currentStatus": "Some native model repos discovery-only; no executed bake-off",
+      "userValue": "Avoid backend lock-in and unsupported resource promises",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/engines/contract.ts",
+        "docs/provenance/import-policy.json"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/engine-candidate-manifests.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-042"
+      ],
+      "instructions": [
+        "Source-inspect exact native CLI/pipeline/model loading closure for finalist candidates,not README-only",
+        "Freeze interpreter/package/model dependency manifests and safe loading policy; no weights",
+        "Predeclare same-operation comparison and resource/rights criteria; choose no winner before evidence"
+      ],
+      "interfaceChanges": [
+        "Versioned recipe and qualification manifest design"
+      ],
+      "dataModelChanges": [
+        "No runtime model install"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/engines/contract.ts",
+          "docs/provenance/import-policy.json"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Dependency review,model loading format,egress and provenance audit"
+      ],
+      "performanceCriteria": [
+        "Actual hardware/model resource demand UNKNOWN until authorized run"
+      ],
+      "tests": [
+        "All selected source paths/pins/licenses/transitive closure validated",
+        "Document unsupported controls and cancellation semantics"
+      ],
+      "negativeTests": [
+        "Mutable revision,missing license,remote-code download or undefined requirements blocks selection"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-043 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Retain candidate records; no production dependency to roll back",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: All selected source paths/pins/licenses/transitive closure validated",
+        "Evidence demonstrates: Document unsupported controls and cancellation semantics",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-050",
+      "phase": 4,
+      "priority": "P2",
+      "objective": "Compile cinematic intent to explicitly supported conditioning",
+      "currentStatus": "Camera/lens metadata is not applied model control",
+      "userValue": "Honest controllable shot requests",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/scene3d.ts",
+        "src/cinema/camera/cameraMath.ts",
+        "core/canonical.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/cinema/control-compiler.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/control-compiler.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-031",
+        "YU-040"
+      ],
+      "instructions": [
+        "Define camera/light/lens/motion intent schema and recipe-specific lowering",
+        "Record intentHash/loweredControlsHash and unsupported/approximate controls",
+        "Keep previs as editable metadata; no applied optics claim without E evaluation"
+      ],
+      "interfaceChanges": [
+        "Versioned controls compiler/capability report"
+      ],
+      "dataModelChanges": [
+        "Shot control refs/qualification evidence"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/scene3d.ts",
+          "src/cinema/camera/cameraMath.ts",
+          "core/canonical.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No executable expressions or arbitrary model nodes"
+      ],
+      "performanceCriteria": [
+        "Bound trajectory samples and ref preprocessing budgets"
+      ],
+      "tests": [
+        "Supported fake recipe maps deterministically with provenance"
+      ],
+      "negativeTests": [
+        "Unsupported depth/pose/end-frame cannot silently become prompt suffix"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-050 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Retain intent; disable specific compiler recipe without changing shots",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Supported fake recipe maps deterministically with provenance",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-051",
+      "phase": 4,
+      "priority": "P2",
+      "objective": "Version continuity references and consent checks at attempt/attach",
+      "currentStatus": "Identity encoding hashes not fidelity proof",
+      "userValue": "Reusable subjects/scenes with traceable revisions",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/identity.ts",
+        "core/director/stages.ts",
+        "core/command/registry.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/continuity.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/continuity-consent.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-031",
+        "YU-013",
+        "YU-040"
+      ],
+      "instructions": [
+        "Bind character/environment/voice references to immutable pack versions",
+        "Validate purpose/expiry/revocation before submission and attachment",
+        "Separate metadata validity from measured continuity score"
+      ],
+      "interfaceChanges": [
+        "Continuity pack references and per-stage consent validation"
+      ],
+      "dataModelChanges": [
+        "Pack/consent links and immutable attempt references"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/identity.ts",
+          "core/director/stages.ts",
+          "core/command/registry.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Sensitive reference retention and non-undoable revocation"
+      ],
+      "performanceCriteria": [
+        "Bound reference count/bytes by exact operation capability"
+      ],
+      "tests": [
+        "Pack update leaves old takes traceable; revoked grant blocks new effect"
+      ],
+      "negativeTests": [
+        "Revocation race,foreign refs,forged encodingHash,old approval fail"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-051 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable new use; retain authorized historical artifact records under retention policy",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Pack update leaves old takes traceable; revoked grant blocks new effect",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-060",
+      "phase": 5,
+      "priority": "P1",
+      "objective": "Add revision-bound creative proposals with human review",
+      "currentStatus": "Manual stage approvals lack full action-list proposal",
+      "userValue": "Supervise agents without hidden edits",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/command/registry.ts",
+        "core/director/stages.ts",
+        "core/store.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/proposals.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/command/registry.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/proposals.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-015",
+        "YU-013",
+        "YU-032"
+      ],
+      "instructions": [
+        "Hash bounded operation list,baseRevision,assets,scope,cost intent and expiry",
+        "Reuse browser human-only grant boundary for restricted approvals",
+        "Apply approved batch exactly once with current revision check"
+      ],
+      "interfaceChanges": [
+        "proposal.create/get/apply and human approval integration"
+      ],
+      "dataModelChanges": [
+        "Proposal/approval receipts in same DB"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/command/registry.ts",
+          "core/director/stages.ts",
+          "core/store.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Prompt content never grants scope; changed plan invalidates approval"
+      ],
+      "performanceCriteria": [
+        "Bound op count/bytes and no expensive work inside transaction"
+      ],
+      "tests": [
+        "Approved exact plan applies once; UI/MCP see same result"
+      ],
+      "negativeTests": [
+        "Changed op/hash,stale revision,expired grant,agent approval/cost widening refused"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-060 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Expire/disable pending proposals; committed edits undone by normal revisions",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Approved exact plan applies once; UI/MCP see same result",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-061",
+      "phase": 5,
+      "priority": "P1",
+      "objective": "Execute resumable three-shot imported-media production",
+      "currentStatus": "Director manual receipts only; no real executor",
+      "userValue": "Complete editable project without inference",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/director/runtime.ts",
+        "core/jobs.ts",
+        "core/director/manifest.ts",
+        "core/flow/snapshot.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/director/runtime.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/jobs.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/flow/snapshot.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/agent-production.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-060",
+        "YU-014",
+        "YU-031"
+      ],
+      "instructions": [
+        "Map approved manual/import stages to existing jobs and registered artifact validation",
+        "Persist command intent/result per stage attempt; checkpoint after committed effects",
+        "Interrupt/restart at every stage; revise one shot and export through canonical path"
+      ],
+      "interfaceChanges": [
+        "workflow.start/status/resume/cancel using existing command boundary"
+      ],
+      "dataModelChanges": [
+        "Run attempts/job refs; no competing scheduler"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/director/runtime.ts",
+          "core/jobs.ts",
+          "core/director/manifest.ts",
+          "core/flow/snapshot.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No arbitrary tools/code or automatic paid/model step"
+      ],
+      "performanceCriteria": [
+        "Finite stages/tool/attempt/wall limits and bounded queue"
+      ],
+      "tests": [
+        "Three-shot storyboard->editable timeline->export->backup->restore succeeds",
+        "Resume never duplicates clips/assets/approval/effect"
+      ],
+      "negativeTests": [
+        "Missing artifact,forged completion,stale lease,cancel/publication race safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-061 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Stop new runs; retain committed stages/outputs and normal edit history",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Three-shot storyboard->editable timeline->export->backup->restore succeeds",
+        "Evidence demonstrates: Resume never duplicates clips/assets/approval/effect",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-062",
+      "phase": 5,
+      "priority": "P2",
+      "objective": "Expose stable request IDs and progress parity across transports",
+      "currentStatus": "CLI/SDK progress and cancellation semantics incomplete",
+      "userValue": "Reliable external agent automation",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "cli/main.ts",
+        "sdk/client.ts",
+        "mcp/main.ts",
+        "server/main.ts",
+        "tests/parity.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "cli/main.ts",
+          "proposed": false
+        },
+        {
+          "path": "sdk/client.ts",
+          "proposed": false
+        },
+        {
+          "path": "mcp/main.ts",
+          "proposed": false
+        },
+        {
+          "path": "server/main.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/parity.test.ts",
+          "proposed": false
+        }
+      ],
+      "dependencies": [
+        "YU-003",
+        "YU-060",
+        "YU-061"
+      ],
+      "instructions": [
+        "Add CLI stable requestId JSON option and bounded SDK streaming/progress cursor",
+        "Resume committed outbox/job events; explicit resync for expired cursors",
+        "Distinguish wait cancellation from job cancel; same schemas/scopes on all clients"
+      ],
+      "interfaceChanges": [
+        "Versioned request/progress transport additions"
+      ],
+      "dataModelChanges": [
+        "Existing outbox retention policy only"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "cli/main.ts",
+          "sdk/client.ts",
+          "mcp/main.ts",
+          "server/main.ts",
+          "tests/parity.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No transport can invent principal/human approval or read foreign project"
+      ],
+      "performanceCriteria": [
+        "Bound frame/event/response/concurrency bytes"
+      ],
+      "tests": [
+        "Equivalent workflow commands yield canonical parity and reconnect progress"
+      ],
+      "negativeTests": [
+        "Lost response,duplicate request,multi-byte frame,revoked token,expired cursor safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-062 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Backward-compatible clients can poll existing status; no new daemon",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Equivalent workflow commands yield canonical parity and reconnect progress",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-070",
+      "phase": 6,
+      "priority": "P2",
+      "objective": "Qualify transcription contract/native stand-in before weights",
+      "currentStatus": "No ASR; captions import can work now",
+      "userValue": "Future local bilingual transcript editing",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/media.ts",
+        "core/process/owner.ts",
+        "core/jobs.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/audio/transcription.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/transcription-contract.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-024",
+        "YU-041",
+        "YU-042"
+      ],
+      "instructions": [
+        "Wrap bounded PCM extraction and transcript artifact schema/timestamps",
+        "Inspect pinned whisper.cpp CLI output/closure before worker implementation; no weight download",
+        "Stand-in tests propose caption edits,never claim actual recognition"
+      ],
+      "interfaceChanges": [
+        "transcribe operation and reviewable caption proposal"
+      ],
+      "dataModelChanges": [
+        "Transcript derivative/document with model/version/language provenance"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/ggml-org/whisper.cpp",
+        "pin": "231638a0717b7822784297e5980965ffcec05810",
+        "paths": [
+          "examples/cli/cli.cpp",
+          "src/whisper.cpp"
+        ],
+        "approach": "WRAP"
+      },
+      "securityControls": [
+        "No arbitrary CLI paths; consent/retention and decoder containment"
+      ],
+      "performanceCriteria": [
+        "Bound chunks/PCM/staging; real CPU accuracy/latency UNKNOWN"
+      ],
+      "tests": [
+        "Stub word/cue timestamps roundtrip into editable captions"
+      ],
+      "negativeTests": [
+        "Missing weights,unsupported language,malformed segments,no speech/huge audio safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-070 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable ASR capability; imported captions remain fully functional",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Stub word/cue timestamps roundtrip into editable captions",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-071",
+      "phase": 6,
+      "priority": "P2",
+      "objective": "Qualify deterministic repair/analysis operations",
+      "currentStatus": "No registered stabilization/scene detection workers",
+      "userValue": "Useful no-model footage assistance",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/media.ts",
+        "core/jobs.ts",
+        "core/render.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/media/repair.ts",
+          "proposed": true
+        },
+        {
+          "path": "core/jobs.ts",
+          "proposed": false
+        },
+        {
+          "path": "tests/media-repair.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-017",
+        "YU-040"
+      ],
+      "instructions": [
+        "Source-inspect bounded FFmpeg scene-detect/denoise/stabilize feature closure and actual binary support",
+        "Select one deterministic operation first and preserve source/PTS/audio",
+        "Compare full output and derivative provenance; no neural restoration claim"
+      ],
+      "interfaceChanges": [
+        "One typed repair operation/capability"
+      ],
+      "dataModelChanges": [
+        "Immutable derivative and operation recipe refs"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/FFmpeg/FFmpeg",
+        "pin": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+        "paths": [
+          "fftools/ffmpeg_filter.c",
+          "libavfilter/af_loudnorm.c"
+        ],
+        "approach": "WRAP",
+        "note": "These inspected graph/audio entrypoints establish the wrapper boundary, not every proposed filter. Each new filter/codec kernel and actual binary/build closure must be inspected/qualified before use; current upstream pin does not prove bundled binary correspondence."
+      },
+      "securityControls": [
+        "Server-owned filter args only; plugin/filter support pinned"
+      ],
+      "performanceCriteria": [
+        "Bound wall/memory/disk and record quality vs unchanged baseline"
+      ],
+      "tests": [
+        "Output decodes and preserves declared timing/audio/source; scene marks reference exact frames"
+      ],
+      "negativeTests": [
+        "Unsupported filter,hostile stream,cancel/OOM/partial output quarantine"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-071 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable repair route and retain original/take",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Output decodes and preserves declared timing/audio/source; scene marks reference exact frames",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-072",
+      "phase": 6,
+      "priority": "P2",
+      "objective": "Qualify neural enhancement/interpolation source and weights later",
+      "currentStatus": "Source inspected hazards; no model entitlement/runtime",
+      "userValue": "Avoid unsafe CLI transplants",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/engines/contract.ts",
+        "core/jobs.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/neural-repair-qualification.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-043",
+        "YU-019",
+        "YU-071"
+      ],
+      "instructions": [
+        "Choose one RealESRGAN/RIFE candidate only after exact checkpoint/runtime rights/resources",
+        "Exclude upstream shell/shared-temp/auto-download/pickle orchestration; use owned decode and frame-pair/tile kernel",
+        "Run complete clip timing/flicker/hallucination comparison only when separately authorized"
+      ],
+      "interfaceChanges": [
+        "Future enhance/interpolate operations stay unavailable"
+      ],
+      "dataModelChanges": [
+        "Qualification manifest only until approved"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/engines/contract.ts",
+          "core/jobs.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Safe loading/supply chain,artifact validation,independent security review"
+      ],
+      "performanceCriteria": [
+        "Requires measured hardware/RAM/disk; no presumed free GPU"
+      ],
+      "tests": [
+        "Authorized full-clip temporal/audio/quality and cancellation evidence retained"
+      ],
+      "negativeTests": [
+        "Scene cut,subtitle/face hallucination,frame count drift,OOM/timeout safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-072 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep route disabled; retain original and test evidence",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Authorized full-clip temporal/audio/quality and cancellation evidence retained",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
+      "state": "BLOCKED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-080",
+      "phase": 7,
+      "priority": "P2",
+      "objective": "Produce portable creative project with explicit interchange loss",
+      "currentStatus": "OTIO subset and recovery not full portable creative export",
+      "userValue": "Own and transfer complete work",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/interchange/otio.ts",
+        "core/recovery.ts",
+        "core/store.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "core/interchange/otio.ts",
+          "proposed": false
+        },
+        {
+          "path": "core/interchange/portable.ts",
+          "proposed": true
+        },
+        {
+          "path": "tests/portable-project.test.ts",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-014",
+        "YU-025",
+        "YU-031"
+      ],
+      "instructions": [
+        "Export canonical docs+media+hash manifest without credentials/host paths",
+        "OTIO export/import supports declared subset and a per-feature loss report",
+        "Traversal/case/symlink/expansion-safe import creates separate new project proposal"
+      ],
+      "interfaceChanges": [
+        "portable export/inspect/import;OTIO loss report"
+      ],
+      "dataModelChanges": [
+        "Versioned portable bundle manifest"
+      ],
+      "primaryApproach": "WRAP",
+      "donor": {
+        "repo": "https://github.com/AcademySoftwareFoundation/OpenTimelineIO",
+        "pin": "eee67fdcdce388696e39f4176d89a61ee9fdc790",
+        "paths": [
+          "src/opentime/rationalTime.h",
+          "src/py-opentimelineio/opentimelineio/adapters/otio_json.py"
+        ],
+        "approach": "WRAP"
+      },
+      "securityControls": [
+        "No archive authority over scopes/consents/paths or plugin execution"
+      ],
+      "performanceCriteria": [
+        "Streaming bounds and disk reservation before extraction"
+      ],
+      "tests": [
+        "Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy"
+      ],
+      "negativeTests": [
+        "Zip slip/case collision/decompression bomb/missing blob/unknown version safe"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-080 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep source project/backup; imported project is separate",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-081",
+      "phase": 7,
+      "priority": "P2",
+      "objective": "Evaluate selective revision as a complete product advantage",
+      "currentStatus": "Take replacements and agent journey unqualified",
+      "userValue": "Potential measurable differentiation",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/quality/lab.ts",
+        "core/director/runtime.ts",
+        "core/timeline/operations.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "scripts/qualify-selective-revision.mjs",
+          "proposed": true
+        },
+        {
+          "path": "docs/evidence/ultimate/selective-revision.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-032",
+        "YU-061",
+        "YU-080"
+      ],
+      "instructions": [
+        "Freeze brief with three shots and change request for exactly one",
+        "Measure edits/interventions/retries/cost and unchanged project regions",
+        "Compare to legitimately accessible workflows only; label no comparator NOT TESTED"
+      ],
+      "interfaceChanges": [
+        "Evaluation receipts only"
+      ],
+      "dataModelChanges": [
+        "No new product authority"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/quality/lab.ts",
+          "core/director/runtime.ts",
+          "core/timeline/operations.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Human review/input rights and secret-free artifacts"
+      ],
+      "performanceCriteria": [
+        "Record total finished-task time/resource/cost; no invented speedup"
+      ],
+      "tests": [
+        "Selective revision preserves unrelated clips/docs and remains editable/restorable"
+      ],
+      "negativeTests": [
+        "Agent changes unrelated shot,missing reference,unapproved inference fails task"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-081 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Remove evaluation-only harness; retain immutable evidence",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Selective revision preserves unrelated clips/docs and remains editable/restorable",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-090",
+      "phase": 8,
+      "priority": "P1",
+      "objective": "Build benchmark recording and analysis harness without outputs",
+      "currentStatus": "Only plan/summary exists; no scientific comparative runner",
+      "userValue": "Reproducible later claims",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/quality/lab.ts",
+        "scripts/benchmark-production.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "scripts/benchmark-ultimate.mjs",
+          "proposed": true
+        },
+        {
+          "path": "docs/evidence/ultimate/benchmark-protocol.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-002",
+        "YU-000"
+      ],
+      "instructions": [
+        "Freeze A–L tasks/versions/cost/failure/rater schema from16",
+        "Use synthetic records to validate blinding/randomization and clustered analyses",
+        "Report NOT TESTED for empty cohort; no automatic provider/model call"
+      ],
+      "interfaceChanges": [
+        "Benchmark evidence/analysis schema"
+      ],
+      "dataModelChanges": [
+        "Versioned protocol and retained raw observations"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/quality/lab.ts",
+          "scripts/benchmark-production.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Consent/privacy retention and no provider key capture"
+      ],
+      "performanceCriteria": [
+        "Bound analysis data; full GPU evaluators remain absent"
+      ],
+      "tests": [
+        "Synthetic known results recompute and repeated prompt/rater clustering respected"
+      ],
+      "negativeTests": [
+        "Missing trials,retries removed,duplicate raters,modality mixing blocks win label"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-090 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep old summary readable; published outcomes immutable",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Synthetic known results recompute and repeated prompt/rater clustering respected",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-091",
+      "phase": 8,
+      "priority": "P1",
+      "objective": "Run affected Windows editor/recovery/performance qualification",
+      "currentStatus": "Historical fixtures not exact new-head qualification",
+      "userValue": "Evidence for actual claimed profile",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "scripts/qualify-release.ts",
+        "scripts/qualify-preview.ts",
+        "scripts/qualify-playback.mjs",
+        "tests/interruption.test.ts"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/windows-qualification.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-026",
+        "YU-014",
+        "YU-030",
+        "YU-024",
+        "YU-025",
+        "YU-062",
+        "YU-090"
+      ],
+      "instructions": [
+        "Run approved S/M and any newly supported profiles with full receipts",
+        "Inject kill/cancel/sharing-lock/cache/disk faults; retain failed cases",
+        "Independent correctness/native security review of changed contracts before promotion"
+      ],
+      "interfaceChanges": [
+        "Artifact-bound capability manifest updates"
+      ],
+      "dataModelChanges": [
+        "No schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "scripts/qualify-release.ts",
+          "scripts/qualify-preview.ts",
+          "scripts/qualify-playback.mjs",
+          "tests/interruption.test.ts"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "No placeholder Windows/model/human gate results"
+      ],
+      "performanceCriteria": [
+        "Frozen policy budgets and complete resource observations"
+      ],
+      "tests": [
+        "All claimed editing/recovery/profile gates execute and pass or explicitly block"
+      ],
+      "negativeTests": [
+        "Unsupported profile never reported passed; real disk/account tests not mocked"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-091 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Disable unqualified capabilities; retain last verified artifact",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: All claimed editing/recovery/profile gates execute and pass or explicitly block",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-092",
+      "phase": 8,
+      "priority": "P2",
+      "objective": "Run real engine and comparative A/V quality qualification only with F",
+      "currentStatus": "No weights/GPU/budget/entitlement authorized",
+      "userValue": "Evidence of actual generation capability",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "core/engines/contract.ts",
+        "docs/FOUNDER_DECISION_RECORD.md"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/engine-benchmark.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-043",
+        "YU-050",
+        "YU-051",
+        "YU-090",
+        "YU-041"
+      ],
+      "instructions": [
+        "Require F and exact capable host/model/runtime/terms plus E-SEC",
+        "Run three-seed operational smoke then powered B–G/K/L as separately budgeted",
+        "Retain all attempts/charges; do not call smoke quality superiority"
+      ],
+      "interfaceChanges": [
+        "Qualification hash/capability promotion proposal only"
+      ],
+      "dataModelChanges": [
+        "Engine/model qualification record"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "core/engines/contract.ts",
+          "docs/FOUNDER_DECISION_RECORD.md"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Independent E-SEC; no enablement from docs or d1"
+      ],
+      "performanceCriteria": [
+        "Preapproved actual hardware/disk/cost limits"
+      ],
+      "tests": [
+        "Actual complete-clip probe/quality/resource/cancel/recovery results retained"
+      ],
+      "negativeTests": [
+        "OOM/no weights/late output/unapproved spend/identity drift handled"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-092 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep engine disabled and preserve offline editing",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Actual complete-clip probe/quality/resource/cancel/recovery results retained",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "REQUIRES CAPABLE GPU",
+      "state": "BLOCKED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-093",
+      "phase": 8,
+      "priority": "P1",
+      "objective": "Perform native Arabic and product usability evaluation",
+      "currentStatus": "Automated RTL only; no actual human study",
+      "userValue": "Trust bilingual workflows and simplify product",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "src/i18n.ts",
+        "core/render/ass.ts",
+        "docs/evidence/qualification/windows-ux-qa-final-report.md"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/ux-native-review.md",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-030",
+        "YU-024",
+        "YU-081",
+        "YU-090"
+      ],
+      "instructions": [
+        "Use qualified native Arabic reviewer and consented formative cohort",
+        "Run six journeys and shaping/audio fixtures on exact artifact",
+        "Record failures and measured sample limits; no invented independent participants"
+      ],
+      "interfaceChanges": [
+        "Reviewed UX/language acceptance packet"
+      ],
+      "dataModelChanges": [
+        "No product schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "src/i18n.ts",
+          "core/render/ass.ts",
+          "docs/evidence/qualification/windows-ux-qa-final-report.md"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Consent/participant privacy; no sensitive captures in public repo"
+      ],
+      "performanceCriteria": [
+        "Task timing and error observations with uncertainty"
+      ],
+      "tests": [
+        "H1 scoped review and accessible journeys signed by actual reviewers"
+      ],
+      "negativeTests": [
+        "Wrong bidi/diacritics/clipping/pronunciation/keyboard traps block affected claim"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-093 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep unresolved claims unavailable and preserve report",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: H1 scoped review and accessible journeys signed by actual reviewers",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
+      "state": "BLOCKED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-100",
+      "phase": 9,
+      "priority": "P1",
+      "objective": "Collect exact-artifact release gates without shipping",
+      "currentStatus": "Release NO-GO; historical RC only",
+      "userValue": "Concrete reviewable release decision packet",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "scripts/qualify-release.ts",
+        "scripts/qualify-release-evidence.ts",
+        "scripts/bundle.ts",
+        "docs/RELEASE_PROPOSAL.md"
+      ],
+      "targetFiles": [
+        {
+          "path": "scripts/qualify-release-evidence.ts",
+          "proposed": false
+        },
+        {
+          "path": "docs/evidence/ultimate/release-readiness.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-091",
+        "YU-093"
+      ],
+      "instructions": [
+        "Bind all receipts to exact candidate/native/font/bundle hashes",
+        "Collect H1–H5/signing/ProfileA/E-SEC/F applicability without fabricating status",
+        "Public release remains blocked until separate founder artifact decision"
+      ],
+      "interfaceChanges": [
+        "Release report schema only"
+      ],
+      "dataModelChanges": [
+        "No schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "scripts/qualify-release.ts",
+          "scripts/qualify-release-evidence.ts",
+          "scripts/bundle.ts",
+          "docs/RELEASE_PROPOSAL.md"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Never prints credentials or activates engines to collect evidence"
+      ],
+      "performanceCriteria": [
+        "Collector metadata bounded; no automatic signing/deploy"
+      ],
+      "tests": [
+        "Missing/stale/failed gate makes NO-GO; signed-off scope verifiable"
+      ],
+      "negativeTests": [
+        "Docs CI or stub receipt cannot count as human/OS/model pass"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-100 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep last known verified package and NO-GO report",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Missing/stale/failed gate makes NO-GO; signed-off scope verifiable",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "CAN BUILD NOW",
+      "state": "PLANNED",
+      "implementationAuthorized": false,
+      "receipt": null
+    },
+    {
+      "id": "YU-101",
+      "phase": 9,
+      "priority": "P1",
+      "objective": "Execute external clean-profile/account/disk/signing/founder gates",
+      "currentStatus": "H2–H5/AuthentiCode open",
+      "userValue": "Legitimate Windows release readiness",
+      "sourceBaseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+      "sourceRefs": [
+        "docs/RELEASE_PROPOSAL.md",
+        "docs/plans/P10-qualification-activation/RELEASE_GATE_MATRIX.md"
+      ],
+      "targetFiles": [
+        {
+          "path": "docs/evidence/ultimate/external-release-gates.json",
+          "proposed": true
+        }
+      ],
+      "dependencies": [
+        "YU-100"
+      ],
+      "instructions": [
+        "Obtain exact artifact-scoped administrator/reviewer/founder actions",
+        "Run actual ProfileA/offline/second-account/constrained-volume/install-update-rollback tests",
+        "Signing costs and public release need separate authorization; do not ship automatically"
+      ],
+      "interfaceChanges": [
+        "No new API"
+      ],
+      "dataModelChanges": [
+        "No schema change"
+      ],
+      "primaryApproach": "BUILD",
+      "donor": {
+        "repo": "https://github.com/TheHalfMoon/Yamakan",
+        "pin": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+        "paths": [
+          "docs/RELEASE_PROPOSAL.md",
+          "docs/plans/P10-qualification-activation/RELEASE_GATE_MATRIX.md"
+        ],
+        "approach": "BUILD",
+        "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
+      },
+      "securityControls": [
+        "Independent security and founder ship approval"
+      ],
+      "performanceCriteria": [
+        "Existing frozen release budgets"
+      ],
+      "tests": [
+        "Actual H2–H5 and applicable signing/update receipts bound to same artifact"
+      ],
+      "negativeTests": [
+        "Unsigned/wrong head/reused account/mock ENOSPC cannot close gate"
+      ],
+      "requiredEvidence": [
+        "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
+        "Command logs and actual test outcomes including failures/skips",
+        "A YU-101 receipt linking code, tests, review identities and Windows/profile limitations"
+      ],
+      "reviewGates": [
+        "Fresh-context correctness/parsimony/product review over immutable implementation diff",
+        "Independent security review for changed boundary; d1 advisory cannot satisfy it"
+      ],
+      "rollbackProcedure": "Keep NO-GO; preserve unsigned RC and prior installer rollback",
+      "mergeConditions": [
+        "Separately authorized implementation scope; dependencies VERIFIED",
+        "Required targeted and repository gates pass on exact head; no unresolved must-fix",
+        "Donor provenance/import guard passes; flags stay off unless separately qualified",
+        "Normal bounded PR; no force push or implied model/spend/release authority"
+      ],
+      "definitionOfDone": [
+        "Evidence demonstrates: Actual H2–H5 and applicable signing/update receipts bound to same artifact",
+        "Negative tests fail safely as specified",
+        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+      ],
+      "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
+      "state": "BLOCKED",
+      "implementationAuthorized": false,
+      "receipt": null
+    }
+  ]
+}

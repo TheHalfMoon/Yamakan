@@ -1,0 +1,3939 @@
+{
+  "schema": "yamakan.current-codebase-audit/v1",
+  "reviewedAt": "2026-10-23",
+  "timezone": "Asia/Riyadh",
+  "sourceHead": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "scope": "Independent source inspection and planning only; not a release/security certification",
+  "evidenceLimits": [
+    "Source inventory is not line-by-line inspection.",
+    "Large implementation files sampled at important definitions and callsites.",
+    "Inherited canvas engine and every test body not independently read.",
+    "No browser, media worker, backup, native sandbox or installer executed.",
+    "No dependency install, paid calls, model inference or weight download."
+  ],
+  "currentRuntime": {
+    "node": "v24.19.0",
+    "repositoryNodeModules": false,
+    "nativeProcdBuilt": false,
+    "vendorFfmpegPathPresent": true,
+    "vendorFfmpegExecuted": false
+  },
+  "currentExecutions": [
+    {
+      "command": "rtk node --test tests/time.test.ts",
+      "exitCode": 1,
+      "passing": 0,
+      "failing": 1,
+      "result": "BLOCKED_DEPENDENCY_MISSING",
+      "detail": "ERR_MODULE_NOT_FOUND zod imported from core/time.ts; tests did not execute module assertions."
+    },
+    {
+      "command": "rtk node --test tests/brand-ui.test.ts",
+      "exitCode": 0,
+      "passing": 2,
+      "failing": 0,
+      "skipped": 0,
+      "result": "PASS",
+      "detail": "Static source checks for Yamakan Y marks and localized preview status ownership only."
+    }
+  ],
+  "historicalReceipts": [
+    {
+      "path": "docs/evidence/qualification/t10-release.json",
+      "sourceHead": "5c6658d589ac36bd08725fef9233872865a7030e",
+      "measuredAt": "2026-10-22T09:58:39.871Z",
+      "pass": 356,
+      "total": 358,
+      "skipped": 2,
+      "coldLaunchP95Ms": 1087,
+      "reopenP95Ms": 1012,
+      "currentExecution": false,
+      "profile": "development"
+    },
+    {
+      "path": "docs/evidence/qualification/windows-product-pass.json",
+      "sourceHead": "fd9a51a2b62ad990533ed1fba355c2150bcf8c75",
+      "durationSeconds": 6,
+      "exportSha256": "ebf7a0d2293fc768ffaa45cd6fd4b81805d0ea73a64c8d5741ae9dead545f4c1",
+      "currentExecution": false,
+      "profile": "isolated D development QA"
+    },
+    {
+      "path": "docs/evidence/qualification/windows-ux-qa-final-report.md",
+      "narrativeEngineeringHead": "e8bb8dd20fdbb87c520c948222cd44abffb5ed0d",
+      "currentExecution": false,
+      "warning": "Report headline and product-pass receipt name different commits; neither equals audited head."
+    },
+    {
+      "path": "docs/evidence/qualification/p10-05-quality-lab.json",
+      "sourceHead": "65451bd06fde091a54efea9c5db5acd387746735",
+      "currentExecution": false,
+      "detail": "Deterministic supplied-record summary; no model inference."
+    }
+  ],
+  "findings": [
+    {
+      "id": "AUD-01",
+      "priority": "P1",
+      "title": "Creative persistence outside canonical recovery",
+      "paths": [
+        "core/command/registry.ts",
+        "core/studio.ts",
+        "src/studio/host/assetStore.ts",
+        "core/cinema-store.ts",
+        "core/director/runtime.ts",
+        "core/recovery.ts"
+      ],
+      "functions": [
+        "saveStudioDocument",
+        "persistCinemaScene",
+        "backupWorkspace"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-02",
+      "priority": "P1",
+      "title": "Sidecar writes lack CAS and receipt replay",
+      "paths": [
+        "core/director/runtime.ts",
+        "core/cinema-store.ts",
+        "core/command/registry.ts"
+      ],
+      "functions": [
+        "writeJson",
+        "advanceStage",
+        "approveStage",
+        "revokeConsentRecord",
+        "persistCinemaScene",
+        "execute"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-03",
+      "priority": "P1",
+      "title": "Studio session lifecycle lacks durable project commit",
+      "paths": [
+        "src/studio/StudioCanvas.tsx",
+        "src/studio/host/documentStore.ts",
+        "src/studio/host/assetStore.ts"
+      ],
+      "functions": [
+        "newStudioSession",
+        "createStudioAssetStore",
+        "dispose"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-04",
+      "priority": "P2",
+      "title": "Quality duplicate-slot TypeError and underbound evidence hash candidates",
+      "paths": [
+        "core/quality/lab.ts",
+        "tests/w17-quality-agents.test.ts"
+      ],
+      "functions": [
+        "QualityComparisonSchema",
+        "summarizeBlindedComparison"
+      ],
+      "evidence": "ENGINEERING INFERENCE FROM SOURCE; NOT REPRODUCED"
+    },
+    {
+      "id": "AUD-05",
+      "priority": "P2",
+      "title": "MCP newline frame size and pending admission candidates",
+      "paths": [
+        "mcp/main.ts"
+      ],
+      "functions": [
+        "process.stdin data handler",
+        "handle"
+      ],
+      "evidence": "ENGINEERING INFERENCE FROM SOURCE; NOT REPRODUCED"
+    },
+    {
+      "id": "AUD-06",
+      "priority": "P1",
+      "title": "Whole-asset browser waveform downloads on revision",
+      "paths": [
+        "src/main.tsx",
+        "src/media/demux.ts"
+      ],
+      "functions": [
+        "App waveform useEffect",
+        "openAssetPeaks"
+      ],
+      "evidence": "SOURCE INSPECTED; MEMORY CONSEQUENCE REQUIRES MEASUREMENT"
+    },
+    {
+      "id": "AUD-07",
+      "priority": "P1",
+      "title": "Professional project and render bounds",
+      "paths": [
+        "core/canonical.ts",
+        "core/command/policy.ts",
+        "core/render/plan.ts"
+      ],
+      "functions": [
+        "ProjectBody",
+        "compilePlan"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-08",
+      "priority": "P2",
+      "title": "Animation filter graph proportional to frames",
+      "paths": [
+        "core/render/animation-filters.ts"
+      ],
+      "functions": [
+        "opacityFilterChain",
+        "volumeFilterChain"
+      ],
+      "evidence": "SOURCE INSPECTED; PERFORMANCE UNMEASURED"
+    },
+    {
+      "id": "AUD-09",
+      "priority": "P1",
+      "title": "Donor preview effects not canonical/export capability",
+      "paths": [
+        "src/adapter.ts",
+        "src/editor/utils/effects.ts",
+        "core/canonical.ts",
+        "core/render/plan.ts"
+      ],
+      "functions": [
+        "editorView",
+        "compilePlan"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-10",
+      "priority": "P2",
+      "title": "Frontier and evidence lineage divergence",
+      "paths": [
+        "specs/CURRENT.md",
+        "docs/IMPLEMENTATION_PLAN.md",
+        "docs/RELEASE_PROPOSAL.md",
+        "docs/evidence/qualification/windows-product-pass.json"
+      ],
+      "functions": [],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-11",
+      "priority": "P1",
+      "title": "Cinema proxies and Director smoke controls not full workflow",
+      "paths": [
+        "src/cinema/CinemaViewport.tsx",
+        "src/director/DirectorPanel.tsx",
+        "core/director/manifest.ts"
+      ],
+      "functions": [
+        "CinemaViewport",
+        "DirectorPanel",
+        "FRAMEWORK_SMOKE_MANIFEST"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    },
+    {
+      "id": "AUD-12",
+      "priority": "P1",
+      "title": "Real engine task adapter and worker profile absent",
+      "paths": [
+        "core/jobs.ts",
+        "core/engines/contract.ts",
+        "core/engines/fake.ts",
+        "native/procd/src/main.rs"
+      ],
+      "functions": [
+        "JobSupervisor.#execute",
+        "EngineAdapter",
+        "createFakeEngine"
+      ],
+      "evidence": "SOURCE INSPECTED"
+    }
+  ],
+  "sampledSourcePaths": [
+    "core/store.ts",
+    "core/canonical.ts",
+    "core/project.ts",
+    "core/time.ts",
+    "core/command/registry.ts",
+    "core/command/policy.ts",
+    "core/jobs.ts",
+    "core/render.ts",
+    "core/render/plan.ts",
+    "core/render/animation-filters.ts",
+    "core/render/preview.ts",
+    "core/render/ass.ts",
+    "core/render/capability.ts",
+    "core/process/owner.ts",
+    "core/process/workers.ts",
+    "core/process/access.ts",
+    "core/media.ts",
+    "core/paths.ts",
+    "core/storage/storage.ts",
+    "core/recovery.ts",
+    "core/studio.ts",
+    "core/scene3d.ts",
+    "core/scene3d-flags.ts",
+    "core/cinema-store.ts",
+    "core/director-flags.ts",
+    "core/director/runtime.ts",
+    "core/director/stages.ts",
+    "core/director/manifest.ts",
+    "core/engines/contract.ts",
+    "core/engines/fake.ts",
+    "core/quality/lab.ts",
+    "core/router/explain.ts",
+    "core/agents.ts",
+    "core/agents/lineage.ts",
+    "core/flow/snapshot.ts",
+    "core/interchange/otio.ts",
+    "core/animation/flags.ts",
+    "core/preview/jassub-flags.ts",
+    "core/timeline/operations.ts",
+    "core/qualification-policy.ts",
+    "server/main.ts",
+    "server/api.ts",
+    "cli/main.ts",
+    "mcp/main.ts",
+    "sdk/client.ts",
+    "src/main.tsx",
+    "src/adapter.ts",
+    "src/edit-ops.ts",
+    "src/studio/StudioCanvas.tsx",
+    "src/studio/flags.ts",
+    "src/studio/host/documentStore.ts",
+    "src/studio/host/assetStore.ts",
+    "src/cinema/CinemaViewport.tsx",
+    "src/director/DirectorPanel.tsx",
+    "src/editor/components/PreviewPlayer.tsx",
+    "src/media/demux.ts",
+    "native/procd/Cargo.toml",
+    "native/procd/src/main.rs",
+    "native/procd/src/container.rs",
+    "tests/w17-quality-agents.test.ts",
+    "tests/brand-ui.test.ts",
+    ".github/workflows/qualify.yml"
+  ],
+  "releaseGateStatus": "NO-GO",
+  "openGates": [
+    "H1 native Arabic",
+    "H2 clean Profile A/offline capture",
+    "H3 real second Windows account",
+    "H4 real constrained volume disk full",
+    "H5 founder ship on signed artifact",
+    "Authenticode",
+    "JASSUB CSP/H1",
+    "native presence qualification",
+    "E-SEC and paid/provider authorization"
+  ],
+  "architectureRecommendation": "Preserve SQLite/reducers/jobs/reference renderer; move creative document and artifact ownership into existing transaction/recovery graph before connecting a real operation-based engine adapter.",
+  "inventory": [
+    {
+      "path": "cli/main.ts",
+      "bytes": 1110,
+      "sha256": "920e03d7b2336b70d42ea2b75804476d9e72c04fa23a1e8846d4f12a0204e4bf",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "cli/migrate.ts",
+      "bytes": 1382,
+      "sha256": "03dc0184c4184135a6de87632c3d00d93394147a2a76bbf7b740e262614ced50",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "cli/open.ts",
+      "bytes": 400,
+      "sha256": "5d614b1fbd5b67fd5839d474a3004ee2bc2167c32358236c390d49fc37facc4a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "cli/recovery.ts",
+      "bytes": 2874,
+      "sha256": "2a71eb82fcbc6168372988b670ec303bb28f15b5c26a8dbe85f78a8d967a8a23",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/agents.ts",
+      "bytes": 1202,
+      "sha256": "aa929fd9ce4507f7f3fdd9a97456dcec4231b4b5e45dedbc6e043da6f0ba6b1a",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/agents/lineage.ts",
+      "bytes": 4119,
+      "sha256": "df25730aab7db9290a1ff0b2d1be86a3aeed589cf9e3cc13bc433f3fe25433cd",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/animation/bezier.ts",
+      "bytes": 1924,
+      "sha256": "2e42a3fdfee7ca35feabf4a40da61ca70ef575540aa765b98a5566de30fa9ed3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/channel-data.ts",
+      "bytes": 1565,
+      "sha256": "122d03ba53f4e280bf68568ce17dd68b2a8548ebcfc5ec9abe0e21714bffec37",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/curve-bridge.ts",
+      "bytes": 2732,
+      "sha256": "9d4c425b98e902d1eb16678293eec0f127c187483a6eef21efd6d57bd5807a3f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/flags.ts",
+      "bytes": 300,
+      "sha256": "0bb63fb26894774409892c1298a2078a1e36aa6e6ea9ecfd321a9377e954e0d5",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/animation/graph-channels.ts",
+      "bytes": 2961,
+      "sha256": "3c40195b3deb0a8a7e8de9eb4cbba47531274b6862027d28b7f8d879af4b7080",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/index.ts",
+      "bytes": 1406,
+      "sha256": "a6fc94397fd2778e8771a0121ccb18a5ae65739414219558ade71d80a95b7c89",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/interpolation.ts",
+      "bytes": 8795,
+      "sha256": "356689d7551c6e931d81ae97758abf081398c1b2102447ca06a9d1ceda8f44bf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/keyframe-query.ts",
+      "bytes": 6590,
+      "sha256": "1db769d9081e70b52779326cc68fe367db584595630e7b509b61fbd77184e6ef",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/keyframes.ts",
+      "bytes": 30825,
+      "sha256": "202f696253dbbc51d6722b693558ce72002891f6fd6bbe8cc9482f5588cc0d20",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/media-time.ts",
+      "bytes": 1203,
+      "sha256": "60bff96ef59a60e30588263d6e96efaaba2dc2e34c4f0823d60e8f40fc49aa02",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/path.ts",
+      "bytes": 1228,
+      "sha256": "d9578279e466a8601b891441eafe85cc4671bc92371ab5df4936bfb1a45f35f7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/property-groups.ts",
+      "bytes": 1205,
+      "sha256": "56956a746f4f5c8e6a50851fc0e4c8f193c8d0e2862e337f769228539ab569ae",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/resolve.ts",
+      "bytes": 3727,
+      "sha256": "0e502582af4225c2dd51cdb4d12eb3b12d2171234a81b71a3fac8047476c7914",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/sample.ts",
+      "bytes": 1285,
+      "sha256": "dace8b996a7af4903b45b567a97a91b85900a08dfe33d286a1e0c01335072a12",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/types.ts",
+      "bytes": 4402,
+      "sha256": "48ab7372c07c5d70549ed9b1b0ab1e965d081b5d257d4ae99af7199ba565b9d0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/animation/values.ts",
+      "bytes": 1455,
+      "sha256": "2809cf2a717937680463ba0fa950c2130fac1c05d1e8be5f14afdde352cf4d0b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/audio/loudnorm.ts",
+      "bytes": 2449,
+      "sha256": "635aa2aef843bec1c6299bf024300915ad59ef51f1e645a37f81d86eb41e5d8b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/audio/unlink.ts",
+      "bytes": 3840,
+      "sha256": "a10397a07771adf75379d903d10ad9b9193d65f041d0775bbe393ea752925cea",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/canonical.ts",
+      "bytes": 20517,
+      "sha256": "697b2f4c18023dc41ed9aa2ea480d38e82b3ab16bf87a97bbdb69a3476a76130",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/cinema-store.ts",
+      "bytes": 3237,
+      "sha256": "861b00e330f4563197c0b038f2b574f7e97b09aace51d1caba62b09641c0dd7e",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/command/envelope.ts",
+      "bytes": 2008,
+      "sha256": "3c338998b86adccee4b85b85b25af668545146a97aeac60c7058ae38775fb618",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/command/errors.ts",
+      "bytes": 3756,
+      "sha256": "fccdbfb185327cbe3a66c790911365778d23c1a14e587550a65eded565b55b2d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/command/policy.ts",
+      "bytes": 4530,
+      "sha256": "3cef91cbbcfa6f5d8cc6c1cf5f6971e77676441bfa1c7e05568a2240aa877489",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/command/registry.ts",
+      "bytes": 33286,
+      "sha256": "5897014d5dbcfad355fa05129b8385e0e8a9204a7cc7f33d02879e556cbdf971",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/director-flags.ts",
+      "bytes": 801,
+      "sha256": "9d7ccc9f06cd62adcc0c585f7c881be26b26c408840de67cd81b4b173991a973",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/director/manifest.ts",
+      "bytes": 4394,
+      "sha256": "97733923daf9886cde14ff071e86f28d54d00c574dd6393c745e593dd21a0245",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/director/runtime.ts",
+      "bytes": 8602,
+      "sha256": "2556a0ba913b8eb568b7742e78cc76f9a0b5231860b85e043459dda69d56e6df",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/director/stages.ts",
+      "bytes": 7155,
+      "sha256": "e1b8c4059b5ffedde38174e0ff4a6c04651636bea79bc39ec0db2f698700a89a",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/durable.ts",
+      "bytes": 3444,
+      "sha256": "4b5ae5b421c7462857c3625d1c871d4ee1e01310180c02e2610d8af1ebfc9859",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/engines/contract.ts",
+      "bytes": 2343,
+      "sha256": "32b71b51397e3a272491de1907f921d51e49bdcce395048ac6c9f2b59bbfbb1d",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/engines/fake.ts",
+      "bytes": 5051,
+      "sha256": "b671aa9493db01e4818b482a9475cf7865b90d59767e55fdb4a1d5ca9fad14e7",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/flow/snapshot.ts",
+      "bytes": 1754,
+      "sha256": "73d462b85285a1e05de566674ee28d87817094b4a5ef6862f1354d9e97060757",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/hash/canonical.ts",
+      "bytes": 2068,
+      "sha256": "2dc287c662c5101323546cfdcbf0f550b79cbb5d5464684a857867e90fc2a039",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/hash/errors.ts",
+      "bytes": 1089,
+      "sha256": "6b3d1cd0276c17dcfcdce2446933ec47b20017e30f4f5ab9be56efb30a340b74",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/identity-format.ts",
+      "bytes": 3292,
+      "sha256": "d5dcacf1a49d3e790d9cc89e2eb8e33ce70f1d664c5c5dc5f4b35b70021bb328",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/identity.ts",
+      "bytes": 5820,
+      "sha256": "2d0c82b8de9c158ea3ee5af7dc578853910b43971f0c8feaa06863f91495612c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/interchange/otio.ts",
+      "bytes": 10237,
+      "sha256": "62a7e80dc29c1d1f0307f9eabf8acf2fb0ed30b677f9646ad9758ac75de08253",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/jobs.ts",
+      "bytes": 38045,
+      "sha256": "e27100ac469c6bbe088b7153997853c05f2ed695257196d8df86d4660120d715",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/jobs/rules/jobs.ts",
+      "bytes": 5949,
+      "sha256": "d48e8af6bdc7404f1ad6ef34c5caeb170711eed339f923302fa4ffd00a8e0daf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/jobs/rules/yamakan-transitions.ts",
+      "bytes": 2272,
+      "sha256": "4fbec5c9cfe64c33a381136b2675cf32b78c909d572457b47d85769c0bab23bc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/launch.ts",
+      "bytes": 2132,
+      "sha256": "f4cc1242f273682e8bd77cb3024922ad00434ec6d6dc07f72280e5f812572e23",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/legacy-store.ts",
+      "bytes": 14476,
+      "sha256": "eb1132022a86e7fbf0b2d0c272318d3445e5c9fbaa0af9a080e38cb8d38f58aa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/media.ts",
+      "bytes": 7388,
+      "sha256": "dfb9898981032bc2dd9024ed1c7a3fe38a311a4b57b95a09779f9c4509775ce8",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/migrate.ts",
+      "bytes": 20006,
+      "sha256": "38258dd6f76866afed3e89831be0929300b1937284fc5a1e1a710f62a0c87202",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/paths.ts",
+      "bytes": 1215,
+      "sha256": "a3f402b92ecbb03dac05bbd72601f35e3dd55de9482c346ab44304a2128f28a5",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/preview/jassub-flags.ts",
+      "bytes": 859,
+      "sha256": "0d0a20698414663b6431f383b44886fc18fedf934e59d1b590c3a70368fa84d1",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/process/access.ts",
+      "bytes": 3472,
+      "sha256": "1109a3087d44e7b3149074d31f209dc37d190bbfab433e20701ae4c132445d4f",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/process/owner.ts",
+      "bytes": 14778,
+      "sha256": "9fb82c26b4826ab4947e6c89964ddea331b35368d2944428bf2bb9867f01d994",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/process/workers.ts",
+      "bytes": 2933,
+      "sha256": "cbe08687d0d1699e2538484f9c9eaecc7e9e582d0edf1ae33c8e5f86349af15c",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/project.ts",
+      "bytes": 6184,
+      "sha256": "f289aee1956ae1341b5317649ac487866331c951d1bd1c3e96e4aa1dc05a5d84",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/qualification-policy.ts",
+      "bytes": 2672,
+      "sha256": "058ac7b98dbcca8fe7e3721c8ee4583d86fc8be65442e3a82fe2007b3b76c501",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/quality/lab.ts",
+      "bytes": 4265,
+      "sha256": "7bd810cd2b8ff82241b42d203d33073f06bf8d421e81ae1931c7b1ed0ce883de",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/recovery.ts",
+      "bytes": 32815,
+      "sha256": "5327ddcb5491afa110db6eabaa8b60072f47c4944be018c3aaf926bf30b170b7",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render.ts",
+      "bytes": 26390,
+      "sha256": "33d7cc257259a08c03aca174d0e145e7dc215e15a6741f65feca68c3dc825654",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render/animation-filters.ts",
+      "bytes": 6689,
+      "sha256": "1847be197e2c1b7d63178f9814d55b75bf100d244844e53836fd301ea16d6bca",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render/ass.ts",
+      "bytes": 5580,
+      "sha256": "3edece189ac35148e60b551d4aa018ee4c4fe05e5c6fda4cafefedf78572f829",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render/capability.ts",
+      "bytes": 3599,
+      "sha256": "2543164d3701ea3bae27cb2ba9aca4a7039fb8f540725752a716e21dc779ba96",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render/fontconfig.ts",
+      "bytes": 1416,
+      "sha256": "672b3c1c50127d091c6dd0298594e87343724c1f63fe4020de0777234c31acb9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/render/fonts.ts",
+      "bytes": 6388,
+      "sha256": "cbb86b7c8a06b12e501972902f6973f60f51c18e136dae61bb53fef367ad52ff",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/render/plan.ts",
+      "bytes": 8627,
+      "sha256": "1c1e9590f56989b212c050bd509f26b22e3874d00d726555db7818d2405dea94",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/render/preview.ts",
+      "bytes": 10118,
+      "sha256": "5bdcd442b161544fe9a6d7ac9f044fae40d9f81860874a658cc648400b09776f",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/retime/atempo.ts",
+      "bytes": 866,
+      "sha256": "bbbc26941fbe5206a44d86de9bd1370adfb64f518523ce4a3b23c580f35f84da",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/retime/index.ts",
+      "bytes": 229,
+      "sha256": "53d4fb3f348da521ec394abd1cf94a30721b8add11572fba5609160cdd7a931b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/retime/presets.ts",
+      "bytes": 509,
+      "sha256": "f09315541d968b9abce1f4c04caa20ab2b6c727e721138456bacdad18fe35a8e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/retime/rate.ts",
+      "bytes": 1529,
+      "sha256": "ea91fdfce5accf6e20b1d730fe2bc40b5fffa830a59b2212dda22097b3400ad5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/retime/resolve.ts",
+      "bytes": 2332,
+      "sha256": "8b546e961463974c33647e9a5db712761c34ebaf9a8ac24bbda6c0d704117cd2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/retime/split.ts",
+      "bytes": 861,
+      "sha256": "7186cbd5d3476d30cccb068f48a638a1c055665cfc4506c413988ed3b3026455",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/router/explain.ts",
+      "bytes": 2284,
+      "sha256": "12cc7120494446e747aa7c82048a8baadfe5356ecb94df01b5ba46b3c55c1923",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/scene3d-flags.ts",
+      "bytes": 869,
+      "sha256": "8bafc9c0b9bd34047eb9c83d12a70d0ce013df52db7631d9ea5a3f3f9dea1c6b",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/scene3d.ts",
+      "bytes": 10370,
+      "sha256": "988d3703cd1aa2c4a582701fd3a5a42ba28da8c60f6c7835167f9541ee89565d",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/service-lock.ts",
+      "bytes": 1945,
+      "sha256": "12d4bb993299dd1f1182e2c74ba3e8b0593f2c74cd9d62f0001039718312f51b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/storage/storage.ts",
+      "bytes": 13378,
+      "sha256": "67deb21124c581eb5b099a073f11b71c47eb3aa0892e7aabb8835570fbaf3e20",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/store.ts",
+      "bytes": 75337,
+      "sha256": "2f7f6da3b39dccc30cacb8dd29f7dd05cfd3cb51a7014c5c62ead000f5f3a41b",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/studio.ts",
+      "bytes": 6295,
+      "sha256": "9080550eae9f7d1bf5f845819627efd666bd1653e3b34667b3383f1914641166",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/time.ts",
+      "bytes": 3989,
+      "sha256": "172cc9be9bc1ab5a6259b372fa1e5082a6159f2d1f8c1030baae5814a340d62b",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/timeline/adapters.ts",
+      "bytes": 4432,
+      "sha256": "868d1396a485c074d15b9ecac64f94936da35ef8ab26e8a24b0fc08e429c09ae",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/animation-schema.ts",
+      "bytes": 1996,
+      "sha256": "f59b8714a9724c4ad72cf34d51a1dc8b39a23c9c54e603689b8a6795560a8407",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/build-group.ts",
+      "bytes": 2439,
+      "sha256": "aefc384abb8cdea5d690915e6d7b50eb1786f4fd1b2de951aac35be04f4437b2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/index.ts",
+      "bytes": 426,
+      "sha256": "7775a20be0c2c22692a03861424b6a220a7bb77935cddf0c899bddbbe2489a99",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/resolve-move.ts",
+      "bytes": 11492,
+      "sha256": "e9c386528ba846933d1f65fdc0edcb95d369b0022e738b838a54469441c3ce09",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/snap.ts",
+      "bytes": 2545,
+      "sha256": "3fe19ae7047ef7d7b7ab09922ddbc9b760b00287afd4eb8458101f0a4119045d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/track-placement.ts",
+      "bytes": 2064,
+      "sha256": "2dd966b83e2d9b6ad15103c756f68805df5a045f6587ee380a072887eb7df683",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/group-move/types.ts",
+      "bytes": 1032,
+      "sha256": "b5a5e0eda931ba204b97fff17f079ed7dd81bf7d765bd87851591432650397c7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/operations.ts",
+      "bytes": 31375,
+      "sha256": "486aca807074503a59801138e2c11009a475f8a1b899d42b3ca1bbf1dd85a76a",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "core/timeline/overlap.ts",
+      "bytes": 1455,
+      "sha256": "5857de68f1cbc484d1cd5e9fdc5efff068c8e85b14e92b49db44aa7fdbd9518e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/properties.ts",
+      "bytes": 10381,
+      "sha256": "a3cf5f11ba42b714038546142fcfcbdc8386a1965bcf131eb3636fd6af9823ef",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/ripple/apply.ts",
+      "bytes": 2145,
+      "sha256": "338eaea8d4ab3f94593b5937262fcae87e3a690532c81e0754d826191800dc8a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/ripple/diff.ts",
+      "bytes": 7413,
+      "sha256": "9a07750e1c6b18fbba23ea67aab1d7485938479a74606b66b6bcdd34c1f4297b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/ripple/index.ts",
+      "bytes": 323,
+      "sha256": "9bd8f4666644fb04472e6d2ff874d1936f6c133f09e72cf3fef63503efc5e36d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/ripple/shift.ts",
+      "bytes": 720,
+      "sha256": "070dbd189d150bb15374d19a7ad94de3333d589e809745c4c721d076447adab5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/snapping.ts",
+      "bytes": 1686,
+      "sha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/timeline/timeline-types.ts",
+      "bytes": 941,
+      "sha256": "ae01bba5ef667cbf794f2999c415309cc1e66b8419d9fe30a75786f19dcdab2f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "core/wal.ts",
+      "bytes": 5161,
+      "sha256": "d04e9d0186d0c2beb0d984372b13897371540ef8864a01cfb2af42ff2f14c701",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "mcp/main.ts",
+      "bytes": 7835,
+      "sha256": "5c721e703734b58e19b5b2dea794fd852c2dd6e3c49c3d6d0c3fe5da06e9281f",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "native/procd/Cargo.lock",
+      "bytes": 157,
+      "sha256": "f55083c6cf9809873221833c2afab26b6415e529435691450672e3514663ff9c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "native/procd/Cargo.toml",
+      "bytes": 392,
+      "sha256": "89faafdace0083e4ccb7d50be8e8e26826aab5d3d9124ef486459d797aae5d00",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "native/procd/src/bin/worker-probe.rs",
+      "bytes": 7235,
+      "sha256": "033602793a3d7b93fb9754ce44289469e6b5c60d895817cc0e1eed2d6a28b192",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "native/procd/src/bin/yamakan-acl.rs",
+      "bytes": 21332,
+      "sha256": "67dc8ffb673f8b9c61ade375ea37e1cefc6cf9f5559f6051cadbf141ce9ab617",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "native/procd/src/container.rs",
+      "bytes": 20113,
+      "sha256": "0f471782eb618575d69c0d1f3ca59934ba2ca9061acb1a4b999b0dfec5a29dde",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "native/procd/src/main.rs",
+      "bytes": 51289,
+      "sha256": "9506e49ffd0e016af01d5e3d0e5384bf97e582ec31bcea2862e186772e93dfaf",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "sdk/client.ts",
+      "bytes": 3376,
+      "sha256": "e2f7204a9237374da0e715eb46169bc351f0571485697683a66ef823067d0178",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "server/api.ts",
+      "bytes": 2337,
+      "sha256": "96ee969bd8c8d7fdbaa09a9a1b1880de56fd674ff6a81512fdd28445678b7ea1",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "server/main.ts",
+      "bytes": 20957,
+      "sha256": "2ecbedbbde897130c19b4db50757d4eff546dfcbf2c28fc0f148863d01afcce9",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/adapter.ts",
+      "bytes": 2280,
+      "sha256": "30a454d44c7b50abec164dc1850383808bb34324a88c909d9cabcc17e4ac36c1",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/audio/audio-stretch.ts",
+      "bytes": 5102,
+      "sha256": "a6dac619eb1764b6f2fb6bccdba72db76b416bc2c5528c2532793051b0291080",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/cinema/CinemaViewport.tsx",
+      "bytes": 8077,
+      "sha256": "e9d7366906abfbc1c2cc22a39c4e91a46d2620e404c32bab6c07fda4eb21ae13",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/cinema/camera/CameraController.ts",
+      "bytes": 9377,
+      "sha256": "49a3881b1f413abf1266eed1c99753315e7d87bad5533abdc4a81d1c0048b67b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/cinema/camera/cameraMath.ts",
+      "bytes": 6193,
+      "sha256": "89c5501ea9033f42ca2b468382fd9ac62f67ecb0185efd8df0eae68a2a472a37",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/cinema/types/object_3d_json.ts",
+      "bytes": 460,
+      "sha256": "bf17dd776a37f7ae4d77db1545972ba0599b6e5a211b24063c98d98d66c0210c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/cinema/types/scene_state_json.ts",
+      "bytes": 170,
+      "sha256": "9703bb440a015f09689f18775756d79bd5caa2ca50389e712e6b784c89e09eb2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/director/DirectorPanel.tsx",
+      "bytes": 3040,
+      "sha256": "645eb86d9e6c3eaa3cb6241ec25c723e4c712b2c44bb120139781e4926bdde08",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/edit-ops.ts",
+      "bytes": 6945,
+      "sha256": "59afc958535c150c3b2e86cf8e1adfd119d7aa3b4d45ca8f4df17e1cf23f0ea5",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/editor/components/PreviewPlayer.tsx",
+      "bytes": 60683,
+      "sha256": "171ace099f199e54dde42ae293c60cb232a106cf461bc2e25e23ceb40eb58d1e",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/editor/components/Timeline.tsx",
+      "bytes": 64038,
+      "sha256": "ef1b80d6057b3476dd1f2d5d070e860ea78564a8760e8146c0b90b764c07b8f0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/components/Waveform.tsx",
+      "bytes": 870,
+      "sha256": "43b66c5cae819f66ffcc88a41640ae3f8215c63f977bf5f2c79d4989d89853ba",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/components/icons.tsx",
+      "bytes": 45054,
+      "sha256": "7c8afbacedf67bc51324ecfc75bcfd39b8e4fd8218dd9d4e1a1127cdd0a0f7e1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/data/moodboardTypes.ts",
+      "bytes": 5080,
+      "sha256": "32f15d98bf90d8cd88a773ea07109e54a8a47a02543718425dc1210cfeda6865",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/data/productionFormats.ts",
+      "bytes": 7852,
+      "sha256": "1f3c269f7347f7338a75a386bf522251c0dc8f916a7e9db868126931c41ba476",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/editor.css",
+      "bytes": 38252,
+      "sha256": "ec10b881ca35357be77dba06b57f7f5d0cc1d30c1d35f97162a0e069540cadf8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/libraryAsset.ts",
+      "bytes": 331,
+      "sha256": "80f0e5f5b9224deb484d02b63cecd69a26c2e5107d3150a9aaf314c8afde802b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/types.ts",
+      "bytes": 48492,
+      "sha256": "f376e55a2266ec2fcd3040678485f539b3e0a21a8d2cd7afac81c01bbe7ed9e8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/colorGrading.ts",
+      "bytes": 8800,
+      "sha256": "f195fcbdbdbf2a10954418b5b3bd3e2049ed941c4755f37ebbf0a348aaa2874c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/colorWheels.ts",
+      "bytes": 9585,
+      "sha256": "37190717704fe4eb7c65c7698493d2d77965f8ace714d4bce971445b7297c041",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/effects.ts",
+      "bytes": 4409,
+      "sha256": "d2236a9879b5310a12a2383ab825a9359228d889bfaa4a16ec8797a9120d2d43",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/exportSettings.test.ts",
+      "bytes": 2303,
+      "sha256": "df2b1a0c229046088ebb7da04ccf2ae376917204949ec8f8876eb33f297418dc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/exportSettings.ts",
+      "bytes": 5890,
+      "sha256": "7aa1108d1e41a14a9cadbb2c9120e0e372f37942b18565974af42f4d86b1261d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/historyState.test.ts",
+      "bytes": 1725,
+      "sha256": "9552fdf17d20ad2fc753f42494f46970e9abc5230d37afe648703fdea3483123",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/historyState.ts",
+      "bytes": 1491,
+      "sha256": "13ba35a80fb3b94b05cb45056c45dcc9d525134c25b2a410427860a89864af2a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/lut.ts",
+      "bytes": 5951,
+      "sha256": "b8ee80b8f6780d8df14069c6d301e70b42c183abac5f1bb3dbeb3248f04d4969",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/editor/utils/timecode.ts",
+      "bytes": 3696,
+      "sha256": "875fbde2c77647b7f28801c9818989349d7dd96e4e770797c7477ce69b340064",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/flow/FlowView.tsx",
+      "bytes": 1271,
+      "sha256": "35fb9a11a219f3cfea52f850cdb6e947125f8003edee7e59ff570b4c96c3799a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/i18n.ts",
+      "bytes": 21840,
+      "sha256": "4b565d163804d65f199bd372e22287e49e7a9dc539444c947d543ba2faee1c86",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/main.tsx",
+      "bytes": 54757,
+      "sha256": "8c567f8319510dcb9fac98958fe6031e2b79387d58f85c50577870fa517e55b7",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/media/demux-worker.ts",
+      "bytes": 2049,
+      "sha256": "fdbb4ad8e3ee6f2e04468f5cbed096c726cd1898b6b3e3f52445f1026581a825",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/media/demux.ts",
+      "bytes": 1523,
+      "sha256": "f94bb458f4fd63338963e132f429720bc8a2558f72e1f4b5f6008ea53783d3d2",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/preview/titles.ts",
+      "bytes": 5450,
+      "sha256": "5e0329f9c457aa92a78874d88fa8b0d272845a95d172f5e8c2468653527398e8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/reference.tsx",
+      "bytes": 4210,
+      "sha256": "426f80f7926611d78845d35d155648aad1e62fffc1e9497c54d31f4b929b264c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/session.ts",
+      "bytes": 2228,
+      "sha256": "16089b943a470396b8335bb5de873fbd50c0307a8e4e084c68dca403c7ac5626",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/StudioCanvas.tsx",
+      "bytes": 7054,
+      "sha256": "ae47e0ff347f15675cdb1d4b12de24376e4484565a3c1a538f613e435a1ece39",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/studio/boundaries.test.ts",
+      "bytes": 1421,
+      "sha256": "98d68f38a7e28e4ca57093cd49c307594a96cb876de2c8c7840a2f96fd2c9621",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/api.ts",
+      "bytes": 294,
+      "sha256": "a39444cf8e58ea923aa25f1e8594604d01f7adfc31f8d6a4b2ad724d00b04593",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/applicationHost.ts",
+      "bytes": 3566,
+      "sha256": "39a2e4d465ff1bf35f925bd5debd9479ca8af430b72ff7aee8b63e63b2c12920",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/browserRaster.browser.test.ts",
+      "bytes": 15297,
+      "sha256": "a16efe76d7f636eb7daf865bb94c4623890d34b1257736c888f99b46784beaf5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/capabilities.ts",
+      "bytes": 31742,
+      "sha256": "bd72e647fc9791c6c22f9cc6fe2ed4c375b8f16ea382f49ae3217618afde24f2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/color.test.ts",
+      "bytes": 758,
+      "sha256": "8020eff66dac187b6ec9d562c25634975d16d786b7dbd58871c601e0535ba2e1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/color.ts",
+      "bytes": 556,
+      "sha256": "d7b5a0a1d5cb4a7fe3b930cb5beaaf6d5efb1b89841db1661aa542756794cbe7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/contracts.ts",
+      "bytes": 14241,
+      "sha256": "8ff618495355d006bee2491caaf04832ea836c388e7c8cc3e844449f7a38889d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/booleanMergeController.ts",
+      "bytes": 7496,
+      "sha256": "218fa601817a6187af28e032e752955dd8a5f71d9c0133e32fec094070941ab1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/controlPixelController.test.ts",
+      "bytes": 8788,
+      "sha256": "2403cd7efdc29029a4bd561bea74bef53590db9449ff626debd958cd689746dc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/controlPixelController.ts",
+      "bytes": 17196,
+      "sha256": "b20810b0c34fd5fe424a87eaa76a132480f9e257507df6672d8b3dbc5008f986",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/copyLayerController.ts",
+      "bytes": 4097,
+      "sha256": "01be337dfb5289e527af2d010c0ff7989431d640ffb5b8dcf5215f446e71e2c9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/cropLayerController.test.ts",
+      "bytes": 3873,
+      "sha256": "9e29cbe9446478f992f6a1ba2133ff0daa4bfe86641776f88def4429fc0f682e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/cropLayerController.ts",
+      "bytes": 7911,
+      "sha256": "872fb603585ed3d50914d53ab96d128ce1014b8ea0ea56a21cad989dfd06afd0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/editSteps.ts",
+      "bytes": 11216,
+      "sha256": "1f308a7b9284cfc3a092726806ed896f1f90e997aade2a2b6d83fb5a3f027a5d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/editingController.test.ts",
+      "bytes": 5075,
+      "sha256": "c13c2aea938638f8d41a54e75d42743616e6926ad927c335948b88c04e9a72db",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/editingController.ts",
+      "bytes": 6069,
+      "sha256": "962c6c5e33dc8e4d716a66165e62e90718179cf4b14c36187411613c9c93ffd8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/extractMaskedAreaController.ts",
+      "bytes": 11190,
+      "sha256": "1cb5d61be8fa18a8bc322b695bbfa62dc43f1a6a4b422c69dc3ec25fc49f6b59",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/filterResultController.ts",
+      "bytes": 10595,
+      "sha256": "7daf4e323d75c44075fe453c5dc4c7362cb787892543f68696f63e8001383fc2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/floatingSelectionController.browser.test.ts",
+      "bytes": 6952,
+      "sha256": "a7097260efe0b3d7b1316e8e1d453acffb7b342192eb26c11632fe60bc49eaf1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/floatingSelectionController.test.ts",
+      "bytes": 29782,
+      "sha256": "cd13e571ddbfbd356feda0cde0d542fd95fe5f4dc05b2d8cd143c221f8b220e7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/floatingSelectionController.ts",
+      "bytes": 17700,
+      "sha256": "c8edf436f99bd8f328b9932a9d712df79ee0fe21e9eb554bbff348305df9871c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/generatedResultController.ts",
+      "bytes": 10300,
+      "sha256": "0b71fa210b988fc525068e03377848a42e73dae56b493a31f5490026be16e6f2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/historyController.test.ts",
+      "bytes": 4192,
+      "sha256": "2b7c82ac6ab1b5dce21c3ac4e074e38b4bf4ca2f49a62f43228bf45344d9aaf4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/historyController.ts",
+      "bytes": 3428,
+      "sha256": "6d221994f11a2ecf3b1124e3bd963f031a3037a01f2ae9a1ea0dcbd32c71f0d9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/interactionController.test.ts",
+      "bytes": 2891,
+      "sha256": "d3769e2e7a9c96f32b7899dc9c35255584fb9ece005702507fa2bc258df53610",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/interactionController.ts",
+      "bytes": 2531,
+      "sha256": "4c4542b0b57c7f3336e59059dc89fc5e82cd7aa42ac1ed6a99b829966337785a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/layerController.test.ts",
+      "bytes": 4735,
+      "sha256": "0462df2e7d0c81bea0a28a49ded71b111801a24bd14d92f159e962b6bea779cc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/layerController.ts",
+      "bytes": 4822,
+      "sha256": "d6ef879c17b8e04258ff442d51628fc21c74fa5c780db43c9d98dcbc52b4b409",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/layerMutationController.ts",
+      "bytes": 21030,
+      "sha256": "4e4ec875e176d1ed28c5b97f44875df7a941d922c8d62c63650692f43e5c2343",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/layerOperationHarness.testing.ts",
+      "bytes": 4191,
+      "sha256": "d86a3ba451233e369c63fe2edbb9ad42341b6cf3539faad2df58ffc81711522f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/maskLayerController.test.ts",
+      "bytes": 6527,
+      "sha256": "fe13c49f7f833a3d09cb29e077fe8d7c46ab20774356150a0e38ae51fa56911a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/maskLayerController.ts",
+      "bytes": 8884,
+      "sha256": "bf8f460ddeeec69ff0be8c7da4c134b4a97560794d6b2db16e72467f1713df83",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/maskResultController.test.ts",
+      "bytes": 2744,
+      "sha256": "7062b800cacddb4a20ff295fbb895728190ee4554a9507cf2c1e0eee8a4e084e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/maskResultController.ts",
+      "bytes": 4488,
+      "sha256": "96e9599192183decc8548fcb7a1b9d9d898f0687b9ae0f14bf3c014f8042a317",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/mergeLayerController.test.ts",
+      "bytes": 5431,
+      "sha256": "1d172461e8975033ba539f07da7e722ef7d25a496c3fbd64ef0f24b7acb21344",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/mergeLayerController.ts",
+      "bytes": 25718,
+      "sha256": "2dddff6e76445fa8fc23b860750204e0d3b8ddbc100569973da0737ab96b3537",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/mutationContext.test.ts",
+      "bytes": 21441,
+      "sha256": "480763f47c8e5aff93ecc61f687e854f238d66f5f51b6bcc44ee0b69000a6659",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/mutationContext.ts",
+      "bytes": 18881,
+      "sha256": "d09011d7b91e87712b276da9d33994de8de733a4a687733431e7d2bf042b4ccf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/newRasterLayerController.test.ts",
+      "bytes": 10689,
+      "sha256": "c971df8e21d478bdc34854b459c3a894a8c52ddd620695ad6ee6421e023e02ae",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/newRasterLayerController.ts",
+      "bytes": 5577,
+      "sha256": "2bafe4c0225c07f6cd1ed99e95a650f080a84994e3affbf867a3698c449b1565",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/persistenceController.test.ts",
+      "bytes": 949,
+      "sha256": "06216734230df3535524092bb88a7c9babc44cd0771de864fb9c02d3935e77db",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/persistenceController.ts",
+      "bytes": 516,
+      "sha256": "7a01871914f13168e54a659625c642f8c84668c7475944626c1efbec340c845a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/previewStateController.ts",
+      "bytes": 3796,
+      "sha256": "b0dc0bed1af6617ac8001f983865fc558dd118b5f2a74bdfaee299b7dc4b3e8a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/psdExportController.test.ts",
+      "bytes": 17489,
+      "sha256": "9a53d28054f6db42b8afb15e277e31f5993bf6ea5b1e4d3be27d0ec296989986",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/psdExportController.ts",
+      "bytes": 8901,
+      "sha256": "db6dd9a9f2e907f63e9e8a52510b047c33f10b7ae8deb4f6ff94df5718d6e8a6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterController.test.ts",
+      "bytes": 10264,
+      "sha256": "faf0f5b54665013b322a226824374602eba28da4e02b3002812e251342139b82",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterController.ts",
+      "bytes": 12429,
+      "sha256": "99d0213a0b24f8c28cd2d982964f38f2fad099ec0e6d55d88a7b8e80e719281a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterExportController.test.ts",
+      "bytes": 18154,
+      "sha256": "7ab6117057a70200ca506d5aa0c40bdd9bb8cd55eb2d6f8a9728625f68e9681a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterExportController.ts",
+      "bytes": 11545,
+      "sha256": "9af292deff062ba1a961ebdeb73d7aaceef27caf9f2194a5c853c541296e7d58",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterMemoryBudgetController.test.ts",
+      "bytes": 3533,
+      "sha256": "072d2ac45434d29aee4cac2c1f23fc33b3e8a68b2c690d0a329877111fec2fe1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterMemoryBudgetController.ts",
+      "bytes": 6597,
+      "sha256": "616f2124b832c52e16e0f9ba3104be3cb12f101d8a142dcfcd32b15bc4f4cf3f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterizeLayerController.test.ts",
+      "bytes": 3688,
+      "sha256": "eb197a2ca6403d43f468a64ccfb9fe655df45123ecbe584c0180f6e96a58023d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/rasterizeLayerController.ts",
+      "bytes": 6250,
+      "sha256": "59ad40eec3a248e38873a3ea621cfd81a693a0e10e826d0c7bbaa0296e928c9d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/renderController.test.ts",
+      "bytes": 1574,
+      "sha256": "679d26381bdb31be12e78e2eefea6cc7352ea1b39b0cb1a45340796b9f4e11a0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/renderController.ts",
+      "bytes": 6727,
+      "sha256": "751db48dff426ed8f76bf23ff6e4ae8ac7081bb1bd9e5a2f40bae07f75d04730",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/selectionImageController.ts",
+      "bytes": 3232,
+      "sha256": "5fcbd100088cdb4b1facc5d42cff0a6219398a52a7d12f8d9f2f3b1787651861",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/selectionPixelController.test.ts",
+      "bytes": 6786,
+      "sha256": "58868449d4adb5cc5fe7615d155f8db6187a7169eab1b2d1ecaf5db0a220df19",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/selectionPixelController.ts",
+      "bytes": 9032,
+      "sha256": "c6b04d61c13b9a8e897bc1f596227de5b7bc589f82d81a7c3a1cbc2458e77b65",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/stagedResultController.integration.test.ts",
+      "bytes": 9674,
+      "sha256": "9e4de45bebd357741f6c580111c9cea658699e635f5aedecc8ee54c26fb5c569",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/stagedResultController.test.ts",
+      "bytes": 10127,
+      "sha256": "088802d9337f8286b631031622da8a7c338fe6d83d34f8f590f953c6e636ceff",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/stagedResultController.ts",
+      "bytes": 8202,
+      "sha256": "432d753f05b887c624ddd447317abfdec797bea3f0b880ca2c0be1fdf265365f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/structuralEngine.testStub.ts",
+      "bytes": 6982,
+      "sha256": "521d4ffc5b7f8806ea2cd0b83bdf1d99e8a38b577922d2bb053e4d9285e3f063",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/structuralLayerController.test.ts",
+      "bytes": 24296,
+      "sha256": "00a0dbf80ec8e8960b50ff736e636c252597a559170362659f3a2a07e073923a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/structuralLayerController.ts",
+      "bytes": 16878,
+      "sha256": "8cf6ba944b40612a979c8ebe383b796399850f7d32aec3e19be858adb5c2be6b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/textEditingController.test.ts",
+      "bytes": 5345,
+      "sha256": "10c592abe9a7e382ca2db5bf62c274f7484a9499bcaac97c960b62dc13523737",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/textEditingController.ts",
+      "bytes": 9218,
+      "sha256": "8bc485c08709208eff8dd87f044b88a6cdf62826584e58c69e89433087a85529",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/thumbnailController.test.ts",
+      "bytes": 1845,
+      "sha256": "53ba8c89877c72de11e1411d81772c4178dc6cbf8b10651279dff60439f3a32f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/thumbnailController.ts",
+      "bytes": 6473,
+      "sha256": "7419d7ab0b34f8943d9165549281e7fde5453e958f5d566648bebe65c8822a41",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/transformEditingController.test.ts",
+      "bytes": 7489,
+      "sha256": "d6619576fb3167f913f5e9ffc5b505970867c841234b2d75abb3d4a25eb088a6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/controllers/transformEditingController.ts",
+      "bytes": 9535,
+      "sha256": "fda3ed7e546747608ced55869a918e6d190037a101ae10e9ce76a88726c755cc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/diagnostics.test.ts",
+      "bytes": 1056,
+      "sha256": "2c92140fa1cb00eee02dadbada67475bdf5f4fd652e62a8ee4c33094b428cf2c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/diagnostics.ts",
+      "bytes": 1712,
+      "sha256": "0b988b227ad751fa01f57f76d146a5230e5b9ee22a38bafdb0d4219e3cedecd0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentCommands.ts",
+      "bytes": 5344,
+      "sha256": "cbff97c5cb9604434e2e8e490c6822c28a108163859dd1f366d0c752a62eb8b8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentFixtures.testStub.ts",
+      "bytes": 5002,
+      "sha256": "704c2ecab285590bd8bff409c7d635fee080d7f129cffb80e1ab0dee3a18d9d4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentModel.budget.test.ts",
+      "bytes": 21057,
+      "sha256": "240c25b183db389fcccaeee3b4735c1c53db36c9b1b3744770a1b94a0836f750",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentModel.fuzz.test.ts",
+      "bytes": 18438,
+      "sha256": "79b842833fa33e2dc485f76820ea0b45458e1fd904efb72f07dbc0fcd4fda9cf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentModel.test.ts",
+      "bytes": 61355,
+      "sha256": "80e5882ea699432735da3228eb7aef93ea276645c686cc3438ef9ef15104f37b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/documentModel.ts",
+      "bytes": 62838,
+      "sha256": "d02d57dae4e9d6bb295eb067979109aaeb079a40af89da05ffd016dd7947e1ec",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/postconditions.test.ts",
+      "bytes": 2442,
+      "sha256": "44520d4f7a1cd3f301ecf52afb3d49b989e9a08b1a1f1d2e29a469b83788a4fc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/postconditions.ts",
+      "bytes": 5696,
+      "sha256": "f1c4f02e7331032026b6c09c278fe61643759309768d360ef08600f5b763283d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/screenComposition.test.ts",
+      "bytes": 3372,
+      "sha256": "efd7e9c7234621c7f6ad4a1353436be3cd34cddce136c88ff7cd5d996170ff41",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/screenComposition.ts",
+      "bytes": 2646,
+      "sha256": "355d64d5cd13a83156479e33e1f4610a2b3230e3ab5d5406b86de6a12d1061de",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/semanticLeaf.ts",
+      "bytes": 2413,
+      "sha256": "fb96a70cf056413e3d1bb8fa4db75b70dacd2e4b4c0dd44d3307b3e375db4226",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document-model/semanticNode.ts",
+      "bytes": 3403,
+      "sha256": "df9925fb4b646d909a4605caebd9f58919a026f47017c755c8a805cb14db0fba",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/bitmapStore.test.ts",
+      "bytes": 70650,
+      "sha256": "0b5e5d4fdf2aaee762df0d896f1d279a9c21ccaba34a0a71989ecfb9d63c66c1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/bitmapStore.ts",
+      "bytes": 31956,
+      "sha256": "0314e701e5ceae14950227f591d4d48fcacb098fbc21481455571edf6aff39f5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/commandRefusal.ts",
+      "bytes": 307,
+      "sha256": "b088cb351687fb08fdaa3633a0ef2c262ab829d7668b746e2f98f7f88319d2cd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/documentIndex.ts",
+      "bytes": 21078,
+      "sha256": "08ab9ea84ebb48821cb4d197d3ea49e034758d4c3e8502c0f93c5cdbbe40b870",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/documentMirror.test.ts",
+      "bytes": 31521,
+      "sha256": "d0ed16bf6835d1635ee6bd2ff1c05511df45a0537191502fc883d02eca19d88a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/documentMirror.ts",
+      "bytes": 11519,
+      "sha256": "9211e460504c27dbffb0756ad21322f3c76a6b580f5a924ddf0412eee324f6aa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/documentTree.test.ts",
+      "bytes": 7713,
+      "sha256": "6e68457933c8f40eb3284b0853578224a73531b02ba265609b269779d2e0a4e3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/documentTree.ts",
+      "bytes": 5760,
+      "sha256": "74bba82871dc0e02a182974a8cdcbd2f4d0d1e750fe289345b2bb7e60c4a5177",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/imageUpload.ts",
+      "bytes": 186,
+      "sha256": "e18cac6f0cc45d1a5451004c463d68829e6185715ef439d5256438d4b162b382",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/insertionAnchors.test.ts",
+      "bytes": 5905,
+      "sha256": "50f6e4e4ca59e2f62ac1b5f68308c7d2d3e58a048280c4599490e048c0839b6a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/insertionAnchors.testStub.ts",
+      "bytes": 927,
+      "sha256": "97f189bf641089445113b3aa0e7886fe0c3f20332c2ea4de16493e30b9b374e6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/insertionAnchors.ts",
+      "bytes": 5517,
+      "sha256": "3b3e0cdf0348ca0b536bbe28b4616470d1aef35fd65ce36b221ccb2e787b2aab",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerChangeDecision.test.ts",
+      "bytes": 4922,
+      "sha256": "08123a044085f932b4b53809da557f03a42422b5ca5765dfe32226c20e773624",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerChangeDecision.ts",
+      "bytes": 3155,
+      "sha256": "a5b9a04d3d4c07dd06f73257e494dcc3bc24211b38e9c9c91a6f2b4c8ec74f80",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerEligibility.test.ts",
+      "bytes": 3294,
+      "sha256": "6b46ba71abb83ce7aa0c196c518c1b80b4bf546d3801b8c7f1323e7c21a2d6bb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerEligibility.ts",
+      "bytes": 3241,
+      "sha256": "8041b814325af3ca8b08d0a0c049a6252b70f8e09c142aa5031cc0b0ee760138",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerFactories.test.ts",
+      "bytes": 641,
+      "sha256": "cc9039a6a9a5d861c800fc0c36438dcb3b864ff470cbde2977728e4c1a5261e9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerFactories.ts",
+      "bytes": 3244,
+      "sha256": "070cd0b785170870706b6f77646828c681af593b7ee3f54bbab1d6dd2f6f64d9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerStacks.test.ts",
+      "bytes": 5666,
+      "sha256": "f5931612c2fa638f9345901c936b35f8a0b2c5dfb52e63a7798fa2c6904f8e16",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/layerStacks.ts",
+      "bytes": 5519,
+      "sha256": "6d47fa8a576dac2e27b11d7299a5e3b67b9313ec97d856b50d795b5ff805babc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/mergeDown.test.ts",
+      "bytes": 1955,
+      "sha256": "9ac95e1e9824e90451c25419311ae7b87cbc27667b9c123d47f925fcbd28a9ca",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/mergeDown.ts",
+      "bytes": 1145,
+      "sha256": "aa8181d4b605d6c8e6946eee36ee383ae2b381b8ddf56960d6529e974b6865fd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/mergeVisible.test.ts",
+      "bytes": 4652,
+      "sha256": "1af45142f98520f078c7717126eb12970d61b9358f59b3c38d7e3944b3c13a3a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/mergeVisible.ts",
+      "bytes": 3162,
+      "sha256": "6a929d7606a885beb7a26e5ace79053d837075c024e5faba9385e23bb5f27c3b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/selectionRepair.test.ts",
+      "bytes": 7011,
+      "sha256": "7edbf342650302fcd98fef2bda3d4821af10b3cf7592b721d3b6707763b6b13e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/selectionRepair.ts",
+      "bytes": 3749,
+      "sha256": "1e50c652bb9663e9ccef3a7e1239c6e6d108aa2aa408d55618c9b10a1040406e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/sources.test.ts",
+      "bytes": 6838,
+      "sha256": "62371c03e1ef150e9719f89a6557140bf719d90d5630ef62d6639fde7fdc4328",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/document/sources.ts",
+      "bytes": 5628,
+      "sha256": "2b48d82d6c5ff217f06ddaecbfdf1d3ea4545f07b26436be20b209213c3d2476",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editConcurrency.testStub.ts",
+      "bytes": 375,
+      "sha256": "ddb63e94e361d0e6cf82d8bebc7a63e35b236d645a66c4b4ac8a9e4fddc47fbc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editConcurrency.ts",
+      "bytes": 1532,
+      "sha256": "f10a6d2020a21b413696a71997d3568a378d4ef2bb05aab5a5bfced072c287d9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editGate.test.ts",
+      "bytes": 1594,
+      "sha256": "ad4cd8d419788cf39da01991b86dead1990d5dd41d694c2f16ffaf710e930e1e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editGate.ts",
+      "bytes": 2243,
+      "sha256": "19e20a704f657b792af6018bcf29af2f16a59d1f75fb5e3b1c241d1ffa4a8154",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editing/controlPixelEdit.browser.test.ts",
+      "bytes": 11122,
+      "sha256": "faa1fed5912a55de07f45d456778247a699b3caec1a436808f50505b870f55fc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editing/controlPixelEdit.test.ts",
+      "bytes": 8432,
+      "sha256": "26e5382ad90bc66c51bf22c048e8949ade70d750456fc6996210e9e50ad71a57",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/editing/controlPixelEdit.ts",
+      "bytes": 4803,
+      "sha256": "6aa60de701e9777096454814beb88acfc96017f368145770573861ed7773a69d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engine.heldAssets.test.ts",
+      "bytes": 11115,
+      "sha256": "a8ab87beb63ff804f35accac0961a41ca9e0b32f4945a1ad275046fa6efd9081",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engine.mask.test.ts",
+      "bytes": 26754,
+      "sha256": "84bc2e8219b3dea0bfada1370dc41c3772b036d512ca7c3a2ac9b381b60a3269",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engine.resources.test.ts",
+      "bytes": 9313,
+      "sha256": "ce3dd56e756d163dd7fb7015732a2d356cac2e5ac4ad12f31b9094ecb27b6e73",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engine.test.ts",
+      "bytes": 769232,
+      "sha256": "44e52a70a6f69157fc5a2cc08adc579243f600a581bd27c75a7a9d5ee35fc27a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engine.ts",
+      "bytes": 121927,
+      "sha256": "10059c7f1fd907a7d3bc384a12504e97f6872a3ea16bd9cab257c14a3753d226",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/engineStores.ts",
+      "bytes": 26950,
+      "sha256": "ba63257d3857ad6e205351aa6480e25e456e7d332f45fa74980b5444c77ecb6f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/export/psdExport.test.ts",
+      "bytes": 15518,
+      "sha256": "56af57dc61d034a8ccdabb14ab567b79b4b181513fa42b2ca32ece3666791b81",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/export/psdExport.ts",
+      "bytes": 19046,
+      "sha256": "a7f9c89d64aee94eaa10e244eef952cad1987917233c2443815a847a6e6bb933",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/exportRasterComposite.test.ts",
+      "bytes": 8174,
+      "sha256": "a8b84485fae2910c4f7f5e3f23e3d9100a3386aae7dbccfb8c94b90fab85387b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/exportRasterComposite.ts",
+      "bytes": 3816,
+      "sha256": "c21b9da6a475a042a86a069456e1c5d70155a9fbfd454d72490a3b5d6c66b845",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/filterError.ts",
+      "bytes": 666,
+      "sha256": "3dd762bf2c37088165cb4856db48ffdc802abaa7d863b97a0a00cb1ce2335d81",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/fontReferences.engine.test.ts",
+      "bytes": 7521,
+      "sha256": "2a54983e9287df4961b336c6de594f236fd7177eed6404a1a0c4a0b0f38d6b66",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/fontReferences.test.ts",
+      "bytes": 4964,
+      "sha256": "3d4f16f645f2b0edc9446cbf7321ebbcd87c5289229e4659f4639572075a7f65",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/fontReferences.ts",
+      "bytes": 7648,
+      "sha256": "a9c57ce0ac3f67b909d8f4d5c6e58dab1f0b6036b72f0cd457cc6efd1e56d772",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/freehand.test.ts",
+      "bytes": 14063,
+      "sha256": "622a8dcaf479b7029fbd4b7635b094bf3fcde245f0d4a0344a151abf255a7b02",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/freehand.ts",
+      "bytes": 9310,
+      "sha256": "7af61fd643326ef535481229e4ed7ec3b6f385620f961e83a377dd57cfc76deb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/documentPatch.test.ts",
+      "bytes": 1795,
+      "sha256": "5cb10a7630a2f7c64bde27106e1b27f207022038bf7494ce49112f96ba738e81",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/documentPatch.ts",
+      "bytes": 1414,
+      "sha256": "021126b3f020fb86cfddae3c616c995c1c2a53dbb85fa6a04a58fa62afe8c6c6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/history.test.ts",
+      "bytes": 11072,
+      "sha256": "ee2a484503e84edca71e90522043f3cefeba3d1ab598f328710cbb0fd7564242",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/history.ts",
+      "bytes": 12214,
+      "sha256": "f46126790c74c149d51d8a6d62adc9a158eeae6f3891a63c854f0a2e329831c0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/imagePatch.test.ts",
+      "bytes": 2517,
+      "sha256": "4ce1dd3c023d7dd64b6487a2cc194ba091defd0566c04f487fbc696d915465e3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/imagePatch.ts",
+      "bytes": 2450,
+      "sha256": "70c8361361dea15f6ecabc00683cd3e18b2604c34315f2bae3091d32a286f1eb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/layerSnapshot.test.ts",
+      "bytes": 3725,
+      "sha256": "caeeea64a6ff44f4a8e51b781aca4e79089304e4678227665055abf7ba258b80",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/history/layerSnapshot.ts",
+      "bytes": 2379,
+      "sha256": "4610adae96dc0e06684003e72d66575f37dceffa8441fb23e0da3a5821d04ce3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/input/pointerPipeline.browser.test.ts",
+      "bytes": 8708,
+      "sha256": "54e514b02427f66b128210ba37c9ee05138fb068658f98c9d76b28a1fa42992f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/input/pointerPipeline.test.ts",
+      "bytes": 27362,
+      "sha256": "99c5e63ba9aa08c3bbb9a432e4e3907ebc4cbd22bb9fb3befcc809bc56489112",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/input/pointerPipeline.ts",
+      "bytes": 20323,
+      "sha256": "c814860c04cb18f962fb9f458ac5ab66ef2cc85d4cdf77852b0af0fb1375580f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/input/wheel.test.ts",
+      "bytes": 3671,
+      "sha256": "2498b1ad39929e15e361891cff9d737b5fbe53e41565e09610b0fc4ce7155d41",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/input/wheel.ts",
+      "bytes": 2409,
+      "sha256": "aabeecf7e7f57c564045adf1d7de95872510ed146c561a821f5d5cb582293fcc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/layerExportGuards.test.ts",
+      "bytes": 8854,
+      "sha256": "8d3f728b781855164466027ec5fe17233cccb3c70eb4dae73dd4d88427610f30",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/layerExportGuards.ts",
+      "bytes": 5690,
+      "sha256": "8ce2fd05ab54ecc054ab820ccce2156f5187faa66b2ed58611c88b2c72f296c2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/layerRasterizer.test.ts",
+      "bytes": 14100,
+      "sha256": "09905cdc3206318919c4422399d973d318f1a4ca36ebbce3b34f687a2bc64576",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/layerRasterizer.ts",
+      "bytes": 8456,
+      "sha256": "ce0c3880a0b0395286292c1e647e9c3e72aa10c6208c40ccaf2bbc11c697662e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/mat2d.test.ts",
+      "bytes": 5232,
+      "sha256": "7a32e686c16308539e21221e823964cba00f6dc12c83466e6f1029cdd64cf5bf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/mat2d.ts",
+      "bytes": 2604,
+      "sha256": "126859b6935721c4975343db9b14a9598f98fba8c7e8b661f1adca66b20c1891",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/rect.test.ts",
+      "bytes": 7400,
+      "sha256": "1680cb0d1f7f6676e807014a059a26f12c5f7c3b5cc64ecf95bca3f64fcfb0bc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/rect.ts",
+      "bytes": 4853,
+      "sha256": "766cb2d0d3400fe7fa43efba963d3c63b88a6d9f13ee0ff4b98ce9d1396ccd41",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/snapping.test.ts",
+      "bytes": 4420,
+      "sha256": "157a0957762ceb5c55152245eccebb65d3081b0cee4f108c701a40b9c4ec5976",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/math/snapping.ts",
+      "bytes": 3060,
+      "sha256": "618ffc458229ac54b4baf216dfb0868c7dcfe8a63b2641198b1e0ea92ccd544d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/mutationContracts.ts",
+      "bytes": 7188,
+      "sha256": "9945d1e2f2f7ec65bfbd5e081e6b464150993757808b7ae3e24c635b8997e467",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/pressureBands.test.ts",
+      "bytes": 3715,
+      "sha256": "035f8403fbfa825f23b261ee37ef8880601cf07fda9e5a767e377daab72e5ec0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/pressureBands.ts",
+      "bytes": 2676,
+      "sha256": "34cbc9d0bd33e2f52e9cc0b2c7082dfaa69b2a24bed5f326587e0fe7acff0ec6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/previewPublisher.test.ts",
+      "bytes": 13997,
+      "sha256": "5179ec4821b000f59a1f4581912ca2958d3f57f5a7985fcf9ad85ec04a887996",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/previewPublisher.ts",
+      "bytes": 9644,
+      "sha256": "c761e2a82804d2e8aa89c399588e08c3555622a1d387d51514922e7bea291511",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/rasterSnapshotCapture.test.ts",
+      "bytes": 18560,
+      "sha256": "2fe98a249d86c68dc4bc04261e9b1ff25639c61988b99dfd7964b713f1f3b5dd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/rasterSnapshotCapture.ts",
+      "bytes": 10718,
+      "sha256": "fd16ed9151dfa279dbd549529847bbf73e557473a40d069974789c0e6afcf21a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/rasterTransactions.ts",
+      "bytes": 1594,
+      "sha256": "d4e3442ba05f0a587c456c275bc881373f4049cbd031aef78c5f56865e3d0848",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/adjustedSurfaceCache.test.ts",
+      "bytes": 4540,
+      "sha256": "f2f6ed9ee120596e6afb5b7af685138542722fff11f214681b51144f2c46caf7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/adjustedSurfaceCache.ts",
+      "bytes": 4492,
+      "sha256": "ee43713e289ba25d1261ed70d2e800e928fe08e716907babfd87a430762bb587",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/adjustedSurfaceDamage.browser.test.ts",
+      "bytes": 7152,
+      "sha256": "638e9399a524ebe0c5ba881a8817c0902e4567c151e961e44855ce7e372ef1bf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/adjustments.test.ts",
+      "bytes": 13713,
+      "sha256": "7ea92c7773c4006104ad341f89d625393039440191bb248766e034cd8715ee5b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/adjustments.ts",
+      "bytes": 12525,
+      "sha256": "8132ac96fc69484fb317c18d806e4edbb92e97b5f6f3cda3e817d241e5f3db39",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/alphaBounds.test.ts",
+      "bytes": 4841,
+      "sha256": "f7487c28e01ba9c176df7a9e8cb580d279ce49e7d978ce9f7db28b61dc652329",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/alphaBounds.ts",
+      "bytes": 2704,
+      "sha256": "9b4baa0d023fe322853a7fa2ffa1fbfd6f6d3c17646b203889fdde9733950223",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/colorSample.browser.test.ts",
+      "bytes": 3952,
+      "sha256": "70c726691965a1532dcc299823d4f34bbb4efb87259475347534e50a9a848bd8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/colorSample.test.ts",
+      "bytes": 7730,
+      "sha256": "2f91c002dffb6216360cfd7d893c8e74ae42f87a5699b73e31085dd7f9967e91",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/colorSample.ts",
+      "bytes": 4605,
+      "sha256": "fb56c6685a413ab4095a791fdbb75bd9a38c27ba90e30cdbbc7442b369c02a66",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositeFrame.budget.test.ts",
+      "bytes": 6818,
+      "sha256": "e43d478823700a4ec1aff03290d90390af16ba4797f319e3463e7f65d81ae311",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositeFrame.test.ts",
+      "bytes": 12418,
+      "sha256": "33d00c87cceb0e1fc2c032ba7f86568f8d1c6fe1d2004ca7c4736d8cde6448a0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositeFrame.ts",
+      "bytes": 11222,
+      "sha256": "ac0b749e7b6ba43950a32c3ee298d60bac6c8f156fa05a273ba41913ebf74baa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositor.test.ts",
+      "bytes": 39305,
+      "sha256": "77a29f0aad14656dd1a3eb22a0c12f0ea7279b5f4db74dbf44e1ac6c26cc2700",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositor.ts",
+      "bytes": 28231,
+      "sha256": "472afea0b2ae7fe0aa7e4516abcb1c56dfad80abdb1cc800a0d7a84a144fccd2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/compositorDamage.browser.test.ts",
+      "bytes": 10526,
+      "sha256": "5d32ddbfdafff3273256e173c0d90424631933e3568699856f514386516f01c6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/controlTransparency.test.ts",
+      "bytes": 7128,
+      "sha256": "e629837b40cbb15bbfe12f5495fd3637b1cd6743440dc162a36f560b3d844b71",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/controlTransparency.ts",
+      "bytes": 1465,
+      "sha256": "aadf1944e8a6bbdf23a7093c6e849432f68fbf3bdbd79c7c21b35a26e91bc7c8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/decodedBitmapPool.test.ts",
+      "bytes": 2872,
+      "sha256": "cd0a80edb4ecf9733ca9a23d89b45b7f4367a4da253366111d87e9490531742e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/decodedBitmapPool.ts",
+      "bytes": 4524,
+      "sha256": "d895edc95586907d159c4dc333291537e30b72ad7b9c099250436c1e0c1525b6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/derivedSurfaceCache.test.ts",
+      "bytes": 4431,
+      "sha256": "c23a873e747c2cdccb4f91fb16a2b1becb8bc572913ebb5650f162de5222ed73",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/derivedSurfaceCache.ts",
+      "bytes": 4751,
+      "sha256": "5e489fcdae64fa1c8bd21ef506a5957207ac30c21302f3fcd0d178e71527379d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/floatingSelectionFrame.test.ts",
+      "bytes": 3339,
+      "sha256": "0aa36c0c831fea6681953d73794e180dbcb31d72ba322ef87dfe6bcd373a3c1a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/floatingSelectionFrame.ts",
+      "bytes": 1654,
+      "sha256": "14e17ad98e094cdef5e4a32d4005180554d3c0a2c1e542418d4420a66d633754",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/fontLoader.browser.test.ts",
+      "bytes": 6266,
+      "sha256": "26138deacfb8be0b26cf4cd8193845d1da93d0648827d47e89ee0e1225d650aa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/fontLoader.test.ts",
+      "bytes": 15448,
+      "sha256": "7cea04b7607d516757d4b70c9fccd5f10cfedf6f1fb953820f06cd605711cda0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/fontLoader.ts",
+      "bytes": 17697,
+      "sha256": "703ce99034466e34629c661cb0eeee38830316a3d7c776635aa2c5543baf0de4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/frameDemand.test.ts",
+      "bytes": 4944,
+      "sha256": "6dfd32d765121c1a43449bfaeb3cf5ce065f83be7f1e160bbea8463dfd06f05d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/frameDemand.ts",
+      "bytes": 2372,
+      "sha256": "0d4a58ea66b75260a52e1d68fdc9618e095ea417295edc7620ff44686e55ae30",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/frameDemandBudget.test.ts",
+      "bytes": 2338,
+      "sha256": "2cc29b09c60bbab9a9c38e663143f3db85d7e9db1c13da85bfefd8f0baacf530",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/blend-difference.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/blend-multiply.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/blend-screen.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/clip-rect.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/composition-normal.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/generation-base.json",
+      "bytes": 302,
+      "sha256": "19e1dc09be0197d9580b209b3b92cf5dd5aed721b5ca99571b7c95a2eee9b789",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/hidden-overlay-isolated.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/hidden-overlay.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/mask-grid.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/mask-solid.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/opacity-half.json",
+      "bytes": 303,
+      "sha256": "554b50ddcc5bbae7e6c9e611b024e325692bcbe2a3d951a354fa4850281851ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/__golden__/rotation-30.json",
+      "bytes": 305,
+      "sha256": "7a468cb3b1b04d3dab9da6fd47fda019fa9a51623df85ef2c05c131a661cb3c6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/compositeGolden.browser.test.ts",
+      "bytes": 9529,
+      "sha256": "062adec450dcc2b91e349d4ef6a60b744304990881f252b30e04027525c3331e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/golden/goldenHarness.ts",
+      "bytes": 10005,
+      "sha256": "e5760c884f4c5241b49ab7996e887e691c2841ec65cac60eced2bff828449601",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/groupAdjustmentComposite.browser.test.ts",
+      "bytes": 28409,
+      "sha256": "13420fbd99a18f7a21d6ddb681064b8e61ead0137285ab6ab5fde2ddca479f6c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/groupCompositeScopes.test.ts",
+      "bytes": 4858,
+      "sha256": "adc3f8eb538e0a6ae41053c3ff212e3c971fba7760ed756cac40f39fa53a6217",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/groupCompositeScopes.ts",
+      "bytes": 4713,
+      "sha256": "6917fb85c56804cd2ce2c6093d538ee18c15ea753effa1c4e6db13464d495399",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/groupSurfaceCache.ts",
+      "bytes": 18255,
+      "sha256": "250ddb3432ea58548bdeb49e63428ee412fa89e1a9943119276675ed08363b99",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerCache.test.ts",
+      "bytes": 23483,
+      "sha256": "50161c5d66679ff62921109d9deb609948805fa0cad91545b801af8ae9f6213f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerCache.ts",
+      "bytes": 22603,
+      "sha256": "2c32a3debee9048b2a70c80ceb4fb82a3c7f321b9070c8136d3e7e2b70d289fa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerCacheGrowth.browser.test.ts",
+      "bytes": 5422,
+      "sha256": "e49780e4171bf47aa45eb6b9e11487344217303ad41b2267da5ebf8c89df6baa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerCacheShrink.browser.test.ts",
+      "bytes": 4192,
+      "sha256": "ffeb7587f6c8467a8682994412ba7ed16549440f4b6b47b5a449a2cc70914e68",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerDisplayEffect.test.ts",
+      "bytes": 4307,
+      "sha256": "2370b9207849d1b377958eadacd54d2819706f063a8e50f54c8a0ee171e407ce",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/layerDisplayEffect.ts",
+      "bytes": 1836,
+      "sha256": "13d64a5b93d01ab0faeca4f940144301e43c19e07184cbb13f6ee8cada699f86",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/maskFill.test.ts",
+      "bytes": 4615,
+      "sha256": "4ead96cae7889bf77f9de08c34018465145f939cb89dad4f27b0d030fbd5d021",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/maskFill.ts",
+      "bytes": 4302,
+      "sha256": "675f4588c7a21639973028f58558b71022ba8a4609006f36218acebf1a85ec00",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/overlayFrame.test.ts",
+      "bytes": 12486,
+      "sha256": "4b8e03adc62e118346db09b396fd121099bad9ce27566963364c7897621ba547",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/overlayFrame.ts",
+      "bytes": 8253,
+      "sha256": "c10f44ef70edc92dd2eeb8fd4758d3945323745adeee0cfaad6c7e832b7c8a0c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/overlayRenderer.browser.test.ts",
+      "bytes": 7168,
+      "sha256": "66541dbd3a7595956d2e7aacaf46fe7e420dece8374f0760889747c44cd5123a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/overlayRenderer.test.ts",
+      "bytes": 11318,
+      "sha256": "c3b14646e8232432bd602f4e6a0684135108aef9383123854ca410eed93214e3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/overlayRenderer.ts",
+      "bytes": 23997,
+      "sha256": "0a779e60b719c904901c9a6b061685b0fa17f2e47203e6d9f43acefe786df078",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/paintCacheTrim.browser.test.ts",
+      "bytes": 5453,
+      "sha256": "50b25071a0bca47be3f566649d7c657696abe51edffdb58efa4cc13cb2a2305f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/paintCacheTrim.test.ts",
+      "bytes": 5010,
+      "sha256": "02fd077e7ecd9effcfb22573e6afec0dbcbdccb5ff99762b9962d5ccf1327feb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/paintCacheTrim.ts",
+      "bytes": 2437,
+      "sha256": "c95963c349a4e5949b25e3b652ca79ba36ab2cb6be8d76941e696954b93a9270",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/raster.testStub.test.ts",
+      "bytes": 4387,
+      "sha256": "1507448dca247632db1123c183b29ae2d047ca377f9ede9e9dfa3ec43d9aba15",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/raster.testStub.ts",
+      "bytes": 7113,
+      "sha256": "9cb08f448cde027ae10e1ee1cf085511a7090c72d0b9f4bf8b2133a6d4d6e89f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/raster.ts",
+      "bytes": 5247,
+      "sha256": "e9b819a13a1383ba1bca2871516f2c62c85b21ef57ee27d8e9b006bd96c68a45",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterComposite.ts",
+      "bytes": 14442,
+      "sha256": "a3b4a599d01e1b5eab1db6501dac1ad9fb781ce20eccac8dc720b11641f20809",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/gradientRasterizer.test.ts",
+      "bytes": 6008,
+      "sha256": "97aad1e1471d6ffff4e4cd75d963933039440fec65356d808771dfc58921a162",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/gradientRasterizer.ts",
+      "bytes": 2750,
+      "sha256": "aba1ae95d18e61ca74a67e44822035082a692e16ce280163c6d0cb4bf58e7907",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/imageRasterizer.ts",
+      "bytes": 2298,
+      "sha256": "58d75aac8969a2549963c3664ecde2a09d834eda7f553a62ca7e2374c26fe430",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/index.ts",
+      "bytes": 1720,
+      "sha256": "b6117f04bc82c3fa2658b023e0083302da5cca8607dad7ef483f627546a4355e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/paintRasterizer.ts",
+      "bytes": 1604,
+      "sha256": "fc1b2af684927daa59f092d3b4d90bed4af973fc767afbcac519a9b0e16a37e4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/rasterizeSource.test.ts",
+      "bytes": 10443,
+      "sha256": "61a865a45ebef39a5d0af6797e6669fc11f9b2a8faa535e19fc67a7c7c7da4d7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/shapeRasterizer.test.ts",
+      "bytes": 6550,
+      "sha256": "6ae26ce52630fe44e6b5c2993961d3e5c300cb342011d06b57f56e52e708841b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/shapeRasterizer.ts",
+      "bytes": 4399,
+      "sha256": "523b220d1a27035f68af83fa28c1da39d6543a67357b542e338886a1910c8d17",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/textRasterizer.test.ts",
+      "bytes": 6822,
+      "sha256": "0bbe797026aec7b5c3f8599e867740b4ac0030b217d1e166d7ff1a768cfbad4c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/textRasterizer.ts",
+      "bytes": 4868,
+      "sha256": "8d70b53882700a7d92f183ba2b9932c6247af9107f5c65620d83bca2b0fb3f6b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/rasterizers/types.ts",
+      "bytes": 1999,
+      "sha256": "73c70038a4540fe40ec754c235879653d1bb27142726257b40a5193ead819ac7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/scheduler.test.ts",
+      "bytes": 13485,
+      "sha256": "13815a8c1cde704590b8fc8f626f919c9029e98af203d8b692511f6661089259",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/scheduler.ts",
+      "bytes": 6950,
+      "sha256": "96febab79bcfa4b28277aa6c9a3b58abf19091b021ef747184a7c90882a291f9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/thumbnail.test.ts",
+      "bytes": 7654,
+      "sha256": "5c767c19f97b6f9db4fa71161f17a4104d3578760fa7f219a8da2b25e54ae438",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/render/thumbnail.ts",
+      "bytes": 2657,
+      "sha256": "20464b23f85bcb9ef5502188674b2835495bfdafe9637137a4a8286346cc9cfa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/samCoordinates.ts",
+      "bytes": 1460,
+      "sha256": "4c39c8c3f3371e02db82fd7ee4de341e8dbe7d7697fbfab0a131df31f82c2950",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/samInteraction.ts",
+      "bytes": 392,
+      "sha256": "31588360de7928cc4b077fe1f834364d98d0c3d2310de00d04cdc42da4facb6b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selectObjectBridge.test.ts",
+      "bytes": 5634,
+      "sha256": "dd47fda17ffd3ae9bf4e2710f3561c356fbff1da9860a998a08cc58d9a1c7090",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selectObjectBridge.ts",
+      "bytes": 4725,
+      "sha256": "93cb5f8328ccc174735054b72e183bd71d71612afb4ec6f01013792548f5f2be",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/floatingSelection.test.ts",
+      "bytes": 7353,
+      "sha256": "5e5afaa288589a124a71ac49847a16134c5d5b5d979b4f467d40472d60344362",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/floatingSelection.ts",
+      "bytes": 7201,
+      "sha256": "4d08cc2f75156973ff6d8710d1051356327a0bde030cfd61c1de717a7f7ab686",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/marchingAnts.test.ts",
+      "bytes": 5314,
+      "sha256": "9b3d15ec5d82b8fca233a69a1ddecb2f8e83007acc1e96e45cb7ab4741df9ab8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/marchingAnts.ts",
+      "bytes": 4808,
+      "sha256": "d7e146a74e8b40965ef496260768de5a249e29bbef433345b154df7db19d0c13",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/maskOutline.test.ts",
+      "bytes": 3208,
+      "sha256": "7d50beeba92e32680a2aa3f04c4f3e1c12349cb08a120985f1ed469d4f2dfb4e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/maskOutline.ts",
+      "bytes": 4522,
+      "sha256": "9f59ad36a91d8461c7080e400e424b3c27e9db48277a8233dca94e721dd7c184",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionHistory.test.ts",
+      "bytes": 5721,
+      "sha256": "9aa8b6b43286669acc49f8a963e78814e1864b3c468df7beb68eef98bce0580b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionHistory.ts",
+      "bytes": 3678,
+      "sha256": "c1c1a4c2afdfe7f59d6ed0582cd6e5a32e1f17a0c1176a04189da94e1b1a17f0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionOpMode.test.ts",
+      "bytes": 1095,
+      "sha256": "a7c5ad35e250cb964458e1c1c08fb6ebdce05dafe4e22c33ec2eb22de9b249fe",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionOpMode.ts",
+      "bytes": 675,
+      "sha256": "228bd24fc5d1d6d08beaa3ab06ef2e97b0ea83ed4e35f0c246c5c90da7084206",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionOps.test.ts",
+      "bytes": 5232,
+      "sha256": "fd0fb1310d36f77f3d5f639b08efa58003f56a28c67b23179e0235829e93e92c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionOps.ts",
+      "bytes": 2902,
+      "sha256": "d21bcde3c0bd0c6a5f52fb7baf5391a5c1c615bbc54b99e78b23a7a755142295",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionPaths.test.ts",
+      "bytes": 1377,
+      "sha256": "f2de834fd5e0ee5b1d76bea760a0850e0ad4ead5617f2e13e87c65d67187f598",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionPaths.ts",
+      "bytes": 984,
+      "sha256": "6b76db55fccae43da5433bffc365d7c4e21c86cc49d53edde167a048e3faf15e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionState.browser.test.ts",
+      "bytes": 1176,
+      "sha256": "c3f48d88ac044f090d7099d5d9d72750c80ded259d52300ba03c4031ba986f29",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionState.test.ts",
+      "bytes": 16617,
+      "sha256": "3ca9b97d9794482b0fe3b3d316d4b6deef0d19dd00e2d79bf883dbf1af3d9ef8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/selection/selectionState.ts",
+      "bytes": 16955,
+      "sha256": "6f128d7699a6d1945fc59c212b413f13a696777464a810c1dc3a2ce78ac089e6",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/stagedPreviewBlobCache.test.ts",
+      "bytes": 10542,
+      "sha256": "68951f23a52a605b1563a9fb392ef587eef1d56f4c01d81e6df0ded7d3bf22c7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/stagedPreviewBlobCache.ts",
+      "bytes": 8007,
+      "sha256": "b6444b19087eb5aed83e56fdbd9b643d217c2ab0830e7c09e882543b7685f50f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/strokeCommit.test.ts",
+      "bytes": 7941,
+      "sha256": "637287191b4244a5eedf39c50aa9475034db56a00025a0ccbea05fade782c740",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/strokeCommit.ts",
+      "bytes": 5757,
+      "sha256": "a90495b5a89415347ebb3050bff24a71be97bcd45781ebc952fd57fd91678405",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/bboxHitTest.test.ts",
+      "bytes": 14586,
+      "sha256": "f4151ecb6816418bd3494388c14a27de80e2c58b414d289922a65132623f5ad0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/bboxHitTest.ts",
+      "bytes": 14827,
+      "sha256": "3e5b34ce6ab3ea3b242bbdb59713c3b4d15681ae7466fd3551baf6a2dae3a492",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/bboxTool.test.ts",
+      "bytes": 14070,
+      "sha256": "bd7edbb236f6570a22615e4535f007df5dd58f3eba1a67d82062894aa512c3b8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/bboxTool.ts",
+      "bytes": 6279,
+      "sha256": "6af74e67bf1a7d1d98e66c19949753d6577544ff47c1a2e34cabd53673b71acf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/brushTool.ts",
+      "bytes": 796,
+      "sha256": "a1d0d77a5fa44771703b1a8bd9451e4694061acbb3e91c8c57c5cfc09ceefb5d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/colorPickerTool.test.ts",
+      "bytes": 10509,
+      "sha256": "f6506ba726a3e2dce6cf57d3f568de55e7b741a47ae542fa9ac20aafd4ff5812",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/colorPickerTool.ts",
+      "bytes": 2750,
+      "sha256": "0225556a95395e400d7564eab2be1b2e8f4e73e69fe01a88d60b8d0a4f7ebe03",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/eraserTool.ts",
+      "bytes": 727,
+      "sha256": "4d3349f663b1d79494d6b35bf436624826c1dc7907cadfaef289d66d4c563bcc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/gradientTool.test.ts",
+      "bytes": 12288,
+      "sha256": "77f4b80dc36a02ebc52a42658b8a5c00d9daf522f517d098043c92b05ccfb17e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/gradientTool.ts",
+      "bytes": 7707,
+      "sha256": "195ba9990b1e50c7e09c79b64da03f878807c7fd182f2b91e6bd181e6783d7ee",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/gridSnap.ts",
+      "bytes": 527,
+      "sha256": "cae1265f69babfc7be3755cf056e02e8470f712f04759b524b24d89fa7aec10f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/lassoTool.test.ts",
+      "bytes": 12385,
+      "sha256": "623f9ae173ce8f03f9e6b3dec9f2a0018e729016e89a778cc5d939b7de1d939f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/lassoTool.ts",
+      "bytes": 5813,
+      "sha256": "63445c27e59ea751fe595ee4ee828fd69781c6113a674f3d46cce14813d4739e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/marqueeTool.test.ts",
+      "bytes": 9698,
+      "sha256": "3ecfdd661ccd59225e3ae65aed8feca01099e5c83b1da6263c3bb6f3cbb8d0b8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/marqueeTool.ts",
+      "bytes": 5766,
+      "sha256": "7b2f60a8b64aecc3b3a13706cb7ea57df3abb4adafd62a4f29f048b48ead95cb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/moveHitTest.test.ts",
+      "bytes": 10714,
+      "sha256": "76bb27dca7c16f7d546cc6646cec0f0d08ee22059cd371305111abb2ac292176",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/moveHitTest.ts",
+      "bytes": 3680,
+      "sha256": "1b0efee06b8fbdeeade3e244a72787b462e0a6cff07745955134904f4cc090b8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/moveTool.test.ts",
+      "bytes": 25600,
+      "sha256": "c735f28c144b498e7332482a1b2e4d461290b52c1cc7c994df2ad61fdc95aa93",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/moveTool.ts",
+      "bytes": 11435,
+      "sha256": "de812d3966123f6b676bede9fd75b19fd3ef85738a47719f36d13938bcda0acb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/paintConstants.test.ts",
+      "bytes": 1603,
+      "sha256": "26b04afad4065362008a81c7f7ebfb2cde2fe7858b566a904ce3d08773465a24",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/paintConstants.ts",
+      "bytes": 852,
+      "sha256": "4308f65662c689e66163a1c63e8a7f69bc16ccf25fe872f1308c72ab59aab711",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/paintTool.test.ts",
+      "bytes": 30360,
+      "sha256": "370c757b1d6f097cbf4e754e6d35e20dc86559f81a099ec66ac1ce83771ab2fc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/paintTool.ts",
+      "bytes": 12985,
+      "sha256": "c91e2ddf10ed0b3ebdc6d26a3c81a6d7a3994c002c12714803cf814df51c3441",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/polylineSession.test.ts",
+      "bytes": 2824,
+      "sha256": "531d8f93190543ca68f2b7cb4d4e8bec557acbde053c2abeed0ebe9c35ca4863",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/polylineSession.ts",
+      "bytes": 4876,
+      "sha256": "5d8be9c0ac5ff0a127e772ea4cebae6c74956b2f4c69fb6b65cfafc78b77c879",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/samHitTest.test.ts",
+      "bytes": 3120,
+      "sha256": "b986185ce6b5cdd34c5e6624434ce3af4aca9e6714e5010b2adee9db07d2c3f5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/samHitTest.ts",
+      "bytes": 4174,
+      "sha256": "d0cefe256c0d399ff6956634b14ca396510ca4da0cd7e047600a9ece049ab539",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/samTool.test.ts",
+      "bytes": 6949,
+      "sha256": "bcf228d1d08d5fa5eff900c2da4f55ed4e3a8b31d5f81e37ae209ec04a59168c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/samTool.ts",
+      "bytes": 5006,
+      "sha256": "72bb51b03209ad58fa603149f0f5ab70eccef7170bc2bc3c34ecf040e207d4b4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/shapeTool.browser.test.ts",
+      "bytes": 5070,
+      "sha256": "0bad09eef30e18c063be5cee334739fe90b4122435d8de8376e92d2b8ccf8ce5",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/shapeTool.test.ts",
+      "bytes": 28522,
+      "sha256": "c335ca09e7cf5af5f3b2ed5085191b2e22a6063024d9e4ddc3b301b72716f2c1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/shapeTool.ts",
+      "bytes": 16244,
+      "sha256": "b72a3d9aa08f4424678f483b81c10877ef9fac87825a0026bd188a90a6b554a2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/strokeEdit.testStub.ts",
+      "bytes": 1209,
+      "sha256": "d0216ef5e3cddaa8b564569dd2aaa2d721dd9d6383fb84da99ee74c4fd4a55e2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/strokeSession.browser.test.ts",
+      "bytes": 12231,
+      "sha256": "6eed768a103304fdae13fb364b608235df89383a1ce9c4f99d19efc5d9550b26",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/strokeSession.test.ts",
+      "bytes": 33001,
+      "sha256": "4598b482f285a6c0106090137512574df3e50bc4cb6a49c0c6ee791167831186",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/strokeSession.ts",
+      "bytes": 26343,
+      "sha256": "05b6114209e35833014bf4ba386433c6d35bf643940b6cd68acba74e0fdfe18f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/textTool.test.ts",
+      "bytes": 6131,
+      "sha256": "7fc5fd4682ea9124510181d20ff04989cb1d60d9ceef4da4a8b69381a57bb9fc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/textTool.ts",
+      "bytes": 3887,
+      "sha256": "b98c02b0f15b514da94bf034d99398d82033bd868c8463bec65c82ce39c60d88",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/tool.ts",
+      "bytes": 12213,
+      "sha256": "b3a92aad0e683ee5fb29bf88a801761bee5bb1e2b6c30cd6748f9a2e837b0566",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/transformTool.test.ts",
+      "bytes": 24485,
+      "sha256": "0cfd1db83d2c59109ba51bfbfc3f2f928f768df64796fceac1d0dfc9185f64ae",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/transformTool.ts",
+      "bytes": 13382,
+      "sha256": "a2e4013705ca7e18c2771bd8a91f7a6a44def891de23c4f1df617f4c97c0fc86",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/tools/viewTool.ts",
+      "bytes": 1610,
+      "sha256": "ab28f24a2358ab85f34ebfa1273ee862dda0fa2a03455d4473cd33df6b81c1b7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/transform/transformMath.test.ts",
+      "bytes": 18781,
+      "sha256": "a4d1153ba0a368d7a47f9106663919b717edd43f4818770a5f36b8ff6487f580",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/transform/transformMath.ts",
+      "bytes": 15435,
+      "sha256": "ceee940239c1580a902ee61b0c1a04faff023556f6dd5b2a4c4b13af72179757",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/types.ts",
+      "bytes": 3284,
+      "sha256": "c210322568fd95340362bb389b06f17ad4d7dc5f3c366341891f8a2d55602f46",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/viewport.test.ts",
+      "bytes": 5053,
+      "sha256": "da3cfb71446a00f6955a0460ef78b111db10612f8e962cb114a408e58418cfa9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/canvas-engine/viewport.ts",
+      "bytes": 5794,
+      "sha256": "d427fc23387e1c84ac753443e56d5899498ee73905322fe4a64837a1bd8b45a8",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/flags.ts",
+      "bytes": 73,
+      "sha256": "9680d37289c1d986153ffb69dc89e6bf4e8d7ca48d25d18102cb911d2456b662",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/studio/host/assetStore.test.ts",
+      "bytes": 510,
+      "sha256": "36d57170ed04264e2a19c495b503b25167e1da7d31563cc372e621e55b31d219",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/assetStore.ts",
+      "bytes": 2259,
+      "sha256": "3df2a274cf62a09d9f2b58c7bb5af32a387afded07643c190e485a422bcc869c",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/studio/host/documentStore.ts",
+      "bytes": 1779,
+      "sha256": "74385ae413088404d8af22ef6d8e2c451a0b1fc9b2214e06b4de0ae114523d4d",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "src/studio/host/features/gallery.ts",
+      "bytes": 321,
+      "sha256": "a62f7936b15cbf52c8aca45d4e5a11dc3357e982ac63e28998b62a0525afe4b0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/fonts.ts",
+      "bytes": 1166,
+      "sha256": "d69d3476d312231ca53795c5a7a4cfdedd1b958817fe2c69e31756a750173dfb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/images.ts",
+      "bytes": 582,
+      "sha256": "dc5e8f7c8893be8f1d959568895e2f03da0d9016e22de7716a8f79a510a7f756",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/platform/browser/downloadBlob.ts",
+      "bytes": 66,
+      "sha256": "e94b00bb6c3b16779eb64399ef034346d1bd33d3cc88588568ffd9b727655403",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/port.ts",
+      "bytes": 2361,
+      "sha256": "e094c497f9120b212701c420a7900e7b3bbe4af9e9820ac5b77a13a62cf7835d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/q10Fixture.ts",
+      "bytes": 1429,
+      "sha256": "e7ed9117bc0447f6f978ebc70bcd9dedeedd2e56196484203d99aa258cc53ca4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/canvasProjectMutationPort.ts",
+      "bytes": 986,
+      "sha256": "95bd685b1600de8e7e271baad19ee1e8a292befe5b5caecfb7cb5b66e0e1820e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/canvasStagingView.ts",
+      "bytes": 1128,
+      "sha256": "47a0e2324b917886ea4667119eea62a0618f79d48d68ba4b3de4499625933d71",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/controlAdapters.ts",
+      "bytes": 2267,
+      "sha256": "591efa2a0eeadcb7ce13a67ddbe8cb991b34179baf6ec17994b6d273002d64a0",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/projectContracts.ts",
+      "bytes": 799,
+      "sha256": "5f1969b3bc626416739b7f2946ac47cccd78637ad3b1a06be4f3d83132bf0cba",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/projectEventTypes.ts",
+      "bytes": 304,
+      "sha256": "05600d4e704bbed137e3b184dd7236b00576fe80936d050927ac1815c67e5ceb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/projectEvents.ts",
+      "bytes": 377,
+      "sha256": "7bb07cdaa3310be48eed3f1c6f49ca518d71c30658160e66d8803eaeda03ff77",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/workbenchState.testing.ts",
+      "bytes": 451,
+      "sha256": "0da2338ba04f431e50c1f9f52e5d7fbe783ca488d1ede434ea10e9d97731888e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/workbenchState.ts",
+      "bytes": 606,
+      "sha256": "af7daf0e3465fa92f5a6f94bb82dc175ce56bd3c54bfd63358bb393b8af8dbac",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/host/workbench/workbenchStore.ts",
+      "bytes": 112,
+      "sha256": "aacba50c1f5eaa7d747bee6850eafae6d73b05b9b6246dfb73e41ff38d48833f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/platform/browser/sha256.ts",
+      "bytes": 4810,
+      "sha256": "aa6c3289fd3ee36a36579bcfccc8a89d127a93661534be087aacabe64bf22753",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/platform/core/json.ts",
+      "bytes": 1162,
+      "sha256": "392f1afbea6da03d9506f3e8f5bb5316696f706a0c13c47bce958175f7765b7e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/platform/ui/modalPresence.ts",
+      "bytes": 1899,
+      "sha256": "6871c54b1b8df76636c3a121bebc79089cc885b02abfa57e0123fb1318cf49eb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/canvasLoadContracts.ts",
+      "bytes": 541,
+      "sha256": "ccb87fa5f02f16e71efe930f6c811079c0a8d91d6e62b67994397c554bd8a396",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/canvasMigration.ts",
+      "bytes": 28085,
+      "sha256": "34313a80a807430d97c09280a1cac3f6a31e7458324269543b9197a0c939ea3a",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/canvasProjectMutations.ts",
+      "bytes": 38543,
+      "sha256": "b1df8a3898fea971f837e7591e695a203f5498165730246cf3184c4be87ac396",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/canvasSchemaVersion.ts",
+      "bytes": 1474,
+      "sha256": "bec5efdc0ce96e94450f1fd562eae19b41e6cb790204995ca747af1c67e83950",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/canvasStagingView.ts",
+      "bytes": 1125,
+      "sha256": "466bbd5c3905cb2db54f5dff7c495e29b916ff9c727a1cf3420398a4fbf326b7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/controlAdapters.ts",
+      "bytes": 2264,
+      "sha256": "c7383b2675be302d91403ace90959d216d9a526682b109f2c6d2052a24289075",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/mediaReferences.ts",
+      "bytes": 2265,
+      "sha256": "e358587438c239b806c034d71baf48fe904ef17b09d335f8408221d21770fb6f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/panZoom.ts",
+      "bytes": 3034,
+      "sha256": "facd64d59be5250118896c6b21293772372e46a4d519d48b28d9b0395afe80da",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/studio/workbench/projectEventContracts.ts",
+      "bytes": 439,
+      "sha256": "6b8dea2ab151e805c63b208eb537c6fc878a261c6bda975849ffad0661deaa67",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/style.css",
+      "bytes": 7625,
+      "sha256": "cd9aa5125a9288ee9d49771a45a3c69ff278b5efa05e7e14bfca63eaf31d13b2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "src/types/soundtouchjs.d.ts",
+      "bytes": 259,
+      "sha256": "4ab11ff19a564a47a47d26ac3cc1701e23be309c93d8af91b332559a164d52d7",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/access.test.ts",
+      "bytes": 6929,
+      "sha256": "863b8f5b6852a69bd946c4e9528c89602d271399719d1d53c48367161d2a4124",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/agent-principals.test.ts",
+      "bytes": 4825,
+      "sha256": "c7f9b71e2188e99b2e71d633b4302f735b95300d86ba20249da2f28d8b6d3842",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/animation-params.test.ts",
+      "bytes": 6377,
+      "sha256": "e415f2ea782709fd4e96a036d966eaf36a63f03f3717ed05a458675feba951d4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/animation-wiring.test.ts",
+      "bytes": 9868,
+      "sha256": "60b878e57f37efdf0eb566e78c510f8742c4109761149785660a094323ef4b4d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/backup.test.ts",
+      "bytes": 26659,
+      "sha256": "a0a73b29a1703017844c917367a8f4194e27baf55a986ad48f17597d570ae6fd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/brand-check.test.ts",
+      "bytes": 1715,
+      "sha256": "b0f1ab95df67c250a700fc36717058b0e982a8b0ae105e80d9bcd0194ea4856e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/brand-ui.test.ts",
+      "bytes": 858,
+      "sha256": "5bef89f2ac435d18b04ded5dd59d57e50e537507d3515b44e282d02034e2d8b4",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "tests/bundle.test.ts",
+      "bytes": 4707,
+      "sha256": "91ab679a7e2f0d2e2d1280f61c53e12cee80f72e509c9f699bb0adddff3d92d4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/canonical-store.test.ts",
+      "bytes": 5595,
+      "sha256": "2920407af406eaae28246596436436950fada076e6fd4451ef1a1c1f33d1ee43",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/canonical.test.ts",
+      "bytes": 9752,
+      "sha256": "2e93aaaa0b6f0c6c0149ac94cd733ab3907858a6c6e4ea1decd9e0198c1b0bfe",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/cinema.test.ts",
+      "bytes": 9891,
+      "sha256": "8c9ae87f987487ca46142ec0868a89d49edd62704b1b81ce78c68c75aed105fb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/command.test.ts",
+      "bytes": 12720,
+      "sha256": "85a5e48929d60a493d1cc5788996fbdb4948e621405063df182d55f4493c2fca",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/containment.test.ts",
+      "bytes": 11325,
+      "sha256": "470f82974919aa7060741a507791a0aa959d3e8204d3f7acee8013a4438ef3bd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/core.test.ts",
+      "bytes": 10213,
+      "sha256": "6f23b2d89aaed99f3510473d059c050a8dcb00edc7e5fbcff6dd557f42e84409",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/derivative.test.ts",
+      "bytes": 14834,
+      "sha256": "924b6f5101302cb89e94c0cd4fdbc85ab2fdd4fca3448b47a49d4b9bf8e2d182",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/director-stages.test.ts",
+      "bytes": 6937,
+      "sha256": "7e0e8904574caf263e94cdda5d7899afa85678185d17c4971c2e247865b37d19",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/engines.test.ts",
+      "bytes": 3469,
+      "sha256": "3ae3bfb1e2a6c0940e64e31b36da84aa85e8601229311b796aa65d3712627304",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/export-golden.test.ts",
+      "bytes": 16143,
+      "sha256": "a1fd311e7c5d6ca79cdacee82a621fa2bbc2173be34047e8c5dff57950ee6d40",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/golden.ts",
+      "bytes": 13540,
+      "sha256": "6e341054210a1cac79e3c18a5705498924a1e240e9e9f0c369e60aabaa02c320",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/provenance/excluded-main.js",
+      "bytes": 24751,
+      "sha256": "ad080726a70027bd3965a35d2933fc62eea83065122de43a994bc37c35c139be",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t2-child.ts",
+      "bytes": 2128,
+      "sha256": "913b536c92bf81329916e2550cd142290dd3def3520d3129138cfccc45016e6c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t4-bare.ts",
+      "bytes": 581,
+      "sha256": "d62ebdf89dea9dde2c7851f66a0b5c615abb614dcf3bc9dc2ac4a277863db90e",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t4-service.ts",
+      "bytes": 868,
+      "sha256": "b2b1db0c76f120d2dbff96628af2fca882ebab356e0e627ca7e2c3e82cc8e6b2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t5-service.ts",
+      "bytes": 832,
+      "sha256": "9d8cb3d0f2ed02964d09f54ab41739174db6cdc127222aee888ab190e461bd65",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t9-backup-child.ts",
+      "bytes": 971,
+      "sha256": "e7dd9cb02c8f04cb34af696f7793053de2b2083554bad00efb6c4e59aaac4faa",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/fixtures/t9-convert-service.ts",
+      "bytes": 1051,
+      "sha256": "4f824664ff394f0c7587397d010cf9bcea46ffb83f15195d73d2c9ba51802ed9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/group-move.test.ts",
+      "bytes": 5150,
+      "sha256": "5698f36c9fd569dea83d09271a0a5539667c977a713d627afbd4f6cbf8219585",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/hostile-media.test.ts",
+      "bytes": 7737,
+      "sha256": "4b1c137b34af70e4ad5e74ac16628823f24c7bf391a94d4aeae2c3245a36b43c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/http.test.ts",
+      "bytes": 23131,
+      "sha256": "eb085fcaa9ed24c42f1b0a457a0a71323403473b335b78d073fe6f651b3c074d",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/i18n.test.ts",
+      "bytes": 3951,
+      "sha256": "0b65c9b44e9eaab80651b58b9818ba17b4925df4143ac55fadc910235ae797da",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/identity.test.ts",
+      "bytes": 7055,
+      "sha256": "d9b6d6fb976abb7620f3d2197ba40f05e31c814f8e72bc35abab644c97352b02",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/interruption.test.ts",
+      "bytes": 12200,
+      "sha256": "24e99eb28847f5e0302e28b08fb4f7b8f092082290bdb898758a0c297878aebd",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/jassub-preview.test.ts",
+      "bytes": 3998,
+      "sha256": "42d6e10efd44f54dcaa52e647158b590bc19d0d2fce9efd11048564a45057152",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/job-transitions.test.ts",
+      "bytes": 4302,
+      "sha256": "cbff016f958bae8f86676b9cd3e2b2ebec9dd33678df79586f7adab6048d34bb",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/jobs.test.ts",
+      "bytes": 26693,
+      "sha256": "08cc0862d0ccc79eaddbb783aa58618c7fc52286114d07785351bbb33763cf72",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/journey.test.ts",
+      "bytes": 7162,
+      "sha256": "5eb01d60895c9a77b84f70855e7919831b04f1b1a6b4a75d9afc4aabd92022ab",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/mcp.test.ts",
+      "bytes": 4348,
+      "sha256": "b91729034a68173e86e5c21f91d1df163078a5cacb6f67b8f50fcdc29a3fab26",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/migrate-audio-preservation.test.ts",
+      "bytes": 4914,
+      "sha256": "5e97157194c7389e82b009abc8cbe5196ae4ee56330db96bcbbaefb412e1e4e2",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/migrate.test.ts",
+      "bytes": 14867,
+      "sha256": "b1c785dd13dd8ec6f03addba88975418223e27a162b995a5c14f0df67a90a667",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/otio.test.ts",
+      "bytes": 5519,
+      "sha256": "8d1c900ae00241fbec6b865bb82373e64f1c8f5aa76cab86190e5a0282877317",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/parity.test.ts",
+      "bytes": 22569,
+      "sha256": "ea67a693298ae935776d63ea29a76f00f907d5ceb0cc4e55f861d87cdff67ad9",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/preview.test.ts",
+      "bytes": 16415,
+      "sha256": "672a4474581e3517780a9c6e397862eb7540b674819f9335f9fe243653e81444",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/probe.test.ts",
+      "bytes": 2324,
+      "sha256": "37597f1b4ce0a3a95901df03fd398b52b54156842121be6435491a2f92984b31",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/process-owner.test.ts",
+      "bytes": 10183,
+      "sha256": "4a6b74442451c32ffd59150196b52b9025444d08b30b62ea96fd8c674de54e48",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/provenance.test.ts",
+      "bytes": 3447,
+      "sha256": "7cb63f855411e81c356a81df6dd6f52568e066dd1544ce07d08a77f0351a62fc",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/recovery.test.ts",
+      "bytes": 8385,
+      "sha256": "f08bd721dae1906e0f3e2f2daafbb87bfc19ef7d76fa757dab6cdf9258ba997c",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/render-plan.test.ts",
+      "bytes": 6684,
+      "sha256": "00de87d02bddf91c4a5e05511e0d68f5676908c8ccc9ab0fa25fe24c1cb7030b",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/resource-policy.test.ts",
+      "bytes": 3991,
+      "sha256": "abba2dafc8f4fa8c0316f494340ad99b09e6b1e28d65dca77722e4c3fcfe8c80",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/retime.test.ts",
+      "bytes": 2150,
+      "sha256": "ec998e7d13fb222c70c445c9e11cfbde5e37070e3a7d810cfb7098cf46624ed1",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/ripple.test.ts",
+      "bytes": 7474,
+      "sha256": "bc4ff18cf3990d321c3794e5d5991878380a871c6ecc917dd4a549e908d3e8cf",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/sandbox.test.ts",
+      "bytes": 12988,
+      "sha256": "752f3eb8893a96f3590d2caad56ef7025ec87bc5d4eb69a35da6130b3a1c1f50",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/set-speed.test.ts",
+      "bytes": 3945,
+      "sha256": "7bea68ad93aff0f70dc32033996b07717c864ade1c5255cc170ffe5ddb2f6616",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/skelet-storage.test.mjs",
+      "bytes": 10186,
+      "sha256": "a90d59c15f6cbfd889aeea2f9073f5557ea862d60a1c46de138ba8cc582ccf70",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/streaming-import.test.ts",
+      "bytes": 20021,
+      "sha256": "699403ec84bd9afdd489ee714a8e02ccd9d9f71fbc40ccf0ed5ff6589f262ab4",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/studio.test.ts",
+      "bytes": 2632,
+      "sha256": "251334923c3d4f1dc50eae29d933a1b468b55f4a711edcd46a861e9f478080ae",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/time.test.ts",
+      "bytes": 4740,
+      "sha256": "f7bcd2701e9ade58f39117fdd2670f73ada9e822e4c9a97bb78b9fb10d1a0e51",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/timeline-placement.test.ts",
+      "bytes": 3133,
+      "sha256": "a32eb7e89f76397362906a7f47d77535f0c4cac4713589707be8ce1bba91090f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/timeline.test.ts",
+      "bytes": 35709,
+      "sha256": "4fbd8fee0964bb567647d0271ed610cbe5b691300056c6d1f064264b20ec648f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/typography.test.ts",
+      "bytes": 17243,
+      "sha256": "44a45a4021044a4ccd7b01b72d4d60094f4fa638bcdec39836afc5cdeeb36932",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/unsigned-rc.test.ts",
+      "bytes": 4154,
+      "sha256": "85492efb44b5b30318c5aa8ec13840b93fc208daf101e52a1986d83bcdf3034f",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/w17-quality-agents.test.ts",
+      "bytes": 3888,
+      "sha256": "f3981976d2ce2cb7e3433819860c1801fd9b03205b7c122d114e8e9a3d7586fa",
+      "inspection": "sampled-source-or-test-inspected"
+    },
+    {
+      "path": "tests/w18-audio-flow.test.ts",
+      "bytes": 5581,
+      "sha256": "5dc2acf106bd7554aeed7831d98379891893e93db5e3641345c867b3f19d4ce3",
+      "inspection": "inventory-only"
+    },
+    {
+      "path": "tests/workspace-db.test.ts",
+      "bytes": 15369,
+      "sha256": "6f3c027cf892c9327b468bab49e995a3e4e6490234900158e68210bc7e663272",
+      "inspection": "inventory-only"
+    }
+  ],
+  "inventoryFileCount": 563,
+  "sourceRootFileCount": 500,
+  "testRootFileCount": 63,
+  "subsystemStatuses": [
+    {
+      "subsystem": "Overall architecture",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Frontend framework",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "UI components/navigation",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "State management",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "SQLite database",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Canonical project",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Timeline structures/reducers",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Revision history",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Undo/redo",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Project recovery/diagnosis",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Durable jobs",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Process ownership",
+      "status": "REQUIRES INDEPENDENT VALIDATION"
+    },
+    {
+      "subsystem": "Command registry",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Content-addressed asset storage",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Native Windows helpers",
+      "status": "REQUIRES INDEPENDENT VALIDATION"
+    },
+    {
+      "subsystem": "File security",
+      "status": "REQUIRES INDEPENDENT VALIDATION"
+    },
+    {
+      "subsystem": "Media import/probe",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "FFmpeg rendering",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Libass subtitles/titles",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Export pipeline",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Preview architecture",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Backup/restoration",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "REST/local service",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "CLI",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "MCP",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "TypeScript SDK",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "OTIO interchange",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Branding source checks",
+      "status": "TESTED AND WORKING"
+    },
+    {
+      "subsystem": "Studio",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Canvas",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Cinema",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Director",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Animation",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Audio",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Timeline editor",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Effects/color/compositing",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Quality Lab",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Smart Router",
+      "status": "DISABLED"
+    },
+    {
+      "subsystem": "Existing engine adapters",
+      "status": "SCAFFOLD ONLY"
+    },
+    {
+      "subsystem": "Cloud/provider interfaces",
+      "status": "DISABLED"
+    },
+    {
+      "subsystem": "Scenes/shots",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Agent access",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Agent workflows",
+      "status": "PARTIALLY IMPLEMENTED"
+    },
+    {
+      "subsystem": "Flow",
+      "status": "WORKING WITH LIMITATIONS"
+    },
+    {
+      "subsystem": "Text/image/video generation",
+      "status": "MISSING"
+    },
+    {
+      "subsystem": "Identity/continuity execution",
+      "status": "SCAFFOLD ONLY"
+    },
+    {
+      "subsystem": "Transcription/subtitle editing/dubbing/lip sync",
+      "status": "MISSING"
+    },
+    {
+      "subsystem": "Upscaling/interpolation/restoration/tracking",
+      "status": "MISSING"
+    },
+    {
+      "subsystem": "Desktop distribution",
+      "status": "PARTIALLY IMPLEMENTED"
+    }
+  ],
+  "dependencies": {
+    "ag-psd": "31.0.3",
+    "jassub": "2.5.20",
+    "mediabunny": "1.61.3",
+    "perfect-freehand": "1.2.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "soundtouchjs": "0.3.0",
+    "three": "0.171.0",
+    "zod": "4.4.3"
+  },
+  "auditDocumentSha256": "8ac8c4bbac54687e975dae57aa925ca093f75332704a7b05abf396091eaa68db",
+  "validation": {
+    "sampledPathsExist": true,
+    "inventorySha256WellFormed": true,
+    "subsystemStatusCount": 49,
+    "productionFilesChangedByReviewer": false,
+    "fullSourceRead": false,
+    "exactHeadRuntimeQualification": false
+  }
+}
