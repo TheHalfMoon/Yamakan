@@ -24,6 +24,8 @@ Use actual `package.json` scripts and lockfile on the authorized implementation 
 
 Every implementation receipt includes task ID, branch/base/head/tree hashes, dirty status, dependency/runtime/native/FFmpeg/font/browser versions, fixture hashes, exact commands, exit codes, stdout/stderr retained location+hash, passed/failed/skipped counts, measurements, reviewer identity/context and findings disposition. A skipped/failed/unsupported scenario cannot be normalized to pass. CI is required on the exact reviewed head and verified post-merge main; changed code after review invalidates affected review/evidence.
 
+AG-DOCS activation requires YU010–015 group evidence before any default v5/user persistence promotion; individual flag-off task verification does not satisfy it. Test actual legacy project.save/edit-view/import paths for lossless preservation or explicit refusal. Restore fault matrix must prove new execution epoch/hold is checked before stale-job requeue and produces zero external/local effects or reservation releases until explicit authorized reconciliation/restart.
+
 Cross-client parity compares substantive canonical bytes or declared deterministic ID mappings. Do not remove relevant fields merely to obtain equal hashes. Reference/render parity compares full prescribed frame ranges/ROIs/audio, including source-rate conversion and titles; one attractive frame is insufficient. Crash tests assert acknowledged state, process exit and artifact roots, not only a successful HTTP response.
 
 ## Review execution policy

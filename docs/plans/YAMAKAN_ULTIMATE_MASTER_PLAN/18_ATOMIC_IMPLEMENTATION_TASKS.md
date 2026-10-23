@@ -35,7 +35,7 @@ Current: Source flags/receipts exist; narrative heads differ. User value: Avoid 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Manifest detects historical-head mismatch and disabled engines; Evidence demonstrates: Existing completed W1–W18/P10 receipts preserved; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Manifest detects historical-head mismatch and disabled engines; Evidence demonstrates: Existing completed W1–W18/P10 receipts preserved; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Remove new report generator; preserve all historical evidence.
 
@@ -72,7 +72,7 @@ Current: Fresh clone missing zod and native helper. User value: Make later regre
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Required existing scripts have exact logs and environment profile; Evidence demonstrates: Failures/skips are retained with reason; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Required existing scripts have exact logs and environment profile; Evidence demonstrates: Failures/skips are retained with reason; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Discard isolated test environment only; no user-workspace deletion.
 
@@ -109,7 +109,7 @@ Current: Duplicate A/B slots allowed; summary omits output identity. User value:
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: A/B comparison roundtrip and changed output changes evidence hash; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: A/B comparison roundtrip and changed output changes evidence hash; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep v1 reader and reject new writes if rolled back; preserve evidence.
 
@@ -146,7 +146,7 @@ Current: Complete newline frame can evade current buffer bound. User value: Keep
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Valid multi-frame stream and clean shutdown work at limits; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Valid multi-frame stream and clean shutdown work at limits; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Revert transport change; clients continue existing schema.
 
@@ -156,34 +156,37 @@ Phase 1; P0; state **PLANNED**; resource **CAN BUILD NOW**; approach **BUILD**.
 
 Current: Project v4 omits creative documents. User value: One recoverable creative project.
 
-- **Exact source:** `core/canonical.ts`, `core/store.ts`, `core/studio.ts`, `core/scene3d.ts`, `core/command/registry.ts` at baseline above. Function/call-graph context: audit01 and donor08.
-- **Donor:** https://github.com/TheHalfMoon/Yamakan @ `a3c3ce91815aee35ce5b91b4a483dd85766a4429`; `core/canonical.ts`, `core/store.ts`, `core/studio.ts`, `core/scene3d.ts`, `core/command/registry.ts`. Extend existing first-party infrastructure; existing donor notices remain binding.
-- **Targets:** `core/canonical.ts`, `core/store.ts`, `core/command/registry.ts`, NEW `core/documents.ts`, NEW `tests/creative-documents.test.ts`.
+- **Exact source:** `core/canonical.ts`, `core/store.ts`, `core/studio.ts`, `core/scene3d.ts`, `core/command/registry.ts`, `server/main.ts`, `sdk/client.ts`, `cli/main.ts` at baseline above. Function/call-graph context: audit01 and donor08.
+- **Donor:** https://github.com/TheHalfMoon/Yamakan @ `a3c3ce91815aee35ce5b91b4a483dd85766a4429`; `core/canonical.ts`, `core/store.ts`, `core/studio.ts`, `core/scene3d.ts`, `core/command/registry.ts`, `server/main.ts`, `sdk/client.ts`, `cli/main.ts`. Extend existing first-party infrastructure; existing donor notices remain binding.
+- **Targets:** `core/canonical.ts`, `core/store.ts`, `core/command/registry.ts`, NEW `core/documents.ts`, NEW `tests/creative-documents.test.ts`, `server/main.ts`, `sdk/client.ts`, `cli/main.ts`.
 - **Dependencies:** YU-001.
-- **Interfaces:** yamakan.document.get/list/commit; revision/hash/CAS return.
-- **Data:** Canonical v5 + creative_documents + snapshot_document_refs; derive media closure.
+- **Interfaces:** yamakan.document.get/list/commit; revision/hash/CAS return; POST project documents/stage streams bytes and returns sealed handle; document.commit accepts handle/hash only; browser/SDK/CLI share route and MCP uses authenticated REST staging.
+- **Data:** Canonical v5 + creative_documents + snapshot_document_refs; derive media closure; Document upload receipt/reservation/expiry/consumption metadata in existing DB; no inline large command or host path.
 
 **Implementation instructions**
 
 1. Implement10 document tables/ref schema in existing DB; strict byte and nested-reference validators.
 2. Commit document bytes/ref index/head/history/receipt/outbox atomically through ProjectStore.
 3. Define document.get/list/commit with project ownership and expected document hash; no disk await in transaction.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
+5. Audit every legacy project.save/edit-view/import path: preserve v5 creative and nested media refs losslessly server-side or explicitly reject unsupported/lossy save.
+6. Implement10 authenticated streamed document staging separately from general command ingress: 8MiB raw and canonical UTF8 whole-document cap,depth64,nodes10000,15min TTL,project/principal/hash-bound sealed receipt,proposed2active/principal and16MiB aggregate reservation; do not widen existing2MiB command/snapshot/MCP limits.
 
-**Security:** Project-scoped refs,ready-object validation,receipt digest and transactional outbox.
+**Security:** Project-scoped refs,ready-object validation,receipt digest and transactional outbox; Authenticate and reserve before stream; private sealed staging/byte-depth-node bounds; no transaction across upload; cleanup exclusion and rehash before atomic commit.
 
 **Performance:** Measure dedup/write/backup costs at8MiB bounded canvas; retain existing snapshot cap.
 
-**Tests:** Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision; Crash before/after commit retains only acknowledged complete document.
+**Tests:** Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision; Crash before/after commit retains only acknowledged complete document; Actual old/full-save and new UI/CLI/MCP paths cannot drop documents,scene/shot/media refs or round rational-rate projects; Valid2–8MiB actual serialized document crosses REST/browser/SDK/CLI staging and small MCP commit without widening ordinary caps; consumed handle replay returns same committed receipt.
 
-**Negative tests:** Unknown schema,huge UTF8/depth,foreign asset,hash mismatch reject.
+**Negative tests:** Unknown schema,huge UTF8/depth,foreign asset,hash mismatch reject; Old-client v4 projection over v5 project must preserve opaque state or refuse without commit; Unicode/escape expansion,over-cap raw/canonical,foreign/expired/changed staging handle,midstream disconnect and cleanup/commit race refuse or recover without phantom revision.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-010 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-010 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision; Evidence demonstrates: Crash before/after commit retains only acknowledged complete document; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision; Evidence demonstrates: Crash before/after commit retains only acknowledged complete document; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Restore verified pre-v5 workspace copy; old reader refuses v5 rather than drops docs.
 
@@ -197,30 +200,32 @@ Current: Canvas and Blob map are session-local. User value: Drawing survives rel
 - **Donor:** https://github.com/TheHalfMoon/Yamakan @ `a3c3ce91815aee35ce5b91b4a483dd85766a4429`; `core/studio.ts`, `src/studio/StudioCanvas.tsx`, `src/studio/host/assetStore.ts`, `src/studio/host/documentStore.ts`, `src/studio/host/port.ts`. Extend existing first-party infrastructure; existing donor notices remain binding.
 - **Targets:** `core/studio.ts`, `src/studio/StudioCanvas.tsx`, `src/studio/host/assetStore.ts`, `src/studio/host/documentStore.ts`, NEW `tests/studio-persistence.test.ts`.
 - **Dependencies:** YU-010.
-- **Interfaces:** Host async load/commit and managed bitmap resolver.
-- **Data:** Studio doc refs and snapshot media-index closure.
+- **Interfaces:** Host async load/commit and managed bitmap resolver; POST project documents/stage streams bytes and returns sealed handle; document.commit accepts handle/hash only; browser/SDK/CLI share route and MCP uses authenticated REST staging.
+- **Data:** Studio doc refs and snapshot media-index closure; Document upload receipt/reservation/expiry/consumption metadata in existing DB; no inline large command or host path.
 
 **Implementation instructions**
 
 1. Bind selected project/document lifecycle to registry; open committed document rather than always empty.
 2. Import bitmap bytes into existing managed storage before doc attach; translate engine IDs deterministically.
 3. Show pending/committed/conflict states; dispose only caches, never acknowledged assets.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
+5. Implement10 authenticated streamed document staging separately from general command ingress: 8MiB raw and canonical UTF8 whole-document cap,depth64,nodes10000,15min TTL,project/principal/hash-bound sealed receipt,proposed2active/principal and16MiB aggregate reservation; do not widen existing2MiB command/snapshot/MCP limits.
 
-**Security:** Reject unlisted nested external media/URLs and oversized canvas.
+**Security:** Reject unlisted nested external media/URLs and oversized canvas; Authenticate and reserve before stream; private sealed staging/byte-depth-node bounds; no transaction across upload; cleanup exclusion and rehash before atomic commit.
 
 **Performance:** No duplicate bitmap upload for same digest; rerun Q8–Q10 affected fixtures.
 
-**Tests:** Draw+import+commit+restart yields exact canvas/bitmap hashes; Undo/reopen and two-window conflict preserve committed state.
+**Tests:** Draw+import+commit+restart yields exact canvas/bitmap hashes; Undo/reopen and two-window conflict preserve committed state; Valid2–8MiB actual serialized document crosses REST/browser/SDK/CLI staging and small MCP commit without widening ordinary caps; consumed handle replay returns same committed receipt.
 
-**Negative tests:** Worker/browser dies between bitmap import and doc commit; no phantom ready doc.
+**Negative tests:** Worker/browser dies between bitmap import and doc commit; no phantom ready doc; Unicode/escape expansion,over-cap raw/canonical,foreign/expired/changed staging handle,midstream disconnect and cleanup/commit race refuse or recover without phantom revision.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-011 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-011 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: Draw+import+commit+restart yields exact canvas/bitmap hashes; Evidence demonstrates: Undo/reopen and two-window conflict preserve committed state; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Draw+import+commit+restart yields exact canvas/bitmap hashes; Evidence demonstrates: Undo/reopen and two-window conflict preserve committed state; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Retain imported assets and v5 snapshot; rollback UI does not erase documents.
 
@@ -242,6 +247,7 @@ Current: Mutable workspace/cinema JSON lacks project CAS. User value: Scenes bec
 1. Inventory sidecars read-only with hashes and validate UUID/schema/bytes.
 2. Stage unassigned scenes; require explicit project selection; never infer ownership.
 3. Import idempotently to canonical document refs; preserve originals and migration receipts.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
 
 **Security:** No new absolute client paths; project ownership checks.
 
@@ -251,13 +257,13 @@ Current: Mutable workspace/cinema JSON lacks project CAS. User value: Scenes bec
 
 **Negative tests:** Truncated/duplicate/reparse/case alias/foreign IDs cannot overwrite originals.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-012 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-012 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: Scene save/reopen/undo and migration retry preserve exact content; Evidence demonstrates: Two simultaneous scene saves conflict safely; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Scene save/reopen/undo and migration retry preserve exact content; Evidence demonstrates: Two simultaneous scene saves conflict safely; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Restore pre-migration workspace; retained sidecars remain original.
 
@@ -279,22 +285,25 @@ Current: JSON read-modify-write state has no uniform CAS. User value: Reliable a
 1. Add run/version/stage attempt and append-only consent/revocation/encoding ledger tables in same DB.
 2. Use receipts/CAS for every mutation; verify actual managed outputs instead of trusting hashes.
 3. Map legacy runs by existing project IDs; restored consents require revalidation; integrate JobSupervisor references.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
+5. On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart.
+6. Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act.
 
-**Security:** Human-only grants,revocation monotonicity,immutable effects receipts.
+**Security:** Human-only grants,revocation monotonicity,immutable effects receipts; Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival.
 
 **Performance:** Bound run history queries; no second queue or scheduler.
 
-**Tests:** Concurrent advance/approve and lost-response replay retain one result; Revoke and dependent invalidation atomic; old project restore cannot un-revoke.
+**Tests:** Concurrent advance/approve and lost-response replay retain one result; Revoke and dependent invalidation atomic; old project restore cannot un-revoke; Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts.
 
-**Negative tests:** Missing output,stale approval,agent human-scope,revocation race refuse.
+**Negative tests:** Missing output,stale approval,agent human-scope,revocation race refuse; Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-013 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-013 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: Concurrent advance/approve and lost-response replay retain one result; Evidence demonstrates: Revoke and dependent invalidation atomic; old project restore cannot un-revoke; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Concurrent advance/approve and lost-response replay retain one result; Evidence demonstrates: Revoke and dependent invalidation atomic; old project restore cannot un-revoke; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Restore verified DB backup under fail-closed consent policy; no permissive sidecar fallback.
 
@@ -316,22 +325,25 @@ Current: Backup currently DB+managed media only. User value: Recover complete fi
 1. Derive backup refs from destination snapshot including all creative docs and nested media.
 2. Seal security/run state with explicit restore/revalidation policy; retain backup pins/barrier invariants.
 3. Add concurrent edit/import/GC and kill-seam restoration fixtures.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
+5. On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart.
+6. Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act.
 
-**Security:** No credentials exported; old artistic snapshot cannot restore authorization.
+**Security:** No credentials exported; old artistic snapshot cannot restore authorization; Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival.
 
 **Performance:** Measure barrier duration/bytes and restore latency on S/M; no weakened existing policy.
 
-**Tests:** Canvas pixels,scene,story,run and revoked-consent state survive verified restore; Destination-snapshot closure stable during concurrent live edits.
+**Tests:** Canvas pixels,scene,story,run and revoked-consent state survive verified restore; Destination-snapshot closure stable during concurrent live edits; Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts.
 
-**Negative tests:** Missing blob,corrupt doc,ENOSPC,junction,partial publication -> safe failure.
+**Negative tests:** Missing blob,corrupt doc,ENOSPC,junction,partial publication -> safe failure; Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-014 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-014 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: Canvas pixels,scene,story,run and revoked-consent state survive verified restore; Evidence demonstrates: Destination-snapshot closure stable during concurrent live edits; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Canvas pixels,scene,story,run and revoked-consent state survive verified restore; Evidence demonstrates: Destination-snapshot closure stable during concurrent live edits; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep old backups readable with explicit incomplete-creative label; retain source workspace.
 
@@ -353,22 +365,24 @@ Current: Local UI drafts/full save differ from per-writer DB undo. User value: S
 1. Map each edit gesture to bounded existing/new typed operation; keep drag preview ephemeral.
 2. Commit on gesture completion and reconcile server head; preserve unsaved draft UX during migration.
 3. Use server writer-scoped undo/redo for committed edits; explicit conflict recovery, not overwrite.
+4. Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together.
+5. Audit every legacy project.save/edit-view/import path: preserve v5 creative and nested media refs losslessly server-side or explicitly reject unsupported/lossy save.
 
 **Security:** No bypass via project.save; scoped expected revision checked.
 
 **Performance:** Candidate edit feedback/ack budgets in12; measure before optimize.
 
-**Tests:** UI/CLI/MCP edit sequences yield equal canonical hashes; Undo after restart cannot undo another writer;100gestures produce expected receipts.
+**Tests:** UI/CLI/MCP edit sequences yield equal canonical hashes; Undo after restart cannot undo another writer;100gestures produce expected receipts; Actual old/full-save and new UI/CLI/MCP paths cannot drop documents,scene/shot/media refs or round rational-rate projects.
 
-**Negative tests:** Lost response,replay mismatch,concurrent agent edit,crash mid-drag safe.
+**Negative tests:** Lost response,replay mismatch,concurrent agent edit,crash mid-drag safe; Old-client v4 projection over v5 project must preserve opaque state or refuse without commit.
 
-**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-015 receipt linking code, tests, review identities and Windows/profile limitations.
+**Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-015 receipt linking code, tests, review identities and Windows/profile limitations; AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion.
 
 **Review gates:** Fresh-context correctness/parsimony/product review over immutable implementation diff; Independent security review for changed boundary; d1 advisory cannot satisfy it.
 
-**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
+**Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority; Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status.
 
-**Definition of done:** Evidence demonstrates: UI/CLI/MCP edit sequences yield equal canonical hashes; Evidence demonstrates: Undo after restart cannot undo another writer;100gestures produce expected receipts; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: UI/CLI/MCP edit sequences yield equal canonical hashes; Evidence demonstrates: Undo after restart cannot undo another writer;100gestures produce expected receipts; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Feature-gated migration can retain old draft workflow with honest limitations; no lost acknowledged edits.
 
@@ -405,7 +419,7 @@ Current: Browser fetches full media on revision changes. User value: Large media
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: 100edits of same media cause no repeated full original fetch; Evidence demonstrates: Long file tile/zoom fidelity and peak extrema match reference; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: 100edits of same media cause no repeated full original fetch; Evidence demonstrates: Long file tile/zoom fidelity and peak extrema match reference; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Drop peak cache and use bounded placeholder; never delete originals.
 
@@ -442,7 +456,7 @@ Current: CFR derivatives exist; general proxy workflow incomplete. User value: S
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Proxy toggle preserves trims/PTS/audio and final render source; Evidence demonstrates: Restart completes or quarantines partial proxy; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Proxy toggle preserves trims/PTS/audio and final render source; Evidence demonstrates: Restart completes or quarantines partial proxy; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable proxy selection; regenerate caches from retained source.
 
@@ -479,7 +493,7 @@ Current: Canvas and reference renderer differ. User value: Trust playback while 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Reference/interactive parity on supported fixtures; revision invalidates stale frame; Evidence demonstrates: Audio drift and minimum-window playback recorded under background export; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Reference/interactive parity on supported fixtures; revision invalidates stale frame; Evidence demonstrates: Audio drift and minimum-window playback recorded under background export; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Revert optimization and evict new cache keys; keep reference path.
 
@@ -516,7 +530,7 @@ Current: Canonical rational core projects through30fps view. User value: Correct
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Boundary frames at long timestamps and mixed source rates roundtrip; Evidence demonstrates: Video/audio duration and title cues match rational golden fixtures; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Boundary frames at long timestamps and mixed source rates roundtrip; Evidence demonstrates: Video/audio duration and title cues match rational golden fixtures; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Old projects remain supported; new unsupported-rate projects read-only in rollback.
 
@@ -553,7 +567,7 @@ Current: Effects UI utilities are not canonical/export stack. User value: Reliab
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Persist/undo/reopen/export transform matches golden ROIs; Evidence demonstrates: Preview identity/noop preserves old project output; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Persist/undo/reopen/export transform matches golden ROIs; Evidence demonstrates: Preview identity/noop preserves old project output; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable new effect writes; preserve versioned read/preflight, never silently drop effects.
 
@@ -590,7 +604,7 @@ Current: No qualified transition contract. User value: Polished cuts without hid
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Cut/dissolve boundaries and audio duration golden tests; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Cut/dissolve boundaries and audio duration golden tests; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Clear only through explicit undo or migration; rollback reader refuses unsupported transition.
 
@@ -611,7 +625,7 @@ Current: Opacity/volume chain cost grows per frame. User value: Usable animated 
 
 1. Compile bounded piecewise curves or bounded segments with explicit tolerance.
 2. Preserve exact hold/linear/Bezier semantics against current sampler.
-3. Add transform channels only after020 parity and complexity gate.
+3. Keep this task limited to existing opacity/volume; transform animation is deferred to a separately scoped follow-up after YU020 and YU022 qualification.
 
 **Security:** Generated expressions server-owned and bounded.
 
@@ -627,7 +641,7 @@ Current: Opacity/volume chain cost grows per frame. User value: Usable animated 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Sampled curve/video/audio matches reference over keys,steps and ends; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Sampled curve/video/audio matches reference over keys,steps and ends; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Retain old compiler for old bounded profiles and version receipts.
 
@@ -664,7 +678,7 @@ Current: No canonical color pipeline/LUT parity. User value: Predictable finishi
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Legal/full range and known color chart roundtrip within frozen tolerance; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Legal/full range and known color chart roundtrip within frozen tolerance; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Revert to qualified SDR defaults; unsupported edits remain visible/read-only.
 
@@ -701,7 +715,7 @@ Current: ASS titles exist; subtitle editor/ASR absent. User value: Bilingual fin
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Cue times/escaping/mixed-script roundtrip and preview/export golden frames; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Cue times/escaping/mixed-script roundtrip and preview/export golden frames; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep original subtitle asset and cue document; rollback read-only rather than drops.
 
@@ -738,7 +752,7 @@ Current: Repair exists; polished relink/batch journey incomplete. User value: Fi
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Missing-media repair and three aspect variants reopen/re-export deterministically; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Missing-media repair and three aspect variants reopen/re-export deterministically; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Undo source replacement; cancel batch leaves old exports and source untouched.
 
@@ -775,7 +789,7 @@ Current: 200clips/16tracks/10min/1080p output bounds. User value: Credible long/
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Named profiles pass or refuse exactly; no hidden clamp; Evidence demonstrates: Backup/open/edit/restore under stress retain acknowledged state; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Named profiles pass or refuse exactly; no hidden clamp; Evidence demonstrates: Backup/open/edit/restore under stress retain acknowledged state; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Revert profile availability; preserve new projects for safe read/explicit migration.
 
@@ -812,7 +826,7 @@ Current: Creative panels disconnected from full lifecycle. User value: Cohesive 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Six journeys reach same project/assets; reload preserves selection policy; Evidence demonstrates: Keyboard/focus/RTL/zoom/error/empty states reviewed; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Six journeys reach same project/assets; reload preserves selection policy; Evidence demonstrates: Keyboard/focus/RTL/zoom/error/empty states reviewed; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep prior shell behind bounded UI flag; canonical docs unchanged.
 
@@ -849,7 +863,7 @@ Current: Scenes/shots metadata exist; reusable packs incomplete. User value: Pla
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Three-shot manual storyboard->timeline->reopen preserves refs and timings; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Three-shot manual storyboard->timeline->reopen preserves refs and timings; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Retain story documents and existing scenes; new writes can be disabled.
 
@@ -886,7 +900,7 @@ Current: No coherent take-to-timeline revision workflow. User value: Revise one 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Replace one of three shots; unrelated project bytes/semantics preserved; Evidence demonstrates: Undo/reopen returns exact old take; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Replace one of three shots; unrelated project bytes/semantics preserved; Evidence demonstrates: Undo/reopen returns exact old take; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Undo creates new revision; old media remains rooted.
 
@@ -923,7 +937,7 @@ Current: v1 graph/class_type and whole byte arrays. User value: Portable future 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Fake/absent/v1 parity and bounded handle IO; Evidence demonstrates: Unsupported controls fail before spawn; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Fake/absent/v1 parity and bounded handle IO; Evidence demonstrates: Unsupported controls fail before spawn; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep v1 reader/fake tests; disable v2 routes without data loss.
 
@@ -950,9 +964,9 @@ Current: Existing single-process policy not Python tree proof. User value: Safe 
 
 **Performance:** Enforce declared memory/wall/process/disk/diagnostic budgets.
 
-**Tests:** Service/helper/worker death leaves no live/suspended orphan; Read sentinels and outbound DNS/TCP/HTTP denied on target profile.
+**Tests:** Service/helper/worker death leaves no live/suspended orphan; Read sentinels and outbound DNS/TCP/HTTP denied on target profile; Every isolation negative has same-environment positive controls: unrestricted sentinel access works,restricted worker alive,authorized staging IO and permitted descendants succeed.
 
-**Negative tests:** WMI/task scheduler/foreign file/junction/inherited handle/AV lock fail safely.
+**Negative tests:** WMI/task scheduler/foreign file/junction/inherited handle/AV lock fail safely; Missing/crashing worker,unreachable sentinel/disconnected network or failed positive control invalidates sandbox denial result.
 
 **Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-041 receipt linking code, tests, review identities and Windows/profile limitations.
 
@@ -960,7 +974,7 @@ Current: Existing single-process policy not Python tree proof. User value: Safe 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Service/helper/worker death leaves no live/suspended orphan; Evidence demonstrates: Read sentinels and outbound DNS/TCP/HTTP denied on target profile; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Service/helper/worker death leaves no live/suspended orphan; Evidence demonstrates: Read sentinels and outbound DNS/TCP/HTTP denied on target profile; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable new profile and retain existing FFmpeg profile; quarantine incomplete attempts.
 
@@ -997,7 +1011,7 @@ Current: Absent capability exists only at scaffold. User value: Honest no-engine
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Absent/corrupt files refuse before inference; offline editor remains usable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Absent/corrupt files refuse before inference; offline editor remains usable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable discovery; engineAbsentCapability remains safe fallback.
 
@@ -1034,7 +1048,7 @@ Current: Some native model repos discovery-only; no executed bake-off. User valu
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: All selected source paths/pins/licenses/transitive closure validated; Evidence demonstrates: Document unsupported controls and cancellation semantics; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: All selected source paths/pins/licenses/transitive closure validated; Evidence demonstrates: Document unsupported controls and cancellation semantics; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Retain candidate records; no production dependency to roll back.
 
@@ -1071,7 +1085,7 @@ Current: Camera/lens metadata is not applied model control. User value: Honest c
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Supported fake recipe maps deterministically with provenance; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Supported fake recipe maps deterministically with provenance; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Retain intent; disable specific compiler recipe without changing shots.
 
@@ -1108,7 +1122,7 @@ Current: Identity encoding hashes not fidelity proof. User value: Reusable subje
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Pack update leaves old takes traceable; revoked grant blocks new effect; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Pack update leaves old takes traceable; revoked grant blocks new effect; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable new use; retain authorized historical artifact records under retention policy.
 
@@ -1145,7 +1159,7 @@ Current: Manual stage approvals lack full action-list proposal. User value: Supe
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Approved exact plan applies once; UI/MCP see same result; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Approved exact plan applies once; UI/MCP see same result; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Expire/disable pending proposals; committed edits undone by normal revisions.
 
@@ -1167,14 +1181,16 @@ Current: Director manual receipts only; no real executor. User value: Complete e
 1. Map approved manual/import stages to existing jobs and registered artifact validation.
 2. Persist command intent/result per stage attempt; checkpoint after committed effects.
 3. Interrupt/restart at every stage; revise one shot and export through canonical path.
+4. On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart.
+5. Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act.
 
-**Security:** No arbitrary tools/code or automatic paid/model step.
+**Security:** No arbitrary tools/code or automatic paid/model step; Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival.
 
 **Performance:** Finite stages/tool/attempt/wall limits and bounded queue.
 
-**Tests:** Three-shot storyboard->editable timeline->export->backup->restore succeeds; Resume never duplicates clips/assets/approval/effect.
+**Tests:** Three-shot storyboard->editable timeline->export->backup->restore succeeds; Resume never duplicates clips/assets/approval/effect; Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts.
 
-**Negative tests:** Missing artifact,forged completion,stale lease,cancel/publication race safe.
+**Negative tests:** Missing artifact,forged completion,stale lease,cancel/publication race safe; Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect.
 
 **Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-061 receipt linking code, tests, review identities and Windows/profile limitations.
 
@@ -1182,7 +1198,7 @@ Current: Director manual receipts only; no real executor. User value: Complete e
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Three-shot storyboard->editable timeline->export->backup->restore succeeds; Evidence demonstrates: Resume never duplicates clips/assets/approval/effect; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Three-shot storyboard->editable timeline->export->backup->restore succeeds; Evidence demonstrates: Resume never duplicates clips/assets/approval/effect; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Stop new runs; retain committed stages/outputs and normal edit history.
 
@@ -1219,7 +1235,7 @@ Current: CLI/SDK progress and cancellation semantics incomplete. User value: Rel
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Equivalent workflow commands yield canonical parity and reconnect progress; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Equivalent workflow commands yield canonical parity and reconnect progress; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Backward-compatible clients can poll existing status; no new daemon.
 
@@ -1256,7 +1272,7 @@ Current: No ASR; captions import can work now. User value: Future local bilingua
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Stub word/cue timestamps roundtrip into editable captions; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Stub word/cue timestamps roundtrip into editable captions; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable ASR capability; imported captions remain fully functional.
 
@@ -1293,7 +1309,7 @@ Current: No registered stabilization/scene detection workers. User value: Useful
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Output decodes and preserves declared timing/audio/source; scene marks reference exact frames; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Output decodes and preserves declared timing/audio/source; scene marks reference exact frames; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable repair route and retain original/take.
 
@@ -1330,7 +1346,7 @@ Current: Source inspected hazards; no model entitlement/runtime. User value: Avo
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Authorized full-clip temporal/audio/quality and cancellation evidence retained; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Authorized full-clip temporal/audio/quality and cancellation evidence retained; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep route disabled; retain original and test evidence.
 
@@ -1352,14 +1368,16 @@ Current: OTIO subset and recovery not full portable creative export. User value:
 1. Export canonical docs+media+hash manifest without credentials/host paths.
 2. OTIO export/import supports declared subset and a per-feature loss report.
 3. Traversal/case/symlink/expansion-safe import creates separate new project proposal.
+4. On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart.
+5. Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act.
 
-**Security:** No archive authority over scopes/consents/paths or plugin execution.
+**Security:** No archive authority over scopes/consents/paths or plugin execution; Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival.
 
 **Performance:** Streaming bounds and disk reservation before extraction.
 
-**Tests:** Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy.
+**Tests:** Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy; Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts.
 
-**Negative tests:** Zip slip/case collision/decompression bomb/missing blob/unknown version safe.
+**Negative tests:** Zip slip/case collision/decompression bomb/missing blob/unknown version safe; Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect.
 
 **Required evidence:** Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes; Command logs and actual test outcomes including failures/skips; A YU-080 receipt linking code, tests, review identities and Windows/profile limitations.
 
@@ -1367,7 +1385,7 @@ Current: OTIO subset and recovery not full portable creative export. User value:
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep source project/backup; imported project is separate.
 
@@ -1404,7 +1422,7 @@ Current: Take replacements and agent journey unqualified. User value: Potential 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Selective revision preserves unrelated clips/docs and remains editable/restorable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Selective revision preserves unrelated clips/docs and remains editable/restorable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Remove evaluation-only harness; retain immutable evidence.
 
@@ -1441,7 +1459,7 @@ Current: Only plan/summary exists; no scientific comparative runner. User value:
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Synthetic known results recompute and repeated prompt/rater clustering respected; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Synthetic known results recompute and repeated prompt/rater clustering respected; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep old summary readable; published outcomes immutable.
 
@@ -1478,7 +1496,7 @@ Current: Historical fixtures not exact new-head qualification. User value: Evide
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: All claimed editing/recovery/profile gates execute and pass or explicitly block; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: All claimed editing/recovery/profile gates execute and pass or explicitly block; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Disable unqualified capabilities; retain last verified artifact.
 
@@ -1515,7 +1533,7 @@ Current: No weights/GPU/budget/entitlement authorized. User value: Evidence of a
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Actual complete-clip probe/quality/resource/cancel/recovery results retained; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Actual complete-clip probe/quality/resource/cancel/recovery results retained; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep engine disabled and preserve offline editing.
 
@@ -1552,7 +1570,7 @@ Current: Automated RTL only; no actual human study. User value: Trust bilingual 
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: H1 scoped review and accessible journeys signed by actual reviewers; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: H1 scoped review and accessible journeys signed by actual reviewers; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep unresolved claims unavailable and preserve report.
 
@@ -1589,7 +1607,7 @@ Current: Release NO-GO; historical RC only. User value: Concrete reviewable rele
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Missing/stale/failed gate makes NO-GO; signed-off scope verifiable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Missing/stale/failed gate makes NO-GO; signed-off scope verifiable; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep last known verified package and NO-GO report.
 
@@ -1626,6 +1644,6 @@ Current: H2–H5/AuthentiCode open. User value: Legitimate Windows release readi
 
 **Merge conditions:** Separately authorized implementation scope; dependencies VERIFIED; Required targeted and repository gates pass on exact head; no unresolved must-fix; Donor provenance/import guard passes; flags stay off unless separately qualified; Normal bounded PR; no force push or implied model/spend/release authority.
 
-**Definition of done:** Evidence demonstrates: Actual H2–H5 and applicable signing/update receipts bound to same artifact; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
+**Definition of done:** Evidence demonstrates: Actual H2–H5 and applicable signing/update receipts bound to same artifact; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained; All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card.
 
 **Rollback:** Keep NO-GO; preserve unsigned RC and prior installer rollback.

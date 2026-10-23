@@ -31,6 +31,11 @@ const visiting=new Set(),done=new Set();
 function visit(id){if(visiting.has(id)){errors.push('Dependency cycle '+id);return;}if(done.has(id))return;const t=map.get(id);if(!t){errors.push('Unknown dependency '+id);return;}visiting.add(id);for(const d of t.dependencies)visit(d);visiting.delete(id);done.add(id);}
 for(const id of map.keys())visit(id);
 const actualEdges=reg.tasks.flatMap(t=>t.dependencies.map(d=>d+'>'+t.id)).sort();
+for(const [id,g]of Object.entries(reg.activationGroups??{})){
+ if(g.initiallyEnabled!==false)errors.push('Unexpected enabled activation group '+id);
+ for(const task of g.requires)if(!map.has(task))errors.push('Unknown activation task '+task);
+}
+if((reg.activationGroups?.['AG-DOCS']?.requires?.length??0)!==6)errors.push('Missing shared creative activation gate');
 const declaredEdges=dag.edges.map(e=>e.from+'>'+e.to).sort();
 if(JSON.stringify(actualEdges)!==JSON.stringify(declaredEdges))errors.push('DAG does not match registry');
 checks.push({name:'task fields, source paths, pins and DAG',tasks:reg.tasks.length,edges:actualEdges.length,acyclic:!errors.some(x=>x.includes('cycle'))});
@@ -63,7 +68,8 @@ checks.push({name:'documentation-only scope',changedTracked:changed.length,untra
 for(const [p,needle]of [['core/engines/contract.ts','ENGINE_ENABLED = false'],['core/router/explain.ts','ROUTER_PROVIDERS_ENABLED = false'],['core/preview/jassub-flags.ts','JASSUB_ENABLED = false']])if(!(await readFile(resolve(repo,p),'utf8')).includes(needle))errors.push('Disabled invariant changed '+p);
 checks.push({name:'engine/provider/JASSUB disabled source invariants',verified:true});
 warnings.push('No product functionality, native/media runtime, model quality, human gate or release is qualified by this validator.');
-const report={schema:'yamakan.plan-validation/v1',checkedAt:new Date().toISOString(),baseline:reg.baseline,result:errors.length?'FAIL':'PASS_WITH_EXPLICIT_LIMITATIONS',checks,errors,warnings};
+const checkedHead=execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim();
+const report={schema:'yamakan.plan-validation/v1',checkedAt:new Date().toISOString(),checkedHead,baseline:reg.baseline,result:errors.length?'FAIL':'PASS_WITH_EXPLICIT_LIMITATIONS',checks,errors,warnings};
 await writeFile(resolve(here,'evidence/plan-validation.json'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
 process.exitCode=errors.length?1:0;

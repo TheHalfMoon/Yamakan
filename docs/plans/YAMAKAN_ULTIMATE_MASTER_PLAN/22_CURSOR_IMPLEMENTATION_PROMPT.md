@@ -26,6 +26,8 @@ Canonical plan: this directory at its approved Git commit. Task specification: `
 
 Allowed progression: `PLANNED → READY → IN_PROGRESS → TESTING → REVIEW → MERGED → VERIFIED`, with `BLOCKED`, `DEFERRED`, `REJECTED` carrying explicit reason/evidence. READY requires verified dependencies, authorization and resource availability. TESTING requires actual code plus test selection. REVIEW requires test receipts and immutable diff. MERGED requires actual GitHub merge identity. VERIFIED requires post-merge current-head verification. A failed review returns to IN_PROGRESS/TESTING; changing code invalidates affected evidence. No undocumented skips between states.
 
+Task verification and capability activation are separate. AG-DOCS requires YU010–015 group evidence for lossless old-client/full-save/undo and complete creative recovery before default v5/user persistence is enabled. Every receipt states flag/activation status. Restoring/importing a workspace resets execution identity and holds copied jobs/proposals/approvals; opening it cannot automatically run effects or release unsettled reservations. Use10 staging handles for large documents without widening existing general command/snapshot/MCP limits.
+
 Future receipt path convention: `docs/evidence/ultimate/tasks/<taskId>/<headSha>.json`. Required fields: taskId, state, scopeAuthorizationRef, start/base/head/tree hashes, file/donor/runtime/fixture manifests, exact commands/results, measurements, failures/skips, reviewer identities/context hashes/findings, PR URL, merge/post-merge SHA+CI and rollback evidence. Sensitive raw assets/logs remain in approved private storage with public hashes/locations; no credentials.
 
 ## Parallel and PR rules

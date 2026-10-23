@@ -3,6 +3,20 @@
   "planningDate": "2026-10-23",
   "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
   "implementationAuthorized": false,
+  "activationGroups": {
+    "AG-DOCS": {
+      "requires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ],
+      "initiallyEnabled": false,
+      "rule": "All dependencies verified plus group legacy-save,undo,reopen,complete-backup/restore and actual UI/client tests; separate reviewed activation receipt."
+    }
+  },
   "authorizationNote": "Research/planning branch only. All tasks remain future work; no READY without separate founder scope and verified dependencies.",
   "tasks": [
     {
@@ -87,7 +101,8 @@
         "Evidence demonstrates: Manifest detects historical-head mismatch and disabled engines",
         "Evidence demonstrates: Existing completed W1–W18/P10 receipts preserved",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -174,7 +189,8 @@
         "Evidence demonstrates: Required existing scripts have exact logs and environment profile",
         "Evidence demonstrates: Failures/skips are retained with reason",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -259,7 +275,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: A/B comparison roundtrip and changed output changes evidence hash",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -344,7 +361,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Valid multi-frame stream and clean shutdown work at limits",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -364,7 +382,10 @@
         "core/store.ts",
         "core/studio.ts",
         "core/scene3d.ts",
-        "core/command/registry.ts"
+        "core/command/registry.ts",
+        "server/main.ts",
+        "sdk/client.ts",
+        "cli/main.ts"
       ],
       "targetFiles": [
         {
@@ -386,6 +407,18 @@
         {
           "path": "tests/creative-documents.test.ts",
           "proposed": true
+        },
+        {
+          "path": "server/main.ts",
+          "proposed": false
+        },
+        {
+          "path": "sdk/client.ts",
+          "proposed": false
+        },
+        {
+          "path": "cli/main.ts",
+          "proposed": false
         }
       ],
       "dependencies": [
@@ -394,13 +427,18 @@
       "instructions": [
         "Implement10 document tables/ref schema in existing DB; strict byte and nested-reference validators",
         "Commit document bytes/ref index/head/history/receipt/outbox atomically through ProjectStore",
-        "Define document.get/list/commit with project ownership and expected document hash; no disk await in transaction"
+        "Define document.get/list/commit with project ownership and expected document hash; no disk await in transaction",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together",
+        "Audit every legacy project.save/edit-view/import path: preserve v5 creative and nested media refs losslessly server-side or explicitly reject unsupported/lossy save",
+        "Implement10 authenticated streamed document staging separately from general command ingress: 8MiB raw and canonical UTF8 whole-document cap,depth64,nodes10000,15min TTL,project/principal/hash-bound sealed receipt,proposed2active/principal and16MiB aggregate reservation; do not widen existing2MiB command/snapshot/MCP limits"
       ],
       "interfaceChanges": [
-        "yamakan.document.get/list/commit; revision/hash/CAS return"
+        "yamakan.document.get/list/commit; revision/hash/CAS return",
+        "POST project documents/stage streams bytes and returns sealed handle; document.commit accepts handle/hash only; browser/SDK/CLI share route and MCP uses authenticated REST staging"
       ],
       "dataModelChanges": [
-        "Canonical v5 + creative_documents + snapshot_document_refs; derive media closure"
+        "Canonical v5 + creative_documents + snapshot_document_refs; derive media closure",
+        "Document upload receipt/reservation/expiry/consumption metadata in existing DB; no inline large command or host path"
       ],
       "primaryApproach": "BUILD",
       "donor": {
@@ -411,28 +449,37 @@
           "core/store.ts",
           "core/studio.ts",
           "core/scene3d.ts",
-          "core/command/registry.ts"
+          "core/command/registry.ts",
+          "server/main.ts",
+          "sdk/client.ts",
+          "cli/main.ts"
         ],
         "approach": "BUILD",
         "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
       },
       "securityControls": [
-        "Project-scoped refs,ready-object validation,receipt digest and transactional outbox"
+        "Project-scoped refs,ready-object validation,receipt digest and transactional outbox",
+        "Authenticate and reserve before stream; private sealed staging/byte-depth-node bounds; no transaction across upload; cleanup exclusion and rehash before atomic commit"
       ],
       "performanceCriteria": [
         "Measure dedup/write/backup costs at8MiB bounded canvas; retain existing snapshot cap"
       ],
       "tests": [
         "Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision",
-        "Crash before/after commit retains only acknowledged complete document"
+        "Crash before/after commit retains only acknowledged complete document",
+        "Actual old/full-save and new UI/CLI/MCP paths cannot drop documents,scene/shot/media refs or round rational-rate projects",
+        "Valid2–8MiB actual serialized document crosses REST/browser/SDK/CLI staging and small MCP commit without widening ordinary caps; consumed handle replay returns same committed receipt"
       ],
       "negativeTests": [
-        "Unknown schema,huge UTF8/depth,foreign asset,hash mismatch reject"
+        "Unknown schema,huge UTF8/depth,foreign asset,hash mismatch reject",
+        "Old-client v4 projection over v5 project must preserve opaque state or refuse without commit",
+        "Unicode/escape expansion,over-cap raw/canonical,foreign/expired/changed staging handle,midstream disconnect and cleanup/commit race refuse or recover without phantom revision"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-010 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-010 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -443,18 +490,29 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: Two writers -> one commit/one conflict; replay returns exact receipt; undo creates new revision",
         "Evidence demonstrates: Crash before/after commit retains only acknowledged complete document",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-011",
@@ -499,13 +557,17 @@
       "instructions": [
         "Bind selected project/document lifecycle to registry; open committed document rather than always empty",
         "Import bitmap bytes into existing managed storage before doc attach; translate engine IDs deterministically",
-        "Show pending/committed/conflict states; dispose only caches, never acknowledged assets"
+        "Show pending/committed/conflict states; dispose only caches, never acknowledged assets",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together",
+        "Implement10 authenticated streamed document staging separately from general command ingress: 8MiB raw and canonical UTF8 whole-document cap,depth64,nodes10000,15min TTL,project/principal/hash-bound sealed receipt,proposed2active/principal and16MiB aggregate reservation; do not widen existing2MiB command/snapshot/MCP limits"
       ],
       "interfaceChanges": [
-        "Host async load/commit and managed bitmap resolver"
+        "Host async load/commit and managed bitmap resolver",
+        "POST project documents/stage streams bytes and returns sealed handle; document.commit accepts handle/hash only; browser/SDK/CLI share route and MCP uses authenticated REST staging"
       ],
       "dataModelChanges": [
-        "Studio doc refs and snapshot media-index closure"
+        "Studio doc refs and snapshot media-index closure",
+        "Document upload receipt/reservation/expiry/consumption metadata in existing DB; no inline large command or host path"
       ],
       "primaryApproach": "BUILD",
       "donor": {
@@ -522,22 +584,26 @@
         "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
       },
       "securityControls": [
-        "Reject unlisted nested external media/URLs and oversized canvas"
+        "Reject unlisted nested external media/URLs and oversized canvas",
+        "Authenticate and reserve before stream; private sealed staging/byte-depth-node bounds; no transaction across upload; cleanup exclusion and rehash before atomic commit"
       ],
       "performanceCriteria": [
         "No duplicate bitmap upload for same digest; rerun Q8–Q10 affected fixtures"
       ],
       "tests": [
         "Draw+import+commit+restart yields exact canvas/bitmap hashes",
-        "Undo/reopen and two-window conflict preserve committed state"
+        "Undo/reopen and two-window conflict preserve committed state",
+        "Valid2–8MiB actual serialized document crosses REST/browser/SDK/CLI staging and small MCP commit without widening ordinary caps; consumed handle replay returns same committed receipt"
       ],
       "negativeTests": [
-        "Worker/browser dies between bitmap import and doc commit; no phantom ready doc"
+        "Worker/browser dies between bitmap import and doc commit; no phantom ready doc",
+        "Unicode/escape expansion,over-cap raw/canonical,foreign/expired/changed staging handle,midstream disconnect and cleanup/commit race refuse or recover without phantom revision"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-011 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-011 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -548,18 +614,29 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: Draw+import+commit+restart yields exact canvas/bitmap hashes",
         "Evidence demonstrates: Undo/reopen and two-window conflict preserve committed state",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-012",
@@ -599,7 +676,8 @@
       "instructions": [
         "Inventory sidecars read-only with hashes and validate UUID/schema/bytes",
         "Stage unassigned scenes; require explicit project selection; never infer ownership",
-        "Import idempotently to canonical document refs; preserve originals and migration receipts"
+        "Import idempotently to canonical document refs; preserve originals and migration receipts",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together"
       ],
       "interfaceChanges": [
         "scene commands gain projectId/expectedRevision/document hash; explicit legacy import"
@@ -636,7 +714,8 @@
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-012 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-012 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -647,18 +726,29 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: Scene save/reopen/undo and migration retry preserve exact content",
         "Evidence demonstrates: Two simultaneous scene saves conflict safely",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-013",
@@ -699,7 +789,10 @@
       "instructions": [
         "Add run/version/stage attempt and append-only consent/revocation/encoding ledger tables in same DB",
         "Use receipts/CAS for every mutation; verify actual managed outputs instead of trusting hashes",
-        "Map legacy runs by existing project IDs; restored consents require revalidation; integrate JobSupervisor references"
+        "Map legacy runs by existing project IDs; restored consents require revalidation; integrate JobSupervisor references",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together",
+        "On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart",
+        "Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act"
       ],
       "interfaceChanges": [
         "Versioned run CAS; approvals bind revision/proposal/output/expiry"
@@ -722,22 +815,26 @@
         "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
       },
       "securityControls": [
-        "Human-only grants,revocation monotonicity,immutable effects receipts"
+        "Human-only grants,revocation monotonicity,immutable effects receipts",
+        "Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival"
       ],
       "performanceCriteria": [
         "Bound run history queries; no second queue or scheduler"
       ],
       "tests": [
         "Concurrent advance/approve and lost-response replay retain one result",
-        "Revoke and dependent invalidation atomic; old project restore cannot un-revoke"
+        "Revoke and dependent invalidation atomic; old project restore cannot un-revoke",
+        "Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts"
       ],
       "negativeTests": [
-        "Missing output,stale approval,agent human-scope,revocation race refuse"
+        "Missing output,stale approval,agent human-scope,revocation race refuse",
+        "Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-013 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-013 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -748,18 +845,30 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: Concurrent advance/approve and lost-response replay retain one result",
         "Evidence demonstrates: Revoke and dependent invalidation atomic; old project restore cannot un-revoke",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-014",
@@ -801,7 +910,10 @@
       "instructions": [
         "Derive backup refs from destination snapshot including all creative docs and nested media",
         "Seal security/run state with explicit restore/revalidation policy; retain backup pins/barrier invariants",
-        "Add concurrent edit/import/GC and kill-seam restoration fixtures"
+        "Add concurrent edit/import/GC and kill-seam restoration fixtures",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together",
+        "On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart",
+        "Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act"
       ],
       "interfaceChanges": [
         "Version manifest to declare complete creative scope and limitations"
@@ -823,22 +935,26 @@
         "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
       },
       "securityControls": [
-        "No credentials exported; old artistic snapshot cannot restore authorization"
+        "No credentials exported; old artistic snapshot cannot restore authorization",
+        "Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival"
       ],
       "performanceCriteria": [
         "Measure barrier duration/bytes and restore latency on S/M; no weakened existing policy"
       ],
       "tests": [
         "Canvas pixels,scene,story,run and revoked-consent state survive verified restore",
-        "Destination-snapshot closure stable during concurrent live edits"
+        "Destination-snapshot closure stable during concurrent live edits",
+        "Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts"
       ],
       "negativeTests": [
-        "Missing blob,corrupt doc,ENOSPC,junction,partial publication -> safe failure"
+        "Missing blob,corrupt doc,ENOSPC,junction,partial publication -> safe failure",
+        "Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-014 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-014 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -849,18 +965,30 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: Canvas pixels,scene,story,run and revoked-consent state survive verified restore",
         "Evidence demonstrates: Destination-snapshot closure stable during concurrent live edits",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-015",
@@ -906,7 +1034,9 @@
       "instructions": [
         "Map each edit gesture to bounded existing/new typed operation; keep drag preview ephemeral",
         "Commit on gesture completion and reconcile server head; preserve unsaved draft UX during migration",
-        "Use server writer-scoped undo/redo for committed edits; explicit conflict recovery, not overwrite"
+        "Use server writer-scoped undo/redo for committed edits; explicit conflict recovery, not overwrite",
+        "Keep AG-DOCS v5/default migration/user persistence server flag false until all group tasks and real legacy-save/undo/complete-recovery paths qualify together",
+        "Audit every legacy project.save/edit-view/import path: preserve v5 creative and nested media refs losslessly server-side or explicitly reject unsupported/lossy save"
       ],
       "interfaceChanges": [
         "Typed operation coverage and stable request IDs in browser"
@@ -933,15 +1063,18 @@
       ],
       "tests": [
         "UI/CLI/MCP edit sequences yield equal canonical hashes",
-        "Undo after restart cannot undo another writer;100gestures produce expected receipts"
+        "Undo after restart cannot undo another writer;100gestures produce expected receipts",
+        "Actual old/full-save and new UI/CLI/MCP paths cannot drop documents,scene/shot/media refs or round rational-rate projects"
       ],
       "negativeTests": [
-        "Lost response,replay mismatch,concurrent agent edit,crash mid-drag safe"
+        "Lost response,replay mismatch,concurrent agent edit,crash mid-drag safe",
+        "Old-client v4 projection over v5 project must preserve opaque state or refuse without commit"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
         "Command logs and actual test outcomes including failures/skips",
-        "A YU-015 receipt linking code, tests, review identities and Windows/profile limitations"
+        "A YU-015 receipt linking code, tests, review identities and Windows/profile limitations",
+        "AG-DOCS activation status; lossless legacy/full-save and backup/restore group receipt before user promotion"
       ],
       "reviewGates": [
         "Fresh-context correctness/parsimony/product review over immutable implementation diff",
@@ -952,18 +1085,29 @@
         "Separately authorized implementation scope; dependencies VERIFIED",
         "Required targeted and repository gates pass on exact head; no unresolved must-fix",
         "Donor provenance/import guard passes; flags stay off unless separately qualified",
-        "Normal bounded PR; no force push or implied model/spend/release authority"
+        "Normal bounded PR; no force push or implied model/spend/release authority",
+        "Individual VERIFIED receipt is flag-off scope only; AG-DOCS activation requires separate reviewed group receipt and explicit activation status"
       ],
       "definitionOfDone": [
         "Evidence demonstrates: UI/CLI/MCP edit sequences yield equal canonical hashes",
         "Evidence demonstrates: Undo after restart cannot undo another writer;100gestures produce expected receipts",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
       "implementationAuthorized": false,
-      "receipt": null
+      "receipt": null,
+      "activationGroup": "AG-DOCS",
+      "activationRequires": [
+        "YU-010",
+        "YU-011",
+        "YU-012",
+        "YU-013",
+        "YU-014",
+        "YU-015"
+      ]
     },
     {
       "id": "YU-016",
@@ -1060,7 +1204,8 @@
         "Evidence demonstrates: 100edits of same media cause no repeated full original fetch",
         "Evidence demonstrates: Long file tile/zoom fidelity and peak extrema match reference",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1161,7 +1306,8 @@
         "Evidence demonstrates: Proxy toggle preserves trims/PTS/audio and final render source",
         "Evidence demonstrates: Restart completes or quarantines partial proxy",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1261,7 +1407,8 @@
         "Evidence demonstrates: Reference/interactive parity on supported fixtures; revision invalidates stale frame",
         "Evidence demonstrates: Audio drift and minimum-window playback recorded under background export",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1377,7 +1524,8 @@
         "Evidence demonstrates: Boundary frames at long timestamps and mixed source rates roundtrip",
         "Evidence demonstrates: Video/audio duration and title cues match rational golden fixtures",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1483,7 +1631,8 @@
         "Evidence demonstrates: Persist/undo/reopen/export transform matches golden ROIs",
         "Evidence demonstrates: Preview identity/noop preserves old project output",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1577,7 +1726,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Cut/dissolve boundaries and audio duration golden tests",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1622,7 +1772,7 @@
       "instructions": [
         "Compile bounded piecewise curves or bounded segments with explicit tolerance",
         "Preserve exact hold/linear/Bezier semantics against current sampler",
-        "Add transform channels only after020 parity and complexity gate"
+        "Keep this task limited to existing opacity/volume; transform animation is deferred to a separately scoped follow-up after YU020 and YU022 qualification"
       ],
       "interfaceChanges": [
         "Versioned animation compiler/profile capability"
@@ -1672,7 +1822,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Sampled curve/video/audio matches reference over keys,steps and ends",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1769,7 +1920,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Legal/full range and known color chart roundtrip within frozen tolerance",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1871,7 +2023,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Cue times/escaping/mixed-script roundtrip and preview/export golden frames",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -1969,7 +2122,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Missing-media repair and three aspect variants reopen/re-export deterministically",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2071,7 +2225,8 @@
         "Evidence demonstrates: Named profiles pass or refuse exactly; no hidden clamp",
         "Evidence demonstrates: Backup/open/edit/restore under stress retain acknowledged state",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2175,7 +2330,8 @@
         "Evidence demonstrates: Six journeys reach same project/assets; reload preserves selection policy",
         "Evidence demonstrates: Keyboard/focus/RTL/zoom/error/empty states reviewed",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2274,7 +2430,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Three-shot manual storyboard->timeline->reopen preserves refs and timings",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2375,7 +2532,8 @@
         "Evidence demonstrates: Replace one of three shots; unrelated project bytes/semantics preserved",
         "Evidence demonstrates: Undo/reopen returns exact old take",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2475,7 +2633,8 @@
         "Evidence demonstrates: Fake/absent/v1 parity and bounded handle IO",
         "Evidence demonstrates: Unsupported controls fail before spawn",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
       "state": "PLANNED",
@@ -2550,10 +2709,12 @@
       ],
       "tests": [
         "Service/helper/worker death leaves no live/suspended orphan",
-        "Read sentinels and outbound DNS/TCP/HTTP denied on target profile"
+        "Read sentinels and outbound DNS/TCP/HTTP denied on target profile",
+        "Every isolation negative has same-environment positive controls: unrestricted sentinel access works,restricted worker alive,authorized staging IO and permitted descendants succeed"
       ],
       "negativeTests": [
-        "WMI/task scheduler/foreign file/junction/inherited handle/AV lock fail safely"
+        "WMI/task scheduler/foreign file/junction/inherited handle/AV lock fail safely",
+        "Missing/crashing worker,unreachable sentinel/disconnected network or failed positive control invalidates sandbox denial result"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
@@ -2575,7 +2736,8 @@
         "Evidence demonstrates: Service/helper/worker death leaves no live/suspended orphan",
         "Evidence demonstrates: Read sentinels and outbound DNS/TCP/HTTP denied on target profile",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
       "state": "PLANNED",
@@ -2667,7 +2829,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Absent/corrupt files refuse before inference; offline editor remains usable",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
       "state": "PLANNED",
@@ -2750,7 +2913,8 @@
         "Evidence demonstrates: All selected source paths/pins/licenses/transitive closure validated",
         "Evidence demonstrates: Document unsupported controls and cancellation semantics",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
       "state": "PLANNED",
@@ -2842,7 +3006,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Supported fake recipe maps deterministically with provenance",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -2935,7 +3100,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Pack update leaves old takes traceable; revoked grant blocks new effect",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3028,7 +3194,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Approved exact plan applies once; UI/MCP see same result",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3075,7 +3242,9 @@
       "instructions": [
         "Map approved manual/import stages to existing jobs and registered artifact validation",
         "Persist command intent/result per stage attempt; checkpoint after committed effects",
-        "Interrupt/restart at every stage; revise one shot and export through canonical path"
+        "Interrupt/restart at every stage; revise one shot and export through canonical path",
+        "On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart",
+        "Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act"
       ],
       "interfaceChanges": [
         "workflow.start/status/resume/cancel using existing command boundary"
@@ -3097,17 +3266,20 @@
         "note": "Extend existing first-party infrastructure; existing donor notices remain binding."
       },
       "securityControls": [
-        "No arbitrary tools/code or automatic paid/model step"
+        "No arbitrary tools/code or automatic paid/model step",
+        "Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival"
       ],
       "performanceCriteria": [
         "Finite stages/tool/attempt/wall limits and bounded queue"
       ],
       "tests": [
         "Three-shot storyboard->editable timeline->export->backup->restore succeeds",
-        "Resume never duplicates clips/assets/approval/effect"
+        "Resume never duplicates clips/assets/approval/effect",
+        "Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts"
       ],
       "negativeTests": [
-        "Missing artifact,forged completion,stale lease,cancel/publication race safe"
+        "Missing artifact,forged completion,stale lease,cancel/publication race safe",
+        "Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
@@ -3129,7 +3301,9 @@
         "Evidence demonstrates: Three-shot storyboard->editable timeline->export->backup->restore succeeds",
         "Evidence demonstrates: Resume never duplicates clips/assets/approval/effect",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3234,7 +3408,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Equivalent workflow commands yield canonical parity and reconnect progress",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3321,7 +3496,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Stub word/cue timestamps roundtrip into editable captions",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN QUALIFY WITHOUT WEIGHTS",
       "state": "PLANNED",
@@ -3412,7 +3588,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Output decodes and preserves declared timing/audio/source; scene marks reference exact frames",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3495,7 +3672,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Authorized full-clip temporal/audio/quality and cancellation evidence retained",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
       "state": "BLOCKED",
@@ -3537,7 +3715,9 @@
       "instructions": [
         "Export canonical docs+media+hash manifest without credentials/host paths",
         "OTIO export/import supports declared subset and a per-feature loss report",
-        "Traversal/case/symlink/expansion-safe import creates separate new project proposal"
+        "Traversal/case/symlink/expansion-safe import creates separate new project proposal",
+        "On restore/import mint fresh execution epoch and durable restoreHold before supervisor startup; invalidate pending approvals and fence copied active leases/jobs/proposals; require explicit new authorized reconciliation/restart",
+        "Keep external account/request IDs and uncertain reservations as historical reconciliation data; never auto-resubmit,attach,release funds or reuse approval while original workspace may still act"
       ],
       "interfaceChanges": [
         "portable export/inspect/import;OTIO loss report"
@@ -3556,16 +3736,19 @@
         "approach": "WRAP"
       },
       "securityControls": [
-        "No archive authority over scopes/consents/paths or plugin execution"
+        "No archive authority over scopes/consents/paths or plugin execution",
+        "Restored execution authority suspended before stale-attempt recovery; no credential restore or consent/approval revival"
       ],
       "performanceCriteria": [
         "Streaming bounds and disk reservation before extraction"
       ],
       "tests": [
-        "Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy"
+        "Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy",
+        "Restore before/after external acceptance,completion/attach,approval/revocation with original still active causes zero workers/provider calls/publications/automatic reservation releases across restarts"
       ],
       "negativeTests": [
-        "Zip slip/case collision/decompression bomb/missing blob/unknown version safe"
+        "Zip slip/case collision/decompression bomb/missing blob/unknown version safe",
+        "Copied queued/running/cancel-pending jobs,old leases,old approval and unresolved billing cannot auto-resume or authorize new effect"
       ],
       "requiredEvidence": [
         "Exact implementation commit/tree and clean status; source/donor/runtime/fixture hashes",
@@ -3586,7 +3769,9 @@
       "definitionOfDone": [
         "Evidence demonstrates: Complete project roundtrip including Studio/story/media and revoked-consent revalidation policy",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "Restored execution hold/epoch and explicit idempotent reconciliation/restart are independently reviewed and fault-tested",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3675,7 +3860,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Selective revision preserves unrelated clips/docs and remains editable/restorable",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3761,7 +3947,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Synthetic known results recompute and repeated prompt/rater clustering respected",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3852,7 +4039,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: All claimed editing/recovery/profile gates execute and pass or explicitly block",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -3937,7 +4125,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Actual complete-clip probe/quality/resource/cancel/recovery results retained",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "REQUIRES CAPABLE GPU",
       "state": "BLOCKED",
@@ -4023,7 +4212,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: H1 scoped review and accessible journeys signed by actual reviewers",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
       "state": "BLOCKED",
@@ -4113,7 +4303,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Missing/stale/failed gate makes NO-GO; signed-off scope verifiable",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "CAN BUILD NOW",
       "state": "PLANNED",
@@ -4194,7 +4385,8 @@
       "definitionOfDone": [
         "Evidence demonstrates: Actual H2–H5 and applicable signing/update receipts bound to same artifact",
         "Negative tests fail safely as specified",
-        "Review findings resolved; affected Windows E2E and post-merge verification retained"
+        "Review findings resolved; affected Windows E2E and post-merge verification retained",
+        "All listed tests including review-added transport,activation,restore and positive-control cases apply where present in this card"
       ],
       "resourceClass": "REQUIRES EXTERNAL AUTHORIZATION",
       "state": "BLOCKED",

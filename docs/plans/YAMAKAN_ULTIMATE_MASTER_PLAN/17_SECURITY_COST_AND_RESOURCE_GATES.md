@@ -26,6 +26,7 @@ Measured filesystem free space at initial inspection: C about5.12GB,D about8.17G
 - Offline mode denies egress at a tested OS boundary. Environment flags prevent accidental fetches but are not a sandbox. No browser-direct provider/Comfy ports.
 - Worker completion is only a candidate artifact: reopen/probe/hash/limits, then attempt-generation/cancel CAS, then publication. Quarantine partial/mismatched output; preserve diagnostic uncertainty.
 - Creative document restore includes all bitmap/media refs. Consent/approval state has stronger rules than artistic undo; revocation cannot be resurrected by a project restore.
+- Restored/imported workspaces get a fresh execution identity and durable hold before supervisor startup. Copied jobs,proposals,approvals and uncertain provider effects cannot auto-resume; budgets/reservations stay unsettled until authorized account-scoped reconciliation. Original workspace activity must be assumed possible.
 - Model formats/loading are a supply-chain boundary. Reject arbitrary pickle/plugin execution; verify approved safe manifests and package closure. Never install custom nodes at run time.
 
 Negative tests and threat boundaries are specified in01,10,13,14,18 and20. No full security scanner/vulnerability certification ran in this research. Source-observed hazards are candidates for independent validation, not fabricated exploits.

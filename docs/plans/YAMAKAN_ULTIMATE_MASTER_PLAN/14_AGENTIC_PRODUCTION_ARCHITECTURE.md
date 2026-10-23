@@ -25,6 +25,8 @@ Run graph nodes are bounded stage records linked to canonical story versions and
 
 Human checkpoints cover likeness/voice use, changed budget, external disclosure, destructive recovery and final proposal as defined by existing security policy. Pure manual editing need not introduce an approval at every click. Approval expiry or revocation racing submission must fail closed before a new effect. Security ledger state cannot be undone by restoring an older story.
 
+Restore/import is not a run-resume command. The fresh execution epoch and `restoreHold` contract in10 suspends copied jobs/effects/proposals before supervisor startup; existing stale-attempt recovery cannot requeue them. Revalidate human approvals and consent on the restored revision; reconcile external IDs/uncertain reservations with the actual account before considering a new approved attempt. Preserve terminal outcomes as history and require explicit restart even for local renders. Test restore on both sides of external acceptance and attachment while the original workspace may remain active.
+
 ## Tools and transport parity
 
 Extend the existing catalog, rather than creating a privileged 'agent execute' endpoint. REST, CLI, MCP and SDK map to identical schemas, scopes, receipt semantics and errors. CLI exposes stable request IDs and JSON outputs; SDK supports bounded streaming upload, progress cursor and reconnect/resync. MCP enforces bytes **per complete newline frame**, bounded concurrency and output; protocol cancellation is distinct from explicit job cancellation.

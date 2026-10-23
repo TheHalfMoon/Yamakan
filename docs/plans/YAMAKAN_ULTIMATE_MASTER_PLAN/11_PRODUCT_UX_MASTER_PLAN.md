@@ -40,3 +40,5 @@ Use semantic landmarks, named controls, visible keyboard focus, tab order, scree
 ## UX qualification
 
 Start with a formative 5–8 participant study across novice creators, experienced editors and native Arabic speakers; it finds problems and does not establish statistical superiority. Record task completion, recoveries, wrong actions and observed confusion on consented sessions. Later run counterbalanced matched workflows with sample size derived from pilot variance. Targets: complete the six journeys without data loss, accessible failure states, and no unsupported capability advertised. Time advantages require actual comparative evidence. Retain the founder's current visual work unless a measured usability issue warrants change.
+
+Before expanding the ten-phase roadmap, use the first qualified integrity milestone for one frozen bilingual short-film finishing brief and a small formative creator/founder walkthrough. Permit later phase reordering/deferment from observed failure, rather than treating every planned studio as mandatory. No unobserved participant or usability result may be recorded as a pass.

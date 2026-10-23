@@ -182,3 +182,11 @@ The shortest useful creator milestone is YU000/001 → YU010 → YU011/012/013 �
 - YU072/092/093/101 carry external gates; choose other READY tasks rather than bypassing them. Release can be evaluated for an explicitly offline capability set; optional model capabilities do not become implicitly authorized.
 
 Keep PRs bounded to task interfaces. Do not stack a migration and unrelated native-engine rewrite. A prototype existence does not make a prerequisite VERIFIED. Recompute this graph and run the validator after any task dependency/state change.
+
+## Activation groups are separate from build dependencies
+
+AG-DOCS requires YU010–015 together, including lossless legacy-save and full backup/restore/browser-path evidence, before v5 default migration or user persistence activation. Individual tasks can be verified only in flag-off isolated scope; their receipts record activation status. Mutual group qualification is not a cyclic implementation prerequisite. Preserve acyclic build edges and require a separate group activation receipt.
+
+## Early product checkpoint
+
+After the integrity group qualifies, freeze one bilingual short-film finishing brief and observe a small formative creator/founder walkthrough before expanding later phases. Record task failures and revise priorities; this is not a powered comparative study. Defer broader studios/model breadth if the observed finishing journey is still confusing or unreliable.
