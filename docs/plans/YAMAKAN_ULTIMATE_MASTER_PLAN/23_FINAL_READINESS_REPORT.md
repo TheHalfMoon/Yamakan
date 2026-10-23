@@ -51,3 +51,5 @@ These constraints do not prevent the first offline integrity slice from being sp
 Founder reviews this Draft PR and may separately authorize YU000/001, then YU010–015 for canonical creative persistence/recovery/command cohesion. YU002/003 and bounded media YU016 can run as separate controlled lanes after baseline. Use the approved plan commit and22; never execute the future prompt during this research. Model/provider/release tasks remain separately gated.
 
 The final founder Q&A and Draft PR linkage are provided in `FOUNDER_REPORT.md` and `CONTINUATION_LEDGER.md`. No arbitrary completion percentage is assigned.
+
+Published as **[Draft PR86](https://github.com/TheHalfMoon/Yamakan/pull/86)**. It is intentionally open and unmerged; public release remains NO-GO. Current CI status must be read against its exact latest head; docs-only CI does not close research/resource/human release blocks.

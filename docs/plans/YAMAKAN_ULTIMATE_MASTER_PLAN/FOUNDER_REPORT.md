@@ -2,6 +2,8 @@
 
 Research2026-10-23. **PLAN PARTIALLY READY — EXPLICIT RESOURCE OR RESEARCH BLOCKERS.** This answers the25 founder questions;23 provides the validation record and24 links evidence. No comparative benchmark or product release claim is made.
 
+GitHub deliverable: **[Draft PR86](https://github.com/TheHalfMoon/Yamakan/pull/86)**, branch `research/ultimate-master-plan-2026-10-23`, not merged. Read00 for strategy,10 for interfaces,18/19 for tasks/order,22 for the unexecuted Cursor prompt and23 for readiness.
+
 | # | Question | Evidence-based answer |
 |---|---|---|
 |1|What is Yamakan today?|A substantial bounded offline media editor and creative workspace with transactional project history, managed media, owned Windows worker design, typed tools and reference export; incomplete integration across creative modules.|

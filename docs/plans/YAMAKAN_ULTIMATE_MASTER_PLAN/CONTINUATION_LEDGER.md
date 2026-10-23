@@ -15,15 +15,17 @@ Research/planning only. Date2026-10-23. Branch `research/ultimate-master-plan-20
 
 ## Finalization status
 
-Fresh-context planning review is complete for its recorded scopes. Initial head `3e15bab459cf2ba904926cf9e4d79fd62d729e7b`; repair head `135a7979f253b0d9324536db42aade6afc0f3abf`; correctness and security deltas found no remaining must-fix. All findings/repairs and limits are retained in `evidence/plan-review-*.json` and21. Additional five-file VBench source inspection supplements the donor research without executing an evaluator. Draft PR publication/verification is the remaining finalization step; this ledger is updated after creation.
+Fresh-context planning review is complete for its recorded scopes. Initial head `3e15bab459cf2ba904926cf9e4d79fd62d729e7b`; repair head `135a7979f253b0d9324536db42aade6afc0f3abf`; correctness and security deltas found no remaining must-fix. All findings/repairs and limits are retained in `evidence/plan-review-*.json` and21. Additional five-file VBench source inspection supplements the donor research without executing an evaluator.
+
+Published **Draft PR [#86](https://github.com/TheHalfMoon/Yamakan/pull/86)** against main; initial published content/evidence head `f1e716f249d9630163524fbb1fde7bd65eb0393d`. Verified OPEN and Draft. Later commits in this PR contain continuation/verification metadata only unless explicitly documented otherwise. The PR is attached to this chat. No merge requested or performed. GitHub Actions starts automatically; consult the exact latest PR head/checks rather than interpreting an earlier in-progress snapshot as a pass.
 
 ## Exact next work if interrupted
 
 1. Read23, `evidence/plan-validation.json`, `evidence/plan-review-*.json` and this ledger before redoing research.
 2. Recheck live main and branch refs; preserve user/agent files. Current scratch checkout lives under this task's `work/Yamakan`; raw captures are outside Git in sibling `work/web`, `work/donors`, `work/web-captures` and `work/prior-rea`; do not publish them wholesale.
-3. Resolve actual review must-fixes, rerun documentation validator and diff whitespace/scope check, commit only plan directory and ADR0004. No production build/install/model operation necessary to publish a planning PR.
-4. Push dedicated branch and open **Draft** PR against main. Attach PR to chat; do not merge. Verify Draft/head/check state and retain limits honestly.
-5. Save user-facing founder report/package link in task outputs and report partial readiness plus precise Cursor handoff. Future implementation needs separate scope; the prompt in22 remains unexecuted.
+3. Planning must-fixes are resolved in the recorded scopes. Reopen only on new evidence; rerun validator/whitespace/scope checks for any changed artifacts. No production build/install/model operation is necessary to maintain this planning PR.
+4. Continue the existing Draft PR86/branch rather than opening a duplicate. Do not merge. Verify latest Draft/head/check state and retain limits honestly.
+5. The final founder report/package is also saved in task outputs. Future implementation needs separate founder scope; the prompt in22 remains unexecuted. Recommended first IDs: YU000/001 then YU010–015 as the AG-DOCS integrity group; optional disjoint fixes only after baseline.
 
 ## Outstanding constraints
 

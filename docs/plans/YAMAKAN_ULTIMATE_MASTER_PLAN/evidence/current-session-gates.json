@@ -4,7 +4,7 @@
   "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
   "scope": "Documentation planning package; no product/runtime/model/release approval",
   "checks": [
-    {"command": "node scripts/provenance.mjs", "exitCode": 0, "observed": "404 pinned source records,26 excluded content hashes,2 pinned fonts,required notices/import guard over1032 files at run time"},
+    {"command": "node scripts/provenance.mjs", "exitCode": 0, "observed": "404 pinned source records,26 excluded content hashes,2 pinned fonts,required notices/import guard; first over1032 files,final publication metadata pass over1039 files"},
     {"command": "node scripts/brand-check.mjs", "exitCode": 0, "observed": "Passed over596 Yamakan surface files at run time"},
     {"command": "git diff a3c3ce91815aee35ce5b91b4a483dd85766a4429 HEAD --check", "exitCode": 0, "observed": "Passed at normalized review head3e15bab; earlier CRLF/empty EOF failures repaired,not relabeled passes"},
     {"command": "node --test tests/brand-ui.test.ts", "exitCode": 0, "passed": 2, "failed": 0, "scope": "Independent source reviewer static branding tests only"},
