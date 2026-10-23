@@ -1629,4 +1629,3 @@ Current: H2–H5/AuthentiCode open. User value: Legitimate Windows release readi
 **Definition of done:** Evidence demonstrates: Actual H2–H5 and applicable signing/update receipts bound to same artifact; Negative tests fail safely as specified; Review findings resolved; affected Windows E2E and post-merge verification retained.
 
 **Rollback:** Keep NO-GO; preserve unsigned RC and prior installer rollback.
-
