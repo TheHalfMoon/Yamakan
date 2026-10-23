@@ -8,6 +8,8 @@ The package specifies a credible offline integrity/editing roadmap and a model-i
 
 Machine results: `evidence/plan-validation.json`; reproducible validator: `validate-plan.mjs`. Final immutable diff reviews and repair dispositions are retained in `evidence/plan-review-*.json`. A mechanical pass confirms structural consistency only; its warnings and the following open items limit readiness.
 
+The fresh panel reviewed initial head `3e15bab459cf2ba904926cf9e4d79fd62d729e7b`, then verified the scoped contract repairs at `135a7979f253b0d9324536db42aade6afc0f3abf`; both deltas report no remaining must-fix within their scope. Repairs cover restored execution authority,document transport,lossless-save/recovery activation and sandbox positive controls. Subsequent report/evidence finalization does not constitute additional product or release qualification. Actual source-provenance/import and brand checks also passed; Git whitespace checks passed after normalizing new planning text.
+
 | Founder validation item | Status / evidence |
 |---|---|
 |1 Important source paths exist | Registry existing paths checked; proposed targets explicitly NEW. Audit coverage is sampled, not every line read |

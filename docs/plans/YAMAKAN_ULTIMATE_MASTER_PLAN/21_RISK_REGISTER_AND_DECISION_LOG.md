@@ -52,3 +52,18 @@ Formal planning ADR: `docs/adr/0004-canonical-creative-project-and-qualified-exe
 Source and integration reviewers independently challenged a generator-first sequence and graph-shaped public engine API; adopted D02–D05. The donor reviewer prefers whisper.cpp's native CPU spike over an immediate Python ASR dependency; adopted D06 with runtime/language qualification explicitly open. Competitor review rejects old claims that Runway has no timeline, that Cuty's Runway marketing page proves Runway model access, or that Higgsfield's public CLI repository contains its backend; corrected throughout02–08. Provider SDK polling/cancel does not define durable/billing truth; contracts10/13/14 separate those outcomes.
 
 Ten requested perspectives are addressed by source/media/competitive reviews plus deliberate adversarial passes in09. They are not ten independent human specialists. Final fresh-context correctness/product/parsimony and security plan review findings must be captured before the package readiness claim is written.
+
+## Completed fresh-context planning panel and repairs
+
+Initial reviewed head `3e15bab459cf2ba904926cf9e4d79fd62d729e7b`; repaired contract head `135a7979f253b0d9324536db42aade6afc0f3abf`. Actual findings and scoped re-review are retained without overwriting the initial open verdicts:
+
+| Finding | Concrete repair | Delta disposition |
+|---|---|---|
+| PC01 / SEC02:8MiB document versus2MiB ingress | Project/principal/hash-bound streamed staging,raw+canonical UTF8 cap,TTL/concurrency/reservation/cleanup,small commit handle; unchanged general request/snapshot/MCP caps | Addressed in both delta reviews |
+| PC02:writable-v5 activation ahead of complete recovery/legacy save | AG-DOCS requires YU010–015 group evidence; preserve opaque creative refs or reject lossy old saves; flag-off verification distinguished from activation | Addressed in correctness delta; consistent with security delta |
+| SEC01:restored execution authority | Fresh execution epoch/restoreHold before startup requeue; invalidate approvals,preserve uncertain external IDs/reservations,no effects until explicit reconciliation/restart | Addressed in security delta |
+| SEC03:false-positive sandbox negatives | Same-receipt authorized IO,live probe and unrestricted sentinel positive controls | Addressed in security delta |
+| PC03:optional transform scope | YU022 limited to existing opacity/volume; transform animation deferred to separate scope | Addressed in correctness delta |
+| PC04:product breadth | Frozen bilingual finishing brief/formative walkthrough after integrity milestone before broader expansion | Addressed in correctness delta |
+
+No remaining must-fix was found within those repair deltas. This is a planning-contract panel on the recorded scopes, not runtime security/native/media/model certification. **Panel: full — fresh correctness/product/parsimony and separate security/native/cost (session model); specialty external reviewers/Alibaba LLM run absent; d1 advisory only; Graft structural only.** Overall verdict remains partially ready, with23's research/resource/release gaps.

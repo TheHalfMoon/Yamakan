@@ -15,7 +15,7 @@ Research/planning only. Date2026-10-23. Branch `research/ultimate-master-plan-20
 
 ## Finalization status
 
-The package is undergoing immutable fresh-context planning review. Review findings and repairs must be captured before final branch push/Draft PR verification. This ledger is updated with the actual final commit/PR state after publication. No unrun review is claimed passed.
+Fresh-context planning review is complete for its recorded scopes. Initial head `3e15bab459cf2ba904926cf9e4d79fd62d729e7b`; repair head `135a7979f253b0d9324536db42aade6afc0f3abf`; correctness and security deltas found no remaining must-fix. All findings/repairs and limits are retained in `evidence/plan-review-*.json` and21. Additional five-file VBench source inspection supplements the donor research without executing an evaluator. Draft PR publication/verification is the remaining finalization step; this ledger is updated after creation.
 
 ## Exact next work if interrupted
 

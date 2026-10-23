@@ -83,6 +83,8 @@ Additional official documentation read through free web search/open: Adobe Premi
 
 ## Current-session checks and review
 
+Additional evaluation source: [VBench five-file capture ledger](evidence/vbench-source.json), immutable pin `fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490`; functions/methodology and limitations in16. This supplements14 scoped donor studies and does not claim a VBench2 full audit or executed score.
+
 - Git ls-remote/gh metadata: live main/PR85/issue/open PR and historical workflow receipts captured.
 - Source reviewer: branding source checks2/2 passed; time test failed module loading (zod missing); no full native/media/browser/release run.
 - d1: initial400 plus actual advisory result in `evidence/d1-advisory*.json`; no approval.

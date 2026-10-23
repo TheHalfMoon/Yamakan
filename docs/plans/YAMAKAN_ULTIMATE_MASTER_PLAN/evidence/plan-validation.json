@@ -1,7 +1,7 @@
 {
   "schema": "yamakan.plan-validation/v1",
-  "checkedAt": "2026-10-23T19:40:02.520Z",
-  "checkedHead": "3e15bab459cf2ba904926cf9e4d79fd62d729e7b",
+  "checkedAt": "2026-10-23T19:43:00.295Z",
+  "checkedHead": "135a7979f253b0d9324536db42aade6afc0f3abf",
   "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
   "result": "PASS_WITH_EXPLICIT_LIMITATIONS",
   "checks": [
@@ -27,8 +27,8 @@
     },
     {
       "name": "documentation-only scope",
-      "changedTracked": 48,
-      "untracked": 2
+      "changedTracked": 50,
+      "untracked": 4
     },
     {
       "name": "engine/provider/JASSUB disabled source invariants",

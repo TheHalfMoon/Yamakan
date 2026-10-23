@@ -1,0 +1,15 @@
+{
+  "schema": "yamakan.research-session-gates/v1",
+  "date": "2026-10-23",
+  "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "scope": "Documentation planning package; no product/runtime/model/release approval",
+  "checks": [
+    {"command": "node scripts/provenance.mjs", "exitCode": 0, "observed": "404 pinned source records,26 excluded content hashes,2 pinned fonts,required notices/import guard over1032 files at run time"},
+    {"command": "node scripts/brand-check.mjs", "exitCode": 0, "observed": "Passed over596 Yamakan surface files at run time"},
+    {"command": "git diff a3c3ce91815aee35ce5b91b4a483dd85766a4429 HEAD --check", "exitCode": 0, "observed": "Passed at normalized review head3e15bab; earlier CRLF/empty EOF failures repaired,not relabeled passes"},
+    {"command": "node --test tests/brand-ui.test.ts", "exitCode": 0, "passed": 2, "failed": 0, "scope": "Independent source reviewer static branding tests only"},
+    {"command": "node --test tests/time.test.ts", "exitCode": 1, "passed": 0, "scope": "Could not load missing zod; environment block,not proven source regression"},
+    {"command": "git ls-remote origin refs/heads/main refs/pull/85/head", "exitCode": 0, "observed": "Main a3c3ce91815aee35ce5b91b4a483dd85766a4429 and PR85 7472a14e2eecea0620e0bb2d4422db8852421491 rechecked"}
+  ],
+  "notRun": ["Full current Windows application/media/native suite","Real model inference/evaluator weights","Paid competitor outputs","Human Arabic/usability or admin/release gates","Alibaba LLM review","Graft deep LLM review"]
+}
