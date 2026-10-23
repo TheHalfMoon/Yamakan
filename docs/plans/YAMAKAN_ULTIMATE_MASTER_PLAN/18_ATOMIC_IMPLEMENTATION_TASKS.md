@@ -342,7 +342,7 @@ Phase 1; P0; state **PLANNED**; resource **CAN BUILD NOW**; approach **ADAPT**.
 Current: Local UI drafts/full save differ from per-writer DB undo. User value: Same edits through humans and agents.
 
 - **Exact source:** `src/main.tsx`, `src/edit-ops.ts`, `src/adapter.ts`, `core/timeline/operations.ts`, `core/store.ts`, `sdk/client.ts` at baseline above. Function/call-graph context: audit01 and donor08.
-- **Donor:** https://github.com/OpenCut-app/opencut-classic @ `cf5e79e919144200294fb9fed22a222592a0aeea`; `apps/web/src/animation/interpolation.ts`, `apps/web/src/ripple/shift.ts`, `apps/web/src/timeline/snapping/resolve.ts`. 
+- **Donor:** https://github.com/OpenCut-app/opencut-classic @ `cf5e79e919144200294fb9fed22a222592a0aeea`; `apps/web/src/animation/interpolation.ts`, `apps/web/src/ripple/shift.ts`, `apps/web/src/timeline/snapping/resolve.ts`.
 - **Targets:** `src/main.tsx`, `src/edit-ops.ts`, `sdk/client.ts`, `tests/parity.test.ts`, NEW `tests/browser-command-history.test.ts`.
 - **Dependencies:** YU-010.
 - **Interfaces:** Typed operation coverage and stable request IDs in browser.
@@ -601,7 +601,7 @@ Phase 1; P1; state **PLANNED**; resource **CAN BUILD NOW**; approach **ADAPT**.
 Current: Opacity/volume chain cost grows per frame. User value: Usable animated long clips.
 
 - **Exact source:** `core/animation/interpolation.ts`, `core/render/animation-filters.ts`, `core/render/plan.ts`, `tests/animation-params.test.ts` at baseline above. Function/call-graph context: audit01 and donor08.
-- **Donor:** https://github.com/OpenCut-app/opencut-classic @ `cf5e79e919144200294fb9fed22a222592a0aeea`; `apps/web/src/animation/interpolation.ts`, `apps/web/src/ripple/shift.ts`, `apps/web/src/timeline/snapping/resolve.ts`. 
+- **Donor:** https://github.com/OpenCut-app/opencut-classic @ `cf5e79e919144200294fb9fed22a222592a0aeea`; `apps/web/src/animation/interpolation.ts`, `apps/web/src/ripple/shift.ts`, `apps/web/src/timeline/snapping/resolve.ts`.
 - **Targets:** `core/render/animation-filters.ts`, `core/render/plan.ts`, `tests/animation-params.test.ts`, NEW `tests/animation-complexity.test.ts`.
 - **Dependencies:** YU-019.
 - **Interfaces:** Versioned animation compiler/profile capability.
@@ -1230,7 +1230,7 @@ Phase 6; P2; state **PLANNED**; resource **CAN QUALIFY WITHOUT WEIGHTS**; approa
 Current: No ASR; captions import can work now. User value: Future local bilingual transcript editing.
 
 - **Exact source:** `core/media.ts`, `core/process/owner.ts`, `core/jobs.ts` at baseline above. Function/call-graph context: audit01 and donor08.
-- **Donor:** https://github.com/ggml-org/whisper.cpp @ `231638a0717b7822784297e5980965ffcec05810`; `examples/cli/cli.cpp`, `src/whisper.cpp`. 
+- **Donor:** https://github.com/ggml-org/whisper.cpp @ `231638a0717b7822784297e5980965ffcec05810`; `examples/cli/cli.cpp`, `src/whisper.cpp`.
 - **Targets:** NEW `core/audio/transcription.ts`, NEW `tests/transcription-contract.test.ts`.
 - **Dependencies:** YU-024, YU-041, YU-042.
 - **Interfaces:** transcribe operation and reviewable caption proposal.
@@ -1341,7 +1341,7 @@ Phase 7; P2; state **PLANNED**; resource **CAN BUILD NOW**; approach **WRAP**.
 Current: OTIO subset and recovery not full portable creative export. User value: Own and transfer complete work.
 
 - **Exact source:** `core/interchange/otio.ts`, `core/recovery.ts`, `core/store.ts` at baseline above. Function/call-graph context: audit01 and donor08.
-- **Donor:** https://github.com/AcademySoftwareFoundation/OpenTimelineIO @ `eee67fdcdce388696e39f4176d89a61ee9fdc790`; `src/opentime/rationalTime.h`, `src/py-opentimelineio/opentimelineio/adapters/otio_json.py`. 
+- **Donor:** https://github.com/AcademySoftwareFoundation/OpenTimelineIO @ `eee67fdcdce388696e39f4176d89a61ee9fdc790`; `src/opentime/rationalTime.h`, `src/py-opentimelineio/opentimelineio/adapters/otio_json.py`.
 - **Targets:** `core/interchange/otio.ts`, NEW `core/interchange/portable.ts`, NEW `tests/portable-project.test.ts`.
 - **Dependencies:** YU-014, YU-025, YU-031.
 - **Interfaces:** portable export/inspect/import;OTIO loss report.
