@@ -20,6 +20,32 @@ The founder will issue a separate implementation instruction after reviewing thi
 >
 > At every interruption, save a continuation receipt with completed code/evidence, exact refs, active files, outstanding tests/reviews/blockers and deterministic next-task selection. Do not mark a phase complete from documents or subjective judgment. End with concise verified work and remaining limitations.
 
+## Mandatory founder tool stack — local-first Cursor reviews and tests
+
+**Founder directive:** Cursor must use PStack, tester-army/e2e, Graft, local D1 and Alibaba Open Code Review (OCR) whenever relevant to an authorized implementation task. Verify real availability, run appropriate tests and retain evidence; a missing or incompatible tool is BLOCKED, not PASS. This instruction does NOT itself authorize implementing unapproved task IDs, model downloads, cost, inference, or release.
+
+### Read-only discovery snapshot (verify again on the execution host)
+An authorized Windows machine check found: Graft v0.21.1 and Alibaba OCR v1.13.3 CLI on PATH. A llama-server.exe listening on loopback 127.0.0.1:18775 reported a locally loaded d1-omni-600M-Q8_0.gguf. Standalone pstack, e2e and ollama commands were not on PATH, but PStack is typically a Cursor plugin/collection of skills rather than a standalone CLI; e2e may be project-scoped. Do not encode the specific machine address, port, user paths, or model file path as product assumptions. Use runtime discovery.
+
+### Required pipeline
+
+**PStack** — Consult actual installed Cursor PStack skills/plugins (upstream cursor/plugins/pstack or standalone backnotprop/pstack), apply relevant understanding/architecture/TDD/unslop/review skills before and after code edits, and log the exact skill and result. If unavailable, qualify a pinned, minimal project-scoped install without silently modifying global configurations. Never fabricate usage.
+
+**Graft** — Before changes, use its local deterministic structural graph to inspect affected modules and transitive callers. After changes, run graft build and graft check --json, plus task-specific queries, to detect changed dependencies and structural drift. Keep graph cache local/ignored and telemetry disabled. Do not use graft build --deep or remote LLM summarization without separate privacy/cost authorization. Graft is structural evidence, not runtime or security proof.
+
+**tester-army/e2e** — Pin and security-review the dependency; run actual Windows local-browser user journeys with explicit Playwright-style locators/assertions (create/edit/save/reopen/restore/export and negative behavior). Preserve Yamakan's existing browser E2E and use tester-army/e2e as an additive layer. Do not use hosted test browsers. Disable e2e telemetry (E2E_TELEMETRY_DISABLED=1). Agent-based natural-language steps need an actually compatible local model; otherwise use deterministic tests. Log both suites independently.
+
+**Liquid D1 locally** — Probe the real loopback typed decision endpoint and model identity. Use only for decision-oriented triage (risk, test selection, uncertain findings) with explicitly enumerated answer options. Record typed questions, outcomes, probabilities and model revision. D1 is a decision model, not an ordinary generative LLM; it cannot substitute for full code review, E2E tests or independent specialist security review. No remote endpoint/fallback.
+
+**Alibaba Open Code Review locally** — The OCR CLI is installed on the host, but OCR's default AI reviewer sends source/diff context to its configured LLM. First verify the exact active model endpoint and data boundary. Use ocr review --preview and ocr delegate preview/rule for deterministic local diff selection and review rules. Run full ocr review --from main --to FEATURE_BRANCH --format json --output REVIEW_JSON only when its backend is an authorized LOCAL generative model. Delegation to the Cursor host may use a remote model and therefore is not a strictly local AI review; never mislabel it offline. If no compatible local generative reviewer exists, record OCR_FULL_REVIEW_BLOCKED, still run local selection/rules and other tests, and do not claim an Alibaba LLM review passed. Resolve high-confidence findings and recheck the immutable final diff.
+
+### Offline, budget, security and evidence rules
+- Before installation or execution verify versions, source pins, package lifecycle scripts, telemetry and network behavior. No surprise remote requests, cloud browsers, hidden provider tokens, additional paid services or large downloads.
+- Place caches/traces/test videos in an isolated directory on a volume with verified available space; do not saturate Windows C: or touch personal projects.
+- For every applicable task publish an evidence receipt under the task scope including: base/head SHA, real tool versions, exact commands, invocation modes, PStack skill names, Graft graph results, tester-army e2e and existing browser outcomes, D1 typed probability records, OCR coverage and findings, failures/skips, reasons for NOT_APPLICABLE or BLOCKED, reviewer identities and security/privacy caveats.
+- A local process is not proof of local model inference. OCR delegation and Cursor may themselves route content to a remote host; respect founder privacy requirements before selecting that path.
+- These tools complement, but never override, exact-head CI, human specialist approvals, release H1–H5, E-SEC, model F/G gates, and the plan's explicit task authorization boundaries.
+
 ## Durable registry and receipts
 
 Canonical plan: this directory at its approved Git commit. Task specification: `TASK_REGISTRY.json`; rendered task details:18. Initial states are PLANNED/BLOCKED and all `implementationAuthorized:false`. Future edits must bind an actual founder scope reference, not simply flip a Boolean.
