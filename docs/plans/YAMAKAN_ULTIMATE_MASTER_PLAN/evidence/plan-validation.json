@@ -1,0 +1,42 @@
+{
+  "schema": "yamakan.plan-validation/v1",
+  "checkedAt": "2026-10-23T19:44:27.332Z",
+  "checkedHead": "f1e716f249d9630163524fbb1fde7bd65eb0393d",
+  "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "result": "PASS_WITH_EXPLICIT_LIMITATIONS",
+  "checks": [
+    {
+      "name": "required numbered documents",
+      "count": 25
+    },
+    {
+      "name": "task fields, source paths, pins and DAG",
+      "tasks": 44,
+      "edges": 95,
+      "acyclic": true
+    },
+    {
+      "name": "architecture score arithmetic",
+      "weightsSum": 100,
+      "weighted": {
+        "A": "3.77",
+        "B": "3.29",
+        "C": "2.74",
+        "D": "4.30"
+      }
+    },
+    {
+      "name": "documentation-only scope",
+      "changedTracked": 54,
+      "untracked": 1
+    },
+    {
+      "name": "engine/provider/JASSUB disabled source invariants",
+      "verified": true
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "No product functionality, native/media runtime, model quality, human gate or release is qualified by this validator."
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "schema": "yamakan.planning-review/v1",
+  "reviewer": "fresh-context session-model subagent /root/plan_correctness",
+  "reviewedHead": "3e15bab459cf2ba904926cf9e4d79fd62d729e7b",
+  "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "freshContext": true,
+  "reviewKind": "Independent planning correctness, product, parsimony and media-systems review",
+  "verdict": "PLAN PARTIALLY READY; repair the two must-fix handoff contracts before authorizing the proposed writable-v5 slice",
+  "releaseApproval": false,
+  "inspectionScope": {
+    "planningDocumentsRead": [
+      "00_EXECUTIVE_STRATEGY.md",
+      "09_ARCHITECTURE_OPTIONS.md",
+      "10_FINAL_TARGET_ARCHITECTURE.md",
+      "11_PRODUCT_UX_MASTER_PLAN.md",
+      "12_PROFESSIONAL_EDITING_ROADMAP.md",
+      "16_BENCHMARK_AND_EVALUATION_PLAN.md",
+      "19_TASK_DEPENDENCY_GRAPH.md",
+      "20_TEST_REVIEW_AND_ACCEPTANCE_MATRIX.md",
+      "21_RISK_REGISTER_AND_DECISION_LOG.md",
+      "22_CURSOR_IMPLEMENTATION_PROMPT.md",
+      "23_FINAL_READINESS_REPORT.md",
+      "TASK_REGISTRY.json",
+      "DEPENDENCY_GRAPH.json",
+      "validate-plan.mjs",
+      "evidence/plan-validation.json"
+    ],
+    "planningSamples": [
+      "01_CURRENT_CODEBASE_AUDIT.md: scope, execution evidence and transaction call graph",
+      "08_SOURCE_DONOR_MASTER_MATRIX.md: scoped donor conclusions, discovery-only boundaries and import gates; not every donor source reread",
+      "18_ATOMIC_IMPLEMENTATION_TASKS.md: canonical persistence and media/effect task contracts",
+      "docs/adr/0004-canonical-creative-project-and-qualified-execution.md"
+    ],
+    "authorityAndSourceSamples": [
+      "AGENTS.md",
+      "C:/Users/Shehr/.codex/RTK.md",
+      "Founder directive attachment 79b2c6ae-9c2a-4176-9cf3-e0ad89b5ce95/Pasted text.txt",
+      "specs/CURRENT.md",
+      "docs/IMPLEMENTATION_PLAN.md",
+      "docs/OPERATIONAL_CONTRACTS.md: workspace, commit, recovery, render and command contracts",
+      "core/store.ts: #commit, canonical conversion, importHistory, publication and retained-media GC",
+      "core/canonical.ts: fromEditView and toEditView",
+      "core/recovery.ts: backup scope and manifest schema",
+      "core/command/policy.ts: enforced request/snapshot byte limits",
+      "core/studio.ts: document schema and byte limits",
+      "server/main.ts: command-body limit enforcement",
+      "mcp/main.ts: frame limit references"
+    ],
+    "notInspectedOrExecuted": [
+      "No production tests, application/media/native execution, dependency install or model inference",
+      "No authenticated competitor task, independent donor checkout build or benchmark rerun",
+      "No exhaustive whole-source/security audit or every donor claim recertification"
+    ]
+  },
+  "checksActuallyRun": [
+    {
+      "check": "Read-only Python graphlib/JSON structural cross-check against current exact reviewed head",
+      "result": "PASS",
+      "observations": {
+        "tasks": 44,
+        "edges": 95,
+        "acyclic": true,
+        "declaredDagMatchesRegistry": true,
+        "allTasksUnauthorized": true,
+        "allTaskStatesPlannedOrBlocked": true
+      }
+    },
+    {
+      "check": "Git HEAD and pre-review working-tree status",
+      "result": "Head matches reviewedHead; clean before review output"
+    },
+    {
+      "check": "Initial read-only Python structural-check command",
+      "result": "FAILED: shell quoting SyntaxError; corrected read-only check above passed"
+    }
+  ],
+  "findings": [
+    {
+      "id": "PC-01",
+      "classification": "must-fix",
+      "priority": "P1",
+      "title": "Specify a transport that can persist the supported Studio document size",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md:25",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md:27",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/TASK_REGISTRY.json: tasks YU-010 and YU-011",
+        "core/command/policy.ts: requestBytes",
+        "core/studio.ts: STUDIO_LIMITS.maxDocumentBytes",
+        "server/main.ts:316"
+      ],
+      "trigger": "Commit a valid Studio document larger than the existing 2 MiB command-envelope limit, within the planned 8 MiB document scope.",
+      "evidence": "The proposed commit takes inline document content. Current HTTP commands are bounded by requestBytes=2 MiB; Studio permits 8 MiB, and JSON string escaping can enlarge wire bytes further. Moving document bytes out of the snapshot does not resolve ingress.",
+      "impact": "Cursor must invent a new publication protocol or silently reduce a supported canvas size; the first persistence slice cannot meet the stated boundary as specified.",
+      "repair": "Specify bounded authenticated document staging and an immutable server-issued handle/hash consumed by the revision-bound commit, including abandoned-upload GC and project ownership; alternatively explicitly reduce the supported serialized wire size and show a safe refusal. Keep global command limits unless a separately reviewed policy change is intended.",
+      "acceptance": "Browser/REST/MCP/SDK tests cover just below/at/above both wire and document byte bounds, multibyte/escaped text, replay, foreign handle, abandoned stage and crash-before-attach; no acknowledged document is lost."
+    },
+    {
+      "id": "PC-02",
+      "classification": "must-fix",
+      "priority": "P1",
+      "title": "Gate writable v5 promotion on lossless existing edit paths and complete recovery",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/TASK_REGISTRY.json: tasks YU-010 through YU-015",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/19_TASK_DEPENDENCY_GRAPH.md",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md:25",
+        "core/store.ts: #commit",
+        "core/canonical.ts: fromEditView/toEditView"
+      ],
+      "trigger": "A Studio/Cinema persistence task is merged and promoted before YU-014/YU-015; an ordinary timeline/full-project save or undo then runs against a document-bearing v5 project.",
+      "evidence": "The graph permits individual persistence tasks to become VERIFIED before complete recovery and browser command cohesion. Current #commit rebuilds canonical state from the editing projection; those conversion functions currently enumerate only known fields, and non-edit-history operations clear the edit chain. The new plan needs an explicit preservation/activation contract for these paths.",
+      "impact": "A locally passing document commit could be presented as durable persistence while another existing mutation drops its references or recovery/undo remains incomplete.",
+      "repair": "Define a shared activation gate for live writable-v5/default UI promotion, separate from build dependencies to avoid a cycle. Require all existing mutation/projection/undo paths to preserve creative references server-side where safe, otherwise reject a lossy save. Individual task verification may cover a flag-off contract but must state activation is still blocked.",
+      "acceptance": "Create canvas/scene/story refs, perform existing save/rename/timeline edits and writer-scoped undo/redo including old-client/lost-response/concurrent-writer cases, kill/reopen, backup/restore and verify exact document/media closure before activation."
+    },
+    {
+      "id": "PC-03",
+      "classification": "worth-considering",
+      "priority": "P2",
+      "title": "Separate optional transform animation from the independent complexity fix",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/18_ATOMIC_IMPLEMENTATION_TASKS.md: YU-022",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/TASK_REGISTRY.json: YU-022",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/DEPENDENCY_GRAPH.json"
+      ],
+      "evidence": "YU-022 depends only on YU-019 but mentions adding transform channels after YU-020 parity. The conditional prose is stricter than the machine graph for that optional sub-scope.",
+      "repair": "Keep YU-022 limited to existing opacity/volume compilation, with transform animation a child task depending on YU-020 and YU-022; or encode the conditional sub-scope explicitly in task selection/receipts.",
+      "impact": "Avoid an implementation agent broadening a performance fix into unqualified effect channels."
+    },
+    {
+      "id": "PC-04",
+      "classification": "worth-considering",
+      "priority": "P2",
+      "title": "Freeze a smaller audience and journey before expanding the ten-phase roadmap",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/00_EXECUTIVE_STRATEGY.md",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/11_PRODUCT_UX_MASTER_PLAN.md",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/19_TASK_DEPENDENCY_GRAPH.md"
+      ],
+      "evidence": "The first integrity slice is credibly separated, but the broader product still spans editor, canvas, cinematic previs, consent/identity, agents, captions, interchange and engines without observed target-user task evidence.",
+      "repair": "After integrity qualification, freeze one bilingual short-film finishing brief and a small formative study as the next prioritization checkpoint; permit reordering or deferring later work based on observed completion failures.",
+      "impact": "Reduce solo-founder maintenance scope and validate that the selected workspace structure improves a real creator journey."
+    },
+    {
+      "id": "PC-05",
+      "classification": "skip-it",
+      "title": "Do not treat missing generation benchmarks or exhaustive donor qualification as concealed passes",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/16_BENCHMARK_AND_EVALUATION_PLAN.md",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/23_FINAL_READINESS_REPORT.md"
+      ],
+      "evidence": "The package explicitly labels head-to-head results NOT TESTED, separates pilot from powered comparisons, clusters repeated prompt/rater evidence, retains failures, and states source/runtime/resource gaps under PARTIALLY READY.",
+      "disposition": "These limitations restrict future claims and activation; they are not grounds to demand paid/model work now or to call the existing plan a release approval."
+    },
+    {
+      "id": "PC-06",
+      "classification": "skip-it",
+      "title": "Do not require a native editor rewrite from the current architecture comparison",
+      "paths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/09_ARCHITECTURE_OPTIONS.md",
+        "docs/adr/0004-canonical-creative-project-and-qualified-execution.md"
+      ],
+      "evidence": "Scores are labeled engineering judgment, include migration/maintenance sensitivity and explicit falsifiers, while native preview adoption requires a matched Windows lifecycle/parity spike.",
+      "disposition": "Preserving the existing authority and testing the narrower route first is defensible under the verified zero-spend/unqualified-GPU constraints."
+    }
+  ],
+  "deltaReview": null,
+  "limitations": "Planning review only. The two must-fixes concern implementation handoff and promotion conditions, not a claim that unimplemented production code has already failed."
+}
