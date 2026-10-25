@@ -128,6 +128,9 @@ function App() {
   // The service's head of the open project: what the editor's change is
   // made from, and what a commit compares and swaps against (YU-015).
   const head = useRef<Project | null>(null);
+  // Which opening of a project the head belongs to: opening, switching or
+  // restoring starts a new one (a Studio save only moves the revision).
+  const headGen = useRef(0);
   const refresh = async () =>
     setProjects(await call("yamakan.project.list", {}));
   useEffect(() => {
@@ -166,6 +169,7 @@ function App() {
   const accept = (project: Project) => {
     const opened = ProjectSchema.parse(project);
     head.current = opened;
+    headGen.current++;
     setUnapplied(null);
     putHistory(createHistoryState(opened));
     setMessage(
@@ -214,7 +218,8 @@ function App() {
   };
   const commitOnce = async (): Promise<Outcome> => {
     const base = head.current,
-      draft = current.current;
+      draft = current.current,
+      gen = headGen.current;
     if (!base || !draft || base.id !== draft.id || base === draft)
       return "unchanged";
     const operations = operationsBetween(base, draft);
@@ -257,7 +262,7 @@ function App() {
         await call("yamakan.project.open", { projectId: base.id }),
       );
       // The editor moved on (another project, a restore): leave it be.
-      if (head.current !== base) return "unchanged";
+      if (headGen.current !== gen) return "unchanged";
       // Merged only when the two changes touch different things: the
       // other writer's edit to the same clip, track or scene is never
       // replaced by this one.
@@ -288,7 +293,7 @@ function App() {
           merged = null;
         }
       }
-      if (head.current !== base) return "unchanged";
+      if (headGen.current !== gen) return "unchanged";
       if (!merged) {
         head.current = fresh;
         setUnapplied(current.current ?? draft);
@@ -301,11 +306,12 @@ function App() {
     }
     // The editor moved on during the commit (another project, a restore,
     // a reload): the commit stands on the service; the editor is left be.
-    if (head.current !== base) return "unchanged";
+    if (headGen.current !== gen) return "unchanged";
     head.current = committed;
     const now = current.current;
     // What was edited during the commit, on top of the committed head.
-    const kept = now && now !== draft ? carry(draft, now, committed) : null;
+    const carried = now && now !== draft ? carry(draft, now, committed) : null;
+    const kept = carried === committed ? null : carried;
     putHistory(
       kept
         ? { past: [committed], present: kept, future: [] }

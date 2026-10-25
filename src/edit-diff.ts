@@ -29,8 +29,9 @@ export function touched(operations: Operation[]): Set<string> {
       "audioTrackId",
     ])
       if (typeof o[key] === "string") ids.add(o[key] as string);
-    if (Array.isArray(o.clipIds))
-      for (const id of o.clipIds) ids.add(String(id));
+    for (const list of ["clipIds", "newTrackIds"])
+      if (Array.isArray(o[list]))
+        for (const id of o[list] as unknown[]) ids.add(String(id));
   }
   return ids;
 }
