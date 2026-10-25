@@ -139,6 +139,11 @@ const noAudio = () =>
     "MEDIA_INVALID",
     "The asset's audio could not be decoded for a waveform.",
   );
+// Failures the same bytes always produce (no audio stream, audio longer
+// than an asset may be). Only these are remembered: a timeout or a killed
+// worker may succeed next time.
+const settled = new WeakSet<Error>();
+const always = <E extends Error>(e: E) => (settled.add(e), e);
 
 // Channels of the first audio stream, by an owned, bounded ffprobe.
 async function audioChannels(file: string, signal: AbortSignal) {
@@ -173,6 +178,7 @@ async function audioChannels(file: string, signal: AbortSignal) {
   });
   if (signal.aborted) throw new Error("Cancelled.");
   const channels = Number(out.trim());
+  if (result.code === 0 && out.trim() === "") throw always(noAudio());
   if (result.code !== 0 || !Number.isInteger(channels) || channels < 1)
     throw noAudio();
   return Math.min(channels, MAX_CHANNELS);
@@ -244,6 +250,8 @@ async function decodePeaks(file: string, seconds: number, signal: AbortSignal) {
     clearTimeout(timer);
     signal.removeEventListener("abort", stop);
   }
+  if (failed instanceof CommandError && failed.code === "LIMIT_EXCEEDED")
+    throw always(failed);
   if (failed) throw failed;
   if (signal.aborted) throw new Error("Cancelled.");
   if (controller.signal.aborted || result.code !== 0) throw noAudio();
@@ -301,7 +309,15 @@ async function basePeaks(
   const dir = await store.file(projectId, "cache", "peaks");
   await mkdir(dir, { recursive: true });
   const key = createHash("sha256")
-    .update(JSON.stringify([asset.hash, PEAKS_VERSION, await engineId(dir)]))
+    .update(
+      JSON.stringify([
+        asset.hash,
+        // The decode stops at the asset's probed duration.
+        asset.durationFrames,
+        PEAKS_VERSION,
+        await engineId(dir),
+      ]),
+    )
     .digest("hex");
   const cacheFile = path.join(dir, `${key}.peaks`);
   const known = recent.get(key);
@@ -343,7 +359,7 @@ async function basePeaks(
           controller.signal,
         );
       } catch (e) {
-        if (e instanceof CommandError)
+        if (e instanceof CommandError && settled.has(e))
           remember(
             failures,
             key,
