@@ -55,11 +55,60 @@ const reply = (id: Message["id"], result: unknown) =>
 const error = (id: Message["id"], code: number, message: string) =>
   send({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 
+// Documents larger than a tool call travel over the authenticated staging
+// route: this one tool stages the JSON content, then commits the sealed
+// upload (sdk/client.ts saveDocument). Its frame is still bounded by the
+// 2 MiB MCP line cap; larger documents are saved by the UI or the CLI.
+const SAVE_DOCUMENT = "yamakan_document_save";
+function saveDocumentTool(commit: {
+  summary: string;
+  scope: string;
+  inputSchema: Record<string, unknown>;
+}) {
+  const schema = commit.inputSchema as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  const { source: _source, ...properties } = schema.properties ?? {};
+  return {
+    name: SAVE_DOCUMENT,
+    title: "yamakan.document.save",
+    description: `Stage a creative document's JSON content and commit it as a new revision (stage route, then yamakan.document.commit). Requires scope ${commit.scope}.`,
+    inputSchema: {
+      ...schema,
+      properties: {
+        ...properties,
+        content: {
+          type: "object",
+          description: "The whole document (Studio document or Cinema scene).",
+        },
+        requestId: { ...REQUEST_ID, maxLength: 121 },
+      },
+      required: [
+        ...(schema.required ?? []).filter((r) => r !== "source"),
+        "content",
+      ],
+    },
+    annotations: { readOnlyHint: false },
+  };
+}
+
 let operations: Map<string, Operation> | null = null;
 async function tools() {
   const catalog = await (await client()).catalog();
   operations = new Map(catalog.tools.map((t) => [toolName(t.name), t.name]));
-  return catalog.tools.map((t) => {
+  const commit = catalog.tools.find(
+    (t) => t.name === "yamakan.document.commit",
+  );
+  return [
+    ...catalogTools(catalog.tools),
+    ...(commit ? [saveDocumentTool(commit)] : []),
+  ];
+}
+function catalogTools(
+  list: Awaited<ReturnType<YamakanClient["catalog"]>>["tools"],
+) {
+  return list.map((t) => {
     const schema = t.inputSchema as {
       properties?: Record<string, unknown>;
     };
@@ -127,7 +176,10 @@ async function handle(message: Message) {
         throw e;
       }
       const operation = operations!.get(String(params.name));
-      if (!operation) return error(id, -32602, "Unknown tool.");
+      const saving =
+        params.name === SAVE_DOCUMENT &&
+        [...operations!.values()].includes("yamakan.document.commit");
+      if (!operation && !saving) return error(id, -32602, "Unknown tool.");
       const args =
         params.arguments && typeof params.arguments === "object"
           ? { ...(params.arguments as Record<string, unknown>) }
@@ -149,14 +201,46 @@ async function handle(message: Message) {
             false,
             null,
           );
-        const result = await (
-          await client()
-        ).call(
-          operation,
-          args as never,
-          // The service validates it like the REST envelope's requestId.
-          requestId === undefined ? undefined : (requestId as string),
-        );
+        if (saving) {
+          // As strict as a catalog tool: no field outside the schema, and
+          // the document must be a JSON object.
+          const allowed = new Set([
+            "projectId",
+            "expectedRevision",
+            "documentId",
+            "kind",
+            "schemaVersion",
+            "expectedContentHash",
+            "content",
+          ]);
+          const content = args.content;
+          if (
+            Object.keys(args).some((k) => !allowed.has(k)) ||
+            !content ||
+            typeof content !== "object" ||
+            Array.isArray(content)
+          )
+            throw new YamakanError(
+              "VALIDATION",
+              "Invalid yamakan_document_save arguments.",
+              false,
+              null,
+            );
+        }
+        const service = await client();
+        const result = saving
+          ? await service.saveDocument({
+              ...(args as Parameters<YamakanClient["saveDocument"]>[0]),
+              // Stage and commit each replay under this id on a retry.
+              requestId:
+                (requestId as string | undefined) ?? crypto.randomUUID(),
+            })
+          : await service.call(
+              operation!,
+              args as never,
+              // The service validates it like the REST envelope's requestId.
+              requestId === undefined ? undefined : (requestId as string),
+            );
         return reply(id, {
           content: [{ type: "text", text: JSON.stringify(result) }],
         });

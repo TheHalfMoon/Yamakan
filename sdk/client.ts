@@ -4,8 +4,16 @@ import type {
   OperationResult,
 } from "../core/command/registry.ts";
 import type { ErrorCode } from "../core/command/errors.ts";
+import type { StagedDocumentReceipt } from "../core/store.ts";
+import { DOCUMENT_LIMITS } from "../core/document-ref.ts";
+
+// saveDocument derives "<id>.stage" and "<id>.commit"; both must stay within
+// the service's 128-character request ids.
+export const SAVE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,121}$/;
 
 export type { Operation, OperationInput, OperationResult };
+
+export type { StagedDocumentReceipt };
 
 export class YamakanError extends Error {
   readonly code: ErrorCode;
@@ -80,6 +88,111 @@ export class YamakanClient {
       );
     }
     return value.result as OperationResult<O>;
+  }
+  /**
+   * Uploads one creative document's bytes to the staging route and returns
+   * its sealed receipt. Reusing `requestId` after a lost response returns
+   * the same receipt without the server reading the body again.
+   */
+  async stageDocument(
+    projectId: string,
+    body: Uint8Array,
+    options: {
+      kind: "studio" | "cinemaScene";
+      schemaVersion: number;
+      requestId: string;
+    },
+  ): Promise<StagedDocumentReceipt> {
+    // Refused here rather than cut off by the server mid-upload.
+    if (
+      body.byteLength === 0 ||
+      body.byteLength > DOCUMENT_LIMITS.documentBytes
+    )
+      throw new YamakanError(
+        "LIMIT_EXCEEDED",
+        `A staged document is 1 to ${DOCUMENT_LIMITS.documentBytes} bytes.`,
+        false,
+        null,
+      );
+    // WebCrypto: the same code runs in the browser UI and in Node.
+    const digest = await globalThis.crypto.subtle.digest(
+      "SHA-256",
+      body as Uint8Array<ArrayBuffer>,
+    );
+    const sha256 = [...new Uint8Array(digest)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const response = await this.#fetch(
+      `${this.#base}/api/v1/projects/${encodeURIComponent(projectId)}/documents/stage`,
+      {
+        method: "POST",
+        // Content-Length comes from the body itself.
+        headers: this.#headers({
+          "Content-Type": "application/json",
+          "X-Request-Id": options.requestId,
+          "X-Content-SHA256": sha256,
+          "X-Document-Kind": options.kind,
+          "X-Document-Schema-Version": String(options.schemaVersion),
+        }),
+        body: body as Uint8Array<ArrayBuffer>,
+      },
+    );
+    const value = await response.json().catch(() => null);
+    if (!response.ok || !value || "error" in value) {
+      const e = value?.error;
+      throw new YamakanError(
+        e?.code ?? "INTERNAL",
+        e?.message ?? `Upload failed with HTTP ${response.status}.`,
+        Boolean(e?.retryable),
+        value?.requestId ?? null,
+      );
+    }
+    return value as StagedDocumentReceipt;
+  }
+  /**
+   * Saves a creative document as a new revision: stages its JSON, then
+   * commits the sealed upload. One `requestId` makes the pair safe to
+   * retry: the stage and the commit each replay their original result.
+   */
+  async saveDocument(input: {
+    projectId: string;
+    expectedRevision: number;
+    documentId: string;
+    kind: "studio" | "cinemaScene";
+    schemaVersion: number;
+    expectedContentHash: string | null;
+    content: unknown;
+    requestId: string;
+  }) {
+    if (!SAVE_REQUEST_ID.test(input.requestId))
+      throw new YamakanError(
+        "VALIDATION",
+        "saveDocument needs a request id of 1 to 121 characters [A-Za-z0-9._:-].",
+        false,
+        null,
+      );
+    const body = new TextEncoder().encode(JSON.stringify(input.content));
+    const staged = await this.stageDocument(input.projectId, body, {
+      kind: input.kind,
+      schemaVersion: input.schemaVersion,
+      requestId: `${input.requestId}.stage`,
+    });
+    return this.call(
+      "yamakan.document.commit",
+      {
+        projectId: input.projectId,
+        expectedRevision: input.expectedRevision,
+        documentId: input.documentId,
+        kind: input.kind,
+        schemaVersion: input.schemaVersion,
+        expectedContentHash: input.expectedContentHash,
+        source: {
+          stagedUploadId: staged.stagedUploadId,
+          contentHash: staged.contentHash,
+        },
+      },
+      `${input.requestId}.commit`,
+    );
   }
   async catalog(): Promise<{
     apiVersion: number;
