@@ -166,3 +166,38 @@ export function evaluateEnvironment(input) {
     workerTools: input.workerTools || null,
   };
 }
+
+// Every package the lockfile pins for this platform must be installed at
+// its pinned version: a stale node_modules (installed before a pin changed)
+// otherwise passes typecheck and fails only some tests, far from the cause.
+export function lockfileDrift(
+  repoRoot,
+  readJson,
+  platform = process.platform,
+  arch = process.arch,
+) {
+  const lock = readJson(`${repoRoot}/package-lock.json`);
+  const drift = [];
+  let checked = 0;
+  for (const [key, entry] of Object.entries(lock?.packages || {})) {
+    if (!key.startsWith("node_modules/")) continue;
+    // Optional packages for another OS or CPU (fsevents, arm64 bindings)
+    // are never installed here.
+    const fits = (list, value) =>
+      !Array.isArray(list) ||
+      (list.includes(value) && !list.includes(`!${value}`));
+    if (entry.optional && !(fits(entry.os, platform) && fits(entry.cpu, arch)))
+      continue;
+    checked += 1;
+    const installed = readJson(`${repoRoot}/${key}/package.json`);
+    if (!installed)
+      drift.push({ package: key, pinned: entry.version, installed: null });
+    else if (installed.version !== entry.version)
+      drift.push({
+        package: key,
+        pinned: entry.version,
+        installed: installed.version,
+      });
+  }
+  return { checked, drift };
+}

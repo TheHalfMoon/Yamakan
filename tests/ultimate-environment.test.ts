@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 // prettier-ignore
 // @ts-expect-error Plain .mjs modules without declarations.
-import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, redactLocalPaths, scriptOutcome } from "../scripts/ultimate-environment.mjs";
+import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, lockfileDrift, redactLocalPaths, scriptOutcome } from "../scripts/ultimate-environment.mjs";
 
 const present = { present: true, sha256: "a".repeat(64) };
 
@@ -159,4 +159,37 @@ test("a redirected worker tools cache is BLOCKED, never pass", () => {
       (b: { code: string }) => b.code === "WORKER_TOOLS_REDIRECTED",
     ),
   );
+});
+
+test("lockfile drift lists missing and mismatched packages only", () => {
+  const files: Record<string, unknown> = {
+    "r/package-lock.json": {
+      packages: {
+        "": { name: "app" },
+        "node_modules/a": { version: "1.0.0" },
+        "node_modules/b": { version: "2.0.0" },
+        "node_modules/c": { version: "3.0.0" },
+        "node_modules/mac-only": {
+          version: "1.0.0",
+          optional: true,
+          os: ["darwin"],
+        },
+        "node_modules/arm-only": {
+          version: "1.0.0",
+          optional: true,
+          os: ["win32"],
+          cpu: ["arm64"],
+        },
+      },
+    },
+    "r/node_modules/a/package.json": { version: "1.0.0" },
+    "r/node_modules/b/package.json": { version: "1.9.0" },
+  };
+  const read = (file: string) => files[file] ?? null;
+  const result = lockfileDrift("r", read, "win32", "x64");
+  assert.equal(result.checked, 3);
+  assert.deepEqual(result.drift, [
+    { package: "node_modules/b", pinned: "2.0.0", installed: "1.9.0" },
+    { package: "node_modules/c", pinned: "3.0.0", installed: null },
+  ]);
 });

@@ -3,7 +3,13 @@
  * Records genuine outcomes. Missing helper/FFmpeg/dependency is BLOCKED.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +19,7 @@ import {
   ENVIRONMENT_FORMAT,
   REQUIRED_SCRIPTS,
   evaluateEnvironment,
+  lockfileDrift,
   redactLocalPaths,
   scriptOutcome,
 } from "./ultimate-environment.mjs";
@@ -145,6 +152,20 @@ try {
   zodPresent = false;
 }
 
+const lockfile = lockfileDrift(repo, (file) => {
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+});
+const dependency = {
+  present: zodPresent && lockfile.checked > 0 && lockfile.drift.length === 0,
+  name: "lockfile-pinned node_modules",
+  checked: lockfile.checked,
+  drift: lockfile.drift,
+};
+
 const ffmpeg = toolRecord(process.env.YAMAKAN_FFMPEG || which("ffmpeg"));
 const ffprobe = toolRecord(process.env.YAMAKAN_FFPROBE || which("ffprobe"));
 
@@ -167,7 +188,7 @@ function workerToolsState() {
 const workerTools = workerToolsState();
 
 const precheck = evaluateEnvironment({
-  dependency: { present: zodPresent, name: "zod" },
+  dependency,
   helper,
   ffmpeg,
   ffprobe,
@@ -194,7 +215,7 @@ if (precheck.status !== "BLOCKED") {
 }
 
 const evaluation = evaluateEnvironment({
-  dependency: { present: zodPresent, name: "zod" },
+  dependency,
   helper,
   ffmpeg,
   ffprobe,
