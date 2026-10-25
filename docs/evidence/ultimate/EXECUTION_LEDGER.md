@@ -22,7 +22,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-012 legacy Cinema sidecar migration (flag off)                                                                                | VERIFIED (flag-off scope)   | #96 → `b49721b` | [receipts/YU-012.json](receipts/YU-012.json); CI and push run green; Windows: Studio 1975/1975, E2E and TesterArmy pass, 3 load-only unit timeouts pass alone                      |
 | YU-013 Director runs and consent in SQLite (part a)                                                                              | VERIFIED                    | #97 → `8747694` | [receipts/YU-013a.json](receipts/YU-013a.json); CI and push run green; Windows: task suites 55/55, Studio 1975/1975, E2E and TesterArmy pass, 4 load-only unit timeouts pass alone |
 | YU-013b restore fencing for jobs (restoreHold, copied job/lease fencing, supervisor references, external-request reconciliation) | PLANNED (with YU-014)       | —               | the Director has no workers or provider calls yet; required before any such effect is added                                                                                        |
-| YU-015 browser editing through canonical operations                                                                              | IMPLEMENTED (this PR)       | —               | —                                                                                                                                                                                  |
+| YU-015 browser editing through canonical operations                                                                              | VERIFIED                    | #99 → `dbf787f` | [receipts/YU-015.json](receipts/YU-015.json); CI and push run green; Windows: 504/507 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy pass                                     |
 | YU-014, YU-017…YU-101                                                                                                            | PLANNED                     | —               | —                                                                                                                                                                                  |
 
 ## Development tool status (Windows 11, this PC)
@@ -60,7 +60,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010 and YU-011 are VERIFIED flag-off (AG-DOCS activation needs the YU-010…015 group receipt); YU-016, YU-012 (flag-off) and YU-013 part a are VERIFIED. Next: YU-015 (canonical browser operations/undo) and YU-014 (complete backup/restore, including documents and Studio bitmaps) together with YU-013b (restore fencing for jobs), in DAG order.
+YU-010 and YU-011 are VERIFIED flag-off (AG-DOCS activation needs the YU-010…015 group receipt); YU-016, YU-012 (flag-off), YU-013 part a and YU-015 are VERIFIED. Next: YU-014 (complete backup/restore, including documents and Studio bitmaps) together with YU-013b (restore fencing for jobs); then the AG-DOCS group activation receipt (YU-010…015), and onward in DAG order.
 
 ## Continuation instructions
 

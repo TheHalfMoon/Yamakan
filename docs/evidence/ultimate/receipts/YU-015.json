@@ -1,0 +1,79 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "a7bbbe1",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-015",
+  "objective": "Route browser editing through canonical operations and durable undo",
+  "branch": "feat/yu-015-browser-operations",
+  "mergedPr": 99,
+  "headCommit": "eec2067",
+  "mergeCommit": "dbf787ff44841b63b93a04c864d173b3042649fa",
+  "tests": {
+    "files": [
+      "tests/browser-command-history.test.ts",
+      "scripts/browser-e2e.mjs"
+    ],
+    "result": "browser-command-history 7/7: every editor gesture as a verified batch; unexpressible changes stay drafts; 100 committed gestures (one revision each, replayable lost response, service == editor after each); writer-scoped undo after restart; UI and CLI/MCP store identical canonical bytes; concurrent agent edit conflicts, disjoint changes merge, same-entity edits never merged; creative documents kept by batches and whole-project save. Edge E2E: mute and unmute each commit on their own as one revision; undo-before-save, redo-then-save and unsaved-draft recovery still pass"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness panel",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 3, "applied": 3, "shouldFixApplied": 7 }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 5,
+        "applied": 3,
+        "notApplied": [
+          "per-tab undo scope (undo is per principal; documented)",
+          "Undo/Redo enabled only when possible (always enabled; the service answers when nothing can be undone)"
+        ]
+      }
+    },
+    {
+      "kind": "delta re-review 1",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 2, "applied": 2, "shouldFixApplied": 3 }
+    },
+    {
+      "kind": "delta re-review 2",
+      "judge": "Sonnet subagent",
+      "findings": { "mustFix": 0, "shouldFix": 1, "applied": 1 }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "low",
+      "probability": 0.57,
+      "confidence": 0.36
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); local model needs more free RAM than the host had"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "dbf787ff44841b63b93a04c864d173b3042649fa",
+    "ci": "PR exact head eec2067: qualify, qualify-windows-r8, otio-oracle success; push run on dbf787f: success",
+    "windows": "detached dbf787f: lint, provenance, build pass; npm test 504/507 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass; TesterArmy Studio journey PASSED"
+  },
+  "limitations": [
+    "Writer-scoped undo is per principal: browser tabs share one, so a tab can undo another tab's step once its head is current (never an agent's or the CLI's)",
+    "A crash mid-drag is safe by construction (nothing leaves the page before the pointer is released), not by a dedicated test",
+    "Rational-rate round-trips on the whole-project save path rely on the existing canonical tests",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
