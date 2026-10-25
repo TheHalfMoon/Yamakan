@@ -113,6 +113,8 @@ export function createProjectStudioAssetStore(
           ),
         ].map((m) => m[1]!),
       );
+      // Bitmaps this session only loaded need no refresh: a retained
+      // revision's document names them, and revisions are never pruned.
       for (const [digest, entry] of stored) {
         const blob = blobs.get(digest);
         if (

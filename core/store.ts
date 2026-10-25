@@ -149,6 +149,9 @@ export type StoreOptions = {
   uploadGraceMs?: number;
   // Test seam: the free bytes a commit sees (default: the volume's, statfs).
   freeBytes?: () => number;
+  // Test seam: awaited while Studio bitmap collection holds the discard
+  // mark, before it unlinks (lets a test race an upload against it).
+  studioCollectionPause?: () => Promise<void>;
 };
 
 // Snapshots hold canonical project bytes (core/canonical.ts). Snapshots that
@@ -2055,19 +2058,21 @@ export class ProjectStore {
       // of the same bytes waits (beginPublication) until the files are, so
       // it can never re-register a digest whose file is then deleted.
       const work = (async () => {
+        await this.#options.studioCollectionPause?.();
         for (const { digest, bytes } of removed) {
-          const unlinked = await unlink(
-            await this.file(
-              projectId,
-              "objects",
-              "sha256",
-              digest.slice(0, 2),
-              digest,
-            ),
-          ).then(
-            () => true,
-            () => false,
-          );
+          // One file that cannot be removed is left for the next pass.
+          const unlinked = await this.file(
+            projectId,
+            "objects",
+            "sha256",
+            digest.slice(0, 2),
+            digest,
+          )
+            .then((file) => unlink(file))
+            .then(
+              () => true,
+              () => false,
+            );
           if (unlinked) {
             report.objects++;
             report.bytes += bytes;

@@ -196,11 +196,13 @@ export function StudioCanvas({
           saver.current = async () => {
             if (cancelled) return;
             setSave({ state: "saving" });
+            // The revision this save starts from, before anything is awaited.
+            const from = revision.current;
             try {
               const result = await saveStudioCanvas({
                 client,
                 projectId,
-                expectedRevision: revision.current,
+                expectedRevision: from,
                 documentId,
                 name: studioDocument.name,
                 expectedContentHash: savedHash,
@@ -216,7 +218,6 @@ export function StudioCanvas({
                     canvas,
                   }),
               });
-              const from = revision.current;
               savedHash = result.contentHash;
               // The editor's draft moves even if this view has gone (the
               // project and revision check in onSaved keeps that safe).

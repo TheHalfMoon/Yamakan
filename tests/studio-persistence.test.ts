@@ -7,6 +7,7 @@ import path from "node:path";
 import { deflateSync, crc32 } from "node:zlib";
 import { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "../core/store.ts";
+import type { StoreOptions } from "../core/store.ts";
 import { canvasBitmapDigests, validateDocument } from "../core/documents.ts";
 import { createEmptyStudioDocument } from "../core/studio.ts";
 import { CommandError } from "../core/command/errors.ts";
@@ -18,10 +19,10 @@ after(() => {
   return Promise.all(bases.map((b) => rm(b, { recursive: true, force: true })));
 });
 
-async function workspace() {
+async function workspace(options: StoreOptions = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-studio-"));
   bases.push(root);
-  const store = new ProjectStore(root);
+  const store = new ProjectStore(root, options);
   handles.push(store);
   await store.initialize();
   const project = await store.create("Studio");
@@ -380,37 +381,43 @@ test("the qualification switch never applies in an installed bundle", async () =
   }
 });
 
-test("a bitmap collected by garbage collection can be stored again, and never loses its file", async () => {
-  const { store, project } = await workspace();
+test("an upload of a bitmap being collected waits, then stores it again, file and all", async () => {
+  let reached!: () => void;
+  const atPause = new Promise<void>((r) => (reached = r));
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let pausing = false;
+  const { store, project } = await workspace({
+    studioCollectionPause: async () => {
+      if (!pausing) return;
+      reached();
+      await gate;
+    },
+  });
   const bytes = png(6, 6, [5, 6, 7, 255]);
-  const later = () => ({ graceMs: 0, now: Date.now() + 1000 });
   const first = await store.importStudioBitmap(
     project.id,
     stream(bytes),
     bytes.length,
   );
-  await store.collectGarbage(later());
-  await refused(store.studioBitmapFile(project.id, first.digest), "NOT_FOUND");
-  // Collection and a new upload of the same bytes, at once, many times:
-  // the bitmap is then either fully present or absent, never a row whose
-  // file is gone (RECOVERY_REQUIRED).
-  for (let round = 0; round < 10; round++) {
-    await Promise.all([
-      store.collectGarbage(later()),
-      store.importStudioBitmap(project.id, stream(bytes), bytes.length),
-    ]);
-    try {
-      const file = await store.studioBitmapFile(project.id, first.digest);
-      assert.equal(sha(await readFile(file)), first.digest);
-    } catch (e) {
-      assert.equal((e as CommandError).code, "NOT_FOUND", String(e));
-    }
-  }
-  const again = await store.importStudioBitmap(
-    project.id,
-    stream(bytes),
-    bytes.length,
-  );
+  // Collection has deleted the rows and holds the mark, the file not yet removed.
+  pausing = true;
+  const collecting = store.collectGarbage({
+    graceMs: 0,
+    now: Date.now() + 1000,
+  });
+  await atPause;
+  let stored = false;
+  const upload = store
+    .importStudioBitmap(project.id, stream(bytes), bytes.length)
+    .then((r) => ((stored = true), r));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(stored, false, "the upload waits for the collection to finish");
+  release();
+  await collecting;
+  const again = await upload;
+  assert.equal(again.digest, first.digest);
+  // Registered and present: the collection's unlink came before the write.
   assert.equal(
     sha(await readFile(await store.studioBitmapFile(project.id, again.digest))),
     first.digest,
