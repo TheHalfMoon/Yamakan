@@ -117,6 +117,7 @@ describe("W17 Quality Lab and router explain", () => {
   it("registers W17 commands", () => {
     assert.ok(commands["yamakan.quality.capability"]);
     assert.ok(commands["yamakan.quality.compare"]);
+    assert.ok(commands["yamakan.quality.evidence"]);
     assert.ok(commands["yamakan.router.explain"]);
     assert.ok(commands["yamakan.lineage.evaluate"]);
   });

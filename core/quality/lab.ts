@@ -51,7 +51,33 @@ export const QualityComparisonSchema = z
       .length(2),
     ratings: z.array(BlindedRatingSchema).max(64),
   })
-  .strict();
+  .strict()
+  .superRefine((doc, ctx) => {
+    const issue = (message: string) =>
+      ctx.addIssue({ code: "custom", message });
+    const slots = doc.systems.map((s) => s.slot).sort();
+    if (slots[0] !== "A" || slots[1] !== "B")
+      issue(
+        "a comparison needs exactly one system in slot A and one in slot B",
+      );
+    if (doc.systems[0]?.systemId === doc.systems[1]?.systemId)
+      issue("a comparison needs two different systems");
+    for (const s of doc.systems)
+      if (s.failureCount > s.attemptCount)
+        issue(`slot ${s.slot}: failureCount cannot exceed attemptCount`);
+    const rated = new Set<string>();
+    const rubrics = new Map<string, string>();
+    for (const r of doc.ratings) {
+      const key = `${r.raterId}\u0000${r.slot}`;
+      if (rated.has(key))
+        issue(`rater ${r.raterId} rated slot ${r.slot} more than once`);
+      rated.add(key);
+      const rubric = rubrics.get(r.raterId);
+      if (rubric !== undefined && rubric !== r.rubricVersion)
+        issue(`rater ${r.raterId} used more than one rubric version`);
+      rubrics.set(r.raterId, r.rubricVersion);
+    }
+  });
 
 export type QualityComparison = z.infer<typeof QualityComparisonSchema>;
 
@@ -76,6 +102,66 @@ export function qualityLabCapability(): {
   };
 }
 
+function parseComparison(raw: unknown): QualityComparison {
+  const parsed = QualityComparisonSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new CommandError(
+      "VALIDATION",
+      parsed.error.issues.map((i) => i.message).join("; ") ||
+        "Invalid quality comparison.",
+    );
+  }
+  return parsed.data;
+}
+
+export const QUALITY_EVIDENCE_FORMAT = "yamakan.quality-evidence/v2";
+
+/**
+ * Private evidence digest over everything a comparison claims: which system
+ * produced which output in which slot, attempts, failures, latency, the
+ * shared input, its consent purpose and every rating with its rater. Two
+ * comparisons share it only if they are the same evidence. It binds system
+ * identities, so it is not part of the blinded summary raters see; the v1
+ * `contentHash` there stays as it was and is never relabelled.
+ */
+export function comparisonEvidence(raw: unknown): {
+  format: typeof QUALITY_EVIDENCE_FORMAT;
+  sha256: string;
+} {
+  const doc = parseComparison(raw);
+  const bySlot = [...doc.systems].sort((a, b) => a.slot.localeCompare(b.slot));
+  const ratings = [...doc.ratings].sort(
+    (a, b) =>
+      a.raterId.localeCompare(b.raterId) || a.slot.localeCompare(b.slot),
+  );
+  // Fixed key order: JSON.stringify of these literals is canonical.
+  const canonical = JSON.stringify({
+    format: QUALITY_EVIDENCE_FORMAT,
+    source: doc.format,
+    comparisonId: doc.comparisonId,
+    inputHash: doc.inputHash,
+    consentPurpose: doc.consentPurpose,
+    systems: bySlot.map((s) => ({
+      slot: s.slot,
+      systemId: s.systemId,
+      outputHash: s.outputHash,
+      attemptCount: s.attemptCount,
+      failureCount: s.failureCount,
+      latencyMs: s.latencyMs,
+    })),
+    ratings: ratings.map((r) => ({
+      raterId: r.raterId,
+      slot: r.slot,
+      score: r.score,
+      rubricVersion: r.rubricVersion,
+    })),
+  });
+  return {
+    format: QUALITY_EVIDENCE_FORMAT,
+    sha256: createHash("sha256").update(canonical).digest("hex"),
+  };
+}
+
 /** Deterministic blinded summary: slot averages only; system ids omitted. */
 export function summarizeBlindedComparison(raw: unknown): {
   comparisonId: string;
@@ -86,15 +172,7 @@ export function summarizeBlindedComparison(raw: unknown): {
   contentHash: string;
   qualityLabEnabled: boolean;
 } {
-  const parsed = QualityComparisonSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new CommandError(
-      "VALIDATION",
-      parsed.error.issues.map((i) => i.message).join("; ") ||
-        "Invalid quality comparison.",
-    );
-  }
-  const doc = parsed.data;
+  const doc = parseComparison(raw);
   const slots = {
     A: doc.systems.find((s) => s.slot === "A")!,
     B: doc.systems.find((s) => s.slot === "B")!,
