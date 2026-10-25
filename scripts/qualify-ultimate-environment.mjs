@@ -3,7 +3,7 @@
  * Records genuine outcomes. Missing helper/FFmpeg/dependency is BLOCKED.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +13,7 @@ import {
   ENVIRONMENT_FORMAT,
   REQUIRED_SCRIPTS,
   evaluateEnvironment,
+  redactLocalPaths,
   scriptOutcome,
 } from "./ultimate-environment.mjs";
 import { hashFile, nativeHashes, redactSecrets } from "./ultimate-baseline.mjs";
@@ -147,12 +148,31 @@ try {
 const ffmpeg = toolRecord(process.env.YAMAKAN_FFMPEG || which("ffmpeg"));
 const ffprobe = toolRecord(process.env.YAMAKAN_FFPROBE || which("ffprobe"));
 
+// The per-user cache procd stages worker executables in (container.rs).
+function workerToolsState() {
+  const base = process.env.LOCALAPPDATA;
+  if (!base) return { checked: false, redirected: false };
+  const folder = path.join(base, "Yamakan", "worker-tools");
+  try {
+    const st = lstatSync(folder);
+    return {
+      checked: true,
+      exists: true,
+      redirected: st.isSymbolicLink() || !st.isDirectory(),
+    };
+  } catch {
+    return { checked: true, exists: false, redirected: false };
+  }
+}
+const workerTools = workerToolsState();
+
 const precheck = evaluateEnvironment({
   dependency: { present: zodPresent, name: "zod" },
   helper,
   ffmpeg,
   ffprobe,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
+  workerTools,
   scripts: [],
 });
 
@@ -179,6 +199,7 @@ const evaluation = evaluateEnvironment({
   ffmpeg,
   ffprobe,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
+  workerTools,
   scripts,
 });
 

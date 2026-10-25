@@ -142,3 +142,21 @@ test("public evidence redacts the worktree and profile folders", () => {
   // different folder; only a whole-segment match may be replaced.
   assert.equal(out.other, win("C:", "Users", "Dev2", "x"));
 });
+
+test("a redirected worker tools cache is BLOCKED, never pass", () => {
+  const result = evaluateEnvironment({
+    dependency: { present: true, name: "zod" },
+    helper: present,
+    ffmpeg: present,
+    ffprobe: present,
+    workerTools: { checked: true, exists: true, redirected: true },
+    scripts: [{ name: "test", exitCode: 0 }],
+  });
+  assert.equal(result.status, "BLOCKED");
+  assert.equal(result.pass, false);
+  assert.ok(
+    result.blockers.some(
+      (b: { code: string }) => b.code === "WORKER_TOOLS_REDIRECTED",
+    ),
+  );
+});

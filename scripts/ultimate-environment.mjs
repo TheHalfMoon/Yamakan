@@ -113,6 +113,16 @@ export function evaluateEnvironment(input) {
       status: "BLOCKED",
     });
   }
+  // procd stages every worker executable in this per-user cache and grants
+  // only it to the worker sandbox; a link there redirects that grant and
+  // makes every sandboxed launch fail.
+  if (input.workerTools?.redirected) {
+    blockers.push({
+      code: "WORKER_TOOLS_REDIRECTED",
+      status: "BLOCKED",
+      detail: "the worker tools cache is a link or junction, not a folder",
+    });
+  }
   const freeBytes = input.disk?.freeBytes;
   const reserveBytes = input.disk?.reserveBytes ?? DISK_RESERVE_BYTES;
   if (typeof freeBytes === "number" && freeBytes < reserveBytes) {
@@ -153,5 +163,6 @@ export function evaluateEnvironment(input) {
     ffmpeg: input.ffmpeg || null,
     ffprobe: input.ffprobe || null,
     disk: input.disk || null,
+    workerTools: input.workerTools || null,
   };
 }
