@@ -150,6 +150,8 @@ try {
           stage: "ingest",
           outputHash: "a".repeat(64),
           ttlMs: 60_000,
+          // A valid request, so the probe reaches the human-only check.
+          expectedVersion: 1,
         },
       }),
     });

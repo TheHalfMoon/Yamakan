@@ -23,6 +23,7 @@ import {
   advanceStage,
   approveStage,
   directorNext,
+  loadRun,
   startDirectorRun,
 } from "../core/director/runtime.ts";
 import {
@@ -45,6 +46,41 @@ async function withStore(fn: (store: ProjectStore) => Promise<void>) {
     store.close();
     await rm(root, { recursive: true, force: true });
   }
+}
+
+// A real project and real stored outputs (YU-013: stage outputs must be
+// managed objects of the run's project): each output is a small WAV whose
+// samples are derived from its name, so different names differ.
+async function project(store: ProjectStore) {
+  const created = await store.create("Director");
+  const output = async (name: string) => {
+    const samples = Buffer.alloc(4800 * 2);
+    for (let i = 0; i < 4800; i++)
+      samples.writeInt16LE(
+        (hash(name).charCodeAt(i % 64) * 97 + i) % 30000,
+        i * 2,
+      );
+    const header = Buffer.alloc(44);
+    header.write("RIFF", 0, "ascii");
+    header.writeUInt32LE(36 + samples.length, 4);
+    header.write("WAVEfmt ", 8, "ascii");
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(1, 22);
+    header.writeUInt32LE(48000, 24);
+    header.writeUInt32LE(96000, 28);
+    header.writeUInt16LE(2, 32);
+    header.writeUInt16LE(16, 34);
+    header.write("data", 36, "ascii");
+    header.writeUInt32LE(samples.length, 40);
+    const { asset } = await store.importAsset(
+      created.id,
+      `${name}.wav`,
+      Buffer.concat([header, samples]),
+    );
+    return asset.hash;
+  };
+  return { projectId: created.id, output };
 }
 
 function emptyRun(id = "22222222-2222-4222-8222-222222222222"): DirectorRun {
@@ -125,8 +161,9 @@ test("prerequisites and approval gate advancement", () => {
 
 test("nextStage blocks agents without approval (journey 5)", async () => {
   await withStore(async (store) => {
+    const { projectId, output } = await project(store);
     const started = await startDirectorRun(store, {
-      projectId: PROJECT,
+      projectId,
       pipelineName: "framework-smoke",
     });
     const nxt = await directorNext(store, started.id);
@@ -134,7 +171,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
     if (nxt.kind !== "stage") return;
     assert.equal(nxt.stage, "research");
 
-    const out = hash("brief-1");
+    const out = await output("brief-1");
     await advanceStage(store, {
       runId: started.id,
       stage: "research",
@@ -154,6 +191,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
         scopes: cliScopes(),
       },
     } satisfies CommandContext;
+    const version = (await loadRun(store, started.id)).version;
     await assert.rejects(
       () =>
         execute(agentCtx, "yamakan.director.approve", {
@@ -161,6 +199,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
           stage: "research",
           outputHash: out,
           ttlMs: 60_000,
+          expectedVersion: version,
         }),
       /browser session|SCOPE_DENIED|lacks scope/i,
     );
@@ -175,6 +214,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
       stage: "research",
       outputHash: out,
       ttlMs: 60_000,
+      expectedVersion: (await loadRun(store, started.id)).version,
     });
     const after = await directorNext(store, started.id);
     assert.equal(after.kind, "stage");
@@ -184,11 +224,13 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
 
 test("changed output hash refuses stale approval", async () => {
   await withStore(async (store) => {
+    const { projectId, output } = await project(store);
     const run = await startDirectorRun(store, {
-      projectId: PROJECT,
+      projectId,
       pipelineName: "framework-smoke",
     });
-    const first = hash("a");
+    const first = await output("a");
+    const second = await output("b");
     await advanceStage(store, {
       runId: run.id,
       stage: "research",
@@ -206,7 +248,7 @@ test("changed output hash refuses stale approval", async () => {
         approveStage(store, {
           runId: run.id,
           stage: "research",
-          outputHash: hash("b"),
+          outputHash: second,
           ttlMs: 60_000,
         }),
       /does not match/,

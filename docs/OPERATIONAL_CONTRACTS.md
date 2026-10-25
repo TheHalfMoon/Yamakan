@@ -8,18 +8,18 @@ One workspace SQLite database owns immutable canonical **snapshot bytes**, heads
 
 Minimal logical tables (names may change, relationships may not):
 
-| Table | Keys and invariant |
-|---|---|
-| `snapshots` | `hash` PK, canonical UTF-8 bytes, format/version, byte length; bytes immutable |
-| `projects` | `projectId` PK, revision, snapshotHash FK; exactly one authoritative head |
-| `revisions` | `(projectId,revision)` PK, snapshotHash FK, parentRevision, commandReceiptId; append-only until an explicit retention policy |
-| `command_receipts` | `(principalId,projectId,requestId)` unique, requestDigest, result bytes, committedRevision; request ID reuse with a different digest is an error |
-| `asset_objects` | digest PK, size, managed object key, `ready/gcPending/quarantined`, monotonic publication generation; no client-controlled absolute path |
-| `asset_versions` | version ID, immutable object digest, probe and derivation refs; referenced objects cannot be GC'd |
-| `jobs` / `attempts` | job ID / `(jobId,attemptNo)`; frozen revision, plan hash, resource policy, lease generation, outcome and output refs |
-| `leases` | supervisor owner, monotonically increasing generation, expiry; stale owners cannot publish |
-| `snapshot_asset_refs` | `(snapshotHash,assetVersionId)`; complete validated reference index inserted with each snapshot; retained snapshots are GC roots |
-| `pins` / `outbox` | snapshot/asset/render cache retention pins; ordered committed event IDs emitted after commit |
+| Table                 | Keys and invariant                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `snapshots`           | `hash` PK, canonical UTF-8 bytes, format/version, byte length; bytes immutable                                                                   |
+| `projects`            | `projectId` PK, revision, snapshotHash FK; exactly one authoritative head                                                                        |
+| `revisions`           | `(projectId,revision)` PK, snapshotHash FK, parentRevision, commandReceiptId; append-only until an explicit retention policy                     |
+| `command_receipts`    | `(principalId,projectId,requestId)` unique, requestDigest, result bytes, committedRevision; request ID reuse with a different digest is an error |
+| `asset_objects`       | digest PK, size, managed object key, `ready/gcPending/quarantined`, monotonic publication generation; no client-controlled absolute path         |
+| `asset_versions`      | version ID, immutable object digest, probe and derivation refs; referenced objects cannot be GC'd                                                |
+| `jobs` / `attempts`   | job ID / `(jobId,attemptNo)`; frozen revision, plan hash, resource policy, lease generation, outcome and output refs                             |
+| `leases`              | supervisor owner, monotonically increasing generation, expiry; stale owners cannot publish                                                       |
+| `snapshot_asset_refs` | `(snapshotHash,assetVersionId)`; complete validated reference index inserted with each snapshot; retained snapshots are GC roots                 |
+| `pins` / `outbox`     | snapshot/asset/render cache retention pins; ordered committed event IDs emitted after commit                                                     |
 
 Commit algorithm:
 
@@ -69,6 +69,7 @@ Bounds are applied before a document is built: a linear pre-scan of the text ref
   - the scene inside names a different id than its file.
 
   A folder that is itself a link is refused.
+
 - **Migration.** `yamakan.scene.migrate {projectId, expectedRevision, sceneId, sourceSha256}` commits one file into the named project as its `cinemaScene` document of that id. It is compare-and-swap on the project revision. The caller names the SHA-256 it inventoried, so a file changed since then is a `REVISION_CONFLICT`. In the same transaction it writes a receipt row in `legacy_migrations` (workspace schema v11) recording the source (its scene id, in any case), the source SHA-256 and size, the project, document, content hash and revision. Ownership is never inferred:
   - a scene file is migrated once, into one project, and is refused for any other, even after the file changes;
   - a project document of that id that did not come from this file is never overwritten;
@@ -82,6 +83,38 @@ Bounds are applied before a document is built: a linear pre-scan of the text ref
 
 Qualification switch: `YAMAKAN_AG_DOCS_QUALIFICATION=1` in the service's own environment enables the AG-DOCS paths for real-browser group tests before activation; the service announces it at startup, `yamakan.document.capability` reports it, and no request can change it. The launcher and bundle never set it, it is ignored whenever `YAMAKAN_BUNDLE_INSTALL` marks an installed bundle, and the build flag stays false.
 
+## Director runs and likeness consent
+
+YU-013 moved this state from mutable JSON files into the workspace database (schema v12). Each change below is one transaction.
+
+- **Runs.** A run belongs to an existing project. It advances by compare-and-swap on its `version`:
+  - `yamakan.director.advance` accepts `expectedVersion`;
+  - `yamakan.director.approve` requires it, so a human approves the version they reviewed and never a run that moved since;
+  - a stale version is a `REVISION_CONFLICT`.
+
+  Every advance and approval appends to the run's attempt log, which is never rewritten. A stage's receipt is its latest attempt.
+
+- **Outputs.** A stage output must be a stored, ready object of the run's project. This is checked when the output is written, and again every time the run is read. An output that has since been lost or quarantined (for example by a restore that could not verify it) leaves its stage `failed`, so the stage must be produced again.
+- **Approvals.** An approval binds that output with an expiry and is human-only (agents are refused).
+- **Consents.** A likeness consent is immutable. It is revoked once, by an append-only row. An identity encoding's validity is derived from its consent and never stored as a flag: a revoked or expired consent, or one awaiting revalidation, invalidates it. So revoking invalidates the consent's encodings in the same commit. An encoding is recorded only inside the same transaction that confirms a live, current consent, so a concurrent revocation cannot be raced.
+- **Replay.** Mutations sent with a request id replay their original result. The same id with a different request is `IDEMPOTENCY_MISMATCH`. A stored result from before a restore is never replayed (`REVISION_CONFLICT`): it described approvals that no longer count.
+- **Execution epoch.** The workspace has an execution epoch. Restoring a backup mints a fresh epoch in the restored copy, in the same transaction that quarantines unverified objects. In the copy:
+  - approvals given before the restore no longer count, and their stages await a new approval;
+  - consents granted before it must be revalidated (`yamakan.consent.revalidate`, human-only) before any new encoding.
+
+  The original workspace is unaffected. Restoring a project revision never touches consent or revocations, which are workspace state.
+
+- **Legacy import.** `yamakan.director.importLegacy` (human-only) imports the pre-database `director/*.json` files once and idempotently. Limits: plain, single-link files of at most 1 MiB each, 64 MiB in total and at most 10,000 files. Originals are kept.
+  - Runs are imported only for projects of this workspace; others are reported.
+  - Revoked consents arrive revoked.
+  - An encoding must match its consent's character.
+  - Imported state belongs to no live epoch: its approvals must be given again, and its consents revalidated. Live state is untouched.
+- **Not yet covered (YU-013b).** The Director has no workers, provider calls, publications or billing reservations today, so nothing can resume or act on its own after a restore. The job side of restore fencing is follow-up work, together with YU-014, before any such effect is added:
+  - a durable `restoreHold` before the job supervisor starts;
+  - fencing of copied queued, running or cancel-pending jobs and leases;
+  - JobSupervisor references from runs;
+  - reconciliation data for external requests.
+
 ## Durable jobs and owned processes
 
 One SQLite state machine, shared by export, proxy/transcode and later workflow/model operations:
@@ -90,14 +123,14 @@ One SQLite state machine, shared by export, proxy/transcode and later workflow/m
 
 `queued → cancelled`; `preparing/running/validating → cancelRequested → cancelled`; any nonterminal attempt may become `failed` or `reconciliationRequired` when its true external/process outcome is unknown. A retry creates a new attempt; it never erases the old outcome. Jobs contain intent; attempts contain execution identity and effects. Terminal states are immutable except append-only diagnostic annotations.
 
-| Transition | Required atomic predicate and effect |
-|---|---|
-| claim | queued, resources available, current supervisor generation; allocate attempt and isolated staging directory |
-| start | prepared inputs/argv/environment hashes persisted; retain exact PID + creation time and native job-handle ownership |
-| validate | worker exited zero; staging artifact bounded, probed and hashed; no project mutation from worker output |
-| succeed | lease generation still current, state is validating, cancel not requested; register artifact and terminal receipt in one transaction |
-| request cancel | CAS nonterminal state, persist request; native supervisor terminates tree; terminal cancelled only after process exit confirmed |
-| restart | new owner fences old owner; reconcile actual process and staging artifact, preserving uncertainty; no automatic paid resubmit |
+| Transition     | Required atomic predicate and effect                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| claim          | queued, resources available, current supervisor generation; allocate attempt and isolated staging directory                          |
+| start          | prepared inputs/argv/environment hashes persisted; retain exact PID + creation time and native job-handle ownership                  |
+| validate       | worker exited zero; staging artifact bounded, probed and hashed; no project mutation from worker output                              |
+| succeed        | lease generation still current, state is validating, cancel not requested; register artifact and terminal receipt in one transaction |
+| request cancel | CAS nonterminal state, persist request; native supervisor terminates tree; terminal cancelled only after process exit confirmed      |
+| restart        | new owner fences old owner; reconcile actual process and staging artifact, preserving uncertainty; no automatic paid resubmit        |
 
 Cancellation races with completion are decided by the DB predicate. A cancellation that wins prevents success publication; a completed job returns `ALREADY_TERMINAL`. Do not promise deletion of a valid artifact after success or let a late worker overwrite cancellation. Restart may validate a sealed completed artifact only if provenance and input hashes match the attempt; otherwise quarantine it and fail/reconcile. Cleanup is asynchronous, bounded, retries sharing violations and reports failures; it never follows worker-supplied paths. A cleanup failure is not permission to mark an alive process cancelled.
 

@@ -160,7 +160,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 11;
+export const WORKSPACE_SCHEMA_VERSION = 12;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -327,6 +327,80 @@ CREATE TABLE legacy_migrations(
   revision INTEGER NOT NULL CHECK(revision > 0),
   migrated_at INTEGER NOT NULL,
   PRIMARY KEY(source_kind, source_name, source_sha256, project_id, revision)
+) STRICT;
+`;
+// Director durability (YU-013): runs with a compare-and-swap version, an
+// append-only attempt log (advances and approvals), immutable likeness
+// consents with append-only revocations and revalidations, identity
+// encodings whose validity is derived (never a stored flag), replayable
+// request results, and the workspace's execution epoch (a fresh one after a
+// restore or import invalidates approvals and requires consent revalidation).
+const SCHEMA_V12 = `
+CREATE TABLE director_epoch(
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+  value INTEGER NOT NULL CHECK(value > 0)
+) STRICT;
+INSERT INTO director_epoch(singleton, value) VALUES (1, 1);
+CREATE TABLE director_runs(
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  pipeline_name TEXT NOT NULL CHECK(length(pipeline_name) BETWEEN 1 AND 80),
+  version INTEGER NOT NULL CHECK(version > 0),
+  created_at INTEGER NOT NULL,
+  created_by TEXT NOT NULL
+) STRICT;
+CREATE TABLE director_attempts(
+  run_id TEXT NOT NULL REFERENCES director_runs(id),
+  seq INTEGER NOT NULL CHECK(seq > 0),
+  stage TEXT NOT NULL CHECK(length(stage) BETWEEN 1 AND 80),
+  kind TEXT NOT NULL CHECK(kind IN ('advance', 'approve')),
+  status TEXT NOT NULL,
+  output_hash TEXT CHECK(output_hash IS NULL OR length(output_hash) = 64),
+  approval_expires_at INTEGER,
+  epoch INTEGER NOT NULL,
+  principal_id TEXT NOT NULL,
+  recorded_at INTEGER NOT NULL,
+  PRIMARY KEY(run_id, seq)
+) STRICT;
+CREATE TABLE likeness_consents(
+  id TEXT PRIMARY KEY,
+  character_id TEXT NOT NULL CHECK(length(character_id) BETWEEN 1 AND 80),
+  purpose TEXT NOT NULL,
+  version TEXT NOT NULL CHECK(length(version) BETWEEN 1 AND 40),
+  granted_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  grantor_principal_id TEXT NOT NULL,
+  epoch INTEGER NOT NULL
+) STRICT;
+CREATE TABLE consent_revocations(
+  consent_id TEXT PRIMARY KEY REFERENCES likeness_consents(id),
+  revoked_at INTEGER NOT NULL,
+  principal_id TEXT NOT NULL
+) STRICT;
+CREATE TABLE consent_revalidations(
+  consent_id TEXT NOT NULL REFERENCES likeness_consents(id),
+  epoch INTEGER NOT NULL,
+  revalidated_at INTEGER NOT NULL,
+  principal_id TEXT NOT NULL,
+  PRIMARY KEY(consent_id, epoch)
+) STRICT;
+CREATE TABLE identity_encodings(
+  id TEXT PRIMARY KEY,
+  character_id TEXT NOT NULL,
+  consent_id TEXT NOT NULL REFERENCES likeness_consents(id),
+  provider TEXT NOT NULL,
+  method TEXT NOT NULL,
+  payload_hash TEXT NOT NULL CHECK(length(payload_hash) = 64),
+  created_at INTEGER NOT NULL
+) STRICT;
+CREATE TABLE director_requests(
+  principal_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  digest TEXT NOT NULL,
+  result TEXT NOT NULL,
+  epoch INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(principal_id, request_id)
 ) STRICT;
 `;
 const SCHEMA_V4 = `
@@ -576,6 +650,7 @@ export class ProjectStore {
         SCHEMA_V9,
         SCHEMA_V10,
         SCHEMA_V11,
+        SCHEMA_V12,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
