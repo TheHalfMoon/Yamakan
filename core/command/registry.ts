@@ -212,11 +212,16 @@ export const commands = {
         { ...a, principalId: principal.id },
         receipt,
       );
+      // What this revision references, determined by the request itself
+      // (also on a replay after later commits).
       return {
         project,
-        document: store
-          .listDocuments(a.projectId)
-          .find((d) => d.id === a.documentId),
+        document: {
+          id: a.documentId,
+          kind: a.kind,
+          schemaVersion: a.schemaVersion,
+          contentHash: a.source.contentHash,
+        },
       };
     },
   }),

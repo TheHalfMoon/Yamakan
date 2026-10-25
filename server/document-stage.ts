@@ -4,6 +4,7 @@
 // Order: flag, authorization, headers, reservation, then the body; a
 // retry of a sealed upload is answered from its receipt without a body.
 import type { IncomingMessage } from "node:http";
+import { RESOURCE_POLICY } from "../core/command/policy.ts";
 import { CommandError } from "../core/command/errors.ts";
 import { authorize } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
@@ -22,17 +23,38 @@ const header = (req: IncomingMessage, name: string) => {
   return typeof value === "string" ? value : "";
 };
 
-async function exactBody(req: IncomingMessage, length: number) {
+// The whole body must arrive at the slowest accepted upload rate plus a
+// short grace, so a dripped body cannot hold its reservation or memory.
+export const stageDeadlineMs = (length: number) =>
+  10_000 +
+  Math.ceil(length / RESOURCE_POLICY.enforced.minUploadBytesPerSecond) * 1000;
+
+async function exactBody(
+  req: IncomingMessage,
+  length: number,
+  deadlineMs: number,
+) {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of req as AsyncIterable<Buffer>) {
-    size += chunk.length;
-    if (size > length)
-      throw new CommandError(
-        "VALIDATION",
-        "The upload is longer than its Content-Length.",
-      );
-    chunks.push(chunk);
+  const timer = setTimeout(
+    () =>
+      req.destroy(
+        new CommandError("LIMIT_EXCEEDED", "The upload was too slow."),
+      ),
+    deadlineMs,
+  );
+  try {
+    for await (const chunk of req as AsyncIterable<Buffer>) {
+      size += chunk.length;
+      if (size > length)
+        throw new CommandError(
+          "VALIDATION",
+          "The upload is longer than its Content-Length.",
+        );
+      chunks.push(chunk);
+    }
+  } finally {
+    clearTimeout(timer);
   }
   return Buffer.concat(chunks, size);
 }
@@ -42,8 +64,10 @@ export async function stageDocument(
   principal: Principal,
   projectId: string,
   req: IncomingMessage,
-  // Test seam only: production passes nothing and gets the AG-DOCS flag.
+  // Test seams only: production passes neither and gets the AG-DOCS flag
+  // and the policy deadline.
   enabled: boolean = CREATIVE_DOCUMENTS_ENABLED,
+  deadlineMs?: number,
 ): Promise<StagedDocumentReceipt> {
   if (!enabled)
     throw new CommandError(
@@ -54,7 +78,7 @@ export async function stageDocument(
   if (!header(req, "content-type").startsWith("application/json"))
     throw new CommandError("VALIDATION", "JSON content type required.");
   const length = header(req, "content-length");
-  if (!/^\d{1,9}$/.test(length))
+  if (!/^\d{1,9}$/.test(length) || Number(length) === 0)
     throw new CommandError(
       "VALIDATION",
       "Staged uploads require a Content-Length header.",
@@ -90,7 +114,11 @@ export async function stageDocument(
   if ("receipt" in reservation) return reservation.receipt;
   let body: Buffer;
   try {
-    body = await exactBody(req, Number(length));
+    body = await exactBody(
+      req,
+      Number(length),
+      deadlineMs ?? stageDeadlineMs(Number(length)),
+    );
   } catch (e) {
     store.abandonDocumentUpload(reservation.reserved);
     throw e instanceof CommandError

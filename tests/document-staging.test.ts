@@ -171,14 +171,119 @@ test("reservations bound active uploads per principal and staged bytes per works
     "LIMIT_EXCEEDED",
     /Too many/,
   );
-  // Aggregate (16 MiB): 2000 bytes held, one 8 MiB fits, a second does not.
-  reserve("agent:a", big);
+  // Agents and the CLI share 8 MiB: with 2000 bytes held, a full document
+  // from an agent does not fit, a smaller one does.
   refusedSync(
-    () => reserve("agent:b", big),
+    () => reserve("agent:a", big),
     "LIMIT_EXCEEDED",
-    /staged upload space/,
+    /agents and the CLI/,
   );
+  reserve("agent:a", big - 4000);
+  refusedSync(() => reserve("agent:b", 3000), "LIMIT_EXCEEDED", /agents/);
+  // The browser session keeps its own share, whatever agents hold...
+  reserve("browser-ui", big);
+  // ...but no principal holds more than one document's worth.
+  refusedSync(() => reserve("browser-ui", 1), "LIMIT_EXCEEDED", /staged bytes/);
   assert.equal(RESOURCE_POLICY.enforced.requestBytes, 2 * 1024 * 1024);
+});
+
+test("a restart releases uploads that were still being received, and expired ones", async () => {
+  const { root, store, project } = await workspace();
+  const body = studioBytes();
+  const input = stageInput(project.id, body);
+  const receiving = store.reserveDocumentUpload(input);
+  assert.ok("reserved" in receiving);
+  stage(store, project.id, studioBytes("Sealed"));
+  store.close();
+  const reopened = new ProjectStore(root);
+  handles.push(reopened);
+  await reopened.initialize();
+  // The interrupted request can start over; the sealed one still counts.
+  const again = reopened.reserveDocumentUpload(input);
+  assert.ok("reserved" in again);
+  refusedSync(
+    () => reopened.reserveDocumentUpload(stageInput(project.id, body)),
+    "LIMIT_EXCEEDED",
+    /Too many/,
+  );
+});
+
+test("a commit replays by receipt even after its upload row was cleaned up", async () => {
+  const { store, project } = await workspace();
+  const receipt = stage(store, project.id, studioBytes());
+  const request = {
+    principalId: "local-client",
+    requestId: "commit-x",
+    digest: "f".repeat(64),
+  };
+  const input = {
+    projectId: project.id,
+    expectedRevision: 0,
+    documentId: randomUUID(),
+    kind: "studio" as const,
+    schemaVersion: 1,
+    expectedContentHash: null,
+    source: {
+      stagedUploadId: receipt.stagedUploadId,
+      contentHash: receipt.contentHash,
+    },
+    principalId: "local-client",
+  };
+  const first = await store.commitDocument(input, request);
+  // A later reservation far in the future sweeps every expired row.
+  store.reserveDocumentUpload(
+    stageInput(project.id, studioBytes("Later")),
+    Date.now() + 2 * DOCUMENT_LIMITS.uploadTtlMs,
+  );
+  assert.deepEqual(await store.commitDocument(input, request), first);
+});
+
+test("a staged document still keeps its assets in the project at commit", async () => {
+  const { store, project } = await workspace();
+  const scene = Buffer.from(
+    JSON.stringify({
+      format: "yamakan.scene3d",
+      formatVersion: 1,
+      id: randomUUID(),
+      units: "metres",
+      eulerOrder: "XYZ",
+      camera: { focalLengthMm: 35, sensorWidthMm: 36, near: 0.1, far: 1000 },
+      items: [
+        {
+          id: randomUUID(),
+          name: "card",
+          position: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+          assetId: randomUUID(),
+        },
+      ],
+    }),
+  );
+  const r = store.reserveDocumentUpload({
+    ...stageInput(project.id, scene),
+    kind: "cinemaScene",
+  });
+  assert.ok("reserved" in r);
+  const sealed = store.sealDocumentUpload(r.reserved, scene);
+  await refused(
+    store.commitDocument({
+      projectId: project.id,
+      expectedRevision: 0,
+      documentId: randomUUID(),
+      kind: "cinemaScene",
+      schemaVersion: 1,
+      expectedContentHash: null,
+      source: {
+        stagedUploadId: sealed.stagedUploadId,
+        contentHash: sealed.contentHash,
+      },
+      principalId: "local-client",
+    }),
+    "VALIDATION",
+    /asset/,
+  );
+  assert.deepEqual(store.listDocuments(project.id), []);
 });
 
 test("a body that is not what was declared, or not a valid document, keeps nothing", async () => {
@@ -275,7 +380,11 @@ test("a committed staged upload replays by request receipt even after the handle
 
 // The handler over real HTTP, with the flag passed explicitly (the route in
 // server/main.ts always passes the build's flag, which is off).
-async function stagingServer(store: ProjectStore, enabled: boolean) {
+async function stagingServer(
+  store: ProjectStore,
+  enabled: boolean,
+  deadlineMs?: number,
+) {
   const server: Server = createServer(async (req, res) => {
     const projectId = /\/projects\/([^/]+)\//.exec(req.url ?? "")?.[1] ?? "";
     try {
@@ -285,6 +394,7 @@ async function stagingServer(store: ProjectStore, enabled: boolean) {
         projectId,
         req,
         enabled,
+        deadlineMs,
       );
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(receipt));
@@ -411,4 +521,43 @@ test("with AG-DOCS off the route and the commit command refuse before any work",
     }),
     "CAPABILITY_UNAVAILABLE",
   );
+});
+
+test("a body dripped slower than the upload deadline is cut off and keeps nothing", async () => {
+  const { store, project } = await workspace();
+  const port = await stagingServer(store, true, 300);
+  const body = studioBytes();
+  const result = await new Promise<string>((resolve) => {
+    const req = request({
+      host: "127.0.0.1",
+      port,
+      method: "POST",
+      path: `/api/v1/projects/${project.id}/documents/stage`,
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": String(body.length),
+        "X-Request-Id": randomUUID(),
+        "X-Content-SHA256": sha(body),
+        "X-Document-Kind": "studio",
+        "X-Document-Schema-Version": "1",
+      },
+    });
+    req.on("error", () => resolve("closed"));
+    req.on("response", () => resolve("answered"));
+    req.write(body.subarray(0, 10)); // ...and never the rest
+  });
+  assert.ok(["closed", "answered"].includes(result));
+  await new Promise((r) => setTimeout(r, 200));
+  // The stalled reservation is gone: two fresh uploads fit.
+  stage(store, project.id, studioBytes("A"));
+  stage(store, project.id, studioBytes("B"));
+});
+
+test("an empty body is refused as invalid before any reservation", async () => {
+  const { store, project } = await workspace();
+  const port = await stagingServer(store, true);
+  const { json } = await post(port, project.id, Buffer.alloc(0));
+  assert.equal(json.code, "VALIDATION");
+  stage(store, project.id, studioBytes("A"));
+  stage(store, project.id, studioBytes("B"));
 });

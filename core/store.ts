@@ -69,7 +69,8 @@ type UploadRow = {
 const uploadReceipt = (row: UploadRow): StagedDocumentReceipt => ({
   stagedUploadId: row.id,
   contentHash: row.content_hash!,
-  byteLength: row.declared_bytes,
+  // The stored canonical document's length, which contentHash names.
+  byteLength: row.bytes ? row.bytes.byteLength : row.declared_bytes,
   kind: row.kind,
   schemaVersion: row.schema_version,
   expiresAt: new Date(row.expires_at).toISOString(),
@@ -545,6 +546,11 @@ export class ProjectStore {
       throw e;
     }
     this.#db = db;
+    // Staged bodies lived only in the previous process's memory: uploads it
+    // was receiving can never complete, and expired ones only hold space.
+    db.prepare(
+      "DELETE FROM document_uploads WHERE state = 'receiving' OR expires_at <= ?",
+    ).run(Date.now());
     // Upgrading to v2: register every asset that existing snapshots reference.
     if (
       this.#database
@@ -1309,6 +1315,35 @@ export class ProjectStore {
           "LIMIT_EXCEEDED",
           "The workspace's staged upload space is in use; retry later.",
         );
+      const sum = (sql: string, ...args: string[]) =>
+        (db.prepare(sql).get(...args) as { n: number }).n;
+      const mine = sum(
+        "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id = ? AND state IN ('receiving', 'sealed')",
+        input.principalId,
+      );
+      if (
+        mine + input.declaredBytes >
+        DOCUMENT_LIMITS.reservedBytesPerPrincipal
+      )
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "Too many staged bytes in progress; commit or wait for one to expire.",
+        );
+      // Agents and the CLI share one half, so the browser session (the
+      // person at the keyboard) can always stage its document.
+      if (input.principalId !== "browser-ui") {
+        const others = sum(
+          "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id <> 'browser-ui' AND state IN ('receiving', 'sealed')",
+        );
+        if (
+          others + input.declaredBytes >
+          DOCUMENT_LIMITS.reservedBytesForOthers
+        )
+          throw new CommandError(
+            "LIMIT_EXCEEDED",
+            "The staged upload space for agents and the CLI is in use; retry later.",
+          );
+      }
       const free = this.#options.freeBytes
         ? this.#options.freeBytes()
         : (() => {
