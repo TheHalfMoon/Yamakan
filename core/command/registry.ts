@@ -11,7 +11,7 @@ import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import type { JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
-import { CREATIVE_DOCUMENTS_ENABLED, DocumentKind } from "../documents.ts";
+import { DocumentKind, creativeDocumentsEnabled } from "../documents.ts";
 
 const Sha256Hex = z.string().regex(/^[a-f0-9]{64}$/);
 import { RESOURCE_POLICY } from "./policy.ts";
@@ -203,7 +203,7 @@ export const commands = {
       })
       .strict(),
     run: async ({ store, principal, receipt }, a) => {
-      if (!CREATIVE_DOCUMENTS_ENABLED)
+      if (!creativeDocumentsEnabled())
         throw new CommandError(
           "CAPABILITY_UNAVAILABLE",
           "Creative document persistence is not enabled in this build.",

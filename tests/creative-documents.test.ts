@@ -107,7 +107,7 @@ async function png(dir: string, color: string) {
 
 test("AG-DOCS stays off and the workspace schema adds document tables", async () => {
   assert.equal(CREATIVE_DOCUMENTS_ENABLED, false);
-  assert.equal(WORKSPACE_SCHEMA_VERSION, 9);
+  assert.equal(WORKSPACE_SCHEMA_VERSION, 10);
   const { db } = await workspace();
   const tables = (
     db.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all() as {

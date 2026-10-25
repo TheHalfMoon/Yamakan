@@ -17,6 +17,8 @@ export const DOCUMENT_LIMITS = Object.freeze({
   // for one commit. Reservations are taken before any byte is read.
   activeUploadsPerPrincipal: 2,
   reservedUploadBytes: 16 * 1024 * 1024,
+  // One Studio layer bitmap (PNG) uploaded into the project object store.
+  bitmapBytes: 64 * 1024 * 1024,
   // No principal holds more than one document's worth, and the browser
   // session keeps its own share, so agents and the CLI together can never
   // lock the person at the keyboard out.
