@@ -211,3 +211,26 @@ test("closing stdin right after a flood still delivers every reply before exit",
   assert.equal(code, 0);
   assert.equal(replies.length, count);
 });
+
+test("a request whose id is not a string, number or null is refused, not echoed", async () => {
+  const { mcp, replies, until } = startMcp("http://127.0.0.1:9");
+  try {
+    // About 1.8 MB: parses, but echoing it back would overflow the stack.
+    const deep = "[".repeat(900_000) + "]".repeat(900_000);
+    mcp.stdin!.write(
+      `{"jsonrpc":"2.0","id":${deep},"method":"ping"}\n{"jsonrpc":"2.0","id":{"a":1},"method":"ping"}\n${ping(3)}`,
+    );
+    await until(3, 20_000);
+    assert.deepEqual(
+      replies.slice(0, 2).map((r) => [r.id, r.error?.code]),
+      [
+        [null, -32600],
+        [null, -32600],
+      ],
+    );
+    assert.deepEqual(replies[2], { jsonrpc: "2.0", id: 3, result: {} });
+  } finally {
+    await stop(mcp);
+  }
+  assert.equal(mcp.exitCode, 0);
+});

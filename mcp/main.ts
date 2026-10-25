@@ -179,6 +179,15 @@ function dispatch(frame: Frame) {
   } catch {
     return error(null, -32700, "Parse error.");
   }
+  // JSON-RPC ids are strings, numbers or null; any other id is never echoed
+  // (a deeply nested one would overflow JSON.stringify and end the process).
+  const id = message && typeof message === "object" ? message.id : undefined;
+  const validId =
+    id === undefined ||
+    id === null ||
+    typeof id === "string" ||
+    typeof id === "number";
+  if (!validId) return error(null, -32600, "Invalid request.");
   if (message?.jsonrpc !== "2.0" || typeof message.method !== "string")
     return error(message?.id, -32600, "Invalid request.");
   // Transport failures (no token file, service not listening) never echo host paths.
