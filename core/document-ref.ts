@@ -13,6 +13,11 @@ export const DOCUMENT_LIMITS = Object.freeze({
   depth: 64,
   nodes: 10_000,
   documentsPerProject: 32,
+  // Staged uploads (YU-010b): sealed bytes wait in the workspace database
+  // for one commit. Reservations are taken before any byte is read.
+  activeUploadsPerPrincipal: 2,
+  reservedUploadBytes: 16 * 1024 * 1024,
+  uploadTtlMs: 15 * 60 * 1000,
 });
 
 export const DocumentKind = z.enum(["studio", "cinemaScene"]);

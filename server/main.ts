@@ -11,6 +11,7 @@ import { CreativeAPI, principals } from "./api.ts";
 import { consumeLaunchSecret } from "../core/launch.ts";
 import { safePath, initializeRoot } from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
+import { stageDocument } from "./document-stage.ts";
 import type { Principal } from "../core/command/registry.ts";
 import { parseEnvelope } from "../core/command/envelope.ts";
 import {
@@ -371,6 +372,14 @@ const server = createServer(async (req, res) => {
           asset: staged.asset,
           probe: staged.probe,
         });
+      }
+      const stage = /^\/api\/v1\/projects\/([^/]+)\/documents\/stage$/.exec(
+        url.pathname,
+      );
+      if (req.method === "POST" && stage) {
+        // A refused upload closes its connection instead of draining the body.
+        res.setHeader("Connection", "close");
+        return json(200, await stageDocument(store, principal, stage[1], req));
       }
       // Reference preview: a frame (PNG) or short segment (MP4) of a stored
       // revision, rendered by the export's plan compiler.

@@ -11,6 +11,9 @@ import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import type { JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
+import { CREATIVE_DOCUMENTS_ENABLED, DocumentKind } from "../documents.ts";
+
+const Sha256Hex = z.string().regex(/^[a-f0-9]{64}$/);
 import { RESOURCE_POLICY } from "./policy.ts";
 import {
   BackupId,
@@ -179,6 +182,43 @@ export const commands = {
       "List the creative document references (id, kind, schema version, content hash) of the current revision.",
     input: z.object({ projectId: Id }).strict(),
     run: ({ store }, a) => store.listDocuments(a.projectId),
+  }),
+  "yamakan.document.commit": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Commit a creative document as a new revision from a sealed staged upload (POST /api/v1/projects/{id}/documents/stage), or revert it to a version this project held. Compare-and-swap on expectedRevision and expectedContentHash (null for a new document).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        kind: DocumentKind,
+        schemaVersion: z.number().int().min(1).max(1000),
+        expectedContentHash: Sha256Hex.nullable(),
+        source: z.union([
+          z.object({ stagedUploadId: Id, contentHash: Sha256Hex }).strict(),
+          z.object({ contentHash: Sha256Hex }).strict(),
+        ]),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!CREATIVE_DOCUMENTS_ENABLED)
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Creative document persistence is not enabled in this build.",
+        );
+      const project = await store.commitDocument(
+        { ...a, principalId: principal.id },
+        receipt,
+      );
+      return {
+        project,
+        document: store
+          .listDocuments(a.projectId)
+          .find((d) => d.id === a.documentId),
+      };
+    },
   }),
   "yamakan.document.get": define({
     scope: "project:read",
