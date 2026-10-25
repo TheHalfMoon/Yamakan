@@ -42,6 +42,13 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 ## Known flaky tests
 
 - `tests/resource-policy.test.ts` "a worker over its Job Object memory limit fails rather than grows": failed once on main `a468345` while another suite ran servers concurrently; passed 3/3 alone. Load-sensitive; not caused by YU-010b. Re-run alone before treating as a regression. Repeatability: 3/3 alone at `a468345`; 0 failures in the full suites at `49f1a9e` and on the YU-011 branch. Resource contention is plausible: the host had 1.7 GB of 15.7 GB RAM free (other applications) when it failed. Not yet reproduced under controlled memory pressure.
+- 2026-10-25, YU-016 branch `6f80273`, with the shared host at about 53% CPU and 3.1 GB RAM free (other sessions and applications):
+  - **Failed in the full suite, all hitting their 60 s limit:** `tests/jobs.test.ts` "a service killed mid-render…", `tests/timeline.test.ts` "audio gain and fades…" and `tests/typography.test.ts` "the title capability probe…".
+  - **Also failed:** the Studio vitest `documentModel.fuzz.test.ts` depth-boundary case, at 5.4 s against vitest's 5 s.
+  - **Alone, all pass:** jobs 34 s, timeline 17 s, typography 7.6 s, fuzz file 163/163.
+  - **Earlier full run:** the preview-route (`tests/http.test.ts`) and MCP stdio tests failed while another worktree's `tsc` ran concurrently, and passed alone (8.5 s against 34 s under load).
+  - **Reading:** these are wall-clock-bound tests on a loaded host, not regressions from the change. Exact-head CI is the clean-machine check.
+  - **Follow-up:** run gates only on an idle host, and consider per-test budgets that scale with measured load.
 
 ## Next eligible
 
