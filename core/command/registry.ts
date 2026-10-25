@@ -34,6 +34,10 @@ import {
   loadCinemaScene,
   persistCinemaScene,
 } from "../cinema-store.ts";
+import {
+  inventoryCinemaSidecars,
+  migrateCinemaSidecar,
+} from "../documents-legacy.ts";
 import { directorCapability } from "../director-flags.ts";
 import {
   StudioDocumentSchema,
@@ -801,6 +805,40 @@ export const commands = {
     summary: "List persisted Cinema scene ids and content hashes.",
     input: z.object({}).strict(),
     run: ({ store }) => listCinemaScenes(store).then((scenes) => ({ scenes })),
+  }),
+  "yamakan.scene.inventory": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Inventory legacy workspace Cinema scene files read-only (name, SHA-256, validity, migrations); nothing is assigned to a project.",
+    input: z.object({}).strict(),
+    run: ({ store }) => inventoryCinemaSidecars(store),
+  }),
+  "yamakan.scene.migrate": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Migrate one legacy Cinema scene file into the named project as its cinemaScene document (compare-and-swap on expectedRevision; sourceSha256 from yamakan.scene.inventory). The original file is kept.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        sceneId: Id,
+        sourceSha256: Sha256Hex,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Creative document persistence is not enabled in this build.",
+        );
+      return migrateCinemaSidecar(
+        store,
+        { ...a, principalId: principal.id },
+        receipt,
+      );
+    },
   }),
   "yamakan.studio.capability": define({
     scope: "project:read",
