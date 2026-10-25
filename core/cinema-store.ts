@@ -87,8 +87,12 @@ export async function persistCinemaScene(
 // Saves in progress, per scene file.
 const saving = new Map<string, Promise<void>>();
 
-// Partial saves a crashed service left behind (a save takes milliseconds).
+// Partial saves a crashed service left behind (a save takes milliseconds),
+// looked for at most every ten minutes.
+let swept = 0;
 async function removeStaleTemps(dir: string) {
+  if (Date.now() - swept < 10 * 60_000) return;
+  swept = Date.now();
   for (const name of await readdir(dir).catch(() => [])) {
     if (!/^\.[0-9a-fA-F-]{36}\.[0-9a-f-]{36}\.tmp$/.test(name)) continue;
     const file = join(dir, name);

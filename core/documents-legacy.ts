@@ -205,7 +205,9 @@ export async function inventoryCinemaSidecars(
       (s) => s.size,
       () => 0,
     );
-    if (size > budget) {
+    // Files refused before reading (over the document limit) cost nothing.
+    const cost = size > DOCUMENT_LIMITS.documentBytes ? 0 : size;
+    if (cost > budget) {
       sidecars.push({
         ...entry,
         state: "unexamined",
@@ -214,7 +216,7 @@ export async function inventoryCinemaSidecars(
       budget = 0;
       continue;
     }
-    budget -= size;
+    budget -= cost;
     try {
       const bytes = await readSidecar(dir, name);
       const { validated, sourceSha256 } = examine(sceneId, bytes);
@@ -269,6 +271,7 @@ export async function migrateCinemaSidecar(
       "This legacy scene was already migrated into another project.",
     );
   const mine = recorded.at(-1);
+  // (Projects are never deleted, so a recorded project always loads.)
   if (mine) {
     const project = await store.load(input.projectId);
     return {
@@ -304,7 +307,11 @@ export async function migrateCinemaSidecar(
     );
   // A project document of this id that did not come from this file is never
   // overwritten (and a migration is never invented for it).
-  if (store.listDocuments(input.projectId).some((d) => d.id === sceneId))
+  if (
+    store
+      .listDocuments(input.projectId)
+      .some((d) => d.id.toLowerCase() === sceneId.toLowerCase())
+  )
     throw new CommandError(
       "VALIDATION",
       "The project already has a document with this scene's id that was not migrated from this file.",
