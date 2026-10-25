@@ -28,6 +28,7 @@ import {
 } from "./i18n.ts";
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
+  applyLocal,
   deleteClip,
   FRAME_TICKS,
   setClipAnimation,
@@ -35,6 +36,7 @@ import {
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
+import { operationsBetween, touched } from "./edit-diff.ts";
 import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
@@ -94,6 +96,8 @@ function App() {
     [tools, setTools] = useState(false),
     [catalog, setCatalog] = useState<string | null>(null),
     [downloadedDraft, setDownloadedDraft] = useState<Project | null>(null),
+    // A change a conflict kept from being applied, offered for download.
+    [unapplied, setUnapplied] = useState<Project | null>(null),
     [revisionHistory, setRevisionHistory] = useState<ProjectHistory | null>(
       null,
     ),
@@ -102,8 +106,31 @@ function App() {
       useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
-  const current = useRef(p);
-  current.current = p;
+  // The latest history, also between renders: every change goes through
+  // putHistory, and commits read their draft here, so a commit chained
+  // behind another never pairs a new head with a stale draft (YU-015).
+  const historyNow = useRef(history);
+  const putHistory = (
+    next: typeof history | ((h: typeof history) => typeof history),
+  ) => {
+    const value =
+      typeof next === "function"
+        ? (next as (h: typeof history) => typeof history)(historyNow.current)
+        : next;
+    historyNow.current = value;
+    setHistory(value);
+  };
+  const current = {
+    get current() {
+      return historyNow.current?.present;
+    },
+  };
+  // The service's head of the open project: what the editor's change is
+  // made from, and what a commit compares and swaps against (YU-015).
+  const head = useRef<Project | null>(null);
+  // Which opening of a project the head belongs to: opening, switching or
+  // restoring starts a new one (a Studio save only moves the revision).
+  const headGen = useRef(0);
   const refresh = async () =>
     setProjects(await call("yamakan.project.list", {}));
   useEffect(() => {
@@ -129,7 +156,7 @@ function App() {
   };
   const edit = (fn: (p: Project) => Project) => {
     if (busy) return;
-    setHistory((h) => {
+    putHistory((h) => {
       if (!h) return h;
       try {
         return pushHistoryState(h, ProjectSchema.parse(fn(h.present)));
@@ -140,7 +167,11 @@ function App() {
     });
   };
   const accept = (project: Project) => {
-    setHistory(createHistoryState(ProjectSchema.parse(project)));
+    const opened = ProjectSchema.parse(project);
+    head.current = opened;
+    headGen.current++;
+    setUnapplied(null);
+    putHistory(createHistoryState(opened));
     setMessage(
       msg("status.opened", { name: project.name, revision: project.revision }),
     );
@@ -150,8 +181,201 @@ function App() {
     setRevisionHistory(null);
     setDownloadedDraft(null);
   };
+  // Commits the editor's pending change as one batch of the typed
+  // operations agents and tools use, compare-and-swap on the head it was
+  // made from (YU-015). A change those operations cannot express exactly
+  // stays a draft, for an explicit full save. Commits run one at a time;
+  // editing goes on meanwhile, and what was edited during a commit is kept
+  // on top of it and committed next.
+  type Outcome = "unchanged" | "committed" | "draft" | "conflict";
+  const committing = useRef<Promise<Outcome> | null>(null);
+  const commit = (): Promise<Outcome> => {
+    if (committing.current)
+      return committing.current.then(
+        () => commit(),
+        () => commit(),
+      );
+    const work = commitOnce();
+    committing.current = work;
+    void work
+      .finally(() => {
+        if (committing.current === work) committing.current = null;
+      })
+      .catch(() => {});
+    return work;
+  };
+  // Edits made on `from` (since it was committed), carried onto `onto`; null
+  // when they do not apply there.
+  const carry = (from: Project, to: Project, onto: Project) => {
+    if (from === to) return onto;
+    const later = operationsBetween(from, to);
+    if (!later) return null;
+    try {
+      return later.length ? applyLocal(onto, later) : onto;
+    } catch {
+      return null;
+    }
+  };
+  const commitOnce = async (): Promise<Outcome> => {
+    const base = head.current,
+      draft = current.current,
+      gen = headGen.current;
+    if (!base || !draft || base.id !== draft.id || base === draft)
+      return "unchanged";
+    const operations = operationsBetween(base, draft);
+    if (operations === null) {
+      setMessage(msg("status.draftNeedsSave"));
+      return "draft";
+    }
+    if (!operations.length) {
+      // A change undone by the next one: nothing is pending.
+      putHistory((h) =>
+        h && h.present === draft ? createHistoryState(base) : h,
+      );
+      return "unchanged";
+    }
+    const send = (revision: number, requestId: string) =>
+      client.call(
+        "yamakan.project.applyBatch",
+        { projectId: base.id, expectedRevision: revision, operations },
+        requestId,
+      );
+    let committed: Project;
+    try {
+      const requestId = crypto.randomUUID();
+      // A lost response is asked again under the same request id, which
+      // the service answers with the original result.
+      committed = ProjectSchema.parse(
+        await send(base.revision, requestId).catch((e) => {
+          if (e instanceof YamakanError) throw e;
+          return send(base.revision, requestId);
+        }),
+      );
+    } catch (e) {
+      if (!(e instanceof YamakanError && e.code === "REVISION_CONFLICT"))
+        throw e;
+      // Another writer moved the project. The change is applied to the
+      // current version when its operations still apply there; otherwise
+      // the current version is shown and the change is kept for download.
+      // Nothing is overwritten.
+      const fresh = ProjectSchema.parse(
+        await call("yamakan.project.open", { projectId: base.id }),
+      );
+      // The editor moved on (another project, a restore): leave it be.
+      if (headGen.current !== gen) return "unchanged";
+      // Merged only when the two changes touch different things: the
+      // other writer's edit to the same clip, track or scene is never
+      // replaced by this one.
+      const theirs = operationsBetween(base, fresh);
+      const disjoint =
+        theirs !== null &&
+        ![...touched(operations)].some((id) => touched(theirs).has(id));
+      let merged: Project | null = null;
+      let applies = disjoint;
+      try {
+        if (applies) applyLocal(fresh, operations);
+      } catch {
+        applies = false;
+      }
+      if (applies) {
+        const mergeId = crypto.randomUUID();
+        try {
+          merged = ProjectSchema.parse(
+            await send(fresh.revision, mergeId).catch((e) => {
+              if (e instanceof YamakanError) throw e;
+              return send(fresh.revision, mergeId);
+            }),
+          );
+        } catch (e) {
+          // Refused by the service: kept for download. A lost connection
+          // is an error, not a conflict (the batch may have landed).
+          if (!(e instanceof YamakanError)) throw e;
+          merged = null;
+        }
+      }
+      if (headGen.current !== gen) return "unchanged";
+      if (!merged) {
+        head.current = fresh;
+        setUnapplied(current.current ?? draft);
+        putHistory(createHistoryState(fresh));
+        setMessage(msg("status.conflictReloaded"));
+        return "conflict";
+      }
+      committed = merged;
+      setMessage(msg("status.mergedAfterConflict"));
+    }
+    // The editor moved on during the commit (another project, a restore,
+    // a reload): the commit stands on the service; the editor is left be.
+    if (headGen.current !== gen) return "unchanged";
+    head.current = committed;
+    const now = current.current;
+    // What was edited during the commit, on top of the committed head.
+    const carried = now && now !== draft ? carry(draft, now, committed) : null;
+    const kept = carried === committed ? null : carried;
+    putHistory(
+      kept
+        ? { past: [committed], present: kept, future: [] }
+        : createHistoryState(committed),
+    );
+    // (What was kept is committed next: the [p] effect schedules it.)
+    if (!kept && now === draft)
+      setMessage(msg("status.saved", { revision: committed.revision }));
+    return "committed";
+  };
+  // A finished gesture is committed once the pointer is released and the
+  // editor has been still for a moment, so a drag or a slider becomes one
+  // revision, not one per movement.
+  const held = useRef(false);
+  const pending = useRef<number | undefined>(undefined);
+  const commitSoon = () => {
+    window.clearTimeout(pending.current);
+    pending.current = window.setTimeout(() => {
+      if (held.current) return commitSoon();
+      if (!head.current || current.current === head.current) return;
+      commit().catch((e) =>
+        setMessage(e instanceof Error ? e.message : t("error.operation")),
+      );
+    }, 400);
+  };
+  useEffect(() => {
+    const down = () => {
+      held.current = true;
+    };
+    // A release outside the window (or leaving it) also ends the gesture.
+    const up = () => {
+      held.current = false;
+    };
+    const hidden = () => {
+      if (document.visibilityState === "hidden") held.current = false;
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    window.addEventListener("blur", up);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+      window.removeEventListener("blur", up);
+      document.removeEventListener("visibilitychange", hidden);
+      window.clearTimeout(pending.current);
+    };
+  }, []);
+  useEffect(() => {
+    if (p && head.current && p !== head.current) commitSoon();
+  }, [p]);
   const save = async () => {
     if (!current.current) return;
+    window.clearTimeout(pending.current);
+    const outcome = await commit();
+    if (outcome === "conflict") return;
+    if (outcome !== "draft") {
+      await refresh();
+      if (head.current)
+        setMessage(msg("status.saved", { revision: head.current.revision }));
+      return head.current ?? undefined;
+    }
     const saved = await call("yamakan.project.save", {
       project: current.current,
       expectedRevision: current.current.revision,
@@ -649,7 +873,7 @@ function App() {
                   // revision unchanged (the service carries documents forward
                   // on its next save). A draft based on anything else is left
                   // alone, so its save still meets another writer's changes.
-                  setHistory((h) => {
+                  putHistory((h) => {
                     if (
                       !h ||
                       h.present.id !== projectId ||
@@ -657,9 +881,18 @@ function App() {
                     )
                       return h;
                     const at = (x: Project) => ({ ...x, revision });
+                    const present = at(h.present);
+                    // The head moves with it (the same object when nothing
+                    // is pending, so no commit follows).
+                    if (head.current === h.present) head.current = present;
+                    else if (
+                      head.current?.id === projectId &&
+                      head.current.revision === from
+                    )
+                      head.current = at(head.current);
                     return {
                       past: h.past.map(at),
-                      present: at(h.present),
+                      present,
                       future: h.future.map(at),
                     };
                   })
@@ -703,6 +936,30 @@ function App() {
             </section>
           ) : p && view ? (
             <>
+              {unapplied && unapplied.id === p.id ? (
+                <div className="notice" role="alert">
+                  <p>{t("conflict.unapplied")}</p>
+                  <button
+                    onClick={() => {
+                      const url = URL.createObjectURL(
+                        new Blob([JSON.stringify(unapplied, null, 2)], {
+                          type: "application/json",
+                        }),
+                      );
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `yamakan-unapplied-${unapplied.id}.json`;
+                      link.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    {t("conflict.download")}
+                  </button>
+                  <button onClick={() => setUnapplied(null)}>
+                    {t("conflict.dismiss")}
+                  </button>
+                </div>
+              ) : null}
               <div className="toolbar">
                 <div>
                   <h1 dir="auto">{p.name}</h1>
@@ -713,14 +970,56 @@ function App() {
                 </div>
                 <div className="actions">
                   <button
-                    disabled={busy || !history.past.length}
-                    onClick={() => setHistory((h) => h && undoHistoryState(h))}
+                    disabled={busy}
+                    onClick={() => {
+                      // A change not yet committed is taken back locally;
+                      // committed ones by the service's history, which
+                      // undoes only this writer's own steps.
+                      if (history.past.length) {
+                        window.clearTimeout(pending.current);
+                        putHistory((h) => h && undoHistoryState(h));
+                        return;
+                      }
+                      run(async () => {
+                        const undone = ProjectSchema.parse(
+                          await call("yamakan.project.undo", {
+                            projectId: p.id,
+                            expectedRevision:
+                              head.current?.revision ?? p.revision,
+                          }),
+                        );
+                        head.current = undone;
+                        putHistory(createHistoryState(undone));
+                        setMessage(
+                          msg("status.saved", { revision: undone.revision }),
+                        );
+                      });
+                    }}
                   >
                     {t("action.undo")}
                   </button>
                   <button
-                    disabled={busy || !history.future.length}
-                    onClick={() => setHistory((h) => h && redoHistoryState(h))}
+                    disabled={busy}
+                    onClick={() => {
+                      if (history.future.length) {
+                        putHistory((h) => h && redoHistoryState(h));
+                        return;
+                      }
+                      run(async () => {
+                        const redone = ProjectSchema.parse(
+                          await call("yamakan.project.redo", {
+                            projectId: p.id,
+                            expectedRevision:
+                              head.current?.revision ?? p.revision,
+                          }),
+                        );
+                        head.current = redone;
+                        putHistory(createHistoryState(redone));
+                        setMessage(
+                          msg("status.saved", { revision: redone.revision }),
+                        );
+                      });
+                    }}
                   >
                     {t("action.redo")}
                   </button>

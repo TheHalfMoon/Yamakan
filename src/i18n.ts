@@ -19,6 +19,16 @@ const en = {
   "status.working": "Working…",
   "status.opened": "Opened {name}, revision {revision}.",
   "status.saved": "Saved revision {revision}.",
+  "status.conflictReloaded":
+    "This project changed elsewhere and your last change no longer applies to it. The current version is shown; your change can be downloaded.",
+  "status.mergedAfterConflict":
+    "This project changed elsewhere; your change was applied to the current version.",
+  "status.draftNeedsSave":
+    "This change is kept as a draft: press Save to save the whole project.",
+  "conflict.unapplied":
+    "Your last change was not applied because the project changed elsewhere.",
+  "conflict.download": "Download my change",
+  "conflict.dismiss": "Dismiss",
   "error.operation": "Operation failed.",
   "error.edit": "Invalid edit.",
   "error.assetMissing": "Asset missing.",
@@ -106,9 +116,11 @@ const en = {
   "studio.state.new": "New canvas: not saved yet",
   "studio.state.saved": "Saved to the project",
   "studio.state.saving": "Saving…",
-  "studio.state.conflict": "Another window saved this canvas first. Reload the saved canvas to continue.",
+  "studio.state.conflict":
+    "Another window saved this canvas first. Reload the saved canvas to continue.",
   "studio.state.error": "The Studio canvas could not be saved.",
-  "studio.state.unavailable": "Saving Studio canvases to the project is not enabled in this build.",
+  "studio.state.unavailable":
+    "Saving Studio canvases to the project is not enabled in this build.",
   "studio.noProject": "Open a project to keep its Studio canvas.",
   "studio.intro":
     "Layered image editing is imported behind a Yamakan host adapter.",
@@ -193,6 +205,16 @@ const ar: Record<MessageKey, string> = {
   "status.working": "جارٍ العمل…",
   "status.opened": "فُتح {name}، المراجعة {revision}.",
   "status.saved": "حُفظت المراجعة {revision}.",
+  "status.conflictReloaded":
+    "تغيّر هذا المشروع في مكان آخر ولم يعد تعديلك الأخير ينطبق عليه. تُعرض النسخة الحالية، ويمكن تنزيل تعديلك.",
+  "status.mergedAfterConflict":
+    "تغيّر هذا المشروع في مكان آخر؛ طُبِّق تعديلك على النسخة الحالية.",
+  "status.draftNeedsSave":
+    "يُحتفظ بهذا التعديل كمسودة: اضغط حفظ لحفظ المشروع كاملًا.",
+  "conflict.unapplied":
+    "لم يُطبَّق تعديلك الأخير لأن المشروع تغيّر في مكان آخر.",
+  "conflict.download": "تنزيل تعديلي",
+  "conflict.dismiss": "إغلاق",
   "error.operation": "تعذّر إتمام العملية.",
   "error.edit": "تعديل غير صالح.",
   "error.assetMissing": "الوسيط غير موجود.",
@@ -279,9 +301,11 @@ const ar: Record<MessageKey, string> = {
   "studio.state.new": "لوحة جديدة: لم تُحفظ بعد",
   "studio.state.saved": "حُفظت في المشروع",
   "studio.state.saving": "جارٍ الحفظ…",
-  "studio.state.conflict": "حفظت نافذة أخرى هذه اللوحة أولاً. أعد تحميل اللوحة المحفوظة للمتابعة.",
+  "studio.state.conflict":
+    "حفظت نافذة أخرى هذه اللوحة أولاً. أعد تحميل اللوحة المحفوظة للمتابعة.",
   "studio.state.error": "تعذّر حفظ لوحة الاستوديو.",
-  "studio.state.unavailable": "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذا الإصدار.",
+  "studio.state.unavailable":
+    "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذا الإصدار.",
   "studio.noProject": "افتح مشروعاً للاحتفاظ بلوحة الاستوديو الخاصة به.",
   "cinema.title": "كاميرا السينما",
   "cinema.intro":
