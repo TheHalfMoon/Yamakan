@@ -12,6 +12,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync, backup } from "node:sqlite";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
+
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
 import {
@@ -32,8 +33,20 @@ import {
   fromEditView,
   inspectFormat,
   parseCanonical,
+  serializeCanonical,
   toEditView,
 } from "./canonical.ts";
+import {
+  DocumentKind,
+  DocumentRefSchema,
+  missingDocumentAssets,
+  validateDocument,
+} from "./documents.ts";
+import type { DocumentRef } from "./documents.ts";
+
+export type ExportedProject = Omit<CanonicalProject, "documents"> & {
+  documents?: DocumentRef[];
+};
 import type { CanonicalProject } from "./canonical.ts";
 import { applyBatch } from "./timeline/operations.ts";
 import type { Operation } from "./timeline/operations.ts";
@@ -94,7 +107,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 7;
+export const WORKSPACE_SCHEMA_VERSION = 8;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -186,6 +199,26 @@ CREATE TABLE agent_tokens(
   created_at TEXT NOT NULL
 ) STRICT;
 `;
+// Creative documents (YU-010, AG-DOCS): immutable canonical document bytes
+// and which snapshot references which document. A document is named by the
+// hash of its bytes; asset_ids lists the project assets it needs, so every
+// commit can keep them in the project without re-parsing the document.
+const SCHEMA_V8 = `
+CREATE TABLE creative_documents(
+  hash TEXT PRIMARY KEY CHECK(length(hash) = 64),
+  kind TEXT NOT NULL CHECK(kind IN ('studio', 'cinemaScene')),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  asset_ids TEXT NOT NULL,
+  bytes BLOB NOT NULL,
+  byte_length INTEGER NOT NULL CHECK(byte_length = length(bytes))
+) STRICT;
+CREATE TABLE snapshot_document_refs(
+  snapshot_hash TEXT NOT NULL REFERENCES snapshots(hash),
+  document_hash TEXT NOT NULL REFERENCES creative_documents(hash),
+  PRIMARY KEY(snapshot_hash, document_hash)
+) STRICT, WITHOUT ROWID;
+CREATE INDEX snapshot_document_refs_by_document ON snapshot_document_refs(document_hash);
+`;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
   project_id TEXT NOT NULL,
@@ -252,6 +285,11 @@ type Commit = {
   effects?: (db: DatabaseSync, revision: number) => void;
   // Project language for the new snapshot; defaults to the current head's.
   language?: () => CanonicalProject["language"];
+  // Document references of the new snapshot; defaults to the head's, so
+  // every save path through the editing shape keeps them (YU-010).
+  // The head's references are decoded only on request: restore must be able
+  // to replace a head whose snapshot no longer verifies.
+  documents?: (head: () => DocumentRef[]) => DocumentRef[];
   next: (current: () => Project, revision: number) => Project;
 };
 
@@ -424,6 +462,7 @@ export class ProjectStore {
         SCHEMA_V5,
         SCHEMA_V6,
         SCHEMA_V7,
+        SCHEMA_V8,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
@@ -712,14 +751,22 @@ export class ProjectStore {
       const view = ProjectSchema.parse(c.next(current, revision));
       if (view.id !== c.projectId || view.revision !== revision)
         throw new Error("Project snapshot identity mismatch.");
-      const language =
-        c.language?.() ??
-        (head
-          ? this.#canonical(head.snapshot_hash, c.projectId, head.revision)
-              .language
-          : "en");
-      const canonicalNext = fromEditView(view, language);
-      const bytes = Buffer.from(canonicalJson(canonicalNext), "utf8");
+      let decoded: CanonicalProject | null = null;
+      const headCanonical = () =>
+        head
+          ? (decoded ??= this.#canonical(
+              head.snapshot_hash,
+              c.projectId,
+              head.revision,
+            ))
+          : null;
+      const language = c.language?.() ?? headCanonical()?.language ?? "en";
+      const headDocuments = () => headCanonical()?.documents ?? [];
+      const documents = c.documents
+        ? c.documents(headDocuments)
+        : headDocuments();
+      const canonicalNext = fromEditView(view, language, documents);
+      const bytes = Buffer.from(serializeCanonical(canonicalNext), "utf8");
       if (
         bytes.length >
         Math.min(
@@ -736,6 +783,13 @@ export class ProjectStore {
         "INSERT INTO snapshots(hash, format, bytes, byte_length) VALUES (?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
       ).run(hash, SNAPSHOT_FORMAT, bytes, bytes.length);
       c.effects?.(db, revision);
+      // After effects, which may store the document being committed.
+      this.#assertDocumentAssets(db, canonicalNext);
+      const refDocument = db.prepare(
+        "INSERT INTO snapshot_document_refs(snapshot_hash, document_hash) VALUES (?, ?) ON CONFLICT DO NOTHING",
+      );
+      for (const ref of canonicalNext.documents)
+        refDocument.run(hash, ref.contentHash);
       // Edits made any other way end the undo history they would invalidate.
       if (!EDIT_HISTORY_OPERATIONS.has(c.operation)) {
         db.prepare("DELETE FROM edit_cursor WHERE project_id = ?").run(
@@ -872,6 +926,181 @@ export class ProjectStore {
     if (!head) throw new Error("Project not found.");
     return this.#snapshot(head.snapshot_hash, id, head.revision);
   }
+  // Every asset a referenced document needs stays in the project: a commit
+  // that would drop one (or reference a document never stored) is refused.
+  #assertDocumentAssets(db: DatabaseSync, project: CanonicalProject) {
+    if (!project.documents.length) return;
+    const assets = new Map(project.assets.map((a) => [a.id, a.kind]));
+    const read = db.prepare(
+      "SELECT kind, schema_version, asset_ids FROM creative_documents WHERE hash = ?",
+    );
+    for (const ref of project.documents) {
+      const row = read.get(ref.contentHash) as
+        { kind: string; schema_version: number; asset_ids: string } | undefined;
+      // Refs are only written beside their stored document, so a mismatch
+      // is workspace damage, not a client error.
+      let assetIds: string[] | null = null;
+      try {
+        if (
+          row &&
+          row.kind === ref.kind &&
+          row.schema_version === ref.schemaVersion
+        )
+          assetIds = JSON.parse(row.asset_ids) as string[];
+      } catch {
+        assetIds = null;
+      }
+      if (!Array.isArray(assetIds))
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "A document reference does not match a stored document; restore an earlier revision.",
+        );
+      if (missingDocumentAssets({ assetIds }, assets.keys()).length)
+        throw new CommandError(
+          "VALIDATION",
+          "A creative document uses an asset this revision would not hold.",
+        );
+      if (
+        ref.kind === "studio" &&
+        assetIds.some((id) => assets.get(id) !== "image")
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "Studio bitmaps must be image assets.",
+        );
+    }
+  }
+  // The head revision's document references.
+  listDocuments(projectId: string): DocumentRef[] {
+    Id.parse(projectId);
+    const head = this.#head(projectId);
+    if (!head) throw new CommandError("NOT_FOUND", "Project not found.");
+    return this.#canonical(head.snapshot_hash, projectId, head.revision)
+      .documents;
+  }
+  // One document of the head revision with its verified canonical bytes.
+  getDocument(
+    projectId: string,
+    documentId: string,
+  ): { ref: DocumentRef; bytes: Buffer } {
+    Id.parse(documentId);
+    const ref = this.listDocuments(projectId).find((d) => d.id === documentId);
+    if (!ref) throw new CommandError("NOT_FOUND", "Document not found.");
+    const row = this.#database
+      .prepare("SELECT bytes FROM creative_documents WHERE hash = ?")
+      .get(ref.contentHash) as { bytes: Uint8Array } | undefined;
+    const bytes = row ? Buffer.from(row.bytes) : null;
+    if (!bytes || sha256Hex(bytes) !== ref.contentHash)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "Stored document does not match its hash.",
+      );
+    return { ref, bytes };
+  }
+  /**
+   * Commits one creative document as a new project revision (YU-010).
+   * `source` is either new bytes, validated here outside the transaction, or
+   * the hash of a document an earlier revision of this project referenced
+   * (revert). `expectedContentHash` is the document's current hash, or null
+   * when the id is new: any other current value is a conflict, so two
+   * writers of one document cannot both succeed. The command surface stays
+   * behind CREATIVE_DOCUMENTS_ENABLED (AG-DOCS).
+   */
+  async commitDocument(
+    input: {
+      projectId: string;
+      expectedRevision: number;
+      documentId: string;
+      kind: DocumentKind;
+      schemaVersion: number;
+      expectedContentHash: string | null;
+      source: { bytes: Uint8Array } | { contentHash: string };
+    },
+    receipt?: RequestReceipt,
+  ) {
+    Id.parse(input.projectId);
+    Id.parse(input.documentId);
+    const kind = DocumentKind.parse(input.kind);
+    const validated =
+      "bytes" in input.source
+        ? validateDocument(kind, input.schemaVersion, input.source.bytes)
+        : null;
+    const contentHash = validated
+      ? validated.hash
+      : DocumentRefSchema.shape.contentHash.parse(
+          (input.source as { contentHash: string }).contentHash,
+        );
+    // The replay digest also binds what is committed, so a retry under the
+    // same request id with other content can never return this result.
+    const bound = receipt && {
+      ...receipt,
+      digest: sha256Hex(
+        canonicalJson({
+          request: receipt.digest,
+          documentId: input.documentId,
+          kind,
+          schemaVersion: input.schemaVersion,
+          expectedContentHash: input.expectedContentHash,
+          contentHash,
+        }),
+      ),
+    };
+    return this.#commit({
+      operation: "document.commit",
+      projectId: input.projectId,
+      expectedRevision: input.expectedRevision,
+      receipt: bound,
+      check: () => {
+        if (validated) return;
+        // A revert may only name a document this project already held.
+        const owned = this.#database
+          .prepare(
+            "SELECT 1 FROM snapshot_document_refs d JOIN revisions r ON r.snapshot_hash = d.snapshot_hash JOIN creative_documents c ON c.hash = d.document_hash WHERE r.project_id = ? AND d.document_hash = ? AND c.kind = ? AND c.schema_version = ?",
+          )
+          .get(input.projectId, contentHash, kind, input.schemaVersion);
+        if (!owned)
+          throw new CommandError(
+            "NOT_FOUND",
+            "This project has no such document version.",
+          );
+      },
+      documents: (head) => {
+        const current = head();
+        const existing = current.find((d) => d.id === input.documentId);
+        if ((existing?.contentHash ?? null) !== input.expectedContentHash)
+          throw new CommandError(
+            "REVISION_CONFLICT",
+            "The document changed; reopen it before saving.",
+          );
+        if (existing && existing.kind !== kind)
+          throw new CommandError("VALIDATION", "A document keeps its kind.");
+        const ref = {
+          id: input.documentId,
+          kind,
+          schemaVersion: input.schemaVersion,
+          contentHash,
+        };
+        return existing
+          ? current.map((d) => (d.id === ref.id ? ref : d))
+          : [...current, ref];
+      },
+      effects: validated
+        ? (db) => {
+            db.prepare(
+              "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
+            ).run(
+              validated.hash,
+              validated.kind,
+              validated.schemaVersion,
+              JSON.stringify(validated.assetIds),
+              validated.bytes,
+              validated.bytes.length,
+            );
+          }
+        : undefined,
+      next: (current, revision) => ({ ...current(), revision }),
+    });
+  }
   // Migration only (T3): import a project's verified history with its original
   // revision numbers into this workspace in one transaction. Refuses a project
   // that already exists; nothing is committed if any revision is invalid.
@@ -895,7 +1124,13 @@ export class ProjectStore {
         const p = parseCanonical(project);
         if (p.id !== projectId)
           throw new Error("Project snapshot identity mismatch.");
-        const bytes = Buffer.from(canonicalJson(p), "utf8");
+        // Migrated folder history predates creative documents.
+        if (p.documents.length)
+          throw new CommandError(
+            "VALIDATION",
+            "Migrated history cannot contain creative documents.",
+          );
+        const bytes = Buffer.from(serializeCanonical(p), "utf8");
         if (bytes.length > limit)
           throw new CommandError(
             "LIMIT_EXCEEDED",
@@ -1319,11 +1554,16 @@ export class ProjectStore {
     if (digest) await this.discardUnregisteredObject(projectId, digest);
   }
   // Canonical bytes for portable export: no host paths, tokens or UI state.
-  async exportProject(id: string): Promise<CanonicalProject> {
+  // Exactly the stored serialization: v4 without documents, v5 with them.
+  async exportProject(id: string): Promise<ExportedProject> {
     Id.parse(id);
     const head = this.#head(id);
     if (!head) throw new Error("Project not found.");
-    return this.#canonical(head.snapshot_hash, id, head.revision);
+    return JSON.parse(
+      serializeCanonical(
+        this.#canonical(head.snapshot_hash, id, head.revision),
+      ),
+    ) as ExportedProject;
   }
   async list() {
     const rows = this.#database
@@ -1442,6 +1682,8 @@ export class ProjectStore {
           );
       },
       language: () => restoredCanonical.language,
+      // The restored revision's own documents, never the head's.
+      documents: () => restoredCanonical.documents,
       next: (_current, next) => ({ ...selected, revision: next }),
     });
   }

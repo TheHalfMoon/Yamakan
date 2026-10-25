@@ -166,12 +166,12 @@ test("canonical validation enforces refs, safe integers and strict keys", () => 
 test("newer formats can be inspected but not parsed for editing", () => {
   const newer = {
     ...fromEditView(richView()),
-    formatVersion: 5,
+    formatVersion: 6,
     futureField: { x: 1 },
   };
   assert.deepEqual(inspectFormat(newer), {
     format: FORMAT,
-    formatVersion: 5,
+    formatVersion: 6,
     supported: false,
   });
   assert.throws(

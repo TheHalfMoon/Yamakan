@@ -172,6 +172,25 @@ export const commands = {
     input: z.object({ projectId: Id }).strict(),
     run: ({ store }, a) => store.exportProject(a.projectId),
   }),
+  "yamakan.document.list": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "List the creative document references (id, kind, schema version, content hash) of the current revision.",
+    input: z.object({ projectId: Id }).strict(),
+    run: ({ store }, a) => store.listDocuments(a.projectId),
+  }),
+  "yamakan.document.get": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read one creative document of the current revision with its verified content.",
+    input: z.object({ projectId: Id, documentId: Id }).strict(),
+    run: ({ store }, a) => {
+      const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
+      return { ...ref, content: JSON.parse(bytes.toString("utf8")) };
+    },
+  }),
   "yamakan.project.history": define({
     scope: "project:read",
     mutation: false,

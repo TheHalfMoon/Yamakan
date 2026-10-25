@@ -24,6 +24,7 @@ function sampleProject(): CanonicalProject {
   return {
     format: FORMAT,
     formatVersion: FORMAT_VERSION,
+    documents: [],
     id: crypto.randomUUID(),
     name: "otio-fixture",
     revision: 1,

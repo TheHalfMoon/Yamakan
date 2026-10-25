@@ -1,0 +1,64 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "8.1.1 (gyan.dev full build)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-003",
+  "objective": "Bound MCP frames and concurrent requests",
+  "branch": "feat/yu-003-mcp-bounds",
+  "mergedPr": 90,
+  "mergeCommit": "0fe9a18079245d1ab2141cd7e3b5c1bfe108da1c",
+  "tests": {
+    "files": ["tests/mcp-transport.test.ts", "tests/mcp.test.ts"],
+    "result": "12/12; full Windows suite 373/375 (0 fail); Edge E2E pass"
+  },
+  "redGreen": "against the old transport: oversized frame answered; 8315 concurrent tool calls (limit 16)",
+  "reviews": [
+    {
+      "kind": "fresh-context ps-review panel incl. security bar",
+      "judge": "session model subagent",
+      "findings": {
+        "mustFix": 0,
+        "nearMustFix": 1,
+        "applied": 1
+      }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 1,
+        "applied": 1
+      }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "medium",
+      "probability": 0.47,
+      "confidence": 0.21
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "preview": "2/4 files in scope",
+      "fullReview": "BLOCKED: cloud provider configured"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "0fe9a18079245d1ab2141cd7e3b5c1bfe108da1c",
+    "ci": "push runs on b5c3372 and 0fe9a18: success",
+    "windows": "npm test on detached 0fe9a18: 386/388 (0 fail, 2 POSIX-only skips); Edge E2E pass; tests/mcp-transport + tests/quality-evidence 23/23"
+  },
+  "limitations": [
+    "A hung service call stalls the transport in order (no SDK timeout); documented"
+  ]
+}

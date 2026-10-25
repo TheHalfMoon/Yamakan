@@ -41,9 +41,13 @@
     }
   ],
   "securityReview": "Not triggered beyond light bar: evidence tooling only, no production boundary change. No independent human security review claimed.",
-  "state": "IMPLEMENTED",
-  "mergedPr": null,
-  "postMergeVerification": null,
+  "state": "VERIFIED",
+  "mergedPr": 88,
+  "postMergeVerification": {
+    "main": "01ccbe58285e7bbd6c74cc4155ae17bac30c3bb3",
+    "ci": "push run on 01ccbe5: success",
+    "windows": "npm run qualify:ultimate-environment on detached 01ccbe5: RECORDED pass; all 8 gates PASSED; 416/418 unit tests (0 fail, 2 POSIX-only skips); Edge E2E PASSED"
+  },
   "task": "YU-001",
   "objective": "Reproduce dependency/native/browser baseline in an isolated workspace",
   "evidence": "docs/evidence/ultimate/environment.json",
@@ -130,5 +134,6 @@
   "limitations": [
     "One Windows 11 machine, developer profile; Profile A, second account and constrained volume remain external gates",
     "TesterArmy e2e not yet integrated; existing Edge E2E used"
-  ]
+  ],
+  "mergeCommit": "01ccbe58285e7bbd6c74cc4155ae17bac30c3bb3"
 }

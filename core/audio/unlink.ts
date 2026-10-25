@@ -63,7 +63,6 @@ export function unlinkVideoSound(
 
   return {
     ...project,
-    formatVersion: 4,
     clips: [
       ...project.clips.map((c) =>
         c.id === args.videoClipId

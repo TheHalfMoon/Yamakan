@@ -20,9 +20,16 @@ import {
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
+import { DOCUMENT_LIMITS, DocumentRefSchema } from "./document-ref.ts";
+import type { DocumentRef } from "./document-ref.ts";
+import { canonicalJson } from "./hash/canonical.ts";
 
 export const FORMAT = "yamakan.project";
-export const FORMAT_VERSION = 4;
+// v5 (YU-010) adds creative document references. A project without any is
+// still written as v4, byte for byte, so its hash and every older reader are
+// unaffected (serializeCanonical).
+export const FORMAT_VERSION = 5;
+const DOCUMENTLESS_FORMAT_VERSION = 4;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -128,7 +135,10 @@ const CanonicalScene = z
 const ProjectBody = z
   .object({
     format: z.literal(FORMAT),
-    formatVersion: z.literal(FORMAT_VERSION),
+    formatVersion: z.union([
+      z.literal(DOCUMENTLESS_FORMAT_VERSION),
+      z.literal(FORMAT_VERSION),
+    ]),
     id: Id,
     name: z.string().min(1).max(120),
     revision: z.number().int().nonnegative().max(10000),
@@ -156,10 +166,17 @@ const ProjectBody = z
     scenes: z.array(CanonicalScene).max(100),
     tracks: z.array(CanonicalTrack).max(16),
     clips: z.array(CanonicalClip).max(200),
+    // v5: references to immutable creative documents (core/documents.ts).
+    documents: z
+      .array(DocumentRefSchema)
+      .max(DOCUMENT_LIMITS.documentsPerProject)
+      .default([]),
   })
   .strict()
   .superRefine((p, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (p.formatVersion === DOCUMENTLESS_FORMAT_VERSION && p.documents.length)
+      fail("A version 4 project cannot contain documents.");
     const ids = [
       p.id,
       ...p.assets,
@@ -167,6 +184,7 @@ const ProjectBody = z
       ...p.scenes.flatMap((s) => s.shots),
       ...p.tracks,
       ...p.clips,
+      ...p.documents,
     ].map((x) => (typeof x === "string" ? x : x.id));
     if (new Set(ids).size !== ids.length) fail("Identifiers must be unique.");
     for (const s of p.scenes)
@@ -290,7 +308,18 @@ export const CanonicalProjectSchema = z.preprocess((value, ctx) => {
       message: "Prototype keys are not allowed.",
     });
   return value;
-}, ProjectBody);
+}, ProjectBody.transform(normalizeVersion));
+// One parsed form: version 4 without documents, version 5 with them.
+function normalizeVersion<
+  T extends { formatVersion: 4 | 5; documents: unknown[] },
+>(p: T): T {
+  return {
+    ...p,
+    formatVersion: p.documents.length
+      ? FORMAT_VERSION
+      : DOCUMENTLESS_FORMAT_VERSION,
+  };
+}
 export type CanonicalProject = z.output<typeof ProjectBody>;
 
 // Bounded, write-free inspection of a stored snapshot whose format may be
@@ -444,14 +473,20 @@ const toFrames = (ticks: number, what: string) => {
 };
 
 // Editing shape → canonical. Exact: one 30 fps frame is 23,520,000 flicks.
+// The editing shape has no documents: callers pass the revision's own
+// references (the store carries the head's forward), never drop them.
 export function fromEditView(
   view: Project,
   language: "en" | "ar" = "en",
+  documents: DocumentRef[] = [],
 ): CanonicalProject {
   const p = ProjectSchema.parse(view);
   return CanonicalProjectSchema.parse({
     format: FORMAT,
-    formatVersion: FORMAT_VERSION,
+    formatVersion: documents.length
+      ? FORMAT_VERSION
+      : DOCUMENTLESS_FORMAT_VERSION,
+    documents,
     id: p.id,
     name: p.name,
     revision: p.revision,
@@ -513,6 +548,26 @@ export function fromEditView(
         ...(c.animation ? { animation: c.animation } : {}),
       };
     }),
+  });
+}
+
+// The stored bytes of a canonical project: v4 exactly as before when it has
+// no documents, v5 with its references otherwise, ordered by document id.
+export function serializeCanonical(project: CanonicalProject): string {
+  const p = CanonicalProjectSchema.parse(project);
+  const { documents, ...rest } = p;
+  if (!documents.length)
+    return canonicalJson({
+      ...rest,
+      formatVersion: DOCUMENTLESS_FORMAT_VERSION,
+    });
+  const ordered = [...documents].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
+  return canonicalJson({
+    ...rest,
+    formatVersion: FORMAT_VERSION,
+    documents: ordered,
   });
 }
 
