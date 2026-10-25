@@ -221,6 +221,12 @@ try {
     .getByRole("status")
     .filter({ hasText: "Saved revision" })
     .waitFor();
+  // YU-016: the audio clip's waveform is drawn from server peak tiles.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll(".tl-clip--audio svg path")].some(
+      (p) => (p.getAttribute("d") || "").length > 100,
+    ),
+  );
   const listing = await (
     await page.request.post(`${url}/api/v1/call`, {
       headers: agent,
@@ -750,6 +756,17 @@ try {
   assert.deepEqual(errors, []);
   const external = requests.filter((u) => !offline(u));
   assert.deepEqual(external, [], "every page request stays on this machine");
+  // Every edit, save and restore above redrew the timeline; each waveform
+  // tile was still fetched once (tiles are reused by content hash).
+  const peakTiles = requests
+    .filter((u) => u.includes("/peaks?"))
+    .map((u) => u.replace(/[?&]media=[^&]*/, ""));
+  assert.ok(peakTiles.length > 0, "waveforms come from peak tiles");
+  assert.equal(
+    new Set(peakTiles).size,
+    peakTiles.length,
+    "no waveform tile is fetched twice",
+  );
   const receipt = {
     runtime:
       process.env.YAMAKAN_BROWSER_CHANNEL ||
@@ -793,6 +810,7 @@ try {
     referencePlanHash,
     pageErrors: errors,
     pageRequests: requests.length,
+    peakTileRequests: peakTiles.length,
     externalPageRequests: requests.filter((u) => !offline(u)).length,
     artifactBytes: bytes.length,
   };
