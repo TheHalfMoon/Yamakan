@@ -1,0 +1,84 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "ccdde01",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "pinned R8 build (vendor/ffmpeg-win64-r8)",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-016",
+  "objective": "Generate bounded immutable waveform peak tiles",
+  "branch": "feat/yu-016-waveform-peaks",
+  "mergedPr": 95,
+  "headCommit": "40e0e8f",
+  "mergeCommit": "69118c056c1ea2f6ada5025a6b3dfa72d8e5ede2",
+  "tests": {
+    "files": [
+      "tests/waveform-cache.test.ts",
+      "tests/peak-tiles.test.ts",
+      "tests/http.test.ts",
+      "scripts/browser-e2e.mjs"
+    ],
+    "result": "waveform-cache 7/7 (120 s stereo PCM fixture: every tile at all 13 levels equals the reference from its samples; full-scale click survives to the coarsest level; mono keeps full level; cancel, invalid stream, remembered deterministic failure, damaged/unwritable cache, below disk reserve); peak-tiles 8/8 (100 edits fetch each tile once and never the original; abort superseded; 404 past decoded audio is silence; bounded cache; constant parity); http media-key route; Edge E2E: audio clip drawn from tiles, no tile repeated within a page load, 0 external requests"
+  },
+  "redGreen": "mono fixture showed peaks 3 dB low with a forced stereo upmix (FFmpeg -ac 2), fixed by decoding native channels; the security review found the media key did not open the tile route (browser could not load tiles), fixed and covered by tests/http.test.ts",
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product panel",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 0, "shouldFix": 4, "applied": 4 }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 1,
+        "applied": 1,
+        "shouldFix": 5,
+        "appliedShouldFix": 3,
+        "notApplied": [
+          "no global cache cap across projects (each project's cache is bounded at 32 MiB, twice that under the recency rule)",
+          "a cancelled decode's error mapping is unchanged (its client has already gone)"
+        ]
+      }
+    },
+    {
+      "kind": "delta security re-review of the fix commit",
+      "judge": "Sonnet subagent",
+      "findings": { "mustFix": 0, "shouldFix": 2, "applied": 2 }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "low",
+      "probability": 0.66,
+      "confidence": 0.48
+    },
+    {
+      "kind": "Graft 0.21.1",
+      "result": "assetPeakTile reachable only from the authenticated route and tests; engineId shared by previews and peaks"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); local model needs more free RAM than the host had"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "69118c056c1ea2f6ada5025a6b3dfa72d8e5ede2",
+    "ci": "PR exact head 40e0e8f: qualify, qualify-windows-r8, otio-oracle success; push run on 69118c0: success",
+    "windows": "detached 69118c0, idle host: npm test 475/477 (0 fail, 2 POSIX-only skips); test:studio 1975/1975; lint, provenance, build pass; Edge E2E pass (peakTileRequests 3, externalPageRequests 0); TesterArmy Studio journey PASSED"
+  },
+  "limitations": [
+    "Waveforms draw for audio assets; video clips keep their thumbnail (unchanged)",
+    "The tile URL's h= parameter is cache-busting only; the server resolves the asset by id",
+    "First view of a long asset waits for one decode (seconds)",
+    "Pre-merge local runs on a loaded shared host saw wall-clock test timeouts in unrelated render tests; they pass alone, on CI and on the idle post-merge run (ledger: Known flaky tests)",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
