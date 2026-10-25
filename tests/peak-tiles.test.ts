@@ -151,8 +151,14 @@ test("a tile past the audio the service decoded draws as silence, not a failure"
   });
   const got = await span(tiles, 19, 22, 300);
   assert.equal(got.peaks.length, 300);
-  assert.deepEqual([...got.peaks.subarray(0, 148)], new Array(148).fill(9));
-  assert.deepEqual([...got.peaks.subarray(148)], new Array(152).fill(0));
+  assert.deepEqual(
+    [...got.peaks.subarray(0, 148)],
+    Array.from({ length: 148 }, () => 9),
+  );
+  assert.deepEqual(
+    [...got.peaks.subarray(148)],
+    Array.from({ length: 152 }, () => 0),
+  );
 });
 
 test("tile URLs carry the content hash and the client's bounds match the service's", async () => {
