@@ -31,9 +31,11 @@ const Waveform: React.FC<WaveformProps> = ({
   height,
 }) => {
   const [span, setSpan] = useState<PeakSpan | null>(null);
+  const [failed, setFailed] = useState(false);
   // Peaks at most one per pixel; a new zoom or trim aborts the old request.
   const px = Math.max(1, Math.round(width));
   useEffect(() => {
+    setFailed(false);
     if (!(duration > 0) || !(to > from)) {
       setSpan(null);
       return;
@@ -49,11 +51,30 @@ const Waveform: React.FC<WaveformProps> = ({
         widthPx: px,
         signal: controller.signal,
       })
-      .then(setSpan, () => {
-        // Aborted or unavailable: keep the empty clip.
+      .then(setSpan, (e: unknown) => {
+        // Superseded: the next request draws. Unavailable: a placeholder.
+        if ((e as { name?: string })?.name !== "AbortError") setFailed(true);
       });
     return () => controller.abort();
   }, [path, hash, duration, from, to, px]);
+  if (failed)
+    return (
+      <svg
+        width={width}
+        height={height}
+        className="absolute inset-0"
+        data-waveform="unavailable"
+      >
+        <line
+          x1={0}
+          x2={width}
+          y1={height / 2}
+          y2={height / 2}
+          stroke="rgba(167, 139, 250, 0.35)"
+          strokeDasharray="4 4"
+        />
+      </svg>
+    );
   if (!span || span.peaks.length === 0) return null;
   const n = span.peaks.length;
   const d = Array.from(span.peaks, (value, index) => {

@@ -141,3 +141,27 @@ test("the editor no longer fetches whole assets to draw waveforms", async () => 
   );
   assert.doesNotMatch(main, /openAssetPeaks|waveformCache/);
 });
+
+test("a tile past the audio the service decoded draws as silence, not a failure", async () => {
+  const tiles = createPeakTiles(async (url) => {
+    const index = Number(new URL(url, "http://x").searchParams.get("index"));
+    return index === 0
+      ? new Response(new Uint8Array(PEAK_TILE).fill(9))
+      : new Response(null, { status: 404 });
+  });
+  const got = await span(tiles, 19, 22, 300);
+  assert.equal(got.peaks.length, 300);
+  assert.deepEqual([...got.peaks.subarray(0, 148)], new Array(148).fill(9));
+  assert.deepEqual([...got.peaks.subarray(148)], new Array(152).fill(0));
+});
+
+test("tile URLs carry the content hash and the client's bounds match the service's", async () => {
+  const s = server();
+  await span(createPeakTiles(s.fetcher), 0, 1, 100);
+  assert.match(s.urls[0]!, new RegExp(`&h=${HASH}$`));
+  const service = await import("../core/audio/peaks.ts");
+  const client = await import("../src/media/peak-tiles.ts");
+  assert.equal(client.PEAK_TILE, service.PEAK_TILE);
+  assert.equal(client.PEAKS_PER_SECOND, service.PEAKS_PER_SECOND);
+  assert.equal(client.MAX_PEAK_LEVEL, service.MAX_PEAK_LEVEL);
+});

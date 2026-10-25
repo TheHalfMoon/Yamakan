@@ -24,6 +24,8 @@ import {
   assetPeakTile,
   peakAccumulator,
   peakTile,
+  forgetRecentPeaks,
+  peakCacheSeams,
   peaksWaiting,
 } from "../core/audio/peaks.ts";
 
@@ -271,23 +273,26 @@ test("an asset without audio is refused, and a stream that does not decode fails
   await refused(assetPeakTile(store, project.id, asset.id, 0, 0), "VALIDATION");
   // The same video when its audio flag is unknown (an older project): the
   // decoder finds no audio stream and the request fails as invalid media.
+  const unknownAudio = {
+    assetFile: async () => ({
+      file: (await store.assetFile(project.id, asset.id)).file,
+      asset: { ...asset, hasAudio: null },
+    }),
+    file: store.file.bind(store),
+  } as unknown as ProjectStore;
   await refused(
-    assetPeakTile(
-      {
-        assetFile: async () => ({
-          file: await store.assetFile(project.id, asset.id).then((r) => r.file),
-          asset: { ...asset, hasAudio: null },
-        }),
-        file: store.file.bind(store),
-      } as unknown as ProjectStore,
-      project.id,
-      asset.id,
-      0,
-      0,
-    ),
+    assetPeakTile(unknownAudio, project.id, asset.id, 0, 0),
     "MEDIA_INVALID",
   );
   assert.deepEqual(await readdir(await cacheDir(store, project.id)), []);
+  // The failure is remembered: asking again does not decode again.
+  const started = Date.now();
+  await refused(
+    assetPeakTile(unknownAudio, project.id, asset.id, 0, 0),
+    "MEDIA_INVALID",
+  );
+  assert.ok(Date.now() - started < 200, "refused without a decode");
+  forgetRecentPeaks();
 });
 
 test("a damaged or unwritable cache entry is rebuilt, never served", async () => {
@@ -302,6 +307,13 @@ test("a damaged or unwritable cache entry is rebuilt, never served", async () =>
   const bytes = await readFile(path.join(dir, name!));
   bytes[40] ^= 0xff;
   await writeFile(path.join(dir, name!), bytes);
+  // Served from memory while recent; the disk entry is checked once that
+  // is gone (another service run).
+  assert.equal(
+    (await assetPeakTile(store, project.id, asset.id, 0, 0)).cached,
+    true,
+  );
+  forgetRecentPeaks();
   const again = await assetPeakTile(store, project.id, asset.id, 0, 0);
   assert.equal(again.cached, false);
   assert.deepEqual([...again.peaks], [...want]);
@@ -311,6 +323,7 @@ test("a damaged or unwritable cache entry is rebuilt, never served", async () =>
   );
   // Truncated to nothing: also only a miss.
   await writeFile(path.join(dir, name!), Buffer.alloc(3));
+  forgetRecentPeaks();
   assert.deepEqual(
     [...(await assetPeakTile(store, project.id, asset.id, 0, 0)).peaks],
     [...want],
@@ -320,15 +333,35 @@ test("a damaged or unwritable cache entry is rebuilt, never served", async () =>
   // and the asset is untouched.
   await rm(path.join(dir, name!));
   await mkdir(path.join(dir, name!));
+  forgetRecentPeaks();
   const unkept = await assetPeakTile(store, project.id, asset.id, 0, 0);
   assert.deepEqual([...unkept.peaks], [...want]);
   assert.deepEqual((await readdir(dir)).sort(), [name]);
+  // Below the disk reserve the cache is not written at all, and tiles are
+  // still served (from memory, without decoding again for each tile).
+  await rm(path.join(dir, name!), { recursive: true });
+  forgetRecentPeaks();
+  peakCacheSeams.freeBytes = () => 0;
+  try {
+    const full = await assetPeakTile(store, project.id, asset.id, 0, 0);
+    assert.deepEqual([...full.peaks], [...want]);
+    assert.equal(full.cached, false);
+    assert.equal(
+      (await assetPeakTile(store, project.id, asset.id, 1, 0)).cached,
+      true,
+    );
+    assert.deepEqual(await readdir(dir), []);
+  } finally {
+    delete peakCacheSeams.freeBytes;
+  }
   const { file } = await store.assetFile(project.id, asset.id);
   assert.ok((await readFile(file)).length > 0);
 });
 
 test("a request whose client left stops its decode; concurrent requests share one", async () => {
   const { store, project, asset } = await withAudio(5);
+  // Same bytes as other tests: start from the disk path, not memory.
+  forgetRecentPeaks();
   const gone = new AbortController();
   gone.abort();
   await assert.rejects(

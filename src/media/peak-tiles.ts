@@ -8,6 +8,9 @@
 export const PEAKS_PER_SECOND = 100;
 export const PEAK_TILE = 2048;
 export const MAX_PEAK_LEVEL = 12;
+// A tile the service has not answered by then is given up (and refetched
+// next time); a first decode of a long asset can take a while.
+const TILE_TIMEOUT_MS = 150_000;
 
 export type PeakSpan = {
   // Peak values 0..255, one per 1 / peaksPerSecond seconds from `from`.
@@ -55,11 +58,23 @@ export function createPeakTiles(fetcher: Fetcher, limit = 256) {
         controller,
         waiters: 0,
         done: false,
+        // The content hash in the URL keeps browser-cached tiles exact.
         promise: fetcher(
-          `${path}?level=${level}&index=${index}`,
-          controller.signal,
+          `${path}?level=${level}&index=${index}&h=${hash}`,
+          AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(TILE_TIMEOUT_MS),
+          ]),
         ).then(async (res) => {
+          // Past the audio the service decoded (a stream shorter than its
+          // container says): silence, not a failed waveform.
+          if (res.status === 404) {
+            made.done = true;
+            return new Uint8Array(0);
+          }
           if (!res.ok) throw new Error(`Waveform tile failed (${res.status}).`);
+          if (Number(res.headers.get("content-length") ?? 0) > PEAK_TILE)
+            throw new Error("Waveform tile is too large.");
           const bytes = new Uint8Array(await res.arrayBuffer());
           if (bytes.length > PEAK_TILE)
             throw new Error("Waveform tile is too large.");
@@ -104,6 +119,7 @@ export function createPeakTiles(fetcher: Fetcher, limit = 256) {
         entries.push(tile(input.path, input.hash, level, i));
       for (const e of entries) e.waiters++;
       let left = false;
+      let onAbort = () => {};
       const leave = () => {
         if (left) return;
         left = true;
@@ -117,14 +133,11 @@ export function createPeakTiles(fetcher: Fetcher, limit = 256) {
             reject(new DOMException("Aborted", "AbortError"));
             return;
           }
-          input.signal.addEventListener(
-            "abort",
-            () => {
-              leave();
-              reject(new DOMException("Aborted", "AbortError"));
-            },
-            { once: true },
-          );
+          onAbort = () => {
+            leave();
+            reject(new DOMException("Aborted", "AbortError"));
+          };
+          input.signal.addEventListener("abort", onAbort, { once: true });
           Promise.all(entries.map((e) => e.promise)).then(resolve, reject);
         });
         const peaks = new Uint8Array(last - first);
@@ -138,6 +151,7 @@ export function createPeakTiles(fetcher: Fetcher, limit = 256) {
         });
         return { peaks, peaksPerSecond: rate };
       } finally {
+        input.signal.removeEventListener("abort", onAbort);
         if (!left) {
           left = true;
           for (const e of entries) e.waiters--;

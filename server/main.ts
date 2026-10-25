@@ -144,10 +144,10 @@ function sameToken(value: string, expected: string) {
     b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-// Media reads (asset bytes, previews, export downloads) are the only routes
-// the media key opens.
+// Media reads (asset bytes and their waveform peaks, previews, export
+// downloads) are the only routes the media key opens.
 const MEDIA_ROUTE =
-  /^\/api\/v1\/(projects\/[^/]+\/(assets\/[^/]+|preview)|jobs\/[^/]+\/artifact)$/;
+  /^\/api\/v1\/(projects\/[^/]+\/(assets\/[^/]+(\/peaks)?|preview)|jobs\/[^/]+\/artifact)$/;
 function authenticate(
   req: import("node:http").IncomingMessage,
   url: URL,

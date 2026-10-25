@@ -128,7 +128,7 @@ export function peakTile(base: Uint8Array, level: number, index: number) {
 const encode = (peaks: Uint8Array) =>
   Buffer.concat([createHash("sha256").update(peaks).digest(), peaks]);
 function decode(bytes: Buffer): Uint8Array | null {
-  if (bytes.length < 32) return null;
+  if (bytes.length < 32 || bytes.length > 32 + MAX_PEAKS) return null;
   const payload = bytes.subarray(32);
   const sum = createHash("sha256").update(payload).digest();
   return sum.equals(bytes.subarray(0, 32)) ? new Uint8Array(payload) : null;
@@ -269,6 +269,24 @@ type Flight = {
 const inFlight = new Map<string, Flight>();
 let queue: Promise<unknown> = Promise.resolve();
 let waiting = 0;
+// Recently used base peaks (about 60 KB each), so tiles stay cheap even
+// when the disk cache cannot be written; keyed by content, like the cache.
+const RECENT = 16;
+const recent = new Map<string, Uint8Array>();
+// Assets whose audio failed to decode are refused for a minute instead of
+// taking the decode slot again on every request.
+const FAILURE_MS = 60_000;
+const failures = new Map<string, { error: CommandError; until: number }>();
+const remember = <V>(
+  map: Map<string, V>,
+  key: string,
+  value: V,
+  bound: number,
+) => {
+  map.delete(key);
+  map.set(key, value);
+  while (map.size > bound) map.delete(map.keys().next().value!);
+};
 
 // Base peaks for an asset: from the cache when intact, else decoded once
 // (one decode at a time; concurrent requests for the same asset share it,
@@ -286,10 +304,18 @@ async function basePeaks(
     .update(JSON.stringify([asset.hash, PEAKS_VERSION, await engineId(dir)]))
     .digest("hex");
   const cacheFile = path.join(dir, `${key}.peaks`);
+  const known = recent.get(key);
+  if (known) {
+    remember(recent, key, known, RECENT);
+    return { peaks: known, cached: true };
+  }
+  const failed = failures.get(key);
+  if (failed && failed.until > Date.now()) throw failed.error;
   const hit = await readFile(cacheFile).catch(() => null);
   if (hit) {
     const peaks = decode(hit);
     if (peaks) {
+      remember(recent, key, peaks, RECENT);
       const now = new Date();
       await utimes(cacheFile, now, now).catch(() => {});
       return { peaks, cached: true };
@@ -309,19 +335,33 @@ async function basePeaks(
     const turn = queue.then(async () => {
       waiting--;
       if (controller.signal.aborted) throw new Error("Cancelled.");
-      const peaks = await decodePeaks(
-        file,
-        asset.durationFrames / 30,
-        controller.signal,
-      );
+      let peaks: Uint8Array;
+      try {
+        peaks = await decodePeaks(
+          file,
+          asset.durationFrames / 30,
+          controller.signal,
+        );
+      } catch (e) {
+        if (e instanceof CommandError)
+          remember(
+            failures,
+            key,
+            { error: e, until: Date.now() + FAILURE_MS },
+            64,
+          );
+        throw e;
+      }
+      remember(recent, key, peaks, RECENT);
       // A full disk leaves no entry (and no partial one) behind: the
       // waveform is still served, just not kept.
-      const space = await statfs(dir).catch(() => null);
-      if (
-        space &&
-        Number(space.bavail) * Number(space.bsize) >=
-          RESOURCE_POLICY.enforced.diskReserveBytes
-      ) {
+      const free = peakCacheSeams.freeBytes
+        ? peakCacheSeams.freeBytes()
+        : await statfs(dir).then(
+            (space) => Number(space.bavail) * Number(space.bsize),
+            () => 0,
+          );
+      if (free >= RESOURCE_POLICY.enforced.diskReserveBytes) {
         const temp = path.join(dir, `${key}.${randomUUID()}.tmp`);
         await removeStaleTemps(dir);
         try {
@@ -407,4 +447,13 @@ export async function assetPeakTile(
 /** Waveform decodes waiting for their turn (tests). */
 export function peaksWaiting() {
   return waiting;
+}
+
+/** Test seam: the free bytes a cache write sees (default: the volume's). */
+export const peakCacheSeams: { freeBytes?: () => number } = {};
+
+/** Forgets in-memory peaks and failures (tests: forces the disk path). */
+export function forgetRecentPeaks() {
+  recent.clear();
+  failures.clear();
 }
