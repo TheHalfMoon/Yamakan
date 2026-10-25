@@ -41,6 +41,7 @@ import type { WaveformCache } from "./editor/types";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
+import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type {
@@ -675,6 +676,25 @@ function App() {
                   new URLSearchParams(window.location.search).get(
                     "studioQ8",
                   ) === "1"
+                }
+                project={p ? { id: p.id, revision: p.revision } : null}
+                client={client as unknown as StudioClient}
+                t={(key) => t(key)}
+                onSaved={(from, revision) =>
+                  // A Studio save changes only the project's documents: a
+                  // draft based on the revision it replaced moves to the new
+                  // revision unchanged (the service carries documents forward
+                  // on its next save). A draft based on anything else is left
+                  // alone, so its save still meets another writer's changes.
+                  setHistory((h) => {
+                    if (!h || h.present.revision !== from) return h;
+                    const at = (x: Project) => ({ ...x, revision });
+                    return {
+                      past: h.past.map(at),
+                      present: at(h.present),
+                      future: h.future.map(at),
+                    };
+                  })
                 }
               />
               <h2>{t("cinema.title")}</h2>

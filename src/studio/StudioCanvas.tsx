@@ -1,10 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { STUDIO_ENABLED, studioCapability } from "./flags.ts";
 import { createStudioAssetStore } from "./host/assetStore.ts";
+import type { StudioAssetStore } from "./host/assetStore.ts";
+import {
+  createProjectStudioAssetStore,
+  loadStudioDocument,
+  saveStudioCanvas,
+} from "./host/persistence.ts";
+import type { StudioClient, StudioSaveState } from "./host/persistence.ts";
+import type { MessageKey } from "../i18n.ts";
 
 type Props = {
   /** When true, attempt mount even if STUDIO_ENABLED is false (Q8 measurement). */
   forceMount?: boolean;
+  /** The open project: its Studio document is loaded and saved (YU-011). */
+  project?: { id: string; revision: number } | null;
+  client?: StudioClient;
+  t?: (key: MessageKey) => string;
+  /**
+   * A save moved the project from `from` to `to` changing only its
+   * documents (the timeline is unchanged).
+   */
+  onSaved?: (from: number, to: number) => void;
 };
 
 /** Q8/Q10 measurement handle exposed only while forceMount is active. */
@@ -43,11 +60,26 @@ declare global {
  * Host shell for the canvas-engine. Talks only through the host port.
  * Real stroke drawing requires STUDIO_ENABLED (or forceMount for Q8).
  */
-export function StudioCanvas({ forceMount = false }: Props) {
+export function StudioCanvas({
+  forceMount = false,
+  project = null,
+  client,
+  t,
+  onSaved,
+}: Props) {
   const screenRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const [status, setStatus] = useState<string>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [save, setSave] = useState<StudioSaveState | null>(null);
+  const [persistence, setPersistence] = useState<boolean | null>(null);
+  const [reloads, setReloads] = useState(0);
+  // The newest project revision known here (the editor's saves advance it
+  // too), read when a save starts.
+  const revision = useRef(project?.revision ?? 0);
+  revision.current = Math.max(revision.current, project?.revision ?? 0);
+  const saver = useRef<(() => Promise<void>) | null>(null);
+  const projectId = project?.id ?? null;
 
   useEffect(() => {
     const cap = studioCapability();
@@ -57,9 +89,38 @@ export function StudioCanvas({ forceMount = false }: Props) {
     }
     let cancelled = false;
     let destroy: (() => void) | undefined;
-    const assets = createStudioAssetStore();
+    let assets: StudioAssetStore = createStudioAssetStore();
+    saver.current = null;
     (async () => {
       try {
+        // Project-bound when the service accepts creative documents.
+        const enabled =
+          projectId && client
+            ? Boolean(
+                (
+                  (await client.call("yamakan.document.capability", {})) as {
+                    available: boolean;
+                  }
+                ).available,
+              )
+            : false;
+        if (cancelled) return;
+        setPersistence(projectId && client ? enabled : null);
+        if (enabled && projectId && client)
+          assets = createProjectStudioAssetStore(client, projectId);
+        if (enabled) setSave({ state: "loading" });
+        const stored =
+          enabled && projectId && client
+            ? await loadStudioDocument(client, projectId)
+            : null;
+        if (enabled && projectId && client) {
+          // Opened (or reloaded after a conflict) against the current head.
+          const head = (await client.call("yamakan.project.open", {
+            projectId,
+          })) as { revision: number };
+          revision.current = head.revision;
+        }
+        if (cancelled) return;
         const { createCanvasEngine } =
           await import("./canvas-engine/engine.ts");
         const { createStudioHostPort } = await import("./host/port.ts");
@@ -67,9 +128,17 @@ export function StudioCanvas({ forceMount = false }: Props) {
           await import("./host/documentStore.ts");
         const { createPinnedFontRuntime } = await import("./host/fonts.ts");
         const session = newStudioSession("Studio");
+        const studioDocument = stored?.document ?? session.document;
+        let savedHash = stored?.ref.contentHash ?? null;
         const port = createStudioHostPort(
-          canvasFromStudioDocument(session.document),
+          canvasFromStudioDocument(studioDocument),
         );
+        if (enabled)
+          setSave(
+            savedHash
+              ? { state: "saved", contentHash: savedHash }
+              : { state: "new" },
+          );
         const fonts = createPinnedFontRuntime();
         const screen = screenRef.current;
         const overlay = overlayRef.current;
@@ -82,6 +151,8 @@ export function StudioCanvas({ forceMount = false }: Props) {
           uploadIntermediateImage: (blob) =>
             assets.uploadIntermediateImage(blob),
           reportError: (report) => {
+            // The full report (label, cause) goes to the console for diagnosis.
+            console.warn("Studio engine:", report);
             setError(String(report.message));
           },
           imageResolver: (imageName, signal) =>
@@ -90,6 +161,45 @@ export function StudioCanvas({ forceMount = false }: Props) {
         });
 
         composition.engine.surface.attach(screen, overlay);
+        if (enabled && projectId && client) {
+          const { studioDocumentFromCanvas } =
+            await import("./host/documentStore.ts");
+          saver.current = async () => {
+            setSave({ state: "saving" });
+            try {
+              const result = await saveStudioCanvas({
+                client,
+                projectId,
+                expectedRevision: revision.current,
+                documentId: studioDocument.id,
+                name: studioDocument.name,
+                expectedContentHash: savedHash,
+                flush: () => composition.engine.lifecycle.flushPendingUploads(),
+                canvas: () => port.getCanvasState(),
+                toDocument: (canvas) =>
+                  studioDocumentFromCanvas({
+                    id: studioDocument.id,
+                    name: studioDocument.name,
+                    canvas,
+                  }),
+              });
+              const from = revision.current;
+              savedHash = result.contentHash;
+              revision.current = result.project.revision;
+              port.clearDirty();
+              setSave({ state: "saved", contentHash: result.contentHash });
+              onSaved?.(from, result.project.revision);
+            } catch (e) {
+              const code = (e as { code?: string }).code;
+              const message = e instanceof Error ? e.message : String(e);
+              setSave(
+                code === "REVISION_CONFLICT"
+                  ? { state: "conflict", message }
+                  : { state: "error", message },
+              );
+            }
+          };
+        }
         const exposeMeasurement = STUDIO_ENABLED || forceMount;
         destroy = () => {
           if (exposeMeasurement && window.__yamakanStudioQ8) {
@@ -159,7 +269,7 @@ export function StudioCanvas({ forceMount = false }: Props) {
       cancelled = true;
       destroy?.();
     };
-  }, [forceMount]);
+  }, [forceMount, projectId, client, reloads]);
 
   return (
     <section
@@ -199,6 +309,49 @@ export function StudioCanvas({ forceMount = false }: Props) {
           </>
         )}
       </div>
+      {project && persistence === false ? (
+        <p data-testid="studio-save-state" data-state="unavailable">
+          {t?.("studio.state.unavailable")}
+        </p>
+      ) : null}
+      {!project && client ? (
+        <p data-testid="studio-save-state" data-state="no-project">
+          {t?.("studio.noProject")}
+        </p>
+      ) : null}
+      {save ? (
+        <div className="studio-persistence">
+          <p
+            role="status"
+            data-testid="studio-save-state"
+            data-state={save.state}
+            data-content-hash={save.state === "saved" ? save.contentHash : ""}
+          >
+            {t?.(`studio.state.${save.state}` as MessageKey)}
+          </p>
+          {save.state === "error" || save.state === "conflict" ? (
+            <p data-testid="studio-save-detail">{save.message}</p>
+          ) : null}
+          {save.state === "conflict" ? (
+            <button
+              type="button"
+              data-testid="studio-reload"
+              onClick={() => setReloads((n) => n + 1)}
+            >
+              {t?.("studio.reload")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="studio-save"
+              disabled={save.state === "saving" || save.state === "loading"}
+              onClick={() => void saver.current?.()}
+            >
+              {t?.("studio.save")}
+            </button>
+          )}
+        </div>
+      ) : null}
       {error ? (
         <p role="alert" data-testid="studio-error">
           {error}

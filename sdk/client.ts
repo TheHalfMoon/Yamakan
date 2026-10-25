@@ -194,6 +194,54 @@ export class YamakanClient {
       `${input.requestId}.commit`,
     );
   }
+  /** Stores one Studio layer bitmap (PNG); the canvas names it by digest. */
+  async uploadStudioBitmap(
+    projectId: string,
+    png: Uint8Array,
+  ): Promise<{
+    digest: string;
+    byteLength: number;
+    width: number;
+    height: number;
+  }> {
+    const response = await this.#fetch(
+      `${this.#base}/api/v1/projects/${encodeURIComponent(projectId)}/studio/bitmaps`,
+      {
+        method: "POST",
+        headers: this.#headers({ "Content-Type": "image/png" }),
+        body: png as Uint8Array<ArrayBuffer>,
+      },
+    );
+    const value = await response.json().catch(() => null);
+    if (!response.ok || !value || "error" in value) {
+      const e = value?.error;
+      throw new YamakanError(
+        e?.code ?? "INTERNAL",
+        e?.message ?? `Bitmap upload failed with HTTP ${response.status}.`,
+        Boolean(e?.retryable),
+        value?.requestId ?? null,
+      );
+    }
+    return value;
+  }
+  /** Reads one of the project's Studio bitmaps by digest. */
+  async studioBitmap(projectId: string, digest: string): Promise<Blob> {
+    const response = await this.#fetch(
+      `${this.#base}/api/v1/projects/${encodeURIComponent(projectId)}/studio/bitmaps/${encodeURIComponent(digest)}`,
+      { headers: this.#headers() },
+    );
+    if (!response.ok) {
+      const value = await response.json().catch(() => null);
+      const e = value?.error;
+      throw new YamakanError(
+        e?.code ?? "INTERNAL",
+        e?.message ?? `Bitmap read failed with HTTP ${response.status}.`,
+        Boolean(e?.retryable),
+        value?.requestId ?? null,
+      );
+    }
+    return response.blob();
+  }
   async catalog(): Promise<{
     apiVersion: number;
     service: string;

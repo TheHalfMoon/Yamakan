@@ -15,8 +15,10 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | (unplanned) zod GHSA-mrhx-c7xc-m3w5 | MERGED | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate |
 | YU-010a v5 refs, schema v8, store commit/get/list (flag off) | MERGED, post-merge verified | #91 → `fc4913e` | flag-off slice |
 | YU-010b staged upload route + `yamakan.document.commit` (flag off) | MERGED, post-merge verified | #92 → `a468345` | flag-off slice |
-| YU-010c SDK / CLI / MCP document clients (flag off) | IMPLEMENTED | (this PR) | after merge |
-| YU-011…YU-101 | PLANNED | — | — |
+| YU-010c SDK / CLI / MCP document clients (flag off) | MERGED, post-merge verified | #93 → `49f1a9e` | flag-off slice; main `49f1a9e` on Windows: 448/450 (0 fail), Edge E2E pass, YU-010 tests 32/32; push CI success |
+| YU-010 overall | VERIFIED (flag-off scope) | #91, #92, #93 | AG-DOCS activation still needs the YU-010…015 group receipt |
+| YU-011 Studio canvas persistence | IMPLEMENTED (this PR) | — | TesterArmy journey PASSED; see `yu-011-studio-e2e.json` |
+| YU-012…YU-101 | PLANNED | — | — |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -24,7 +26,8 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 - **Graft** 0.21.1, local deterministic build only (`graft build .`: 515 files parsed), telemetry off; no `--deep`/LLM pass.
 - **Liquid AI d1-omni-600M** (local llama-server, `127.0.0.1:18775`, CPU): advisory triage only; never a gate.
 - **Alibaba Open Code Review** 1.13.3: `ocr review --preview` runs locally. **Full AI review is BLOCKED**: the configured provider is a cloud ChatGPT account, so code would leave the machine; no local generative backend is configured.
-- **TesterArmy e2e**: not yet integrated into Yamakan (existing Edge E2E `scripts/browser-e2e.mjs` is the browser gate). A pinned `e2e@0.20.0` + `@e2e-dev/web@0.14.0` harness pattern exists on this PC from another project; integration is scheduled with the first UI task (YU-011/YU-015).
+- **TesterArmy e2e**: integrated with YU-011 as `e2e/testerarmy/` (own lockfile; `e2e@0.20.0`, `@e2e-dev/web@0.14.0`, zod overridden to 4.6.7 because e2e pins vulnerable 4.6.1; `npm audit` 0). Installed Edge over CDP, no model, telemetry off, no browser download. `npm run test:e2e:studio` (after `npm ci --ignore-scripts` in that folder). The existing Edge E2E (`npm run test:e2e`) stays the general browser gate.
+- **Local generative model for OCR**: `D:\tmp\mesc-local-ocr-review\Qwen3-4B-Q4_K_M.gguf` (SHA-256 `7485fe6f…dfa5`, matches its earlier record) with a llama.cpp Vulkan runtime was found from an earlier project. Usable for full OCR review without downloads, but only with ≥4 GB free RAM; on 2026-10-25 the host had 1.7 GB free (other applications), so full OCR review stays `OCR_FULL_REVIEW_BLOCKED (insufficient RAM)`. Never point OCR at the configured cloud provider.
 
 ## Environment findings (2026-10-25)
 
@@ -32,9 +35,12 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 2. The main clone's `node_modules` predates the `jassub` pin (5 packages missing). The capture now checks every lockfile package for this OS/CPU and reports drift as BLOCKED; worktrees install with CI's own `npm ci --ignore-scripts`.
 3. Disk: C: ≈7.8 GB free, D: ≈4.8 GB free. Keep generated media small; no weights.
 
+4. 2026-10-25 afternoon: C: fell to under 1 GB free, driven by other workloads (a growing WSL `ext4.vhdx`, another project's Rust builds). Yamakan work now keeps test temp files and the TesterArmy workspace on D: (`TEMP`/`TMP`, `YAMAKAN_E2E_ROOT`). `scripts/browser-e2e.mjs` and an overlap test leak `yamakan-browser-*` / `yamakan-overlap-*` temp folders (about 15 MB per run); 443 MB had accumulated. Follow-up: clean them up in the scripts.
+5. `npm run qualify:q8` fails on main: it asserts `data-studio-enabled === "false"`, untrue since Studio activation (#61). Its receipt predates activation. Follow-up: update the harness (a separate change that regenerates its receipt).
+
 ## Known flaky tests
 
-- `tests/resource-policy.test.ts` "a worker over its Job Object memory limit fails rather than grows": failed once on main `a468345` while another suite ran servers concurrently; passed 3/3 alone. Load-sensitive; not caused by YU-010b. Re-run alone before treating as a regression.
+- `tests/resource-policy.test.ts` "a worker over its Job Object memory limit fails rather than grows": failed once on main `a468345` while another suite ran servers concurrently; passed 3/3 alone. Load-sensitive; not caused by YU-010b. Re-run alone before treating as a regression. Repeatability: 3/3 alone at `a468345`; 0 failures in the full suites at `49f1a9e` and on the YU-011 branch. Resource contention is plausible: the host had 1.7 GB of 15.7 GB RAM free (other applications) when it failed. Not yet reproduced under controlled memory pressure.
 
 ## Next eligible
 
