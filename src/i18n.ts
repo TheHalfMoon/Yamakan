@@ -19,6 +19,8 @@ const en = {
   "status.working": "Working…",
   "status.opened": "Opened {name}, revision {revision}.",
   "status.saved": "Saved revision {revision}.",
+  "status.conflictReloaded":
+    "This project changed elsewhere, so your last change was not applied. The current version is shown.",
   "error.operation": "Operation failed.",
   "error.edit": "Invalid edit.",
   "error.assetMissing": "Asset missing.",
@@ -106,9 +108,11 @@ const en = {
   "studio.state.new": "New canvas: not saved yet",
   "studio.state.saved": "Saved to the project",
   "studio.state.saving": "Saving…",
-  "studio.state.conflict": "Another window saved this canvas first. Reload the saved canvas to continue.",
+  "studio.state.conflict":
+    "Another window saved this canvas first. Reload the saved canvas to continue.",
   "studio.state.error": "The Studio canvas could not be saved.",
-  "studio.state.unavailable": "Saving Studio canvases to the project is not enabled in this build.",
+  "studio.state.unavailable":
+    "Saving Studio canvases to the project is not enabled in this build.",
   "studio.noProject": "Open a project to keep its Studio canvas.",
   "studio.intro":
     "Layered image editing is imported behind a Yamakan host adapter.",
@@ -193,6 +197,8 @@ const ar: Record<MessageKey, string> = {
   "status.working": "جارٍ العمل…",
   "status.opened": "فُتح {name}، المراجعة {revision}.",
   "status.saved": "حُفظت المراجعة {revision}.",
+  "status.conflictReloaded":
+    "تغيّر هذا المشروع في مكان آخر، فلم يُطبَّق تعديلك الأخير. تُعرض النسخة الحالية.",
   "error.operation": "تعذّر إتمام العملية.",
   "error.edit": "تعديل غير صالح.",
   "error.assetMissing": "الوسيط غير موجود.",
@@ -279,9 +285,11 @@ const ar: Record<MessageKey, string> = {
   "studio.state.new": "لوحة جديدة: لم تُحفظ بعد",
   "studio.state.saved": "حُفظت في المشروع",
   "studio.state.saving": "جارٍ الحفظ…",
-  "studio.state.conflict": "حفظت نافذة أخرى هذه اللوحة أولاً. أعد تحميل اللوحة المحفوظة للمتابعة.",
+  "studio.state.conflict":
+    "حفظت نافذة أخرى هذه اللوحة أولاً. أعد تحميل اللوحة المحفوظة للمتابعة.",
   "studio.state.error": "تعذّر حفظ لوحة الاستوديو.",
-  "studio.state.unavailable": "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذا الإصدار.",
+  "studio.state.unavailable":
+    "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذا الإصدار.",
   "studio.noProject": "افتح مشروعاً للاحتفاظ بلوحة الاستوديو الخاصة به.",
   "cinema.title": "كاميرا السينما",
   "cinema.intro":

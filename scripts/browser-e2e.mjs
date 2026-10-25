@@ -389,6 +389,28 @@ try {
     .getByRole("status")
     .filter({ hasText: "Saved revision" })
     .waitFor();
+  // YU-015: a finished gesture commits on its own, as one batch of typed
+  // operations, without Save; the next one moves the head again.
+  for (const [titled, muted] of [
+    ["Mute track (Alt+M)", true],
+    ["Unmute track (Alt+M)", false],
+  ]) {
+    const before = await getProject();
+    await page.getByTitle(titled).first().click();
+    const deadline = Date.now() + 15_000;
+    let after = before;
+    while (after.revision === before.revision && Date.now() < deadline) {
+      await page.waitForTimeout(200);
+      after = await getProject();
+    }
+    assert.equal(
+      after.revision,
+      before.revision + 1,
+      `${titled} committed as one revision`,
+    );
+    assert.equal(after.tracks[0].muted, muted);
+    assert.equal(after.clips.length, before.clips.length);
+  }
   // P10-02 Animation: OpenCut-gated panel → local undo/redo → persist.
   await page.getByTitle("reference.png · 00:00:00:00 → 00:00:01:00").click();
   await page.getByTestId("clip-animation-panel").waitFor({ timeout: 15000 });
