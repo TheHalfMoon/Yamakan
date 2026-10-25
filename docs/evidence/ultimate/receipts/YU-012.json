@@ -1,0 +1,73 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "69118c0",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0"
+  },
+  "state": "VERIFIED",
+  "scope": "flag-off (AG-DOCS): migration refuses with CAPABILITY_UNAVAILABLE until the YU-010…015 group receipt; the inventory is available",
+  "task": "YU-012",
+  "objective": "Migrate Cinema sidecars with explicit project assignment",
+  "branch": "feat/yu-012-cinema-migration",
+  "mergedPr": 96,
+  "headCommit": "a43b129",
+  "mergeCommit": "b49721b0c55061a3580bc04c890f78a3e14a7a9e",
+  "tests": {
+    "files": ["tests/cinema-migration.test.ts"],
+    "result": "12 pass, 1 POSIX-only skip (names differing only in case): read-only inventory (bytes and mtime unchanged), truncated/foreign-id/non-scene names, upper-case originals, hard links refused, byte budget, explicit project-only migration with exact content and receipt, retry and retry after restart, ownership per scene file even after the file changes, retries after file and project edits return the recorded migration, changed/missing/foreign refused, concurrent migrations conflict safely, concurrent legacy saves never tear, revert restores the migrated scene exactly, command behind AG-DOCS"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product panel",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 0, "shouldFix": 5, "applied": 5 }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": { "mustFix": 0, "shouldFix": 4, "applied": 4 }
+    },
+    {
+      "kind": "delta re-review of the fix commit",
+      "judge": "Sonnet subagent",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 4,
+        "applied": 3,
+        "notApplied": [
+          "receipt for a deleted project: projects are never deleted, so the case cannot occur (noted in code)"
+        ]
+      }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "low",
+      "probability": 0.56,
+      "confidence": 0.34
+    },
+    {
+      "kind": "Graft 0.21.1",
+      "result": "migrateCinemaSidecar reachable only from the registry command and tests; legacyMigrations used only by inventory and migration"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); local model needs more free RAM than the host had"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "b49721b0c55061a3580bc04c890f78a3e14a7a9e",
+    "ci": "PR exact head a43b129: qualify, qualify-windows-r8, otio-oracle success; push run on b49721b: success",
+    "windows": "detached b49721b on a loaded shared host (62% CPU, 2.9 GB free, other sessions): lint, provenance, build pass; test:studio 1975/1975; Edge E2E pass (0 external requests); TesterArmy journey PASSED; npm test 484/490 with 3 wall-clock failures (core journey 65 s, VFR upload, preview route) that each pass alone (5.9 s, 2.5 s, 7.4 s) and on CI"
+  },
+  "limitations": [
+    "yamakan.scene.save/open/list keep using the legacy files until AG-DOCS activation",
+    "Full OCR review blocked (see reviews)",
+    "Local full-suite runs on the shared host hit wall-clock limits in unrelated media tests (ledger: Known flaky tests)"
+  ]
+}
