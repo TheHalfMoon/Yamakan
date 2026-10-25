@@ -13,8 +13,9 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-002 Quality Lab evidence | VERIFIED | #87 → `b5c3372` | [receipts/YU-002.json](receipts/YU-002.json) |
 | YU-003 MCP bounds | VERIFIED | #90 → `0fe9a18` | [receipts/YU-003.json](receipts/YU-003.json) |
 | (unplanned) zod GHSA-mrhx-c7xc-m3w5 | MERGED | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate |
-| YU-010 creative documents | IN PROGRESS: 010a (v5 refs, schema v8 tables, store commit/get/list, flag off) | (this PR) | after merge |
-| YU-010b staged upload route + `document.commit` command, YU-010c client surfaces | PLANNED | — | — |
+| YU-010a v5 refs, schema v8, store commit/get/list (flag off) | MERGED, post-merge verified | #91 → `fc4913e` | flag-off slice |
+| YU-010b staged upload route + `yamakan.document.commit` (flag off) | IMPLEMENTED | #92 | after merge |
+| YU-010c SDK / CLI / MCP document clients (flag off) | IMPLEMENTED | (this PR) | after merge |
 | YU-011…YU-101 | PLANNED | — | — |
 
 ## Development tool status (Windows 11, this PC)
@@ -33,7 +34,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010b (authenticated streamed document staging: 8 MiB route-specific cap, reservations, 15 min TTL, sealed receipts; `yamakan.document.commit` behind AG-DOCS), then YU-010c (SDK/CLI/MCP surfaces, legacy client refusal paths). YU-016 (waveforms/thumbnails/proxies) depends only on YU-001 and can run in parallel. YU-011/012/013/015 follow YU-010; YU-014 after 011–013.
+After YU-010a–c merge, YU-010 is implementation-complete flag-off; its VERIFIED receipt is flag-off scope only (AG-DOCS activation needs the YU-010…015 group receipt). Then YU-011 (Studio canvas persistence through documents: engine image-id translation, canvas-internal refs ⊆ bitmapAssetIds, UI load/commit, TesterArmy e2e), YU-012 (Cinema), YU-013 (Director), YU-015 (canonical browser operations/undo), YU-014 (complete backup/restore incl. documents). YU-016 (waveforms/thumbnails/proxies) can proceed in parallel.
 
 ## Continuation instructions
 
