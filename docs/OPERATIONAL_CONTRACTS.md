@@ -55,25 +55,30 @@ Bounds are applied before a document is built: a linear pre-scan of the text ref
 **Legacy Cinema scenes** (YU-012). Before documents existed, `yamakan.scene.save` wrote each scene as a workspace file, `cinema/<sceneId>.json`, with no project and no compare-and-swap.
 
 - **Sidecar writes.** The file is now written whole and then renamed into place, so a crash or two concurrent saves can never leave a torn scene.
-- **Inventory.** `yamakan.scene.inventory` examines up to 10,000 such files. It reads only, and never assigns anything to a project. For each file it reports:
+- **Inventory.** `yamakan.scene.inventory` examines up to 10,000 such files, reading and validating at most 256 MiB per call. Files past that budget are listed as `unexamined`, and the result is marked `truncated`. It reads only, and never assigns anything to a project. For each file it reports:
   - the name and the SHA-256 of its bytes;
   - whether it is a valid scene, and the canonical document hash it would have;
   - every migration recorded for it.
 
   A file is reported invalid, with its reason, when:
-  - its name is not a canonical lowercase UUID (an upper-case alias of the same file on Windows is reported, never read);
-  - it is a link or not a plain file;
+  - its name is not a UUID file name (older saves kept the id's case, so an upper-case name can be the original);
+  - several names differ only in case (possible off Windows); none of them is read;
+  - it is a link, a hard link (more than one link), or not a plain file, or it was swapped after it was looked at;
   - it is empty, larger than 8 MiB, or truncated;
   - it is not a valid scene;
   - the scene inside names a different id than its file.
 
   A folder that is itself a link is refused.
-- **Migration.** `yamakan.scene.migrate {projectId, expectedRevision, sceneId, sourceSha256}` commits one file into the named project as its `cinemaScene` document of that id. It is compare-and-swap on the project revision. The caller names the SHA-256 it inventoried, so a file changed since then is a `REVISION_CONFLICT`. In the same transaction it writes a receipt row in `legacy_migrations` (workspace schema v11) recording the source name, source SHA-256 and size, the project, document, content hash and revision. Ownership is never inferred:
-  - a source migrated into one project is refused for any other;
-  - a project document of that id that did not come from this source is never overwritten;
-  - a retry, including after a restart, returns the recorded migration without a new revision.
+- **Migration.** `yamakan.scene.migrate {projectId, expectedRevision, sceneId, sourceSha256}` commits one file into the named project as its `cinemaScene` document of that id. It is compare-and-swap on the project revision. The caller names the SHA-256 it inventoried, so a file changed since then is a `REVISION_CONFLICT`. In the same transaction it writes a receipt row in `legacy_migrations` (workspace schema v11) recording the source (its scene id, in any case), the source SHA-256 and size, the project, document, content hash and revision. Ownership is never inferred:
+  - a scene file is migrated once, into one project, and is refused for any other, even after the file changes;
+  - a project document of that id that did not come from this file is never overwritten;
+  - a retry, including after a restart, returns the recorded migration without a new revision, whatever has happened to the file or the project's scene since. Later changes belong to the project's document.
 
-  The original file is never written, renamed or deleted. Later edits and reverts of the scene use the ordinary document commit. While AG-DOCS is off, migration refuses with `CAPABILITY_UNAVAILABLE`; the inventory stays available.
+  The original file is never written, renamed or deleted. Two concurrent first migrations of different scenes against the same revision: one commits and the other gets `REVISION_CONFLICT`. Calling again then returns a fresh result.
+
+  Undo: like any document commit, a migration ends the project's per-writer editing undo history, so it is not undone by `yamakan.project.undo`. A scene is restored to an earlier version by committing that version again (a revert, `source: {contentHash}`).
+
+  Filesystem errors are reported without host paths. While AG-DOCS is off, migration refuses with `CAPABILITY_UNAVAILABLE`; the inventory stays available.
 
 Qualification switch: `YAMAKAN_AG_DOCS_QUALIFICATION=1` in the service's own environment enables the AG-DOCS paths for real-browser group tests before activation; the service announces it at startup, `yamakan.document.capability` reports it, and no request can change it. The launcher and bundle never set it, it is ignored whenever `YAMAKAN_BUNDLE_INSTALL` marks an installed bundle, and the build flag stays false.
 

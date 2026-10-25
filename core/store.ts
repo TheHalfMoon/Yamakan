@@ -312,7 +312,7 @@ ALTER TABLE creative_documents ADD COLUMN object_digests TEXT NOT NULL DEFAULT '
 ALTER TABLE document_uploads ADD COLUMN object_digests TEXT;
 `;
 // Legacy migrations (YU-012): which legacy source (a workspace Cinema
-// sidecar, by file name and the SHA-256 of its bytes) became which
+// sidecar, by its scene id and the SHA-256 of its bytes) became which
 // project's document, at which revision. Written in the commit's own
 // transaction; a source is assigned to one project only.
 const SCHEMA_V11 = `
@@ -1242,14 +1242,9 @@ export class ProjectStore {
           // project it was explicitly migrated into.
           const elsewhere = this.#database
             .prepare(
-              "SELECT 1 FROM legacy_migrations WHERE source_kind = ? AND source_name = ? AND source_sha256 = ? AND project_id <> ?",
+              "SELECT 1 FROM legacy_migrations WHERE source_kind = ? AND source_name = ? AND project_id <> ?",
             )
-            .get(
-              migration.sourceKind,
-              migration.sourceName,
-              migration.sourceSha256,
-              input.projectId,
-            );
+            .get(migration.sourceKind, migration.sourceName, input.projectId);
           if (elsewhere)
             throw new CommandError(
               "VALIDATION",

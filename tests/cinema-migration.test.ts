@@ -4,6 +4,7 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
+  link,
   mkdir,
   mkdtemp,
   readFile,
@@ -121,16 +122,74 @@ test("the inventory reports every sidecar without changing any of them", async (
   assert.deepEqual(await fingerprint(files), before);
 });
 
-test("an upper-case alias is reported, never read as the scene", async () => {
+test("an upper-case scene file (an older save kept the id's case) is an original and migrates", async () => {
   const { store, sidecar } = await workspace();
   // An id with hex letters, so its upper-case form is a different name.
-  const D = "dddddddd-dddd-4ddd-addd-dddddddddddd";
-  await sidecar(`${D.toUpperCase()}.json`, JSON.stringify(scene(D)));
-  const { sidecars } = await inventoryCinemaSidecars(store);
-  assert.equal(sidecars.length, 1);
-  assert.equal(sidecars[0]!.state, "invalid");
-  assert.match(sidecars[0]!.reason!, /Upper-case/);
-  assert.equal(sidecars[0]!.sceneId, null);
+  const D = "DDDDDDDD-DDDD-4DDD-ADDD-DDDDDDDDDDDD";
+  const file = await sidecar(`${D}.json`, JSON.stringify(scene(D)));
+  const [entry] = (await inventoryCinemaSidecars(store)).sidecars;
+  assert.equal(entry!.state, "valid");
+  assert.equal(entry!.sceneId, D);
+  const project = await store.create("Cinema");
+  const out = await migrateCinemaSidecar(store, {
+    projectId: project.id,
+    expectedRevision: project.revision,
+    sceneId: D.toLowerCase(),
+    sourceSha256: sha(await readFile(file)),
+  });
+  assert.equal(out.migrated, true);
+  assert.equal(out.document.id, D, "the scene keeps its own id");
+});
+
+test(
+  "names that differ only in case are ambiguous and never read",
+  { skip: process.platform === "win32" && "case-insensitive file system" },
+  async () => {
+    const { store, sidecar } = await workspace();
+    const D = "dddddddd-dddd-4ddd-addd-dddddddddddd";
+    await sidecar(`${D}.json`, JSON.stringify(scene(D)));
+    await sidecar(
+      `${D.toUpperCase()}.json`,
+      JSON.stringify(scene(D.toUpperCase())),
+    );
+    const { sidecars } = await inventoryCinemaSidecars(store);
+    assert.deepEqual(
+      sidecars.map((s) => s.state),
+      ["invalid", "invalid"],
+    );
+    const project = await store.create("Cinema");
+    await refused(
+      migrateCinemaSidecar(store, {
+        projectId: project.id,
+        expectedRevision: project.revision,
+        sceneId: D,
+        sourceSha256: "0".repeat(64),
+      }),
+      "VALIDATION",
+    );
+  },
+);
+
+test("hard links and links are not read; the inventory stops at its byte budget", async () => {
+  const { root, store, sidecar } = await workspace();
+  const outside = path.join(root, "outside.json");
+  await writeFile(outside, JSON.stringify(scene(A)));
+  await link(outside, path.join(root, "cinema", `${A}.json`));
+  await sidecar(`${B}.json`, JSON.stringify(scene(B)));
+  await sidecar(`${C}.json`, JSON.stringify(scene(C)));
+  const all = await inventoryCinemaSidecars(store);
+  const by = Object.fromEntries(all.sidecars.map((s) => [s.name, s]));
+  assert.equal(by[`${A}.json`]!.state, "invalid");
+  assert.match(by[`${A}.json`]!.reason!, /Not a plain file/);
+  assert.equal(all.truncated, false);
+  // A budget for one file: the rest are listed, not examined.
+  const one = (await stat(path.join(root, "cinema", `${B}.json`))).size;
+  const small = await inventoryCinemaSidecars(store, { bytes: one + one });
+  assert.equal(small.truncated, true);
+  assert.deepEqual(
+    small.sidecars.map((s) => s.state),
+    ["invalid", "valid", "unexamined"],
+  );
 });
 
 test("a scene migrates only into the project named, with exact content, and keeps its original", async () => {
@@ -243,6 +302,57 @@ test("ownership is never inferred or moved, and project documents are never over
     "VALIDATION",
   );
   assert.equal(store.listDocuments(three.id)[0]!.contentHash, ownHash);
+});
+
+test("a scene file stays its project's after it changes; retries return the recorded migration", async () => {
+  const { store, sidecar } = await workspace();
+  const file = await sidecar(`${A}.json`, JSON.stringify(scene(A)));
+  const one = await store.create("One");
+  const two = await store.create("Two");
+  const first = await migrateCinemaSidecar(store, {
+    projectId: one.id,
+    expectedRevision: one.revision,
+    sceneId: A,
+    sourceSha256: sha(await readFile(file)),
+  });
+  // The legacy file is saved again (still allowed), and the project edits
+  // its own scene.
+  await writeFile(file, JSON.stringify(scene(A, 70)));
+  const changed = sha(await readFile(file));
+  await refused(
+    migrateCinemaSidecar(store, {
+      projectId: two.id,
+      expectedRevision: two.revision,
+      sceneId: A,
+      sourceSha256: changed,
+    }),
+    "VALIDATION",
+  );
+  const edited = await store.commitDocument({
+    projectId: one.id,
+    expectedRevision: first.project.revision,
+    documentId: A,
+    kind: "cinemaScene",
+    schemaVersion: 1,
+    expectedContentHash: first.document.contentHash,
+    source: { bytes: Buffer.from(JSON.stringify(scene(A, 90))) },
+  });
+  // A retry (a lost response) returns the recorded migration, unchanged,
+  // and never overwrites the project's later edit.
+  const retry = await migrateCinemaSidecar(store, {
+    projectId: one.id,
+    expectedRevision: first.project.revision - 1,
+    sceneId: A,
+    sourceSha256: changed,
+  });
+  assert.equal(retry.migrated, false);
+  assert.deepEqual(retry.receipt, first.receipt);
+  assert.equal(retry.project.revision, edited.revision);
+  assert.notEqual(
+    store.listDocuments(one.id)[0]!.contentHash,
+    first.document.contentHash,
+  );
+  assert.deepEqual(store.listDocuments(two.id), []);
 });
 
 test("a file changed since inventory, a missing one and a foreign id are refused", async () => {

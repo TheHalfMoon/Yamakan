@@ -4,6 +4,7 @@
  */
 import { randomUUID } from "node:crypto";
 import {
+  lstat,
   mkdir,
   readFile,
   readdir,
@@ -58,6 +59,7 @@ export async function persistCinemaScene(
   // Saves of one scene take turns (Windows refuses a rename onto a file
   // another rename is replacing); the last one to finish wins.
   const turn = (saving.get(path) ?? Promise.resolve()).then(async () => {
+    await removeStaleTemps(dir);
     const temp = join(dir, `.${scene.id}.${randomUUID()}.tmp`);
     try {
       await writeFile(temp, `${JSON.stringify(scene, null, 2)}\n`, {
@@ -67,7 +69,10 @@ export async function persistCinemaScene(
       await renameReplacing(temp, path);
     } catch (e) {
       await unlink(temp).catch(() => {});
-      throw e;
+      // Never a host path or a raw system message.
+      throw e instanceof CommandError
+        ? e
+        : new CommandError("UNAVAILABLE", "The scene could not be saved.");
     }
   });
   const settled = turn.catch(() => {});
@@ -81,6 +86,17 @@ export async function persistCinemaScene(
 
 // Saves in progress, per scene file.
 const saving = new Map<string, Promise<void>>();
+
+// Partial saves a crashed service left behind (a save takes milliseconds).
+async function removeStaleTemps(dir: string) {
+  for (const name of await readdir(dir).catch(() => [])) {
+    if (!/^\.[0-9a-fA-F-]{36}\.[0-9a-f-]{36}\.tmp$/.test(name)) continue;
+    const file = join(dir, name);
+    const info = await lstat(file).catch(() => null);
+    if (info?.isFile() && Date.now() - info.mtimeMs > 10 * 60_000)
+      await unlink(file).catch(() => {});
+  }
+}
 
 // Another process (an indexer, antivirus) can hold the target for a moment
 // on Windows: a few short retries, then the error.
