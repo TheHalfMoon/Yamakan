@@ -513,9 +513,13 @@ test("a damaged write-ahead log is diagnosed and refused, and stays as found; a 
   assert.equal((await reopened.load(project.id)).revision, head - 1);
   reopened.close();
 
-  // Damage in the middle: SQLite would silently drop later commits.
+  // Damage in the middle of the saves (the frame after the commit six
+  // before the last, wherever schema steps put the start of the log):
+  // SQLite would silently drop later commits.
   const log = Buffer.from(await readFile(wal));
-  log.fill(0x5a, Math.floor(log.length / 2), Math.floor(log.length / 2) + 2000);
+  const commits = Array.from({ length: frames }, (_, i) => i).filter(isCommit);
+  const middle = 32 + (commits[commits.length - 6]! + 1) * frameBytes;
+  log.fill(0x5a, middle, middle + 2000);
   await writeFile(wal, log);
   const before = await tree(crashed);
   const report = await diagnoseWorkspace(crashed);

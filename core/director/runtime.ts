@@ -73,26 +73,34 @@ function once<T>(
   if (!receipt) return compute();
   const prior = db
     .prepare(
-      "SELECT digest, result FROM director_requests WHERE principal_id = ? AND request_id = ?",
+      "SELECT digest, result, epoch FROM director_requests WHERE principal_id = ? AND request_id = ?",
     )
     .get(receipt.principalId, receipt.requestId) as
-    { digest: string; result: string } | undefined;
+    { digest: string; result: string; epoch: number } | undefined;
   if (prior) {
     if (prior.digest !== receipt.digest)
       throw new CommandError(
         "IDEMPOTENCY_MISMATCH",
         "Request ID was already used for a different request.",
       );
+    // A result from before a restore describes a state that no longer
+    // holds (its approvals are void): never replayed.
+    if (prior.epoch !== epochOf(db))
+      throw new CommandError(
+        "REVISION_CONFLICT",
+        "This request was made before the workspace was restored; reload and send it again with a new request id.",
+      );
     return JSON.parse(prior.result) as T;
   }
   const result = compute();
   db.prepare(
-    "INSERT INTO director_requests(principal_id, request_id, digest, result, created_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO director_requests(principal_id, request_id, digest, result, epoch, created_at) VALUES (?, ?, ?, ?, ?, ?)",
   ).run(
     receipt.principalId,
     receipt.requestId,
     receipt.digest,
     JSON.stringify(result),
+    epochOf(db),
     Date.now(),
   );
   return result;
@@ -251,6 +259,8 @@ type EncodingRow = {
   payload_hash: string;
   revoked_at: number | null;
   expires_at: number;
+  // 1 when the consent belongs to this epoch or was revalidated in it.
+  current: number;
 };
 
 function encodingFrom(row: EncodingRow, nowMs: number): IdentityEncoding {
@@ -265,7 +275,9 @@ function encodingFrom(row: EncodingRow, nowMs: number): IdentityEncoding {
     consentId: row.consent_id,
     metadata: {},
     // Derived: a revoked or expired consent invalidates its encodings.
-    invalidated: row.revoked_at !== null || nowMs >= row.expires_at,
+    // (and so does one awaiting revalidation after a restore or import).
+    invalidated:
+      row.revoked_at !== null || nowMs >= row.expires_at || row.current !== 1,
   });
 }
 
@@ -276,7 +288,7 @@ function encodingsOf(
 ) {
   const rows = db
     .prepare(
-      `SELECT e.*, r.revoked_at, c.expires_at FROM identity_encodings e JOIN likeness_consents c ON c.id = e.consent_id LEFT JOIN consent_revocations r ON r.consent_id = e.consent_id${consentId ? " WHERE e.consent_id = ?" : ""} ORDER BY e.created_at, e.id`,
+      `SELECT e.*, r.revoked_at, c.expires_at, (c.epoch = d.value OR EXISTS (SELECT 1 FROM consent_revalidations v WHERE v.consent_id = c.id AND v.epoch = d.value)) AS current FROM identity_encodings e JOIN likeness_consents c ON c.id = e.consent_id JOIN director_epoch d ON d.singleton = 1 LEFT JOIN consent_revocations r ON r.consent_id = e.consent_id${consentId ? " WHERE e.consent_id = ?" : ""} ORDER BY e.created_at, e.id`,
     )
     .all(...(consentId ? [consentId] : [])) as EncodingRow[];
   return rows.map((r) => encodingFrom(r, nowMs));
@@ -374,7 +386,25 @@ function runFrom(
     .all(row.id) as AttemptRow[];
   const latest = new Map<string, AttemptRow>();
   for (const a of attempts) latest.set(a.stage, a);
+  const held = db.prepare(
+    "SELECT 1 FROM asset_objects WHERE project_id = ? AND digest = ? AND state = 'ready'",
+  );
   const receipts: StageReceipt[] = [...latest.values()].map((a) => {
+    // An output that is no longer a ready object of the project (lost,
+    // quarantined by a restore, or never stored) completes nothing.
+    if (a.output_hash && !held.get(row.project_id, a.output_hash))
+      return StageReceiptSchema.parse({
+        format: "yamakan.stage-receipt",
+        formatVersion: 1,
+        projectId: row.project_id,
+        pipelineName: row.pipeline_name,
+        stage: a.stage,
+        status: "failed",
+        outputHash: a.output_hash,
+        humanApproved: false,
+        approvalExpiresAtMs: null,
+        approvedOutputHash: null,
+      });
     const approved = a.kind === "approve" && a.epoch === epoch;
     return StageReceiptSchema.parse({
       format: "yamakan.stage-receipt",

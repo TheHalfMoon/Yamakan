@@ -58,7 +58,7 @@ import {
   startDirectorRun,
 } from "../director/runtime.ts";
 import { builtinManifest } from "../director/manifest.ts";
-import { importLegacyDirector } from "../director/legacy.ts";
+import { importLegacyDirector } from "../director-legacy.ts";
 import { FLOW_ENABLED, flowSnapshot } from "../flow/snapshot.ts";
 import {
   QualityComparisonSchema,
@@ -1014,7 +1014,7 @@ export const commands = {
         receipt,
       ),
   }),
-  "yamakan.director.import-legacy": define({
+  "yamakan.director.importLegacy": define({
     scope: "consent:grant",
     mutation: true,
     humanOnly: true,
@@ -1076,7 +1076,9 @@ export const commands = {
           .int()
           .positive()
           .max(30 * 24 * 60 * 60 * 1000),
-        expectedVersion: z.number().int().positive().optional(),
+        // The run version the human reviewed: a run that moved since is a
+        // conflict, never approved blind.
+        expectedVersion: z.number().int().positive(),
       })
       .strict(),
     run: ({ store, principal, receipt }, a) =>

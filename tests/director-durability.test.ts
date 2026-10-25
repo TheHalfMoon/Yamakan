@@ -22,7 +22,13 @@ import {
   revokeConsentRecord,
   startDirectorRun,
 } from "../core/director/runtime.ts";
-import { importLegacyDirector } from "../core/director/legacy.ts";
+import { importLegacyDirector } from "../core/director-legacy.ts";
+import {
+  execute,
+  browserScopes,
+  cliScopes,
+  type CommandContext,
+} from "../core/command/registry.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -422,7 +428,6 @@ test("legacy Director files import once, by existing project, under a fresh epoc
   assert.equal(report.consents, 2);
   assert.equal(report.revocations, 1);
   assert.equal(report.encodings, 1);
-  assert.ok(report.epoch! > 1);
   assert.ok(
     report.skipped.some(
       (s) =>
@@ -455,17 +460,11 @@ test("legacy Director files import once, by existing project, under a fresh epoc
     "VALIDATION",
     /revalidated/,
   );
-  // Idempotent: nothing is imported twice, and no new epoch is minted.
+  // Idempotent: nothing is imported twice.
   const again = await importLegacyDirector(store);
   assert.deepEqual(
-    [
-      again.runs,
-      again.consents,
-      again.revocations,
-      again.encodings,
-      again.epoch,
-    ],
-    [0, 0, 0, 0, null],
+    [again.runs, again.consents, again.revocations, again.encodings],
+    [0, 0, 0, 0],
   );
   // Originals are untouched.
   assert.deepEqual(
@@ -474,4 +473,252 @@ test("legacy Director files import once, by existing project, under a fresh epoc
     ),
     originals,
   );
+});
+
+test("an output that is no longer stored completes nothing", async () => {
+  const { store, project, output } = await workspace();
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const out = await output("brief");
+  const advanced = await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "awaiting_human",
+    outputHash: out,
+  });
+  await approveStage(store, {
+    runId: run.id,
+    stage: "research",
+    outputHash: out,
+    ttlMs: 60_000,
+    expectedVersion: advanced.version,
+  });
+  assert.equal((await directorNext(store, run.id)).kind, "stage");
+  // The object is quarantined (as a restore does with what it cannot verify).
+  store.transaction((db) =>
+    db
+      .prepare(
+        "UPDATE asset_objects SET state = 'quarantined' WHERE project_id = ? AND digest = ?",
+      )
+      .run(project.id, out),
+  );
+  const after = await loadRun(store, run.id);
+  const research = after.receipts.find((r) => r.stage === "research")!;
+  assert.equal(research.status, "failed");
+  assert.equal(research.humanApproved, false);
+  // The stage has to be produced again.
+  assert.deepEqual(await directorNext(store, run.id), {
+    kind: "stage",
+    stage: "research",
+  });
+});
+
+test("after a restore: no replayed approval, listings show consent awaiting revalidation", async () => {
+  const { store, project, output } = await workspace();
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const out = await output("brief");
+  const advanced = await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "awaiting_human",
+    outputHash: out,
+  });
+  const receipt = {
+    principalId: "browser-ui",
+    requestId: "approve-1",
+    digest: hash("approve-1"),
+  };
+  const approval = {
+    runId: run.id,
+    stage: "research",
+    outputHash: out,
+    ttlMs: 3_600_000,
+    expectedVersion: advanced.version,
+  };
+  await approveStage(store, approval, receipt);
+  const consent = await grantConsent(store, consentInput);
+  await recordEncoding(store, {
+    characterId: "hero",
+    purpose: "identity-encode",
+    consentId: consent.id,
+    provider: "local",
+    method: "ref",
+    payloadHash: hash("z"),
+  });
+  const home = await mkdtemp(path.join(tmpdir(), "yamakan-director-home-"));
+  bases.push(home);
+  const restored = await restoreFromHome(
+    home,
+    (await backupWorkspace(store, home)).backupId,
+  );
+  bases.push(restored.root);
+  const copy = await open(restored.root);
+  // The lost response's retry in the copy is not answered with the
+  // backup's approval.
+  await refused(
+    approveStage(copy, approval, receipt),
+    "REVISION_CONFLICT",
+    /restored/,
+  );
+  assert.deepEqual(
+    (await listEncodings(copy)).map((e) => e.invalidated),
+    [true],
+  );
+  await revalidateConsent(copy, consent.id, "browser-ui");
+  assert.deepEqual(
+    (await listEncodings(copy)).map((e) => e.invalidated),
+    [false],
+  );
+  // The original is unchanged: its approval and encoding stand.
+  assert.deepEqual(
+    (await listEncodings(store)).map((e) => e.invalidated),
+    [false],
+  );
+  assert.deepEqual(
+    await approveStage(store, approval, receipt),
+    await approveStage(store, approval, receipt),
+  );
+});
+
+test("an import leaves live approvals and consents as they were", async () => {
+  const { root, store, project, output } = await workspace();
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const out = await output("brief");
+  const advanced = await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "awaiting_human",
+    outputHash: out,
+  });
+  await approveStage(store, {
+    runId: run.id,
+    stage: "research",
+    outputHash: out,
+    ttlMs: 3_600_000,
+    expectedVersion: advanced.version,
+  });
+  const live = await grantConsent(store, consentInput);
+  const dir = path.join(root, "director");
+  await mkdir(dir, { recursive: true });
+  const old = randomUUID();
+  await writeFile(
+    path.join(dir, `consent-${old}.json`),
+    JSON.stringify({
+      format: "yamakan.likeness-consent",
+      formatVersion: 1,
+      id: old,
+      characterId: "hero",
+      purpose: "identity-encode",
+      version: "v0",
+      grantedAtMs: Date.now(),
+      expiresAtMs: Date.now() + 3_600_000,
+      revokedAtMs: null,
+      grantorPrincipalId: "browser-ui",
+    }),
+  );
+  assert.equal((await importLegacyDirector(store)).consents, 1);
+  assert.equal(
+    (await directorNext(store, run.id)).kind,
+    "stage",
+    "the live approval still counts",
+  );
+  const enc = await recordEncoding(store, {
+    characterId: "hero",
+    purpose: "identity-encode",
+    consentId: live.id,
+    provider: "local",
+    method: "ref",
+    payloadHash: hash("live"),
+  });
+  assert.equal(
+    enc.invalidated,
+    false,
+    "the live consent needs no revalidation",
+  );
+  await refused(
+    recordEncoding(store, {
+      characterId: "hero",
+      purpose: "identity-encode",
+      consentId: old,
+      provider: "local",
+      method: "ref",
+      payloadHash: hash("old"),
+    }),
+    "VALIDATION",
+    /revalidated/,
+  );
+});
+
+test("agents can never approve, revalidate consent or import legacy state", async () => {
+  const { store, project, output } = await workspace();
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const out = await output("brief");
+  const advanced = await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "awaiting_human",
+    outputHash: out,
+  });
+  const consent = await grantConsent(store, consentInput);
+  const agent = {
+    store,
+    queue: {} as CommandContext["queue"],
+    principal: {
+      id: "agent:44444444-4444-4444-8444-444444444444",
+      scopes: cliScopes(),
+    },
+  } satisfies CommandContext;
+  for (const [name, input] of [
+    [
+      "yamakan.director.approve",
+      {
+        runId: run.id,
+        stage: "research",
+        outputHash: out,
+        ttlMs: 60_000,
+        expectedVersion: advanced.version,
+      },
+    ],
+    ["yamakan.consent.revalidate", { consentId: consent.id }],
+    ["yamakan.director.importLegacy", {}],
+  ] as const)
+    await assert.rejects(
+      execute(agent, name, input),
+      /browser session|SCOPE_DENIED|lacks scope/i,
+      name,
+    );
+  // The browser session may, and approve names the version it reviewed.
+  const human = {
+    store,
+    queue: {} as CommandContext["queue"],
+    principal: { id: "browser-ui", scopes: browserScopes() },
+  } satisfies CommandContext;
+  await assert.rejects(
+    execute(human, "yamakan.director.approve", {
+      runId: run.id,
+      stage: "research",
+      outputHash: out,
+      ttlMs: 60_000,
+    }),
+    /expectedVersion|Required|VALIDATION/i,
+  );
+  await execute(human, "yamakan.director.approve", {
+    runId: run.id,
+    stage: "research",
+    outputHash: out,
+    ttlMs: 60_000,
+    expectedVersion: advanced.version,
+  });
+  assert.equal((await directorNext(store, run.id)).kind, "stage");
 });

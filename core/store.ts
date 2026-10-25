@@ -398,6 +398,7 @@ CREATE TABLE director_requests(
   request_id TEXT NOT NULL,
   digest TEXT NOT NULL,
   result TEXT NOT NULL,
+  epoch INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
   PRIMARY KEY(principal_id, request_id)
 ) STRICT;

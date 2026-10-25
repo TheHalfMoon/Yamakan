@@ -23,6 +23,7 @@ import {
   advanceStage,
   approveStage,
   directorNext,
+  loadRun,
   startDirectorRun,
 } from "../core/director/runtime.ts";
 import {
@@ -190,6 +191,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
         scopes: cliScopes(),
       },
     } satisfies CommandContext;
+    const version = (await loadRun(store, started.id)).version;
     await assert.rejects(
       () =>
         execute(agentCtx, "yamakan.director.approve", {
@@ -197,6 +199,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
           stage: "research",
           outputHash: out,
           ttlMs: 60_000,
+          expectedVersion: version,
         }),
       /browser session|SCOPE_DENIED|lacks scope/i,
     );
@@ -211,6 +214,7 @@ test("nextStage blocks agents without approval (journey 5)", async () => {
       stage: "research",
       outputHash: out,
       ttlMs: 60_000,
+      expectedVersion: (await loadRun(store, started.id)).version,
     });
     const after = await directorNext(store, started.id);
     assert.equal(after.kind, "stage");

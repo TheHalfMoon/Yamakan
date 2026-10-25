@@ -3,20 +3,26 @@
 // workspace database. Explicit and idempotent (rows keep their ids; a retry
 // imports nothing twice), bounded, and read-only on the files: originals
 // stay. Runs are mapped by their existing project id only; a run naming no
-// project of this workspace is reported, not imported. What is imported
-// starts under a fresh execution epoch: its approvals must be given again
-// and its consents revalidated before any new encoding.
-import { lstat, readdir, readFile } from "node:fs/promises";
+// project of this workspace is reported, not imported. Imported state
+// belongs to no current epoch (epoch 0): its approvals must be given again
+// and its consents revalidated before any new encoding, while live state
+// already in the database is untouched.
+import { lstat, open, readdir } from "node:fs/promises";
 import path from "node:path";
-import { CommandError } from "../command/errors.ts";
-import { ConsentRecordSchema, IdentityEncodingSchema } from "../identity.ts";
-import { DirectorRunSchema } from "./stages.ts";
-import { bumpDirectorEpoch } from "./runtime.ts";
-import type { ProjectStore } from "../store.ts";
+import { CommandError } from "./command/errors.ts";
+import { ConsentRecordSchema, IdentityEncodingSchema } from "./identity.ts";
+import { DirectorRunSchema } from "./director/stages.ts";
+import type { ProjectStore } from "./store.ts";
 
 const FILE = /^(run|consent|encoding)-([0-9a-f-]{36})\.json$/;
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 1024 * 1024;
+// Bytes read per import, across all files.
+const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
+// Skipped files listed in the report.
+const MAX_REPORTED = 200;
+// Imported rows carry no live epoch.
+const LEGACY_EPOCH = 0;
 
 export type LegacyDirectorReport = {
   runs: number;
@@ -25,15 +31,36 @@ export type LegacyDirectorReport = {
   revocations: number;
   encodings: number;
   skipped: { file: string; reason: string }[];
-  epoch: number | null;
+  skippedTotal: number;
 };
 
+// One plain, single-link file of at most MAX_FILE_BYTES, opened once and
+// checked on the handle (a swap after lstat is refused).
 async function readBounded(file: string) {
   const info = await lstat(file);
   if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
     throw new Error("Not a plain file.");
   if (info.size > MAX_FILE_BYTES) throw new Error("The file is too large.");
-  return JSON.parse(await readFile(file, "utf8")) as unknown;
+  const handle = await open(file, "r");
+  try {
+    const opened = await handle.stat();
+    if (
+      opened.ino !== info.ino ||
+      opened.size !== info.size ||
+      opened.nlink !== 1
+    )
+      throw new Error("The file changed while it was read.");
+    const bytes = Buffer.alloc(info.size);
+    const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
+    if (bytesRead !== info.size)
+      throw new Error("The file changed while it was read.");
+    return {
+      value: JSON.parse(bytes.toString("utf8")) as unknown,
+      size: info.size,
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 export async function importLegacyDirector(
@@ -47,7 +74,12 @@ export async function importLegacyDirector(
     revocations: 0,
     encodings: 0,
     skipped: [],
-    epoch: null,
+    skippedTotal: 0,
+  };
+  const skip = (file: string, reason: string) => {
+    report.skippedTotal++;
+    if (report.skipped.length < MAX_REPORTED)
+      report.skipped.push({ file: file.slice(0, 128), reason });
   };
   const info = await lstat(dir).catch(() => null);
   if (!info) return report;
@@ -62,22 +94,22 @@ export async function importLegacyDirector(
       "LIMIT_EXCEEDED",
       `The director folder holds more than ${MAX_FILES} files.`,
     );
-  const parsed = { run: [], consent: [], encoding: [] } as {
-    run: { file: string; value: ReturnType<typeof DirectorRunSchema.parse> }[];
-    consent: {
-      file: string;
-      value: ReturnType<typeof ConsentRecordSchema.parse>;
-    }[];
-    encoding: {
-      file: string;
-      value: ReturnType<typeof IdentityEncodingSchema.parse>;
-    }[];
-  };
+  const runs: ReturnType<typeof DirectorRunSchema.parse>[] = [];
+  const consents: ReturnType<typeof ConsentRecordSchema.parse>[] = [];
+  const encodings: ReturnType<typeof IdentityEncodingSchema.parse>[] = [];
+  const files = new Map<object, string>();
+  let budget = MAX_TOTAL_BYTES;
   for (const name of names) {
     const match = FILE.exec(name);
     if (!match) continue;
     try {
-      const raw = await readBounded(path.join(dir, name));
+      const { value: raw, size } = await readBounded(path.join(dir, name));
+      budget -= size;
+      if (budget < 0)
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          `The director files exceed ${MAX_TOTAL_BYTES} bytes in total; nothing was imported.`,
+        );
       const kind = match[1] as "run" | "consent" | "encoding";
       const value =
         kind === "run"
@@ -87,38 +119,35 @@ export async function importLegacyDirector(
             : IdentityEncodingSchema.parse(raw);
       if (value.id !== match[2])
         throw new Error("The id differs from the file name.");
-      (parsed[kind] as { file: string; value: unknown }[]).push({
-        file: name,
-        value,
-      });
+      files.set(value, name);
+      if (kind === "run") runs.push(value as (typeof runs)[number]);
+      else if (kind === "consent")
+        consents.push(value as (typeof consents)[number]);
+      else encodings.push(value as (typeof encodings)[number]);
     } catch (e) {
-      report.skipped.push({
-        file: name.slice(0, 128),
-        reason:
-          e instanceof Error && !/[\\/]/.test(e.message)
-            ? e.message.slice(0, 200)
-            : "The file is not a valid Director record.",
-      });
+      if (e instanceof CommandError) throw e;
+      skip(
+        name,
+        e instanceof Error && !/[\\/]/.test(e.message)
+          ? e.message.slice(0, 200)
+          : "The file is not a valid Director record.",
+      );
     }
   }
-  // Runs belong to projects of this workspace only.
-  const projects = new Set<string>();
-  for (const { value } of parsed.run)
-    if (
-      await store.load(value.projectId).then(
-        () => true,
-        () => false,
-      )
-    )
-      projects.add(value.projectId);
+  // Runs belong to projects of this workspace only (each looked up once).
+  const known = new Map<string, boolean>();
+  for (const run of runs)
+    if (!known.has(run.projectId))
+      known.set(
+        run.projectId,
+        await store.load(run.projectId).then(
+          () => true,
+          () => false,
+        ),
+      );
   return store.transaction((db) => {
     const now = Date.now();
-    const epoch = (
-      db
-        .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
-        .get() as { value: number }
-    ).value;
-    for (const { file, value } of parsed.consent) {
+    for (const value of consents) {
       const added = db
         .prepare(
           "INSERT INTO likeness_consents(id, character_id, purpose, version, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
@@ -131,7 +160,7 @@ export async function importLegacyDirector(
           value.grantedAtMs,
           value.expiresAtMs,
           value.grantorPrincipalId,
-          epoch,
+          LEGACY_EPOCH,
         );
       report.consents += Number(added.changes);
       if (value.revokedAtMs !== null) {
@@ -139,16 +168,21 @@ export async function importLegacyDirector(
           .prepare(
             "INSERT INTO consent_revocations(consent_id, revoked_at, principal_id) VALUES (?, ?, ?) ON CONFLICT(consent_id) DO NOTHING",
           )
-          .run(value.id, value.revokedAtMs, `legacy:${file}`);
+          .run(value.id, value.revokedAtMs, `legacy:${files.get(value)}`);
         report.revocations += Number(revoked.changes);
       }
     }
-    for (const { file, value } of parsed.encoding) {
+    for (const value of encodings) {
       const consent = db
-        .prepare("SELECT 1 FROM likeness_consents WHERE id = ?")
-        .get(value.consentId);
+        .prepare("SELECT character_id FROM likeness_consents WHERE id = ?")
+        .get(value.consentId) as { character_id: string } | undefined;
       if (!consent) {
-        report.skipped.push({ file, reason: "Its consent is not recorded." });
+        skip(files.get(value)!, "Its consent is not recorded.");
+        continue;
+      }
+      // An encoding is only ever of its consent's character.
+      if (consent.character_id !== value.characterId) {
+        skip(files.get(value)!, "Its character differs from its consent's.");
         continue;
       }
       const added = db
@@ -166,12 +200,10 @@ export async function importLegacyDirector(
         );
       report.encodings += Number(added.changes);
     }
-    for (const { file, value } of parsed.run) {
-      if (!projects.has(value.projectId)) {
-        report.skipped.push({
-          file,
-          reason: "Its project is not in this workspace.",
-        });
+    for (const value of runs) {
+      const file = files.get(value)!;
+      if (!known.get(value.projectId)) {
+        skip(file, "Its project is not in this workspace.");
         continue;
       }
       const added = db
@@ -188,8 +220,9 @@ export async function importLegacyDirector(
         );
       if (!added.changes) continue;
       report.runs++;
-      // Each legacy receipt becomes its stage's attempt; an approval is kept
-      // as history but belongs to the epoch before this import.
+      // Each legacy receipt becomes its stage's attempt. Its output is
+      // verified whenever the run is read (core/director/runtime.ts), and
+      // its approval, from no live epoch, must be given again.
       let seq = 1;
       const insert = db.prepare(
         "INSERT INTO director_attempts(run_id, seq, stage, kind, status, output_hash, approval_expires_at, epoch, principal_id, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -203,7 +236,7 @@ export async function importLegacyDirector(
           r.status,
           r.humanApproved ? r.approvedOutputHash : r.outputHash,
           r.humanApproved ? r.approvalExpiresAtMs : null,
-          epoch,
+          LEGACY_EPOCH,
           `legacy:${file}`,
           now,
         );
@@ -214,8 +247,6 @@ export async function importLegacyDirector(
         value.id,
       );
     }
-    if (report.runs || report.consents || report.encodings)
-      report.epoch = bumpDirectorEpoch(db);
     return report;
   });
 }
