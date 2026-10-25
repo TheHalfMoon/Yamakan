@@ -601,8 +601,8 @@ async function restore(
       // A restored workspace starts a fresh Director execution epoch
       // (YU-013): approvals from the backup no longer count and its
       // consents must be revalidated before use. (A backup older than
-      // schema v12 has no Director tables; its legacy files get a fresh
-      // epoch when they are imported.)
+      // schema v12 has no Director tables; its legacy files, once
+      // imported, belong to no live epoch either.)
       if (
         db
           .prepare(

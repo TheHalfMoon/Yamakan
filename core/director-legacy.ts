@@ -51,8 +51,19 @@ async function readBounded(file: string) {
     )
       throw new Error("The file changed while it was read.");
     const bytes = Buffer.alloc(info.size);
-    const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
-    if (bytesRead !== info.size)
+    // Reads may return less than asked: read until the file's size.
+    let read = 0;
+    while (read < bytes.length) {
+      const { bytesRead } = await handle.read(
+        bytes,
+        read,
+        bytes.length - read,
+        read,
+      );
+      if (bytesRead === 0) break;
+      read += bytesRead;
+    }
+    if (read !== info.size)
       throw new Error("The file changed while it was read.");
     return {
       value: JSON.parse(bytes.toString("utf8")) as unknown,
