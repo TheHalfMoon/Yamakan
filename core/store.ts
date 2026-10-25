@@ -1996,7 +1996,12 @@ export class ProjectStore {
       .prepare("SELECT DISTINCT project_id FROM studio_bitmaps")
       .all() as { project_id: string }[];
     for (const { project_id: projectId } of projects) {
-      if (this.#publishing.has(projectId) || this.#holds > 0) continue;
+      if (
+        this.#publishing.has(projectId) ||
+        this.#discarding.has(projectId) ||
+        this.#holds > 0
+      )
+        continue;
       const removed = this.transaction((inner) => {
         const named = new Set<string>();
         const lists = inner
@@ -2045,23 +2050,35 @@ export class ProjectStore {
         }
         return files;
       });
-      for (const { digest, bytes } of removed) {
-        const unlinked = await unlink(
-          await this.file(
-            projectId,
-            "objects",
-            "sha256",
-            digest.slice(0, 2),
-            digest,
-          ),
-        ).then(
-          () => true,
-          () => false,
-        );
-        if (unlinked) {
-          report.objects++;
-          report.bytes += bytes;
+      if (!removed.length) continue;
+      // Marked synchronously, right after the rows are gone: a publication
+      // of the same bytes waits (beginPublication) until the files are, so
+      // it can never re-register a digest whose file is then deleted.
+      const work = (async () => {
+        for (const { digest, bytes } of removed) {
+          const unlinked = await unlink(
+            await this.file(
+              projectId,
+              "objects",
+              "sha256",
+              digest.slice(0, 2),
+              digest,
+            ),
+          ).then(
+            () => true,
+            () => false,
+          );
+          if (unlinked) {
+            report.objects++;
+            report.bytes += bytes;
+          }
         }
+      })();
+      this.#discarding.set(projectId, work);
+      try {
+        await work;
+      } finally {
+        this.#discarding.delete(projectId);
       }
     }
   }

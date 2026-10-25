@@ -379,3 +379,40 @@ test("the qualification switch never applies in an installed bundle", async () =
     process.env = saved;
   }
 });
+
+test("a bitmap collected by garbage collection can be stored again, and never loses its file", async () => {
+  const { store, project } = await workspace();
+  const bytes = png(6, 6, [5, 6, 7, 255]);
+  const later = () => ({ graceMs: 0, now: Date.now() + 1000 });
+  const first = await store.importStudioBitmap(
+    project.id,
+    stream(bytes),
+    bytes.length,
+  );
+  await store.collectGarbage(later());
+  await refused(store.studioBitmapFile(project.id, first.digest), "NOT_FOUND");
+  // Collection and a new upload of the same bytes, at once, many times:
+  // the bitmap is then either fully present or absent, never a row whose
+  // file is gone (RECOVERY_REQUIRED).
+  for (let round = 0; round < 10; round++) {
+    await Promise.all([
+      store.collectGarbage(later()),
+      store.importStudioBitmap(project.id, stream(bytes), bytes.length),
+    ]);
+    try {
+      const file = await store.studioBitmapFile(project.id, first.digest);
+      assert.equal(sha(await readFile(file)), first.digest);
+    } catch (e) {
+      assert.equal((e as CommandError).code, "NOT_FOUND", String(e));
+    }
+  }
+  const again = await store.importStudioBitmap(
+    project.id,
+    stream(bytes),
+    bytes.length,
+  );
+  assert.equal(
+    sha(await readFile(await store.studioBitmapFile(project.id, again.digest))),
+    first.digest,
+  );
+});

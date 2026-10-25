@@ -43,14 +43,21 @@ const toPng = async (blob: Blob): Promise<Blob> => {
   }
 };
 
+// A bitmap uploaded longer ago than this is uploaded again before a save,
+// which restarts its garbage-collection grace period on the service.
+const REFRESH_AFTER_MS = 20 * 60 * 1000;
+
 /** Studio bitmaps backed by the project's object store. */
 export function createProjectStudioAssetStore(
   client: StudioClient,
   projectId: string,
-): StudioAssetStore {
+): StudioAssetStore & {
+  /** Re-uploads old bitmaps the canvas still names, before a commit. */
+  refresh(canvas: unknown): Promise<void>;
+} {
   const blobs = new Map<string, Blob>();
   // Bitmaps this session already stored, by digest: never uploaded twice.
-  const stored = new Map<string, StudioUploadedImage>();
+  const stored = new Map<string, StudioUploadedImage & { at: number }>();
   const dimensions = async (blob: Blob) => {
     const bmp = await createImageBitmap(blob);
     try {
@@ -76,7 +83,7 @@ export function createProjectStudioAssetStore(
         width: saved.width,
         height: saved.height,
       };
-      stored.set(saved.digest, image);
+      stored.set(saved.digest, { ...image, at: Date.now() });
       return image;
     },
     uploadIntermediateImage: async (blob): Promise<StudioUploadedImage> => {
@@ -98,6 +105,29 @@ export function createProjectStudioAssetStore(
       return blob;
     },
     has: (imageName) => blobs.has(imageName),
+    refresh: async (canvas) => {
+      const named = new Set(
+        [
+          ...JSON.stringify(canvas).matchAll(
+            /"image_?[nN]ame":"([a-f0-9]{64})"/g,
+          ),
+        ].map((m) => m[1]!),
+      );
+      for (const [digest, entry] of stored) {
+        const blob = blobs.get(digest);
+        if (
+          !named.has(digest) ||
+          !blob ||
+          Date.now() - entry.at < REFRESH_AFTER_MS
+        )
+          continue;
+        await client.uploadStudioBitmap(
+          projectId,
+          new Uint8Array(await blob.arrayBuffer()),
+        );
+        entry.at = Date.now();
+      }
+    },
     // Only this session's caches: stored bitmaps stay in the project.
     dispose: () => {
       blobs.clear();
@@ -147,6 +177,8 @@ export async function saveStudioCanvas(input: {
   name: string;
   expectedContentHash: string | null;
   flush: () => Promise<void>;
+  // Runs after the flush, before the commit (refreshing old bitmaps).
+  beforeCommit?: (canvas: CanvasStateContractV3) => Promise<void>;
   canvas: () => CanvasStateContractV3 | null;
   toDocument: (canvas: CanvasStateContractV3) => StudioDocument;
 }): Promise<{ project: { revision: number }; contentHash: string }> {
@@ -159,6 +191,7 @@ export async function saveStudioCanvas(input: {
     throw new Error(
       "This canvas still uses a generated image that is not saved; keep or discard it before saving.",
     );
+  await input.beforeCommit?.(canvas);
   const result = (await input.client.saveDocument({
     projectId: input.projectId,
     expectedRevision: input.expectedRevision,

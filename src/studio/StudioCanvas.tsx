@@ -90,6 +90,7 @@ export function StudioCanvas({
     let cancelled = false;
     let destroy: (() => void) | undefined;
     let assets: StudioAssetStore = createStudioAssetStore();
+    let refresh: ((canvas: unknown) => Promise<void>) | undefined;
     // A new run starts clean: nothing of the previous project's state stays.
     saver.current = null;
     setSave(null);
@@ -123,8 +124,14 @@ export function StudioCanvas({
             : false;
         if (cancelled) return;
         setPersistence(projectId && client ? enabled : null);
-        if (enabled && projectId && client)
-          assets = createProjectStudioAssetStore(client, projectId);
+        if (enabled && projectId && client) {
+          const projectAssets = createProjectStudioAssetStore(
+            client,
+            projectId,
+          );
+          assets = projectAssets;
+          refresh = (canvas) => projectAssets.refresh(canvas);
+        }
         if (enabled) setSave({ state: "loading" });
         const stored =
           enabled && projectId && client
@@ -168,7 +175,7 @@ export function StudioCanvas({
           reportError: (report) => {
             // The full report (label, cause) goes to the console for diagnosis.
             console.warn("Studio engine:", report);
-            setError(String(report.message));
+            if (!cancelled) setError(String(report.message));
           },
           imageResolver: (imageName, signal) =>
             assets.imageResolver(imageName, signal),
@@ -198,6 +205,9 @@ export function StudioCanvas({
                 name: studioDocument.name,
                 expectedContentHash: savedHash,
                 flush: () => composition.engine.lifecycle.flushPendingUploads(),
+                beforeCommit: async (canvas) => {
+                  await refresh?.(canvas);
+                },
                 canvas: () => port.getCanvasState(),
                 toDocument: (canvas) =>
                   studioDocumentFromCanvas({
@@ -208,11 +218,13 @@ export function StudioCanvas({
               });
               const from = revision.current;
               savedHash = result.contentHash;
+              // The editor's draft moves even if this view has gone (the
+              // project and revision check in onSaved keeps that safe).
+              onSaved?.(projectId, from, result.project.revision);
               if (cancelled) return;
               revision.current = result.project.revision;
               port.clearDirty();
               setSave({ state: "saved", contentHash: result.contentHash });
-              onSaved?.(projectId, from, result.project.revision);
             } catch (e) {
               if (cancelled) return;
               const code = (e as { code?: string }).code;
