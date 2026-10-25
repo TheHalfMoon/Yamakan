@@ -54,7 +54,8 @@ export function redactLocalPaths(value, roots) {
 }
 
 export function scriptOutcome(input) {
-  if (input.skipped) {
+  // A skip is never a pass, so a row already marked SKIPPED stays one.
+  if (input.skipped || input.status === "SKIPPED") {
     return {
       name: input.name,
       status: "SKIPPED",
@@ -101,16 +102,24 @@ export function evaluateEnvironment(input) {
       detail: input.helper?.path || "yamakan-procd",
     });
   }
-  if (!input.ffmpeg?.present) {
+  // A tool counts only if it ran and reported a version.
+  if (!input.ffmpeg?.present || !input.ffmpeg?.version) {
     blockers.push({
       code: "FFMPEG_MISSING",
       status: "BLOCKED",
     });
   }
-  if (!input.ffprobe?.present) {
+  if (!input.ffprobe?.present || !input.ffprobe?.version) {
     blockers.push({
       code: "FFPROBE_MISSING",
       status: "BLOCKED",
+    });
+  }
+  if (input.node && input.node.satisfiesEngine !== true) {
+    blockers.push({
+      code: "NODE_ENGINE",
+      status: "BLOCKED",
+      detail: `node ${input.node.version} does not satisfy ${input.node.engine}`,
     });
   }
   // procd stages every worker executable in this per-user cache and grants
@@ -125,7 +134,9 @@ export function evaluateEnvironment(input) {
   }
   const freeBytes = input.disk?.freeBytes;
   const reserveBytes = input.disk?.reserveBytes ?? DISK_RESERVE_BYTES;
-  if (typeof freeBytes === "number" && freeBytes < reserveBytes) {
+  if (input.disk && !Number.isFinite(freeBytes)) {
+    blockers.push({ code: "DISK_UNKNOWN", status: "BLOCKED" });
+  } else if (typeof freeBytes === "number" && freeBytes < reserveBytes) {
     blockers.push({
       code: "DISK_RESERVE",
       status: "BLOCKED",
@@ -134,23 +145,20 @@ export function evaluateEnvironment(input) {
     });
   }
 
-  const scripts = (input.scripts || []).map((row) =>
-    row.status ? row : scriptOutcome(row),
+  // Outcomes are always derived from exit codes, never taken as claimed.
+  const scripts = (input.scripts || []).map(scriptOutcome);
+  const required = input.requiredScripts || REQUIRED_SCRIPTS;
+  const missing = required.filter(
+    (name) => !scripts.some((r) => r.name === name),
   );
   const hasFailure = scripts.some((row) => row.status !== "PASSED");
 
-  let status = "RECORDED";
-  let pass = false;
-  if (blockers.length) {
-    status = "BLOCKED";
-    pass = false;
-  } else if (hasFailure) {
-    status = "RECORDED_WITH_FAILURES";
-    pass = false;
-  } else if (scripts.length && scripts.every((row) => row.pass)) {
-    status = "RECORDED";
-    pass = true;
-  }
+  let status;
+  if (blockers.length) status = "BLOCKED";
+  else if (hasFailure) status = "RECORDED_WITH_FAILURES";
+  else if (missing.length) status = "INCOMPLETE";
+  else status = "RECORDED";
+  const pass = status === "RECORDED";
 
   return {
     format: ENVIRONMENT_FORMAT,
@@ -158,6 +166,8 @@ export function evaluateEnvironment(input) {
     pass,
     blockers,
     scripts,
+    missingScripts: missing,
+    node: input.node || null,
     dependency: input.dependency || null,
     helper: input.helper || null,
     ffmpeg: input.ffmpeg || null,
@@ -183,9 +193,12 @@ export function lockfileDrift(
     if (!key.startsWith("node_modules/")) continue;
     // Optional packages for another OS or CPU (fsevents, arm64 bindings)
     // are never installed here.
-    const fits = (list, value) =>
-      !Array.isArray(list) ||
-      (list.includes(value) && !list.includes(`!${value}`));
+    const fits = (list, value) => {
+      if (!Array.isArray(list)) return true;
+      if (list.includes(`!${value}`)) return false;
+      const positive = list.filter((x) => !String(x).startsWith("!"));
+      return positive.length === 0 || positive.includes(value);
+    };
     if (entry.optional && !(fits(entry.os, platform) && fits(entry.cpu, arch)))
       continue;
     checked += 1;
@@ -200,4 +213,15 @@ export function lockfileDrift(
       });
   }
   return { checked, drift };
+}
+
+// Minimal ">=x.y.z" check for package.json engines.node.
+export function satisfiesNodeEngine(version, engine) {
+  const m = /^>=\s*(\d+)\.(\d+)\.(\d+)$/.exec(String(engine || "").trim());
+  const v = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(version || ""));
+  if (!m || !v) return false;
+  for (let i = 1; i <= 3; i++) {
+    if (Number(v[i]) !== Number(m[i])) return Number(v[i]) > Number(m[i]);
+  }
+  return true;
 }

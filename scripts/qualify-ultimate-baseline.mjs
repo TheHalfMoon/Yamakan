@@ -6,8 +6,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
+import { redactLocalPaths } from "./ultimate-environment.mjs";
 import {
   BASELINE_FORMAT,
+  REQUIRED_HISTORICAL_RECEIPTS,
   evaluateBaseline,
   extractNarrativeHeads,
   fontPins,
@@ -15,6 +18,7 @@ import {
   nativeHashes,
   parseCommandNames,
   readFlags,
+  receiptsPreserved,
   redactSecrets,
   sourceHashes,
   unsupportedAreas,
@@ -88,7 +92,9 @@ const github = redactSecrets({
   openPullRequests: prs.ok ? prs.value : { error: prs.error },
   openIssues: issues.ok ? issues.value : { error: issues.error },
   planning: {
-    pr86ApprovedReference: "58f030bf9370044ce9c26ea346b7606d2deed4d7",
+    pr86Head: prs.ok
+      ? (prs.value.find((pr) => pr.number === 86)?.headRefOid ?? null)
+      : null,
     pr85PreservedSeparately: true,
     doNotMergePlanningPrs: [85, 86],
   },
@@ -105,6 +111,29 @@ const evaluation = evaluateBaseline({
   receipts,
   github,
 });
+
+// Historical receipts are compared, as git blobs, with the same paths on the
+// base branch: any rewrite of an existing receipt shows up here.
+const base = process.env.YAMAKAN_BASELINE_BASE || "origin/main";
+const blob = (...args) => {
+  try {
+    return git(...args);
+  } catch {
+    return null;
+  }
+};
+const before = {};
+const after = {};
+for (const row of receipts) {
+  const atBase = blob("rev-parse", `${base}:${row.path}`);
+  if (atBase === null) continue; // added on this branch, not historical
+  before[row.path] = atBase;
+  after[row.path] = blob("hash-object", path.join(repo, row.path));
+}
+const preservation = receiptsPreserved(before, after);
+const missingRequired = REQUIRED_HISTORICAL_RECEIPTS.filter(
+  (rel) => !existsSync(path.join(repo, rel)),
+);
 
 const registryFile = path.join(repo, "core/command/registry.ts");
 const manifest = {
@@ -128,7 +157,13 @@ const manifest = {
   native: nativeHashes(repo),
   sourceHashes: sourceHashes(repo),
   unsupportedAreas: unsupportedAreas(),
-  historicalReceiptsPreserved: true,
+  historicalReceiptsPreserved: {
+    base,
+    compared: Object.keys(before).length,
+    preserved: preservation.preserved,
+    changed: preservation.changed,
+    missingRequired,
+  },
   notes: [
     "Historical W1–W18/P10 receipts keep their original bound commits.",
     "This manifest is not a current-head product PASS.",
@@ -138,7 +173,11 @@ const manifest = {
 };
 
 mkdirSync(outDir, { recursive: true });
-writeFileSync(outFile, JSON.stringify(manifest, null, 2) + "\n");
+const publicManifest = redactLocalPaths(manifest, [
+  { path: repo, label: "<repo>" },
+  { path: os.homedir(), label: "~" },
+]);
+writeFileSync(outFile, JSON.stringify(publicManifest, null, 2) + "\n");
 console.log(
   JSON.stringify(
     {
@@ -154,6 +193,16 @@ console.log(
     2,
   ),
 );
-if (!manifest.enginesDisabled || manifest.currentHeadPass) {
+// Without live GitHub state the baseline is not bound to anything: BLOCKED.
+if (!liveMain) {
+  console.error("BLOCKED: live main could not be read from GitHub.");
+  process.exit(2);
+}
+if (
+  !manifest.enginesDisabled ||
+  manifest.currentHeadPass ||
+  !preservation.preserved ||
+  missingRequired.length > 0
+) {
   process.exit(1);
 }

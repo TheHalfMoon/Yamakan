@@ -21,6 +21,7 @@ import {
   evaluateEnvironment,
   lockfileDrift,
   redactLocalPaths,
+  satisfiesNodeEngine,
   scriptOutcome,
 } from "./ultimate-environment.mjs";
 import { hashFile, nativeHashes, redactSecrets } from "./ultimate-baseline.mjs";
@@ -120,10 +121,10 @@ const candidateSha = git("rev-parse", "HEAD");
 const tree = git("rev-parse", "HEAD^{tree}");
 const dirty = git("status", "--porcelain");
 const freeBytes = diskFree(repo);
-let helpers = nativeHashes(repo);
-let helper = helpers[0] || { present: false };
+// The helpers are always rebuilt from source here, so the recorded hashes
+// are this checkout's, never a stale binary left from an earlier build.
 const nativeBuild = { attempted: false, exitCode: null, logPath: null };
-if (!helper.present && freeBytes >= DISK_RESERVE_BYTES) {
+if (freeBytes >= DISK_RESERVE_BYTES) {
   nativeBuild.attempted = true;
   mkdirSync(logDir, { recursive: true });
   const logPath = path.join(logDir, "build-native.log");
@@ -141,9 +142,17 @@ if (!helper.present && freeBytes >= DISK_RESERVE_BYTES) {
   );
   nativeBuild.exitCode = built.status;
   nativeBuild.logPath = path.relative(repo, logPath).replaceAll("\\", "/");
-  helpers = nativeHashes(repo);
-  helper = helpers[0] || { present: false };
 }
+const helpers = nativeHashes(repo);
+// Every helper must exist and the build must have succeeded.
+const helper = {
+  present: nativeBuild.exitCode === 0 && helpers.every((h) => h.present),
+  path:
+    helpers
+      .filter((h) => !h.present)
+      .map((h) => h.path)
+      .join(",") || null,
+};
 let zodPresent = false;
 try {
   require.resolve("zod", { paths: [repo] });
@@ -187,7 +196,25 @@ function workerToolsState() {
 }
 const workerTools = workerToolsState();
 
+const pkg = JSON.parse(readFileSync(path.join(repo, "package.json"), "utf8"));
+const node = {
+  version: process.version,
+  engine: pkg.engines?.node ?? null,
+  satisfiesEngine: satisfiesNodeEngine(process.version, pkg.engines?.node),
+};
+// Lifecycle scripts the lockfile declares; installs here use CI's own
+// `npm ci --ignore-scripts`, so none of them ran.
+const lifecycle = Object.entries(
+  JSON.parse(readFileSync(path.join(repo, "package-lock.json"), "utf8"))
+    .packages || {},
+)
+  .filter(([key, entry]) => key && entry.hasInstallScript)
+  .map(
+    ([key, entry]) => `${key.slice("node_modules/".length)}@${entry.version}`,
+  );
+
 const precheck = evaluateEnvironment({
+  node,
   dependency,
   helper,
   ffmpeg,
@@ -215,6 +242,7 @@ if (precheck.status !== "BLOCKED") {
 }
 
 const evaluation = evaluateEnvironment({
+  node,
   dependency,
   helper,
   ffmpeg,
@@ -243,6 +271,11 @@ const manifest = redactLocalPaths(
     },
     native: helpers,
     nativeBuild,
+    install: {
+      command: "npm ci --ignore-scripts --no-audit --no-fund",
+      lifecycleScriptsDeclared: lifecycle,
+      lifecycleScriptsRun: [],
+    },
     notes: [
       "Failures and skips are retained with reasons.",
       "Missing helper, FFmpeg or dependency cannot produce PASS.",

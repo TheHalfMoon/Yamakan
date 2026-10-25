@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 // prettier-ignore
 // @ts-expect-error Plain .mjs modules without declarations.
-import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, lockfileDrift, redactLocalPaths, scriptOutcome } from "../scripts/ultimate-environment.mjs";
+import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, lockfileDrift, redactLocalPaths, satisfiesNodeEngine, scriptOutcome } from "../scripts/ultimate-environment.mjs";
 
-const present = { present: true, sha256: "a".repeat(64) };
+const present = { present: true, sha256: "a".repeat(64), version: "8.1.1" };
 
 test("environment format and required scripts are explicit", () => {
   assert.equal(ENVIRONMENT_FORMAT, "yamakan.ultimate-environment/v1");
@@ -191,5 +191,103 @@ test("lockfile drift lists missing and mismatched packages only", () => {
   assert.deepEqual(result.drift, [
     { package: "node_modules/b", pinned: "2.0.0", installed: "1.9.0" },
     { package: "node_modules/c", pinned: "3.0.0", installed: null },
+  ]);
+});
+
+const ready = {
+  dependency: { present: true, name: "zod" },
+  helper: present,
+  ffmpeg: present,
+  ffprobe: present,
+  disk: { freeBytes: 10 * 1024 ** 3 },
+};
+const all = (exitCode = 0) =>
+  REQUIRED_SCRIPTS.map((name: string) => ({ name, exitCode }));
+
+test("all required scripts passing is the only PASS", () => {
+  const result = evaluateEnvironment({ ...ready, scripts: all() });
+  assert.equal(result.status, "RECORDED");
+  assert.equal(result.pass, true);
+});
+
+test("a passing subset of the required scripts is INCOMPLETE, never pass", () => {
+  const result = evaluateEnvironment({
+    ...ready,
+    scripts: all().slice(0, 3),
+  });
+  assert.equal(result.status, "INCOMPLETE");
+  assert.equal(result.pass, false);
+  assert.ok(result.missingScripts.includes("test:e2e"));
+  assert.equal(evaluateEnvironment({ ...ready, scripts: [] }).pass, false);
+});
+
+test("a row claiming PASSED with a failing exit code is re-derived as FAILED", () => {
+  const scripts = all().map((row: { name: string }) =>
+    row.name === "test"
+      ? { name: "test", status: "PASSED", pass: true, exitCode: 1 }
+      : row,
+  );
+  const result = evaluateEnvironment({ ...ready, scripts });
+  assert.equal(result.pass, false);
+  assert.equal(
+    result.scripts.find((r: { name: string }) => r.name === "test").status,
+    "FAILED",
+  );
+});
+
+test("unknown free space, an unusable tool or an old Node is BLOCKED", () => {
+  const codes = (input: object) =>
+    evaluateEnvironment({ ...ready, scripts: all(), ...input }).blockers.map(
+      (b: { code: string }) => b.code,
+    );
+  assert.ok(
+    codes({ disk: { freeBytes: Number.NaN } }).includes("DISK_UNKNOWN"),
+  );
+  assert.ok(
+    codes({ ffmpeg: { present: true, version: null } }).includes(
+      "FFMPEG_MISSING",
+    ),
+  );
+  assert.ok(
+    codes({
+      node: { version: "v22.1.0", engine: ">=24.11.0", satisfiesEngine: false },
+    }).includes("NODE_ENGINE"),
+  );
+});
+
+test("node engine check compares numerically", () => {
+  assert.equal(satisfiesNodeEngine("v24.19.0", ">=24.11.0"), true);
+  assert.equal(satisfiesNodeEngine("v24.11.0", ">=24.11.0"), true);
+  assert.equal(satisfiesNodeEngine("v24.9.9", ">=24.11.0"), false);
+  assert.equal(satisfiesNodeEngine("v100.0.0", ">=24.11.0"), true);
+  assert.equal(satisfiesNodeEngine("v24.19.0", "^24"), false);
+});
+
+test("negated os/cpu lists exclude only the named platform", () => {
+  const files: Record<string, unknown> = {
+    "r/package-lock.json": {
+      packages: {
+        "node_modules/not-mac": {
+          version: "1.0.0",
+          optional: true,
+          os: ["!darwin"],
+        },
+        "node_modules/not-win": {
+          version: "1.0.0",
+          optional: true,
+          os: ["!win32"],
+        },
+      },
+    },
+  };
+  const result = lockfileDrift(
+    "r",
+    (f: string) => files[f] ?? null,
+    "win32",
+    "x64",
+  );
+  assert.equal(result.checked, 1);
+  assert.deepEqual(result.drift, [
+    { package: "node_modules/not-mac", pinned: "1.0.0", installed: null },
   ]);
 });

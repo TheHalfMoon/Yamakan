@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 // prettier-ignore
 // @ts-expect-error Plain .mjs modules without declarations.
-import { BASELINE_FORMAT, DISABLED_CAPABILITIES, REQUIRED_HISTORICAL_RECEIPTS, claimCurrentHeadPass, evaluateBaseline, extractBoundCommit, extractNarrativeHeads, hashFile, listQualificationReceipts, receiptsPreserved, redactSecrets } from "../scripts/ultimate-baseline.mjs";
+import { BASELINE_FORMAT, DISABLED_CAPABILITIES, REQUIRED_HISTORICAL_RECEIPTS, boundCommitField, claimCurrentHeadPass, evaluateBaseline, extractBoundCommit, extractNarrativeHeads, hashFile, listQualificationReceipts, receiptsPreserved, redactSecrets } from "../scripts/ultimate-baseline.mjs";
 
 const LIVE = "a3c3ce91815aee35ce5b91b4a483dd85766a4429";
 const HISTORICAL = "e8bb8dd20fdbb87c520c948222cd44abffb5ed0d";
@@ -212,4 +212,92 @@ test("qualification inventory does not rewrite nested diagnose files as current"
   assert.ok(
     readdirSync("docs/evidence/qualification").includes("t10-release.json"),
   );
+});
+
+test("receipts bound by head/base fields record which field bound them; donor pins never bind", () => {
+  assert.deepEqual(boundCommitField({ head: HISTORICAL }), {
+    field: "head",
+    sha: HISTORICAL,
+  });
+  assert.deepEqual(boundCommitField({ baseMain: STALE }), {
+    field: "baseMain",
+    sha: STALE,
+  });
+  // A receipt's own commit wins over a base it was measured against.
+  assert.equal(
+    boundCommitField({ commit: LIVE, gitHeadBase: STALE })?.field,
+    "commit",
+  );
+  assert.equal(boundCommitField({ pin: HISTORICAL }), null);
+});
+
+test("unbound and malformed receipts are flagged, never silently accepted", () => {
+  const result = evaluateBaseline({
+    liveMain: LIVE,
+    flags: disabledFlags,
+    receipts: [
+      receipt("docs/evidence/qualification/no-commit.json", { passed: true }),
+      {
+        path: "docs/evidence/qualification/bad.json",
+        sha256: "0".repeat(64),
+        json: null,
+        parseError: "Unexpected token",
+      },
+      receipt("docs/evidence/qualification/live.json", {
+        commit: LIVE,
+        passed: true,
+      }),
+    ],
+  });
+  const codes = result.mismatches.map(
+    (m: { code: string; path?: string }) => `${m.code}:${m.path}`,
+  );
+  assert.ok(
+    codes.includes(
+      "UNBOUND_RECEIPT:docs/evidence/qualification/no-commit.json",
+    ),
+  );
+  assert.ok(
+    codes.includes("MALFORMED_RECEIPT:docs/evidence/qualification/bad.json"),
+  );
+  const rows = Object.fromEntries(
+    result.preservedReceipts.map((r: { path: string }) => [r.path, r]),
+  );
+  assert.equal(
+    rows["docs/evidence/qualification/no-commit.json"].currentHeadPass,
+    false,
+  );
+  assert.equal(
+    rows["docs/evidence/qualification/no-commit.json"].reason,
+    "UNBOUND_RECEIPT",
+  );
+  assert.equal(
+    rows["docs/evidence/qualification/live.json"].currentHeadPass,
+    true,
+  );
+  // The manifest itself is never a product PASS.
+  assert.equal(result.currentHeadPass, false);
+});
+
+test("every real historical receipt is either bound to a commit or flagged", () => {
+  const receipts = listQualificationReceipts("docs/evidence/qualification");
+  const result = evaluateBaseline({
+    liveMain: LIVE,
+    flags: disabledFlags,
+    receipts,
+  });
+  for (const row of result.preservedReceipts) {
+    const flagged = result.mismatches.some(
+      (m: { path?: string }) => m.path === row.path,
+    );
+    assert.ok(
+      row.boundCommit || flagged,
+      `${row.path} is neither bound nor flagged`,
+    );
+    assert.notEqual(
+      row.currentHeadPass,
+      true,
+      `${row.path} claims a live-head PASS`,
+    );
+  }
 });

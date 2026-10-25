@@ -60,18 +60,34 @@ export function hashFile(file) {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-export function extractBoundCommit(receipt) {
+// Yamakan commit fields receipts were written with, in precedence order.
+// Donor "pin" fields name upstream commits and never bind a receipt.
+export const BOUND_COMMIT_FIELDS = Object.freeze([
+  "commit",
+  "gitHead",
+  "environment.commit",
+  "head",
+  "gitHeadAtQ8",
+  "gitHeadBase",
+  "baseMain",
+]);
+
+export function boundCommitField(receipt) {
   if (!receipt || typeof receipt !== "object") return null;
-  if (isSha(receipt.commit)) return receipt.commit;
-  if (isSha(receipt.gitHead)) return receipt.gitHead;
-  if (
-    receipt.environment &&
-    typeof receipt.environment === "object" &&
-    isSha(receipt.environment.commit)
-  ) {
-    return receipt.environment.commit;
+  for (const field of BOUND_COMMIT_FIELDS) {
+    const value = field
+      .split(".")
+      .reduce(
+        (o, k) => (o && typeof o === "object" ? o[k] : undefined),
+        receipt,
+      );
+    if (isSha(value)) return { field, sha: value };
   }
   return null;
+}
+
+export function extractBoundCommit(receipt) {
+  return boundCommitField(receipt)?.sha ?? null;
 }
 
 export function extractNarrativeHeads(text) {
@@ -166,7 +182,6 @@ export function listQualificationReceipts(
       sha256: hashFile(file),
       json,
       parseError,
-      boundCommit: extractBoundCommit(json),
     };
   });
 }
@@ -229,25 +244,34 @@ export function evaluateBaseline(input) {
   }
 
   const preservedReceipts = receipts.map((row) => {
-    const json = row.json;
-    const boundCommit = row.boundCommit ?? extractBoundCommit(json);
-    if (boundCommit && boundCommit !== liveMain) {
+    const bound = boundCommitField(row.json);
+    const claim = claimCurrentHeadPass({ liveMain, receipt: row.json });
+    if (!bound) {
+      mismatches.push({
+        code: row.parseError ? "MALFORMED_RECEIPT" : "UNBOUND_RECEIPT",
+        path: row.path,
+      });
+    } else if (bound.sha !== liveMain) {
       mismatches.push({
         code: "HISTORICAL_RECEIPT_HEAD",
         path: row.path,
-        boundCommit,
+        boundCommit: bound.sha,
         liveMain,
       });
     }
     return {
       path: row.path,
       sha256: row.sha256,
-      boundCommit,
+      boundCommit: bound?.sha ?? null,
+      boundField: bound?.field ?? null,
+      currentHeadPass: claim.currentHeadPass,
+      reason: claim.reason ?? null,
       parseError: row.parseError || null,
     };
   });
 
   const enginesDisabled = violations.length === 0;
+  // The manifest describes the baseline; it is never itself a product PASS.
   const currentHeadPass = false;
 
   return {
@@ -294,6 +318,8 @@ export function nativeHashes(repoRoot = ".") {
   const helpers = [
     "native/procd/target/release/yamakan-procd.exe",
     "native/procd/target/release/yamakan-acl.exe",
+    // The sandbox probe the process-ownership tests launch.
+    "native/procd/target/release/worker-probe.exe",
   ];
   return helpers.map((rel) => {
     const full = path.join(repoRoot, rel);
