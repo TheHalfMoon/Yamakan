@@ -1,0 +1,82 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "b49721b",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0"
+  },
+  "state": "VERIFIED",
+  "scope": "YU-013 part a: Director runs, attempts, likeness consent, revocations, revalidations and identity encodings in the workspace database; restore epoch. Part b (restoreHold, copied job/lease fencing, JobSupervisor references, external-request reconciliation) is planned with YU-014.",
+  "task": "YU-013",
+  "objective": "Move Director attempts and consent/revocations into existing SQLite",
+  "branch": "feat/yu-013-director-durability",
+  "mergedPr": 97,
+  "headCommit": "e27c02e",
+  "mergeCommit": "874769492e4b37559294df14248c6a90fe626ec6",
+  "tests": {
+    "files": [
+      "tests/director-durability.test.ts",
+      "tests/director-stages.test.ts",
+      "tests/identity.test.ts",
+      "tests/backup.test.ts"
+    ],
+    "result": "director-durability 10/10: concurrent advance/approve keep one result; lost-response replay once, mismatch refused; missing/changed/expired outputs and approvals refused; quarantined output completes nothing; revoke + invalidation atomic, race refused, project restore cannot un-revoke; workspace restore voids approvals, consents need revalidation, copy never acts on its own across two starts, replay across restore refused, listings show awaiting revalidation; legacy import by existing project, idempotent, originals unchanged, live state untouched; agents refused approve/revalidate/importLegacy, approve requires expectedVersion"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness panel",
+      "judge": "session model subagent",
+      "findings": {
+        "mustFix": 1,
+        "applied": 1,
+        "shouldFix": 5,
+        "appliedShouldFix": 3,
+        "cardGapsCarriedTo": "YU-013b"
+      }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 8,
+        "applied": 6,
+        "notApplied": [
+          "caps/pagination for agent-created runs, attempts and encodings",
+          "a warning when revalidating a restored consent the original workspace revoked after the backup"
+        ]
+      }
+    },
+    {
+      "kind": "delta re-review of the fix commit",
+      "judge": "Sonnet subagent",
+      "findings": { "mustFix": 0, "shouldFix": 3, "applied": 3 }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "medium",
+      "probability": 0.74,
+      "confidence": 0.61,
+      "note": "advisory only; independent security review performed"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); local model needs more free RAM than the host had"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "874769492e4b37559294df14248c6a90fe626ec6",
+    "ci": "PR exact head e27c02e: qualify, qualify-windows-r8, otio-oracle success; push run on 8747694: success",
+    "windows": "detached 8747694 on a loaded shared host: lint, provenance, build pass; Director/identity/Cinema/waveform/Studio persistence suites 55 pass (1 POSIX skip); test:studio 1975/1975; Edge E2E pass (0 external requests); TesterArmy journey PASSED; npm test 493/500 with 4 wall-clock failures (core journey, preview route, conversion kill/reconcile, MCP stdio) that pass alone on the identical tree (11 s, 12 s, 137 s, 3.2 s) and on CI"
+  },
+  "limitations": [
+    "YU-013b not done: no durable restoreHold, no fencing of copied jobs/leases, no JobSupervisor references, no external-request reconciliation; the Director has no workers, provider calls, publications or reservations today, so nothing can act after a restore",
+    "Agent-created Director rows are not capped; listEncodings is not paginated",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
