@@ -44,6 +44,12 @@ A live backup uses SQLite's online backup API with a **GC exclusion barrier**, a
 
 Legacy migration reads original Darzain roots without writes, creates a new workspace, validates snapshots and media hashes, and records a before/after original-root manifest. Unknown project versions allow bounded safe inspection only. JSON recovery exports contain no credentials or host paths. Portable media archives follow later with traversal, case-collision, expansion, symlink/reparse and duplicate protections; process isolation is not a substitute for extraction validation.
 
+## Creative documents
+
+Studio canvases and Cinema scenes are immutable creative documents of the one project (YU-010, activation group AG-DOCS). Canonical format v5 adds a bounded `documents` list (at most 32) of `{id, kind, schemaVersion, contentHash}`; a project without documents is still written as v4 byte for byte, so its hash, history and older readers are unchanged. Workspace schema v8 adds `creative_documents` (canonical bytes named by their SHA-256, with the asset ids they use) and `snapshot_document_refs`; as with every schema step, a workspace this build opens is then refused by earlier builds, and rollback is a verified pre-upgrade backup.
+
+A document is validated before it is stored: raw and canonical bytes each at most 8 MiB, strict UTF-8, JSON depth at most 64 and at most 10,000 nodes (the Studio canvas text inside a document is bounded the same way), no prototype keys, and the kind's own schema (`studio` v1, `cinemaScene` v1). Every revision keeps the assets its documents use (Studio bitmaps must be image assets); a commit that would drop one is refused. Every save path through the editing shape (whole-project save, timeline batches, undo and redo) carries the head's document references forward; restore uses the restored revision's own. Committing a document (store API `commitDocument`; its command arrives with the staged upload route) is compare-and-swap on the document's current hash and the project revision, replayable by request receipt, and may revert to a version this project already held. Migrated folder history cannot carry documents. `yamakan.document.list` and `yamakan.document.get` read the current revision. While `CREATIVE_DOCUMENTS_ENABLED` is false no client writes documents; activation requires the AG-DOCS group receipt.
+
 ## Durable jobs and owned processes
 
 One SQLite state machine, shared by export, proxy/transcode and later workflow/model operations:

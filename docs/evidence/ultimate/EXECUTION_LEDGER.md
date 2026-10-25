@@ -8,11 +8,14 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 | Task | State | PR | Receipt |
 | ---- | ----- | -- | ------- |
-| YU-000 baseline evidence | IMPLEMENTED | (this PR) | [receipts/YU-000.json](receipts/YU-000.json) |
-| YU-001 environment reproduction | IMPLEMENTED | (this PR) | [receipts/YU-001.json](receipts/YU-001.json) |
-| YU-002 Quality Lab evidence | IMPLEMENTED | #87 | pending merge |
-| YU-003 MCP bounds | IMPLEMENTED (branch `feat/yu-003-mcp-bounds`) | — | pending |
-| YU-010…YU-101 | PLANNED | — | — |
+| YU-000 baseline evidence | VERIFIED | #88 → `01ccbe5` | [receipts/YU-000.json](receipts/YU-000.json) |
+| YU-001 environment reproduction | VERIFIED | #88 → `01ccbe5` | [receipts/YU-001.json](receipts/YU-001.json) |
+| YU-002 Quality Lab evidence | VERIFIED | #87 → `b5c3372` | [receipts/YU-002.json](receipts/YU-002.json) |
+| YU-003 MCP bounds | VERIFIED | #90 → `0fe9a18` | [receipts/YU-003.json](receipts/YU-003.json) |
+| (unplanned) zod GHSA-mrhx-c7xc-m3w5 | MERGED | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate |
+| YU-010 creative documents | IN PROGRESS: 010a (v5 refs, schema v8 tables, store commit/get/list, flag off) | (this PR) | after merge |
+| YU-010b staged upload route + `document.commit` command, YU-010c client surfaces | PLANNED | — | — |
+| YU-011…YU-101 | PLANNED | — | — |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -30,10 +33,10 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-After YU-000/001/002/003 merge: YU-010 (canonical v5 creative documents, AG-DOCS group, flag off), then YU-011/012/013/015 in parallel lanes, YU-014; YU-016 (waveforms/thumbnails/proxies) depends only on YU-001 and can proceed in parallel.
+YU-010b (authenticated streamed document staging: 8 MiB route-specific cap, reservations, 15 min TTL, sealed receipts; `yamakan.document.commit` behind AG-DOCS), then YU-010c (SDK/CLI/MCP surfaces, legacy client refusal paths). YU-016 (waveforms/thumbnails/proxies) depends only on YU-001 and can run in parallel. YU-011/012/013/015 follow YU-010; YU-014 after 011–013.
 
 ## Continuation instructions
 
 1. Re-verify live main, open PRs and this ledger; never redo a VERIFIED task.
-2. Worktrees: `C:\Users\Shehr\Yamakan-yu*` (one per task). Install with `npm ci --ignore-scripts --no-audit --no-fund` or junction to a drift-free install.
+2. Worktrees: `C:\Users\Shehr\Yamakan-yu*` (one per task). Install with `npm ci --ignore-scripts --no-audit --no-fund`, or junction to a drift-free install — but never run `npm ci` through a junction (npm replaces it and empties the shared target).
 3. Before trusting a failing sandbox test run, run `npm run qualify:ultimate-environment` (BLOCKED codes explain environment faults).

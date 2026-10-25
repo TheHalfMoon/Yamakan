@@ -41,9 +41,14 @@
     }
   ],
   "securityReview": "Not triggered beyond light bar: evidence tooling only, no production boundary change. No independent human security review claimed.",
-  "state": "IMPLEMENTED",
-  "mergedPr": null,
-  "postMergeVerification": null,
+  "state": "VERIFIED",
+  "mergedPr": 88,
+  "postMergeVerification": {
+    "main": "01ccbe58285e7bbd6c74cc4155ae17bac30c3bb3",
+    "ci": "push run on 01ccbe5: success",
+    "windows": "npm run qualify:ultimate-environment on detached 01ccbe5: RECORDED pass; all 8 gates PASSED; 416/418 unit tests (0 fail, 2 POSIX-only skips); Edge E2E PASSED",
+    "baseline": "qualify:ultimate-baseline exit 0 on 01ccbe5"
+  },
   "task": "YU-000",
   "objective": "Freeze artifact-bound baseline and capability evidence",
   "evidence": "docs/evidence/ultimate/baseline.json",
@@ -70,5 +75,6 @@
   "limitations": [
     "Render compiler/plan/policy versions are recorded as constants, not parsed from source",
     "No profile (Profile A) hash: Profile A remains an external gate"
-  ]
+  ],
+  "mergeCommit": "01ccbe58285e7bbd6c74cc4155ae17bac30c3bb3"
 }

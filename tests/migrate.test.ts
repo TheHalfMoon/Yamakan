@@ -407,7 +407,7 @@ test("database projects with a newer-format revision are never downgraded", asyn
   const newer = {
     ...JSON.parse(Buffer.from(row.bytes).toString("utf8")),
     revision: 1,
-    formatVersion: 5,
+    formatVersion: 6,
   };
   const bytes = Buffer.from(JSON.stringify(newer));
   const hash = createHash("sha256").update(bytes).digest("hex");
