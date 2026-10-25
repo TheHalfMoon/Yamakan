@@ -598,6 +598,21 @@ async function restore(
       );
       db.exec("BEGIN IMMEDIATE");
       for (const q of toQuarantine) quarantine.run(q.projectId, q.digest);
+      // A restored workspace starts a fresh Director execution epoch
+      // (YU-013): approvals from the backup no longer count and its
+      // consents must be revalidated before use. (A backup older than
+      // schema v12 has no Director tables; its legacy files get a fresh
+      // epoch when they are imported.)
+      if (
+        db
+          .prepare(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'director_epoch'",
+          )
+          .get()
+      )
+        db.prepare(
+          "UPDATE director_epoch SET value = value + 1 WHERE singleton = 1",
+        ).run();
       db.exec("COMMIT");
     } finally {
       db.close();

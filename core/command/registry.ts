@@ -53,10 +53,12 @@ import {
   grantConsent,
   loadRun,
   recordEncoding,
+  revalidateConsent,
   revokeConsentRecord,
   startDirectorRun,
 } from "../director/runtime.ts";
 import { builtinManifest } from "../director/manifest.ts";
+import { importLegacyDirector } from "../director/legacy.ts";
 import { FLOW_ENABLED, flowSnapshot } from "../flow/snapshot.ts";
 import {
   QualityComparisonSchema,
@@ -916,14 +918,28 @@ export const commands = {
         ttlMs: z.number().int().positive(),
       })
       .strict(),
+    run: ({ store, principal, receipt }, a) =>
+      grantConsent(
+        store,
+        {
+          characterId: a.characterId,
+          purpose: a.purpose,
+          version: a.version,
+          ttlMs: a.ttlMs,
+          principalId: principal.id,
+        },
+        receipt,
+      ),
+  }),
+  "yamakan.consent.revalidate": define({
+    scope: "consent:grant",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Revalidate a likeness consent granted before a restore or import, so it can be used again. Browser session only.",
+    input: z.object({ consentId: Id }).strict(),
     run: ({ store, principal }, a) =>
-      grantConsent(store, {
-        characterId: a.characterId,
-        purpose: a.purpose,
-        version: a.version,
-        ttlMs: a.ttlMs,
-        principalId: principal.id,
-      }),
+      revalidateConsent(store, a.consentId, principal.id),
   }),
   "yamakan.consent.revoke": define({
     scope: "consent:revoke",
@@ -932,7 +948,14 @@ export const commands = {
     summary:
       "Revoke likeness consent and invalidate derived encodings. Browser session only.",
     input: z.object({ consentId: Id }).strict(),
-    run: ({ store }, a) => revokeConsentRecord(store, a.consentId),
+    run: ({ store, principal, receipt }, a) =>
+      revokeConsentRecord(
+        store,
+        a.consentId,
+        Date.now(),
+        principal.id,
+        receipt,
+      ),
   }),
   "yamakan.identity.encode": define({
     scope: "project:write",
@@ -949,15 +972,19 @@ export const commands = {
         payloadHash: z.string().regex(/^[a-f0-9]{64}$/),
       })
       .strict(),
-    run: ({ store }, a) =>
-      recordEncoding(store, {
-        characterId: a.characterId,
-        purpose: a.purpose,
-        consentId: a.consentId,
-        provider: a.provider,
-        method: a.method,
-        payloadHash: a.payloadHash,
-      }),
+    run: ({ store, receipt }, a) =>
+      recordEncoding(
+        store,
+        {
+          characterId: a.characterId,
+          purpose: a.purpose,
+          consentId: a.consentId,
+          provider: a.provider,
+          method: a.method,
+          payloadHash: a.payloadHash,
+        },
+        receipt,
+      ),
   }),
   "yamakan.director.capability": define({
     scope: "project:read",
@@ -976,11 +1003,25 @@ export const commands = {
         pipelineName: z.string().min(1).max(80),
       })
       .strict(),
-    run: ({ store }, a) =>
-      startDirectorRun(store, {
-        projectId: a.projectId,
-        pipelineName: a.pipelineName,
-      }),
+    run: ({ store, principal, receipt }, a) =>
+      startDirectorRun(
+        store,
+        {
+          projectId: a.projectId,
+          pipelineName: a.pipelineName,
+          principalId: principal.id,
+        },
+        receipt,
+      ),
+  }),
+  "yamakan.director.import-legacy": define({
+    scope: "consent:grant",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Import the workspace's pre-database Director files (runs by existing project id, consents, encodings) once; originals are kept, approvals must be given again and consents revalidated. Browser session only.",
+    input: z.object({}).strict(),
+    run: ({ store }) => importLegacyDirector(store),
   }),
   "yamakan.director.advance": define({
     scope: "project:write",
@@ -1001,15 +1042,23 @@ export const commands = {
           .string()
           .regex(/^[a-f0-9]{64}$/)
           .nullable(),
+        // Compare-and-swap on the run's version (from start, next or open).
+        expectedVersion: z.number().int().positive().optional(),
       })
       .strict(),
-    run: ({ store }, a) =>
-      advanceStage(store, {
-        runId: a.runId,
-        stage: a.stage,
-        status: a.status,
-        outputHash: a.outputHash,
-      }),
+    run: ({ store, principal, receipt }, a) =>
+      advanceStage(
+        store,
+        {
+          runId: a.runId,
+          stage: a.stage,
+          status: a.status,
+          outputHash: a.outputHash,
+          expectedVersion: a.expectedVersion,
+          principalId: principal.id,
+        },
+        receipt,
+      ),
   }),
   "yamakan.director.approve": define({
     scope: "director:approve",
@@ -1027,15 +1076,22 @@ export const commands = {
           .int()
           .positive()
           .max(30 * 24 * 60 * 60 * 1000),
+        expectedVersion: z.number().int().positive().optional(),
       })
       .strict(),
-    run: ({ store }, a) =>
-      approveStage(store, {
-        runId: a.runId,
-        stage: a.stage,
-        outputHash: a.outputHash,
-        ttlMs: a.ttlMs,
-      }),
+    run: ({ store, principal, receipt }, a) =>
+      approveStage(
+        store,
+        {
+          runId: a.runId,
+          stage: a.stage,
+          outputHash: a.outputHash,
+          ttlMs: a.ttlMs,
+          expectedVersion: a.expectedVersion,
+          principalId: principal.id,
+        },
+        receipt,
+      ),
   }),
   "yamakan.director.next": define({
     scope: "project:read",

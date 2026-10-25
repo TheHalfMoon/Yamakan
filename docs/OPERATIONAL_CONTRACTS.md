@@ -82,6 +82,23 @@ Bounds are applied before a document is built: a linear pre-scan of the text ref
 
 Qualification switch: `YAMAKAN_AG_DOCS_QUALIFICATION=1` in the service's own environment enables the AG-DOCS paths for real-browser group tests before activation; the service announces it at startup, `yamakan.document.capability` reports it, and no request can change it. The launcher and bundle never set it, it is ignored whenever `YAMAKAN_BUNDLE_INSTALL` marks an installed bundle, and the build flag stays false.
 
+## Director runs and likeness consent
+
+YU-013 moved this state from mutable JSON files into the workspace database (schema v12). Each change below is one transaction.
+
+- **Runs.** A run belongs to an existing project. It advances by compare-and-swap on its `version`: `yamakan.director.advance` and `yamakan.director.approve` accept `expectedVersion`, and a stale one is `REVISION_CONFLICT`. Every advance and approval appends to the run's attempt log, which is never rewritten; a stage's receipt is its latest attempt.
+- **Outputs.** A stage output must be a stored, ready object of the run's project. The hash is checked against what the workspace holds, never trusted as given.
+- **Approvals.** An approval binds that output with an expiry and is human-only (agents are refused).
+- **Consents.** A likeness consent is immutable. It is revoked once, by an append-only row. An identity encoding's validity is derived from its consent, revoked or expired, and never stored as a flag, so revoking invalidates its encodings in the same commit. An encoding is recorded only inside the same transaction that confirms a live consent, so a concurrent revocation cannot be raced.
+- **Replay.** Mutations sent with a request id replay their original result. The same id with a different request is `IDEMPOTENCY_MISMATCH`.
+- **Execution epoch.** The workspace has an execution epoch. Restoring a backup mints a fresh epoch in the restored copy, in the same transaction that quarantines unverified objects. In the copy:
+  - approvals given before the restore no longer count, and their stages await a new approval;
+  - consents granted before it must be revalidated (`yamakan.consent.revalidate`, human-only) before any new encoding;
+  - nothing resumes on its own;
+  - the original workspace is unaffected;
+  - restoring a project revision never touches consent or revocations, which are workspace state.
+- **Legacy import.** `yamakan.director.import-legacy` (human-only) imports the pre-database `director/*.json` files once and idempotently. Files must be plain, single-link and at most 1 MiB, with at most 10,000 of them. Originals are kept. Runs are imported only for projects of this workspace; others are reported. Revoked consents arrive revoked. What is imported starts under a fresh epoch.
+
 ## Durable jobs and owned processes
 
 One SQLite state machine, shared by export, proxy/transcode and later workflow/model operations:
