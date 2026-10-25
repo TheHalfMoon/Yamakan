@@ -12,6 +12,29 @@ import { applyBatch } from "../core/timeline/operations.ts";
 import type { Operation } from "../core/timeline/operations.ts";
 import { canonicalJson } from "../core/hash/canonical.ts";
 
+/** The tracks, clips, scenes and shots a batch changes, by id. */
+export function touched(operations: Operation[]): Set<string> {
+  const ids = new Set<string>();
+  for (const op of operations) {
+    const o = op as Record<string, unknown>;
+    for (const key of [
+      "trackId",
+      "clipId",
+      "sceneId",
+      "shotId",
+      "newClipId",
+      "anchorClipId",
+      "targetTrackId",
+      "audioClipId",
+      "audioTrackId",
+    ])
+      if (typeof o[key] === "string") ids.add(o[key] as string);
+    if (Array.isArray(o.clipIds))
+      for (const id of o.clipIds) ids.add(String(id));
+  }
+  return ids;
+}
+
 /** Operations per commit (the service's batch bound). */
 export const MAX_GESTURE_OPERATIONS = 64;
 

@@ -20,7 +20,7 @@ import {
   updateClips,
 } from "../src/edit-ops.ts";
 import { editorView } from "../src/adapter.ts";
-import { operationsBetween } from "../src/edit-diff.ts";
+import { operationsBetween, touched } from "../src/edit-diff.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -627,6 +627,9 @@ test("a concurrent agent edit: the stale commit conflicts, and the change's oper
     theirs.revision,
     "nothing was overwritten",
   );
+  // The two changes touch different things, so the editor may merge.
+  const theirOps = operationsBetween(head, theirs)!;
+  assert.ok(![...touched(ops)].some((id) => touched(theirOps).has(id)));
   // The same operations, on the current version: both changes are kept.
   applyLocal(theirs, ops);
   const merged = await store.applyOperations(
@@ -655,6 +658,20 @@ test("a concurrent agent edit: the stale commit conflicts, and the change's oper
   } as Project;
   const stale = operationsBetween(merged, retitle)!;
   assert.throws(() => applyLocal(gone, stale));
+  // An edit to the same clip another writer changed is never merged.
+  const mine = operationsBetween(merged, {
+    ...merged,
+    clips: merged.clips.map((c) =>
+      c.id === C1 ? { ...c, startFrame: 90 } : c,
+    ),
+  } as Project)!;
+  const other = operationsBetween(merged, {
+    ...merged,
+    clips: merged.clips.map((c) =>
+      c.id === C1 ? { ...c, title: "Theirs" } : c,
+    ),
+  } as Project)!;
+  assert.ok([...touched(mine)].some((id) => touched(other).has(id)));
 });
 
 test("auto-committed batches and the legacy whole-project save keep creative documents", async () => {

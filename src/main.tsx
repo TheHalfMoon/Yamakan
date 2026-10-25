@@ -36,7 +36,7 @@ import {
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
-import { operationsBetween } from "./edit-diff.ts";
+import { operationsBetween, touched } from "./edit-diff.ts";
 import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
@@ -106,8 +106,25 @@ function App() {
       useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
-  const current = useRef(p);
-  current.current = p;
+  // The latest history, also between renders: every change goes through
+  // putHistory, and commits read their draft here, so a commit chained
+  // behind another never pairs a new head with a stale draft (YU-015).
+  const historyNow = useRef(history);
+  const putHistory = (
+    next: typeof history | ((h: typeof history) => typeof history),
+  ) => {
+    const value =
+      typeof next === "function"
+        ? (next as (h: typeof history) => typeof history)(historyNow.current)
+        : next;
+    historyNow.current = value;
+    setHistory(value);
+  };
+  const current = {
+    get current() {
+      return historyNow.current?.present;
+    },
+  };
   // The service's head of the open project: what the editor's change is
   // made from, and what a commit compares and swaps against (YU-015).
   const head = useRef<Project | null>(null);
@@ -136,7 +153,7 @@ function App() {
   };
   const edit = (fn: (p: Project) => Project) => {
     if (busy) return;
-    setHistory((h) => {
+    putHistory((h) => {
       if (!h) return h;
       try {
         return pushHistoryState(h, ProjectSchema.parse(fn(h.present)));
@@ -149,7 +166,8 @@ function App() {
   const accept = (project: Project) => {
     const opened = ProjectSchema.parse(project);
     head.current = opened;
-    setHistory(createHistoryState(opened));
+    setUnapplied(null);
+    putHistory(createHistoryState(opened));
     setMessage(
       msg("status.opened", { name: project.name, revision: project.revision }),
     );
@@ -206,7 +224,7 @@ function App() {
     }
     if (!operations.length) {
       // A change undone by the next one: nothing is pending.
-      setHistory((h) =>
+      putHistory((h) =>
         h && h.present === draft ? createHistoryState(base) : h,
       );
       return "unchanged";
@@ -238,36 +256,63 @@ function App() {
       const fresh = ProjectSchema.parse(
         await call("yamakan.project.open", { projectId: base.id }),
       );
+      // The editor moved on (another project, a restore): leave it be.
+      if (head.current !== base) return "unchanged";
+      // Merged only when the two changes touch different things: the
+      // other writer's edit to the same clip, track or scene is never
+      // replaced by this one.
+      const theirs = operationsBetween(base, fresh);
+      const disjoint =
+        theirs !== null &&
+        ![...touched(operations)].some((id) => touched(theirs).has(id));
       let merged: Project | null = null;
+      let applies = disjoint;
       try {
-        applyLocal(fresh, operations);
-        merged = ProjectSchema.parse(
-          await send(fresh.revision, crypto.randomUUID()),
-        );
+        if (applies) applyLocal(fresh, operations);
       } catch {
-        merged = null;
+        applies = false;
       }
+      if (applies) {
+        const mergeId = crypto.randomUUID();
+        try {
+          merged = ProjectSchema.parse(
+            await send(fresh.revision, mergeId).catch((e) => {
+              if (e instanceof YamakanError) throw e;
+              return send(fresh.revision, mergeId);
+            }),
+          );
+        } catch (e) {
+          // Refused by the service: kept for download. A lost connection
+          // is an error, not a conflict (the batch may have landed).
+          if (!(e instanceof YamakanError)) throw e;
+          merged = null;
+        }
+      }
+      if (head.current !== base) return "unchanged";
       if (!merged) {
         head.current = fresh;
         setUnapplied(current.current ?? draft);
-        setHistory(createHistoryState(fresh));
+        putHistory(createHistoryState(fresh));
         setMessage(msg("status.conflictReloaded"));
         return "conflict";
       }
       committed = merged;
       setMessage(msg("status.mergedAfterConflict"));
     }
+    // The editor moved on during the commit (another project, a restore,
+    // a reload): the commit stands on the service; the editor is left be.
+    if (head.current !== base) return "unchanged";
     head.current = committed;
     const now = current.current;
     // What was edited during the commit, on top of the committed head.
     const kept = now && now !== draft ? carry(draft, now, committed) : null;
-    setHistory(
+    putHistory(
       kept
         ? { past: [committed], present: kept, future: [] }
         : createHistoryState(committed),
     );
-    if (kept) commitSoon();
-    else if (now === draft)
+    // (What was kept is committed next: the [p] effect schedules it.)
+    if (!kept && now === draft)
       setMessage(msg("status.saved", { revision: committed.revision }));
     return "committed";
   };
@@ -822,7 +867,7 @@ function App() {
                   // revision unchanged (the service carries documents forward
                   // on its next save). A draft based on anything else is left
                   // alone, so its save still meets another writer's changes.
-                  setHistory((h) => {
+                  putHistory((h) => {
                     if (
                       !h ||
                       h.present.id !== projectId ||
@@ -926,7 +971,7 @@ function App() {
                       // undoes only this writer's own steps.
                       if (history.past.length) {
                         window.clearTimeout(pending.current);
-                        setHistory((h) => h && undoHistoryState(h));
+                        putHistory((h) => h && undoHistoryState(h));
                         return;
                       }
                       run(async () => {
@@ -938,7 +983,7 @@ function App() {
                           }),
                         );
                         head.current = undone;
-                        setHistory(createHistoryState(undone));
+                        putHistory(createHistoryState(undone));
                         setMessage(
                           msg("status.saved", { revision: undone.revision }),
                         );
@@ -951,7 +996,7 @@ function App() {
                     disabled={busy}
                     onClick={() => {
                       if (history.future.length) {
-                        setHistory((h) => h && redoHistoryState(h));
+                        putHistory((h) => h && redoHistoryState(h));
                         return;
                       }
                       run(async () => {
@@ -963,7 +1008,7 @@ function App() {
                           }),
                         );
                         head.current = redone;
-                        setHistory(createHistoryState(redone));
+                        putHistory(createHistoryState(redone));
                         setMessage(
                           msg("status.saved", { revision: redone.revision }),
                         );
