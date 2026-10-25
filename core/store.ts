@@ -160,7 +160,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 10;
+export const WORKSPACE_SCHEMA_VERSION = 11;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -310,6 +310,24 @@ CREATE TABLE studio_bitmaps(
 ) STRICT;
 ALTER TABLE creative_documents ADD COLUMN object_digests TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE document_uploads ADD COLUMN object_digests TEXT;
+`;
+// Legacy migrations (YU-012): which legacy source (a workspace Cinema
+// sidecar, by its scene id and the SHA-256 of its bytes) became which
+// project's document, at which revision. Written in the commit's own
+// transaction; a source is assigned to one project only.
+const SCHEMA_V11 = `
+CREATE TABLE legacy_migrations(
+  source_kind TEXT NOT NULL CHECK(source_kind IN ('cinema-sidecar')),
+  source_name TEXT NOT NULL CHECK(length(source_name) BETWEEN 1 AND 64),
+  source_sha256 TEXT NOT NULL CHECK(length(source_sha256) = 64),
+  source_bytes INTEGER NOT NULL CHECK(source_bytes > 0),
+  project_id TEXT NOT NULL,
+  document_id TEXT NOT NULL,
+  content_hash TEXT NOT NULL CHECK(length(content_hash) = 64),
+  revision INTEGER NOT NULL CHECK(revision > 0),
+  migrated_at INTEGER NOT NULL,
+  PRIMARY KEY(source_kind, source_name, source_sha256, project_id, revision)
+) STRICT;
 `;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
@@ -557,6 +575,7 @@ export class ProjectStore {
         SCHEMA_V8,
         SCHEMA_V9,
         SCHEMA_V10,
+        SCHEMA_V11,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
@@ -1114,6 +1133,32 @@ export class ProjectStore {
       );
     return { ref, bytes };
   }
+  /** Recorded migrations of one legacy source (YU-012), oldest first. */
+  legacyMigrations(sourceKind: "cinema-sidecar", sourceName: string) {
+    return (
+      this.#database
+        .prepare(
+          "SELECT source_sha256, source_bytes, project_id, document_id, content_hash, revision, migrated_at FROM legacy_migrations WHERE source_kind = ? AND source_name = ? ORDER BY migrated_at, revision",
+        )
+        .all(sourceKind, sourceName) as {
+        source_sha256: string;
+        source_bytes: number;
+        project_id: string;
+        document_id: string;
+        content_hash: string;
+        revision: number;
+        migrated_at: number;
+      }[]
+    ).map((r) => ({
+      sourceSha256: r.source_sha256,
+      sourceBytes: r.source_bytes,
+      projectId: r.project_id,
+      documentId: r.document_id,
+      contentHash: r.content_hash,
+      revision: r.revision,
+      migratedAt: r.migrated_at,
+    }));
+  }
   /**
    * Commits one creative document as a new project revision (YU-010).
    * `source` is either new bytes, validated here outside the transaction, or
@@ -1137,12 +1182,24 @@ export class ProjectStore {
         | { stagedUploadId: string; contentHash: string };
       // Who commits: a staged upload is consumable only by its uploader.
       principalId?: string;
+      // A legacy source this commit migrates (YU-012), recorded atomically.
+      migration?: {
+        sourceKind: "cinema-sidecar";
+        sourceName: string;
+        sourceSha256: string;
+        sourceBytes: number;
+      };
     },
     receipt?: RequestReceipt,
   ) {
     Id.parse(input.projectId);
     Id.parse(input.documentId);
     const kind = DocumentKind.parse(input.kind);
+    if (input.migration && !("bytes" in input.source))
+      throw new CommandError(
+        "VALIDATION",
+        "A migration commits the legacy bytes themselves.",
+      );
     const validated =
       "bytes" in input.source
         ? validateDocument(kind, input.schemaVersion, input.source.bytes)
@@ -1169,15 +1226,31 @@ export class ProjectStore {
           schemaVersion: input.schemaVersion,
           expectedContentHash: input.expectedContentHash,
           contentHash,
+          migration: input.migration ?? null,
         }),
       ),
     };
+    const migration = input.migration;
     return this.#commit({
       operation: "document.commit",
       projectId: input.projectId,
       expectedRevision: input.expectedRevision,
       receipt: bound,
       check: () => {
+        if (migration) {
+          // Never inferred, never moved: a source belongs to the first
+          // project it was explicitly migrated into.
+          const elsewhere = this.#database
+            .prepare(
+              "SELECT 1 FROM legacy_migrations WHERE source_kind = ? AND source_name = ? AND project_id <> ?",
+            )
+            .get(migration.sourceKind, migration.sourceName, input.projectId);
+          if (elsewhere)
+            throw new CommandError(
+              "VALIDATION",
+              "This legacy scene was already migrated into another project.",
+            );
+        }
         if (validated) return;
         if (stagedId) {
           const upload = this.#database
@@ -1266,7 +1339,7 @@ export class ProjectStore {
             ).run(revision, stagedId);
           }
         : validated
-          ? (db) => {
+          ? (db, revision) => {
               db.prepare(
                 "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
               ).run(
@@ -1278,6 +1351,20 @@ export class ProjectStore {
                 validated.bytes,
                 validated.bytes.length,
               );
+              if (migration)
+                db.prepare(
+                  "INSERT INTO legacy_migrations(source_kind, source_name, source_sha256, source_bytes, project_id, document_id, content_hash, revision, migrated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                ).run(
+                  migration.sourceKind,
+                  migration.sourceName,
+                  migration.sourceSha256,
+                  migration.sourceBytes,
+                  input.projectId,
+                  input.documentId,
+                  validated.hash,
+                  revision,
+                  Date.now(),
+                );
             }
           : undefined,
       next: (current, revision) => ({ ...current(), revision }),

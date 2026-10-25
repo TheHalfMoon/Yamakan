@@ -206,7 +206,7 @@ test("a version 2 workspace with imported media upgrades to the current version 
   store.close();
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; PRAGMA user_version = 2",
+    "DROP TABLE IF EXISTS legacy_migrations; DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; PRAGMA user_version = 2",
   );
   db.close();
   const reopened = new ProjectStore(root);
@@ -231,7 +231,7 @@ test("a version 1 workspace database upgrades step by step to the current versio
   store.close();
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
+    "DROP TABLE IF EXISTS legacy_migrations; DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
   );
   db.close();
   const reopened = new ProjectStore(root);
@@ -425,7 +425,7 @@ test("upgrading to schema v2 registers existing assets (ready, or quarantined if
   await truncate(badFile, 10);
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.exec(
-    "DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
+    "DROP TABLE IF EXISTS legacy_migrations; DROP TABLE IF EXISTS studio_bitmaps; DROP TABLE IF EXISTS document_uploads; DROP TABLE IF EXISTS snapshot_document_refs; DROP TABLE IF EXISTS creative_documents; DROP TABLE IF EXISTS agent_tokens; DROP TABLE IF EXISTS recovery_receipts; DROP TABLE edit_cursor; DROP TABLE edit_history; DROP TABLE attempts; DROP TABLE jobs; DROP TABLE supervisor; DROP TABLE asset_versions; DROP TABLE asset_objects; DROP TABLE pending_work; PRAGMA user_version = 1",
   );
   db.close();
   const reopened = new ProjectStore(root);
