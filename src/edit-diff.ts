@@ -38,7 +38,7 @@ function trackOps(a: Track | undefined, b: Track): Operation[] {
   const changes: Partial<
     Record<"name" | "muted" | "solo" | "targeted", unknown>
   > = {};
-  if (!a || a.name !== b.name) changes.name = b.name;
+  if (a && a.name !== b.name) changes.name = b.name;
   if ((a?.muted ?? false) !== b.muted) changes.muted = b.muted;
   if ((a?.solo ?? false) !== b.solo) changes.solo = b.solo;
   if ((a?.targeted ?? false) !== b.targeted) changes.targeted = b.targeted;
@@ -122,38 +122,136 @@ export function operationsBetween(
     return null;
   }
   if (comparable(a) === comparable(b)) return [];
+  // In place first: the batch an agent or the CLI would send for the same
+  // edit (clip.move, clip.trim, setters), so the stored bytes are the same
+  // whichever client made it. Only when that cannot reproduce the view
+  // exactly (clips trading places would overlap on the way) are changed
+  // clips taken out and put back whole.
+  for (const inPlace of [true, false]) {
+    const ops = plan(a, b, inPlace);
+    if (!ops || ops.length === 0 || ops.length > MAX_GESTURE_OPERATIONS)
+      continue;
+    try {
+      const result = applyBatch(a, ops);
+      if (
+        inPlace
+          ? exact(result) === exact(b)
+          : comparable(result) === comparable(b)
+      )
+        return ops;
+    } catch {
+      // Refused on the way: try the other plan.
+    }
+  }
+  return null;
+}
+
+// What an in-place batch must reproduce: everything, clip order included.
+function exact(p: Canon) {
+  const { revision: _revision, ...rest } = p;
+  return canonicalJson(rest);
+}
+
+// The setters that turn clip `a` into `b` in place, or null when its track,
+// asset or kind changed in a way only a re-add can express.
+function inPlaceOps(a: Clip, b: Clip): Operation[] | null {
+  if (a.assetId !== b.assetId || (a.title === null) !== (b.title === null))
+    return null;
+  const ops: Operation[] = [];
+  const sameLength = a.durationTicks === b.durationTicks;
+  const sameSource = a.sourceStartTicks === b.sourceStartTicks;
+  if (a.trackId !== b.trackId || a.startTicks !== b.startTicks) {
+    if (sameLength && sameSource)
+      ops.push({
+        type: "clip.move",
+        clipId: b.id,
+        ...(a.trackId !== b.trackId ? { trackId: b.trackId } : {}),
+        startTicks: b.startTicks,
+      });
+    else if (a.trackId === b.trackId)
+      ops.push({
+        type: "clip.trim",
+        clipId: b.id,
+        startTicks: b.startTicks,
+        endTicks: b.startTicks + b.durationTicks,
+      });
+    else return null;
+  } else if (!sameLength) {
+    if (!sameSource) return null;
+    ops.push({
+      type: "clip.trim",
+      clipId: b.id,
+      endTicks: b.startTicks + b.durationTicks,
+    });
+  } else if (!sameSource) return null;
+  if (a.title !== b.title && b.title !== null)
+    ops.push({ type: "clip.setTitle", clipId: b.id, title: b.title });
+  if (
+    a.gainDb !== b.gainDb ||
+    a.fadeInTicks !== b.fadeInTicks ||
+    a.fadeOutTicks !== b.fadeOutTicks
+  )
+    ops.push({
+      type: "clip.setAudio",
+      clipId: b.id,
+      gainDb: b.gainDb,
+      fadeInTicks: b.fadeInTicks,
+      fadeOutTicks: b.fadeOutTicks,
+    });
+  if (!same(a.sound, b.sound)) {
+    if (!b.sound) return null;
+    ops.push({ type: "clip.setSound", clipId: b.id, ...b.sound });
+  }
+  const one = { num: 1, den: 1 };
+  if (!same(a.speed ?? one, b.speed ?? one))
+    ops.push({ type: "clip.setSpeed", clipId: b.id, speed: b.speed ?? one });
+  if (!same(a.animation ?? null, b.animation ?? null))
+    ops.push({
+      type: "clip.setAnimation",
+      clipId: b.id,
+      animation: b.animation ?? null,
+    });
+  return ops;
+}
+
+function plan(a: Canon, b: Canon, inPlace: boolean): Operation[] | null {
   const aClips = new Map(a.clips.map((c) => [c.id, c]));
   const bClips = new Map(b.clips.map((c) => [c.id, c]));
   const aTracks = new Map(a.tracks.map((t) => [t.id, t]));
   const bTracks = new Map(b.tracks.map((t) => [t.id, t]));
   const aScenes = new Map(a.scenes.map((s) => [s.id, s]));
   const ops: Operation[] = [];
-  // Tracks unlocked by this change are unlocked first; new tracks exist
-  // before clips land on them.
-  for (const t of b.tracks) {
-    const before = aTracks.get(t.id);
-    if (before?.locked && !t.locked)
+  // Tracks unlocked by this change (or removed while locked) are unlocked
+  // first; new tracks exist before clips land on them.
+  for (const t of a.tracks)
+    if (t.locked && (!bTracks.has(t.id) || !bTracks.get(t.id)!.locked))
       ops.push({ type: "track.update", trackId: t.id, locked: false });
-    if (!before)
+  for (const t of b.tracks)
+    if (!aTracks.has(t.id))
       ops.push({
         type: "track.add",
         trackId: t.id,
         name: t.name,
         kind: t.kind,
       });
-  }
-  // Changed clips are taken out and put back whole (no transient overlap
-  // between clips that trade places); removed ones go for good.
   const changed = b.clips.filter((c) => {
     const before = aClips.get(c.id);
     return before && !same(before, c);
   });
+  const readded = new Set<string>();
   for (const c of a.clips)
-    if (!bClips.has(c.id) || changed.some((x) => x.id === c.id))
+    if (!bClips.has(c.id)) ops.push({ type: "clip.remove", clipId: c.id });
+  for (const c of changed) {
+    const set = inPlace ? inPlaceOps(aClips.get(c.id)!, c) : null;
+    if (set) ops.push(...set);
+    else if (inPlace) return null;
+    else {
       ops.push({ type: "clip.remove", clipId: c.id });
+      readded.add(c.id);
+    }
+  }
   for (const c of b.clips)
-    if (!aClips.has(c.id) || changed.some((x) => x.id === c.id))
-      ops.push(...clipOps(a, c));
+    if (!aClips.has(c.id) || readded.has(c.id)) ops.push(...clipOps(a, c));
   // Scenes and shots, including shot membership a clip.remove cleared.
   for (const s of a.scenes)
     if (!b.scenes.some((x) => x.id === s.id))
@@ -178,7 +276,7 @@ export function operationsBetween(
       else if (
         prior.name !== shot.name ||
         !same(prior.clipIds, shot.clipIds) ||
-        shot.clipIds.some((id) => changed.some((c) => c.id === id))
+        shot.clipIds.some((id) => readded.has(id))
       )
         ops.push({
           type: "shot.update",
@@ -195,10 +293,5 @@ export function operationsBetween(
   for (const t of b.tracks)
     if (t.locked && !aTracks.get(t.id)?.locked)
       ops.push({ type: "track.update", trackId: t.id, locked: true });
-  if (ops.length === 0 || ops.length > MAX_GESTURE_OPERATIONS) return null;
-  try {
-    return comparable(applyBatch(a, ops)) === comparable(b) ? ops : null;
-  } catch {
-    return null;
-  }
+  return ops;
 }

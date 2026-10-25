@@ -471,3 +471,234 @@ test("undo after a restart undoes only the writer's own step", async () => {
     (e: unknown) => e instanceof CommandError && e.code === "REVISION_CONFLICT",
   );
 });
+
+test("the editor and the CLI/MCP path store identical canonical bytes for the same edits", async () => {
+  const { store } = await workspace();
+  const { execute } = await import("../core/command/registry.ts");
+  const ctx = {
+    store,
+    queue: {} as never,
+    principal: {
+      id: "local-client",
+      scopes: new Set(["project:write", "project:read"]),
+    },
+  } as Parameters<typeof execute>[0];
+  // Two projects with the same content: one edited by the editor's path,
+  // one by commands.
+  const setup = async () => {
+    const p = await store.create("Parity");
+    return store.applyOperations(
+      p.id,
+      p.revision,
+      [
+        { type: "track.add", trackId: VIDEO, name: "Titles", kind: "video" },
+        {
+          type: "clip.add",
+          clipId: C1,
+          trackId: VIDEO,
+          assetId: null,
+          title: "One",
+          startTicks: 0,
+          durationTicks: 30 * 23_520_000,
+          sourceStartTicks: 0,
+        },
+        {
+          type: "clip.add",
+          clipId: C2,
+          trackId: VIDEO,
+          assetId: null,
+          title: "Two",
+          startTicks: 60 * 23_520_000,
+          durationTicks: 30 * 23_520_000,
+          sourceStartTicks: 0,
+        },
+      ],
+      "browser-ui",
+    );
+  };
+  let ui = await setup();
+  let cli = await setup();
+  // Each project's default tracks have their own ids: compared by position.
+  const bytes = (p: Project) => {
+    const c = fromEditView(p);
+    const at = new Map(c.tracks.map((t, i) => [t.id, `track-${i}`]));
+    return canonicalJson({
+      ...c,
+      id: "-",
+      name: "-",
+      revision: 0,
+      tracks: c.tracks.map((t) => ({ ...t, id: at.get(t.id) })),
+      clips: c.clips.map((x) => ({ ...x, trackId: at.get(x.trackId) })),
+    });
+  };
+  assert.equal(bytes(ui), bytes(cli));
+  const view = editorView(ui);
+  const tl = (id: string) => view.clips.find((c) => c.id === id)!;
+  const edits: [Project, unknown[]][] = [
+    [
+      updateClips(ui, [{ ...tl(C1), start: 4, end: 5 }]),
+      [{ type: "clip.move", clipId: C1, startTicks: 120 * 23_520_000 }],
+    ],
+  ];
+  for (const [draft, commands] of edits) {
+    const ops = operationsBetween(ui, draft)!;
+    ui = await store.applyOperations(ui.id, ui.revision, ops, "browser-ui");
+    cli = (
+      await execute(ctx, "yamakan.project.applyBatch", {
+        projectId: cli.id,
+        expectedRevision: cli.revision,
+        operations: commands,
+      })
+    ).result as Project;
+    assert.equal(bytes(ui), bytes(cli), "same stored bytes after a drag");
+  }
+  // A trim of the end and a retitle, then the same through commands.
+  const v2 = editorView(ui);
+  const trimmed = updateClips(ui, [
+    { ...v2.clips.find((c) => c.id === C2)!, end: 2.5 },
+  ]);
+  const retitled = {
+    ...trimmed,
+    clips: trimmed.clips.map((c) =>
+      c.id === C2 ? { ...c, title: "Deux" } : c,
+    ),
+  } as Project;
+  ui = await store.applyOperations(
+    ui.id,
+    ui.revision,
+    operationsBetween(ui, retitled)!,
+    "browser-ui",
+  );
+  cli = (
+    await execute(ctx, "yamakan.project.applyBatch", {
+      projectId: cli.id,
+      expectedRevision: cli.revision,
+      operations: [
+        { type: "clip.trim", clipId: C2, endTicks: 75 * 23_520_000 },
+        { type: "clip.setTitle", clipId: C2, title: "Deux" },
+      ],
+    })
+  ).result as Project;
+  assert.equal(
+    bytes(ui),
+    bytes(cli),
+    "same stored bytes after a trim and a retitle",
+  );
+});
+
+test("a concurrent agent edit: the stale commit conflicts, and the change's operations still apply to the current version", async () => {
+  const { store, project } = await workspace();
+  const head = await store.applyOperations(
+    project.id,
+    project.revision,
+    [{ type: "track.add", trackId: VIDEO, name: "Titles", kind: "video" }],
+    "browser-ui",
+  );
+  // The editor's change, made on `head`.
+  const draft = {
+    ...head,
+    clips: [
+      ...head.clips,
+      {
+        id: C1,
+        trackId: VIDEO,
+        assetId: null,
+        startFrame: 0,
+        durationFrames: 30,
+        sourceFrame: 0,
+        title: "Mine",
+      },
+    ],
+  } as Project;
+  const ops = operationsBetween(head, draft)!;
+  // An agent commits first, elsewhere in the project.
+  const theirs = await store.applyOperations(
+    head.id,
+    head.revision,
+    [{ type: "track.add", trackId: AUDIO, name: "Theirs", kind: "audio" }],
+    "agent:34343434-3434-4343-8343-343434343434",
+  );
+  await assert.rejects(
+    store.applyOperations(head.id, head.revision, ops, "browser-ui"),
+    (e: unknown) => e instanceof CommandError && e.code === "REVISION_CONFLICT",
+  );
+  assert.equal(
+    (await store.load(head.id)).revision,
+    theirs.revision,
+    "nothing was overwritten",
+  );
+  // The same operations, on the current version: both changes are kept.
+  applyLocal(theirs, ops);
+  const merged = await store.applyOperations(
+    head.id,
+    theirs.revision,
+    ops,
+    "browser-ui",
+  );
+  assert.ok(merged.tracks.some((t) => t.name === "Theirs"));
+  assert.ok(merged.clips.some((c) => c.title === "Mine"));
+  // A change that no longer applies (the agent removed its track) is refused.
+  const gone = await store.applyOperations(
+    head.id,
+    merged.revision,
+    [
+      { type: "clip.remove", clipId: C1 },
+      { type: "track.remove", trackId: VIDEO },
+    ],
+    "agent:34343434-3434-4343-8343-343434343434",
+  );
+  const retitle = {
+    ...merged,
+    clips: merged.clips.map((c) =>
+      c.id === C1 ? { ...c, title: "Again" } : c,
+    ),
+  } as Project;
+  const stale = operationsBetween(merged, retitle)!;
+  assert.throws(() => applyLocal(gone, stale));
+});
+
+test("auto-committed batches and the legacy whole-project save keep creative documents", async () => {
+  const { store, project } = await workspace();
+  const { createEmptyStudioDocument } = await import("../core/studio.ts");
+  const studio = createEmptyStudioDocument({
+    id: crypto.randomUUID(),
+    name: "Canvas",
+    width: 64,
+    height: 64,
+  });
+  const head = await store.commitDocument({
+    projectId: project.id,
+    expectedRevision: project.revision,
+    documentId: studio.id,
+    kind: "studio",
+    schemaVersion: 1,
+    expectedContentHash: null,
+    source: { bytes: Buffer.from(JSON.stringify(studio)) },
+  });
+  const docs = store.listDocuments(project.id);
+  assert.equal(docs.length, 1);
+  const draft = {
+    ...head,
+    tracks: [
+      ...head.tracks,
+      { id: VIDEO, name: "New", kind: "video", muted: false, locked: false },
+    ],
+  } as Project;
+  const after = await store.applyOperations(
+    head.id,
+    head.revision,
+    operationsBetween(head, draft)!,
+    "browser-ui",
+  );
+  assert.deepEqual(
+    store.listDocuments(project.id),
+    docs,
+    "a batch carries documents forward",
+  );
+  await store.save({ ...after, name: "Renamed" }, after.revision);
+  assert.deepEqual(
+    store.listDocuments(project.id),
+    docs,
+    "the whole-project save carries them too",
+  );
+});

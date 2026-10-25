@@ -20,7 +20,15 @@ const en = {
   "status.opened": "Opened {name}, revision {revision}.",
   "status.saved": "Saved revision {revision}.",
   "status.conflictReloaded":
-    "This project changed elsewhere, so your last change was not applied. The current version is shown.",
+    "This project changed elsewhere and your last change no longer applies to it. The current version is shown; your change can be downloaded.",
+  "status.mergedAfterConflict":
+    "This project changed elsewhere; your change was applied to the current version.",
+  "status.draftNeedsSave":
+    "This change is kept as a draft: press Save to save the whole project.",
+  "conflict.unapplied":
+    "Your last change was not applied because the project changed elsewhere.",
+  "conflict.download": "Download my change",
+  "conflict.dismiss": "Dismiss",
   "error.operation": "Operation failed.",
   "error.edit": "Invalid edit.",
   "error.assetMissing": "Asset missing.",
@@ -198,7 +206,15 @@ const ar: Record<MessageKey, string> = {
   "status.opened": "فُتح {name}، المراجعة {revision}.",
   "status.saved": "حُفظت المراجعة {revision}.",
   "status.conflictReloaded":
-    "تغيّر هذا المشروع في مكان آخر، فلم يُطبَّق تعديلك الأخير. تُعرض النسخة الحالية.",
+    "تغيّر هذا المشروع في مكان آخر ولم يعد تعديلك الأخير ينطبق عليه. تُعرض النسخة الحالية، ويمكن تنزيل تعديلك.",
+  "status.mergedAfterConflict":
+    "تغيّر هذا المشروع في مكان آخر؛ طُبِّق تعديلك على النسخة الحالية.",
+  "status.draftNeedsSave":
+    "يُحتفظ بهذا التعديل كمسودة: اضغط حفظ لحفظ المشروع كاملًا.",
+  "conflict.unapplied":
+    "لم يُطبَّق تعديلك الأخير لأن المشروع تغيّر في مكان آخر.",
+  "conflict.download": "تنزيل تعديلي",
+  "conflict.dismiss": "إغلاق",
   "error.operation": "تعذّر إتمام العملية.",
   "error.edit": "تعديل غير صالح.",
   "error.assetMissing": "الوسيط غير موجود.",

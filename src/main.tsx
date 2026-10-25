@@ -28,6 +28,7 @@ import {
 } from "./i18n.ts";
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
+  applyLocal,
   deleteClip,
   FRAME_TICKS,
   setClipAnimation,
@@ -95,6 +96,8 @@ function App() {
     [tools, setTools] = useState(false),
     [catalog, setCatalog] = useState<string | null>(null),
     [downloadedDraft, setDownloadedDraft] = useState<Project | null>(null),
+    // A change a conflict kept from being applied, offered for download.
+    [unapplied, setUnapplied] = useState<Project | null>(null),
     [revisionHistory, setRevisionHistory] = useState<ProjectHistory | null>(
       null,
     ),
@@ -159,77 +162,152 @@ function App() {
   // Commits the editor's pending change as one batch of the typed
   // operations agents and tools use, compare-and-swap on the head it was
   // made from (YU-015). A change those operations cannot express exactly
-  // stays a draft, for an explicit full save.
-  const commit = async (): Promise<
-    "unchanged" | "committed" | "draft" | "conflict"
-  > => {
+  // stays a draft, for an explicit full save. Commits run one at a time;
+  // editing goes on meanwhile, and what was edited during a commit is kept
+  // on top of it and committed next.
+  type Outcome = "unchanged" | "committed" | "draft" | "conflict";
+  const committing = useRef<Promise<Outcome> | null>(null);
+  const commit = (): Promise<Outcome> => {
+    if (committing.current)
+      return committing.current.then(
+        () => commit(),
+        () => commit(),
+      );
+    const work = commitOnce();
+    committing.current = work;
+    void work
+      .finally(() => {
+        if (committing.current === work) committing.current = null;
+      })
+      .catch(() => {});
+    return work;
+  };
+  // Edits made on `from` (since it was committed), carried onto `onto`; null
+  // when they do not apply there.
+  const carry = (from: Project, to: Project, onto: Project) => {
+    if (from === to) return onto;
+    const later = operationsBetween(from, to);
+    if (!later) return null;
+    try {
+      return later.length ? applyLocal(onto, later) : onto;
+    } catch {
+      return null;
+    }
+  };
+  const commitOnce = async (): Promise<Outcome> => {
     const base = head.current,
       draft = current.current;
     if (!base || !draft || base.id !== draft.id || base === draft)
       return "unchanged";
     const operations = operationsBetween(base, draft);
-    if (operations === null) return "draft";
-    if (!operations.length) return "unchanged";
+    if (operations === null) {
+      setMessage(msg("status.draftNeedsSave"));
+      return "draft";
+    }
+    if (!operations.length) {
+      // A change undone by the next one: nothing is pending.
+      setHistory((h) =>
+        h && h.present === draft ? createHistoryState(base) : h,
+      );
+      return "unchanged";
+    }
+    const send = (revision: number, requestId: string) =>
+      client.call(
+        "yamakan.project.applyBatch",
+        { projectId: base.id, expectedRevision: revision, operations },
+        requestId,
+      );
+    let committed: Project;
     try {
-      const committed = ProjectSchema.parse(
-        await call("yamakan.project.applyBatch", {
-          projectId: base.id,
-          expectedRevision: base.revision,
-          operations,
+      const requestId = crypto.randomUUID();
+      // A lost response is asked again under the same request id, which
+      // the service answers with the original result.
+      committed = ProjectSchema.parse(
+        await send(base.revision, requestId).catch((e) => {
+          if (e instanceof YamakanError) throw e;
+          return send(base.revision, requestId);
         }),
       );
-      head.current = committed;
-      // Edits wait while a commit is in flight (busy), so the draft is
-      // exactly what was committed.
-      setHistory(createHistoryState(committed));
-      setMessage(msg("status.saved", { revision: committed.revision }));
-      return "committed";
     } catch (e) {
-      // Someone else changed the project: the current version is shown,
-      // never overwritten.
-      if (e instanceof YamakanError && e.code === "REVISION_CONFLICT") {
-        const fresh = ProjectSchema.parse(
-          await call("yamakan.project.open", { projectId: base.id }),
+      if (!(e instanceof YamakanError && e.code === "REVISION_CONFLICT"))
+        throw e;
+      // Another writer moved the project. The change is applied to the
+      // current version when its operations still apply there; otherwise
+      // the current version is shown and the change is kept for download.
+      // Nothing is overwritten.
+      const fresh = ProjectSchema.parse(
+        await call("yamakan.project.open", { projectId: base.id }),
+      );
+      let merged: Project | null = null;
+      try {
+        applyLocal(fresh, operations);
+        merged = ProjectSchema.parse(
+          await send(fresh.revision, crypto.randomUUID()),
         );
+      } catch {
+        merged = null;
+      }
+      if (!merged) {
         head.current = fresh;
+        setUnapplied(current.current ?? draft);
         setHistory(createHistoryState(fresh));
         setMessage(msg("status.conflictReloaded"));
         return "conflict";
       }
-      throw e;
+      committed = merged;
+      setMessage(msg("status.mergedAfterConflict"));
     }
+    head.current = committed;
+    const now = current.current;
+    // What was edited during the commit, on top of the committed head.
+    const kept = now && now !== draft ? carry(draft, now, committed) : null;
+    setHistory(
+      kept
+        ? { past: [committed], present: kept, future: [] }
+        : createHistoryState(committed),
+    );
+    if (kept) commitSoon();
+    else if (now === draft)
+      setMessage(msg("status.saved", { revision: committed.revision }));
+    return "committed";
   };
   // A finished gesture is committed once the pointer is released and the
   // editor has been still for a moment, so a drag or a slider becomes one
   // revision, not one per movement.
   const held = useRef(false);
-  const busyNow = useRef(busy);
-  busyNow.current = busy;
   const pending = useRef<number | undefined>(undefined);
   const commitSoon = () => {
     window.clearTimeout(pending.current);
     pending.current = window.setTimeout(() => {
-      if (held.current || busyNow.current) return commitSoon();
+      if (held.current) return commitSoon();
       if (!head.current || current.current === head.current) return;
-      void run(async () => {
-        await commit();
-      });
+      commit().catch((e) =>
+        setMessage(e instanceof Error ? e.message : t("error.operation")),
+      );
     }, 400);
   };
   useEffect(() => {
     const down = () => {
       held.current = true;
     };
+    // A release outside the window (or leaving it) also ends the gesture.
     const up = () => {
       held.current = false;
+    };
+    const hidden = () => {
+      if (document.visibilityState === "hidden") held.current = false;
     };
     window.addEventListener("pointerdown", down, true);
     window.addEventListener("pointerup", up, true);
     window.addEventListener("pointercancel", up, true);
+    window.addEventListener("blur", up);
+    document.addEventListener("visibilitychange", hidden);
     return () => {
       window.removeEventListener("pointerdown", down, true);
       window.removeEventListener("pointerup", up, true);
       window.removeEventListener("pointercancel", up, true);
+      window.removeEventListener("blur", up);
+      document.removeEventListener("visibilitychange", hidden);
       window.clearTimeout(pending.current);
     };
   }, []);
@@ -752,14 +830,18 @@ function App() {
                     )
                       return h;
                     const at = (x: Project) => ({ ...x, revision });
-                    if (
+                    const present = at(h.present);
+                    // The head moves with it (the same object when nothing
+                    // is pending, so no commit follows).
+                    if (head.current === h.present) head.current = present;
+                    else if (
                       head.current?.id === projectId &&
                       head.current.revision === from
                     )
                       head.current = at(head.current);
                     return {
                       past: h.past.map(at),
-                      present: at(h.present),
+                      present,
                       future: h.future.map(at),
                     };
                   })
@@ -803,6 +885,30 @@ function App() {
             </section>
           ) : p && view ? (
             <>
+              {unapplied && unapplied.id === p.id ? (
+                <div className="notice" role="alert">
+                  <p>{t("conflict.unapplied")}</p>
+                  <button
+                    onClick={() => {
+                      const url = URL.createObjectURL(
+                        new Blob([JSON.stringify(unapplied, null, 2)], {
+                          type: "application/json",
+                        }),
+                      );
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `yamakan-unapplied-${unapplied.id}.json`;
+                      link.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    {t("conflict.download")}
+                  </button>
+                  <button onClick={() => setUnapplied(null)}>
+                    {t("conflict.dismiss")}
+                  </button>
+                </div>
+              ) : null}
               <div className="toolbar">
                 <div>
                   <h1 dir="auto">{p.name}</h1>
