@@ -1,0 +1,134 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "branch": "feat/yu-000-001-baseline",
+  "implementationCommit": "7b6640facc74d09d6109a4f216257cd88cb45842",
+  "baseMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "environment": {
+    "os": "Windows_NT 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "8.1.1 (gyan.dev full build)",
+    "edge": "installed Microsoft Edge (Playwright channel msedge)"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context ps-review light panel",
+      "judge": "session model subagent (same model family as author; not an independent security reviewer)",
+      "findings": {
+        "mustFix": 4,
+        "applied": 4
+      },
+      "result": "must-fix resolved in 7b6640f"
+    },
+    {
+      "kind": "d1 advisory",
+      "model": "d1-omni-600M-Q8_0.gguf (local CPU)",
+      "securityRisk": "low",
+      "probability": 0.62,
+      "confidence": 0.43,
+      "needsReview": 0.06,
+      "note": "advisory only; not a gate"
+    },
+    {
+      "kind": "Alibaba OCR",
+      "version": "1.13.3",
+      "preview": "local file selection only",
+      "fullReview": "BLOCKED: configured provider is cloud (ChatGPT); no local generative backend"
+    }
+  ],
+  "securityReview": "Not triggered beyond light bar: evidence tooling only, no production boundary change. No independent human security review claimed.",
+  "state": "IMPLEMENTED",
+  "mergedPr": null,
+  "postMergeVerification": null,
+  "task": "YU-001",
+  "objective": "Reproduce dependency/native/browser baseline in an isolated workspace",
+  "evidence": "docs/evidence/ultimate/environment.json",
+  "runs": [
+    {
+      "run": 1,
+      "result": "RECORDED_WITH_FAILURES",
+      "unitTests": "266/380 pass, 112 fail, 1 file hung 20 min (killed)",
+      "e2e": "FAILED (media import timeout)",
+      "cause": "worker-tools junction + shared node_modules; capture script missing import"
+    },
+    {
+      "run": 2,
+      "result": "FAILED (1 test)",
+      "unitTests": "382/385 pass, 1 fail (jassub pin missing from stale shared node_modules)",
+      "e2e": "PASSED"
+    },
+    {
+      "run": 3,
+      "result": "RECORDED pass",
+      "note": "after npm ci; before review hardening"
+    },
+    {
+      "run": 4,
+      "result": "RECORDED pass=true",
+      "unitTests": "393/395 pass, 0 fail, 2 skipped (POSIX-only)",
+      "e2e": "PASSED",
+      "durationSeconds": 218
+    }
+  ],
+  "results": {
+    "status": "RECORDED",
+    "pass": true,
+    "scripts": [
+      "typecheck:PASSED",
+      "lint:PASSED",
+      "format:check:PASSED",
+      "test:PASSED",
+      "build:PASSED",
+      "provenance:check:PASSED",
+      "brand:check:PASSED",
+      "test:e2e:PASSED"
+    ],
+    "lockfile": {
+      "checked": 98,
+      "drift": 0
+    },
+    "install": {
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "lifecycleScriptsDeclared": ["fsevents@2.3.3", "lfa-ponyfill@1.1.1"],
+      "lifecycleScriptsRun": []
+    },
+    "native": [
+      {
+        "path": "native/procd/target/release/yamakan-procd.exe",
+        "present": true,
+        "sha256": "8a04334276ab3ab0c5d87f4576f1c837fbba074cf87eed25be3a8da28bc8b51d"
+      },
+      {
+        "path": "native/procd/target/release/yamakan-acl.exe",
+        "present": true,
+        "sha256": "9e766f0c9c865017c6304b017e45431cef0d620fc180c4f27cad3437c2639efe"
+      },
+      {
+        "path": "native/procd/target/release/worker-probe.exe",
+        "present": true,
+        "sha256": "3ae2d88e2985dd6f97cabf55abc8507c57babdd3fbd1120be667434bbcf537ed"
+      }
+    ],
+    "freeBytes": 8371302400
+  },
+  "tests": {
+    "file": "tests/ultimate-environment.test.ts",
+    "includes": [
+      "missing dependency/helper/FFmpeg BLOCKED",
+      "redirected worker tools BLOCKED",
+      "lockfile drift",
+      "failures and skips retained",
+      "subset INCOMPLETE",
+      "claimed PASS re-derived",
+      "path redaction"
+    ]
+  },
+  "limitations": [
+    "One Windows 11 machine, developer profile; Profile A, second account and constrained volume remain external gates",
+    "TesterArmy e2e not yet integrated; existing Edge E2E used"
+  ]
+}

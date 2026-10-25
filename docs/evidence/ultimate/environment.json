@@ -1,0 +1,159 @@
+{
+  "format": "yamakan.ultimate-environment/v1",
+  "status": "RECORDED",
+  "pass": true,
+  "blockers": [],
+  "scripts": [
+    {
+      "name": "typecheck",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/typecheck.log"
+    },
+    {
+      "name": "lint",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/lint.log"
+    },
+    {
+      "name": "format:check",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/format-check.log"
+    },
+    {
+      "name": "test",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/test.log"
+    },
+    {
+      "name": "build",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/build.log"
+    },
+    {
+      "name": "provenance:check",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/provenance-check.log"
+    },
+    {
+      "name": "brand:check",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/brand-check.log"
+    },
+    {
+      "name": "test:e2e",
+      "status": "PASSED",
+      "pass": true,
+      "exitCode": 0,
+      "reason": null,
+      "logPath": "work/ultimate/logs/test-e2e.log"
+    }
+  ],
+  "missingScripts": [],
+  "node": {
+    "version": "v24.19.0",
+    "engine": ">=24.11.0",
+    "satisfiesEngine": true
+  },
+  "dependency": {
+    "present": true,
+    "name": "lockfile-pinned node_modules",
+    "checked": 98,
+    "drift": []
+  },
+  "helper": {
+    "present": true,
+    "path": null
+  },
+  "ffmpeg": {
+    "present": true,
+    "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffmpeg.exe",
+    "sha256": "09948d4cdd0650da6ff5a87577469f2a218dc2615ae379f8f734d24c49de0f73",
+    "version": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers"
+  },
+  "ffprobe": {
+    "present": true,
+    "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffprobe.exe",
+    "sha256": "a6618e99bb58869ded3c6f37b53aa1a8d701c3591dbb7b5b317d47369c112be2",
+    "version": "ffprobe version 8.1.1-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers"
+  },
+  "disk": {
+    "freeBytes": 8371302400,
+    "reserveBytes": 2147483648,
+    "root": "<repo>"
+  },
+  "workerTools": {
+    "checked": true,
+    "exists": true,
+    "redirected": false
+  },
+  "capturedAt": "2026-10-25T06:41:37.325Z",
+  "candidate": {
+    "sha": "7b6640facc74d09d6109a4f216257cd88cb45842",
+    "tree": "78509bf023e2b5568d1853d3b5ff2acda5ede0d3",
+    "dirty": true,
+    "dirtyStatus": "?? docs/evidence/ultimate/"
+  },
+  "runtime": {
+    "os": "Windows_NT 10.0.26300",
+    "node": "v24.19.0",
+    "cwd": "<repo>",
+    "isolatedWorkspace": "<repo>"
+  },
+  "native": [
+    {
+      "path": "native/procd/target/release/yamakan-procd.exe",
+      "present": true,
+      "sha256": "8a04334276ab3ab0c5d87f4576f1c837fbba074cf87eed25be3a8da28bc8b51d"
+    },
+    {
+      "path": "native/procd/target/release/yamakan-acl.exe",
+      "present": true,
+      "sha256": "9e766f0c9c865017c6304b017e45431cef0d620fc180c4f27cad3437c2639efe"
+    },
+    {
+      "path": "native/procd/target/release/worker-probe.exe",
+      "present": true,
+      "sha256": "3ae2d88e2985dd6f97cabf55abc8507c57babdd3fbd1120be667434bbcf537ed"
+    }
+  ],
+  "nativeBuild": {
+    "attempted": true,
+    "exitCode": 0,
+    "logPath": "work/ultimate/logs/build-native.log"
+  },
+  "install": {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "lifecycleScriptsDeclared": [
+      "fsevents@2.3.3",
+      "lfa-ponyfill@1.1.1"
+    ],
+    "lifecycleScriptsRun": []
+  },
+  "notes": [
+    "Failures and skips are retained with reasons.",
+    "Missing helper, FFmpeg or dependency cannot produce PASS.",
+    "No weights, providers or paid services were invoked.",
+    "Local paths are redacted: <repo> is the isolated worktree, ~ the user profile."
+  ]
+}

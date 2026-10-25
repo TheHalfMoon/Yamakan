@@ -1,0 +1,890 @@
+{
+  "format": "yamakan.ultimate-baseline/v1",
+  "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "candidateSha": "7b6640facc74d09d6109a4f216257cd88cb45842",
+  "flags": {
+    "ENGINE_ENABLED": false,
+    "ROUTER_PROVIDERS_ENABLED": false,
+    "JASSUB_ENABLED": false,
+    "STUDIO_ENABLED": true,
+    "QUALITY_LAB_ENABLED": true,
+    "CINEMA_ENABLED": true,
+    "DIRECTOR_ENABLED": true,
+    "ANIMATION_ENABLED": true
+  },
+  "enginesDisabled": true,
+  "currentHeadPass": false,
+  "mismatches": [
+    {
+      "code": "NARRATIVE_HEAD_MISMATCH",
+      "source": "specs/CURRENT.md",
+      "sha": "e8bb8dd20fdbb87c520c948222cd44abffb5ed0d",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/av-sync.json",
+      "boundCommit": "37110afe5551a4719ba41baa984e7c2de291f420",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/cinema-activation.json",
+      "boundCommit": "7472a06858308def0638c6daf38a2cc72a718a86",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/director-activation.json",
+      "boundCommit": "7472a06858308def0638c6daf38a2cc72a718a86",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/large-import.json",
+      "boundCommit": "ee4745316da7ccbe017e8b0c595d8a9d48d5f6dc",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/p10-02-animation-e2e.json",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/p10-05-quality-lab.json",
+      "boundCommit": "65451bd06fde091a54efea9c5db5acd387746735",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/p10-08-bundle-r6.json",
+      "boundCommit": "d917ac297e20748916ba0c67e0f40a700167d93b",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/p10-08-unsigned-rc.json",
+      "boundCommit": "d917ac297e20748916ba0c67e0f40a700167d93b",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/p10-reviews-tooling.json",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/playback.json",
+      "boundCommit": "5623a1ea9445a6008e432faa619720fb1a117c5a",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q1-has-audio.json",
+      "boundCommit": "8349152b5f0c457468736d555b8f69735530af78",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q10-studio-chunk-partial.json",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q10-studio.json",
+      "boundCommit": "fbf14141f501ddf1edb5f4e1d37d281f7d922aae",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q11-jassub-eng.json",
+      "boundCommit": "ec7cb6005895541bc2c19d248bd02ccbfec10ccd",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q11-jassub-investigation/diagnose/report.json"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q13-animation-compile.json",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q14-animation-params.json",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q15-user-presence.json",
+      "boundCommit": "09539bf5243b8fcdbf800a1275af5c3af1940462",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q4-flick-ticks.json"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q5-mediabunny.json",
+      "boundCommit": "cf8897f17475412af1963f7d56a43aca38f10519",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q6-atempo.json",
+      "boundCommit": "cf8897f17475412af1963f7d56a43aca38f10519",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q7a-studio-tsc-proper.json"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q7a-studio-tsc.json"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q7a-webv2-error-classification.json"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q7b-studio-seam.json"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q8-q10-studio-status.json",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q8-studio-stroke.json",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/q9-exclusions.json"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/q9-studio-inherited.json",
+      "boundCommit": "72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/resource-policy.json",
+      "boundCommit": "ee4745316da7ccbe017e8b0c595d8a9d48d5f6dc",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/studio-activation.json",
+      "boundCommit": "16f8154a1d0b9dd50350a16498878b2f8f70df92",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/t10-release.json",
+      "boundCommit": "5c6658d589ac36bd08725fef9233872865a7030e",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/t4-large-import.json",
+      "boundCommit": "66b3c0e8e004e7217affb29b7f35c9bc4b3902c8",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/t7-typography.json",
+      "boundCommit": "be95f1c5edfa3ff81ea48d638f5aa4eac5cec114",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/t8-preview.json",
+      "boundCommit": "c958b972c606108b2968af9e02384906d412316d",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/w11-import-ledger.json"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/w18-loudnorm.json"
+    },
+    {
+      "code": "UNBOUND_RECEIPT",
+      "path": "docs/evidence/qualification/w7-export-ffprobe.json"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/w7-export-hashes.json",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/w7-release-evidence.json",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/w7-session-transcript.json",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/w7-title-frame-hashes.json",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    {
+      "code": "HISTORICAL_RECEIPT_HEAD",
+      "path": "docs/evidence/qualification/windows-product-pass.json",
+      "boundCommit": "fd9a51a2b62ad990533ed1fba355c2150bcf8c75",
+      "liveMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    }
+  ],
+  "violations": [],
+  "preservedReceipts": [
+    {
+      "path": "docs/evidence/qualification/av-sync.json",
+      "sha256": "04458b0279bcb4e564654205c283ca5b977c1a3fb428d1359d10e24a0d464dc3",
+      "boundCommit": "37110afe5551a4719ba41baa984e7c2de291f420",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/cinema-activation.json",
+      "sha256": "c8538c298e3c8e575f454b0daca25566e86c4bef7ca615d1a37b14db1607e32e",
+      "boundCommit": "7472a06858308def0638c6daf38a2cc72a718a86",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/director-activation.json",
+      "sha256": "0f1d9f8b2aef485adb87d77d358756774d4113af0417e4b5e7cee7b5f2573b8d",
+      "boundCommit": "7472a06858308def0638c6daf38a2cc72a718a86",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/large-import.json",
+      "sha256": "a33e9ddf4dd55709294a645bbb6c12cdecf9c9301ae938668eb745b04a05dad0",
+      "boundCommit": "ee4745316da7ccbe017e8b0c595d8a9d48d5f6dc",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/p10-02-animation-e2e.json",
+      "sha256": "8fab89fe9acfb90cc18c3f8c7f8f428eb55aaefcd591549aca55336d326e2764",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/p10-05-quality-lab.json",
+      "sha256": "aec05d77f7e302fb7e9d8bf8118473092e41209d546489ebf054b31beb32e7f5",
+      "boundCommit": "65451bd06fde091a54efea9c5db5acd387746735",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/p10-08-bundle-r6.json",
+      "sha256": "fb39368105b24cebba207513ae3abddfe7caf660e303b96a311f0ca9227070c2",
+      "boundCommit": "d917ac297e20748916ba0c67e0f40a700167d93b",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/p10-08-unsigned-rc.json",
+      "sha256": "75e127292097a9858f89b86ee5f52f7059585d9cfd820a40e5e86e697e8e94ba",
+      "boundCommit": "d917ac297e20748916ba0c67e0f40a700167d93b",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/p10-reviews-tooling.json",
+      "sha256": "fee7b1b93737bfa1cd8e45583d812410c0109927f40b6329eab79c0e969b3883",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "boundField": "gitHeadBase",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/playback.json",
+      "sha256": "7bffa953cfb2fcac0d7cdfb094a9d97a6604fbcf2e7568997fbcbb0c76d8e775",
+      "boundCommit": "5623a1ea9445a6008e432faa619720fb1a117c5a",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q1-has-audio.json",
+      "sha256": "ccaa3d8967030af9131e5cb763d41393b738882a7e52481fa613699e63d0487a",
+      "boundCommit": "8349152b5f0c457468736d555b8f69735530af78",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q10-studio-chunk-partial.json",
+      "sha256": "c97f64c9c39ec358ebb678a2e77780c7a8296c22a4d5cfece83461a1d3a3045c",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q10-studio.json",
+      "sha256": "43985927a65d38c65f57ae11884ca37d373e5a85d660604e25d1c4b1dc2c2d62",
+      "boundCommit": "fbf14141f501ddf1edb5f4e1d37d281f7d922aae",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q11-jassub-eng.json",
+      "sha256": "217a31bafaac4fd3522d70e7f4691fcbc6b12a2ca39a4863387d068a1cca6592",
+      "boundCommit": "ec7cb6005895541bc2c19d248bd02ccbfec10ccd",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q11-jassub-investigation/diagnose/report.json",
+      "sha256": "1fad77aa59d82dffe7636cf5b39cc06dfc9aa45a72a77586dc536363ed277b68",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q13-animation-compile.json",
+      "sha256": "d8324d53a269b8f39940f4713432e79e9815f378392877fc2fda83506fe4862c",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "boundField": "head",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q14-animation-params.json",
+      "sha256": "4b158d5cb96824d05695b947dbd1c16178726937b952e8793e625333e7b82fe4",
+      "boundCommit": "5d023c605292f0686cdc533700d2ff35fde8cbf0",
+      "boundField": "head",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q15-user-presence.json",
+      "sha256": "038c2de2fb8c55b5f2563edebcd98d785ec71580f601bc356db3d86a726921a6",
+      "boundCommit": "09539bf5243b8fcdbf800a1275af5c3af1940462",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q4-flick-ticks.json",
+      "sha256": "c7eb90cb674170e045392c5fa619bc40c15332558a7718b84e417dad639ea1d2",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q5-mediabunny.json",
+      "sha256": "2ee27e2edddde25c8627a46fd5f64043a388aebb04dd7a1acdae13732a724216",
+      "boundCommit": "cf8897f17475412af1963f7d56a43aca38f10519",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q6-atempo.json",
+      "sha256": "b2c7f329d2c10ff7fac1f98fcc79661ec7aef98412ae6950d6d84994903c6ef7",
+      "boundCommit": "cf8897f17475412af1963f7d56a43aca38f10519",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q7a-studio-tsc-proper.json",
+      "sha256": "c5c428b60a93225bc823665dfbbdda2b6859e20d863472bc0c51d6ac7ee3b872",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q7a-studio-tsc.json",
+      "sha256": "b197b9c431ae2fbdefda2ce65e2970909a5c1bf98147eb4696a21beb3a9abbfb",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q7a-webv2-error-classification.json",
+      "sha256": "ff1f7d46bc1a55b562c73bc5d7058678f933277c3cbb2822b71659eb7d019063",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q7b-studio-seam.json",
+      "sha256": "a7bd1cbf237e36a94213f8a3574f1870075e9de937581f9762da90567cd7caee",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q8-q10-studio-status.json",
+      "sha256": "a33131f65ee15028991a9c3d6b6f24428a5dd7b1db82c177a04694e09f12672e",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "boundField": "gitHeadAtQ8",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q8-studio-stroke.json",
+      "sha256": "de2de6e36614aace55fb15977466762949b46b39ef68d3b19673bb2ff52fca6a",
+      "boundCommit": "c6d10f7a82fc17c0d39e1536331b6287b2dfa99e",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q9-exclusions.json",
+      "sha256": "f559abd0d7c03ad1d557cb68b5558b756045fecabf0cc7d077834dd008b5f39c",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/q9-studio-inherited.json",
+      "sha256": "91fdb160ab0ac8f3612edabe59e59dafd85003bcb56bcfec0f260d39190c4d61",
+      "boundCommit": "72bc193bba6eab97f8e4ba7e0cc1be9ffeee393d",
+      "boundField": "baseMain",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/resource-policy.json",
+      "sha256": "18ea3945be7a8546ba3a3180598c5eb725383ab6018f1380c5677fd9698f0e1d",
+      "boundCommit": "ee4745316da7ccbe017e8b0c595d8a9d48d5f6dc",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/studio-activation.json",
+      "sha256": "f13009124d879ffbc06af732dace74fc1364f24585856c791e306fb69c8f6a73",
+      "boundCommit": "16f8154a1d0b9dd50350a16498878b2f8f70df92",
+      "boundField": "gitHead",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/t10-release.json",
+      "sha256": "4c6b2e9a0051052db92ce7bd75302598f6bef74fce082ccb138f3f1f2ea0e178",
+      "boundCommit": "5c6658d589ac36bd08725fef9233872865a7030e",
+      "boundField": "environment.commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/t4-large-import.json",
+      "sha256": "70cd82fc39074310f6887ff7bef8e623366d2a40bc6eb7d4386800077157d85d",
+      "boundCommit": "66b3c0e8e004e7217affb29b7f35c9bc4b3902c8",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/t7-typography.json",
+      "sha256": "fbff3a22461eb768694bc8d67c65bc6be91342ef9d9610e8a6459b84d80b9d84",
+      "boundCommit": "be95f1c5edfa3ff81ea48d638f5aa4eac5cec114",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/t8-preview.json",
+      "sha256": "5b08ded5375d3c7d0c5025c9c4041e73885cc52065d32f0f174daa59d35dd3e4",
+      "boundCommit": "c958b972c606108b2968af9e02384906d412316d",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w11-import-ledger.json",
+      "sha256": "9d6428cde7598da8d4a624f748359acfa0f173e4838f2ad3365c3b06f5d27f90",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w18-loudnorm.json",
+      "sha256": "4a382e913cc5b7ae2983c4f30d128d226f40ca1e8c04307dd97d22271963bf3a",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w7-export-ffprobe.json",
+      "sha256": "c0754d355b3e3ce8ab90c39eeee06f719276b94c740af2b7ed883c38fca6d43e",
+      "boundCommit": null,
+      "boundField": null,
+      "currentHeadPass": false,
+      "reason": "UNBOUND_RECEIPT",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w7-export-hashes.json",
+      "sha256": "876753ea40d7005f7e7a604cfdb3a5e8a4dffe99a6f6f5049c04682560f86cb9",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w7-release-evidence.json",
+      "sha256": "f1503057884372eaf3732a827a03b1b44394176baec554a499fd746c2580702a",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w7-session-transcript.json",
+      "sha256": "a8cd3174abe791a8a8e420e85cc6b067d3265b6e1f677220a8422d089a07a9c5",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/w7-title-frame-hashes.json",
+      "sha256": "302013d57dc4f08647c054e14578f3ef982b14e83b29efac5434e182fb0fcba2",
+      "boundCommit": "c3cc1d584dd6d3998393bfa5f2a6d10f2635ae0c",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    },
+    {
+      "path": "docs/evidence/qualification/windows-product-pass.json",
+      "sha256": "021772f7c724e76976068a3f61a46bfc77e4e8fd7639f013ac2459b54c2777a4",
+      "boundCommit": "fd9a51a2b62ad990533ed1fba355c2150bcf8c75",
+      "boundField": "commit",
+      "currentHeadPass": false,
+      "reason": "HISTORICAL_HEAD_MISMATCH",
+      "parseError": null
+    }
+  ],
+  "github": {
+    "capturedAt": "2026-10-25T06:37:44.694Z",
+    "liveMain": {
+      "date": "2026-10-22T14:17:34Z",
+      "message": "Merge pull request #84 from TheHalfMoon/docs/windows-ux-qa-frontier\n\ndocs: record Windows UX QA verified main and final report",
+      "sha": "a3c3ce91815aee35ce5b91b4a483dd85766a4429"
+    },
+    "openPullRequests": [
+      {
+        "headRefOid": "b7fdfad23d076f262a6517f611e3beacf93879b8",
+        "isDraft": false,
+        "number": 87,
+        "title": "fix(yu-002): complete Quality Lab comparison validation and evidence digest",
+        "url": "https://github.com/TheHalfMoon/Yamakan/pull/87"
+      },
+      {
+        "headRefOid": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d",
+        "isDraft": true,
+        "number": 86,
+        "title": "research: founder master plan with verified gaps and gated Cursor roadmap",
+        "url": "https://github.com/TheHalfMoon/Yamakan/pull/86"
+      },
+      {
+        "headRefOid": "7472a14e2eecea0620e0bb2d4422db8852421491",
+        "isDraft": true,
+        "number": 85,
+        "title": "research: complete competitive video REA (implementation-ready plan; engines OFF)",
+        "url": "https://github.com/TheHalfMoon/Yamakan/pull/85"
+      }
+    ],
+    "openIssues": [
+      {
+        "number": 77,
+        "title": "External release gates remaining (post P10 engineering)",
+        "url": "https://github.com/TheHalfMoon/Yamakan/issues/77"
+      }
+    ],
+    "planning": {
+      "pr86Head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d",
+      "pr85PreservedSeparately": true,
+      "doNotMergePlanningPrs": [
+        85,
+        86
+      ]
+    }
+  },
+  "capturedAt": "2026-10-25T06:37:53.995Z",
+  "candidate": {
+    "sha": "7b6640facc74d09d6109a4f216257cd88cb45842",
+    "tree": "78509bf023e2b5568d1853d3b5ff2acda5ede0d3",
+    "dirty": false,
+    "dirtyStatus": ""
+  },
+  "flagSources": {
+    "ENGINE_ENABLED": {
+      "path": "core/engines/contract.ts",
+      "sha256": "32b71b51397e3a272491de1907f921d51e49bdcce395048ac6c9f2b59bbfbb1d",
+      "parseError": null
+    },
+    "ROUTER_PROVIDERS_ENABLED": {
+      "path": "core/router/explain.ts",
+      "sha256": "12cc7120494446e747aa7c82048a8baadfe5356ecb94df01b5ba46b3c55c1923",
+      "parseError": null
+    },
+    "JASSUB_ENABLED": {
+      "path": "core/preview/jassub-flags.ts",
+      "sha256": "0d0a20698414663b6431f383b44886fc18fedf934e59d1b590c3a70368fa84d1",
+      "parseError": null
+    },
+    "STUDIO_ENABLED": {
+      "path": "core/studio.ts",
+      "sha256": "9080550eae9f7d1bf5f845819627efd666bd1653e3b34667b3383f1914641166",
+      "parseError": null
+    },
+    "QUALITY_LAB_ENABLED": {
+      "path": "core/quality/lab.ts",
+      "sha256": "7bd810cd2b8ff82241b42d203d33073f06bf8d421e81ae1931c7b1ed0ce883de",
+      "parseError": null
+    },
+    "CINEMA_ENABLED": {
+      "path": "core/scene3d-flags.ts",
+      "sha256": "8bafc9c0b9bd34047eb9c83d12a70d0ce013df52db7631d9ea5a3f3f9dea1c6b",
+      "parseError": null
+    },
+    "DIRECTOR_ENABLED": {
+      "path": "core/director-flags.ts",
+      "sha256": "9d7ccc9f06cd62adcc0c585f7c881be26b26c408840de67cd81b4b173991a973",
+      "parseError": null
+    },
+    "ANIMATION_ENABLED": {
+      "path": "core/animation/flags.ts",
+      "sha256": "0bb63fb26894774409892c1298a2078a1e36aa6e6ea9ecfd321a9377e954e0d5",
+      "parseError": null
+    }
+  },
+  "catalog": [
+    "yamakan.project.create",
+    "yamakan.project.open",
+    "yamakan.project.list",
+    "yamakan.project.export",
+    "yamakan.project.history",
+    "yamakan.project.restore",
+    "yamakan.clip.setSound",
+    "yamakan.clip.setSpeed",
+    "yamakan.clip.setAnimation",
+    "yamakan.clip.upsertAnimationKeyframe",
+    "yamakan.clip.unlinkSound",
+    "yamakan.clip.relinkSound",
+    "yamakan.timeline.rippleDelete",
+    "yamakan.timeline.rippleTrim",
+    "yamakan.timeline.insert",
+    "yamakan.timeline.groupMove",
+    "yamakan.project.applyBatch",
+    "yamakan.project.undo",
+    "yamakan.project.redo",
+    "yamakan.project.save",
+    "yamakan.workspace.backup",
+    "yamakan.workspace.backups",
+    "yamakan.workspace.restore",
+    "yamakan.workspace.collectGarbage",
+    "yamakan.asset.repair",
+    "yamakan.export.video",
+    "yamakan.job.status",
+    "yamakan.job.cancel",
+    "yamakan.job.list",
+    "yamakan.job.retry",
+    "yamakan.job.discard",
+    "yamakan.scene.capability",
+    "yamakan.scene.save",
+    "yamakan.scene.open",
+    "yamakan.scene.list",
+    "yamakan.studio.capability",
+    "yamakan.studio.open",
+    "yamakan.studio.commit",
+    "yamakan.studio.export",
+    "yamakan.consent.grant",
+    "yamakan.consent.revoke",
+    "yamakan.identity.encode",
+    "yamakan.director.capability",
+    "yamakan.director.start",
+    "yamakan.director.advance",
+    "yamakan.director.approve",
+    "yamakan.director.next",
+    "yamakan.flow.snapshot",
+    "yamakan.quality.capability",
+    "yamakan.quality.compare",
+    "yamakan.router.explain",
+    "yamakan.lineage.evaluate",
+    "yamakan.agent.create",
+    "yamakan.agent.revoke"
+  ],
+  "qualificationPolicy": "yamakan.qualification-policy/v1",
+  "renderPlan": "yamakan.render-plan/v1",
+  "renderCompiler": "yamakan.render-compiler/1",
+  "fonts": {
+    "path": "docs/provenance/fonts.json",
+    "sha256": "c2aca3bda12d51a2b450aad5f00b2289525d872fb8f6d9513c8e3e8a1a56544e",
+    "files": [
+      {
+        "path": "assets/fonts/IBMPlexSansArabic-Regular.ttf",
+        "pinned": "93ac94c4b3174176d410381b86c19891086a091c3c8da940ca65d85aa6a4f8a4",
+        "actual": "93ac94c4b3174176d410381b86c19891086a091c3c8da940ca65d85aa6a4f8a4",
+        "verified": true
+      },
+      {
+        "path": "assets/fonts/IBMPlexSansArabic-Bold.ttf",
+        "pinned": "44f73c1db689f2aac357cae39ef439d0705bd700b7d02e8d3f0079cda5a95e5f",
+        "actual": "44f73c1db689f2aac357cae39ef439d0705bd700b7d02e8d3f0079cda5a95e5f",
+        "verified": true
+      }
+    ]
+  },
+  "native": [
+    {
+      "path": "native/procd/target/release/yamakan-procd.exe",
+      "present": true,
+      "sha256": "8a04334276ab3ab0c5d87f4576f1c837fbba074cf87eed25be3a8da28bc8b51d"
+    },
+    {
+      "path": "native/procd/target/release/yamakan-acl.exe",
+      "present": true,
+      "sha256": "9e766f0c9c865017c6304b017e45431cef0d620fc180c4f27cad3437c2639efe"
+    },
+    {
+      "path": "native/procd/target/release/worker-probe.exe",
+      "present": true,
+      "sha256": "3ae2d88e2985dd6f97cabf55abc8507c57babdd3fbd1120be667434bbcf537ed"
+    }
+  ],
+  "sourceHashes": {
+    "package-lock.json": "23b5c2b898a48bf1f61abf04407d5016f28a012c16d246951e3f3c938aad807d",
+    "package.json": "94046ff313e9da42070cb701d54804e3afea4706922f592e4cad596e7d4e1099",
+    "core/qualification-policy.ts": "058ac7b98dbcca8fe7e3721c8ee4583d86fc8be65442e3a82fe2007b3b76c501",
+    "core/command/registry.ts": "5897014d5dbcfad355fa05129b8385e0e8a9204a7cc7f33d02879e556cbdf971",
+    "core/render/plan.ts": "1c1e9590f56989b212c050bd509f26b22e3874d00d726555db7818d2405dea94",
+    "specs/CURRENT.md": "ae9a569720d0b95dd2b1736435085ab5ea787bdb1de56c4bca55c54b18a807be",
+    "docs/IMPLEMENTATION_PLAN.md": "03ebb81e81de74ab57c5a8ef3de004eeaa71e49819184ba638731e56d9bd2ba6"
+  },
+  "unsupportedAreas": [
+    {
+      "id": "AUD-01",
+      "area": "Studio/Cinema/Director persistence",
+      "status": "UNSUPPORTED_FOR_COMPLETE_RECOVERY",
+      "note": "Creative sidecars and session canvas are outside backup/restore closure."
+    },
+    {
+      "id": "AUD-10",
+      "area": "Frontier narrative vs live GitHub",
+      "status": "NARRATIVE_DIVERGES",
+      "note": "CURRENT.md verified-main and historical receipts keep their own heads."
+    },
+    {
+      "id": "engines",
+      "area": "Generative engines and providers",
+      "status": "DISABLED",
+      "note": "ENGINE_ENABLED, ROUTER_PROVIDERS_ENABLED and JASSUB_ENABLED stay false."
+    },
+    {
+      "id": "H1-H5",
+      "area": "Human and release gates",
+      "status": "OPEN",
+      "note": "Native Arabic, Profile A, second account, constrained disk, founder ship."
+    }
+  ],
+  "historicalReceiptsPreserved": {
+    "base": "origin/main",
+    "compared": 43,
+    "preserved": true,
+    "changed": [],
+    "missingRequired": []
+  },
+  "notes": [
+    "Historical W1–W18/P10 receipts keep their original bound commits.",
+    "This manifest is not a current-head product PASS.",
+    "Engines, providers and JASSUB remain disabled.",
+    "Planning PRs #85 and #86 stay open and are not merged by this task."
+  ]
+}

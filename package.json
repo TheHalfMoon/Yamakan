@@ -52,6 +52,8 @@
     "qualify:playback": "node scripts/qualify-playback.mjs",
     "qualify:release": "node scripts/qualify-release.ts",
     "qualify:release-evidence": "node scripts/qualify-release-evidence.ts",
+    "qualify:ultimate-baseline": "node scripts/qualify-ultimate-baseline.mjs",
+    "qualify:ultimate-environment": "node scripts/qualify-ultimate-environment.mjs",
     "bundle": "node scripts/bundle.ts",
     "bundle:install-dev": "node scripts/bundle.ts install-dev",
     "bundle:pack-unsigned-rc": "node scripts/bundle.ts pack-unsigned-rc"

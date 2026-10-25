@@ -185,8 +185,12 @@ async function service(marker: string, mode = "run") {
     { stdio: ["ignore", "ignore", "pipe", "ipc"], windowsHide: true },
   );
   const [ids] = (await once(child, "message")) as [
-    { worker: number; owner: number },
+    { worker: number; owner: number; error?: string },
   ];
+  if (ids.error) {
+    child.kill("SIGKILL");
+    throw new Error(`the stand-in service could not launch: ${ids.error}`);
+  }
   return { child, ...ids };
 }
 

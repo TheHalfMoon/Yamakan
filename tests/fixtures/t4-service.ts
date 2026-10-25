@@ -22,5 +22,9 @@ void owner
       if (mode === "hang") return new Promise<void>(() => {});
     },
   })
-  .catch(() => {});
+  // A launch that fails before the worker exists is reported, so the test
+  // fails at once instead of waiting forever for the worker's identity.
+  .catch((e: unknown) => {
+    process.send?.({ error: e instanceof Error ? e.message : String(e) });
+  });
 setInterval(() => {}, 1000);

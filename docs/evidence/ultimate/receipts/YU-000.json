@@ -1,0 +1,74 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "branch": "feat/yu-000-001-baseline",
+  "implementationCommit": "7b6640facc74d09d6109a4f216257cd88cb45842",
+  "baseMain": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "environment": {
+    "os": "Windows_NT 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "8.1.1 (gyan.dev full build)",
+    "edge": "installed Microsoft Edge (Playwright channel msedge)"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context ps-review light panel",
+      "judge": "session model subagent (same model family as author; not an independent security reviewer)",
+      "findings": {
+        "mustFix": 4,
+        "applied": 4
+      },
+      "result": "must-fix resolved in 7b6640f"
+    },
+    {
+      "kind": "d1 advisory",
+      "model": "d1-omni-600M-Q8_0.gguf (local CPU)",
+      "securityRisk": "low",
+      "probability": 0.62,
+      "confidence": 0.43,
+      "needsReview": 0.06,
+      "note": "advisory only; not a gate"
+    },
+    {
+      "kind": "Alibaba OCR",
+      "version": "1.13.3",
+      "preview": "local file selection only",
+      "fullReview": "BLOCKED: configured provider is cloud (ChatGPT); no local generative backend"
+    }
+  ],
+  "securityReview": "Not triggered beyond light bar: evidence tooling only, no production boundary change. No independent human security review claimed.",
+  "state": "IMPLEMENTED",
+  "mergedPr": null,
+  "postMergeVerification": null,
+  "task": "YU-000",
+  "objective": "Freeze artifact-bound baseline and capability evidence",
+  "evidence": "docs/evidence/ultimate/baseline.json",
+  "results": {
+    "historicalReceiptsCompared": 43,
+    "preserved": true,
+    "missingRequired": 0,
+    "unboundFlagged": 10,
+    "historicalHeadMismatches": 33,
+    "narrativeHeadMismatches": 1,
+    "enginesDisabled": true,
+    "currentHeadPass": false
+  },
+  "tests": {
+    "file": "tests/ultimate-baseline.test.ts",
+    "includes": [
+      "historical-head mismatch",
+      "disabled engines enforced",
+      "stale/malformed/unbound receipt cannot PASS",
+      "real receipts all bound or flagged",
+      "secret redaction"
+    ]
+  },
+  "limitations": [
+    "Render compiler/plan/policy versions are recorded as constants, not parsed from source",
+    "No profile (Profile A) hash: Profile A remains an external gate"
+  ]
+}
