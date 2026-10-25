@@ -76,6 +76,8 @@ test("every bound field changes the evidence digest", () => {
     (d) => (d.comparisonId = randomUUID()),
     (d) => (d.ratings[0]!.raterId = "r9"),
     (d) => (d.ratings[0]!.score = 2),
+    // r2 rates once, so a different rubric keeps the document valid.
+    (d) => (d.ratings[2]!.rubricVersion = "v2"),
     (d) => (d.ratings.pop(), undefined),
   ];
   for (const [i, mutate] of mutations.entries()) {
@@ -162,29 +164,43 @@ test("evidence validation refuses what the summary refuses", () => {
   );
 });
 
-test("the evidence command runs through the shared registry path", async () => {
-  const { execute } = await import("../core/command/registry.ts");
+test("the blinded compare command never returns the private digest", async () => {
+  const { commands, execute } = await import("../core/command/registry.ts");
+  assert.ok(!("yamakan.quality.evidence" in commands));
   const ctx = {
     store: {},
     queue: {},
     principal: { id: "local-client", scopes: new Set(["project:read"]) },
   } as never;
-  const evidence = await execute(ctx, "yamakan.quality.evidence", {
-    comparison: base(),
-  });
-  assert.deepEqual(evidence.result, comparisonEvidence(base()));
   const compared = await execute(ctx, "yamakan.quality.compare", {
     comparison: base(),
   });
-  assert.ok(!("sha256" in (compared.result as object)));
-  const aa = base();
-  aa.systems[1]!.slot = "A";
+  const text = JSON.stringify(compared.result);
+  assert.ok(!text.includes(comparisonEvidence(base()).sha256));
+  assert.ok(!text.includes("fixture-a"));
   // The registry rejects invalid input with the schema's own error, which
   // the service maps to VALIDATION like every other command.
+  const aa = base();
+  aa.systems[1]!.slot = "A";
   await assert.rejects(
-    execute(ctx, "yamakan.quality.evidence", { comparison: aa }),
+    execute(ctx, "yamakan.quality.compare", { comparison: aa }),
     (e: unknown) =>
       e instanceof z.ZodError &&
       /exactly one system in slot A and one in slot B/.test(e.message),
   );
+});
+
+test("rater order is by code unit, so look-alike IDs keep one digest", () => {
+  // Distinct to the duplicate check, but equal under locale collation.
+  const look = ["r1", "r\u200b1", "e\u0301", "\u00e9"];
+  const doc = base();
+  doc.ratings = look.map((raterId, i) => ({
+    raterId,
+    slot: "A" as const,
+    score: i + 1,
+    rubricVersion: "v1",
+  }));
+  const forward = comparisonEvidence(doc).sha256;
+  doc.ratings.reverse();
+  assert.equal(comparisonEvidence(doc).sha256, forward);
 });

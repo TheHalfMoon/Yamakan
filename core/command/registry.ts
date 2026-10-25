@@ -49,7 +49,6 @@ import { builtinManifest } from "../director/manifest.ts";
 import { FLOW_ENABLED, flowSnapshot } from "../flow/snapshot.ts";
 import {
   QualityComparisonSchema,
-  comparisonEvidence,
   qualityLabCapability,
   summarizeBlindedComparison,
 } from "../quality/lab.ts";
@@ -968,18 +967,6 @@ export const commands = {
       })
       .strict(),
     run: (_ctx, a) => summarizeBlindedComparison(a.comparison),
-  }),
-  "yamakan.quality.evidence": define({
-    scope: "project:read",
-    mutation: false,
-    summary:
-      "Private evidence digest of a Quality Lab comparison (binds systems, outputs, input, consent, latency and raters); never show it to raters.",
-    input: z
-      .object({
-        comparison: QualityComparisonSchema,
-      })
-      .strict(),
-    run: (_ctx, a) => comparisonEvidence(a.comparison),
   }),
   "yamakan.router.explain": define({
     scope: "project:read",

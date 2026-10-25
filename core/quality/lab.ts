@@ -121,18 +121,21 @@ export const QUALITY_EVIDENCE_FORMAT = "yamakan.quality-evidence/v2";
  * produced which output in which slot, attempts, failures, latency, the
  * shared input, its consent purpose and every rating with its rater. Two
  * comparisons share it only if they are the same evidence. It binds system
- * identities, so it is not part of the blinded summary raters see; the v1
- * `contentHash` there stays as it was and is never relabelled.
+ * identities and is an unsalted hash of guessable values, so it is never
+ * returned by a command or stored beside blinded material; the v1
+ * `contentHash` of the blinded summary stays as it was, never relabelled.
  */
 export function comparisonEvidence(raw: unknown): {
   format: typeof QUALITY_EVIDENCE_FORMAT;
   sha256: string;
 } {
   const doc = parseComparison(raw);
-  const bySlot = [...doc.systems].sort((a, b) => a.slot.localeCompare(b.slot));
+  // Code-unit order: locale collation can rank distinct IDs as equal and
+  // varies across ICU versions, which would give one evidence two digests.
+  const order = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
+  const bySlot = [...doc.systems].sort((a, b) => order(a.slot, b.slot));
   const ratings = [...doc.ratings].sort(
-    (a, b) =>
-      a.raterId.localeCompare(b.raterId) || a.slot.localeCompare(b.slot),
+    (a, b) => order(a.raterId, b.raterId) || order(a.slot, b.slot),
   );
   // Fixed key order: JSON.stringify of these literals is canonical.
   const canonical = JSON.stringify({
