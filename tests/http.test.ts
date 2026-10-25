@@ -263,6 +263,18 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       401,
       "media key reads media",
     );
+    // Waveform peak tiles are media reads of the same asset (YU-016).
+    assert.notEqual(
+      await mediaRead(media, `${assetPath}/peaks`),
+      401,
+      "media key reads waveform peaks",
+    );
+    assert.equal(
+      await mediaRead(media, `${assetPath}/peaks/more`),
+      401,
+      "only the peaks route itself",
+    );
+    assert.equal(await mediaRead("0".repeat(64), `${assetPath}/peaks`), 401);
     assert.equal(await mediaRead("0".repeat(64), assetPath), 401);
     assert.equal(
       await mediaRead(sessionKey, assetPath),

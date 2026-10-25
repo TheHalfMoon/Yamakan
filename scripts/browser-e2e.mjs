@@ -167,6 +167,17 @@ try {
     new URL(u).hostname === "127.0.0.1";
   const record = (c) => c.on("request", (r) => requests.push(r.url()));
   record(context);
+  // Waveform tiles per page load of the main page (YU-016): a reload starts
+  // a fresh in-page tile cache, so repeats are counted within one load.
+  let pageLoad = 0;
+  const peakTiles = [];
+  page.on("framenavigated", (f) => {
+    if (f === page.mainFrame()) pageLoad++;
+  });
+  page.on("request", (r) => {
+    if (r.url().includes("/peaks?"))
+      peakTiles.push(`${pageLoad} ${r.url().replace(/[?&]media=[^&]*/, "")}`);
+  });
   // Without the launch link the page grants nothing: a fresh browser
   // context sees the locked notice and holds no session.
   const stranger = await browser.newContext();
@@ -221,6 +232,12 @@ try {
     .getByRole("status")
     .filter({ hasText: "Saved revision" })
     .waitFor();
+  // YU-016: the audio clip's waveform is drawn from server peak tiles.
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll(".tl-clip--audio svg path")].some(
+      (p) => (p.getAttribute("d") || "").length > 100,
+    ),
+  );
   const listing = await (
     await page.request.post(`${url}/api/v1/call`, {
       headers: agent,
@@ -750,6 +767,14 @@ try {
   assert.deepEqual(errors, []);
   const external = requests.filter((u) => !offline(u));
   assert.deepEqual(external, [], "every page request stays on this machine");
+  // Every edit, save and restore above redrew the timeline; within a page
+  // load each waveform tile was still fetched once (reused by content hash).
+  assert.ok(peakTiles.length > 0, "waveforms come from peak tiles");
+  assert.equal(
+    new Set(peakTiles).size,
+    peakTiles.length,
+    `no waveform tile is fetched twice in one page load: ${peakTiles.join(", ")}`,
+  );
   const receipt = {
     runtime:
       process.env.YAMAKAN_BROWSER_CHANNEL ||
@@ -793,6 +818,7 @@ try {
     referencePlanHash,
     pageErrors: errors,
     pageRequests: requests.length,
+    peakTileRequests: peakTiles.length,
     externalPageRequests: requests.filter((u) => !offline(u)).length,
     artifactBytes: bytes.length,
   };

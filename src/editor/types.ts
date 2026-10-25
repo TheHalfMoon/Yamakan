@@ -125,6 +125,9 @@ export type MediaItem = {
   name: string;
   type: 'video' | 'image' | 'audio';
   url: string;
+  // Project assets: content hash and waveform peak tiles (YU-016).
+  hash?: string;
+  peaksPath?: string;
   sourceUrl?: string;
   source: 'upload' | 'generated' | 'unsplash';
   generatedBy?: string;
@@ -1262,9 +1265,6 @@ export type ProductionStep = {
   result?: any;
 };
 
-export type WaveformCache = {
-  [mediaId: string]: number[];
-};
 
 export type ShotContextReference = {
   id: string;

@@ -1,0 +1,93 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "49f1a9e",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless over CDP",
+    "e2eRunner": "TesterArmy e2e 0.20.0 + @e2e-dev/web 0.14.0, no model, telemetry off"
+  },
+  "state": "VERIFIED",
+  "scope": "flag-off (AG-DOCS): live only under the operator qualification switch YAMAKAN_AG_DOCS_QUALIFICATION=1, never in an installed bundle",
+  "task": "YU-011",
+  "objective": "Project-bound Studio canvas persistence: managed bitmap storage, reopen, undo, conflicts, recovery",
+  "branch": "feat/yu-011-studio-persistence",
+  "mergedPr": 94,
+  "headCommit": "eb1b4d88b3894822fcf5c4844f9d95d00f13c458",
+  "mergeCommit": "ccdde01c75e5bc7cb8254114526f5e7e07b3c467",
+  "tests": {
+    "files": [
+      "tests/studio-persistence.test.ts",
+      "tests/creative-documents.test.ts",
+      "src/studio/host/documentStore.test.ts",
+      "e2e/testerarmy/tests/studio-save.e2e.ts",
+      "e2e/testerarmy/tests/studio-reopen.e2e.ts"
+    ],
+    "result": "studio-persistence 12/12; full Windows suite 460/462 (0 fail, 2 POSIX-only skips); Studio vitest 1975/1975; Edge E2E pass; TesterArmy Studio journey PASSED (create, draw, save, conflicting save from a second writer, reload, service SIGKILL, reopen with exact pixels)",
+    "e2eSummary": "docs/evidence/ultimate/yu-011-studio-e2e.json"
+  },
+  "redGreen": "GC/re-upload race test fails with the discard mark removed (mutation-checked) and passes with it; reopen check previously could sample the background before the stored bitmap drew (one observed failure), now waits for the stroke pixel",
+  "reviews": [
+    {
+      "kind": "fresh-context ps-review panel",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 3, "applied": 3 }
+    },
+    {
+      "kind": "different-model fresh-context security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 3,
+        "applied": 2,
+        "documented": 1
+      }
+    },
+    {
+      "kind": "delta re-review of eb6bbea",
+      "judge": "session model subagent",
+      "findings": { "mustFix": 1, "applied": 1 }
+    },
+    {
+      "kind": "delta re-review of 2a632d0",
+      "judge": "session model subagent",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 4,
+        "applied": 3,
+        "noChangeNeeded": 1
+      }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "low",
+      "probability": 0.42,
+      "confidence": 0.13
+    },
+    {
+      "kind": "Graft 0.21.1",
+      "result": "importStudioBitmap reachable only from the authenticated route; graph consistent"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "preview": "21/28 files in scope",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); local Qwen3-4B needs >=4 GB free RAM, host had 1.9 GB"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "ccdde01c75e5bc7cb8254114526f5e7e07b3c467",
+    "ci": "PR exact head eb1b4d8: qualify, qualify-windows-r8, otio-oracle success; push run on ccdde01: success",
+    "windows": "detached ccdde01: npm test 460/462 (0 fail, 2 POSIX-only skips); test:studio 1975/1975; lint, build, Edge E2E pass; TesterArmy Studio journey PASSED"
+  },
+  "limitations": [
+    "AG-DOCS activation still needs the YU-010…015 group receipt; the switch is for qualification runs only",
+    "Bitmaps a session only loaded rely on retained revisions (never pruned today); revision pruning, if added, must keep their references",
+    "Cinema scene asset kinds are not type-checked (follow-up)",
+    "Full OCR review blocked (see reviews)"
+  ]
+}

@@ -47,8 +47,8 @@ export type Preview = {
 
 let engine: Promise<string> | null = null;
 // The renderer's identity: the FFmpeg build that draws previews and exports.
-// A different build is a different cache.
-function engineId(cwd: string) {
+// A different build is a different cache (previews, waveform peaks).
+export function engineId(cwd: string) {
   engine ??= (async () => {
     let out = "";
     const result = await workers().run({
@@ -279,10 +279,12 @@ export async function evictPreviews(
   keep: string,
   bound: number = RESOURCE_POLICY.enforced.previewCacheBytes,
   pinnedMs = PINNED_MS,
+  // The cache's own entries; nothing else in the folder is touched.
+  names = /^[a-f0-9]{64}\.(png|mp4)$/,
 ) {
   const entries = [];
   for (const name of await readdir(dir).catch(() => [])) {
-    if (!/^[a-f0-9]{64}\.(png|mp4)$/.test(name)) continue;
+    if (!names.test(name)) continue;
     const file = path.join(dir, name);
     const info = await stat(file).catch(() => null);
     if (info?.isFile())

@@ -6,19 +6,20 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Task state
 
-| Task | State | PR | Receipt |
-| ---- | ----- | -- | ------- |
-| YU-000 baseline evidence | VERIFIED | #88 → `01ccbe5` | [receipts/YU-000.json](receipts/YU-000.json) |
-| YU-001 environment reproduction | VERIFIED | #88 → `01ccbe5` | [receipts/YU-001.json](receipts/YU-001.json) |
-| YU-002 Quality Lab evidence | VERIFIED | #87 → `b5c3372` | [receipts/YU-002.json](receipts/YU-002.json) |
-| YU-003 MCP bounds | VERIFIED | #90 → `0fe9a18` | [receipts/YU-003.json](receipts/YU-003.json) |
-| (unplanned) zod GHSA-mrhx-c7xc-m3w5 | MERGED | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate |
-| YU-010a v5 refs, schema v8, store commit/get/list (flag off) | MERGED, post-merge verified | #91 → `fc4913e` | flag-off slice |
-| YU-010b staged upload route + `yamakan.document.commit` (flag off) | MERGED, post-merge verified | #92 → `a468345` | flag-off slice |
-| YU-010c SDK / CLI / MCP document clients (flag off) | MERGED, post-merge verified | #93 → `49f1a9e` | flag-off slice; main `49f1a9e` on Windows: 448/450 (0 fail), Edge E2E pass, YU-010 tests 32/32; push CI success |
-| YU-010 overall | VERIFIED (flag-off scope) | #91, #92, #93 | AG-DOCS activation still needs the YU-010…015 group receipt |
-| YU-011 Studio canvas persistence | IMPLEMENTED (this PR) | — | TesterArmy journey PASSED; see `yu-011-studio-e2e.json` |
-| YU-012…YU-101 | PLANNED | — | — |
+| Task                                                               | State                       | PR              | Receipt                                                                                                                                           |
+| ------------------------------------------------------------------ | --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| YU-000 baseline evidence                                           | VERIFIED                    | #88 → `01ccbe5` | [receipts/YU-000.json](receipts/YU-000.json)                                                                                                      |
+| YU-001 environment reproduction                                    | VERIFIED                    | #88 → `01ccbe5` | [receipts/YU-001.json](receipts/YU-001.json)                                                                                                      |
+| YU-002 Quality Lab evidence                                        | VERIFIED                    | #87 → `b5c3372` | [receipts/YU-002.json](receipts/YU-002.json)                                                                                                      |
+| YU-003 MCP bounds                                                  | VERIFIED                    | #90 → `0fe9a18` | [receipts/YU-003.json](receipts/YU-003.json)                                                                                                      |
+| (unplanned) zod GHSA-mrhx-c7xc-m3w5                                | MERGED                      | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate                                                                                      |
+| YU-010a v5 refs, schema v8, store commit/get/list (flag off)       | MERGED, post-merge verified | #91 → `fc4913e` | flag-off slice                                                                                                                                    |
+| YU-010b staged upload route + `yamakan.document.commit` (flag off) | MERGED, post-merge verified | #92 → `a468345` | flag-off slice                                                                                                                                    |
+| YU-010c SDK / CLI / MCP document clients (flag off)                | MERGED, post-merge verified | #93 → `49f1a9e` | flag-off slice; main `49f1a9e` on Windows: 448/450 (0 fail), Edge E2E pass, YU-010 tests 32/32; push CI success                                   |
+| YU-010 overall                                                     | VERIFIED (flag-off scope)   | #91, #92, #93   | AG-DOCS activation still needs the YU-010…015 group receipt                                                                                       |
+| YU-011 Studio canvas persistence                                   | VERIFIED (flag-off scope)   | #94 → `ccdde01` | [receipts/YU-011.json](receipts/YU-011.json); main `ccdde01` on Windows: 460/462 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy journey pass |
+| YU-016 waveform peak tiles                                         | IMPLEMENTED (this PR)       | —               | —                                                                                                                                                 |
+| YU-012…YU-015, YU-017…YU-101                                       | PLANNED                     | —               | —                                                                                                                                                 |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -41,10 +42,17 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 ## Known flaky tests
 
 - `tests/resource-policy.test.ts` "a worker over its Job Object memory limit fails rather than grows": failed once on main `a468345` while another suite ran servers concurrently; passed 3/3 alone. Load-sensitive; not caused by YU-010b. Re-run alone before treating as a regression. Repeatability: 3/3 alone at `a468345`; 0 failures in the full suites at `49f1a9e` and on the YU-011 branch. Resource contention is plausible: the host had 1.7 GB of 15.7 GB RAM free (other applications) when it failed. Not yet reproduced under controlled memory pressure.
+- 2026-10-25, YU-016 branch `6f80273`, with the shared host at about 53% CPU and 3.1 GB RAM free (other sessions and applications):
+  - **Failed in the full suite, all hitting their 60 s limit:** `tests/jobs.test.ts` "a service killed mid-render…", `tests/timeline.test.ts` "audio gain and fades…" and `tests/typography.test.ts` "the title capability probe…".
+  - **Also failed:** the Studio vitest `documentModel.fuzz.test.ts` depth-boundary case, at 5.4 s against vitest's 5 s.
+  - **Alone, all pass:** jobs 34 s, timeline 17 s, typography 7.6 s, fuzz file 163/163.
+  - **Earlier full run:** the preview-route (`tests/http.test.ts`) and MCP stdio tests failed while another worktree's `tsc` ran concurrently, and passed alone (8.5 s against 34 s under load).
+  - **Reading:** these are wall-clock-bound tests on a loaded host, not regressions from the change. Exact-head CI is the clean-machine check.
+  - **Follow-up:** run gates only on an idle host, and consider per-test budgets that scale with measured load.
 
 ## Next eligible
 
-After YU-010a–c merge, YU-010 is implementation-complete flag-off; its VERIFIED receipt is flag-off scope only (AG-DOCS activation needs the YU-010…015 group receipt). Then YU-011 (Studio canvas persistence through documents: engine image-id translation, canvas-internal refs ⊆ bitmapAssetIds, UI load/commit, TesterArmy e2e), YU-012 (Cinema), YU-013 (Director), YU-015 (canonical browser operations/undo), YU-014 (complete backup/restore incl. documents). YU-016 (waveforms/thumbnails/proxies) can proceed in parallel.
+YU-010 and YU-011 are VERIFIED flag-off (AG-DOCS activation needs the YU-010…015 group receipt). YU-016 (waveform peak tiles) is in review. Then YU-012 (Cinema sidecar migration into documents), YU-013 (Director in SQLite), YU-015 (canonical browser operations/undo) and YU-014 (complete backup/restore, including documents and Studio bitmaps), in DAG order.
 
 ## Continuation instructions
 
