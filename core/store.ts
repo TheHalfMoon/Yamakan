@@ -37,12 +37,44 @@ import {
   toEditView,
 } from "./canonical.ts";
 import {
+  DOCUMENT_LIMITS,
   DocumentKind,
   DocumentRefSchema,
   missingDocumentAssets,
   validateDocument,
 } from "./documents.ts";
 import type { DocumentRef } from "./documents.ts";
+
+// A sealed staged upload as clients see it: never a host path.
+export type StagedDocumentReceipt = {
+  stagedUploadId: string;
+  contentHash: string;
+  byteLength: number;
+  kind: DocumentKind;
+  schemaVersion: number;
+  expiresAt: string;
+};
+type UploadRow = {
+  id: string;
+  request_digest: string;
+  kind: DocumentKind;
+  schema_version: number;
+  declared_bytes: number;
+  body_sha256: string;
+  state: "receiving" | "sealed" | "consumed";
+  content_hash: string | null;
+  bytes: Uint8Array | null;
+  expires_at: number;
+};
+const uploadReceipt = (row: UploadRow): StagedDocumentReceipt => ({
+  stagedUploadId: row.id,
+  contentHash: row.content_hash!,
+  // The stored canonical document's length, which contentHash names.
+  byteLength: row.bytes ? row.bytes.byteLength : row.declared_bytes,
+  kind: row.kind,
+  schemaVersion: row.schema_version,
+  expiresAt: new Date(row.expires_at).toISOString(),
+});
 
 export type ExportedProject = Omit<CanonicalProject, "documents"> & {
   documents?: DocumentRef[];
@@ -107,7 +139,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 8;
+export const WORKSPACE_SCHEMA_VERSION = 9;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -218,6 +250,30 @@ CREATE TABLE snapshot_document_refs(
   PRIMARY KEY(snapshot_hash, document_hash)
 ) STRICT, WITHOUT ROWID;
 CREATE INDEX snapshot_document_refs_by_document ON snapshot_document_refs(document_hash);
+`;
+// Staged creative document uploads (YU-010b): a reservation, then the
+// sealed canonical bytes, held in the database (never a host path) until
+// one document commit consumes them or they expire.
+const SCHEMA_V9 = `
+CREATE TABLE document_uploads(
+  id TEXT PRIMARY KEY CHECK(length(id) = 36),
+  project_id TEXT NOT NULL,
+  principal_id TEXT NOT NULL,
+  request_id TEXT NOT NULL CHECK(length(request_id) BETWEEN 1 AND 128),
+  request_digest TEXT NOT NULL CHECK(length(request_digest) = 64),
+  kind TEXT NOT NULL CHECK(kind IN ('studio', 'cinemaScene')),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  declared_bytes INTEGER NOT NULL CHECK(declared_bytes > 0),
+  body_sha256 TEXT NOT NULL CHECK(length(body_sha256) = 64),
+  state TEXT NOT NULL CHECK(state IN ('receiving', 'sealed', 'consumed')),
+  content_hash TEXT CHECK(content_hash IS NULL OR length(content_hash) = 64),
+  asset_ids TEXT,
+  bytes BLOB,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  consumed_revision INTEGER,
+  UNIQUE(principal_id, project_id, request_id)
+) STRICT;
 `;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
@@ -463,6 +519,7 @@ export class ProjectStore {
         SCHEMA_V6,
         SCHEMA_V7,
         SCHEMA_V8,
+        SCHEMA_V9,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
@@ -489,6 +546,11 @@ export class ProjectStore {
       throw e;
     }
     this.#db = db;
+    // Staged bodies lived only in the previous process's memory: uploads it
+    // was receiving can never complete, and expired ones only hold space.
+    db.prepare(
+      "DELETE FROM document_uploads WHERE state = 'receiving' OR expires_at <= ?",
+    ).run(Date.now());
     // Upgrading to v2: register every asset that existing snapshots reference.
     if (
       this.#database
@@ -1014,7 +1076,12 @@ export class ProjectStore {
       kind: DocumentKind;
       schemaVersion: number;
       expectedContentHash: string | null;
-      source: { bytes: Uint8Array } | { contentHash: string };
+      source:
+        | { bytes: Uint8Array }
+        | { contentHash: string }
+        | { stagedUploadId: string; contentHash: string };
+      // Who commits: a staged upload is consumable only by its uploader.
+      principalId?: string;
     },
     receipt?: RequestReceipt,
   ) {
@@ -1030,6 +1097,11 @@ export class ProjectStore {
       : DocumentRefSchema.shape.contentHash.parse(
           (input.source as { contentHash: string }).contentHash,
         );
+    const stagedId =
+      "stagedUploadId" in input.source
+        ? Id.parse(input.source.stagedUploadId)
+        : null;
+    const now = Date.now();
     // The replay digest also binds what is committed, so a retry under the
     // same request id with other content can never return this result.
     const bound = receipt && {
@@ -1052,6 +1124,51 @@ export class ProjectStore {
       receipt: bound,
       check: () => {
         if (validated) return;
+        if (stagedId) {
+          const upload = this.#database
+            .prepare(
+              "SELECT project_id, principal_id, kind, schema_version, state, content_hash, expires_at FROM document_uploads WHERE id = ?",
+            )
+            .get(stagedId) as
+            | {
+                project_id: string;
+                principal_id: string;
+                kind: string;
+                schema_version: number;
+                state: string;
+                content_hash: string | null;
+                expires_at: number;
+              }
+            | undefined;
+          // Foreign, unknown and expired handles are indistinguishable.
+          if (
+            !upload ||
+            upload.project_id !== input.projectId ||
+            upload.principal_id !== input.principalId ||
+            upload.expires_at <= now
+          )
+            throw new CommandError(
+              "NOT_FOUND",
+              "No such staged upload; stage the document again.",
+            );
+          if (upload.state !== "sealed")
+            throw new CommandError(
+              "VALIDATION",
+              upload.state === "consumed"
+                ? "This staged upload was already committed."
+                : "This staged upload is not complete.",
+            );
+          if (
+            upload.content_hash !== contentHash ||
+            upload.kind !== kind ||
+            upload.schema_version !== input.schemaVersion
+          )
+            throw new CommandError(
+              "VALIDATION",
+              "The staged upload does not match this document.",
+            );
+          return;
+        }
         // A revert may only name a document this project already held.
         const owned = this.#database
           .prepare(
@@ -1084,22 +1201,234 @@ export class ProjectStore {
           ? current.map((d) => (d.id === ref.id ? ref : d))
           : [...current, ref];
       },
-      effects: validated
-        ? (db) => {
+      effects: stagedId
+        ? (db, revision) => {
             db.prepare(
-              "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
-            ).run(
-              validated.hash,
-              validated.kind,
-              validated.schemaVersion,
-              JSON.stringify(validated.assetIds),
-              validated.bytes,
-              validated.bytes.length,
-            );
+              "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) SELECT content_hash, kind, schema_version, asset_ids, bytes, length(bytes) FROM document_uploads WHERE id = ? ON CONFLICT(hash) DO NOTHING",
+            ).run(stagedId);
+            db.prepare(
+              "UPDATE document_uploads SET state = 'consumed', consumed_revision = ?, bytes = NULL WHERE id = ? AND state = 'sealed'",
+            ).run(revision, stagedId);
           }
-        : undefined,
+        : validated
+          ? (db) => {
+              db.prepare(
+                "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
+              ).run(
+                validated.hash,
+                validated.kind,
+                validated.schemaVersion,
+                JSON.stringify(validated.assetIds),
+                validated.bytes,
+                validated.bytes.length,
+              );
+            }
+          : undefined,
       next: (current, revision) => ({ ...current(), revision }),
     });
+  }
+  /**
+   * Reserves a staged document upload before any byte is read (YU-010b).
+   * The request digest binds the project, kind, version, declared length and
+   * the body's SHA-256, so a retry after a lost response returns the same
+   * sealed receipt without re-sending, and a changed request is refused.
+   */
+  reserveDocumentUpload(
+    input: {
+      projectId: string;
+      principalId: string;
+      requestId: string;
+      kind: DocumentKind;
+      schemaVersion: number;
+      declaredBytes: number;
+      bodySha256: string;
+    },
+    now = Date.now(),
+  ): { reserved: string } | { receipt: StagedDocumentReceipt } {
+    Id.parse(input.projectId);
+    const kind = DocumentKind.parse(input.kind);
+    const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
+      input.bodySha256,
+    );
+    if (
+      !Number.isSafeInteger(input.declaredBytes) ||
+      input.declaredBytes < 1 ||
+      input.declaredBytes > DOCUMENT_LIMITS.documentBytes
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `A staged document is 1 to ${DOCUMENT_LIMITS.documentBytes} bytes.`,
+      );
+    const digest = sha256Hex(
+      canonicalJson({
+        projectId: input.projectId,
+        kind,
+        schemaVersion: input.schemaVersion,
+        declaredBytes: input.declaredBytes,
+        bodySha256,
+      }),
+    );
+    return this.transaction((db) => {
+      // Expired uploads release their reservation (and any bytes) here.
+      db.prepare("DELETE FROM document_uploads WHERE expires_at <= ?").run(now);
+      if (!this.#head(input.projectId))
+        throw new CommandError("NOT_FOUND", "Project not found.");
+      const prior = db
+        .prepare(
+          "SELECT * FROM document_uploads WHERE principal_id = ? AND project_id = ? AND request_id = ?",
+        )
+        .get(input.principalId, input.projectId, input.requestId) as
+        UploadRow | undefined;
+      if (prior) {
+        if (prior.request_digest !== digest)
+          throw new CommandError(
+            "IDEMPOTENCY_MISMATCH",
+            "Request ID was already used for a different upload.",
+          );
+        if (prior.state === "receiving")
+          throw new CommandError(
+            "BUSY",
+            "This upload is still being received; retry shortly.",
+          );
+        return { receipt: uploadReceipt(prior) };
+      }
+      const active = db
+        .prepare(
+          "SELECT count(*) AS n FROM document_uploads WHERE principal_id = ? AND state IN ('receiving', 'sealed')",
+        )
+        .get(input.principalId) as { n: number };
+      if (active.n >= DOCUMENT_LIMITS.activeUploadsPerPrincipal)
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "Too many staged uploads in progress; commit or wait for one to expire.",
+        );
+      const reserved = db
+        .prepare(
+          "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE state IN ('receiving', 'sealed')",
+        )
+        .get() as { n: number };
+      if (
+        reserved.n + input.declaredBytes >
+        DOCUMENT_LIMITS.reservedUploadBytes
+      )
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "The workspace's staged upload space is in use; retry later.",
+        );
+      const sum = (sql: string, ...args: string[]) =>
+        (db.prepare(sql).get(...args) as { n: number }).n;
+      const mine = sum(
+        "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id = ? AND state IN ('receiving', 'sealed')",
+        input.principalId,
+      );
+      if (
+        mine + input.declaredBytes >
+        DOCUMENT_LIMITS.reservedBytesPerPrincipal
+      )
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "Too many staged bytes in progress; commit or wait for one to expire.",
+        );
+      // Agents and the CLI share one half, so the browser session (the
+      // person at the keyboard) can always stage its document.
+      if (input.principalId !== "browser-ui") {
+        const others = sum(
+          "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id <> 'browser-ui' AND state IN ('receiving', 'sealed')",
+        );
+        if (
+          others + input.declaredBytes >
+          DOCUMENT_LIMITS.reservedBytesForOthers
+        )
+          throw new CommandError(
+            "LIMIT_EXCEEDED",
+            "The staged upload space for agents and the CLI is in use; retry later.",
+          );
+      }
+      const free = this.#options.freeBytes
+        ? this.#options.freeBytes()
+        : (() => {
+            const space = statfsSync(this.root);
+            return Number(space.bavail) * Number(space.bsize);
+          })();
+      if (
+        free <
+        input.declaredBytes + RESOURCE_POLICY.enforced.diskReserveBytes
+      )
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "Insufficient free disk space to stage a document.",
+        );
+      const id = randomUUID();
+      db.prepare(
+        "INSERT INTO document_uploads(id, project_id, principal_id, request_id, request_digest, kind, schema_version, declared_bytes, body_sha256, state, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'receiving', ?, ?)",
+      ).run(
+        id,
+        input.projectId,
+        input.principalId,
+        input.requestId,
+        digest,
+        kind,
+        input.schemaVersion,
+        input.declaredBytes,
+        bodySha256,
+        now,
+        now + DOCUMENT_LIMITS.uploadTtlMs,
+      );
+      return { reserved: id };
+    });
+  }
+  // Seals a reserved upload with its complete body: the bytes must be the
+  // declared length and hash and a valid document; otherwise the
+  // reservation is released and nothing is kept.
+  sealDocumentUpload(
+    uploadId: string,
+    body: Uint8Array,
+  ): StagedDocumentReceipt {
+    const row = this.#database
+      .prepare("SELECT * FROM document_uploads WHERE id = ?")
+      .get(uploadId) as UploadRow | undefined;
+    if (!row || row.state !== "receiving")
+      throw new CommandError("NOT_FOUND", "No such upload in progress.");
+    try {
+      if (body.byteLength !== row.declared_bytes)
+        throw new CommandError(
+          "VALIDATION",
+          "The upload's length does not match its Content-Length.",
+        );
+      if (sha256Hex(body) !== row.body_sha256)
+        throw new CommandError(
+          "VALIDATION",
+          "The upload does not match its declared SHA-256.",
+        );
+      const doc = validateDocument(
+        DocumentKind.parse(row.kind),
+        row.schema_version,
+        body,
+      );
+      return this.transaction((db) => {
+        db.prepare(
+          "UPDATE document_uploads SET state = 'sealed', content_hash = ?, asset_ids = ?, bytes = ? WHERE id = ? AND state = 'receiving'",
+        ).run(doc.hash, JSON.stringify(doc.assetIds), doc.bytes, uploadId);
+        return uploadReceipt(
+          db
+            .prepare("SELECT * FROM document_uploads WHERE id = ?")
+            .get(uploadId) as UploadRow,
+        );
+      });
+    } catch (e) {
+      this.abandonDocumentUpload(uploadId);
+      throw e;
+    }
+  }
+  // Releases a reservation whose body never arrived complete.
+  abandonDocumentUpload(uploadId: string) {
+    this.transaction((db) =>
+      db
+        .prepare(
+          "DELETE FROM document_uploads WHERE id = ? AND state = 'receiving'",
+        )
+        .run(uploadId),
+    );
   }
   // Migration only (T3): import a project's verified history with its original
   // revision numbers into this workspace in one transaction. Refuses a project
