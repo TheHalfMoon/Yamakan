@@ -218,7 +218,11 @@ function pump() {
   else if (!ended) process.stdin.resume();
   if (ended && queue.length === 0 && !finishing) {
     finishing = true;
-    void Promise.allSettled(inFlight).then(() => process.exit(0));
+    // Exit only once every reply has reached stdout: on POSIX a pipe
+    // write is asynchronous and exiting would drop what is still buffered.
+    void Promise.allSettled(inFlight).then(() =>
+      process.stdout.write("", () => process.exit(0)),
+    );
   }
 }
 process.stdin.setEncoding("utf8");

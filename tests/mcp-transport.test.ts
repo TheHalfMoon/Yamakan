@@ -128,8 +128,9 @@ test("MCP refuses an oversized newline-terminated frame and keeps serving", asyn
   }
 });
 
-test("MCP answers thousands of frames in one chunk in order under a small heap", async () => {
-  // A 48 MiB heap would not survive retaining every request or response.
+test("positive control: thousands of frames in one chunk are all answered in order", async () => {
+  // Valid traffic at volume keeps working under the bounds (a small heap
+  // guards against gross retention, not a precise memory bound).
   const { mcp, replies, until } = startMcp("http://127.0.0.1:9", [
     "--max-old-space-size=48",
   ]);
@@ -196,4 +197,17 @@ test("10k concurrent tool calls never exceed the in-flight bound and all get ans
     await stop(mcp);
     service.close();
   }
+});
+
+test("closing stdin right after a flood still delivers every reply before exit", async () => {
+  const { mcp, replies, until } = startMcp("http://127.0.0.1:9");
+  const count = 5_000;
+  let batch = "";
+  for (let id = 1; id <= count; id++) batch += ping(id);
+  const exited = once(mcp, "exit");
+  mcp.stdin!.end(batch);
+  await until(count, 60_000);
+  const [code] = await exited;
+  assert.equal(code, 0);
+  assert.equal(replies.length, count);
 });
