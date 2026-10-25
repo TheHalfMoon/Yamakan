@@ -251,6 +251,14 @@ test("a retried commit returns its original revision; a reused request id with o
     store.commitDocument(input, receipt("b".repeat(64))),
     "IDEMPOTENCY_MISMATCH",
   );
+  // The same request id and caller digest with other bytes is not a replay.
+  await refused(
+    store.commitDocument(
+      { ...input, source: { bytes: bytes(studio("Other")) } },
+      receipt("a".repeat(64)),
+    ),
+    "IDEMPOTENCY_MISMATCH",
+  );
 });
 
 test("reverting to an earlier document version is a new revision; another project's version is refused", async () => {
@@ -337,7 +345,7 @@ test("a Cinema scene keeps the assets it uses in the project", async () => {
       source: { bytes: bytes(scene(randomUUID())) },
     }),
     "VALIDATION",
-    /still used by a creative document/,
+    /uses an asset this revision would not hold/,
   );
   const current = await store.load(project.id);
   await store.commitDocument({

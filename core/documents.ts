@@ -39,25 +39,57 @@ export type ValidatedDocument = {
 
 const PROTOTYPE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
-// Walks parsed JSON once, iteratively, enforcing depth and node bounds.
+const tooDeep = () =>
+  new CommandError(
+    "LIMIT_EXCEEDED",
+    `Document nesting exceeds depth ${DOCUMENT_LIMITS.depth}.`,
+  );
+const tooMany = () =>
+  new CommandError(
+    "LIMIT_EXCEEDED",
+    `Document exceeds ${DOCUMENT_LIMITS.nodes} JSON nodes.`,
+  );
+
+// One linear pass over the text before JSON.parse, so a hostile document
+// is refused without building it: nesting depth exactly, and an upper bound
+// on values (every value after the first follows a comma, colon or opening
+// bracket, counted outside strings; object members count twice).
+function prescan(text: string) {
+  let depth = 0;
+  let tokens = 1;
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (inString) {
+      if (c === 0x5c)
+        i++; // backslash: skip the escaped character
+      else if (c === 0x22) inString = false;
+      continue;
+    }
+    if (c === 0x22) inString = true;
+    else if (c === 0x5b || c === 0x7b) {
+      if (++depth > DOCUMENT_LIMITS.depth) throw tooDeep();
+      tokens++;
+    } else if (c === 0x5d || c === 0x7d) depth--;
+    else if (c === 0x2c || c === 0x3a) tokens++;
+    if (tokens > 2 * DOCUMENT_LIMITS.nodes) throw tooMany();
+  }
+}
+
+// Exact bounds on the parsed value, counting each value as it is reached.
 function assertShape(value: unknown) {
   const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
-  let nodes = 0;
+  let nodes = 1;
+  const push = (child: unknown, depth: number) => {
+    if (++nodes > DOCUMENT_LIMITS.nodes) throw tooMany();
+    stack.push({ value: child, depth });
+  };
   while (stack.length) {
     const { value: node, depth } = stack.pop()!;
-    if (++nodes > DOCUMENT_LIMITS.nodes)
-      throw new CommandError(
-        "LIMIT_EXCEEDED",
-        `Document exceeds ${DOCUMENT_LIMITS.nodes} JSON nodes.`,
-      );
     if (node === null || typeof node !== "object") continue;
-    if (depth >= DOCUMENT_LIMITS.depth)
-      throw new CommandError(
-        "LIMIT_EXCEEDED",
-        `Document nesting exceeds depth ${DOCUMENT_LIMITS.depth}.`,
-      );
+    if (depth >= DOCUMENT_LIMITS.depth) throw tooDeep();
     if (Array.isArray(node)) {
-      for (const item of node) stack.push({ value: item, depth: depth + 1 });
+      for (const item of node) push(item, depth + 1);
       continue;
     }
     for (const key of Object.keys(node)) {
@@ -66,10 +98,7 @@ function assertShape(value: unknown) {
           "VALIDATION",
           "Prototype keys are not allowed in documents.",
         );
-      stack.push({
-        value: (node as Record<string, unknown>)[key],
-        depth: depth + 1,
-      });
+      push((node as Record<string, unknown>)[key], depth + 1);
     }
   }
 }
@@ -86,6 +115,7 @@ function parseBounded(bytes: Uint8Array, what: string): unknown {
   } catch {
     throw new CommandError("VALIDATION", `${what} is not valid UTF-8.`);
   }
+  prescan(text);
   let value: unknown;
   try {
     value = JSON.parse(text);

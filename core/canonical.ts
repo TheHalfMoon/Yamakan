@@ -308,7 +308,18 @@ export const CanonicalProjectSchema = z.preprocess((value, ctx) => {
       message: "Prototype keys are not allowed.",
     });
   return value;
-}, ProjectBody);
+}, ProjectBody.transform(normalizeVersion));
+// One parsed form: version 4 without documents, version 5 with them.
+function normalizeVersion<
+  T extends { formatVersion: 4 | 5; documents: unknown[] },
+>(p: T): T {
+  return {
+    ...p,
+    formatVersion: p.documents.length
+      ? FORMAT_VERSION
+      : DOCUMENTLESS_FORMAT_VERSION,
+  };
+}
 export type CanonicalProject = z.output<typeof ProjectBody>;
 
 // Bounded, write-free inspection of a stored snapshot whose format may be

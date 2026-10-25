@@ -11,7 +11,6 @@ import { createReadStream, statfsSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync, backup } from "node:sqlite";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
-import { z } from "zod";
 import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
 
 import type { Project, Asset } from "./project.ts";
@@ -39,6 +38,7 @@ import {
 } from "./canonical.ts";
 import {
   DocumentKind,
+  DocumentRefSchema,
   missingDocumentAssets,
   validateDocument,
 } from "./documents.ts";
@@ -47,8 +47,6 @@ import type { DocumentRef } from "./documents.ts";
 export type ExportedProject = Omit<CanonicalProject, "documents"> & {
   documents?: DocumentRef[];
 };
-
-const ContentHash = z.string().regex(/^[a-f0-9]{64}$/);
 import type { CanonicalProject } from "./canonical.ts";
 import { applyBatch } from "./timeline/operations.ts";
 import type { Operation } from "./timeline/operations.ts";
@@ -939,20 +937,28 @@ export class ProjectStore {
     for (const ref of project.documents) {
       const row = read.get(ref.contentHash) as
         { kind: string; schema_version: number; asset_ids: string } | undefined;
-      if (
-        !row ||
-        row.kind !== ref.kind ||
-        row.schema_version !== ref.schemaVersion
-      )
+      // Refs are only written beside their stored document, so a mismatch
+      // is workspace damage, not a client error.
+      let assetIds: string[] | null = null;
+      try {
+        if (
+          row &&
+          row.kind === ref.kind &&
+          row.schema_version === ref.schemaVersion
+        )
+          assetIds = JSON.parse(row.asset_ids) as string[];
+      } catch {
+        assetIds = null;
+      }
+      if (!Array.isArray(assetIds))
         throw new CommandError(
-          "VALIDATION",
-          "A document reference does not match a stored document.",
+          "RECOVERY_REQUIRED",
+          "A document reference does not match a stored document; restore an earlier revision.",
         );
-      const assetIds = JSON.parse(row.asset_ids) as string[];
       if (missingDocumentAssets({ assetIds }, assets.keys()).length)
         throw new CommandError(
           "VALIDATION",
-          "An asset is still used by a creative document.",
+          "A creative document uses an asset this revision would not hold.",
         );
       if (
         ref.kind === "studio" &&
@@ -964,16 +970,13 @@ export class ProjectStore {
         );
     }
   }
-  // The head's (or a revision's) document references.
-  listDocuments(projectId: string, revision?: number): DocumentRef[] {
+  // The head revision's document references.
+  listDocuments(projectId: string): DocumentRef[] {
     Id.parse(projectId);
-    if (revision === undefined) {
-      const head = this.#head(projectId);
-      if (!head) throw new CommandError("NOT_FOUND", "Project not found.");
-      return this.#canonical(head.snapshot_hash, projectId, head.revision)
-        .documents;
-    }
-    return this.revisionCanonical(projectId, revision).project.documents;
+    const head = this.#head(projectId);
+    if (!head) throw new CommandError("NOT_FOUND", "Project not found.");
+    return this.#canonical(head.snapshot_hash, projectId, head.revision)
+      .documents;
   }
   // One document of the head revision with its verified canonical bytes.
   getDocument(
@@ -1024,14 +1027,29 @@ export class ProjectStore {
         : null;
     const contentHash = validated
       ? validated.hash
-      : ContentHash.parse(
+      : DocumentRefSchema.shape.contentHash.parse(
           (input.source as { contentHash: string }).contentHash,
         );
+    // The replay digest also binds what is committed, so a retry under the
+    // same request id with other content can never return this result.
+    const bound = receipt && {
+      ...receipt,
+      digest: sha256Hex(
+        canonicalJson({
+          request: receipt.digest,
+          documentId: input.documentId,
+          kind,
+          schemaVersion: input.schemaVersion,
+          expectedContentHash: input.expectedContentHash,
+          contentHash,
+        }),
+      ),
+    };
     return this.#commit({
       operation: "document.commit",
       projectId: input.projectId,
       expectedRevision: input.expectedRevision,
-      receipt,
+      receipt: bound,
       check: () => {
         if (validated) return;
         // A revert may only name a document this project already held.
