@@ -529,7 +529,32 @@ test(
           headers: { Authorization: `Bearer ${token}` },
         })
       ).json();
-      const { tools } = (await viaMcp.raw("tools/list")).result;
+      const { tools: listed } = (await viaMcp.raw("tools/list")).result;
+      // One documented composite: document.save stages its content over the
+      // authenticated route, then calls yamakan.document.commit. Its input is
+      // that command's, with the document as content instead of a source.
+      const save = listed.find(
+        (x: { title: string }) => x.title === "yamakan.document.save",
+      );
+      const commit = catalog.tools.find(
+        (x: { name: string }) => x.name === "yamakan.document.commit",
+      );
+      {
+        const { requestId, content, ...rest } = save.inputSchema.properties;
+        const { source, ...commitRest } = commit.inputSchema.properties;
+        assert.ok(requestId && content && source);
+        assert.deepEqual(rest, commitRest);
+        assert.deepEqual(
+          [...save.inputSchema.required].sort(),
+          commit.inputSchema.required
+            .map((r: string) => (r === "source" ? "content" : r))
+            .sort(),
+        );
+        assert.equal(save.annotations.readOnlyHint, false);
+      }
+      const tools = listed.filter(
+        (x: { title: string }) => x.title !== "yamakan.document.save",
+      );
       assert.deepEqual(
         tools.map((x: { title: string }) => x.title).sort(),
         catalog.tools.map((x: { name: string }) => x.name).sort(),
