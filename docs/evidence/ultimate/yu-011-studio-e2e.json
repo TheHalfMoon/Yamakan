@@ -1,0 +1,19 @@
+{
+  "format": "yamakan.studio-e2e/v1",
+  "browser": "Microsoft Edge (installed), headless, over CDP",
+  "runner": "TesterArmy e2e 0.20.0 + @e2e-dev/web 0.14.0 (no model, telemetry disabled)",
+  "serviceKilledBetweenPhases": true,
+  "headFormatVersion": 5,
+  "documents": 1,
+  "storedBitmaps": 1,
+  "canvasNamesStoredBitmaps": 1,
+  "firstSaveHash": "e88a492a4d4f67d2e54e70032676b652de1646c95cdbec3a3095f17cc42e8d3e",
+  "lastCommittedHash": "cf728b2fc4867743bf1a9eb668e12e9fcb6eeee9056fa254040eb8b8b95d301e",
+  "strokePixel": [
+    0,
+    0,
+    0,
+    255
+  ],
+  "failures": []
+}

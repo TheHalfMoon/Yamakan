@@ -20,6 +20,7 @@
     "format": "prettier --write \"core/*.ts\" core/command server cli sdk mcp src/main.tsx src/adapter.ts src/style.css tests scripts vite.config.ts tsconfig.json package.json",
     "format:check": "prettier --check \"core/*.ts\" core/command server cli sdk mcp src/main.tsx src/adapter.ts src/style.css tests scripts vite.config.ts tsconfig.json package.json",
     "test:e2e": "node scripts/browser-e2e.mjs",
+    "test:e2e:studio": "node e2e/testerarmy/run.mjs",
     "provenance:check": "node scripts/provenance.mjs",
     "brand:check": "node scripts/brand-check.mjs",
     "benchmark": "node scripts/benchmark-production.ts",

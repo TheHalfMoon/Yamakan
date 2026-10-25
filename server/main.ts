@@ -11,7 +11,11 @@ import { CreativeAPI, principals } from "./api.ts";
 import { consumeLaunchSecret } from "../core/launch.ts";
 import { safePath, initializeRoot } from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
-import { stageDocument } from "./document-stage.ts";
+import { stageDocument, uploadStudioBitmap } from "./document-stage.ts";
+import {
+  CREATIVE_DOCUMENTS_ENABLED,
+  creativeDocumentsEnabled,
+} from "../core/documents.ts";
 import type { Principal } from "../core/command/registry.ts";
 import { parseEnvelope } from "../core/command/envelope.ts";
 import {
@@ -381,6 +385,33 @@ const server = createServer(async (req, res) => {
         res.setHeader("Connection", "close");
         return json(200, await stageDocument(store, principal, stage[1], req));
       }
+      const bitmaps = /^\/api\/v1\/projects\/([^/]+)\/studio\/bitmaps$/.exec(
+        url.pathname,
+      );
+      if (req.method === "POST" && bitmaps) {
+        res.setHeader("Connection", "close");
+        return json(
+          200,
+          await uploadStudioBitmap(store, principal, bitmaps[1], req),
+        );
+      }
+      const bitmap =
+        /^\/api\/v1\/projects\/([^/]+)\/studio\/bitmaps\/([a-f0-9]{64})$/.exec(
+          url.pathname,
+        );
+      if (req.method === "GET" && bitmap) {
+        if (!creativeDocumentsEnabled())
+          throw new CommandError(
+            "CAPABILITY_UNAVAILABLE",
+            "Creative document persistence is not enabled in this build.",
+          );
+        authorize(principal, "yamakan.project.open");
+        const file = await store.studioBitmapFile(bitmap[1], bitmap[2]);
+        // Content-addressed: a digest's bytes never change.
+        res.setHeader("Cache-Control", "private, max-age=3600, immutable");
+        await media(file, "image/png");
+        return;
+      }
       // Reference preview: a frame (PNG) or short segment (MP4) of a stored
       // revision, rendered by the export's plan compiler.
       const previewMatch = /^\/api\/v1\/projects\/([^/]+)\/preview$/.exec(
@@ -505,11 +536,15 @@ const server = createServer(async (req, res) => {
 // Long uploads and downloads stay open while data flows; idle sockets close.
 server.requestTimeout = 0;
 server.setTimeout(120_000);
-server.listen(port, "127.0.0.1", () =>
+server.listen(port, "127.0.0.1", () => {
+  if (creativeDocumentsEnabled() && !CREATIVE_DOCUMENTS_ENABLED)
+    console.warn(
+      "QUALIFICATION RUN: creative document persistence (AG-DOCS) is enabled by YAMAKAN_AG_DOCS_QUALIFICATION and is not yet qualified for use.",
+    );
   console.log(
     `Yamakan is running at ${origin}; workspace ${root}\nRun npm run open (or your Start-menu shortcut) to sign in in the browser.`,
-  ),
-);
+  );
+});
 const close = async (code = 0) => {
   if (closing) return;
   closing = true;

@@ -44,6 +44,7 @@ import {
   validateDocument,
 } from "./documents.ts";
 import type { DocumentRef } from "./documents.ts";
+import { assertStudioImageLimits } from "./studio.ts";
 
 // A sealed staged upload as clients see it: never a host path.
 export type StagedDocumentReceipt = {
@@ -75,6 +76,23 @@ const uploadReceipt = (row: UploadRow): StagedDocumentReceipt => ({
   schemaVersion: row.schema_version,
   expiresAt: new Date(row.expires_at).toISOString(),
 });
+
+// Width and height from a PNG signature and IHDR chunk, within Studio limits.
+function pngSize(head: Buffer): { width: number; height: number } {
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
+  if (
+    !head.subarray(0, 8).equals(signature) ||
+    head.readUInt32BE(8) !== 13 ||
+    head.subarray(12, 16).toString("latin1") !== "IHDR"
+  )
+    throw new CommandError("VALIDATION", "A Studio bitmap must be a PNG.");
+  const width = head.readUInt32BE(16);
+  const height = head.readUInt32BE(20);
+  assertStudioImageLimits(width, height);
+  return { width, height };
+}
 
 export type ExportedProject = Omit<CanonicalProject, "documents"> & {
   documents?: DocumentRef[];
@@ -131,6 +149,9 @@ export type StoreOptions = {
   uploadGraceMs?: number;
   // Test seam: the free bytes a commit sees (default: the volume's, statfs).
   freeBytes?: () => number;
+  // Test seam: awaited while Studio bitmap collection holds the discard
+  // mark, before it unlinks (lets a test race an upload against it).
+  studioCollectionPause?: () => Promise<void>;
 };
 
 // Snapshots hold canonical project bytes (core/canonical.ts). Snapshots that
@@ -139,7 +160,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 9;
+export const WORKSPACE_SCHEMA_VERSION = 10;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -274,6 +295,21 @@ CREATE TABLE document_uploads(
   consumed_revision INTEGER,
   UNIQUE(principal_id, project_id, request_id)
 ) STRICT;
+`;
+// Studio bitmaps (YU-011): which content-addressed objects of a project are
+// Studio layer bitmaps, and the bitmaps each stored document names.
+const SCHEMA_V10 = `
+CREATE TABLE studio_bitmaps(
+  project_id TEXT NOT NULL,
+  digest TEXT NOT NULL CHECK(length(digest) = 64),
+  byte_length INTEGER NOT NULL CHECK(byte_length > 0),
+  width INTEGER NOT NULL CHECK(width > 0),
+  height INTEGER NOT NULL CHECK(height > 0),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(project_id, digest)
+) STRICT;
+ALTER TABLE creative_documents ADD COLUMN object_digests TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE document_uploads ADD COLUMN object_digests TEXT;
 `;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
@@ -520,6 +556,7 @@ export class ProjectStore {
         SCHEMA_V7,
         SCHEMA_V8,
         SCHEMA_V9,
+        SCHEMA_V10,
       ];
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
@@ -994,25 +1031,37 @@ export class ProjectStore {
     if (!project.documents.length) return;
     const assets = new Map(project.assets.map((a) => [a.id, a.kind]));
     const read = db.prepare(
-      "SELECT kind, schema_version, asset_ids FROM creative_documents WHERE hash = ?",
+      "SELECT kind, schema_version, asset_ids, object_digests FROM creative_documents WHERE hash = ?",
+    );
+    const bitmap = db.prepare(
+      "SELECT 1 FROM studio_bitmaps b JOIN asset_objects o ON o.project_id = b.project_id AND o.digest = b.digest WHERE b.project_id = ? AND b.digest = ? AND o.state = 'ready'",
     );
     for (const ref of project.documents) {
       const row = read.get(ref.contentHash) as
-        { kind: string; schema_version: number; asset_ids: string } | undefined;
+        | {
+            kind: string;
+            schema_version: number;
+            asset_ids: string;
+            object_digests: string;
+          }
+        | undefined;
       // Refs are only written beside their stored document, so a mismatch
       // is workspace damage, not a client error.
       let assetIds: string[] | null = null;
+      let objectDigests: string[] | null = null;
       try {
         if (
           row &&
           row.kind === ref.kind &&
           row.schema_version === ref.schemaVersion
-        )
+        ) {
           assetIds = JSON.parse(row.asset_ids) as string[];
+          objectDigests = JSON.parse(row.object_digests) as string[];
+        }
       } catch {
         assetIds = null;
       }
-      if (!Array.isArray(assetIds))
+      if (!Array.isArray(assetIds) || !Array.isArray(objectDigests))
         throw new CommandError(
           "RECOVERY_REQUIRED",
           "A document reference does not match a stored document; restore an earlier revision.",
@@ -1029,6 +1078,12 @@ export class ProjectStore {
         throw new CommandError(
           "VALIDATION",
           "Studio bitmaps must be image assets.",
+        );
+      // Canvas bitmaps must be this project's stored Studio bitmaps.
+      if (objectDigests.some((digest) => !bitmap.get(project.id, digest)))
+        throw new CommandError(
+          "VALIDATION",
+          "A Studio canvas names a bitmap this project does not hold.",
         );
     }
   }
@@ -1204,7 +1259,7 @@ export class ProjectStore {
       effects: stagedId
         ? (db, revision) => {
             db.prepare(
-              "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) SELECT content_hash, kind, schema_version, asset_ids, bytes, length(bytes) FROM document_uploads WHERE id = ? ON CONFLICT(hash) DO NOTHING",
+              "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT content_hash, kind, schema_version, asset_ids, object_digests, bytes, length(bytes) FROM document_uploads WHERE id = ? ON CONFLICT(hash) DO NOTHING",
             ).run(stagedId);
             db.prepare(
               "UPDATE document_uploads SET state = 'consumed', consumed_revision = ?, bytes = NULL WHERE id = ? AND state = 'sealed'",
@@ -1213,12 +1268,13 @@ export class ProjectStore {
         : validated
           ? (db) => {
               db.prepare(
-                "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
+                "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
               ).run(
                 validated.hash,
                 validated.kind,
                 validated.schemaVersion,
                 JSON.stringify(validated.assetIds),
+                JSON.stringify(validated.objectDigests),
                 validated.bytes,
                 validated.bytes.length,
               );
@@ -1407,8 +1463,14 @@ export class ProjectStore {
       );
       return this.transaction((db) => {
         db.prepare(
-          "UPDATE document_uploads SET state = 'sealed', content_hash = ?, asset_ids = ?, bytes = ? WHERE id = ? AND state = 'receiving'",
-        ).run(doc.hash, JSON.stringify(doc.assetIds), doc.bytes, uploadId);
+          "UPDATE document_uploads SET state = 'sealed', content_hash = ?, asset_ids = ?, object_digests = ?, bytes = ? WHERE id = ? AND state = 'receiving'",
+        ).run(
+          doc.hash,
+          JSON.stringify(doc.assetIds),
+          JSON.stringify(doc.objectDigests),
+          doc.bytes,
+          uploadId,
+        );
         return uploadReceipt(
           db
             .prepare("SELECT * FROM document_uploads WHERE id = ?")
@@ -1429,6 +1491,165 @@ export class ProjectStore {
         )
         .run(uploadId),
     );
+  }
+  /**
+   * Stores one Studio layer bitmap (PNG) in the project's content-addressed
+   * object store and registers it, so the canvas can name it by digest
+   * (YU-011). Identical bytes are stored once. The PNG header and the Studio
+   * dimension limits are checked from the first bytes, before the rest is
+   * read; the registration happens inside the publication hold, so garbage
+   * collection never sees the object unregistered.
+   */
+  async importStudioBitmap(
+    projectId: string,
+    source: AsyncIterable<Uint8Array>,
+    declaredBytes: number,
+  ): Promise<{
+    digest: string;
+    byteLength: number;
+    width: number;
+    height: number;
+  }> {
+    Id.parse(projectId);
+    if (!this.#head(projectId))
+      throw new CommandError("NOT_FOUND", "Project not found.");
+    if (
+      !Number.isSafeInteger(declaredBytes) ||
+      declaredBytes < 33 ||
+      declaredBytes > DOCUMENT_LIMITS.bitmapBytes
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `A Studio bitmap is a PNG of at most ${DOCUMENT_LIMITS.bitmapBytes} bytes.`,
+      );
+    const free = this.#options.freeBytes
+      ? this.#options.freeBytes()
+      : (() => {
+          const space = statfsSync(this.root);
+          return Number(space.bavail) * Number(space.bsize);
+        })();
+    if (free < declaredBytes + RESOURCE_POLICY.enforced.diskReserveBytes)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Insufficient free disk space to store a Studio bitmap.",
+      );
+    // The project's Studio bitmap budget, checked before streaming and again
+    // when the bitmap is registered.
+    const overBudget = (db: DatabaseSync, digest: string | null) => {
+      const used = db
+        .prepare(
+          "SELECT count(*) AS n, coalesce(sum(byte_length), 0) AS bytes FROM studio_bitmaps WHERE project_id = ? AND digest IS NOT ?",
+        )
+        .get(projectId, digest) as { n: number; bytes: number };
+      return (
+        used.n + 1 > DOCUMENT_LIMITS.projectBitmaps ||
+        used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes
+      );
+    };
+    if (overBudget(this.#database, null))
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+      );
+    let size = 0;
+    let head = Buffer.alloc(0);
+    let size2d: { width: number; height: number } | null = null;
+    const checked = async function* () {
+      for await (const chunk of source) {
+        size += chunk.byteLength;
+        if (size > declaredBytes)
+          throw new CommandError(
+            "VALIDATION",
+            "The bitmap is longer than its declared length.",
+          );
+        if (!size2d) {
+          head = Buffer.concat([head, Buffer.from(chunk)]).subarray(0, 33);
+          if (head.length >= 24) size2d = pngSize(head);
+        }
+        yield chunk;
+      }
+      if (!size2d || size !== declaredBytes)
+        throw new CommandError(
+          "VALIDATION",
+          "A Studio bitmap must be a complete PNG of its declared length.",
+        );
+    };
+    const release = await this.beginPublication(projectId);
+    try {
+      await this.#ensureDirectories(projectId);
+      const stored = await (await this.#objects(projectId)).put(checked());
+      const { width, height } = size2d!;
+      this.transaction((db) => {
+        const object = db
+          .prepare(
+            "SELECT state FROM asset_objects WHERE project_id = ? AND digest = ?",
+          )
+          .get(projectId, stored.sha256) as { state: string } | undefined;
+        if (object && object.state !== "ready")
+          throw new CommandError(
+            "RECOVERY_REQUIRED",
+            "This bitmap's stored copy is quarantined; restore a verified backup.",
+          );
+        const known = db
+          .prepare(
+            "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+          )
+          .get(projectId, stored.sha256);
+        if (!known && overBudget(db, stored.sha256))
+          throw new CommandError(
+            "LIMIT_EXCEEDED",
+            "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+          );
+        if (!object)
+          db.prepare(
+            "INSERT INTO asset_objects(project_id, digest, byte_length, state, generation) VALUES (?, ?, ?, 'ready', 1)",
+          ).run(projectId, stored.sha256, stored.byteLength);
+        db.prepare(
+          "INSERT INTO studio_bitmaps(project_id, digest, byte_length, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(project_id, digest) DO UPDATE SET created_at = excluded.created_at",
+        ).run(
+          projectId,
+          stored.sha256,
+          stored.byteLength,
+          width,
+          height,
+          Date.now(),
+        );
+      });
+      return {
+        digest: stored.sha256,
+        byteLength: stored.byteLength,
+        width,
+        height,
+      };
+    } finally {
+      release();
+    }
+  }
+  // The stored file of one of this project's Studio bitmaps.
+  async studioBitmapFile(projectId: string, digest: string) {
+    Id.parse(projectId);
+    if (!/^[a-f0-9]{64}$/.test(digest))
+      throw new CommandError("NOT_FOUND", "Bitmap not found.");
+    const row = this.#database
+      .prepare(
+        "SELECT b.byte_length FROM studio_bitmaps b JOIN asset_objects o ON o.project_id = b.project_id AND o.digest = b.digest WHERE b.project_id = ? AND b.digest = ? AND o.state = 'ready'",
+      )
+      .get(projectId, digest) as { byte_length: number } | undefined;
+    if (!row) throw new CommandError("NOT_FOUND", "Bitmap not found.");
+    const file = await this.file(
+      projectId,
+      "objects",
+      "sha256",
+      digest.slice(0, 2),
+      digest,
+    );
+    const info = await lstat(file).catch(() => null);
+    if (!info?.isFile() || info.size !== row.byte_length)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "A Studio bitmap's stored copy is missing or damaged.",
+      );
+    return file;
   }
   // Migration only (T3): import a project's verified history with its original
   // revision numbers into this workspace in one transaction. Refuses a project
@@ -1762,7 +1983,109 @@ export class ProjectStore {
       }
     }
     await this.#collectHiddenVfrOriginals(report);
+    await this.#collectStudioBitmaps(report, graceMs, now);
     return report;
+  }
+  // Studio bitmaps no retained revision's document (and no sealed upload
+  // awaiting its commit) names, once older than the grace period: a save in
+  // progress uploads its bitmaps before committing the document.
+  async #collectStudioBitmaps(
+    report: { objects: number; bytes: number },
+    graceMs: number,
+    now: number,
+  ) {
+    const db = this.#database;
+    const projects = db
+      .prepare("SELECT DISTINCT project_id FROM studio_bitmaps")
+      .all() as { project_id: string }[];
+    for (const { project_id: projectId } of projects) {
+      if (
+        this.#publishing.has(projectId) ||
+        this.#discarding.has(projectId) ||
+        this.#holds > 0
+      )
+        continue;
+      const removed = this.transaction((inner) => {
+        const named = new Set<string>();
+        const lists = inner
+          .prepare(
+            `SELECT c.object_digests AS list FROM revisions r
+             JOIN snapshot_document_refs d ON d.snapshot_hash = r.snapshot_hash
+             JOIN creative_documents c ON c.hash = d.document_hash
+             WHERE r.project_id = ?
+             UNION ALL
+             SELECT object_digests AS list FROM document_uploads
+             WHERE project_id = ? AND state = 'sealed' AND object_digests IS NOT NULL`,
+          )
+          .all(projectId, projectId) as { list: string }[];
+        for (const { list } of lists)
+          for (const digest of JSON.parse(list) as string[]) named.add(digest);
+        const stale = (
+          inner
+            .prepare(
+              "SELECT digest, byte_length FROM studio_bitmaps WHERE project_id = ? AND created_at < ?",
+            )
+            .all(projectId, now - graceMs) as {
+            digest: string;
+            byte_length: number;
+          }[]
+        ).filter((b) => !named.has(b.digest));
+        const files: { digest: string; bytes: number }[] = [];
+        for (const b of stale) {
+          inner
+            .prepare(
+              "DELETE FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+            )
+            .run(projectId, b.digest);
+          // The same bytes may also be an imported asset's: keep them then.
+          const shared = inner
+            .prepare(
+              "SELECT 1 FROM asset_versions WHERE project_id = ? AND digest = ? LIMIT 1",
+            )
+            .get(projectId, b.digest);
+          if (shared) continue;
+          inner
+            .prepare(
+              "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
+            )
+            .run(projectId, b.digest);
+          files.push({ digest: b.digest, bytes: b.byte_length });
+        }
+        return files;
+      });
+      if (!removed.length) continue;
+      // Marked synchronously, right after the rows are gone: a publication
+      // of the same bytes waits (beginPublication) until the files are, so
+      // it can never re-register a digest whose file is then deleted.
+      const work = (async () => {
+        await this.#options.studioCollectionPause?.();
+        for (const { digest, bytes } of removed) {
+          // One file that cannot be removed is left for the next pass.
+          const unlinked = await this.file(
+            projectId,
+            "objects",
+            "sha256",
+            digest.slice(0, 2),
+            digest,
+          )
+            .then((file) => unlink(file))
+            .then(
+              () => true,
+              () => false,
+            );
+          if (unlinked) {
+            report.objects++;
+            report.bytes += bytes;
+          }
+        }
+      })();
+      this.#discarding.set(projectId, work);
+      try {
+        await work;
+      } finally {
+        this.#discarding.delete(projectId);
+      }
+    }
   }
   async #collectHiddenVfrOriginals(report: { objects: number; bytes: number }) {
     if (this.#holds > 0 || this.#importing > 0) return;
@@ -1874,7 +2197,13 @@ export class ProjectStore {
           "SELECT 1 FROM asset_versions WHERE project_id = ? AND digest = ? LIMIT 1",
         )
         .get(projectId, version.digest);
-      if (shared) return null;
+      // The same bytes may also be a Studio bitmap of this project.
+      const bitmap = db
+        .prepare(
+          "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+        )
+        .get(projectId, version.digest);
+      if (shared || bitmap) return null;
       db.prepare(
         "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
       ).run(projectId, version.digest);

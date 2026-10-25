@@ -28,6 +28,23 @@ export type { DocumentRef } from "./document-ref.ts";
  */
 export const CREATIVE_DOCUMENTS_ENABLED = false;
 
+/**
+ * Whether this service process accepts creative document writes: the
+ * build's AG-DOCS flag, or an operator's qualification run started with
+ * YAMAKAN_AG_DOCS_QUALIFICATION=1 (real-browser group tests need the path
+ * live before activation). The switch is read from the service's own
+ * environment only, is never set by the launcher or bundle, and the
+ * service announces it at startup. No request can change it.
+ */
+export function creativeDocumentsEnabled(): boolean {
+  return (
+    CREATIVE_DOCUMENTS_ENABLED ||
+    // Never in an installed bundle (YAMAKAN_BUNDLE_INSTALL marks one).
+    (process.env.YAMAKAN_AG_DOCS_QUALIFICATION === "1" &&
+      !process.env.YAMAKAN_BUNDLE_INSTALL)
+  );
+}
+
 export type ValidatedDocument = {
   kind: DocumentKind;
   schemaVersion: number;
@@ -35,6 +52,8 @@ export type ValidatedDocument = {
   hash: string;
   // Project assets the document needs; they must stay in the project.
   assetIds: string[];
+  // Studio bitmaps (content-addressed objects) the document needs.
+  objectDigests: string[];
 };
 
 const PROTOTYPE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
@@ -138,6 +157,7 @@ const schemaError = (e: unknown, what: string): never => {
 function validateStudio(value: unknown): {
   content: StudioDocument;
   assetIds: string[];
+  objectDigests: string[];
 } {
   let content: StudioDocument;
   try {
@@ -159,17 +179,79 @@ function validateStudio(value: unknown): {
       "VALIDATION",
       "Studio bitmap assets must be listed once.",
     );
-  return { content, assetIds: [...content.bitmapAssetIds].sort() };
+  return {
+    content,
+    assetIds: [...content.bitmapAssetIds].sort(),
+    objectDigests: canvasBitmapDigests(canvas),
+  };
+}
+
+// Keys whose string values name canvas media (the engine's own extractor,
+// src/studio/workbench/mediaReferences.ts, uses the same sets).
+const IMAGE_NAME_KEYS = new Set(["imageName", "image_name"]);
+const VIDEO_NAME_KEYS = new Set([
+  "videoName",
+  "video_name",
+  "source_video_name",
+]);
+// Keys whose values fetch media from elsewhere. Free text (a text layer's
+// words) may look like a URL and is not refused.
+const URL_KEYS = new Set(["url", "src", "href", "uri"]);
+const DIGEST = /^[a-f0-9]{64}$/;
+
+/**
+ * Every bitmap a Studio canvas names, anywhere in it. A persisted canvas
+ * names bitmaps only by the SHA-256 of a Studio bitmap stored in its
+ * project (imageName is that digest); any other name, a URL or a video
+ * reference is refused, so a document can never point outside its project.
+ */
+export function canvasBitmapDigests(canvas: unknown): string[] {
+  const digests = new Set<string>();
+  const pending: unknown[] = [canvas];
+  while (pending.length) {
+    const node = pending.pop();
+    if (Array.isArray(node)) {
+      pending.push(...node);
+      continue;
+    }
+    if (!node || typeof node !== "object") continue;
+    for (const [key, value] of Object.entries(node)) {
+      if (typeof value === "string") {
+        // Media fetched from anywhere but the project (staging candidates,
+        // reference images): refused, whatever else the object names.
+        if (URL_KEYS.has(key) && value !== "")
+          throw new CommandError(
+            "VALIDATION",
+            "A Studio canvas cannot reference media by URL.",
+          );
+        if (VIDEO_NAME_KEYS.has(key))
+          throw new CommandError(
+            "VALIDATION",
+            "Studio canvases cannot reference video.",
+          );
+        if (IMAGE_NAME_KEYS.has(key)) {
+          if (!DIGEST.test(value))
+            throw new CommandError(
+              "VALIDATION",
+              "A Studio canvas names bitmaps only by their stored SHA-256.",
+            );
+          digests.add(value);
+        }
+      } else if (value && typeof value === "object") pending.push(value);
+    }
+  }
+  return [...digests].sort();
 }
 
 function validateScene(value: unknown): {
   content: unknown;
   assetIds: string[];
+  objectDigests: string[];
 } {
   const scene = parseScene3D(value);
   const ids = new Set<string>();
   for (const item of scene.items) if (item.assetId) ids.add(item.assetId);
-  return { content: scene, assetIds: [...ids].sort() };
+  return { content: scene, assetIds: [...ids].sort(), objectDigests: [] };
 }
 
 /**
@@ -188,7 +270,7 @@ export function validateDocument(
       `Unsupported ${kind} document schema version ${schemaVersion}.`,
     );
   const value = parseBounded(raw, "Document");
-  const { content, assetIds } =
+  const { content, assetIds, objectDigests } =
     kind === "studio" ? validateStudio(value) : validateScene(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
   if (bytes.byteLength > DOCUMENT_LIMITS.documentBytes)
@@ -196,7 +278,14 @@ export function validateDocument(
       "LIMIT_EXCEEDED",
       `Canonical document exceeds ${DOCUMENT_LIMITS.documentBytes} bytes.`,
     );
-  return { kind, schemaVersion, bytes, hash: sha256Hex(bytes), assetIds };
+  return {
+    kind,
+    schemaVersion,
+    bytes,
+    hash: sha256Hex(bytes),
+    assetIds,
+    objectDigests,
+  };
 }
 
 /** Assets a document references that the project does not hold. */

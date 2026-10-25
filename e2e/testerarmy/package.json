@@ -1,0 +1,16 @@
+{
+  "name": "yamakan-testerarmy-e2e",
+  "private": true,
+  "description": "YU-011+: TesterArmy e2e journeys against a local Yamakan service and installed Microsoft Edge (no model, no telemetry, no browser download, no hosted service). Test-only; never packaged.",
+  "type": "module",
+  "scripts": {
+    "e2e": "node run.mjs"
+  },
+  "devDependencies": {
+    "@e2e-dev/web": "0.14.0",
+    "e2e": "0.20.0"
+  },
+  "overrides": {
+    "zod": "4.6.7"
+  }
+}

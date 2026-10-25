@@ -9,7 +9,7 @@ import { CommandError } from "../core/command/errors.ts";
 import { authorize } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
 import {
-  CREATIVE_DOCUMENTS_ENABLED,
+  creativeDocumentsEnabled,
   DOCUMENT_LIMITS,
   DocumentKind,
 } from "../core/documents.ts";
@@ -66,7 +66,7 @@ export async function stageDocument(
   req: IncomingMessage,
   // Test seams only: production passes neither and gets the AG-DOCS flag
   // and the policy deadline.
-  enabled: boolean = CREATIVE_DOCUMENTS_ENABLED,
+  enabled: boolean = creativeDocumentsEnabled(),
   deadlineMs?: number,
 ): Promise<StagedDocumentReceipt> {
   if (!enabled)
@@ -127,3 +127,66 @@ export async function stageDocument(
   }
   return store.sealDocumentUpload(reservation.reserved, body);
 }
+
+// POST /api/v1/projects/:projectId/studio/bitmaps (YU-011): one Studio layer
+// bitmap (PNG) into the project's object store. The canvas then names it by
+// the returned digest. Same order as staging: flag, authorization, headers,
+// then the body, streamed under the same deadline.
+export async function uploadStudioBitmap(
+  store: ProjectStore,
+  principal: Principal,
+  projectId: string,
+  req: IncomingMessage,
+  enabled: boolean = creativeDocumentsEnabled(),
+  deadlineMs?: number,
+) {
+  if (!enabled)
+    throw new CommandError(
+      "CAPABILITY_UNAVAILABLE",
+      "Creative document persistence is not enabled in this build.",
+    );
+  authorize(principal, "yamakan.document.commit");
+  if (header(req, "content-type") !== "image/png")
+    throw new CommandError("VALIDATION", "Studio bitmaps are image/png.");
+  const length = header(req, "content-length");
+  if (!/^\d{1,9}$/.test(length) || Number(length) === 0)
+    throw new CommandError(
+      "VALIDATION",
+      "Bitmap uploads require a Content-Length header.",
+    );
+  if (Number(length) > DOCUMENT_LIMITS.bitmapBytes)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      `A Studio bitmap is at most ${DOCUMENT_LIMITS.bitmapBytes} bytes.`,
+    );
+  const active = bitmapUploads.get(principal.id) ?? 0;
+  if (active >= DOCUMENT_LIMITS.activeBitmapUploadsPerPrincipal)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      "Too many bitmap uploads in progress; wait for one to finish.",
+    );
+  bitmapUploads.set(principal.id, active + 1);
+  const timer = setTimeout(
+    () =>
+      req.destroy(
+        new CommandError("LIMIT_EXCEEDED", "The upload was too slow."),
+      ),
+    deadlineMs ?? stageDeadlineMs(Number(length)),
+  );
+  try {
+    return await store.importStudioBitmap(
+      projectId,
+      req as AsyncIterable<Uint8Array>,
+      Number(length),
+    );
+  } finally {
+    clearTimeout(timer);
+    const left = (bitmapUploads.get(principal.id) ?? 1) - 1;
+    if (left > 0) bitmapUploads.set(principal.id, left);
+    else bitmapUploads.delete(principal.id);
+  }
+}
+
+// Bitmap uploads in progress per principal (bodies stream to disk, so this
+// bounds open uploads and the GC deferral they cause, not memory).
+const bitmapUploads = new Map<string, number>();
