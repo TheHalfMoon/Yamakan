@@ -5,6 +5,11 @@ import type {
 } from "../core/command/registry.ts";
 import type { ErrorCode } from "../core/command/errors.ts";
 import type { StagedDocumentReceipt } from "../core/store.ts";
+import { DOCUMENT_LIMITS } from "../core/document-ref.ts";
+
+// saveDocument derives "<id>.stage" and "<id>.commit"; both must stay within
+// the service's 128-character request ids.
+export const SAVE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,121}$/;
 
 export type { Operation, OperationInput, OperationResult };
 
@@ -98,6 +103,17 @@ export class YamakanClient {
       requestId: string;
     },
   ): Promise<StagedDocumentReceipt> {
+    // Refused here rather than cut off by the server mid-upload.
+    if (
+      body.byteLength === 0 ||
+      body.byteLength > DOCUMENT_LIMITS.documentBytes
+    )
+      throw new YamakanError(
+        "LIMIT_EXCEEDED",
+        `A staged document is 1 to ${DOCUMENT_LIMITS.documentBytes} bytes.`,
+        false,
+        null,
+      );
     // WebCrypto: the same code runs in the browser UI and in Node.
     const digest = await globalThis.crypto.subtle.digest(
       "SHA-256",
@@ -148,6 +164,13 @@ export class YamakanClient {
     content: unknown;
     requestId: string;
   }) {
+    if (!SAVE_REQUEST_ID.test(input.requestId))
+      throw new YamakanError(
+        "VALIDATION",
+        "saveDocument needs a request id of 1 to 121 characters [A-Za-z0-9._:-].",
+        false,
+        null,
+      );
     const body = new TextEncoder().encode(JSON.stringify(input.content));
     const staged = await this.stageDocument(input.projectId, body, {
       kind: input.kind,

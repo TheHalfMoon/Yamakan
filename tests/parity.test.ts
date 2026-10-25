@@ -539,6 +539,7 @@ test(
       const commit = catalog.tools.find(
         (x: { name: string }) => x.name === "yamakan.document.commit",
       );
+      assert.ok(save && commit, "document.save and document.commit are listed");
       {
         const { requestId, content, ...rest } = save.inputSchema.properties;
         const { source, ...commitRest } = commit.inputSchema.properties;

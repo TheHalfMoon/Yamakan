@@ -25,11 +25,16 @@ try {
       throw new Error(
         "Usage: npm run cli -- stage-document <projectId> <studio|cinemaScene> <schemaVersion> <file> [requestId]",
       );
-    return client.stageDocument(projectId, await readFile(file), {
-      kind,
-      schemaVersion: Number(version),
-      requestId: requestId ?? crypto.randomUUID(),
-    });
+    // The request id is printed so a lost response can be retried safely.
+    const id = requestId ?? crypto.randomUUID();
+    return {
+      requestId: id,
+      ...(await client.stageDocument(projectId, await readFile(file), {
+        kind,
+        schemaVersion: Number(version),
+        requestId: id,
+      })),
+    };
   };
   const result =
     name === "tools"

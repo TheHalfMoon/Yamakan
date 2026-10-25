@@ -82,7 +82,7 @@ function saveDocumentTool(commit: {
           type: "object",
           description: "The whole document (Studio document or Cinema scene).",
         },
-        requestId: REQUEST_ID,
+        requestId: { ...REQUEST_ID, maxLength: 121 },
       },
       required: [
         ...(schema.required ?? []).filter((r) => r !== "source"),
@@ -201,6 +201,32 @@ async function handle(message: Message) {
             false,
             null,
           );
+        if (saving) {
+          // As strict as a catalog tool: no field outside the schema, and
+          // the document must be a JSON object.
+          const allowed = new Set([
+            "projectId",
+            "expectedRevision",
+            "documentId",
+            "kind",
+            "schemaVersion",
+            "expectedContentHash",
+            "content",
+          ]);
+          const content = args.content;
+          if (
+            Object.keys(args).some((k) => !allowed.has(k)) ||
+            !content ||
+            typeof content !== "object" ||
+            Array.isArray(content)
+          )
+            throw new YamakanError(
+              "VALIDATION",
+              "Invalid yamakan_document_save arguments.",
+              false,
+              null,
+            );
+        }
         const service = await client();
         const result = saving
           ? await service.saveDocument({

@@ -88,7 +88,7 @@ test("the SDK stages a document and a retry returns the same receipt", async () 
 test("against the real service with AG-DOCS off, SDK, MCP and CLI saves are refused", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-docclients-"));
   bases.push(root);
-  const port = 24331;
+  const port = 24347;
   const url = `http://127.0.0.1:${port}`;
   const env = {
     ...process.env,
@@ -189,6 +189,18 @@ test("against the real service with AG-DOCS off, SDK, MCP and CLI saves are refu
     JSON.parse(called.result.content[0].text).code,
     "CAPABILITY_UNAVAILABLE",
   );
+  // As strict as a catalog tool: stray fields and non-object content fail.
+  for (const bad of [
+    { ...args, source: { contentHash: "a".repeat(64) } },
+    { ...args, content: "not an object" },
+  ]) {
+    const r = await rpc("tools/call", {
+      name: "yamakan_document_save",
+      arguments: bad,
+    });
+    assert.equal(r.result.isError, true);
+    assert.equal(JSON.parse(r.result.content[0].text).code, "VALIDATION");
+  }
 
   // The CLI reads the file locally and sends only its bytes.
   const file = path.join(root, "board.json");
@@ -214,4 +226,37 @@ test("against the real service with AG-DOCS off, SDK, MCP and CLI saves are refu
   );
   assert.equal(cli.code, 1);
   assert.equal(JSON.parse(cli.stderr.trim()).code, "CAPABILITY_UNAVAILABLE");
+});
+
+test("the SDK refuses ids it cannot suffix and bodies the route would cut off", async () => {
+  let called = false;
+  const client = new YamakanClient({
+    baseUrl: "http://127.0.0.1:9",
+    fetch: (async () => {
+      called = true;
+      throw new Error("must not be called");
+    }) as typeof fetch,
+  });
+  await assert.rejects(
+    client.saveDocument({
+      projectId: randomUUID(),
+      expectedRevision: 0,
+      documentId: randomUUID(),
+      kind: "studio",
+      schemaVersion: 1,
+      expectedContentHash: null,
+      content: studio(),
+      requestId: "r".repeat(122),
+    }),
+    (e: unknown) => e instanceof YamakanError && e.code === "VALIDATION",
+  );
+  await assert.rejects(
+    client.stageDocument(randomUUID(), new Uint8Array(8 * 1024 * 1024 + 1), {
+      kind: "studio",
+      schemaVersion: 1,
+      requestId: "big",
+    }),
+    (e: unknown) => e instanceof YamakanError && e.code === "LIMIT_EXCEEDED",
+  );
+  assert.equal(called, false);
 });

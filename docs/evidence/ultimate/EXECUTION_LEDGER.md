@@ -14,7 +14,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-003 MCP bounds | VERIFIED | #90 → `0fe9a18` | [receipts/YU-003.json](receipts/YU-003.json) |
 | (unplanned) zod GHSA-mrhx-c7xc-m3w5 | MERGED | #89 → `cfc6cd7` | security dependency fix that unblocked CI's `npm audit` gate |
 | YU-010a v5 refs, schema v8, store commit/get/list (flag off) | MERGED, post-merge verified | #91 → `fc4913e` | flag-off slice |
-| YU-010b staged upload route + `yamakan.document.commit` (flag off) | IMPLEMENTED | #92 | after merge |
+| YU-010b staged upload route + `yamakan.document.commit` (flag off) | MERGED, post-merge verified | #92 → `a468345` | flag-off slice |
 | YU-010c SDK / CLI / MCP document clients (flag off) | IMPLEMENTED | (this PR) | after merge |
 | YU-011…YU-101 | PLANNED | — | — |
 
@@ -31,6 +31,10 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 1. `%LOCALAPPDATA%\Yamakan\worker-tools` had been turned into a junction to `D:\CleanupPreserved\YamakanWorkerTools_20261024` by a disk cleanup. procd cannot create its container-granted tools folder through it, so every sandboxed worker launch failed (112/380 unit tests; Edge E2E failed at media import; one test hung forever). The junction was replaced with a real folder (the D: copy is untouched). The environment capture now reports `WORKER_TOOLS_REDIRECTED` as BLOCKED, and the hanging fixture fails fast.
 2. The main clone's `node_modules` predates the `jassub` pin (5 packages missing). The capture now checks every lockfile package for this OS/CPU and reports drift as BLOCKED; worktrees install with CI's own `npm ci --ignore-scripts`.
 3. Disk: C: ≈7.8 GB free, D: ≈4.8 GB free. Keep generated media small; no weights.
+
+## Known flaky tests
+
+- `tests/resource-policy.test.ts` "a worker over its Job Object memory limit fails rather than grows": failed once on main `a468345` while another suite ran servers concurrently; passed 3/3 alone. Load-sensitive; not caused by YU-010b. Re-run alone before treating as a regression.
 
 ## Next eligible
 
