@@ -17,6 +17,8 @@ export function editorView(p: Project) {
     type: a.kind,
     source: "upload",
     url: mediaUrl(`/api/v1/projects/${p.id}/assets/${a.id}`),
+    hash: a.hash,
+    peaksPath: `/api/v1/projects/${p.id}/assets/${a.id}/peaks`,
     duration: a.durationFrames / 30,
   }));
   const clips: TimelineClip[] = p.clips.map((c) => ({

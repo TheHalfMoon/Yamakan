@@ -28,6 +28,11 @@ import { acquireServiceLock } from "../core/service-lock.ts";
 import { isLegacyWorkspace } from "../core/migrate.ts";
 import { closeWorkers } from "../core/process/workers.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
+import {
+  assetPeakTile,
+  PEAK_TILE,
+  PEAKS_PER_SECOND,
+} from "../core/audio/peaks.ts";
 import { assertSeparate, defaultRecoveryHome } from "../core/recovery.ts";
 import { restrictToOwner } from "../core/process/access.ts";
 import { verifyInstalledBinaries } from "../scripts/bundle.ts";
@@ -458,6 +463,47 @@ const server = createServer(async (req, res) => {
         // A preview of a revision never changes.
         res.setHeader("Cache-Control", "private, max-age=3600, immutable");
         await media(shown.file, shown.contentType);
+        return;
+      }
+      // Waveform peak tiles (YU-016): bounded, immutable for an asset.
+      const peaksMatch =
+        /^\/api\/v1\/projects\/([^/]+)\/assets\/([^/]+)\/peaks$/.exec(
+          url.pathname,
+        );
+      if (req.method === "GET" && peaksMatch) {
+        authorize(principal, "yamakan.project.open");
+        const whole = (name: string) => {
+          const raw = url.searchParams.get(name);
+          if (raw === null || !/^\d{1,6}$/.test(raw))
+            throw new CommandError(
+              "VALIDATION",
+              `${name} must be a whole number.`,
+            );
+          return Number(raw);
+        };
+        // A client that scrolled on releases its decode.
+        const left = new AbortController();
+        res.once("close", () => {
+          if (!res.writableFinished) left.abort();
+        });
+        const tile = await assetPeakTile(
+          store,
+          peaksMatch[1],
+          peaksMatch[2],
+          whole("level"),
+          whole("index"),
+          left.signal,
+        );
+        res.writeHead(200, {
+          "Content-Type": "application/octet-stream",
+          "Content-Length": String(tile.peaks.length),
+          "Cache-Control": "private, max-age=86400, immutable",
+          "X-Peaks-Per-Second": `${PEAKS_PER_SECOND}/${2 ** tile.level}`,
+          "X-Peaks-Total": String(tile.total),
+          "X-Peaks-Tile": String(PEAK_TILE),
+          "X-Peaks-Cache": tile.cached ? "hit" : "miss",
+        });
+        res.end(Buffer.from(tile.peaks));
         return;
       }
       const asset = /^\/api\/v1\/projects\/([^/]+)\/assets\/([^/]+)$/.exec(

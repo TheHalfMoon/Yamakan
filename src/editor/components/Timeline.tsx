@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { EffectType, TimelineClip, MediaItem, TimelineTrack, WaveformCache } from '../types';
+import { EffectType, TimelineClip, MediaItem, TimelineTrack } from '../types';
 import { VideoIcon, AudioIcon, ScissorsIcon, MagnetIcon, LockIcon, UnlockIcon, MuteIcon, WandSparklesIcon, ZoomInIcon, ZoomOutIcon, FitViewIcon, SoloIcon, LayersIcon, TrashIcon, SkipBackIcon, SkipForwardIcon } from './icons';
 import { formatTimecode, formatRulerLabel, pickRulerStep } from '../utils/timecode';
 import Waveform from './Waveform';
@@ -16,7 +16,6 @@ interface TimelineProps {
   isSnappingEnabled: boolean;
   trimMode: 'normal' | 'ripple' | 'roll' | 'slip' | 'slide';
   onTrimModeChange?: (mode: 'normal' | 'ripple' | 'roll' | 'slip' | 'slide') => void;
-  waveformCache: WaveformCache;
   /** Program in/out marks, drawn on the ruler. */
   rangeIn?: number | null;
   rangeOut?: number | null;
@@ -89,7 +88,6 @@ const Timeline: React.FC<TimelineProps> = (props) => {
     isSnappingEnabled,
     trimMode,
     onTrimModeChange,
-    waveformCache,
     onSelectClip,
     onSetActiveTrack,
     onUpdateClip,
@@ -1280,7 +1278,17 @@ const Timeline: React.FC<TimelineProps> = (props) => {
                             ) : media.type === 'video' ? (
                               <video src={media.url} className="w-full h-full object-cover" muted preload="metadata" />
                             ) : (
-                              waveformCache[media.id] && <Waveform data={waveformCache[media.id]} width={clipWidth} height={trackHeight} />
+                              media.peaksPath && media.hash && (
+                                <Waveform
+                                  path={media.peaksPath}
+                                  hash={media.hash}
+                                  duration={media.duration ?? 0}
+                                  from={clip.sourceIn ?? 0}
+                                  to={clip.sourceOut ?? clip.end - clip.start}
+                                  width={clipWidth}
+                                  height={trackHeight}
+                                />
+                              )
                             )}
                           </div>
                           <div className="tl-clip__scrim" />
