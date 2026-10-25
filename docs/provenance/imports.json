@@ -6,9 +6,10 @@
     "imported": "src/editor/types.ts",
     "sha256": "be796c82d49d2e2a50ec56b00363c8b5a7f0a8dd041479c18ec4580603e4075c",
     "modifications": [
-      "Add optional TimelineClip.soundEnabled for W1 preview parity with export."
+      "Add optional TimelineClip.soundEnabled for W1 preview parity with export.",
+      "YU-016: MediaItem gains hash and peaksPath; WaveformCache removed (peaks come from server tiles)."
     ],
-    "importedSha256": "f376e55a2266ec2fcd3040678485f539b3e0a21a8d2cd7afac81c01bbe7ed9e8",
+    "importedSha256": "f6688594e361fc37c9fa6a894f24d04f37a9ae922623ca65ef385609f548a551",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -24,9 +25,10 @@
     "sha256": "ad0e74169a035125d7aeefa575aee30be4649312523a7315adf665ffd63bf900",
     "modifications": [
       "Use isolated LibraryAsset type; omit cloud-backed library hook.",
-      "Duplicate clips use canonical UUIDs."
+      "Duplicate clips use canonical UUIDs.",
+      "YU-016: audio clips draw Waveform from peak tiles over the clip's source range (sourceIn..sourceOut); the waveformCache prop is removed."
     ],
-    "importedSha256": "ef1b80d6057b3476dd1f2d5d070e860ea78564a8760e8146c0b90b764c07b8f0",
+    "importedSha256": "c62369c5b92d326031a840ec89d5e0eb9a3f6c88dfdd2b35ebeef33d36514bcb",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -61,9 +63,10 @@
     "imported": "src/editor/components/Waveform.tsx",
     "sha256": "b3f358e3af2c4cba3ed42017a8ba3a085e9e8f9acb7a3fc611f1f1976bdddc4e",
     "modifications": [
-      "W9: note that peaks may come from Mediabunny openAssetPeaks."
+      "W9: note that peaks may come from Mediabunny openAssetPeaks.",
+      "YU-016: rewritten to fetch bounded server peak tiles (src/media/peak-tiles.ts) for the clip's source range, abort superseded requests and draw a placeholder when unavailable."
     ],
-    "importedSha256": "43b66c5cae819f66ffcc88a41640ae3f8215c63f977bf5f2c79d4989d89853ba",
+    "importedSha256": "29f9c193e9cd5141a21ec620fb7c174c0843731110f53c4d5d7d2c7abfbf6f4f",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
