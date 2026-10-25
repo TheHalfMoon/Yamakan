@@ -680,14 +680,19 @@ function App() {
                 project={p ? { id: p.id, revision: p.revision } : null}
                 client={client as unknown as StudioClient}
                 t={(key) => t(key)}
-                onSaved={(from, revision) =>
+                onSaved={(projectId, from, revision) =>
                   // A Studio save changes only the project's documents: a
                   // draft based on the revision it replaced moves to the new
                   // revision unchanged (the service carries documents forward
                   // on its next save). A draft based on anything else is left
                   // alone, so its save still meets another writer's changes.
                   setHistory((h) => {
-                    if (!h || h.present.revision !== from) return h;
+                    if (
+                      !h ||
+                      h.present.id !== projectId ||
+                      h.present.revision !== from
+                    )
+                      return h;
                     const at = (x: Project) => ({ ...x, revision });
                     return {
                       past: h.past.map(at),

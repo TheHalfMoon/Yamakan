@@ -159,6 +159,13 @@ export async function uploadStudioBitmap(
       "LIMIT_EXCEEDED",
       `A Studio bitmap is at most ${DOCUMENT_LIMITS.bitmapBytes} bytes.`,
     );
+  const active = bitmapUploads.get(principal.id) ?? 0;
+  if (active >= DOCUMENT_LIMITS.activeBitmapUploadsPerPrincipal)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      "Too many bitmap uploads in progress; wait for one to finish.",
+    );
+  bitmapUploads.set(principal.id, active + 1);
   const timer = setTimeout(
     () =>
       req.destroy(
@@ -174,5 +181,12 @@ export async function uploadStudioBitmap(
     );
   } finally {
     clearTimeout(timer);
+    const left = (bitmapUploads.get(principal.id) ?? 1) - 1;
+    if (left > 0) bitmapUploads.set(principal.id, left);
+    else bitmapUploads.delete(principal.id);
   }
 }
+
+// Bitmap uploads in progress per principal (bodies stream to disk, so this
+// bounds open uploads and the GC deferral they cause, not memory).
+const bitmapUploads = new Map<string, number>();

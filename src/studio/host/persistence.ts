@@ -49,6 +49,8 @@ export function createProjectStudioAssetStore(
   projectId: string,
 ): StudioAssetStore {
   const blobs = new Map<string, Blob>();
+  // Bitmaps this session already stored, by digest: never uploaded twice.
+  const stored = new Map<string, StudioUploadedImage>();
   const dimensions = async (blob: Blob) => {
     const bmp = await createImageBitmap(blob);
     try {
@@ -63,17 +65,19 @@ export function createProjectStudioAssetStore(
       if (!(blob instanceof Blob) || blob.size <= 0)
         throw new Error("Studio upload requires a non-empty Blob.");
       const png = await toPng(blob);
+      const bytes = new Uint8Array(await png.arrayBuffer());
+      const known = stored.get(await sha256Hex(bytes));
+      if (known) return known;
       await dimensions(png);
-      const stored = await client.uploadStudioBitmap(
-        projectId,
-        new Uint8Array(await png.arrayBuffer()),
-      );
-      blobs.set(stored.digest, png);
-      return {
-        imageName: stored.digest,
-        width: stored.width,
-        height: stored.height,
+      const saved = await client.uploadStudioBitmap(projectId, bytes);
+      blobs.set(saved.digest, png);
+      const image = {
+        imageName: saved.digest,
+        width: saved.width,
+        height: saved.height,
       };
+      stored.set(saved.digest, image);
+      return image;
     },
     uploadIntermediateImage: async (blob): Promise<StudioUploadedImage> => {
       const { width, height } = await dimensions(blob);
@@ -94,7 +98,11 @@ export function createProjectStudioAssetStore(
       return blob;
     },
     has: (imageName) => blobs.has(imageName),
-    dispose: () => blobs.clear(),
+    // Only this session's caches: stored bitmaps stay in the project.
+    dispose: () => {
+      blobs.clear();
+      stored.clear();
+    },
   };
 }
 
@@ -145,6 +153,12 @@ export async function saveStudioCanvas(input: {
   await input.flush();
   const canvas = input.canvas();
   if (!canvas) throw new Error("There is no Studio canvas to save.");
+  // Generated candidates live only in this session: commit or discard them
+  // first (the service would refuse a canvas that names them).
+  if (/"image_?[nN]ame":"session-/.test(JSON.stringify(canvas)))
+    throw new Error(
+      "This canvas still uses a generated image that is not saved; keep or discard it before saving.",
+    );
   const result = (await input.client.saveDocument({
     projectId: input.projectId,
     expectedRevision: input.expectedRevision,

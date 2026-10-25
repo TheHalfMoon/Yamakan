@@ -39,7 +39,9 @@ export const CREATIVE_DOCUMENTS_ENABLED = false;
 export function creativeDocumentsEnabled(): boolean {
   return (
     CREATIVE_DOCUMENTS_ENABLED ||
-    process.env.YAMAKAN_AG_DOCS_QUALIFICATION === "1"
+    // Never in an installed bundle (YAMAKAN_BUNDLE_INSTALL marks one).
+    (process.env.YAMAKAN_AG_DOCS_QUALIFICATION === "1" &&
+      !process.env.YAMAKAN_BUNDLE_INSTALL)
   );
 }
 
@@ -192,6 +194,9 @@ const VIDEO_NAME_KEYS = new Set([
   "video_name",
   "source_video_name",
 ]);
+// Keys whose values fetch media from elsewhere. Free text (a text layer's
+// words) may look like a URL and is not refused.
+const URL_KEYS = new Set(["url", "src", "href", "uri"]);
 const DIGEST = /^[a-f0-9]{64}$/;
 
 /**
@@ -212,6 +217,13 @@ export function canvasBitmapDigests(canvas: unknown): string[] {
     if (!node || typeof node !== "object") continue;
     for (const [key, value] of Object.entries(node)) {
       if (typeof value === "string") {
+        // Media fetched from anywhere but the project (staging candidates,
+        // reference images): refused, whatever else the object names.
+        if (URL_KEYS.has(key) && value !== "")
+          throw new CommandError(
+            "VALIDATION",
+            "A Studio canvas cannot reference media by URL.",
+          );
         if (VIDEO_NAME_KEYS.has(key))
           throw new CommandError(
             "VALIDATION",

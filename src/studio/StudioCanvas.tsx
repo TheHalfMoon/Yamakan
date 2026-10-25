@@ -18,10 +18,10 @@ type Props = {
   client?: StudioClient;
   t?: (key: MessageKey) => string;
   /**
-   * A save moved the project from `from` to `to` changing only its
+   * A save moved `projectId` from `from` to `to`, changing only its
    * documents (the timeline is unchanged).
    */
-  onSaved?: (from: number, to: number) => void;
+  onSaved?: (projectId: string, from: number, to: number) => void;
 };
 
 /** Q8/Q10 measurement handle exposed only while forceMount is active. */
@@ -90,9 +90,26 @@ export function StudioCanvas({
     let cancelled = false;
     let destroy: (() => void) | undefined;
     let assets: StudioAssetStore = createStudioAssetStore();
+    // A new run starts clean: nothing of the previous project's state stays.
     saver.current = null;
+    setSave(null);
+    setError(null);
     (async () => {
       try {
+        // Everything the run needs is loaded first, so once the engine
+        // exists nothing else is awaited before cleanup can dispose it.
+        const { createCanvasEngine } =
+          await import("./canvas-engine/engine.ts");
+        const { createStudioHostPort } = await import("./host/port.ts");
+        const {
+          canvasFromStudioDocument,
+          newStudioSession,
+          studioDocumentFromCanvas,
+        } = await import("./host/documentStore.ts");
+        const { createPinnedFontRuntime } = await import("./host/fonts.ts");
+        const { createQ10StudioCanvasState } =
+          await import("./host/q10Fixture.ts");
+        if (cancelled) return;
         // Project-bound when the service accepts creative documents.
         const enabled =
           projectId && client
@@ -113,20 +130,17 @@ export function StudioCanvas({
           enabled && projectId && client
             ? await loadStudioDocument(client, projectId)
             : null;
+        if (cancelled) return;
+        let headRevision: number | null = null;
         if (enabled && projectId && client) {
           // Opened (or reloaded after a conflict) against the current head.
           const head = (await client.call("yamakan.project.open", {
             projectId,
           })) as { revision: number };
-          revision.current = head.revision;
+          if (cancelled) return;
+          headRevision = head.revision;
         }
-        if (cancelled) return;
-        const { createCanvasEngine } =
-          await import("./canvas-engine/engine.ts");
-        const { createStudioHostPort } = await import("./host/port.ts");
-        const { canvasFromStudioDocument, newStudioSession } =
-          await import("./host/documentStore.ts");
-        const { createPinnedFontRuntime } = await import("./host/fonts.ts");
+        if (headRevision !== null) revision.current = headRevision;
         const session = newStudioSession("Studio");
         const studioDocument = stored?.document ?? session.document;
         let savedHash = stored?.ref.contentHash ?? null;
@@ -144,6 +158,7 @@ export function StudioCanvas({
         const overlay = overlayRef.current;
         if (!screen || !overlay || cancelled) return;
 
+        const exposeMeasurement = STUDIO_ENABLED || forceMount;
         const composition = createCanvasEngine({
           projectId: session.document.id,
           mutationPort: port,
@@ -160,18 +175,26 @@ export function StudioCanvas({
           fonts,
         });
 
+        destroy = () => {
+          if (exposeMeasurement && window.__yamakanStudioQ8) {
+            delete window.__yamakanStudioQ8;
+          }
+          composition.engine.lifecycle.dispose();
+          assets.dispose();
+        };
         composition.engine.surface.attach(screen, overlay);
         if (enabled && projectId && client) {
-          const { studioDocumentFromCanvas } =
-            await import("./host/documentStore.ts");
+          // The reference's own id (an agent may have committed it).
+          const documentId = stored?.ref.id ?? studioDocument.id;
           saver.current = async () => {
+            if (cancelled) return;
             setSave({ state: "saving" });
             try {
               const result = await saveStudioCanvas({
                 client,
                 projectId,
                 expectedRevision: revision.current,
-                documentId: studioDocument.id,
+                documentId,
                 name: studioDocument.name,
                 expectedContentHash: savedHash,
                 flush: () => composition.engine.lifecycle.flushPendingUploads(),
@@ -185,11 +208,13 @@ export function StudioCanvas({
               });
               const from = revision.current;
               savedHash = result.contentHash;
+              if (cancelled) return;
               revision.current = result.project.revision;
               port.clearDirty();
               setSave({ state: "saved", contentHash: result.contentHash });
-              onSaved?.(from, result.project.revision);
+              onSaved?.(projectId, from, result.project.revision);
             } catch (e) {
+              if (cancelled) return;
               const code = (e as { code?: string }).code;
               const message = e instanceof Error ? e.message : String(e);
               setSave(
@@ -200,19 +225,8 @@ export function StudioCanvas({
             }
           };
         }
-        const exposeMeasurement = STUDIO_ENABLED || forceMount;
-        destroy = () => {
-          if (exposeMeasurement && window.__yamakanStudioQ8) {
-            delete window.__yamakanStudioQ8;
-          }
-          composition.engine.lifecycle.dispose();
-          assets.dispose();
-        };
-
         if (exposeMeasurement) {
           const { interaction, tools, history } = composition.engine;
-          const { createQ10StudioCanvasState } =
-            await import("./host/q10Fixture.ts");
           const geometryOf = () => {
             const canvas = port.getCanvasState();
             const doc = canvas?.document;

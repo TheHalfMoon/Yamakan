@@ -1530,6 +1530,24 @@ export class ProjectStore {
         "LIMIT_EXCEEDED",
         "Insufficient free disk space to store a Studio bitmap.",
       );
+    // The project's Studio bitmap budget, checked before streaming and again
+    // when the bitmap is registered.
+    const overBudget = (db: DatabaseSync, digest: string | null) => {
+      const used = db
+        .prepare(
+          "SELECT count(*) AS n, coalesce(sum(byte_length), 0) AS bytes FROM studio_bitmaps WHERE project_id = ? AND digest IS NOT ?",
+        )
+        .get(projectId, digest) as { n: number; bytes: number };
+      return (
+        used.n + 1 > DOCUMENT_LIMITS.projectBitmaps ||
+        used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes
+      );
+    };
+    if (overBudget(this.#database, null))
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+      );
     let size = 0;
     let head = Buffer.alloc(0);
     let size2d: { width: number; height: number } | null = null;
@@ -1569,12 +1587,22 @@ export class ProjectStore {
             "RECOVERY_REQUIRED",
             "This bitmap's stored copy is quarantined; restore a verified backup.",
           );
+        const known = db
+          .prepare(
+            "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+          )
+          .get(projectId, stored.sha256);
+        if (!known && overBudget(db, stored.sha256))
+          throw new CommandError(
+            "LIMIT_EXCEEDED",
+            "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+          );
         if (!object)
           db.prepare(
             "INSERT INTO asset_objects(project_id, digest, byte_length, state, generation) VALUES (?, ?, ?, 'ready', 1)",
           ).run(projectId, stored.sha256, stored.byteLength);
         db.prepare(
-          "INSERT INTO studio_bitmaps(project_id, digest, byte_length, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+          "INSERT INTO studio_bitmaps(project_id, digest, byte_length, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(project_id, digest) DO UPDATE SET created_at = excluded.created_at",
         ).run(
           projectId,
           stored.sha256,
@@ -1952,7 +1980,90 @@ export class ProjectStore {
       }
     }
     await this.#collectHiddenVfrOriginals(report);
+    await this.#collectStudioBitmaps(report, graceMs, now);
     return report;
+  }
+  // Studio bitmaps no retained revision's document (and no sealed upload
+  // awaiting its commit) names, once older than the grace period: a save in
+  // progress uploads its bitmaps before committing the document.
+  async #collectStudioBitmaps(
+    report: { objects: number; bytes: number },
+    graceMs: number,
+    now: number,
+  ) {
+    const db = this.#database;
+    const projects = db
+      .prepare("SELECT DISTINCT project_id FROM studio_bitmaps")
+      .all() as { project_id: string }[];
+    for (const { project_id: projectId } of projects) {
+      if (this.#publishing.has(projectId) || this.#holds > 0) continue;
+      const removed = this.transaction((inner) => {
+        const named = new Set<string>();
+        const lists = inner
+          .prepare(
+            `SELECT c.object_digests AS list FROM revisions r
+             JOIN snapshot_document_refs d ON d.snapshot_hash = r.snapshot_hash
+             JOIN creative_documents c ON c.hash = d.document_hash
+             WHERE r.project_id = ?
+             UNION ALL
+             SELECT object_digests AS list FROM document_uploads
+             WHERE project_id = ? AND state = 'sealed' AND object_digests IS NOT NULL`,
+          )
+          .all(projectId, projectId) as { list: string }[];
+        for (const { list } of lists)
+          for (const digest of JSON.parse(list) as string[]) named.add(digest);
+        const stale = (
+          inner
+            .prepare(
+              "SELECT digest, byte_length FROM studio_bitmaps WHERE project_id = ? AND created_at < ?",
+            )
+            .all(projectId, now - graceMs) as {
+            digest: string;
+            byte_length: number;
+          }[]
+        ).filter((b) => !named.has(b.digest));
+        const files: { digest: string; bytes: number }[] = [];
+        for (const b of stale) {
+          inner
+            .prepare(
+              "DELETE FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+            )
+            .run(projectId, b.digest);
+          // The same bytes may also be an imported asset's: keep them then.
+          const shared = inner
+            .prepare(
+              "SELECT 1 FROM asset_versions WHERE project_id = ? AND digest = ? LIMIT 1",
+            )
+            .get(projectId, b.digest);
+          if (shared) continue;
+          inner
+            .prepare(
+              "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
+            )
+            .run(projectId, b.digest);
+          files.push({ digest: b.digest, bytes: b.byte_length });
+        }
+        return files;
+      });
+      for (const { digest, bytes } of removed) {
+        const unlinked = await unlink(
+          await this.file(
+            projectId,
+            "objects",
+            "sha256",
+            digest.slice(0, 2),
+            digest,
+          ),
+        ).then(
+          () => true,
+          () => false,
+        );
+        if (unlinked) {
+          report.objects++;
+          report.bytes += bytes;
+        }
+      }
+    }
   }
   async #collectHiddenVfrOriginals(report: { objects: number; bytes: number }) {
     if (this.#holds > 0 || this.#importing > 0) return;
@@ -2064,7 +2175,13 @@ export class ProjectStore {
           "SELECT 1 FROM asset_versions WHERE project_id = ? AND digest = ? LIMIT 1",
         )
         .get(projectId, version.digest);
-      if (shared) return null;
+      // The same bytes may also be a Studio bitmap of this project.
+      const bitmap = db
+        .prepare(
+          "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+        )
+        .get(projectId, version.digest);
+      if (shared || bitmap) return null;
       db.prepare(
         "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
       ).run(projectId, version.digest);

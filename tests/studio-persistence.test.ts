@@ -148,10 +148,56 @@ test("a PNG bitmap is stored once, registered, and kept by garbage collection", 
     ).n,
     1,
   );
-  // Collect with no grace: a registered bitmap survives.
-  await store.collectGarbage({ graceMs: 0 });
+  // Within the grace period an unreferenced bitmap survives collection (a
+  // save uploads its bitmaps before committing the document).
+  await store.collectGarbage();
   const file = await store.studioBitmapFile(project.id, first.digest);
   assert.equal(sha(await readFile(file)), first.digest);
+});
+
+test("garbage collection frees unreferenced Studio bitmaps and keeps those a revision names", async () => {
+  const { store, project } = await workspace();
+  const kept = png(8, 8, [1, 2, 3, 255]);
+  const loose = png(8, 8, [9, 9, 9, 255]);
+  const k = await store.importStudioBitmap(
+    project.id,
+    stream(kept),
+    kept.length,
+  );
+  const l = await store.importStudioBitmap(
+    project.id,
+    stream(loose),
+    loose.length,
+  );
+  await commitStudio(store, project.id, studioWith([k.digest]), 0);
+  const report = await store.collectGarbage({ graceMs: 0 });
+  assert.ok(report.objects >= 1);
+  await refused(store.studioBitmapFile(project.id, l.digest), "NOT_FOUND");
+  assert.equal(
+    sha(await readFile(await store.studioBitmapFile(project.id, k.digest))),
+    k.digest,
+  );
+  // A later revision without the document still keeps it: history names it.
+  const view = await store.load(project.id);
+  await store.save({ ...view, name: "Renamed" }, view.revision);
+  await store.collectGarbage({ graceMs: 0 });
+  assert.ok(await store.studioBitmapFile(project.id, k.digest));
+});
+
+test("a project's Studio bitmap budget is enforced before streaming", async () => {
+  const { store, project, root } = await workspace();
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  handles.push({ close: () => db.isOpen && db.close() });
+  // Simulate a project whose bitmaps already fill its budget.
+  db.prepare(
+    "INSERT INTO studio_bitmaps(project_id, digest, byte_length, width, height, created_at) VALUES (?, ?, ?, 1, 1, ?)",
+  ).run(project.id, "f".repeat(64), 2 * 1024 * 1024 * 1024, Date.now());
+  const bytes = png(4, 4);
+  await refused(
+    store.importStudioBitmap(project.id, stream(bytes), bytes.length),
+    "LIMIT_EXCEEDED",
+    /bitmap space is full/,
+  );
 });
 
 test("bitmap uploads that are not a PNG within Studio limits keep nothing", async () => {
@@ -296,4 +342,40 @@ test("a client that dies between bitmap import and document commit leaves no pha
   await reopened.initialize();
   assert.deepEqual(reopened.listDocuments(project.id), []);
   assert.equal((await reopened.load(project.id)).revision, 0);
+});
+
+test("canvas media by URL is refused, while text that looks like a URL is kept", () => {
+  const d = "a".repeat(64);
+  for (const bad of [
+    { image: { imageName: d, url: "https://example.com/x.png" } },
+    { reference: { src: "file:///C:/secret.png" } },
+    { candidate: { href: "blob:http://127.0.0.1/abc" } },
+  ])
+    assert.throws(
+      () => canvasBitmapDigests(bad),
+      (e: unknown) => e instanceof CommandError && /URL/.test(e.message),
+    );
+  assert.deepEqual(
+    canvasBitmapDigests({
+      text: { content: "see https://yamakan.example" },
+      image: { imageName: d, url: "" },
+    }),
+    [d],
+  );
+});
+
+test("the qualification switch never applies in an installed bundle", async () => {
+  const { creativeDocumentsEnabled } = await import("../core/documents.ts");
+  const saved = { ...process.env };
+  try {
+    delete process.env.YAMAKAN_AG_DOCS_QUALIFICATION;
+    delete process.env.YAMAKAN_BUNDLE_INSTALL;
+    assert.equal(creativeDocumentsEnabled(), false);
+    process.env.YAMAKAN_AG_DOCS_QUALIFICATION = "1";
+    assert.equal(creativeDocumentsEnabled(), true);
+    process.env.YAMAKAN_BUNDLE_INSTALL = "C:/Program Files/Yamakan";
+    assert.equal(creativeDocumentsEnabled(), false);
+  } finally {
+    process.env = saved;
+  }
 });
