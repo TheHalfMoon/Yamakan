@@ -5,7 +5,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import type { Operation } from "../sdk/client.ts";
-import { RESOURCE_POLICY } from "../core/command/policy.ts";
+import { LineFramer, MCP_LIMITS } from "./framing.ts";
+import type { Frame } from "./framing.ts";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const env = (key: string) =>
@@ -169,48 +170,77 @@ async function handle(message: Message) {
   }
 }
 
-let buffer = "";
+function dispatch(frame: Frame) {
+  if ("oversized" in frame)
+    return error(null, -32700, "Message exceeds the request size limit.");
+  let message: Message;
+  try {
+    message = JSON.parse(frame.line);
+  } catch {
+    return error(null, -32700, "Parse error.");
+  }
+  // JSON-RPC ids are strings, numbers or null; any other id is never echoed
+  // (a deeply nested one would overflow JSON.stringify and end the process).
+  const id = message && typeof message === "object" ? message.id : undefined;
+  const validId =
+    id === undefined ||
+    id === null ||
+    typeof id === "string" ||
+    typeof id === "number";
+  if (!validId) return error(null, -32600, "Invalid request.");
+  if (message?.jsonrpc !== "2.0" || typeof message.method !== "string")
+    return error(message?.id, -32600, "Invalid request.");
+  // Transport failures (no token file, service not listening) never echo host paths.
+  const pending = handle(message).catch(() =>
+    error(
+      message.id,
+      -32603,
+      "Yamakan service is not running or its workspace credential is unavailable.",
+    ),
+  );
+  inFlight.add(pending);
+  void pending.finally(() => {
+    inFlight.delete(pending);
+    pump();
+  });
+}
+
+// Frames from stdin wait here, in order, while the server is saturated;
+// stdin stays paused until the queue drains, so the queue never holds more
+// than the chunk that filled it.
+const framer = new LineFramer(MCP_LIMITS.lineBytes);
 const inFlight = new Set<Promise<unknown>>();
+let queue: Frame[] = [];
+let next = 0;
+let ended = false;
+let finishing = false;
+const saturated = () =>
+  inFlight.size >= MCP_LIMITS.inFlight ||
+  process.stdout.writableLength >= MCP_LIMITS.outputBytes;
+function pump() {
+  while (next < queue.length && !saturated()) dispatch(queue[next++]!);
+  if (next === queue.length) {
+    queue = [];
+    next = 0;
+  }
+  if (queue.length > 0 || saturated()) process.stdin.pause();
+  else if (!ended) process.stdin.resume();
+  if (ended && queue.length === 0 && !finishing) {
+    finishing = true;
+    // Exit only once every reply has reached stdout: on POSIX a pipe
+    // write is asynchronous and exiting would drop what is still buffered.
+    void Promise.allSettled(inFlight).then(() =>
+      process.stdout.write("", () => process.exit(0)),
+    );
+  }
+}
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk: string) => {
-  buffer += chunk;
-  if (
-    buffer.length > RESOURCE_POLICY.enforced.requestBytes &&
-    !buffer.includes("\n")
-  ) {
-    buffer = "";
-    error(null, -32700, "Message exceeds the request size limit.");
-    return;
-  }
-  let newline: number;
-  while ((newline = buffer.indexOf("\n")) >= 0) {
-    const line = buffer.slice(0, newline).trim();
-    buffer = buffer.slice(newline + 1);
-    if (!line) continue;
-    let message: Message;
-    try {
-      message = JSON.parse(line);
-    } catch {
-      error(null, -32700, "Parse error.");
-      continue;
-    }
-    if (message?.jsonrpc !== "2.0" || typeof message.method !== "string") {
-      error(message?.id, -32600, "Invalid request.");
-      continue;
-    }
-    // Transport failures (no token file, service not listening) never echo host paths.
-    const pending = handle(message).catch(() =>
-      error(
-        message.id,
-        -32603,
-        "Yamakan service is not running or its workspace credential is unavailable.",
-      ),
-    );
-    inFlight.add(pending);
-    void pending.finally(() => inFlight.delete(pending));
-  }
+  for (const frame of framer.push(chunk)) queue.push(frame);
+  pump();
 });
-process.stdin.on("end", async () => {
-  await Promise.allSettled(inFlight);
-  process.exit(0);
+process.stdout.on("drain", pump);
+process.stdin.on("end", () => {
+  ended = true;
+  pump();
 });
