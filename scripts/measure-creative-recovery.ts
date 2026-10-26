@@ -139,4 +139,4 @@ async function profile(name: string, documents: number, edits: number) {
 }
 
 await profile("S", 4, 20);
-await profile("M", 40, 400);
+await profile("M", 20, 150);

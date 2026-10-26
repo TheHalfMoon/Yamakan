@@ -646,14 +646,20 @@ function App() {
                               );
                               setMessage(
                                 restored.quarantined.length
-                                  ? msg("backups.restoredQuarantined", {
-                                      folder: restored.root,
-                                      count: restored.quarantined.length,
-                                    })
-                                  : restored.fenced.jobsHeld
+                                  ? restored.fenced?.jobsHeld
+                                    ? msg("backups.restoredQuarantinedHeld", {
+                                        folder: restored.root,
+                                        count: restored.quarantined.length,
+                                        held: restored.fenced.jobsHeld,
+                                      })
+                                    : msg("backups.restoredQuarantined", {
+                                        folder: restored.root,
+                                        count: restored.quarantined.length,
+                                      })
+                                  : restored.fenced?.jobsHeld
                                     ? msg("backups.restoredHeld", {
                                         folder: restored.root,
-                                        count: restored.fenced.jobsHeld,
+                                        count: restored.fenced?.jobsHeld,
                                       })
                                     : msg("backups.restored", {
                                         folder: restored.root,

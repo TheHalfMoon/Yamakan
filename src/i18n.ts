@@ -58,6 +58,8 @@ const en = {
     "Restored into a new workspace folder: {folder}. Start Yamakan with that folder as its workspace to open it.",
   "backups.restoredQuarantined":
     "Restored into a new workspace folder: {folder}. Media files that could not be verified were quarantined: {count}. Start Yamakan with that folder as its workspace to open it.",
+  "backups.restoredQuarantinedHeld":
+    "Restored into a new workspace folder: {folder}. Media files that could not be verified were quarantined: {count}. Jobs copied from this workspace wait there until you retry or discard them: {held}. Start Yamakan with that folder as its workspace to open it.",
   "backups.restoredHeld":
     "Restored into a new workspace folder: {folder}. Jobs copied from this workspace wait there until you retry or discard them: {count}. Start Yamakan with that folder as its workspace to open it.",
   "assets.title": "Assets",
@@ -248,6 +250,8 @@ const ar: Record<MessageKey, string> = {
     "استُعيدت في مجلد مساحة عمل جديد: {folder}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
   "backups.restoredQuarantined":
     "استُعيدت في مجلد مساحة عمل جديد: {folder}. عُزلت ملفات وسائط تعذّر التحقق منها، وعددها {count}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
+  "backups.restoredQuarantinedHeld":
+    "استُعيدت في مجلد مساحة عمل جديد: {folder}. عُزلت ملفات وسائط تعذّر التحقق منها، وعددها {count}. تنتظر هناك مهام منسوخة من مساحة العمل هذه حتى تعيد تشغيلها أو تتجاهلها، وعددها {held}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
   "backups.restoredHeld":
     "استُعيدت في مجلد مساحة عمل جديد: {folder}. تنتظر هناك مهام منسوخة من مساحة العمل هذه حتى تعيد تشغيلها أو تتجاهلها، وعددها {count}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
   "assets.title": "الوسائط",

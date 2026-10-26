@@ -10,6 +10,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  link,
   rm,
   symlink,
   unlink,
@@ -557,8 +558,7 @@ test("copied jobs, attempts, uploads and agent tokens cannot act in a restored w
     path.join(home, "backups", backup.backupId),
     path.join(home, "restored-fenced"),
   );
-  assert.equal(restored.fenced.jobsHeld, 4);
-  assert.equal(restored.fenced.jobsCancelled, 1);
+  assert.equal(restored.fenced.jobsHeld, 5, "cancel requests included");
   assert.equal(restored.fenced.attemptsFenced, 3);
   assert.equal(restored.fenced.uploadsDropped, 1);
   assert.equal(restored.fenced.agentTokensRevoked, 1);
@@ -568,12 +568,17 @@ test("copied jobs, attempts, uploads and agent tokens cannot act in a restored w
     const copy = await open(restored.root);
     const supervisor = new JobSupervisor(copy);
     await supervisor.start();
-    for (const state of ["queued", "preparing", "running", "validating"])
+    for (const state of [
+      "queued",
+      "preparing",
+      "running",
+      "validating",
+      "cancelRequested",
+    ])
       assert.equal(
         supervisor.status(ids[state]!).detail,
         "reconciliationRequired",
       );
-    assert.equal(supervisor.status(ids.cancelRequested!).detail, "cancelled");
     assert.equal(supervisor.status(ids.succeeded!).detail, "succeeded");
     assert.equal(copy.principalForAgentToken(agent.token), null);
     await supervisor.close();
@@ -608,6 +613,7 @@ test("copied jobs, attempts, uploads and agent tokens cannot act in a restored w
   const copy = await open(restored.root);
   const supervisor = new JobSupervisor(copy);
   assert.equal(supervisor.discard(ids.queued!).detail, "cancelled");
+  assert.equal(supervisor.retry(ids.running!).detail, "queued");
   await supervisor.close();
   assert.ok(w.store.principalForAgentToken(agent.token));
 });
@@ -634,4 +640,73 @@ test("an earlier backup format still restores, labelled as not proving creative 
   assert.equal(restored.creative, "incomplete");
   assert.equal(restored.legacyRestored, 0);
   assert.equal(restored.closure.gaps, 0);
+});
+
+test("a backup database carrying a trigger, or a manifest listing a file twice, is refused and leaves nothing", async () => {
+  const w = await creativeWorkspace();
+  const home = await temp("yamakan-creative-home-");
+  const backup = await backupWorkspace(w.store, home);
+  const dir = path.join(home, "backups", backup.backupId);
+  const manifestFile = path.join(dir, "backup.json");
+  const original = await readFile(manifestFile, "utf8");
+  // Listed twice: refused as not a backup.
+  const twice = JSON.parse(original);
+  twice.legacyFiles.push(twice.legacyFiles[0]);
+  await writeFile(manifestFile, JSON.stringify(twice));
+  await refused(
+    restoreWorkspace(dir, path.join(home, "restored-twice")),
+    "VALIDATION",
+  );
+  // A trigger that would undo the fencing, with the manifest re-hashed to
+  // match (as someone who can write the backup folder could).
+  const database = path.join(dir, "workspace.sqlite");
+  const db = new DatabaseSync(database);
+  db.exec(
+    "CREATE TRIGGER unrevoke AFTER UPDATE ON agent_tokens BEGIN UPDATE agent_tokens SET revoked = 0; END",
+  );
+  db.close();
+  const forged = JSON.parse(original);
+  const bytes = await readFile(database);
+  forged.database = { sha256: sha(bytes), bytes: bytes.length };
+  await writeFile(manifestFile, JSON.stringify(forged));
+  const target = path.join(home, "restored-trigger");
+  await refused(restoreWorkspace(dir, target), "RECOVERY_REQUIRED", /triggers/);
+  await assert.rejects(readdir(target));
+});
+
+test("upper-case scene names are kept; hard-linked legacy files are recorded, never copied", async () => {
+  const w = await creativeWorkspace();
+  const upper = randomUUID().toUpperCase();
+  await writeFile(path.join(w.root, "cinema", `${upper}.json`), scene(upper));
+  const outside = await temp("yamakan-outside-");
+  await writeFile(path.join(outside, "secret.json"), '{"secret":true}');
+  const linked = `consent-${randomUUID()}.json`;
+  await link(
+    path.join(outside, "secret.json"),
+    path.join(w.root, "director", linked),
+  );
+  const home = await temp("yamakan-creative-home-");
+  const backup = await backupWorkspace(w.store, home);
+  assert.equal(backup.creative, "incomplete");
+  const dir = path.join(home, "backups", backup.backupId);
+  const manifest = JSON.parse(
+    await readFile(path.join(dir, "backup.json"), "utf8"),
+  );
+  assert.ok(
+    manifest.legacyFiles.some(
+      (f: { path: string }) => f.path === `cinema/${upper}.json`,
+    ),
+  );
+  assert.deepEqual(manifest.legacyDamaged, [
+    { path: `director/${linked}`, reason: "invalid" },
+  ]);
+  const restored = await restoreWorkspace(
+    dir,
+    path.join(home, "restored-upper"),
+  );
+  assert.deepEqual(
+    await readFile(path.join(restored.root, "cinema", `${upper}.json`)),
+    scene(upper),
+  );
+  await assert.rejects(readFile(path.join(restored.root, "director", linked)));
 });

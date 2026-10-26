@@ -73,10 +73,10 @@ const Reported = z.string().max(200);
 // manifest so a reader need not know this build.
 const RESTORE_POLICY = [
   "A restore creates a new workspace folder; the original is never changed.",
-  "Jobs active in the original wait for an explicit retry or discard; their attempts are failed.",
+  "Jobs active in the original (cancel requests included) wait for an explicit retry or discard; their attempts are failed.",
   "Staged document uploads are dropped; agent tokens are revoked.",
   "Director approvals are void and likeness consents need revalidation (new execution epoch).",
-  "Unverifiable media, documents and legacy files are quarantined or left out and named in the restore receipt.",
+  "Unverifiable media is quarantined, unverifiable legacy files are left out, and unresolved documents are reported; the restore receipt names each.",
 ];
 
 // Workspace files kept outside the database by earlier builds: Cinema scene
@@ -84,12 +84,15 @@ const RESTORE_POLICY = [
 // (YU-013 imports them). A backup copies them as found, so a restore can
 // still migrate them; only names those builds wrote are copied.
 const LEGACY = {
+  // Scene ids are written as given, so either case (core/documents-legacy.ts).
   cinema:
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json$/,
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\.json$/,
   director: /^(run|consent|encoding)-[0-9a-f-]{36}\.json$/,
 } as const;
 type LegacyFolder = keyof typeof LEGACY;
 const LEGACY_LIMITS = { files: 10_000, bytes: 256 * 1024 * 1024 };
+// Closure gaps named in a manifest or receipt; the counts stay exact.
+const MAX_REPORTED = 200;
 const LegacyPath = z
   .string()
   .max(120)
@@ -106,16 +109,18 @@ const ClosureSchema = z
     documents: z.number().int().nonnegative(),
     objects: z.number().int().nonnegative(),
     gaps: z.number().int().nonnegative(),
-    reported: z.array(
-      z
-        .object({
-          projectId: Reported,
-          kind: z.enum(["snapshot", "document", "object"]),
-          ref: Reported,
-          reason: z.enum(["missing", "mismatch", "unreadable"]),
-        })
-        .strict(),
-    ),
+    reported: z
+      .array(
+        z
+          .object({
+            projectId: Reported,
+            kind: z.enum(["snapshot", "document", "object"]),
+            ref: Reported,
+            reason: z.enum(["missing", "mismatch", "unreadable"]),
+          })
+          .strict(),
+      )
+      .max(MAX_REPORTED),
   })
   .strict();
 const ManifestSchema = z
@@ -166,6 +171,13 @@ const ManifestSchema = z
           })
           .strict(),
       )
+      .max(LEGACY_LIMITS.files)
+      // Each file once, and no more bytes than a backup copies.
+      .refine(
+        (files) =>
+          new Set(files.map((f) => f.path)).size === files.length &&
+          files.reduce((n, f) => n + f.bytes, 0) <= LEGACY_LIMITS.bytes,
+      )
       .optional(),
     legacyDamaged: z
       .array(
@@ -176,6 +188,7 @@ const ManifestSchema = z
           })
           .strict(),
       )
+      .max(LEGACY_LIMITS.files + 2)
       .optional(),
     closure: ClosureSchema.optional(),
     restorePolicy: z.array(z.string().max(200)).max(20).optional(),
@@ -392,7 +405,7 @@ async function sourceObject(root: string, projectId: string, digest: string) {
   return canonical;
 }
 
-type LegacyFile = { path: string; source: string; bytes: number };
+type LegacyFile = { path: string; bytes: number };
 type LegacyDamage = NonNullable<BackupManifest["legacyDamaged"]>[number];
 
 // The legacy files of a workspace, as found: plain files with a name the
@@ -411,12 +424,21 @@ async function scanLegacy(root: string) {
       damaged.push({ path: folder, reason: "invalid" });
       continue;
     }
-    for (const name of (await readdir(dir)).sort()) {
+    const names = await readdir(dir).catch(() => null);
+    if (!names) {
+      damaged.push({ path: folder, reason: "invalid" });
+      continue;
+    }
+    for (const name of names.sort()) {
       if (!LEGACY[folder].test(name)) continue;
-      const file = path.join(dir, name);
+      const file = await safePath(root, folder, name).catch(() => null);
+      if (!file) {
+        damaged.push({ path: folder, reason: "invalid" });
+        break;
+      }
       const entry = await lstat(file).catch(() => null);
       if (!entry) continue;
-      if (!entry.isFile() || entry.isSymbolicLink()) {
+      if (!entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1) {
         damaged.push({ path: `${folder}/${name}`, reason: "invalid" });
         continue;
       }
@@ -428,11 +450,7 @@ async function scanLegacy(root: string) {
         break;
       }
       bytes += entry.size;
-      files.push({
-        path: `${folder}/${name}`,
-        source: file,
-        bytes: entry.size,
-      });
+      files.push({ path: `${folder}/${name}`, bytes: entry.size });
     }
   }
   return { files, damaged };
@@ -442,30 +460,48 @@ async function scanLegacy(root: string) {
 // verified as written. A file replaced while it is copied (a Cinema save
 // renames over its scene) is read once more; one that keeps changing is
 // recorded, not copied.
-async function copyLegacy(files: LegacyFile[], dir: string) {
+async function copyLegacy(root: string, files: LegacyFile[], dir: string) {
   const copied: NonNullable<BackupManifest["legacyFiles"]> = [];
   const damaged: LegacyDamage[] = [];
+  let total = 0;
   for (const file of files) {
     let done = false;
+    let reason: LegacyDamage["reason"] = "changed";
     for (let attempt = 0; attempt < 2 && !done; attempt++) {
-      const info = await lstat(file.source).catch(() => null);
-      if (!info?.isFile()) break;
+      const source = await safePath(root, ...file.path.split("/")).catch(
+        () => null,
+      );
+      if (!source) {
+        reason = "invalid";
+        break;
+      }
+      const info = await lstat(source).catch(() => null);
+      if (!info?.isFile() || info.isSymbolicLink() || info.nlink !== 1) {
+        reason = "invalid";
+        break;
+      }
+      // A file that grew since the scan still fits the backup's bound.
+      if (total + info.size > LEGACY_LIMITS.bytes) {
+        reason = "limit";
+        break;
+      }
       const expected = {
-        sha256: await sha256File(file.source).catch(() => ""),
+        sha256: await sha256File(source).catch(() => ""),
         bytes: info.size,
       };
       if (!expected.sha256) continue;
       const result = await copyVerified(
-        file.source,
+        source,
         await safePath(dir, "legacy", ...file.path.split("/")),
         expected,
       );
       if (result === "ok") {
         copied.push({ path: file.path, ...expected });
+        total += expected.bytes;
         done = true;
       }
     }
-    if (!done) damaged.push({ path: file.path, reason: "changed" });
+    if (!done) damaged.push({ path: file.path, reason });
   }
   return { copied, damaged };
 }
@@ -572,7 +608,7 @@ export function backupWorkspace(
         if (result === "ok") copied.push(object);
         else damaged.push({ ...reported(object), reason: result });
       }
-      const legacyFiles = await copyLegacy(legacy.files, dir);
+      const legacyFiles = await copyLegacy(source.root, legacy.files, dir);
       const manifest: BackupManifest = {
         format: BACKUP_FORMAT,
         backupId,
@@ -591,6 +627,7 @@ export function backupWorkspace(
         closure,
         restorePolicy: RESTORE_POLICY,
       };
+      ManifestSchema.parse(manifest);
       // Written last and atomically: its presence marks a complete backup.
       const partial = path.join(dir, "backup.json.partial");
       const handle = await open(partial, "wx", 0o600);
@@ -685,7 +722,6 @@ const RESTORED_ATTEMPT =
 type Fenced = {
   directorEpoch: number | null;
   jobsHeld: number;
-  jobsCancelled: number;
   attemptsFenced: number;
   uploadsDropped: number;
   agentTokensRevoked: number;
@@ -694,8 +730,9 @@ type Fenced = {
 // Restore fencing (YU-013b), in the restore's own transaction, before any
 // service can open the new root: nothing copied from the original workspace
 // may act on its own. The original may still be running, so
-//   - active jobs wait for an explicit retry or discard (a job the original
-//     had asked to cancel is cancelled), and their attempts are failed;
+//   - active jobs, cancel requests included, wait for an explicit retry or
+//     discard (which also releases a conversion's staged original), and
+//     their attempts are failed;
 //   - the supervisor generation moves on, fencing any copied attempt;
 //   - staged document uploads, which belong to a client of the original,
 //     are dropped (consumed ones stay: they replay a committed result);
@@ -704,45 +741,38 @@ type Fenced = {
 //     revalidated (YU-013).
 // Recorded history (receipts, Director requests, migrations) stays as it was.
 function fenceRestored(db: DatabaseSync): Fenced {
-  const has = (table: string) =>
-    db
-      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
-      .get(table) !== undefined;
   const run = (sql: string, ...args: (string | number)[]) =>
     Number(db.prepare(sql).run(...args).changes);
   const fenced: Fenced = {
     directorEpoch: null,
     jobsHeld: 0,
-    jobsCancelled: 0,
     attemptsFenced: 0,
     uploadsDropped: 0,
     agentTokensRevoked: 0,
   };
-  if (has("jobs")) {
+  if (has(db, "jobs")) {
     fenced.attemptsFenced = run(
       "UPDATE attempts SET state = 'failed', error = ? WHERE state IN ('preparing', 'running', 'validating')",
       RESTORED_ATTEMPT,
     );
-    fenced.jobsCancelled = run(
-      "UPDATE jobs SET state = 'cancelled', progress = 0 WHERE state IN ('queued', 'preparing', 'running', 'validating', 'cancelRequested') AND (cancel_requested = 1 OR state = 'cancelRequested')",
-    );
+    // Each a legal transition (core/jobs/rules/yamakan-transitions.ts).
     fenced.jobsHeld = run(
-      "UPDATE jobs SET state = 'reconciliationRequired', error = ?, progress = 0 WHERE state IN ('queued', 'preparing', 'running', 'validating')",
+      "UPDATE jobs SET state = 'reconciliationRequired', error = ?, progress = 0 WHERE state IN ('queued', 'preparing', 'running', 'validating', 'cancelRequested')",
       RESTORED_JOB,
     );
     run("UPDATE supervisor SET generation = generation + 1 WHERE id = 1");
   }
-  if (has("document_uploads"))
+  if (has(db, "document_uploads"))
     fenced.uploadsDropped = run(
       "DELETE FROM document_uploads WHERE state <> 'consumed'",
     );
-  if (has("agent_tokens"))
+  if (has(db, "agent_tokens"))
     fenced.agentTokensRevoked = run(
       "UPDATE agent_tokens SET revoked = 1 WHERE revoked = 0",
     );
   // A backup older than schema v12 has no Director tables; its legacy
   // files, once imported, belong to no live epoch either.
-  if (has("director_epoch")) {
+  if (has(db, "director_epoch")) {
     run("UPDATE director_epoch SET value = value + 1 WHERE singleton = 1");
     fenced.directorEpoch = (
       db
@@ -797,7 +827,10 @@ async function restore(
     await initializeRoot(root);
     initialized = true;
     await restrictToOwner(root, "dir");
-    const database = path.join(root, "workspace.sqlite");
+    // The database is verified and fenced under a staging name and becomes
+    // the workspace's only as the last step: a crash or a failed cleanup
+    // never leaves an unfenced copy that a service would open.
+    const database = path.join(root, "restore.partial.sqlite");
     if (
       (await copyVerified(path.join(backupDir, "workspace.sqlite"), database, {
         sha256: manifest.database.sha256,
@@ -817,6 +850,19 @@ async function restore(
         throw new CommandError(
           "RECOVERY_REQUIRED",
           `The restored database failed its integrity check: ${problems[0]}`,
+        );
+      // The workspace schema has no triggers or views; one in a backup
+      // could undo the restore fencing, so such a database is refused.
+      if (
+        check
+          .prepare(
+            "SELECT 1 FROM sqlite_master WHERE type IN ('trigger', 'view') LIMIT 1",
+          )
+          .get()
+      )
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "The backup's database holds triggers or views this workspace never creates.",
         );
       if (userVersion(check) !== manifest.schemaVersion)
         throw new CommandError(
@@ -929,6 +975,8 @@ async function restore(
       closure,
       fenced,
     };
+    // Fenced and closed: now it is the workspace's database.
+    await rename(database, path.join(root, "workspace.sqlite"));
     const partial = path.join(root, "restore.json.partial");
     await writeFile(partial, JSON.stringify(receipt, null, 2), {
       flag: "wx",
@@ -965,9 +1013,10 @@ async function resumeBackupSummary(home: string, backupId: string) {
 async function resumeRestoreResult(home: string, effectRef: string) {
   try {
     const root = await safePath(home, ...effectRef.split("/"));
-    const receipt = JSON.parse(
-      await readFile(path.join(root, "restore.json"), "utf8"),
-    );
+    const file = path.join(root, "restore.json");
+    const info = await lstat(file);
+    if (!info.isFile() || info.size > MAX_MANIFEST_BYTES) return null;
+    const receipt = JSON.parse(await readFile(file, "utf8"));
     return { root, ...receipt };
   } catch {
     return null;
@@ -1280,8 +1329,6 @@ export function referencedDigestsInRetention(
 // The snapshot format of the editing shape (core/store.ts EDIT_VIEW_FORMAT);
 // named here because the store imports this module.
 const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
-// Reported entries per closure; the counts stay exact.
-const MAX_REPORTED = 200;
 
 export type ClosureGap = {
   projectId: string;
@@ -1305,7 +1352,14 @@ export function creativeClosure(db: DatabaseSync): Closure {
   const closure: Closure = { documents: 0, objects: 0, gaps: 0, reported: [] };
   const gap = (g: ClosureGap) => {
     closure.gaps++;
-    if (closure.reported.length < MAX_REPORTED) closure.reported.push(g);
+    // Data as found (a malformed row may name anything): bounded, as the
+    // manifest schema requires.
+    if (closure.reported.length < MAX_REPORTED)
+      closure.reported.push({
+        ...g,
+        projectId: String(g.projectId).slice(0, 200),
+        ref: String(g.ref).slice(0, 200),
+      });
   };
   const documentsTable = has(db, "creative_documents");
   const ready = db.prepare(
@@ -1314,6 +1368,11 @@ export function creativeClosure(db: DatabaseSync): Closure {
   const snapshot = db.prepare(
     "SELECT format, bytes FROM snapshots WHERE hash = ?",
   );
+  const studioBitmap = has(db, "studio_bitmaps")
+    ? db.prepare(
+        "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
+      )
+    : null;
   const document = documentsTable
     ? db.prepare(
         "SELECT bytes, object_digests FROM creative_documents WHERE hash = ?",
@@ -1324,6 +1383,8 @@ export function creativeClosure(db: DatabaseSync): Closure {
     .all() as { project_id: string }[];
   for (const { project_id: projectId } of projects) {
     const parsed = new Map<string, CanonicalProject | null>();
+    // As the store reads a snapshot (ProjectStore#canonical), cached by
+    // hash: one snapshot names the same references at any revision.
     const canonicalAt = (hash: string, revision: number) => {
       if (!parsed.has(hash)) {
         let project: CanonicalProject | null = null;
@@ -1389,7 +1450,10 @@ export function creativeClosure(db: DatabaseSync): Closure {
     }
     for (const digest of [...new Set([...media, ...bitmaps])].sort()) {
       closure.objects++;
-      if (!ready.get(projectId, digest))
+      if (
+        !ready.get(projectId, digest) ||
+        (bitmaps.has(digest) && !studioBitmap?.get(projectId, digest))
+      )
         gap({ projectId, kind: "object", ref: digest, reason: "missing" });
     }
   }
