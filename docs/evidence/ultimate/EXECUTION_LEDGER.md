@@ -25,7 +25,9 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-015 browser editing through canonical operations                                                                              | VERIFIED                       | #99 → `dbf787f`  | [receipts/YU-015.json](receipts/YU-015.json); CI and push run green; Windows: 504/507 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy pass                                                                              |
 | YU-014 complete creative backup/restore closure                                                                                  | VERIFIED                       | #101 → `432b863` | [receipts/YU-014.json](receipts/YU-014.json); CI and push run green; Windows: 514/517 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy pass                                                                              |
 | AG-DOCS group activation (YU-010…YU-015)                                                                                         | ACTIVATED, post-merge verified | #102 → `75921bc` | [receipts/AG-DOCS.json](receipts/AG-DOCS.json); rollback `YAMAKAN_AG_DOCS_OFF=1`; CI and push run green; Windows: Studio 1975/1975, Edge E2E and TesterArmy (with restore phase) pass, 3 load-only unit failures pass alone |
-| YU-017…YU-101                                                                                                                    | PLANNED                        | —                | —                                                                                                                                                                                                                           |
+| YU-090 benchmark recording and analysis harness                                                                                  | VERIFIED                       | #104 → `2baa695` | [receipts/YU-090.json](receipts/YU-090.json); protocol 1.1.0; CI and push run green; Windows: Studio 1975/1975, E2E and TesterArmy pass; 14 load-only unit timeouts re-run serially 85/85                                   |
+| YU-040 EngineAdapter v2 with artifact handles (engines off)                                                                      | VERIFIED                       | #105 → `71a727d` | [receipts/YU-040.json](receipts/YU-040.json); CI and push run green; Windows (idle): 549/552 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy pass                                                                       |
+| YU-017…YU-089, YU-091…YU-101 (except YU-040)                                                                                     | PLANNED                        | —                | —                                                                                                                                                                                                                           |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -64,7 +66,9 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010…YU-016 are VERIFIED and AG-DOCS is activated (group receipt). Next by the plan's DAG: YU-017 (thumbnails and proxies, after YU-016), YU-018 (preview cache and audio clock), YU-090 (benchmark harness, after YU-000/002), YU-040 (EngineAdapter v2, after YU-010/003), and YU-030 (unified navigation, after YU-011…015).
+YU-010…YU-016, YU-040 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-041 (worker profile with no-model stand-ins) and YU-042 (missing-weights discovery), YU-017 (thumbnails and proxies), YU-018 (preview cache and audio clock), and YU-030 (unified navigation).
+
+- 2026-10-26, post-merge run of main `2baa695` with the host at 82% CPU from other applications and a concurrent typecheck: 14 tests hit their 60 s limits; the 10 affected files re-run one at a time pass 85/85. Push CI green.
 
 ## Continuation instructions
 

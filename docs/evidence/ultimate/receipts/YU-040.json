@@ -1,0 +1,70 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "2baa695",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-040",
+  "objective": "Introduce operation-based EngineAdapter v2 with artifact handles",
+  "branch": "feat/yu-040-engine-adapter-v2",
+  "mergedPr": 105,
+  "headCommit": "e0af634",
+  "mergeCommit": "71a727dd650bccb6f7998eaf40f0469db9ba3c97",
+  "flags": "ENGINE_ENABLED stays false; no v2 route on the command surface",
+  "deviations": [
+    "Requests carry bounded inline controls (numbers, booleans, short choices) rather than the plan's controlsHash, so the capability check can see which controls a request uses",
+    "Output is typed: video outputs carry kind, rational fps and audio; transcription has its own output; capabilities carry their constraints with the constraints hash"
+  ],
+  "tests": {
+    "files": ["tests/engines.test.ts"],
+    "result": "20/20 (v1 tests unchanged). Strict schemas (no graph, URL, path, class or plugin; exact roles and media); engine-less build disabled everywhere; unsupported controls, outputs and inputs refused before any spawn; hash-checked input streams; bounded verified artifact reads for both adapters; fence: concurrent generations, same generation runs once, request conflicts, failed-execution replay, refusal frees only its generation, older generation stays stale, a throwing submit releases its claim, a stuck older generation never blocks a newer one, a newer generation cancels the unfinished execution it replaces; bridge refuses raw graphs, unlowered inputs and controls, absent v1, answers unknown executions; diagnostics redacted."
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness review",
+      "judge": "session model subagent",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 3,
+        "applied": 3,
+        "reproduced": true,
+        "finalRound": "no must-fix; nits applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 16,
+        "finalRound": "clean"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "71a727dd650bccb6f7998eaf40f0469db9ba3c97",
+    "ci": "PR exact head e0af634: qualify, qualify-windows-r8, otio-oracle success; push run on 71a727d: success",
+    "windows": "detached 71a727d, idle host: lint, provenance, build pass; npm test 549/552 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass; TesterArmy PASSED"
+  },
+  "limitations": [
+    "Fences live in memory; the durable JobSupervisor fence becomes authoritative once workers exist",
+    "Publication fencing of artifacts by generation and cancellation is the service's, to be built with the first real worker",
+    "deadlineMs is validated but not enforced (no workers yet)",
+    "Fence maps (#highest, #current, #live) are unbounded per attempt key",
+    "Diagnostic redaction is best effort",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
