@@ -54,7 +54,14 @@ after(async () => {
 // of either encode; a 440 Hz tone keeps audio in the proxy.
 async function fixture(
   name: string,
-  options: { size?: string; seconds?: number; rotate?: number } = {},
+  options: {
+    size?: string;
+    seconds?: number;
+    rotate?: number;
+    rate?: number;
+    // Shift every timestamp (a source that starts after zero).
+    startAt?: number;
+  } = {},
 ) {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-proxy-"));
   bases.push(root);
@@ -64,7 +71,7 @@ async function fixture(
     "-f",
     "lavfi",
     "-i",
-    `color=c=black:s=${options.size ?? "1280x720"}:r=30:d=${seconds}[bg];color=c=white:s=8x2160:r=30:d=${seconds}[bar];[bg][bar]overlay=x='mod(n*8\\,main_w)':y=0:shortest=1`,
+    `color=c=black:s=${options.size ?? "1280x720"}:r=${options.rate ?? 30}:d=${seconds}[bg];color=c=white:s=8x2160:r=${options.rate ?? 30}:d=${seconds}[bar];[bg][bar]overlay=x='mod(n*8\\,main_w)':y=0:shortest=1`,
     "-f",
     "lavfi",
     "-i",
@@ -80,6 +87,7 @@ async function fixture(
     "-c:a",
     "aac",
     "-shortest",
+    ...(options.startAt ? ["-output_ts_offset", String(options.startAt)] : []),
     file,
   ]);
   if (options.rotate !== undefined) {
@@ -322,6 +330,11 @@ test("misleading proxies are refused: missing, wrong source, damaged, variable r
   const refused = await settled(store, project.id, staged.asset.id);
   assert.equal(refused.state, "unsupported");
   assert.match(refused.reason!, /frame rate varies/);
+  // Remembered: asking again does not run the build again.
+  assert.equal(
+    (await buildProxy(store, project.id, staged.asset.id)).state,
+    "unsupported",
+  );
   // A damaged source: the store refuses its object before any build.
   const { file: c } = await fixture("c", { seconds: 3 });
   const cut = await imported(store, project.id, c, "c.mp4");
@@ -437,4 +450,88 @@ test("the proxy toggle changes only which file a video plays: clips, trims and t
   assert.match(media(on).url, /\/assets\/[^/]+\/proxy$/);
   assert.match(media(off).url, /\/assets\/[^/]+$/);
   assert.equal(media(on).duration, media(off).duration);
+});
+
+test("a 60 fps video maps frame for frame", async () => {
+  resetProxiesForTests();
+  const { file } = await fixture("sixty", {
+    seconds: 2,
+    rate: 60,
+    size: "960x540",
+  });
+  const { store, project } = await workspace();
+  const asset = await imported(store, project.id, file);
+  await buildProxy(store, project.id, asset.id);
+  const ready = await settled(store, project.id, asset.id);
+  assert.equal(ready.state, "ready", ready.reason);
+  assert.ok(ready.mapping!.frames >= 119, String(ready.mapping!.frames));
+  const proxy = await proxyFile(store, project.id, asset.id);
+  const original = (await store.assetFile(project.id, asset.id)).file;
+  assert.notEqual(barColumn(original, 1), barColumn(original, 1 + 1 / 60));
+  for (const t of [0, 1 / 60, 0.5, 1 + 1 / 60, 1.9]) {
+    const a = barColumn(original, t);
+    assert.equal(barColumn(proxy, t), a, `t=${t}`);
+  }
+});
+
+test("a video that starts after time zero is refused with its reason", async () => {
+  resetProxiesForTests();
+  const { file } = await fixture("late", {
+    seconds: 2,
+    startAt: 0.5,
+    size: "640x360",
+  });
+  const { store, project } = await workspace();
+  const asset = await imported(store, project.id, file);
+  await buildProxy(store, project.id, asset.id);
+  const refused = await settled(store, project.id, asset.id);
+  assert.equal(refused.state, "unsupported", refused.reason);
+  assert.match(refused.reason!, /starts after time zero/);
+});
+
+test("cancelling a queued build returns at once; builds are per project", async () => {
+  resetProxiesForTests();
+  const { file: long } = await fixture("first", { seconds: 30 });
+  const { file: next } = await fixture("second", {
+    seconds: 2,
+    size: "640x360",
+  });
+  const one = await workspace();
+  const two = await workspace();
+  const running = await imported(one.store, one.project.id, long, "long.mp4");
+  const waiting = await imported(one.store, one.project.id, next, "short.mp4");
+  // The same bytes in another project.
+  const twin = await imported(two.store, two.project.id, long, "long.mp4");
+  await buildProxy(one.store, one.project.id, running.id);
+  await buildProxy(one.store, one.project.id, waiting.id);
+  const until = Date.now() + 30_000;
+  while (
+    (await proxyStatus(one.store, one.project.id, running.id)).state !==
+      "building" &&
+    Date.now() < until
+  )
+    await new Promise((r) => setTimeout(r, 50));
+  assert.equal(
+    (await proxyStatus(one.store, one.project.id, waiting.id)).state,
+    "queued",
+  );
+  // The other project's copy is not "building": that build is not its own.
+  assert.equal(
+    (await proxyStatus(two.store, two.project.id, twin.id)).state,
+    "absent",
+  );
+  const started = Date.now();
+  const left = await cancelProxy(one.store, one.project.id, waiting.id);
+  assert.equal(left.state, "absent");
+  assert.ok(Date.now() - started < 2000, "no wait for the running build");
+  // A cancel in the other project leaves this project's build running.
+  await cancelProxy(two.store, two.project.id, twin.id);
+  assert.equal(
+    (await proxyStatus(one.store, one.project.id, running.id)).state,
+    "building",
+  );
+  assert.equal(
+    (await cancelProxy(one.store, one.project.id, running.id)).state,
+    "absent",
+  );
 });

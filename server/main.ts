@@ -553,7 +553,9 @@ const server = createServer(async (req, res) => {
         res.writeHead(200, {
           "Content-Type": "image/jpeg",
           "Content-Length": String(shot.bytes.length),
-          "Cache-Control": "private, max-age=86400, immutable",
+          // The URL names no content version: a relinked asset must not
+          // keep showing its old frame.
+          "Cache-Control": "private, no-cache",
           "X-Thumbnail-Cache": shot.cached ? "hit" : "miss",
         });
         res.end(shot.bytes);

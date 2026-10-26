@@ -433,7 +433,12 @@ function App() {
     (operation, parameters) =>
       client.call(operation as never, parameters as never),
   );
-  const view = p ? editorView(p, proxiesOn ? proxies.ready : undefined) : null;
+  // While playing, the preview keeps the files it started with: a proxy
+  // that becomes ready (or the toggle) takes effect at the next pause, so
+  // no clip's media element is replaced mid-play.
+  const shownProxies = useRef<ReadonlySet<string>>(new Set());
+  if (!playing) shownProxies.current = proxiesOn ? proxies.ready : new Set();
+  const view = p ? editorView(p, shownProxies.current) : null;
   const addAsset = (assetId: string, trackId?: string, time?: number) =>
     edit((p) => {
       const a = p.assets.find((a) => a.id === assetId);
