@@ -1005,17 +1005,22 @@ export const commands = {
       "Report which generative operations could run here and, if not, the plain reason (never downloads or installs).",
     input: z.object({}).strict(),
     run: async (ctx) => ({
-      operations: (
-        await discoverEngineCapabilities({ modelRoot: ctx.modelRoot ?? null })
-      ).map((d) => ({
-        operation: d.operation,
-        available: d.capability.available,
-        reason: d.capability.reason ?? null,
-        detail: d.detail,
-        message: d.message,
-        version: d.version ?? null,
-        expiresAt: d.expiresAt ?? null,
-      })),
+      operations:
+        // A status answer: presence, size and links, never every weight's
+        // content (an engine start verifies that).
+        (
+          await discoverEngineCapabilities({
+            modelRoot: ctx.modelRoot ?? null,
+            verifyHashes: false,
+          })
+        ).map((d) => ({
+          operation: d.operation,
+          available: d.capability.available,
+          reason: d.capability.reason ?? null,
+          message: d.message,
+          version: d.version ?? null,
+          expiresAt: d.expiresAt ?? null,
+        })),
     }),
   }),
   "yamakan.director.start": define({

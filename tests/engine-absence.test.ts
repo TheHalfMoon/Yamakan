@@ -6,7 +6,7 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +24,7 @@ import {
 } from "../core/engines/contract-v2.ts";
 import { ENGINE_ENABLED } from "../core/engines/contract.ts";
 import { ENGINE_REASON_MESSAGES } from "../core/engines/reasons.ts";
+import { MESSAGES } from "../src/i18n.ts";
 import { Scopes, execute } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { ProjectStore } from "../core/store.ts";
@@ -68,7 +69,7 @@ async function model(
       bytes: Buffer.byteLength(body),
       sha256: sha(body),
     })),
-    rights: { license: "apache-2.0", commercialUse: true, noticeSha256: HASH },
+    rights: { license: "apache-2.0", commercialUse: true },
     qualification: {
       qualificationHash: "b".repeat(64),
       minMemoryBytes: 8 * 1024 ** 3,
@@ -105,6 +106,7 @@ const discover = (
     enabled: true,
     modelRoot: root,
     pins,
+    verifyHashes: true,
     host,
     now,
     ...extra,
@@ -121,6 +123,7 @@ test("this build: engines off, nothing pinned, every operation ENGINE_DISABLED w
   const results = await discoverEngineCapabilities({
     modelRoot: root,
     pins: [pin],
+    verifyHashes: true,
   });
   assert.deepEqual(
     results.map((r) => r.operation),
@@ -152,6 +155,8 @@ test("the capabilities command reports the plain reason, takes no parameters, an
     operations: { reason: string; message: string; available: boolean }[];
   };
   assert.equal(operations.length, Operation.options.length);
+  // Internal check states stay in the service.
+  assert.ok(operations.every((o) => !("detail" in o)));
   assert.ok(
     operations.every(
       (o) =>
@@ -405,18 +410,99 @@ test("pins are bounded and validated; one per operation", async () => {
   );
 });
 
-test("discovery has no network, install, process or scan path", () => {
-  const source = readFileSync(
-    fileURLToPath(new URL("../core/engines/manifests.ts", import.meta.url)),
-    "utf8",
+test("a status answer checks presence, size and links; an engine start also reads every file's content", async () => {
+  const root = await temp();
+  const { dir, pin } = await model(root);
+  await writeFile(path.join(dir, "weights.bin"), "WEIGHTS-XXXXXXXXXX");
+  assert.equal(
+    (await t2v(root, [pin], { verifyHashes: false })).detail,
+    "QUALIFIED",
   );
-  const code = source.replace(/\/\/.*$/gm, "");
-  for (const forbidden of [
-    /\bfetch\s*\(/,
-    /node:(https?|net|dgram|dns|tls|child_process|worker_threads)/,
-    /\breaddir\b|\bopendir\b|\bglob\b|\bwatch\b/,
-    /\bspawn\b|\bexec\b/,
-    /huggingface|\bpip\b|npm install|download/i,
-  ])
-    assert.doesNotMatch(code, forbidden, String(forbidden));
+  assert.equal((await t2v(root, [pin])).detail, "FILE_HASH_MISMATCH");
+});
+
+test("a hard-linked weight file (a second name for a file elsewhere) is refused", async () => {
+  const root = await temp();
+  const { dir, pin } = await model(root);
+  const outside = path.join(await temp(), "weights.bin");
+  await writeFile(outside, "WEIGHTS-0123456789");
+  await rm(path.join(dir, "weights.bin"));
+  await link(outside, path.join(dir, "weights.bin"));
+  assert.equal((await t2v(root, [pin])).detail, "LINK_REFUSED");
+});
+
+test("plain names only: device names, trailing dots and streams are invalid", async () => {
+  for (const name of [
+    "NUL",
+    "con.bin",
+    "weights.",
+    "weights.bin:stream",
+    "WEIGHT~1.BIN",
+  ]) {
+    const root = await temp();
+    const { pin } = await model(root, (m) => {
+      m.files[0].name = name;
+    });
+    assert.equal((await t2v(root, [pin])).detail, "MANIFEST_INVALID", name);
+  }
+  const root = await temp();
+  const { pin } = await model(root);
+  await assert.rejects(discover(root, [{ ...pin, id: "aux" }]));
+});
+
+// The engine modules import only these: no network, process, worker or
+// package code can be reached from discovery. (The OS offline boundary is
+// the release's control and is not tested here.)
+const ALLOWED_IMPORTS = new Set([
+  "node:crypto",
+  "node:fs",
+  "node:fs/promises",
+  "node:os",
+  "node:path",
+  "zod",
+]);
+test("discovery and the engine contract import nothing that reaches a network, process or installer", () => {
+  const seen = new Set<string>();
+  const visit = (file: string) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const source = readFileSync(file, "utf8");
+    // Block and whole-line comments only (a "//" inside a string stays).
+    const code = source
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    assert.doesNotMatch(
+      code,
+      /\brequire\s*\(|\bimport\s*\(/,
+      `${file}: dynamic load`,
+    );
+    assert.doesNotMatch(
+      code,
+      /\b(fetch|WebSocket|XMLHttpRequest|EventSource|readdir|opendir|glob|watch)\b/,
+      `${file}: network or scan`,
+    );
+    for (const [, spec] of code.matchAll(/\bfrom\s+"([^"]+)"/g)) {
+      if (spec.startsWith(".")) {
+        const next = path.resolve(path.dirname(file), spec);
+        visit(next);
+      } else assert.ok(ALLOWED_IMPORTS.has(spec), `${file} imports ${spec}`);
+    }
+  };
+  for (const entry of ["manifests.ts", "reasons.ts"])
+    visit(fileURLToPath(new URL(`../core/engines/${entry}`, import.meta.url)));
+  // It reached the contract and its hashing helper.
+  assert.ok([...seen].some((f) => f.endsWith("contract-v2.ts")));
+  assert.ok([...seen].some((f) => f.endsWith("canonical.ts")));
+});
+
+test("each reason has the same English text in the interface and an Arabic one; every operation has a label", () => {
+  for (const [reason, text] of Object.entries(ENGINE_REASON_MESSAGES)) {
+    const key = `engine.reason.${reason}` as keyof typeof MESSAGES.en;
+    assert.equal(MESSAGES.en[key], text, reason);
+    assert.ok(MESSAGES.ar[key] && MESSAGES.ar[key] !== text, reason);
+  }
+  for (const op of Operation.options) {
+    const key = `engine.op.${op}` as keyof typeof MESSAGES.en;
+    assert.ok(MESSAGES.en[key] && MESSAGES.ar[key], op);
+  }
 });
