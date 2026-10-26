@@ -243,3 +243,25 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 - **Point in time.** The status command checks presence, size and links, but never reads every weight. Its answer is `verified: false`, and the panel says the files are in place rather than available. An engine start must run discovery again with `verifyHashes` and load only what that run verified, before the qualification expires.
 - **Model root.** It must be a local folder that is not synced: a cloud placeholder file such as OneDrive's would be fetched when it is read. Offline is the operating system's boundary for a release and is not tested here. The tests check only that the engine modules import nothing that can reach a network, a process or an installer.
 - **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.
+
+## Edit proxies and thumbnails (YU-017)
+
+An edit proxy is a small H.264 copy of a video asset that the interactive preview plays for smooth editing. It is at most 540 lines tall, has a keyframe every 15 frames, and keeps the source's own timestamps and audio. `core/media/proxies.ts` makes and serves it.
+
+- **A cache, never the asset.**
+  - It is keyed by the asset's content hash, the proxy profile and the FFmpeg build, and kept under the project's `cache/proxies`.
+  - Export and reference preview always read the original, or its qualified constant-rate derivative. The render path does not import the proxy module.
+  - Eviction keeps the cache within 2 GiB per project, touches only cache entries, and keeps one used in the last minute.
+- **Verified before use.**
+  - A build runs in an owned, bounded FFmpeg worker, one at a time, with at most 4 waiting. It is cancellable (`yamakan.proxy.cancel`) and has a 15-minute wall limit.
+  - It is published only if the frame count, audio presence, upright shape and start time all match the source (start times within half a frame). The record of that mapping is the commit.
+  - A variable-rate source is refused as `unsupported`. A damaged source is refused by the store before any build.
+  - A proxy whose size no longer matches its record is removed rather than served.
+- **Restart.** An interrupted build leaves either a private build folder or a video without a record. Both are removed on the next look, and the next request builds the proxy again.
+- **Surface.**
+  - `yamakan.proxy.status` needs `project:read`. `yamakan.proxy.build` and `yamakan.proxy.cancel` need `render:execute`.
+  - `GET …/assets/{id}/proxy` serves the proxy as a media read.
+  - `GET …/assets/{id}/thumbnail?index=n` returns a JPEG 90 lines tall at whole second `n`. It is drawn from the proxy when ready, cached up to 64 MiB, and bounded at 256 KiB.
+  - In the editor, "Edit proxies" (on by default, kept per browser) asks for each video's proxy and switches a clip to it once ready. Trims and timing are unchanged. Off, or until a proxy is ready, the preview plays the original.
+- **Not promised.** Thumbnails are small previews and make no claim about 4K playback. Measured playback budgets belong to YU-018.
+- **Rollback.** Turn "Edit proxies" off, or revert the toggle, and the preview plays originals. Deleting `cache/proxies` loses nothing.

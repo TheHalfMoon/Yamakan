@@ -275,6 +275,19 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       "only the peaks route itself",
     );
     assert.equal(await mediaRead("0".repeat(64), `${assetPath}/peaks`), 401);
+    // Edit proxies and thumbnails are media reads too (YU-017).
+    for (const route of ["proxy", "thumbnail"]) {
+      assert.notEqual(
+        await mediaRead(media, `${assetPath}/${route}`),
+        401,
+        `media key reads ${route}`,
+      );
+      assert.equal(
+        await mediaRead("0".repeat(64), `${assetPath}/${route}`),
+        401,
+      );
+      assert.equal(await mediaRead(media, `${assetPath}/${route}/more`), 401);
+    }
     assert.equal(await mediaRead("0".repeat(64), assetPath), 401);
     assert.equal(
       await mediaRead(sessionKey, assetPath),

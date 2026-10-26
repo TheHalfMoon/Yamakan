@@ -15,6 +15,7 @@ import {
   redoHistoryState,
 } from "./editor/utils/historyState";
 import { editorView } from "./adapter";
+import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
 import {
   direction,
@@ -423,7 +424,16 @@ function App() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [history]);
-  const view = p ? editorView(p) : null;
+  // Edit proxies for the preview (YU-017): the viewer's choice, per browser.
+  const [proxiesOn, setProxiesOn] = useState(proxiesPreferred);
+  const proxies = useEditProxies(
+    p?.id ?? null,
+    p ? p.assets.filter((a) => a.kind === "video").map((a) => a.id) : [],
+    proxiesOn,
+    (operation, parameters) =>
+      client.call(operation as never, parameters as never),
+  );
+  const view = p ? editorView(p, proxiesOn ? proxies.ready : undefined) : null;
   const addAsset = (assetId: string, trackId?: string, time?: number) =>
     edit((p) => {
       const a = p.assets.find((a) => a.id === assetId);
@@ -1093,6 +1103,30 @@ function App() {
                     })}
                   />
                   <div className="transport">
+                    <label className="proxy-toggle">
+                      <input
+                        type="checkbox"
+                        data-testid="proxy-toggle"
+                        checked={proxiesOn}
+                        onChange={(e) => {
+                          setProxiesOn(e.target.checked);
+                          preferProxies(e.target.checked);
+                        }}
+                      />{" "}
+                      {t("proxy.toggle")}
+                    </label>
+                    <span
+                      data-testid="proxy-status"
+                      data-proxies-ready={proxies.ready.size}
+                    >
+                      {proxiesOn
+                        ? t("proxy.summary", {
+                            ready: proxies.ready.size,
+                            total: proxies.total,
+                            building: proxies.building,
+                          })
+                        : t("proxy.off")}
+                    </span>
                     <button
                       onClick={() => setPlaying((x) => !x)}
                       disabled={!p.clips.length}

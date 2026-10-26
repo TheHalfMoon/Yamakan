@@ -622,6 +622,32 @@ try {
     "Overlapping clips must keep independent source offsets",
   );
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  // YU-017: the portrait video gets an edit proxy, and the preview plays it
+  // once ready; switched off, the preview plays the original again.
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="proxy-status"]')
+        ?.getAttribute("data-proxies-ready") === "1",
+    null,
+    { timeout: 120000 },
+  );
+  await page.waitForFunction(() =>
+    window.__yamakanMedia.some(
+      (e) =>
+        e instanceof HTMLVideoElement &&
+        (e.getAttribute("src") || "").includes("/proxy?"),
+    ),
+  );
+  await page.getByTestId("proxy-toggle").uncheck();
+  await page.waitForFunction(() =>
+    window.__yamakanMedia.some(
+      (e) =>
+        e instanceof HTMLVideoElement &&
+        /\/assets\/[^/]+\?/.test(e.getAttribute("src") || ""),
+    ),
+  );
+  await page.getByTestId("proxy-toggle").check();
   const beforeRestore = await getProject();
   const historyButton = page
     .locator(".project-list > div")

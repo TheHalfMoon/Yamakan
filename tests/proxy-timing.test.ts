@@ -412,3 +412,29 @@ test("the proxy commands: status for readers, build and cancel need render right
   assert.equal((await settled(store, project.id, asset.id)).state, "ready");
   await queue.close();
 });
+
+test("the proxy toggle changes only which file a video plays: clips, trims and timing are the same", async () => {
+  const { editorView } = await import("../src/adapter.ts");
+  const { store, project } = await workspace();
+  const { file } = await fixture("toggle", { seconds: 1 });
+  const asset = await imported(store, project.id, file);
+  const p = await store.load(project.id);
+  const track = p.tracks.find((t) => t.kind === "video")!;
+  p.clips.push({
+    id: crypto.randomUUID(),
+    trackId: track.id,
+    assetId: asset.id,
+    startFrame: 12,
+    durationFrames: 9,
+    sourceFrame: 7,
+    title: null,
+  });
+  const off = editorView(p);
+  const on = editorView(p, new Set([asset.id]));
+  assert.deepEqual(on.clips, off.clips, "trims and positions unchanged");
+  assert.deepEqual(on.tracks, off.tracks);
+  const media = (v: typeof on) => v.media.find((m) => m.id === asset.id)!;
+  assert.match(media(on).url, /\/assets\/[^/]+\/proxy$/);
+  assert.match(media(off).url, /\/assets\/[^/]+$/);
+  assert.equal(media(on).duration, media(off).duration);
+});
