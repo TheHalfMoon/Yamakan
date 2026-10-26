@@ -1,0 +1,76 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "8e8bc9c",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-019",
+  "objective": "Rational project frame rates, 24000/1001 first, with 30 fps unchanged",
+  "branch": "feat/yu-019-rational-fps",
+  "mergedPr": 117,
+  "headCommit": "53ae0a9",
+  "mergeCommit": "83bfa543d6a36c54ab3ac3460bdd6f916fdfa28b",
+  "flags": "None: 30 fps projects keep view schema 2; a 24000/1001 project is opted into at creation (yamakan.project.create frameRate)",
+  "deviations": [
+    "Only 30/1 and 24000/1001 are qualified; 25, 29.97, 50 and 60 fps stay refused (CAPABILITY_UNAVAILABLE or VALIDATION), never rounded",
+    "Imported durations floor after about 1 microsecond (706 ticks) of ffprobe's six-decimal print tolerance; for 30 fps this keeps a frame a source printed a hair under a boundary (e.g. 2.999999 s gives 90, not 89)",
+    "The probe's own durationFrames and the export check stay in thirtieths of a second (tolerance 2); project frames come from exact ticks",
+    "core/render.ts is donor-derived; its frame-margin change is recorded in imports.json",
+    "The frame rate is fixed at creation; a save that changes it is refused"
+  ],
+  "tests": {
+    "files": [
+      "tests/rational-fps.test.ts",
+      "tests/otio.test.ts",
+      "tests/canonical.test.ts",
+      "tests/waveform-cache.test.ts"
+    ],
+    "result": "11 rational-fps tests: 30 fps keeps schema 2 and canonical bytes; 24000/1001 round-trips frame for frame; ten-minute boundary (14385 frames ok, 14386 refused); unsupported, unreduced, mixed and off-grid inputs refused; exact decimal durations (2.1 s gives 63 frames at 30); rational plan goldens; end-to-end create, import 23.976 and 30 fps footage, render with ffprobe r_frame_rate 24000/1001 and 48 frames, reopen; hostile frame counts are VALIDATION; rate-locked save both ways; on-grid durations keep their last frame; editor fades in project frames. OTIO round-trips 24000/1001 timing exactly"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness review (30 fps assumption audit)",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 2,
+        "shouldFixApplied": 2,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 1,
+        "shouldFixApplied": 2,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "83bfa543d6a36c54ab3ac3460bdd6f916fdfa28b",
+    "ci": "PR exact head 53ae0a9: qualify, qualify-windows-r8, otio-oracle success; push run on 83bfa54: success",
+    "windows": "detached 83bfa54: typecheck, lint, format, provenance, brand, build pass; npm test 600/603 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Rates other than 30 and 24000/1001 are not supported yet",
+    "No browser E2E opens a 24000/1001 project; the editor's rate handling is covered by unit tests and the shared 30 fps E2E",
+    "The legacy store (migration-only reader of 30 fps data) has no frame-rate lock",
+    "The export check's 2/30 s tolerance would not catch a one-frame error at 23.976",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
