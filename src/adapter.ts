@@ -1,7 +1,13 @@
 import { mediaUrl } from "./session.ts";
 import type { Project } from "../core/project.ts";
 import type { TimelineClip, TimelineTrack, MediaItem } from "./editor/types";
-export function editorView(p: Project) {
+// With `proxies`, a video whose edit proxy is ready plays that proxy in
+// the interactive preview (same times and trims; YU-017); everything else,
+// and every export, uses the original.
+export function editorView(
+  p: Project,
+  proxies: ReadonlySet<string> = new Set(),
+) {
   const tracks: TimelineTrack[] = p.tracks.map((t) => ({
     id: t.id,
     name: t.name,
@@ -16,7 +22,11 @@ export function editorView(p: Project) {
     name: a.name,
     type: a.kind,
     source: "upload",
-    url: mediaUrl(`/api/v1/projects/${p.id}/assets/${a.id}`),
+    url: mediaUrl(
+      proxies.has(a.id) && a.kind === "video"
+        ? `/api/v1/projects/${p.id}/assets/${a.id}/proxy`
+        : `/api/v1/projects/${p.id}/assets/${a.id}`,
+    ),
     hash: a.hash,
     peaksPath: `/api/v1/projects/${p.id}/assets/${a.id}/peaks`,
     duration: a.durationFrames / 30,

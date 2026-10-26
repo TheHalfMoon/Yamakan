@@ -243,3 +243,29 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 - **Point in time.** The status command checks presence, size and links, but never reads every weight. Its answer is `verified: false`, and the panel says the files are in place rather than available. An engine start must run discovery again with `verifyHashes` and load only what that run verified, before the qualification expires.
 - **Model root.** It must be a local folder that is not synced: a cloud placeholder file such as OneDrive's would be fetched when it is read. Offline is the operating system's boundary for a release and is not tested here. The tests check only that the engine modules import nothing that can reach a network, a process or an installer.
 - **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.
+
+## Edit proxies and thumbnails (YU-017)
+
+An edit proxy is a small H.264 copy of a video asset that the interactive preview plays for smooth editing. It is at most 540 lines tall, has a keyframe every 15 frames, and keeps the source's own timestamps and audio. `core/media/proxies.ts` makes and serves it.
+
+- **A cache, never the asset.**
+  - It is keyed by the asset's content hash, the proxy profile and the FFmpeg build, and kept under the project's `cache/proxies`.
+  - Export and reference preview always read the original, or its qualified constant-rate derivative. The render path does not import the proxy module.
+  - Eviction keeps the cache within 2 GiB per project, touches only cache entries, and keeps one used in the last minute.
+- **Verified before use.**
+  - A build runs in an owned, bounded FFmpeg worker, one at a time, with at most 4 waiting. It is cancellable (`yamakan.proxy.cancel`) and has a 15-minute wall limit.
+  - It is published only if the frame count, audio presence, upright shape and start time all match the source (start times within half a frame). The record of that mapping is the commit.
+  - A variable-rate source is refused as `unsupported`. So is a video whose first frame is not at time zero (some B-frame files without an edit list start at about 0.067 s): FFmpeg would shift its proxy, and the editor would show it out of step, so such a video plays its original. A damaged source is refused by the store before any build.
+  - Before publishing, every video frame's presentation time is matched one for one with the source's (within 1/120 s), and so is the audio start.
+  - Remembered failures: a mismatch or an unsupported source for 10 minutes, anything else (a timeout, a killed worker, a busy host) for 1 minute. A build request during that time returns the remembered failure.
+  - A proxy whose size no longer matches its record is removed rather than served.
+- **Restart.** An interrupted build leaves either a private build folder or a video without a record. Both are removed on the next look, and the next request builds the proxy again.
+- **Surface.**
+  - `yamakan.proxy.status` needs `project:read`. `yamakan.proxy.build` and `yamakan.proxy.cancel` need `render:execute`.
+  - `GET …/assets/{id}/proxy` serves the proxy as a media read.
+  - `GET …/assets/{id}/thumbnail?index=n` returns a JPEG 90 lines tall at whole second `n`. It is drawn from the proxy when ready, cached up to 64 MiB, and bounded at 256 KiB.
+  - In the editor, "Edit proxies" (on by default, kept per browser) asks for each video's proxy and switches a clip to it once ready. Trims and timing are unchanged. Off, or until a proxy is ready, the preview plays the original.
+- **Disk.** One proxy is bounded at twice its source (64 MiB to 1 GiB), and within half the space above the reserve. There is no budget across projects, so many projects with large videos can bring free space near the reserve, as imports can.
+- **Toggle versus cancel.** While "Edit proxies" is on, the editor asks again for a proxy that a client cancelled. Turn the toggle off to stop asking. A proxy evicted mid-session plays only after the page reloads.
+- **Not promised.** Thumbnails are small previews and make no claim about 4K playback. Measured playback budgets belong to YU-018.
+- **Rollback.** Turn "Edit proxies" off, or revert the toggle, and the preview plays originals. Deleting `cache/proxies` loses nothing.

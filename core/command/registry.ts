@@ -40,6 +40,7 @@ import {
   migrateCinemaSidecar,
 } from "../documents-legacy.ts";
 import { directorCapability } from "../director-flags.ts";
+import { buildProxy, cancelProxy, proxyStatus } from "../media/proxies.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -715,6 +716,29 @@ export const commands = {
       })
       .strict(),
     run: ({ store }, a) => store.repairAsset(a.projectId, a.assetId),
+  }),
+  "yamakan.proxy.status": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report a video asset's edit-proxy state (absent, queued, building, ready, failed or unsupported).",
+    input: z.object({ projectId: Id, assetId: Id }).strict(),
+    run: ({ store }, a) => proxyStatus(store, a.projectId, a.assetId),
+  }),
+  "yamakan.proxy.build": define({
+    scope: "render:execute",
+    mutation: false,
+    summary:
+      "Start making a video asset's edit proxy for smooth preview (the original is unchanged and still exported).",
+    input: z.object({ projectId: Id, assetId: Id }).strict(),
+    run: ({ store }, a) => buildProxy(store, a.projectId, a.assetId),
+  }),
+  "yamakan.proxy.cancel": define({
+    scope: "render:execute",
+    mutation: false,
+    summary: "Stop a video asset's proxy build; a ready proxy stays.",
+    input: z.object({ projectId: Id, assetId: Id }).strict(),
+    run: ({ store }, a) => cancelProxy(store, a.projectId, a.assetId),
   }),
   "yamakan.export.video": define({
     scope: "render:execute",

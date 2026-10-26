@@ -165,6 +165,10 @@ const en = {
   "action.save": "Save",
   "action.export": "Export video",
   "transport.play": "Play",
+  "proxy.toggle": "Edit proxies",
+  "proxy.summary":
+    "{ready} of {total} videos use a proxy · {building} preparing · export always uses the originals",
+  "proxy.off": "Preview plays the original videos",
   "transport.pause": "Pause",
   "transport.playhead": "Playhead",
   "transport.seconds": "{seconds} s",
@@ -373,6 +377,10 @@ const ar: Record<MessageKey, string> = {
   "action.save": "حفظ",
   "action.export": "تصدير الفيديو",
   "transport.play": "تشغيل",
+  "proxy.toggle": "نسخ التحرير الخفيفة",
+  "proxy.summary":
+    "{ready} من {total} مقاطع فيديو تستخدم نسخة خفيفة · {building} قيد التحضير · التصدير يستخدم الأصول دائمًا",
+  "proxy.off": "المعاينة تعرض مقاطع الفيديو الأصلية",
   "transport.pause": "إيقاف مؤقت",
   "transport.playhead": "موضع التشغيل",
   "transport.seconds": "{seconds} ث",
