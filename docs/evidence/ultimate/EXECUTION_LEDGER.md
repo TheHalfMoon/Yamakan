@@ -29,7 +29,8 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-040 EngineAdapter v2 with artifact handles (engines off)                                                                      | VERIFIED                       | #105 → `71a727d` | [receipts/YU-040.json](receipts/YU-040.json); CI and push run green; Windows (idle): 549/552 (0 fail), Studio 1975/1975, Edge E2E and TesterArmy pass                                                                       |
 | YU-041 engine-worker process profile (no-model stand-ins)                                                                        | VERIFIED                       | #107 → `0b50a43` | [receipts/YU-041.json](receipts/YU-041.json); CI (qualify rerun after runner hang) and push run green; Windows: 558/561 (0 fail), Studio 1975/1975, Edge E2E pass                                                           |
 | YU-042 missing-weights and qualification discovery (no downloads)                                                                | VERIFIED                       | #109 → `a4b0278` | [receipts/YU-042.json](receipts/YU-042.json); CI and push run green; Windows: 568/573 with 2 load timeouts passing alone (11/11), Studio 1975/1975, Edge E2E and Director activation pass                                   |
-| YU-017…YU-089, YU-091…YU-101 (except YU-040, YU-041, YU-042)                                                                     | PLANNED                        | —                | —                                                                                                                                                                                                                           |
+| YU-017 edit proxies and indexed thumbnails                                                                                       | VERIFIED                       | #111 → `c44d041` | [receipts/YU-017.json](receipts/YU-017.json); CI and push run green; Windows: 582/585 (0 fail), Studio 1975/1975, Edge E2E pass                                                                                             |
+| YU-018…YU-089, YU-091…YU-101 (except YU-040, YU-041, YU-042)                                                                     | PLANNED                        | —                | —                                                                                                                                                                                                                           |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -68,7 +69,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010…YU-016, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-017 (thumbnails and proxies), YU-018 (preview cache and audio clock), and YU-030 (unified navigation).
+YU-010…YU-017, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-018 (preview cache and audio clock), and YU-030 (unified navigation).
 
 - 2026-10-26, post-merge run of main `2baa695` with the host at 82% CPU from other applications and a concurrent typecheck: 14 tests hit their 60 s limits; the 10 affected files re-run one at a time pass 85/85. Push CI green.
 

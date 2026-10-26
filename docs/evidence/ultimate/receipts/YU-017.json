@@ -1,0 +1,78 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "c4d2d5a",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "pinned R8 build (vendor/ffmpeg-win64-r8)",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-017",
+  "objective": "Add indexed thumbnails and proxy policy",
+  "branch": "feat/yu-017-proxies",
+  "mergedPr": 111,
+  "headCommit": "9105949",
+  "mergeCommit": "c44d0411097cf699bb5c005bd97e3fd0a34079ec",
+  "flags": "Edit proxies on by default in the editor (per-browser choice); export and reference preview unchanged (originals only)",
+  "deviations": [
+    "Proxies are a rebuildable per-project cache keyed by content hash, profile and FFmpeg build (the YU-016 peaks pattern), not registered derivative versions: a proxy never joins the project, so the immutable original and its lineage are untouched and deleting the cache loses nothing",
+    "core/jobs.ts, core/store.ts and src/editor/components/PreviewPlayer.tsx were not changed: the preview switches files through the first-party adapter (src/adapter.ts) and main.tsx, so the donor-derived player keeps its provenance record",
+    "Sources whose first video frame is not at time zero are refused (measured: FFmpeg normalises such a proxy's start, 0.5 s -> 0.033 s), so they play their originals"
+  ],
+  "tests": {
+    "files": [
+      "tests/proxy-timing.test.ts",
+      "tests/http.test.ts",
+      "scripts/browser-e2e.mjs"
+    ],
+    "result": "proxy-timing 12/12: a moving-bar fixture shows the same frame in source and proxy at trim points and in-between times at 30 fps and 60 fps (the measure distinguishes neighbouring frames); per-frame presentation times and audio start matched before publishing; publish leaves project objects unchanged; restart quarantine then completion; running and queued cancel (queued returns under 2 s); per-project builds; missing, relinked (other bytes), damaged proxy, variable-rate, late-start and damaged-source refusals; rotated phone video upright; thumbnails bounded, cached, video only; command scopes and strict inputs; the toggle changes only the played file (clips, trims, durations equal). http: the media key opens /proxy and /thumbnail and nothing beyond. Edge E2E: the preview switches to the proxy once ready and back to the original when toggled off, 0 page errors, 0 external requests",
+    "measurements": "On this host, under the sandboxed worker: a 4 s 1280x720 30 fps source builds, verifies and publishes in about 3-6 s (test wall times 3.4-6.2 s, including fixture encode); a 2 s 960x540 60 fps source in about 3.6-5.2 s. Proxy height 540 (960x540 from 720p; 304x540 from portrait 360x640). Per-proxy disk bound min(max(64 MiB, 2x source), 1 GiB, half the space above the reserve); per-project cache 2 GiB. No playback frame-rate claim: that is YU-018's qualification"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 9,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 10,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "c44d0411097cf699bb5c005bd97e3fd0a34079ec",
+    "ci": "PR exact head 9105949: qualify, qualify-windows-r8, otio-oracle success; push run on c44d041: success",
+    "windows": "detached c44d041: typecheck, lint, format, provenance, brand, build pass; npm test 582/585 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No proxy disk budget across projects (per proxy and per project only)",
+    "A proxy evicted during a session plays only after a page reload; the player does not fall back on a media error",
+    "While the toggle is on, the editor asks again for a proxy that a client cancelled through the API",
+    "A probe timeout inside the general media probe is still remembered as a settled failure for 10 minutes",
+    "Videos that do not start at time zero get no proxy",
+    "No editor component draws thumbnails yet (the route and cache exist)",
+    "Playback budgets (S/M, under export pressure) are measured by YU-018",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
