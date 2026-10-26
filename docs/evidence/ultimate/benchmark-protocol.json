@@ -1,16 +1,10 @@
 {
   "format": "yamakan.benchmark-protocol/1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "frozenAt": "2026-10-26",
   "source": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/16_BENCHMARK_AND_EVALUATION_PLAN.md (Draft PR #86 @ caec7d9)",
   "status": "Protocol only. No benchmark run, evaluator weight, download, provider call or paid generation is authorized by this file. Every head-to-head outcome is NOT TESTED until a valid matched run exists.",
-  "labels": [
-    "WINS",
-    "MATCHES",
-    "LOSES",
-    "INCONCLUSIVE",
-    "NOT TESTED"
-  ],
+  "labels": ["WINS", "MATCHES", "LOSES", "INCONCLUSIVE", "NOT TESTED"],
   "statistics": {
     "alpha": 0.05,
     "multipleComparisons": "holm",
@@ -48,16 +42,8 @@
     ]
   },
   "blinding": {
-    "randomize": [
-      "left/right position",
-      "task order"
-    ],
-    "hidden": [
-      "product",
-      "provider",
-      "model",
-      "cost"
-    ],
+    "randomize": ["left/right position", "task order"],
+    "hidden": ["product", "provider", "model", "cost"],
     "attentionChecks": true,
     "exclusionsDocumentedBeforeAnalysis": true
   },
@@ -214,18 +200,8 @@
       "leftTrialId",
       "rightTrialId"
     ],
-    "vote": [
-      "pairId",
-      "raterId",
-      "choice",
-      "attentionPassed"
-    ],
-    "consent": [
-      "consentId",
-      "categories",
-      "grantedAt",
-      "deleteBy"
-    ],
+    "vote": ["pairId", "raterId", "choice", "attentionPassed"],
+    "consent": ["consentId", "categories", "grantedAt", "deleteBy"],
     "cohort": [
       "id",
       "category",
@@ -239,5 +215,8 @@
       "successFloor"
     ],
     "note": "Version 1 analyses the primary endpoint only; costMicros and interventionSeconds are recorded for categories H and K and reported by later analyses."
-  }
+  },
+  "changes": [
+    "1.1.0 (2026-10-26, before any run): pairs name their deciding trials; a retry after a success, excess votes and an all-inattentive slot block a label; a success floor is required for preference cohorts; MATCHES at alpha / m; consents are unique, dated and expire; reports state their analysis date."
+  ]
 }

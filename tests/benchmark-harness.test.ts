@@ -283,6 +283,18 @@ test("missing trials, removed retries, duplicates, missing votes and mixed modal
     ],
     ["no floor", { ...good, successFloor: undefined }, "FLOOR_UNDECLARED"],
     [
+      "inattentive slot",
+      {
+        ...good,
+        votes: good.votes.map((v) =>
+          v.pairId === good.pairs[0]!.pairId
+            ? { ...v, attentionPassed: false }
+            : v,
+        ),
+      },
+      "MISSING_VOTES",
+    ],
+    [
       // The pair shows a re-run of the product, not its deciding trial.
       "pair shows another output",
       {
@@ -624,6 +636,33 @@ test("records are bounded, strict, bound to the protocol, and never hold credent
         protocolSha256,
       ),
     /another protocol version/,
+  );
+  // Descriptive ids and upper-case UUIDs are not keys.
+  for (const id of [
+    "text-to-video-2026-prompt-set-alpha-0001",
+    "3F2A9C1E-4B5D-4E6F-8A9B-0C1D2E3F4A5B",
+  ])
+    assert.doesNotThrow(() =>
+      parseObservations(text(observations([{ ...cohort, id }]))),
+    );
+  // Descriptive ids are not keys.
+  const described = {
+    ...cohort,
+    id: "cinema-reference-motion-transfer-prompt-017",
+    expected: { ...cohort.expected, prompts: cohort.expected.prompts },
+  };
+  assert.doesNotThrow(() => parseObservations(text(observations([described]))));
+  // The analysis date is validated and recorded.
+  assert.equal(
+    analyse(observations([cohort]), protocol, protocolSha256, {
+      analysedAt: "2026-10-26",
+    }).analysedAt,
+    "2026-10-26",
+  );
+  assert.throws(() =>
+    analyse(observations([cohort]), protocol, protocolSha256, {
+      analysedAt: "0000",
+    }),
   );
   // A parsed file round-trips; lower-case hashes are not mistaken for keys.
   assert.deepEqual(

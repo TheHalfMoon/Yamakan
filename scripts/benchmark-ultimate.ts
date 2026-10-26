@@ -3,7 +3,7 @@
 // runs a model, calls a provider or downloads anything.
 //
 //   node scripts/benchmark-ultimate.ts protocol
-//   node scripts/benchmark-ultimate.ts analyze <observations.json>
+//   node scripts/benchmark-ultimate.ts analyze <observations.json> [--at YYYY-MM-DD]
 import { open, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,10 +22,20 @@ async function readBounded(file: string) {
       throw new Error("The observations must be a regular file.");
     if (info.size > BENCHMARK_LIMITS.bytes)
       throw new Error("The observations file is too large to analyse.");
-    const text = await handle.readFile("utf8");
-    if (Buffer.byteLength(text) > BENCHMARK_LIMITS.bytes)
-      throw new Error("The observations file is too large to analyse.");
-    return text;
+    // Never more than the size seen: a file that grows is cut, not read on.
+    const bytes = Buffer.alloc(info.size);
+    let read = 0;
+    while (read < info.size) {
+      const { bytesRead } = await handle.read(
+        bytes,
+        read,
+        info.size - read,
+        read,
+      );
+      if (bytesRead === 0) break;
+      read += bytesRead;
+    }
+    return bytes.subarray(0, read).toString("utf8");
   } finally {
     await handle.close();
   }
@@ -34,7 +44,7 @@ async function readBounded(file: string) {
 const protocolFile = fileURLToPath(
   new URL("../docs/evidence/ultimate/benchmark-protocol.json", import.meta.url),
 );
-const [command, file] = process.argv.slice(2);
+const [command, file, flag, at] = process.argv.slice(2);
 const { protocol, sha256 } = parseProtocol(
   await readFile(protocolFile, "utf8"),
 );
@@ -53,15 +63,18 @@ try {
       ),
     );
   } else if (command === "analyze" && file) {
+    if (flag !== undefined && (flag !== "--at" || !at))
+      throw new Error("Usage: analyze <observations.json> [--at YYYY-MM-DD]");
     const report = analyse(
       parseObservations(await readBounded(file)),
       protocol,
       sha256,
+      { analysedAt: at },
     );
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.error(
-      "Usage: node scripts/benchmark-ultimate.ts protocol | analyze <observations.json>",
+      "Usage: node scripts/benchmark-ultimate.ts protocol | analyze <observations.json> [--at YYYY-MM-DD]",
     );
     process.exit(2);
   }
