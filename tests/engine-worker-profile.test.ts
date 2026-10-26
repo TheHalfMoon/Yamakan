@@ -373,9 +373,9 @@ test(
     // Win32_Process.Create (root\cimv2) or a permanent command-line consumer
     // (root\subscription); root\default holds the registry provider. The
     // control connects to each. The worker cannot even initialize COM
-    // (access denied), so it reaches none of them; a refused connection
-    // would also do. (PowerShell and cscript do not start under the profile
-    // at all, so the native probe makes the call.)
+    // (access denied), so it has no WMI access through COM; a refused
+    // connection would also do. (PowerShell and cscript do not start under
+    // the profile at all, so the native probe makes the call.)
     for (const namespace of [
       "ROOT\\CIMV2",
       "ROOT\\SUBSCRIPTION",
@@ -392,7 +392,7 @@ test(
       assert.match(
         wmi.stdout,
         /^(noinit 0x80070005|denied connect 0x(80070005|80041003))$/,
-        `no connection to ${namespace}`,
+        `no WMI access through COM (init or connect refused): ${namespace}`,
       );
     }
 
@@ -423,13 +423,15 @@ test(
         profile: ENGINE_WORKER_PROFILE,
         cwd: dir,
       });
-      // schtasks ran and was refused by the Task Scheduler (not a failed start).
+      // schtasks ran and was refused by the Task Scheduler (not a failed
+      // start, and not its arguments: the control's succeed). Its refusal
+      // is the host's own text for ERROR_ACCESS_DENIED, in its language.
       assert.notEqual(created.code, 0);
-      // (It printed its refusal; the message is localized, so only an
-      // English one is matched.)
-      assert.notEqual(created.stderr.trim(), "", "schtasks ran");
-      if (Intl.DateTimeFormat().resolvedOptions().locale.startsWith("en"))
-        assert.match(created.stderr, /Access is denied/, created.stderr);
+      const accessDenied = spawnSync("net", ["helpmsg", "5"], {
+        encoding: "utf8",
+      }).stdout.trim();
+      assert.ok(accessDenied, "the host names ERROR_ACCESS_DENIED");
+      assert.ok(created.stderr.includes(accessDenied), created.stderr);
       const listed = spawnSync(schtasks, ["/Query", "/TN", task], {
         encoding: "utf8",
       });

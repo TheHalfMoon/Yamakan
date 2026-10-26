@@ -214,7 +214,7 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 - **What the token gains.** The worker keeps the media worker's restricted, low-integrity token and less-privileged AppContainer, plus the `registryRead` capability. Without that capability, process creation fails in a less-privileged AppContainer (measured on Windows 11 26300). It opens the registry keys whose ACL grants `registryRead` or all application packages (in HKLM, for example machine configuration such as the Windows product name). It opens no admin-only key, no HKCU value, no file and no network, and nothing in the registry can be written.
 - **Tested denials.** Every denial is checked against a positive control in the same environment:
   - sentinel files, TCP to a local HTTP server, and DNS;
-  - COM: the worker cannot initialize COM (access denied), so it reaches no COM server and no WMI namespace (`root\cimv2`, `root\subscription` and `root\default` are checked against controls that connect);
+  - COM: the worker cannot initialize COM (access denied), so it reaches no COM server and has no WMI access through COM (`root\cimv2`, `root\subscription` and `root\default` are checked against controls that connect);
   - process starts through Task Scheduler (task creation refused);
   - registry writes, and junction folders.
 
