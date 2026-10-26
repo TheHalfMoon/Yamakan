@@ -339,9 +339,19 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
         // this one, if a newer one is live) is cancelled.
         const cancel = claim.supersede(ref);
         const e = cancel ? executions.get(cancel) : undefined;
-        if (e && cancel)
+        // Only an unfinished execution can be cancelled.
+        if (
+          cancel &&
+          e &&
+          (e.status.state === "queued" || e.status.state === "running")
+        ) {
           e.status = { executionRef: cancel, state: "cancelled" };
-        return { executionRef: ref };
+          e.artifact = null;
+        }
+        // A newer generation went live first: this one is stale.
+        return cancel === ref
+          ? { refused: "STALE_ATTEMPT" }
+          : { executionRef: ref };
       });
     },
     async status(ref) {

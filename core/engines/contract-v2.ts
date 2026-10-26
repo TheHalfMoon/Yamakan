@@ -404,11 +404,12 @@ type SubmitResult = { executionRef: string } | { refused: RefusalReason };
 // request, and a refusal or failure frees that generation for a retry.
 // The latest live execution per attempt is recorded apart from claims, so
 // refusals and failures in between never lose it: on success an adapter
-// calls supersede(), which names the older execution to cancel (or its own,
-// when a newer generation is already live). Generations are minted by the
-// service alone; a refused claim still raises the highest generation. Fences live in memory: once workers exist,
-// the durable JobSupervisor fence is authoritative, and publication of an
-// artifact is fenced by the service (generation and cancellation), not here.
+// calls supersede(), which names the older execution to cancel (or its
+// own, when a newer generation is already live). Generations are minted
+// by the service alone; a refused claim still raises the highest
+// generation. Fences live in memory: once workers exist, the durable
+// JobSupervisor fence is authoritative, and publication of an artifact is
+// fenced by the service (generation and cancellation), not here.
 export class AttemptFence {
   #highest = new Map<string, number>();
   #current = new Map<

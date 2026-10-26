@@ -286,8 +286,13 @@ export function bridgeV1(
         // this one, if a newer one is live) is cancelled. A cancel that
         // fails is left to reconcile: the execution's status reports it.
         const cancel = claim.supersede(id);
-        if (cancel) await v1.cancel(cancel).catch(() => {});
-        return { executionRef: id };
+        // Not awaited: a hung cancel never holds up this submit. A cancel
+        // that fails leaves a stale execution the service must cancel.
+        if (cancel) void v1.cancel(cancel).catch(() => {});
+        // A newer generation went live first: this one is stale.
+        return cancel === id
+          ? { refused: "STALE_ATTEMPT" }
+          : { executionRef: id };
       });
     },
     status: observe,

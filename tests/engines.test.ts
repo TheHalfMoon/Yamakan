@@ -408,9 +408,9 @@ test("concurrent submits: an older generation never replaces a newer one, and on
   release();
   const [r1, r2] = await Promise.all([one, two]);
   assert.ok("executionRef" in r2);
-  // Generation 1 claimed first, so it ran, but it can no longer be
-  // replayed once generation 2 holds the fence.
-  assert.ok("executionRef" in r1);
+  // Generation 1 claimed first but finished after generation 2 went live:
+  // it is stale, and its execution was cancelled.
+  assert.deepEqual(r1, { refused: "STALE_ATTEMPT" });
   assert.deepEqual(
     await engine.submit(imageToVideo({ leaseGeneration: 1 }), ctx),
     {
@@ -565,7 +565,8 @@ test("a newer generation cancels the execution it replaces; unknown executions a
     ctx,
   );
   assert.ok("executionRef" in three);
-  assert.equal((await engine.status(one.executionRef)).state, "cancelled");
+  // Finished executions keep their outcome: only unfinished ones cancel.
+  assert.equal((await engine.status(one.executionRef)).state, "succeeded");
   assert.equal((await engine.status(three.executionRef)).state, "succeeded");
   // A long-running older execution is cancelled when a newer one runs.
   const long = createFakeEngineV2({ stayRunning: true });
