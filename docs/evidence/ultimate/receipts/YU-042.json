@@ -1,0 +1,72 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "e256bd1",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-042",
+  "objective": "Prove missing-weights and qualification discovery without downloads",
+  "branch": "feat/yu-042-engine-absence",
+  "mergedPr": 109,
+  "headCommit": "1dfcab7",
+  "mergeCommit": "a4b02789c66fa5beef5949778652c611fc5bfe16",
+  "flags": "ENGINE_ENABLED stays false (discovery does no IO); PINNED_MODEL_MANIFESTS is empty",
+  "deviations": [
+    "The plan's target core/router/explain.ts was not changed: the plain reason reaches the operation UI through a new read-only command (yamakan.engines.capabilities) and the Director panel, since the router explains cloud provider routes, not local engines",
+    "RIGHTS_UNQUALIFIED is reported distinctly as well as the three reasons the plan names",
+    "The status command checks presence, size and links only; content hashing is reserved for an engine start (verifyHashes), and answers carry verified"
+  ],
+  "tests": {
+    "files": [
+      "tests/engine-absence.test.ts",
+      "scripts/qualify-director-activation.mjs"
+    ],
+    "result": "engine-absence 12/12: engines off does no IO; capabilities command with strict empty input and offline project editing; a qualified fixture with constraints, qualification hash and expiry; ten distinct WEIGHTS_ABSENT checks (nothing pinned, no root, missing, unpinned, source field, path escape, wrong operation, missing, truncated, same-size corrupt file), each refused by the contract before any worker; junction and hard-link refusal; rights, expiry, memory and GPU; pin bounds; plain names (device names, trailing dots, streams, short names); status versus engine-start hashing; an import allowlist over the transitive engine module set; English and Arabic reason parity. Director activation (Edge): five operations, ENGINE_DISABLED, plain reason. Diagnostic: file symlinks need Developer Mode on this host (EPERM), so the file-symlink case is not qualified here"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 7,
+        "finalRound": "no must-fix, no should-fix; parity-test nit applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 6,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "a4b02789c66fa5beef5949778652c611fc5bfe16",
+    "ci": "PR exact head 1dfcab7: qualify, qualify-windows-r8, otio-oracle success; push run on a4b0278: success",
+    "windows": "detached a4b0278: typecheck, lint, format, provenance, brand, build pass; npm test 568/573 with 2 load timeouts (core production journey 61 s, http preview route 33 s) that pass alone (core and http files 11/11 with --test-concurrency=1); test:studio 1975/1975; Edge E2E pass; Director activation pass"
+  },
+  "limitations": [
+    "No engine-start gate exists yet; when added it must consume only verified answers and re-run discovery before load",
+    "The model root must be a local, unsynced folder (documented, not enforced); no service configuration sets it yet",
+    "The OS offline boundary is not tested here; the tests prove only that the engine modules import nothing that reaches a network, process or installer",
+    "File-symlink refusal is not qualified on this host",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
