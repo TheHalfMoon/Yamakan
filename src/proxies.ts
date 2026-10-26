@@ -95,9 +95,16 @@ export function useEditProxies(
     for (const id of states.keys()) if (!list.includes(id)) states.delete(id);
     setSummary(summarize(states, list));
     let looks = 0;
+    const open = (id: string) => {
+      const s = states.get(id);
+      return (
+        underway(s) || s === "absent" || s === "unknown" || s === undefined
+      );
+    };
     const look = async () => {
       looks++;
-      for (const assetId of list) {
+      // After the first look, only assets still settling are asked about.
+      for (const assetId of looks === 1 ? list : list.filter(open)) {
         const answer = stateOf(
           await caller
             .current("yamakan.proxy.status", { projectId, assetId })
@@ -122,11 +129,7 @@ export function useEditProxies(
         if (answer) states.set(assetId, answer);
       }
       setSummary(summarize(states, list));
-      const open = list.some((id) => {
-        const s = states.get(id);
-        return underway(s) || s === "absent" || s === "unknown";
-      });
-      if (open && looks < MAX_LOOKS)
+      if (list.some(open) && looks < MAX_LOOKS)
         timer = setTimeout(() => void look(), POLL_MS);
     };
     void look();

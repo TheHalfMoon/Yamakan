@@ -365,11 +365,14 @@ export async function cancelProxy(
 
 class ProxyUnsupported extends Error {}
 
-// An owned, bounded ffprobe of one stream, as JSON.
+// An owned, bounded ffprobe of one stream. A probe that fails or runs
+// over is not a property of the bytes (a timeout, a busy host), so it is
+// remembered only briefly.
 async function probeStream(
   file: string,
   stream: "v:0" | "a:0",
   entries: string,
+  format: "json" | "csv=p=0",
   signal: AbortSignal,
   limit: number,
 ) {
@@ -388,9 +391,8 @@ async function probeStream(
       stream,
       "-show_entries",
       entries,
-      // JSON: a display matrix adds side-data lines to plain formats.
       "-of",
-      "json",
+      format,
       `file:${path.basename(file)}`,
     ],
     cwd: path.dirname(file),
@@ -406,15 +408,12 @@ async function probeStream(
     },
   });
   if (signal.aborted) throw new Error("Cancelled.");
-  try {
-    if (result.code !== 0 || over) throw new Error("probe");
-    return JSON.parse(out);
-  } catch {
+  if (result.code !== 0 || over)
     throw new CommandError(
-      "MEDIA_INVALID",
+      "UNAVAILABLE",
       "The video's timing could not be read.",
     );
-  }
+  return out;
 }
 
 // The presentation start time of a file's first video or audio stream.
@@ -423,9 +422,23 @@ async function startSeconds(
   stream: "v:0" | "a:0",
   signal: AbortSignal,
 ) {
-  const raw = (
-    await probeStream(file, stream, "stream=start_time", signal, 4096)
-  )?.streams?.[0]?.start_time;
+  // JSON: a display matrix adds side-data lines to plain formats.
+  let raw: unknown;
+  try {
+    raw = JSON.parse(
+      await probeStream(
+        file,
+        stream,
+        "stream=start_time",
+        "json",
+        signal,
+        4096,
+      ),
+    )?.streams?.[0]?.start_time;
+  } catch (e) {
+    if (e instanceof CommandError) throw e;
+    raw = Number.NaN;
+  }
   const value = raw === undefined || raw === "N/A" ? 0 : Number(raw);
   if (!Number.isFinite(value))
     throw new CommandError(
@@ -437,13 +450,19 @@ async function startSeconds(
 
 // Every video frame's presentation time (seconds), in order.
 async function frameTimes(file: string, signal: AbortSignal) {
-  // About 30 bytes per packet as JSON: 10 minutes at 120 fps fits.
-  const packets: { pts_time?: string }[] =
-    (await probeStream(file, "v:0", "packet=pts_time", signal, 4 * 1024 * 1024))
-      ?.packets ?? [];
-  return packets
-    .map((p) => Number(p.pts_time))
-    .filter((t) => Number.isFinite(t))
+  // About 10 bytes per packet: 10 minutes at 240 fps fits.
+  const out = await probeStream(
+    file,
+    "v:0",
+    "packet=pts_time",
+    "csv=p=0",
+    signal,
+    4 * 1024 * 1024,
+  );
+  return out
+    .split(/\r?\n/)
+    .map((line) => Number(line.trim().split(",")[0]))
+    .filter((t) => Number.isFinite(t) && t >= 0)
     .sort((a, b) => a - b);
 }
 
@@ -489,6 +508,8 @@ async function runBuild(
   const controller = new AbortController();
   const stop = () => controller.abort();
   signal.addEventListener("abort", stop, { once: true });
+  // A cancel that landed during the checks above has already fired.
+  if (signal.aborted) stop();
   const timer = setTimeout(stop, BUILD_WALL_SECONDS * 1000);
   let progress = "";
   let result;
@@ -583,7 +604,7 @@ async function runBuild(
     throw new CommandError("LIMIT_EXCEEDED", "The proxy took too long.");
   if (result.code !== 0)
     throw new CommandError(
-      "MEDIA_INVALID",
+      "UNAVAILABLE",
       "The proxy could not be made from this video.",
     );
   const made = path.join(build.work, "proxy.mp4");
@@ -671,14 +692,17 @@ export async function proxyFile(
   store: ProjectStore,
   projectId: string,
   assetId: string,
+  touch = true,
 ) {
   const at = await locate(store, projectId, assetId);
   if (at.why) throw new CommandError("NOT_FOUND", "This asset has no proxy.");
   const published = await readPublished(at.dir, at.key);
   if (!published)
     throw new CommandError("NOT_FOUND", "This asset has no proxy yet.");
-  const now = new Date();
-  await utimes(published.videoFile, now, now).catch(() => {});
+  if (touch) {
+    const now = new Date();
+    await utimes(published.videoFile, now, now).catch(() => {});
+  }
   return published.videoFile;
 }
 
@@ -724,7 +748,9 @@ export async function assetThumbnail(
   await mkdir(dir, { recursive: true });
   // The proxy when ready: a smaller decode of the same frame. Which one
   // drew it is part of the key, so a cached image never changes.
-  const proxy = await proxyFile(store, projectId, assetId).catch(() => null);
+  const proxy = await proxyFile(store, projectId, assetId, false).catch(
+    () => null,
+  );
   const key = createHash("sha256")
     .update(
       JSON.stringify([
