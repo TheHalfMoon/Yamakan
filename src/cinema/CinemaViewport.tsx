@@ -95,13 +95,21 @@ declare global {
 
 type Props = {
   initialScene?: CinemaSceneLocal;
+  // False while another workspace is open: the loop draws nothing.
+  active?: boolean;
 };
 
 /**
  * Supported Cinema preview: local Three.js scene, asset ids only (no remote URLs).
  * AI-conditioned camera is not wired.
  */
-export function CinemaViewport({ initialScene = SAMPLE_SCENE }: Props) {
+export function CinemaViewport({
+  initialScene = SAMPLE_SCENE,
+  active = true,
+}: Props) {
+  // Hidden (another workspace is open): the scene is kept, nothing is drawn.
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState<string | null>(null);
@@ -174,8 +182,10 @@ export function CinemaViewport({ initialScene = SAMPLE_SCENE }: Props) {
     let raf = 0;
     const tick = () => {
       if (cancelled) return;
-      controls.update();
-      renderer.render(threeScene, camera);
+      if (activeRef.current) {
+        controls.update();
+        renderer.render(threeScene, camera);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

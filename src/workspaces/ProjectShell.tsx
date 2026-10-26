@@ -70,16 +70,15 @@ export function WorkspaceTabs(props: {
   workspace: Workspace;
   onOpen: (w: Workspace) => void;
   t: Translate;
-  // Shown on the tabs whatever is open, so nothing is happening unseen.
+  // Shown on the tabs whatever is open (the job tray, above the
+  // workspaces, shows the export job in every one).
   unsaved: boolean;
-  job: string | null;
 }) {
-  const { workspace, onOpen, t, unsaved, job } = props;
+  const { workspace, onOpen, t, unsaved } = props;
   const tabs = useRef<Partial<Record<Workspace, HTMLButtonElement | null>>>({});
-  const move = (to: Workspace) => {
-    onOpen(to);
-    tabs.current[to]?.focus();
-  };
+  // Arrows move focus only; Enter, Space or a click opens (so passing
+  // through a workspace does not load it).
+  const move = (to: Workspace) => tabs.current[to]?.focus();
   return (
     <div className="workspaces">
       <div role="tablist" aria-label={t("workspace.label")}>
@@ -133,16 +132,6 @@ export function WorkspaceTabs(props: {
           {t("toolbar.unsaved")}
         </span>
       ) : null}
-      {job ? (
-        <button
-          type="button"
-          className="job-tray"
-          data-testid="job-tray"
-          onClick={() => onOpen("finish")}
-        >
-          {t(`job.${job}` as MessageKey)}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -153,16 +142,15 @@ export function WorkspacePanel(props: {
   id: Workspace;
   workspace: Workspace;
   visited: ReadonlySet<Workspace>;
-  t: Translate;
   children: ReactNode;
 }) {
-  const { id, workspace, visited, t, children } = props;
+  const { id, workspace, visited, children } = props;
   return (
     <div
       role="tabpanel"
       id={`workspace-${id}`}
       aria-labelledby={`workspace-tab-${id}`}
-      aria-label={t(`workspace.${id}`)}
+      tabIndex={0}
       hidden={workspace !== id}
       className="workspace-panel"
     >

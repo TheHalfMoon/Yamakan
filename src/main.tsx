@@ -120,7 +120,12 @@ function App() {
       useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
   // The workspace shell (YU-030), or the prior shell behind its flag.
   const [classic] = useState(classicShell);
-  const { workspace, visited, open: openWorkspace } = useWorkspace();
+  const { workspace, visited, open: showWorkspace } = useWorkspace();
+  // Leaving Edit pauses playback (its player stays mounted, hidden).
+  const openWorkspace = (next: Parameters<typeof showWorkspace>[0]) => {
+    if (next !== "edit") setPlaying(false);
+    showWorkspace(next);
+  };
   const [studioOpen, setStudioOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
@@ -840,18 +845,20 @@ function App() {
       />
     </>
   );
-  const cinemaPanel = () => (
+  const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
       <p>{t("cinema.intro")}</p>
-      <CinemaViewport />
+      <CinemaViewport active={active} />
     </>
   );
   const directorPanel = () => (
     <>
       <h2>{t("director.title")}</h2>
       <p>{t("director.intro")}</p>
+      {/* A new panel per project: no run of another project stays up. */}
       <DirectorPanel
+        key={p?.id ?? "none"}
         projectId={p?.id ?? null}
         t={t}
         client={{
@@ -1378,7 +1385,6 @@ function App() {
             onOpen={openWorkspace}
             t={t}
             unsaved={Boolean(history?.past.length)}
-            job={job?.state ?? null}
           />
         )}
         <span className="badge">{t("badge.local")}</span>
@@ -1785,7 +1791,6 @@ function App() {
                 id="story"
                 workspace={workspace}
                 visited={visited}
-                t={t}
               >
                 {p ? (
                   <section className="story">
@@ -1797,16 +1802,16 @@ function App() {
                   emptyPanel()
                 )}
                 <section className="tools">
-                  {directorPanel()}
-                  {cinemaPanel()}
+                  {cinemaPanel(workspace === "story")}
+                  {/* Director's manual stages and their raw results are
+                      for checking pipelines, kept out of the story flow. */}
+                  <details className="director">
+                    <summary>{t("director.title")}</summary>
+                    {directorPanel()}
+                  </details>
                 </section>
               </WorkspacePanel>
-              <WorkspacePanel
-                id="edit"
-                workspace={workspace}
-                visited={visited}
-                t={t}
-              >
+              <WorkspacePanel id="edit" workspace={workspace} visited={visited}>
                 {p && view ? editPanel(p, view, false) : emptyPanel()}
                 <section className="tools studio-panel" id="studio-panel">
                   {/* Studio is a focused panel of Edit (with or without a
@@ -1836,10 +1841,9 @@ function App() {
                 id="finish"
                 workspace={workspace}
                 visited={visited}
-                t={t}
               >
                 {p ? (
-                  <section className="finish">
+                  <section className="finish" data-testid="finish-panel">
                     <h2>{t("workspace.finish")}</h2>
                     <p>{t("workspace.finishIntro")}</p>
                     <p data-testid="finish-output">
@@ -1856,14 +1860,15 @@ function App() {
                         ),
                       })}
                     </p>
-                    <details className="agent-tools">
-                      <summary>{t("nav.tools")}</summary>
-                      {catalogPanel()}
-                    </details>
                   </section>
                 ) : (
                   emptyPanel()
                 )}
+                {/* Agent tools, with or without an open project. */}
+                <details className="agent-tools">
+                  <summary>{t("nav.tools")}</summary>
+                  {catalogPanel()}
+                </details>
               </WorkspacePanel>
             </>
           )}

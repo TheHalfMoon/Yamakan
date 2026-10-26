@@ -386,18 +386,21 @@ try {
         document.querySelector('[role="tab"][aria-selected="true"]')
           ?.textContent,
     );
+  // Arrows move focus only; Enter opens the focused workspace.
+  const focusedTab = () =>
+    page.evaluate(() => document.activeElement?.textContent);
   await page.getByRole("tab", { name: "Finish", exact: true }).focus();
   await page.keyboard.press("Home");
-  assert.equal(await selectedTab(), "Story");
+  assert.equal(await focusedTab(), "Story");
+  assert.equal(await selectedTab(), "Finish", "focus alone opens nothing");
   await page.keyboard.press("ArrowRight");
+  assert.equal(await focusedTab(), "Edit");
+  await page.keyboard.press("Enter");
   assert.equal(await selectedTab(), "Edit");
   await page.keyboard.press("End");
+  assert.equal(await focusedTab(), "Finish");
+  await page.keyboard.press(" ");
   assert.equal(await selectedTab(), "Finish");
-  assert.equal(
-    await page.evaluate(() => document.activeElement?.textContent),
-    "Finish",
-    "focus follows the selected tab",
-  );
   await workspace("Edit");
   const picture = saved.clips.filter((c) =>
     saved.assets.some((a) => a.id === c.assetId && a.kind === "image"),
@@ -679,14 +682,16 @@ try {
     path: join(output, "yamakan-workspace.png"),
     fullPage: true,
   });
+  // The workspace chosen last is kept across a reload (Finish, not the
+  // default).
+  await workspace("Finish");
   await page.reload();
   await page
     .getByRole("button", { name: /Browser verified production Revision/ })
     .click();
-  // The workspace chosen last is kept across a reload (Edit, here).
   assert.equal(
     await page
-      .getByRole("tab", { name: "Edit", exact: true })
+      .getByRole("tab", { name: "Finish", exact: true })
       .getAttribute("aria-selected"),
     "true",
   );
@@ -956,15 +961,14 @@ try {
   await page.getByRole("tab", { name: "القصة", exact: true }).focus();
   await page.keyboard.press("ArrowLeft");
   assert.equal(
-    await page.evaluate(
-      () =>
-        document.querySelector('[role="tab"][aria-selected="true"]')
-          ?.textContent,
-    ),
+    await page.evaluate(() => document.activeElement?.textContent),
     "التحرير",
   );
   await page.keyboard.press("ArrowRight");
-  await page.getByRole("tabpanel", { name: "القصة", exact: true }).waitFor();
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.textContent),
+    "القصة",
+  );
   await page.screenshot({ path: join(output, "arabic-interface.png") });
   // Keyboard only, right to left: Tab reaches the Arabic backup button and
   // Enter runs it.
