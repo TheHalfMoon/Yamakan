@@ -195,6 +195,7 @@ type Pending = {
     restored: boolean,
     peakBytes: number | null,
     walled: boolean,
+    flooded: boolean,
   ) => void;
   failed: (message: string) => void;
 };
@@ -255,7 +256,7 @@ export class ProcessOwner {
     this.#ready = new Promise<void>((resolve, reject) => {
       const lines = createInterface({ input: child.stdout! });
       lines.on("line", (line) => {
-        const [kind, id, value, extra, peak, wall] = line.split("\t");
+        const [kind, id, value, extra, peak, wall, output] = line.split("\t");
         if (kind === "READY") return resolve();
         const p = this.#pending.get(id);
         if (!p) return;
@@ -270,6 +271,7 @@ export class ProcessOwner {
             extra !== "0",
             Number(peak) > 0 ? Number(peak) : null,
             wall === "1",
+            output === "1",
           );
         else if (kind === "ERROR")
           p.failed(Buffer.from(value ?? "", "hex").toString("utf8"));
@@ -372,10 +374,21 @@ export class ProcessOwner {
             options.onStderr?.(chunk);
             stderr = (stderr + chunk.toString("utf8")).slice(-limit);
           },
-          exited: (exitCode, restored, peakBytes, walled) => {
+          exited: (exitCode, restored, peakBytes, walled, flooded) => {
             settle();
             peakMemoryBytes = peakBytes;
             wallExceeded = walled;
+            // Past its profile's output cap the job was ended: the run fails,
+            // never succeeds on partial output.
+            if (flooded) {
+              reject(
+                new CommandError(
+                  "LIMIT_EXCEEDED",
+                  "The worker wrote more output than its profile allows.",
+                ),
+              );
+              return;
+            }
             this.#report({
               executable: path.basename(executable),
               code: exitCode,

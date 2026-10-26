@@ -36,9 +36,10 @@
 //!   RESUME id                   -> RESUMED id
 //!   KILL id                     -> (EXITED follows)
 //!   (worker output)             -> OUT id hexChunk | ERR id hexChunk
-//!   (process end, after output) -> EXITED id exitCode restored(1|0) peakJobBytes wall(1|0)
-//!   (a job's relayed output is capped at MAX_JOB_OUTPUT bytes; past it,
-//!   output is read and discarded)
+//!   (process end, after output) -> EXITED id exitCode restored(1|0) peakJobBytes wall(1|0) output(1|0)
+//!   (an engine worker's output is capped at MAX_JOB_OUTPUT bytes: past it
+//!   the whole job is ended (exit 1450) and output(1) is reported; a media
+//!   worker's output is not capped)
 //!   errors                      -> ERROR id hexMessage
 //! Executables must be on the allowlist given as arguments at startup.
 
@@ -69,6 +70,8 @@ const MAX_JOB_OUTPUT: usize = 64 * 1024 * 1024;
 const MAX_WALL_MS: u32 = 21_600_000;
 // ERROR_TIMEOUT: the exit code of a job ended by its wall budget.
 const WALL_EXIT_CODE: u32 = 1460;
+// ERROR_NO_SYSTEM_RESOURCES: the exit code of a job ended by its output cap.
+const OUTPUT_EXIT_CODE: u32 = 1450;
 const JOB_OBJECT_LIMIT_JOB_MEMORY: u32 = 0x0000_0200;
 const JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION: u32 = 0x0000_0400;
 const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x0000_2000;
@@ -1178,6 +1181,7 @@ fn relay(
     kind: &'static str,
     pipe: Owned,
     budget: Arc<std::sync::atomic::AtomicUsize>,
+    limit: usize,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         use std::sync::atomic::Ordering;
@@ -1189,11 +1193,12 @@ fn relay(
             if ok == 0 || read == 0 {
                 break;
             }
-            // Past the job's output budget, output is read and discarded,
-            // so a worker can neither block on a full pipe nor flood procd.
+            // Past the job's output limit, output is read and discarded (so
+            // the worker never blocks on a full pipe) while the exit watcher
+            // ends the job and reports it.
             let used = budget.fetch_add(read as usize, Ordering::Relaxed);
-            if used < MAX_JOB_OUTPUT {
-                let keep = (read as usize).min(MAX_JOB_OUTPUT - used);
+            if used < limit {
+                let keep = (read as usize).min(limit - used);
                 send(&out, &format!("{kind}\t{id}\t{}", hex_encode(&buffer[..keep])));
             }
         }
@@ -1259,23 +1264,37 @@ fn main() {
                     Ok(spawned) => {
                         workers.lock().unwrap().insert(id.to_string(), spawned.worker);
                         send(&out, &format!("CREATED\t{id}\t{}", spawned.pid));
+                        // Only an engine worker's output is capped.
+                        let limit = if max_processes > 1 { MAX_JOB_OUTPUT } else { usize::MAX };
                         let budget = Arc::new(std::sync::atomic::AtomicUsize::new(0));
                         let readers = [
-                            relay(Arc::clone(&out), id.to_string(), "OUT", spawned.stdout, Arc::clone(&budget)),
-                            relay(Arc::clone(&out), id.to_string(), "ERR", spawned.stderr, budget),
+                            relay(Arc::clone(&out), id.to_string(), "OUT", spawned.stdout, Arc::clone(&budget), limit),
+                            relay(Arc::clone(&out), id.to_string(), "ERR", spawned.stderr, Arc::clone(&budget), limit),
                         ];
                         let (out, workers, id, process) =
                             (Arc::clone(&out), Arc::clone(&workers), id.to_string(), spawned.process);
                         std::thread::spawn(move || {
                             let process = process; // move the owned handle
                             let mut code = 0u32;
-                            let mut walled = false;
+                            let (mut ended_wall, mut ended_output) = (false, false);
                             unsafe {
-                                // The wall budget ends the whole job: the
-                                // worker and every descendant.
-                                if wall_ms > 0 && WaitForSingleObject(process.0, wall_ms) == WAIT_TIMEOUT {
+                                // The wall budget and the output cap end the
+                                // whole job: the worker and every descendant.
+                                let started = std::time::Instant::now();
+                                let terminate = |exit: u32| {
                                     if let Some(worker) = workers.lock().unwrap().get(&id) {
-                                        walled = TerminateJobObject(worker.job.0, WALL_EXIT_CODE) != 0;
+                                        TerminateJobObject(worker.job.0, exit);
+                                    }
+                                };
+                                if wall_ms > 0 || limit != usize::MAX {
+                                    while WaitForSingleObject(process.0, 100) == WAIT_TIMEOUT {
+                                        if !ended_output && budget.load(std::sync::atomic::Ordering::Relaxed) > limit {
+                                            ended_output = true;
+                                            terminate(OUTPUT_EXIT_CODE);
+                                        } else if !ended_wall && wall_ms > 0 && started.elapsed().as_millis() >= u128::from(wall_ms) {
+                                            ended_wall = true;
+                                            terminate(WALL_EXIT_CODE);
+                                        }
                                     }
                                 }
                                 WaitForSingleObject(process.0, INFINITE);
@@ -1345,7 +1364,21 @@ fn main() {
                                     restored &= release_label(dir);
                                 }
                             }
-                            send(&out, &format!("EXITED\t{id}\t{code}\t{}\t{peak}\t{}", u8::from(restored), u8::from(walled)));
+                            // A wall termination counts only if it ended the worker (its
+                            // code). Output past the cap was discarded, so it is always
+                            // reported, even when the worker exited before the watcher
+                            // ended the job.
+                            let walled = ended_wall && code == WALL_EXIT_CODE;
+                            let flooded = budget.load(std::sync::atomic::Ordering::Relaxed) > limit;
+                            send(
+                                &out,
+                                &format!(
+                                    "EXITED\t{id}\t{code}\t{}\t{peak}\t{}\t{}",
+                                    u8::from(restored),
+                                    u8::from(walled),
+                                    u8::from(flooded)
+                                ),
+                            );
                         });
                     }
                     Err(message) => send(&out, &format!("ERROR\t{id}\t{}", hex_encode(message.as_bytes()))),

@@ -7,7 +7,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { once } from "node:events";
@@ -28,12 +27,6 @@ const probe = fileURLToPath(
   new URL("../native/procd/target/release/worker-probe.exe", import.meta.url),
 );
 const system32 = path.join(process.env.SystemRoot || "C:\\Windows", "System32");
-const powershell = path.join(
-  system32,
-  "WindowsPowerShell",
-  "v1.0",
-  "powershell.exe",
-);
 const schtasks = path.join(system32, "schtasks.exe");
 const folders: string[] = [];
 after(() =>
@@ -52,16 +45,14 @@ const profile = (over: Partial<WorkerProfile> = {}): WorkerProfile => ({
   ...ENGINE_WORKER_PROFILE,
   ...over,
 });
-// Whether a process id is still a live worker-probe (an uncontained check;
-// the image filter keeps a reused id from counting).
+// Whether a process id is still a live process of this image (an
+// uncontained check; the image filter keeps a reused id from counting).
 const alive = (pid: number, image = "worker-probe.exe") =>
   (
     spawnSync(
       "tasklist",
       ["/FI", `PID eq ${pid}`, "/FI", `IMAGENAME eq ${image}`, "/NH"],
-      {
-        encoding: "utf8",
-      },
+      { encoding: "utf8" },
     ).stdout ?? ""
   ).includes(` ${pid} `);
 const waitGone = async (pids: number[], ms = 8000) => {
@@ -69,14 +60,6 @@ const waitGone = async (pids: number[], ms = 8000) => {
   while (pids.some((p) => alive(p)) && Date.now() < until)
     await new Promise((r) => setTimeout(r, 200));
   return pids.filter((p) => alive(p));
-};
-const appears = async (file: string, ms: number) => {
-  const until = Date.now() + ms;
-  while (Date.now() < until) {
-    if (existsSync(file)) return true;
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  return existsSync(file);
 };
 async function run(
   args: string[],
@@ -88,14 +71,18 @@ async function run(
     writable?: string[];
     cwd?: string;
     signal?: AbortSignal;
-    // Called with each complete stdout line.
+    // Called with each complete stdout line. It only records: a throw here
+    // would escape the run.
     onLine?: (line: string) => void;
     owner?: ProcessOwner;
+    // false counts stdout bytes without keeping them.
+    keepStdout?: boolean;
   } = {},
 ) {
   const executable = options.executable ?? probe;
   const owner = options.owner ?? new ProcessOwner(options.allow ?? [probe]);
   let stdout = "";
+  let bytes = 0;
   let pending = "";
   try {
     const result = await owner.run({
@@ -108,6 +95,8 @@ async function run(
       signal: options.signal,
       stderrLimit: 8000,
       onStdout: (b) => {
+        bytes += b.length;
+        if (options.keepStdout === false) return;
         stdout += b;
         pending += b;
         let at;
@@ -117,7 +106,7 @@ async function run(
         }
       },
     });
-    return { ...result, stdout };
+    return { ...result, stdout, bytes };
   } finally {
     if (!options.owner) owner.close();
   }
@@ -172,7 +161,7 @@ test(
     });
     assert.equal(engine.code, 0, engine.stderr);
     assert.equal(engine.stdout.split("|")[0], "3", engine.stdout);
-    // Beyond the bound, the job refuses more processes: 4 is the worker and 3.
+    // Beyond the bound, the job refuses more: 4 is the worker and 3.
     const four = await run(["tree", "6", "1000"], {
       profile: profile({ maxProcesses: 4 }),
     });
@@ -181,6 +170,7 @@ test(
     const two = await run(["tree", "6", "1000"], {
       profile: profile({ maxProcesses: 2 }),
     });
+    assert.equal(two.code, 0, two.stderr);
     assert.equal(two.stdout.split("|")[0], "1", two.stdout);
   },
 );
@@ -251,7 +241,7 @@ test(
       assert.equal(seen.writeSentinelDir, false);
       assert.equal(seen.loopback, false, "no TCP to the HTTP server");
       // DNS: an outside name. Without network here, the control fails and the
-      // denial proves nothing, so it is only asserted when the control works.
+      // denial proves nothing, so it is only credited when the control works.
       const resolvesOutside =
         spawnSync(probe, ["dns", "example.com"], { encoding: "utf8" })
           .stdout === "resolved";
@@ -277,107 +267,72 @@ test(
     // tasklist itself works here, or "gone" would mean nothing.
     assert.ok(alive(process.pid, "node.exe"), "tasklist sees this process");
 
-    // A child left behind on purpose by a worker that exits 300 ms later.
-    const seen: number[] = [];
+    // A child left behind on purpose by a worker that exits 2 s later.
+    const orphans: number[] = [];
     await run(["orphan", "60000"], {
       profile: ENGINE_WORKER_PROFILE,
       onLine: (line) => {
         const pid = Number(line);
-        if (pid > 0 && alive(pid)) seen.push(pid);
+        if (pid > 0 && alive(pid)) orphans.push(pid);
       },
     });
     assert.equal(
-      seen.length,
+      orphans.length,
       1,
       "the orphan was alive before its worker exited",
     );
-    assert.deepEqual(await waitGone(seen), [], "the job ended the orphan");
+    assert.deepEqual(await waitGone(orphans), [], "the job ended the orphan");
 
-    // Cancelled while its descendants run.
-    const controller = new AbortController();
-    let cancelled: number[] = [];
-    await run(["spawn-hold", "2", "60000"], {
-      profile: ENGINE_WORKER_PROFILE,
-      signal: controller.signal,
-      onLine: (line) => {
-        cancelled = pidsOf(line);
-        assert.ok(
-          cancelled.length === 2 && cancelled.every((p) => alive(p)),
-          "running before the cancel",
-        );
-        controller.abort();
-      },
-    }).catch(() => null);
-    assert.equal(cancelled.length, 2);
-    assert.deepEqual(
-      await waitGone(cancelled),
-      [],
-      "cancel ended every descendant",
-    );
-
-    // The service goes away (the owner closes procd's input).
-    const owner = new ProcessOwner([probe]);
-    let closed: number[] = [];
-    await run(["spawn-hold", "2", "60000"], {
-      owner,
-      profile: ENGINE_WORKER_PROFILE,
-      onLine: (line) => {
-        closed = pidsOf(line);
-        assert.ok(
-          closed.length === 2 && closed.every((p) => alive(p)),
-          "running before the service exit",
-        );
-        owner.close();
-      },
-    }).catch(() => null);
-    assert.equal(closed.length, 2);
-    assert.deepEqual(
-      await waitGone(closed),
-      [],
-      "service exit ended every descendant",
-    );
-
-    // procd itself is killed: Windows closes its job handles, ending the jobs.
-    const hard = new ProcessOwner([probe]);
-    let killed: number[] = [];
-    await run(["spawn-hold", "2", "60000"], {
-      owner: hard,
-      profile: ENGINE_WORKER_PROFILE,
-      onLine: (line) => {
-        killed = pidsOf(line);
-        assert.ok(
-          killed.length === 2 && killed.every((p) => alive(p)),
-          "running before procd dies",
-        );
-        execFileSync("taskkill", ["/F", "/PID", String(hard.ownerPid)]);
-      },
-    }).catch(() => null);
-    hard.close();
-    assert.equal(killed.length, 2);
-    assert.deepEqual(
-      await waitGone(killed),
-      [],
-      "procd's death ended every descendant",
-    );
-
+    // Each case records whether its descendants were alive, then acts; the
+    // assertions follow the run.
+    const holding = async (
+      act: (owner: ProcessOwner, controller: AbortController) => void,
+      over: Partial<WorkerProfile> = {},
+    ) => {
+      const owner = new ProcessOwner([probe]);
+      const controller = new AbortController();
+      let pids: number[] = [];
+      let wereAlive = false;
+      const result = await run(["spawn-hold", "2", "60000"], {
+        owner,
+        profile: profile(over),
+        signal: controller.signal,
+        onLine: (line) => {
+          pids = pidsOf(line);
+          wereAlive = pids.length === 2 && pids.every((p) => alive(p));
+          act(owner, controller);
+        },
+      }).catch((e: unknown) => e);
+      owner.close();
+      return { pids, wereAlive, result };
+    };
+    for (const [name, act] of [
+      ["cancel", (_o: ProcessOwner, c: AbortController) => c.abort()],
+      ["service exit", (o: ProcessOwner) => o.close()],
+      [
+        "procd killed",
+        (o: ProcessOwner) =>
+          void execFileSync("taskkill", ["/F", "/PID", String(o.ownerPid)]),
+      ],
+    ] as const) {
+      const { pids, wereAlive } = await holding(act);
+      assert.ok(wereAlive, `${name}: the descendants were running first`);
+      assert.deepEqual(
+        await waitGone(pids),
+        [],
+        `${name} ended every descendant`,
+      );
+    }
     // The wall budget ends the whole job, and says so.
-    let timed: number[] = [];
     const started = Date.now();
-    const wall = await run(["spawn-hold", "2", "60000"], {
-      profile: profile({ wallMs: 1500 }),
-      onLine: (line) => {
-        timed = pidsOf(line);
-        assert.ok(
-          timed.every((p) => alive(p)),
-          "running before the budget",
-        );
-      },
-    });
-    assert.equal(wall.code, WALL_EXIT_CODE);
-    assert.equal(wall.wallExceeded, true);
+    const walled = await holding(() => {}, { wallMs: 1500 });
+    assert.ok(walled.wereAlive, "running before the budget");
+    const result = walled.result as { code: number; wallExceeded: boolean };
+    assert.equal(result.code, WALL_EXIT_CODE);
+    assert.equal(result.wallExceeded, true);
     assert.ok(Date.now() - started < 15_000, "ended near its budget");
     assert.deepEqual(
-      await waitGone(timed),
+      await waitGone(walled.pids),
       [],
       "the budget ended every descendant",
     );
@@ -385,104 +340,119 @@ test(
 );
 
 test(
+  "an engine worker's output is capped: past it the run fails; a media worker's output is not",
+  { skip: !windows },
+  async () => {
+    const flood = await run(["flood", "80"], {
+      profile: ENGINE_WORKER_PROFILE,
+      keepStdout: false,
+    }).catch((e: unknown) => e);
+    assert.ok(
+      flood instanceof CommandError && flood.code === "LIMIT_EXCEEDED",
+      String(flood),
+    );
+    // Below the cap it runs to the end.
+    const under = await run(["flood", "8"], {
+      profile: ENGINE_WORKER_PROFILE,
+      keepStdout: false,
+    });
+    assert.equal(under.code, 0, under.stderr);
+    assert.equal(under.bytes, 8 * 1024 * 1024);
+    // The media profile (an FFmpeg decode streams more than 64 MiB) is unchanged.
+    const media = await run(["flood", "80"], { keepStdout: false });
+    assert.equal(media.code, 0, media.stderr);
+    assert.equal(media.bytes, 80 * 1024 * 1024);
+  },
+);
+
+test(
   "services cannot start a process for an engine worker: WMI and Task Scheduler, with controls",
   { skip: !windows },
   async () => {
-    const dir = await temp("yamakan-escape-");
-    const out = path.join(dir, "out");
-    await mkdir(out);
-    // WMI (Win32_Process.Create runs the command from the WMI service,
-    // outside any job of the caller).
-    const wmi = (marker: string) => [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      `$ErrorActionPreference = 'Stop'; Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = 'cmd.exe /c echo escaped > "${marker}"'}`,
-    ];
-    const control = path.join(dir, "wmi-control.txt");
-    spawnSync(powershell, wmi(control), { windowsHide: true });
-    assert.ok(
-      await appears(control, 15000),
-      "WMI starts a process for an ordinary process",
-    );
-    const viaWmi = path.join(out, "wmi.txt");
-    const result = await run(wmi(viaWmi), {
-      executable: powershell,
-      allow: [powershell],
-      profile: ENGINE_WORKER_PROFILE,
-      cwd: dir,
-      writable: [out],
-    });
-    assert.notEqual(result.code, 0);
+    // WMI: Win32_Process.Create would run a command from the WMI service,
+    // outside the worker's job. The worker cannot even connect to root\cimv2.
+    // (PowerShell and cscript do not start under the profile at all, so the
+    // native probe makes the call.)
     assert.equal(
-      await appears(viaWmi, 8000),
-      false,
-      "no process started through WMI",
+      spawnSync(probe, ["wmi"], { encoding: "utf8" }).stdout,
+      "connected",
+      "WMI control",
     );
+    const wmi = await run(["wmi"], { profile: ENGINE_WORKER_PROFILE });
+    assert.match(wmi.stdout, /^denied 0x/, "no connection to the WMI service");
 
-    // Task Scheduler: a task created by the worker would run outside its job.
+    // Task Scheduler: a task the worker created would run outside its job.
+    const dir = await temp("yamakan-escape-");
     const task = `YamakanEscapeTest-${process.pid}`;
-    const marker = path.join(out, "task.txt");
+    const create = (name: string) => [
+      "/Create",
+      "/TN",
+      name,
+      "/SC",
+      "ONCE",
+      "/ST",
+      "23:59",
+      "/TR",
+      `cmd.exe /c echo escaped > ${path.join(dir, "task.txt")}`,
+      "/F",
+    ];
     try {
-      const created = await run(
-        [
-          "/Create",
-          "/TN",
-          task,
-          "/SC",
-          "ONCE",
-          "/ST",
-          "23:59",
-          "/TR",
-          `cmd.exe /c echo escaped > "${marker}"`,
-          "/F",
-        ],
-        {
-          executable: schtasks,
-          allow: [schtasks],
-          profile: ENGINE_WORKER_PROFILE,
-          cwd: dir,
-          writable: [out],
-        },
-      );
-      assert.notEqual(created.code, 0, "the worker cannot create a task");
+      // Control: an ordinary process can create (and delete) a task.
+      const ok = spawnSync(schtasks, create(`${task}-control`), {
+        encoding: "utf8",
+      });
+      assert.equal(ok.status, 0, `Task Scheduler control: ${ok.stderr}`);
+      const created = await run(create(task), {
+        executable: schtasks,
+        allow: [schtasks],
+        profile: ENGINE_WORKER_PROFILE,
+        cwd: dir,
+      });
+      // schtasks ran and was refused by the Task Scheduler (not a failed start).
+      assert.notEqual(created.code, 0);
+      assert.match(created.stderr, /Access is denied/, created.stderr);
       const listed = spawnSync(schtasks, ["/Query", "/TN", task], {
         encoding: "utf8",
       });
-      assert.notEqual(listed.status, 0, "no task exists");
+      assert.notEqual(listed.status, 0, "the worker created no task");
     } finally {
       spawnSync(schtasks, ["/Delete", "/TN", task, "/F"]);
+      spawnSync(schtasks, ["/Delete", "/TN", `${task}-control`, "/F"]);
     }
   },
 );
 
 test(
-  "COM local servers and job breakaway: denied, asserted where the control works here",
+  "COM local servers and job breakaway: denied, credited where the control works here",
   { skip: !windows },
   async (t) => {
     // A local COM server would run outside the job. MMC20.Application needs
-    // elevation and Shell.Application is not a local server on this host, so
-    // the control usually fails: then the denial is recorded, not credited.
+    // elevation on this host, so the control usually fails: then the denial
+    // is recorded, not credited.
     const progid = "MMC20.Application";
     const comControl = spawnSync(probe, ["com", progid], {
       encoding: "utf8",
     }).stdout;
     const com = await run(["com", progid], { profile: ENGINE_WORKER_PROFILE });
-    assert.notEqual(com.stdout, "created", "no local server for the worker");
+    assert.match(
+      com.stdout,
+      /^denied /,
+      "activation refused (not a missing class)",
+    );
     if (comControl !== "created")
       t.diagnostic(
         `COM control failed (${comControl}): local-server denial not qualified here`,
       );
-    // Breakaway: procd's jobs never allow it. When this test runs inside a
-    // job that forbids breakaway (CI shells do), the control fails too.
+    // Breakaway: procd's jobs never allow it (ERROR_ACCESS_DENIED). When this
+    // test runs inside a job that forbids breakaway, the control fails too.
     const breakControl = spawnSync(probe, ["breakaway"], {
       encoding: "utf8",
     }).stdout;
     const broke = await run(["breakaway"], { profile: ENGINE_WORKER_PROFILE });
-    assert.equal(broke.stdout, "denied", "no child leaves the job");
+    assert.equal(broke.stdout, "denied 5", "no child leaves the job");
     if (breakControl !== "started")
       t.diagnostic(
-        "breakaway control failed (the test runs in a job): denial not qualified here",
+        `breakaway control failed (${breakControl}): denial not qualified here`,
       );
   },
 );
@@ -496,15 +466,27 @@ test(
     await mkdir(target);
     const link = path.join(base, "link");
     await symlink(target, link, "junction");
+    // Control: the real folder is accepted.
+    assert.equal(
+      (
+        await run(["exit"], {
+          profile: ENGINE_WORKER_PROFILE,
+          writable: [target],
+        })
+      ).code,
+      0,
+    );
     await assert.rejects(
       run(["exit"], { profile: ENGINE_WORKER_PROFILE, writable: [link] }),
-      (e: unknown) => e instanceof CommandError,
+      (e: unknown) =>
+        e instanceof CommandError &&
+        /writable folder is missing or is a link/.test(e.message),
     );
   },
 );
 
 test(
-  "registryRead: what it opens (Users-readable HKLM) and what it does not",
+  "registryRead: what it opens (keys whose ACL grants it or app packages) and what it does not",
   { skip: !windows },
   async () => {
     const product = [

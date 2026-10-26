@@ -233,6 +233,74 @@ fn activates_local_server(_progid: &str) -> String {
     "denied".into()
 }
 #[cfg(windows)]
+#[link(name = "oleaut32")]
+extern "system" {
+    fn SysAllocString(text: *const u16) -> *mut u16;
+}
+// Whether the WMI service accepts a connection to root\cimv2 (where
+// Win32_Process.Create starts a process outside the caller's job).
+#[cfg(windows)]
+fn connects_wmi() -> String {
+    const CLSID_WBEM_LOCATOR: [u8; 16] = [
+        0x11, 0xf8, 0x90, 0x45, 0x3a, 0x1d, 0xd0, 0x11, 0x89, 0x1f, 0x00, 0xaa, 0x00, 0x4b, 0x2e,
+        0x24,
+    ];
+    const IID_IWBEM_LOCATOR: [u8; 16] = [
+        0x87, 0xa6, 0x12, 0xdc, 0x7f, 0x73, 0xcf, 0x11, 0x88, 0x4d, 0x00, 0xaa, 0x00, 0x4b, 0x2e,
+        0x24,
+    ];
+    type Connect = unsafe extern "system" fn(
+        this: *mut std::ffi::c_void,
+        resource: *mut u16,
+        user: *mut u16,
+        password: *mut u16,
+        locale: *mut u16,
+        flags: i32,
+        authority: *mut u16,
+        context: *mut std::ffi::c_void,
+        services: *mut *mut std::ffi::c_void,
+    ) -> i32;
+    let mut locator: *mut std::ffi::c_void = std::ptr::null_mut();
+    unsafe {
+        CoInitializeEx(std::ptr::null_mut(), 0);
+        let hr = CoCreateInstance(
+            &CLSID_WBEM_LOCATOR,
+            std::ptr::null_mut(),
+            0x1,
+            &IID_IWBEM_LOCATOR,
+            &mut locator,
+        );
+        if hr != 0 {
+            return format!("denied {hr:#x}");
+        }
+        // IWbemLocator: IUnknown's three methods, then ConnectServer.
+        let vtable = *(locator as *const *const usize);
+        let connect: Connect = std::mem::transmute(*vtable.add(3));
+        let null = std::ptr::null_mut();
+        let mut services: *mut std::ffi::c_void = std::ptr::null_mut();
+        let hr = connect(
+            locator,
+            SysAllocString(wide("ROOT\\CIMV2").as_ptr()),
+            null,
+            null,
+            null,
+            0,
+            null,
+            std::ptr::null_mut(),
+            &mut services,
+        );
+        if hr == 0 {
+            "connected".into()
+        } else {
+            format!("denied {hr:#x}")
+        }
+    }
+}
+#[cfg(not(windows))]
+fn connects_wmi() -> String {
+    "denied".into()
+}
+#[cfg(windows)]
 #[link(name = "kernel32")]
 extern "system" {
     fn LocalFree(mem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
@@ -336,14 +404,14 @@ fn main() {
         "orphan" => {
             // A child left behind on purpose: the job must end it.
             let exe = env::current_exe().unwrap_or_default();
-            // It stays 300 ms after starting the child, so a test can see the
+            // It stays 2 s after starting the child, so a test can see the
             // child alive before the worker exits.
             match Command::new(exe).args(["sleep-ms", arg(&args, 1)]).spawn() {
                 Ok(c) => {
                     use std::io::Write;
                     println!("{}", c.id());
                     let _ = std::io::stdout().flush();
-                    thread::sleep(Duration::from_millis(300));
+                    thread::sleep(Duration::from_millis(2000));
                 }
                 Err(_) => print!("denied"),
             }
@@ -376,6 +444,9 @@ fn main() {
         "com" => {
             print!("{}", activates_local_server(arg(&args, 1)));
         }
+        "wmi" => {
+            print!("{}", connects_wmi());
+        }
         "breakaway" => {
             // A child that asks to leave the job (CREATE_BREAKAWAY_FROM_JOB).
             #[cfg(windows)]
@@ -391,7 +462,18 @@ fn main() {
                         let _ = c.wait();
                         print!("started")
                     }
-                    Err(_) => print!("denied"),
+                    Err(e) => print!("denied {}", e.raw_os_error().unwrap_or(0)),
+                }
+            }
+        }
+        "flood" => {
+            // Writes n MiB to stdout (the engine profile's output cap).
+            use std::io::Write;
+            let chunk = vec![b'x'; 1024 * 1024];
+            let mut out = std::io::stdout().lock();
+            for _ in 0..arg(&args, 1).parse::<usize>().unwrap_or(1) {
+                if out.write_all(&chunk).is_err() {
+                    break;
                 }
             }
         }
