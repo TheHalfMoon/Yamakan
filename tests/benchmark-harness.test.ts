@@ -59,6 +59,8 @@ function preferenceCohort(
     seed: 0,
     left: i % 2 ? "yamakan" : "rival",
     right: i % 2 ? "rival" : "yamakan",
+    leftTrialId: `${promptId}-${i % 2 ? "yamakan" : "rival"}`,
+    rightTrialId: `${promptId}-${i % 2 ? "rival" : "yamakan"}`,
   }));
   const votes = pairs.flatMap((pair, i) =>
     Array.from({ length: raters }, (_, r) => {
@@ -80,6 +82,7 @@ function preferenceCohort(
     comparator: "rival",
     analysis: "bestWithinBudget",
     expected: { prompts: promptIds, seedsPerPrompt: 1 },
+    successFloor: 0,
     trials,
     pairs,
     votes,
@@ -130,8 +133,8 @@ test("with nothing recorded, every category is NOT TESTED", () => {
 });
 
 test("a small hand-computed cohort gives its exact estimate", () => {
-  // Two prompts: 3 of 3 votes for the product, then 1 of 3; the estimate
-  // is 4/6 (a ratio over prompt clusters), whatever the bootstrap does.
+  // Two prompts: 3 of 3 votes for the product, then 1 of 3; each slot
+  // weighs one, so the estimate is (1 + 1/3) / 2, whatever the bootstrap does.
   const cohort = preferenceCohort("exact", 2, 0.5, 2);
   cohort.votes = cohort.votes.map((v, i) => {
     const pair = cohort.pairs.find((p) => p.pairId === v.pairId)!;
@@ -189,7 +192,15 @@ test("raters within a prompt are not independent samples", () => {
         "left" | "right",
     };
   });
-  const cohort = one({ ...base, votes });
+  const sixty = {
+    ...protocol,
+    sampling: { ...protocol.sampling, ratersPerPair: 60 },
+  };
+  const cohort = analyse(
+    observations([{ ...base, votes }]),
+    sixty,
+    protocolSha256,
+  ).cohorts[0]!;
   // A naive binomial interval over 600 votes would be about ±0.04 wide; the
   // prompt-clustered interval is far wider, and no win is claimed.
   const naive = wilson(
@@ -262,6 +273,48 @@ test("missing trials, removed retries, duplicates, missing votes and mixed modal
       { ...good, pairs: [...good.pairs, good.pairs[0]!] },
       "DUPLICATE_ID",
     ],
+    [
+      "extra votes",
+      {
+        ...good,
+        votes: [...good.votes, { ...good.votes[0]!, raterId: "extra-rater" }],
+      },
+      "EXCESS_VOTES",
+    ],
+    ["no floor", { ...good, successFloor: undefined }, "FLOOR_UNDECLARED"],
+    [
+      // The pair shows a re-run of the product, not its deciding trial.
+      "pair shows another output",
+      {
+        ...good,
+        trials: [
+          ...good.trials,
+          ...good.trials
+            .filter(
+              (t) =>
+                t.product === "yamakan" &&
+                t.promptId === good.expected.prompts[0],
+            )
+            .map((t) => ({
+              ...t,
+              trialId: "rerun",
+              attempt: 2,
+              outputSha256: hash(999),
+            })),
+        ],
+        pairs: good.pairs.map((p, i) =>
+          i === 0
+            ? {
+                ...p,
+                ...(p.left === "yamakan"
+                  ? { leftTrialId: "rerun" }
+                  : { rightTrialId: "rerun" }),
+              }
+            : p,
+        ),
+      },
+      "PAIR_NOT_DECIDING",
+    ],
   ];
   for (const [name, cohort, problem] of cases) {
     const report = one(cohort);
@@ -303,6 +356,22 @@ test("a failed output loses its comparison: failures never leave the denominator
       "PAIR_WITHOUT_OUTPUTS",
     ),
   );
+});
+
+test("a retry after a success is a choice between outputs, never counted", () => {
+  const good = preferenceCohort("reroll", 240, 0.7, 24);
+  const rerolled = {
+    ...good,
+    trials: [
+      ...good.trials,
+      {
+        ...good.trials[0]!,
+        trialId: `${good.trials[0]!.trialId}-2`,
+        attempt: 2,
+      },
+    ],
+  };
+  assert.ok(hasReason(one(rerolled), "RETRY_AFTER_OK"));
 });
 
 test("first attempt and best within budget are separate analyses", () => {
@@ -407,6 +476,44 @@ test("a declared success floor holds back a preference win", () => {
   assert.equal(one({ ...cohort, successFloor: 0.8 }).label, "WINS");
 });
 
+test("consent must be listed once, in date order, and not past its deletion date", () => {
+  const cohort = preferenceCohort("kept", 30, 0.5, 53, { category: "F" });
+  const withConsent = {
+    ...cohort,
+    trials: cohort.trials.map((t) => ({ ...t, consentId: "c-1" })),
+  };
+  const entry = {
+    consentId: "c-1",
+    categories: ["F" as const],
+    grantedAt: "2026-01-01",
+    deleteBy: "2026-06-30",
+  };
+  const expired = analyse(
+    observations([withConsent], [entry]),
+    protocol,
+    protocolSha256,
+    {
+      analysedAt: "2026-10-26",
+    },
+  ).cohorts[0]!;
+  assert.ok(hasReason(expired, "CONSENT_EXPIRED"));
+  const inTime = analyse(
+    observations([withConsent], [entry]),
+    protocol,
+    protocolSha256,
+    {
+      analysedAt: "2026-05-01",
+    },
+  ).cohorts[0]!;
+  assert.ok(!hasReason(inTime, "CONSENT_EXPIRED"));
+  assert.throws(() =>
+    run([withConsent], [entry, { ...entry, categories: ["C", "F"] }]),
+  );
+  assert.throws(() =>
+    run([withConsent], [{ ...entry, deleteBy: "2025-12-31" }]),
+  );
+});
+
 test("consent must come from the registry and cover the category", () => {
   const cohort = preferenceCohort("faces", 30, 0.5, 51, { category: "F" });
   const withConsent = {
@@ -422,7 +529,7 @@ test("consent must come from the registry and cover the category", () => {
       consentId: "consent-1",
       categories,
       grantedAt: "2026-10-01",
-      deleteBy: "2027-10-01",
+      deleteBy: "2099-10-01",
     },
   ];
   assert.ok(
@@ -491,6 +598,7 @@ test("records are bounded, strict, bound to the protocol, and never hold credent
     "AIzaSyA1234567890abcdefghijklmnopqrstu",
     "eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0",
     "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xYz",
+    "aB3dE5fG7hJ9kL1mN3pQ5rS7-tU9vW1xYz4Q",
   ])
     refused({
       ...observations([cohort]),

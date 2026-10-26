@@ -148,6 +148,9 @@ const PairSchema = z
     seed: z.number().int().nonnegative().max(15),
     left: RefId,
     right: RefId,
+    // The trials whose outputs were shown: each side's deciding trial.
+    leftTrialId: RefId,
+    rightTrialId: RefId,
   })
   .strict();
 const VoteSchema = z
@@ -203,12 +206,20 @@ const ConsentSchema = z
     grantedAt: z.iso.date(),
     deleteBy: z.iso.date(),
   })
-  .strict();
+  .strict()
+  .refine((c) => c.grantedAt <= c.deleteBy, "A consent ends after it is granted.");
 export const ObservationsSchema = z
   .object({
     format: z.literal(BENCHMARK_OBSERVATIONS_FORMAT),
     protocolSha256: Sha256,
-    consents: z.array(ConsentSchema).max(BENCHMARK_LIMITS.consents).default([]),
+    consents: z
+      .array(ConsentSchema)
+      .max(BENCHMARK_LIMITS.consents)
+      .refine(
+        (c) => new Set(c.map((x) => x.consentId)).size === c.length,
+        "Each consent is listed once.",
+      )
+      .default([]),
     cohorts: z.array(CohortSchema).max(BENCHMARK_LIMITS.cohorts),
   })
   .strict();
@@ -223,14 +234,15 @@ const SECRET_VALUE =
   /\bsk-[A-Za-z0-9_-]{16,}|\b[sr]k_(?:live|test)_[A-Za-z0-9]{10,}|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|\bBasic\s+[A-Za-z0-9+/=]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY|\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}|\bAKIA[0-9A-Z]{16}\b|\bAIza[0-9A-Za-z_-]{30,}|\bxox[bpas]-[A-Za-z0-9-]{10,}|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/;
 // A long run of mixed-case letters and digits reads as a key; hashes and
 // ids in the records are lower-case hex or carry separators.
-const looksLikeKey = (s: string) =>
-  /[A-Za-z0-9+/_]{32,}/.test(s) &&
-  /[a-z]/.test(s) &&
-  /[A-Z]/.test(s) &&
-  /[0-9]/.test(s);
+const looksLikeKey = (s: string) => {
+  const run = s.replace(/[-._:]/g, "").match(/[A-Za-z0-9+/_]{32,}/)?.[0];
+  if (!run || /^[0-9a-f]+$/.test(run)) return false;
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/].filter((r) => r.test(run)).length;
+  return classes >= 2;
+};
 const secretLike = (s: string) => SECRET_VALUE.test(s) || looksLikeKey(s);
 function assertNoSecrets(value: unknown, at = "$", depth = 0): void {
-  if (depth > 32)
+  if (depth > BENCHMARK_LIMITS.depth + 2)
     throw new CommandError(
       "VALIDATION",
       "Benchmark records are nested too deeply.",
@@ -239,7 +251,7 @@ function assertNoSecrets(value: unknown, at = "$", depth = 0): void {
     if (secretLike(value))
       throw new CommandError(
         "VALIDATION",
-        `A value at ${at} looks like a credential; benchmark evidence never holds one.`,
+        `A value at ${at} looks like a credential (long mixed-case runs are refused; separate words in ids); benchmark evidence never holds one.`,
       );
     return;
   }
@@ -422,6 +434,11 @@ export type Problem =
   | "DUPLICATE_RATER"
   | "MISSING_VOTES"
   | "PAIR_WITHOUT_OUTPUTS"
+  | "PAIR_NOT_DECIDING"
+  | "RETRY_AFTER_OK"
+  | "EXCESS_VOTES"
+  | "FLOOR_UNDECLARED"
+  | "CONSENT_EXPIRED"
   | "MODALITY_MIXED"
   | "UNKNOWN_PRODUCT"
   | "UNDECLARED_PROMPT"
@@ -430,10 +447,12 @@ export type Problem =
 
 const slotKey = (prompt: string, seed: number) => `${prompt}\u0000${seed}`;
 
-// Each slot's outcome per product under the cohort's analysis: the first
-// attempt, or success if any attempt within the budget succeeded.
-function slotOutcomes(cohort: Cohort, protocol: Protocol) {
-  const outcome = new Map<string, boolean>();
+// Each slot's outcome per product under the cohort's analysis, and the
+// trial that decides it: the first attempt; or, within the budget, the
+// first attempt that succeeded (retries follow failures only, so there is
+// never a choice between outputs).
+function slotDecisions(cohort: Cohort, protocol: Protocol) {
+  const deciding = new Map<string, { ok: boolean; trialId: string | null; attempt: number }>();
   for (const t of cohort.trials) {
     const key = `${slotKey(t.promptId, t.seed)}\u0000${t.product}`;
     const counts =
@@ -441,18 +460,29 @@ function slotOutcomes(cohort: Cohort, protocol: Protocol) {
         ? t.attempt === 1
         : t.attempt <= protocol.retries.maxAttempts;
     if (!counts) continue;
-    outcome.set(key, (outcome.get(key) ?? false) || t.status === "ok");
+    const prior = deciding.get(key) ?? { ok: false, trialId: null, attempt: Infinity };
+    if (t.status === "ok" && (!prior.ok || t.attempt < prior.attempt))
+      deciding.set(key, { ok: true, trialId: t.trialId, attempt: t.attempt });
+    else if (!prior.ok) deciding.set(key, { ...prior, attempt: Math.min(prior.attempt, t.attempt) });
   }
   return (prompt: string, seed: number, product: string) =>
-    outcome.get(`${slotKey(prompt, seed)}\u0000${product}`);
+    deciding.get(`${slotKey(prompt, seed)}\u0000${product}`);
+}
+function slotOutcomes(cohort: Cohort, protocol: Protocol) {
+  const decide = slotDecisions(cohort, protocol);
+  return (prompt: string, seed: number, product: string) =>
+    decide(prompt, seed, product)?.ok;
 }
 
+const category_ = (protocol: Protocol, cohort: Cohort) =>
+  protocol.categories.find((c) => c.id === cohort.category)!;
 // Record integrity: each finding blocks any label stronger than
 // INCONCLUSIVE for the cohort.
 export function integrity(
   cohort: Cohort,
   protocol: Protocol,
   consents: Parsed["consents"] = [],
+  analysedAt = new Date().toISOString().slice(0, 10),
 ) {
   const problems = new Map<Problem, number>();
   const add = (p: Problem) => problems.set(p, (problems.get(p) ?? 0) + 1);
@@ -460,13 +490,16 @@ export function integrity(
   const prompts = new Set(cohort.expected.prompts);
   const seeds = cohort.expected.seedsPerPrompt;
   if (seeds > protocol.sampling.maxSeedsPerPrompt) add("SEEDS_OVER_PROTOCOL");
+  // A preference win needs a success floor (it may be declared as 0).
+  if (category_(protocol, cohort).primaryEndpoint === "preference" && cohort.successFloor === undefined)
+    add("FLOOR_UNDECLARED");
   const category = protocol.categories.find((c) => c.id === cohort.category)!;
   const covering = new Map(consents.map((c) => [c.consentId, c]));
   const trialIds = new Set<string>();
   // Per slot and product: how many attempts, which numbers, the highest.
   const attempts = new Map<
     string,
-    { n: number; seen: Set<number>; max: number }
+    { n: number; seen: Set<number>; max: number; firstOk: number }
   >();
   for (const t of cohort.trials) {
     if (trialIds.has(t.trialId)) add("DUPLICATE_ID");
@@ -479,18 +512,28 @@ export function integrity(
       const consent = t.consentId ? covering.get(t.consentId) : undefined;
       if (!consent || !consent.categories.includes(cohort.category))
         add("CONSENT_MISSING");
+      // Media kept past its deletion date is not evidence.
+      else if (consent.deleteBy < analysedAt) add("CONSENT_EXPIRED");
     }
     const key = `${slotKey(t.promptId, t.seed)}\u0000${t.product}`;
-    const a = attempts.get(key) ?? { n: 0, seen: new Set<number>(), max: 0 };
+    const a = attempts.get(key) ?? {
+      n: 0,
+      seen: new Set<number>(),
+      max: 0,
+      firstOk: Infinity,
+    };
     a.n++;
     a.seen.add(t.attempt);
     a.max = Math.max(a.max, t.attempt);
+    if (t.status === "ok") a.firstOk = Math.min(a.firstOk, t.attempt);
     attempts.set(key, a);
   }
   for (const a of attempts.values()) {
     // Attempts 1..max, each exactly once.
     if (a.n !== a.max || a.seen.size !== a.n) add("RETRIES_REMOVED");
     if (a.n > protocol.retries.maxAttempts) add("TOO_MANY_ATTEMPTS");
+    // A retry follows a failure; one after a success picks between outputs.
+    if (a.max > a.firstOk) add("RETRY_AFTER_OK");
   }
   for (const prompt of prompts)
     for (let seed = 0; seed < seeds; seed++)
@@ -499,7 +542,9 @@ export function integrity(
           add("MISSING_TRIALS");
   const pairsBySlot = new Map<string, string>();
   const pairIds = new Set<string>();
-  const outcome = slotOutcomes(cohort, protocol);
+  const decide = slotDecisions(cohort, protocol);
+  const outcome = (prompt: string, seed: number, product: string) =>
+    decide(prompt, seed, product)?.ok;
   for (const p of cohort.pairs) {
     if (pairIds.has(p.pairId)) add("DUPLICATE_ID");
     pairIds.add(p.pairId);
@@ -516,6 +561,13 @@ export function integrity(
       !outcome(p.promptId, p.seed, cohort.comparator)
     )
       add("PAIR_WITHOUT_OUTPUTS");
+    // The outputs shown are the deciding trials of their own sides.
+    for (const [side, trialId] of [
+      [p.left, p.leftTrialId],
+      [p.right, p.rightTrialId],
+    ] as const)
+      if (decide(p.promptId, p.seed, side)?.trialId !== trialId)
+        add("PAIR_NOT_DECIDING");
   }
   const votesPerPair = new Map<string, number>();
   const seen = new Set<string>();
@@ -538,11 +590,9 @@ export function integrity(
         )
           continue;
         const pair = pairsBySlot.get(slotKey(prompt, seed));
-        if (
-          !pair ||
-          (votesPerPair.get(pair) ?? 0) < protocol.sampling.ratersPerPair
-        )
-          add("MISSING_VOTES");
+        const votes = pair ? (votesPerPair.get(pair) ?? 0) : 0;
+        if (votes < protocol.sampling.ratersPerPair) add("MISSING_VOTES");
+        if (votes > protocol.sampling.ratersPerPair) add("EXCESS_VOTES");
       }
   return [...problems].map(([problem, count]) => ({ problem, count }));
 }
@@ -563,8 +613,8 @@ type CohortReport = {
   // the product's success rate minus the comparator's.
   estimate: number | null;
   interval: Interval | null;
-  // The interval at this cohort's Holm step level: WINS/LOSES exactly when
-  // it excludes no difference.
+  // For reference, the interval at this cohort's Holm step level; the
+  // label follows the Holm-adjusted p-value.
   adjustedInterval: Interval | null;
   pValue: number | null;
   adjustedPValue: number | null;
@@ -585,38 +635,41 @@ function promptScores(
   const prompts = cohort.expected.prompts;
   const seeds = cohort.expected.seedsPerPrompt;
   const clusters = new Map<string, { sum: number; n: number }>();
-  const add = (prompt: string, score: number, weight = 1) => {
+  const add = (prompt: string, score: number) => {
     const c = clusters.get(prompt) ?? { sum: 0, n: 0 };
-    c.sum += score * weight;
-    c.n += weight;
+    c.sum += score;
+    c.n += 1;
     clusters.set(prompt, c);
   };
   if (report.endpoint === "preference") {
-    const declared = new Set(prompts);
+    // Each slot weighs one: the mean of its attention-checked votes, or, for
+    // a slot one side failed (intention to treat), that side's loss; a slot
+    // both failed is a tie.
     const pairs = new Map(cohort.pairs.map((p) => [p.pairId, p]));
+    const bySlot = new Map<string, { sum: number; n: number }>();
     for (const v of cohort.votes) {
       const pair = pairs.get(v.pairId);
-      if (!pair || !declared.has(pair.promptId)) continue;
+      if (!pair) continue;
       if (!v.attentionPassed) {
         report.excludedVotes++;
         continue;
       }
       const productSide = pair.left === cohort.product ? "left" : "right";
-      add(
-        pair.promptId,
-        v.choice === "tie" ? 0.5 : v.choice === productSide ? 1 : 0,
-      );
+      const key = slotKey(pair.promptId, pair.seed);
+      const c = bySlot.get(key) ?? { sum: 0, n: 0 };
+      c.sum += v.choice === "tie" ? 0.5 : v.choice === productSide ? 1 : 0;
+      c.n++;
+      bySlot.set(key, c);
     }
-    // Intention to treat: a slot one side failed counts as that side losing
-    // every rater's vote; a slot both failed, as ties.
-    const raters = protocol.sampling.ratersPerPair;
     for (const prompt of prompts)
       for (let seed = 0; seed < seeds; seed++) {
         const mine = outcome(prompt, seed, cohort.product);
         const theirs = outcome(prompt, seed, cohort.comparator);
-        if (mine === undefined || theirs === undefined || (mine && theirs))
-          continue;
-        add(prompt, mine ? 1 : theirs ? 0 : 0.5, raters);
+        if (mine === undefined || theirs === undefined) continue;
+        if (mine && theirs) {
+          const c = bySlot.get(slotKey(prompt, seed));
+          if (c?.n) add(prompt, c.sum / c.n);
+        } else add(prompt, mine ? 1 : theirs ? 0 : 0.5);
       }
   } else
     for (const prompt of prompts) {
@@ -670,11 +723,15 @@ function successRates(cohort: Cohort, protocol: Protocol, seed: number) {
   };
 }
 
+// Direct callers pass records already read with parseObservations (which
+// bounds nesting and refuses credentials); they are validated again here.
 export function analyse(
   observations: Observations,
   protocol: Protocol,
   protocolSha256: string,
+  options: { analysedAt?: string } = {},
 ) {
+  const analysedAt = options.analysedAt ?? new Date().toISOString().slice(0, 10);
   const parsed: Parsed = ObservationsSchema.parse(observations);
   if (parsed.protocolSha256 !== protocolSha256)
     throw new CommandError(
@@ -726,7 +783,7 @@ export function analyse(
       return;
     }
     report.label = "INCONCLUSIVE";
-    const problems = integrity(cohort, protocol, parsed.consents);
+    const problems = integrity(cohort, protocol, parsed.consents, analysedAt);
     if (problems.length) {
       for (const { problem, count } of problems)
         report.reasons.push(
@@ -811,11 +868,11 @@ export function analyse(
       return;
     }
     // No difference established: a match only inside a declared margin,
-    // tested at the cohort's adjusted level (two one-sided tests).
+    // two one-sided tests at alpha / m over the whole family.
     if (cohort.equivalenceMargin !== undefined) {
       const m = cohort.equivalenceMargin;
-      const lo = scale(quantile(f.boot, level[k]!));
-      const hi = scale(quantile(f.boot, 1 - level[k]!));
+      const lo = scale(quantile(f.boot, alpha / family.length));
+      const hi = scale(quantile(f.boot, 1 - alpha / family.length));
       const centre = report.endpoint === "preference" ? 0.5 : 0;
       if (lo >= centre - m && hi <= centre + m) {
         report.label = "MATCHES";

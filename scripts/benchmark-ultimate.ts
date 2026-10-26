@@ -22,9 +22,10 @@ async function readBounded(file: string) {
       throw new Error("The observations must be a regular file.");
     if (info.size > BENCHMARK_LIMITS.bytes)
       throw new Error("The observations file is too large to analyse.");
-    const bytes = Buffer.alloc(info.size);
-    const { bytesRead } = await handle.read(bytes, 0, info.size, 0);
-    return bytes.subarray(0, bytesRead).toString("utf8");
+    const text = await handle.readFile("utf8");
+    if (Buffer.byteLength(text) > BENCHMARK_LIMITS.bytes)
+      throw new Error("The observations file is too large to analyse.");
+    return text;
   } finally {
     await handle.close();
   }
