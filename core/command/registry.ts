@@ -15,6 +15,7 @@ import {
   CREATIVE_DOCUMENTS_ENABLED,
   DocumentKind,
   creativeDocumentsEnabled,
+  DOCUMENTS_OFF,
 } from "../documents.ts";
 
 const Sha256Hex = z.string().regex(/^[a-f0-9]{64}$/);
@@ -197,11 +198,11 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Report whether this service accepts creative document writes (AG-DOCS), and whether that is a qualification run.",
+      "Report whether this service accepts creative document writes (AG-DOCS), and whether an operator turned them off.",
     input: z.object({}).strict(),
     run: () => ({
       available: creativeDocumentsEnabled(),
-      qualification: creativeDocumentsEnabled() && !CREATIVE_DOCUMENTS_ENABLED,
+      turnedOff: CREATIVE_DOCUMENTS_ENABLED && !creativeDocumentsEnabled(),
     }),
   }),
   "yamakan.document.commit": define({
@@ -225,10 +226,7 @@ export const commands = {
       .strict(),
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
-        throw new CommandError(
-          "CAPABILITY_UNAVAILABLE",
-          "Creative document persistence is not enabled in this build.",
-        );
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
       const project = await store.commitDocument(
         { ...a, principalId: principal.id },
         receipt,
@@ -820,7 +818,7 @@ export const commands = {
     scope: "project:write",
     mutation: true,
     summary:
-      "Migrate one legacy Cinema scene file into the named project as its cinemaScene document (compare-and-swap on expectedRevision; sourceSha256 from yamakan.scene.inventory). The original file is kept.",
+      "Migrate one legacy Cinema scene file into the named project as its cinemaScene document (compare-and-swap on expectedRevision; sourceSha256 from yamakan.scene.inventory). The original file is kept. Not for agents.",
     input: z
       .object({
         projectId: Id,
@@ -831,9 +829,13 @@ export const commands = {
       .strict(),
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      // A legacy scene belongs to the first project it is migrated into, so
+      // only the person (browser session or local CLI/SDK) assigns one.
+      if (principal.id.startsWith("agent:"))
         throw new CommandError(
-          "CAPABILITY_UNAVAILABLE",
-          "Creative document persistence is not enabled in this build.",
+          "SCOPE_DENIED",
+          "Agents cannot assign legacy scenes to projects.",
         );
       return migrateCinemaSidecar(
         store,

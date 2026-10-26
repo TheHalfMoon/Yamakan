@@ -85,7 +85,7 @@ test("the SDK stages a document and a retry returns the same receipt", async () 
   );
 });
 
-test("against the real service with AG-DOCS off, SDK, MCP and CLI saves are refused", async () => {
+test("against the real service with AG-DOCS turned off, SDK, MCP and CLI saves are refused", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-docclients-"));
   bases.push(root);
   const port = 24347;
@@ -95,6 +95,7 @@ test("against the real service with AG-DOCS off, SDK, MCP and CLI saves are refu
     YAMAKAN_WORKSPACE: root,
     YAMAKAN_PORT: String(port),
     YAMAKAN_URL: url,
+    YAMAKAN_AG_DOCS_OFF: "1",
   };
   const server = fork(
     fileURLToPath(new URL("../server/main.ts", import.meta.url)),

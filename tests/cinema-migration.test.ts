@@ -473,7 +473,7 @@ test("after a later edit, reverting restores the migrated scene exactly", async 
   assert.deepEqual(JSON.parse(bytes.toString("utf8")), parseScene3D(scene(A)));
 });
 
-test("the commands: inventory reads, migration stays behind the AG-DOCS flag", async () => {
+test("the commands: inventory reads; migration is refused while AG-DOCS is turned off", async () => {
   const { store, sidecar } = await workspace();
   const file = await sidecar(`${A}.json`, JSON.stringify(scene(A)));
   const project = await store.create("Cinema");
@@ -487,14 +487,41 @@ test("the commands: inventory reads, migration stays behind the AG-DOCS flag", a
   } satisfies CommandContext;
   const listed = await execute(ctx, "yamakan.scene.inventory", {});
   assert.equal((listed.result as { sidecars: unknown[] }).sidecars.length, 1);
-  await refused(
+  const migrate = async () =>
     execute(ctx, "yamakan.scene.migrate", {
       projectId: project.id,
       expectedRevision: project.revision,
       sceneId: A,
       sourceSha256: sha(await readFile(file)),
-    }),
-    "CAPABILITY_UNAVAILABLE",
+    });
+  // A scene belongs to the first project it enters: agents never assign.
+  await refused(
+    execute(
+      {
+        ...ctx,
+        principal: {
+          id: "agent:helper",
+          scopes: new Set(["project:write", "project:read"]),
+        },
+      } as CommandContext,
+      "yamakan.scene.migrate",
+      {
+        projectId: project.id,
+        expectedRevision: project.revision,
+        sceneId: A,
+        sourceSha256: sha(await readFile(file)),
+      },
+    ),
+    "SCOPE_DENIED",
   );
+  process.env.YAMAKAN_AG_DOCS_OFF = "1";
+  try {
+    await refused(migrate(), "CAPABILITY_UNAVAILABLE");
+  } finally {
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
+  }
   assert.deepEqual(store.listDocuments(project.id), []);
+  // On (the build's default), the same command migrates.
+  await migrate();
+  assert.equal(store.listDocuments(project.id).length, 1);
 });

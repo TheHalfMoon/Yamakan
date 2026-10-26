@@ -1,0 +1,102 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "43332a9",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-014",
+  "includes": ["YU-013b"],
+  "objective": "Prove complete creative backup/restore closure; fence restored execution state",
+  "branch": "feat/yu-014-backup-closure",
+  "mergedPr": 101,
+  "headCommit": "4a8602b",
+  "mergeCommit": "432b863b4087786a67fb548fa3ef4413112be8eb",
+  "tests": {
+    "files": [
+      "tests/creative-recovery.test.ts",
+      "tests/backup.test.ts",
+      "tests/director-durability.test.ts"
+    ],
+    "result": "creative-recovery 10/10. Canvas pixels, scenes, story, Director run and revoked consent survive verified restore. Closure stays closed during concurrent edits, imports and GC. Missing bitmap and corrupt document fail safely. Refused or recorded safely: junction folders, hard-linked files, upper-case scene names (kept), altered legacy files, escaping or duplicated manifest paths, forged trigger database, ENOSPC. Copied queued, preparing, running, validating and cancel-requested jobs, attempts, staged uploads and agent tokens never act across two restarts; explicit retry and discard work. Format 1 backups restore labelled incomplete. Existing backup, recovery and director suites unchanged and passing."
+  },
+  "measurement": {
+    "script": "scripts/measure-creative-recovery.ts",
+    "profiles": "synthetic Studio workspaces; S = 4 documents, 20 edits; M = 20 documents, 150 edits (reduced from 40/400, whose setup of 400 document commits exceeded 15 minutes)",
+    "S": {
+      "revisions": 20,
+      "bytes": 347719,
+      "backupMs": 256,
+      "closureMs": 8,
+      "restoreMs": 263
+    },
+    "M": {
+      "revisions": 150,
+      "bytes": 2231074,
+      "backupMs": 1974,
+      "closureMs": 83,
+      "restoreMs": 1922
+    }
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness panel",
+      "judge": "session model subagent",
+      "findings": {
+        "mustFix": 1,
+        "shouldFix": 5,
+        "applied": 6,
+        "nitsApplied": 4
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 4,
+        "applied": 4
+      }
+    },
+    {
+      "kind": "delta re-reviews (correctness and security)",
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 2,
+        "applied": 2,
+        "finalDelta": "clean"
+      }
+    },
+    {
+      "kind": "d1 advisory",
+      "securityRisk": "medium",
+      "probability": 0.56,
+      "confidence": 0.34
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); no local generative backend with enough free RAM"
+    }
+  ],
+  "activation": "Merged with AG-DOCS off (flag-off scope). AG-DOCS was activated afterwards by the group receipt (receipts/AG-DOCS.json).",
+  "postMergeVerification": {
+    "main": "432b863b4087786a67fb548fa3ef4413112be8eb",
+    "ci": "PR exact head 4a8602b: qualify, qualify-windows-r8, otio-oracle success; push run on 432b863: success",
+    "windows": "detached 432b863: lint, provenance, build pass; npm test 514/517 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass; TesterArmy Studio journey PASSED"
+  },
+  "limitations": [
+    "No test swaps a legacy file between hashing and copying",
+    "JobSupervisor.discard releases a conversion's staged original without awaiting it; GC reclaims an interrupted release",
+    "A crash between the database rename and restore.json leaves a fenced folder without a receipt; an idempotent replay cannot complete it",
+    "No provider or external-request reconciliation exists yet (the Director has no workers); historical request rows are kept untouched",
+    "A legitimately multi-linked legacy file marks the backup incomplete",
+    "Full OCR review blocked (see reviews)"
+  ]
+}

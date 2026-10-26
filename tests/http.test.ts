@@ -88,8 +88,8 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       ).status,
       403,
     );
-    // The document staging route authenticates, then refuses while AG-DOCS
-    // is off, before reserving or reading anything.
+    // The document staging route authenticates, then refuses an upload
+    // without its headers before reserving or reading anything.
     const stageUrl = `${origin}/api/v1/projects/${crypto.randomUUID()}/documents/stage`;
     assert.equal(
       (await fetch(stageUrl, { method: "POST", body: "{}" })).status,
@@ -102,7 +102,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     });
     assert.equal(
       ((await staged.json()) as { error: { code: string } }).error.code,
-      "CAPABILITY_UNAVAILABLE",
+      "VALIDATION",
     );
     const call = async (name: string, args: unknown) =>
       fetch(`${origin}/api/v1/call`, {

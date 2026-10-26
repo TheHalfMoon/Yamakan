@@ -126,7 +126,9 @@ const en = {
     "Another window saved this canvas first. Reload the saved canvas to continue.",
   "studio.state.error": "The Studio canvas could not be saved.",
   "studio.state.unavailable":
-    "Saving Studio canvases to the project is not enabled in this build.",
+    "Saving Studio canvases to the project is not enabled on this service.",
+  "studio.state.turnedOff":
+    "Saving Studio canvases is turned off on this service. This canvas is not kept; saved canvases are kept and open again when saving is turned back on.",
   "studio.noProject": "Open a project to keep its Studio canvas.",
   "studio.intro":
     "Layered image editing is imported behind a Yamakan host adapter.",
@@ -317,7 +319,9 @@ const ar: Record<MessageKey, string> = {
     "حفظت نافذة أخرى هذه اللوحة أولاً. أعد تحميل اللوحة المحفوظة للمتابعة.",
   "studio.state.error": "تعذّر حفظ لوحة الاستوديو.",
   "studio.state.unavailable":
-    "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذا الإصدار.",
+    "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذه الخدمة.",
+  "studio.state.turnedOff":
+    "حفظ لوحات الاستوديو موقوف في هذه الخدمة. لن تُحفظ هذه اللوحة؛ أما اللوحات المحفوظة فتبقى وتُفتح من جديد عند إعادة تشغيل الحفظ.",
   "studio.noProject": "افتح مشروعاً للاحتفاظ بلوحة الاستوديو الخاصة به.",
   "cinema.title": "كاميرا السينما",
   "cinema.intro":

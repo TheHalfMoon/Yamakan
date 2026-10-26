@@ -171,20 +171,32 @@ test("reservations bound active uploads per principal and staged bytes per works
     "LIMIT_EXCEEDED",
     /Too many/,
   );
-  // Agents and the CLI share 8 MiB: with 2000 bytes held, a full document
-  // from an agent does not fit, a smaller one does.
-  refusedSync(
-    () => reserve("agent:a", big),
-    "LIMIT_EXCEEDED",
-    /agents and the CLI/,
-  );
+  // Agents share 8 MiB between them (the local client's bytes do not
+  // count against it): another agent's document no longer fits.
   reserve("agent:a", big - 4000);
-  refusedSync(() => reserve("agent:b", 3000), "LIMIT_EXCEEDED", /agents/);
+  refusedSync(() => reserve("agent:b", 5000), "LIMIT_EXCEEDED", /agents/);
   // The browser session keeps its own share, whatever agents hold...
   reserve("browser-ui", big);
   // ...but no principal holds more than one document's worth.
   refusedSync(() => reserve("browser-ui", 1), "LIMIT_EXCEEDED", /staged bytes/);
   assert.equal(RESOURCE_POLICY.enforced.requestBytes, 2 * 1024 * 1024);
+});
+
+test("agents share one staging pool and can never lock out the local client", async () => {
+  const { store, project } = await workspace();
+  const big = DOCUMENT_LIMITS.documentBytes;
+  const reserve = (principalId: string, declaredBytes: number) =>
+    store.reserveDocumentUpload({
+      ...stageInput(project.id, studioBytes()),
+      principalId,
+      declaredBytes,
+    });
+  reserve("agent:a", big);
+  refusedSync(() => reserve("agent:b", 1), "LIMIT_EXCEEDED", /agents/);
+  // The CLI and SDK stage a whole document whatever agents hold, and the
+  // browser session still stages its own after both.
+  assert.ok("reserved" in reserve("local-client", big));
+  assert.ok("reserved" in reserve("browser-ui", big));
 });
 
 test("a restart releases uploads that were still being received, and expired ones", async () => {
@@ -499,7 +511,7 @@ test("the route refuses bad headers and oversize before reading, and a cut conne
   stage(store, project.id, studioBytes("B"));
 });
 
-test("with AG-DOCS off the route and the commit command refuse before any work", async () => {
+test("with AG-DOCS turned off the route and the commit command refuse before any work", async () => {
   const { store, project } = await workspace();
   const port = await stagingServer(store, false);
   const { json } = await post(port, project.id, studioBytes());
@@ -509,18 +521,23 @@ test("with AG-DOCS off the route and the commit command refuse before any work",
     queue: {},
     principal: principals["local-client"],
   } as never;
-  await refused(
-    execute(ctx, "yamakan.document.commit", {
-      projectId: project.id,
-      expectedRevision: 0,
-      documentId: randomUUID(),
-      kind: "studio",
-      schemaVersion: 1,
-      expectedContentHash: null,
-      source: { contentHash: "a".repeat(64) },
-    }),
-    "CAPABILITY_UNAVAILABLE",
-  );
+  process.env.YAMAKAN_AG_DOCS_OFF = "1";
+  try {
+    await refused(
+      execute(ctx, "yamakan.document.commit", {
+        projectId: project.id,
+        expectedRevision: 0,
+        documentId: randomUUID(),
+        kind: "studio",
+        schemaVersion: 1,
+        expectedContentHash: null,
+        source: { contentHash: "a".repeat(64) },
+      }),
+      "CAPABILITY_UNAVAILABLE",
+    );
+  } finally {
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
+  }
 });
 
 test("a body dripped slower than the upload deadline is cut off and keeps nothing", async () => {

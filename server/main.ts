@@ -131,12 +131,22 @@ try {
 const api = new CreativeAPI(store, { recoveryHome });
 // Durable jobs: reconcile any interrupted attempts and resume queued work.
 await api.queue.start();
-// Crash leftovers from an earlier run (older than the grace period).
-void store
-  .collectGarbage()
-  .catch((e: Error) =>
-    console.warn("Garbage collection skipped: " + e.message),
-  );
+// Crash leftovers from an earlier run (older than the grace period), then
+// hourly: unreferenced Studio bitmaps and refused uploads' files are freed
+// while the service runs, not only at its next start.
+let collecting = false;
+const collect = () => {
+  if (collecting) return;
+  collecting = true;
+  void store
+    .collectGarbage()
+    .catch((e: Error) =>
+      console.warn("Garbage collection skipped: " + e.message),
+    )
+    .finally(() => (collecting = false));
+};
+collect();
+setInterval(collect, 60 * 60 * 1000).unref();
 const port = Number(env("PORT") || 4318);
 const origin = `http://127.0.0.1:${port}`;
 function sameToken(value: string, expected: string) {
@@ -404,12 +414,8 @@ const server = createServer(async (req, res) => {
         /^\/api\/v1\/projects\/([^/]+)\/studio\/bitmaps\/([a-f0-9]{64})$/.exec(
           url.pathname,
         );
+      // Reads stay open when saving is turned off: stored canvases load.
       if (req.method === "GET" && bitmap) {
-        if (!creativeDocumentsEnabled())
-          throw new CommandError(
-            "CAPABILITY_UNAVAILABLE",
-            "Creative document persistence is not enabled in this build.",
-          );
         authorize(principal, "yamakan.project.open");
         const file = await store.studioBitmapFile(bitmap[1], bitmap[2]);
         // Content-addressed: a digest's bytes never change.
@@ -583,9 +589,13 @@ const server = createServer(async (req, res) => {
 server.requestTimeout = 0;
 server.setTimeout(120_000);
 server.listen(port, "127.0.0.1", () => {
-  if (creativeDocumentsEnabled() && !CREATIVE_DOCUMENTS_ENABLED)
+  if (CREATIVE_DOCUMENTS_ENABLED && !creativeDocumentsEnabled())
     console.warn(
-      "QUALIFICATION RUN: creative document persistence (AG-DOCS) is enabled by YAMAKAN_AG_DOCS_QUALIFICATION and is not yet qualified for use.",
+      "Creative document saving (AG-DOCS) is turned off by YAMAKAN_AG_DOCS_OFF; stored documents stay readable.",
+    );
+  else if (process.env.YAMAKAN_AG_DOCS_OFF !== undefined)
+    console.warn(
+      "YAMAKAN_AG_DOCS_OFF is set but not to 1, so creative document saving stays on.",
     );
   console.log(
     `Yamakan is running at ${origin}; workspace ${root}\nRun npm run open (or your Start-menu shortcut) to sign in in the browser.`,

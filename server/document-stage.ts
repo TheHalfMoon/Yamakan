@@ -10,6 +10,7 @@ import { authorize } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
 import {
   creativeDocumentsEnabled,
+  DOCUMENTS_OFF,
   DOCUMENT_LIMITS,
   DocumentKind,
 } from "../core/documents.ts";
@@ -69,11 +70,7 @@ export async function stageDocument(
   enabled: boolean = creativeDocumentsEnabled(),
   deadlineMs?: number,
 ): Promise<StagedDocumentReceipt> {
-  if (!enabled)
-    throw new CommandError(
-      "CAPABILITY_UNAVAILABLE",
-      "Creative document persistence is not enabled in this build.",
-    );
+  if (!enabled) throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
   authorize(principal, "yamakan.document.commit");
   if (!header(req, "content-type").startsWith("application/json"))
     throw new CommandError("VALIDATION", "JSON content type required.");
@@ -140,11 +137,7 @@ export async function uploadStudioBitmap(
   enabled: boolean = creativeDocumentsEnabled(),
   deadlineMs?: number,
 ) {
-  if (!enabled)
-    throw new CommandError(
-      "CAPABILITY_UNAVAILABLE",
-      "Creative document persistence is not enabled in this build.",
-    );
+  if (!enabled) throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
   authorize(principal, "yamakan.document.commit");
   if (header(req, "content-type") !== "image/png")
     throw new CommandError("VALIDATION", "Studio bitmaps are image/png.");
@@ -178,6 +171,7 @@ export async function uploadStudioBitmap(
       projectId,
       req as AsyncIterable<Uint8Array>,
       Number(length),
+      principal.id,
     );
   } finally {
     clearTimeout(timer);

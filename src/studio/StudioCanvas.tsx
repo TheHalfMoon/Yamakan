@@ -73,6 +73,7 @@ export function StudioCanvas({
   const [error, setError] = useState<string | null>(null);
   const [save, setSave] = useState<StudioSaveState | null>(null);
   const [persistence, setPersistence] = useState<boolean | null>(null);
+  const [turnedOff, setTurnedOff] = useState(false);
   const [reloads, setReloads] = useState(0);
   // The newest project revision known here (the editor's saves advance it
   // too), read when a save starts.
@@ -111,19 +112,20 @@ export function StudioCanvas({
         const { createQ10StudioCanvasState } =
           await import("./host/q10Fixture.ts");
         if (cancelled) return;
-        // Project-bound when the service accepts creative documents.
-        const enabled =
+        // Project-bound when the service accepts creative documents. When
+        // an operator turned saving off, the canvas is session-only (as
+        // without the service) and says so; stored canvases are kept.
+        const capability =
           projectId && client
-            ? Boolean(
-                (
-                  (await client.call("yamakan.document.capability", {})) as {
-                    available: boolean;
-                  }
-                ).available,
-              )
-            : false;
+            ? ((await client.call("yamakan.document.capability", {})) as {
+                available: boolean;
+                turnedOff?: boolean;
+              })
+            : null;
+        const enabled = Boolean(capability?.available);
         if (cancelled) return;
         setPersistence(projectId && client ? enabled : null);
+        setTurnedOff(Boolean(capability?.turnedOff));
         if (enabled && projectId && client) {
           const projectAssets = createProjectStudioAssetStore(
             client,
@@ -337,8 +339,13 @@ export function StudioCanvas({
         )}
       </div>
       {project && persistence === false ? (
-        <p data-testid="studio-save-state" data-state="unavailable">
-          {t?.("studio.state.unavailable")}
+        <p
+          data-testid="studio-save-state"
+          data-state={turnedOff ? "turned-off" : "unavailable"}
+        >
+          {t?.(
+            turnedOff ? "studio.state.turnedOff" : "studio.state.unavailable",
+          )}
         </p>
       ) : null}
       {!project && client ? (
