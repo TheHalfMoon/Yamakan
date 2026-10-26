@@ -631,6 +631,11 @@ function App() {
                             {t("backups.damaged", { count: b.damaged })}
                           </small>
                         )}
+                        {b.creative !== "complete" && (
+                          <small className="note">
+                            {t("backups.partialScope")}
+                          </small>
+                        )}
                         <button
                           disabled={busy}
                           onClick={() =>
@@ -641,13 +646,24 @@ function App() {
                               );
                               setMessage(
                                 restored.quarantined.length
-                                  ? msg("backups.restoredQuarantined", {
-                                      folder: restored.root,
-                                      count: restored.quarantined.length,
-                                    })
-                                  : msg("backups.restored", {
-                                      folder: restored.root,
-                                    }),
+                                  ? restored.fenced?.jobsHeld
+                                    ? msg("backups.restoredQuarantinedHeld", {
+                                        folder: restored.root,
+                                        count: restored.quarantined.length,
+                                        held: restored.fenced.jobsHeld,
+                                      })
+                                    : msg("backups.restoredQuarantined", {
+                                        folder: restored.root,
+                                        count: restored.quarantined.length,
+                                      })
+                                  : restored.fenced?.jobsHeld
+                                    ? msg("backups.restoredHeld", {
+                                        folder: restored.root,
+                                        count: restored.fenced?.jobsHeld,
+                                      })
+                                    : msg("backups.restored", {
+                                        folder: restored.root,
+                                      }),
                               );
                             })
                           }

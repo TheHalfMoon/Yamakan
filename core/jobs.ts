@@ -333,6 +333,8 @@ export class JobSupervisor {
       });
       return this.#row(db, jobId)!;
     });
+    // A discarded conversion gives up its staged original, as a cancel does.
+    void this.#release(jobId);
     return this.#view(row);
   }
 
