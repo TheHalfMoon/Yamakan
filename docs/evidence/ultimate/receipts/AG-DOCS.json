@@ -88,7 +88,7 @@
   "hardeningWithActivation": [
     "Agents cannot migrate legacy scenes (a source belongs to the first project it enters)",
     "Agents share one 8 MiB staging pool of their own; with the browser's and the local client's own shares the workspace holds 24 MiB, so agents can never lock out either",
-    "Workspace-wide budgets: Studio bitmaps 8 GiB, distinct stored document bytes 4 GiB; agents may fill at most half of each, so the person keeps the other half",
+    "Workspace-wide budgets: Studio bitmaps 8 GiB, distinct stored document bytes 4 GiB; agents write only while the workspace uses less than half of each, so the person always keeps the rest",
     "Garbage collection runs hourly (unreferenced bitmaps and refused uploads' files are freed while the service runs)",
     "Stored documents and bitmaps stay readable through the API under rollback; Studio becomes session-only and says saved canvases are kept and return when saving is turned back on",
     "An unrecognised YAMAKAN_AG_DOCS_OFF value is announced at startup"

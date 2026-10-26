@@ -1759,8 +1759,9 @@ export class ProjectStore {
         )
         .get(projectId, digest) as { bytes: number };
       return (
-        used.n + 1 > DOCUMENT_LIMITS.projectBitmaps ||
-        used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes ||
+        used.n + 1 > budgetFor(DOCUMENT_LIMITS.projectBitmaps, principalId) ||
+        used.bytes + declaredBytes >
+          budgetFor(DOCUMENT_LIMITS.projectBitmapBytes, principalId) ||
         all.bytes + declaredBytes >
           budgetFor(DOCUMENT_LIMITS.workspaceBitmapBytes, principalId)
       );
