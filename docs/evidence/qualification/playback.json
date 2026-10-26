@@ -1,8 +1,8 @@
 {
   "receipt": "yamakan.playback-qualification/1",
   "policy": "yamakan.qualification-policy/v1",
-  "commit": "92a35bc0b1738bdd02436eeffee501286c853a92",
-  "measuredAt": "2026-10-26T19:16:00.155Z",
+  "commit": "70322c468742c1a09b474f20c62f7ab3e9aed7ae",
+  "measuredAt": "2026-10-26T20:01:17.810Z",
   "environment": {
     "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
     "logicalCores": 12,
@@ -16,70 +16,70 @@
   "sustained": {
     "fromSeconds": 0,
     "seconds": 15,
-    "animationFrames": 575,
-    "sampledSeconds": 15.13,
-    "framesShown": 411,
+    "animationFrames": 650,
+    "sampledSeconds": 16.08,
+    "framesShown": 335,
     "changes": {
-      "next": 387,
-      "skipped": 21,
+      "next": 308,
+      "skipped": 22,
       "framesSkipped": 23,
-      "black": 0,
-      "other": 3
+      "black": 2,
+      "other": 5
     },
-    "fps": 27.2,
-    "minOneSecondWindow": 17,
-    "droppedEstimate": 43,
+    "fps": 20.8,
+    "minOneSecondWindow": 0,
+    "droppedEstimate": 147,
     "audioDriftMs": {
-      "samples": 543,
-      "mean": 25.4,
-      "p95": 54.4,
-      "max": 78.2
+      "samples": 609,
+      "mean": 134.3,
+      "p95": 169.5,
+      "max": 183.7
     }
   },
   "seek": {
     "fromSeconds": 4.5,
     "seconds": 3,
-    "animationFrames": 99,
-    "sampledSeconds": 3.3,
-    "framesShown": 80,
+    "animationFrames": 101,
+    "sampledSeconds": 3.31,
+    "framesShown": 81,
     "changes": {
-      "next": 68,
+      "next": 69,
       "skipped": 11,
       "framesSkipped": 11,
       "black": 1,
       "other": 1
     },
-    "fps": 24.2,
-    "minOneSecondWindow": 21,
-    "droppedEstimate": 19,
+    "fps": 24.5,
+    "minOneSecondWindow": 20,
+    "droppedEstimate": 18,
     "audioDriftMs": {
-      "samples": 92,
-      "mean": 29.8,
-      "p95": 66.7,
-      "max": 91
+      "samples": 94,
+      "mean": 20.2,
+      "p95": 45.9,
+      "max": 69.1
     }
   },
   "pressure": {
     "fromSeconds": 0,
     "seconds": 10,
-    "animationFrames": 313,
-    "sampledSeconds": 10.25,
-    "framesShown": 277,
+    "animationFrames": 325,
+    "sampledSeconds": 10.3,
+    "framesShown": 268,
     "changes": {
-      "next": 253,
-      "skipped": 22,
-      "framesSkipped": 22,
+      "next": 235,
+      "skipped": 31,
+      "framesSkipped": 31,
       "black": 1,
       "other": 2
     },
-    "fps": 27,
+    "fps": 26,
     "minOneSecondWindow": 18,
-    "droppedEstimate": 31,
+    "droppedEstimate": 41,
     "audioDriftMs": {
-      "samples": 287,
-      "mean": 20.5,
-      "p95": 49.6,
-      "max": 67.8
+      "samples": 301,
+      "mean": 33.4,
+      "p95": 64.3,
+      "max": 89.9
     },
     "exportStates": {
       "COMPLETED": 2
@@ -90,49 +90,49 @@
     "cpuThrottle": 20,
     "fromSeconds": 0,
     "seconds": 5,
-    "animationFrames": 23,
-    "sampledSeconds": 12.76,
-    "framesShown": 3,
+    "animationFrames": 24,
+    "sampledSeconds": 17.68,
+    "framesShown": 2,
     "changes": {
       "next": 0,
       "skipped": 0,
       "framesSkipped": 0,
       "black": 3,
-      "other": 3
+      "other": 2
     },
-    "fps": 0.2,
+    "fps": 0.1,
     "minOneSecondWindow": 0,
-    "droppedEstimate": 380,
+    "droppedEstimate": 529,
     "audioDriftMs": {
-      "samples": 10,
-      "mean": 516.9,
-      "p95": 1201.1,
-      "max": 1201.1
+      "samples": 8,
+      "mean": 1099.7,
+      "p95": 2314.4,
+      "max": 2314.4
     },
     "detected": true
   },
   "checks": [
     {
       "check": "sustained 720p playback (15 s, two cuts, overlay, title) at ≥ 24 fps",
-      "measured": 27.2,
+      "measured": 20.8,
       "threshold": 24,
-      "metThreshold": true,
+      "metThreshold": false,
       "gated": true
     },
     {
       "check": "seek to 4.5 s, then play across the cut at 6 s (counted from the Play press)",
-      "measured": 24.2,
+      "measured": 24.5,
       "threshold": 24,
       "metThreshold": true,
       "gated": false
     },
     {
       "check": "play while exports render back to back (completed exports covered 100% of the window)",
-      "measured": 27,
+      "measured": 26,
       "threshold": 24,
       "metThreshold": true,
       "gated": false
     }
   ],
-  "passed": true
+  "passed": false
 }
