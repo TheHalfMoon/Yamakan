@@ -9,6 +9,26 @@ import type {
   EngineSubmitRequest,
 } from "./contract.ts";
 import { ENGINE_CONTRACT } from "./contract.ts";
+import {
+  AttemptFence,
+  ENGINE_CONTRACT_V2,
+  ENGINE_V2_LIMITS,
+  EngineRequestV2Schema,
+  Operation,
+  constraintsHash,
+  refusal,
+  underClaim,
+} from "./contract-v2.ts";
+import type {
+  Artifact,
+  AssetRef,
+  CapabilityV2,
+  Constraints,
+  EngineAdapterV2,
+  EngineRequestV2,
+  ExecutionStatus,
+  RefusalReason,
+} from "./contract-v2.ts";
 
 type Internal = {
   request: EngineSubmitRequest;
@@ -51,7 +71,9 @@ export function createFakeEngine(
       throw new Error("Invalid attempt key.");
     for (const node of Object.values(request.graph.nodes)) {
       if (!allowlisted.has(node.class_type))
-        throw new Error(`Node class_type is not allowlisted: ${node.class_type}`);
+        throw new Error(
+          `Node class_type is not allowlisted: ${node.class_type}`,
+        );
     }
   };
 
@@ -155,4 +177,219 @@ function finish(job: Internal, failProbe: boolean) {
   }
   job.outputs = [{ name: "fake-output.bin", bytes: payload, sha256 }];
   job.status = { id: job.status.id, state: "completed" };
+}
+
+// ---------------------------------------------------------------------------
+// EngineAdapter v2 fake (YU-040): native operation requests, no graph. It
+// counts the workers it would spawn, so a refusal "before spawn" is
+// observable, and serves its artifact from a generator in bounded chunks
+// (never one whole-file array).
+// ---------------------------------------------------------------------------
+
+export type FakeEngineV2Options = {
+  // Operations the fake reports unavailable, with this reason.
+  unavailable?: Partial<Record<Operation, RefusalReason>>;
+  // Artifact size the fake produces (bytes).
+  artifactBytes?: number;
+  // Fail the execution after spawning (an engine-side failure).
+  failExecutions?: boolean;
+  // Called before each input is read (tests hold one back to race another).
+  beforeInput?: (request: EngineRequestV2) => Promise<void>;
+  // Executions stay running (a long render) until cancelled.
+  stayRunning?: boolean;
+};
+
+const FAKE_V2_CONSTRAINTS: Constraints = {
+  maxWidth: 1280,
+  maxHeight: 720,
+  fps: [
+    { num: 30, den: 1 },
+    { num: 24000, den: 1001 },
+  ],
+  minDurationTicks: 1,
+  maxDurationTicks: 705_600_000 * 10,
+  audio: false,
+  controls: ["guidance"],
+  roles: ["firstFrame", "lastFrame", "source", "mask", "audio"],
+};
+
+// Deterministic artifact bytes, generated chunk by chunk.
+function* fakeBytes(seed: string, length: number, chunk: number) {
+  let produced = 0;
+  let block = createHash("sha256").update(seed).digest();
+  while (produced < length) {
+    const size = Math.min(chunk, length - produced);
+    const out = Buffer.alloc(size);
+    for (let i = 0; i < size; i += 32) {
+      block.copy(out, i, 0, Math.min(32, size - i));
+      block = createHash("sha256").update(block).digest();
+    }
+    produced += size;
+    yield new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
+  }
+}
+
+// Reads an asset stream to its end, bounded, verifying its hash.
+async function verifyAsset(
+  stream: AsyncIterable<Uint8Array>,
+  asset: AssetRef,
+  maxBytes: number,
+) {
+  const hash = createHash("sha256");
+  let bytes = 0;
+  for await (const chunk of stream) {
+    bytes += chunk.byteLength;
+    if (bytes > maxBytes) return false;
+    hash.update(chunk);
+  }
+  return hash.digest("hex") === asset.sha256;
+}
+
+export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
+  const artifactBytes = options.artifactBytes ?? 3 * 1024 * 1024 + 17;
+  type Execution = { status: ExecutionStatus; artifact: Artifact | null };
+  const executions = new Map<string, Execution>();
+  const fence = new AttemptFence();
+  let spawned = 0;
+  let seq = 0;
+  const known = (ref: string) => {
+    const e = executions.get(ref);
+    if (!e) throw new Error("Unknown engine execution.");
+    return e;
+  };
+  const capabilities = (): CapabilityV2[] =>
+    Operation.options.map((operation) => {
+      const reason = options.unavailable?.[operation];
+      return reason
+        ? {
+            operation,
+            available: false,
+            reason,
+            constraintsHash: constraintsHash(null),
+          }
+        : {
+            operation,
+            available: true,
+            constraints: FAKE_V2_CONSTRAINTS,
+            constraintsHash: constraintsHash(FAKE_V2_CONSTRAINTS),
+          };
+    });
+  const adapter: EngineAdapterV2 & { spawned(): number } = {
+    contract: ENGINE_CONTRACT_V2,
+    spawned: () => spawned,
+    capabilities,
+    async submit(raw, context) {
+      const parsed = EngineRequestV2Schema.safeParse(raw);
+      if (!parsed.success) return { refused: "INVALID_REQUEST" };
+      const request = parsed.data;
+      const claim = fence.claim(request);
+      if (claim.kind === "done") return claim.result;
+      return underClaim(claim, async () => {
+        const refused = refusal(
+          request,
+          capabilities().find((c) => c.operation === request.operation),
+        );
+        if (refused) return { refused };
+        // Inputs are read through the service's handles and checked against
+        // their recorded hashes before anything runs.
+        for (const { asset } of request.inputs) {
+          await options.beforeInput?.(request);
+          if (
+            !(await verifyAsset(
+              context.openAsset(asset),
+              asset,
+              ENGINE_V2_LIMITS.artifactBytes,
+            ))
+          )
+            return { refused: "INVALID_REQUEST" };
+        }
+        spawned++;
+        const ref = `fake-v2-${++seq}`;
+        let artifact: Artifact | null = null;
+        if (!options.failExecutions) {
+          const hash = createHash("sha256");
+          for (const chunk of fakeBytes(
+            ref,
+            artifactBytes,
+            ENGINE_V2_LIMITS.chunkBytes,
+          ))
+            hash.update(chunk);
+          artifact = {
+            handle:
+              request.output.kind === "video" ? "output.mp4" : "output.vtt",
+            mediaType:
+              request.output.kind === "video" ? "video/mp4" : "text/vtt",
+            byteLength: artifactBytes,
+            sha256: hash.digest("hex"),
+          };
+        }
+        executions.set(ref, {
+          status: options.failExecutions
+            ? {
+                executionRef: ref,
+                state: "failed",
+                diagnostic: "Simulated engine failure.",
+              }
+            : options.stayRunning
+              ? { executionRef: ref, state: "running", progress: 0.5 }
+              : { executionRef: ref, state: "succeeded", progress: 1 },
+          artifact,
+        });
+        // Only the newest generation stays live; the one it replaces (or
+        // this one, if a newer one is live) is cancelled.
+        const cancel = claim.supersede(ref);
+        const e = cancel ? executions.get(cancel) : undefined;
+        // Only an unfinished execution can be cancelled.
+        if (
+          cancel &&
+          e &&
+          (e.status.state === "queued" || e.status.state === "running")
+        ) {
+          e.status = { executionRef: cancel, state: "cancelled" };
+          e.artifact = null;
+        }
+        // A newer generation went live first: this one is stale.
+        return cancel === ref
+          ? { refused: "STALE_ATTEMPT" }
+          : { executionRef: ref };
+      });
+    },
+    async status(ref) {
+      return { ...known(ref).status };
+    },
+    async reconcile(ref) {
+      // An in-process fake survives nothing: what it knows is its status.
+      return { ...known(ref).status };
+    },
+    async requestCancel(ref) {
+      const e = known(ref);
+      // Executions finish within submit, so there is never a running one.
+      if (e.status.state === "queued" || e.status.state === "running") {
+        e.status = { executionRef: ref, state: "cancelled" };
+        e.artifact = null;
+      }
+      return {
+        requested: true,
+        localProcessExited: true,
+        billingOutcome: "notApplicable",
+      };
+    },
+    async enumerateArtifacts(ref) {
+      const e = known(ref);
+      return e.status.state === "succeeded" && e.artifact
+        ? [{ ...e.artifact }]
+        : [];
+    },
+    async *readArtifact(ref, handle) {
+      const e = known(ref);
+      if (
+        e.status.state !== "succeeded" ||
+        !e.artifact ||
+        e.artifact.handle !== handle
+      )
+        throw new Error("No such artifact.");
+      yield* fakeBytes(ref, e.artifact.byteLength, ENGINE_V2_LIMITS.chunkBytes);
+    },
+  };
+  return adapter;
 }

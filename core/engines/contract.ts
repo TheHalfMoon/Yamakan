@@ -27,7 +27,10 @@ export type EngineJobState = z.infer<typeof EngineJobStateSchema>;
 
 export type EngineGraph = {
   /** Node class_type allowlist is enforced by the adapter before submit. */
-  nodes: Record<string, { class_type: string; inputs: Record<string, unknown> }>;
+  nodes: Record<
+    string,
+    { class_type: string; inputs: Record<string, unknown> }
+  >;
 };
 
 export type EngineInputFile = {

@@ -147,6 +147,14 @@
       "reason": "Yamakan-authored fake engine for cancel/fencing/quarantine tests (W10); no donor copy."
     },
     {
+      "path": "core/engines/contract-v2.ts",
+      "reason": "Yamakan-authored operation-based EngineAdapter v2 contract (YU-040); no donor copy."
+    },
+    {
+      "path": "core/engines/v1-bridge.ts",
+      "reason": "Yamakan-authored bridge lowering server-owned recipes to the v1 fake (YU-040); no donor copy."
+    },
+    {
       "path": "core/animation/sample.ts",
       "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
     },
