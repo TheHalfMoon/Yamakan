@@ -12,6 +12,8 @@ import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
   absentCapabilitiesV2,
+  diagnostic,
+  readArtifactVerified,
   parseRequestV2,
   type AssetRef,
   type EngineAdapterV2,
@@ -391,4 +393,208 @@ test("v1 parity: the bridge lowers only server recipes and reports what the v2 f
   assert.ok("executionRef" in failed);
   assert.equal((await probe.status(failed.executionRef)).state, "failed");
   assert.deepEqual(await probe.enumerateArtifacts(failed.executionRef), []);
+});
+
+test("concurrent submits: an older generation never replaces a newer one, and one generation runs once", async () => {
+  // Generation 2 and generation 1 race; generation 1's input is slower.
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  const engine = createFakeEngineV2({
+    beforeInput: (r) => (r.leaseGeneration === 1 ? held : Promise.resolve()),
+  });
+  const ctx = context();
+  const one = engine.submit(imageToVideo({ leaseGeneration: 1 }), ctx);
+  const two = engine.submit(imageToVideo({ leaseGeneration: 2 }), ctx);
+  release();
+  const [r1, r2] = await Promise.all([one, two]);
+  assert.ok("executionRef" in r2);
+  // Generation 1 claimed first, so it ran, but it can no longer be
+  // replayed once generation 2 holds the fence.
+  assert.ok("executionRef" in r1);
+  assert.deepEqual(
+    await engine.submit(imageToVideo({ leaseGeneration: 1 }), ctx),
+    {
+      refused: "STALE_ATTEMPT",
+    },
+  );
+  assert.deepEqual(
+    await engine.submit(imageToVideo({ leaseGeneration: 2 }), ctx),
+    r2,
+  );
+  // Two submits of one generation at once: one execution.
+  const fresh = createFakeEngineV2();
+  const [a, b] = await Promise.all([
+    fresh.submit(imageToVideo({ attemptKey: "same" }), ctx),
+    fresh.submit(imageToVideo({ attemptKey: "same" }), ctx),
+  ]);
+  assert.deepEqual(a, b);
+  assert.equal(fresh.spawned(), 1);
+});
+
+test("one attempt and generation means one request; a failed execution replays as failed", async () => {
+  for (const engine of [createFakeEngineV2(), bridgeV1(createFakeEngine())]) {
+    const ctx = context();
+    assert.ok(
+      "executionRef" in
+        (await engine.submit(textToVideo({ attemptKey: "k" }), ctx)),
+    );
+    assert.deepEqual(
+      await engine.submit(
+        textToVideo({ attemptKey: "k", prompt: "Something else" }),
+        ctx,
+      ),
+      { refused: "ATTEMPT_CONFLICT" },
+    );
+  }
+  const failing = createFakeEngineV2({ failExecutions: true });
+  const ctx = context();
+  const failed = await failing.submit(
+    textToVideo({ attemptKey: "f", leaseGeneration: 3 }),
+    ctx,
+  );
+  assert.ok("executionRef" in failed);
+  assert.equal((await failing.status(failed.executionRef)).state, "failed");
+  assert.deepEqual(await failing.enumerateArtifacts(failed.executionRef), []);
+  // The same generation replays the failed execution; an older one is stale.
+  assert.deepEqual(
+    await failing.submit(
+      textToVideo({ attemptKey: "f", leaseGeneration: 3 }),
+      ctx,
+    ),
+    failed,
+  );
+  assert.deepEqual(
+    await failing.submit(
+      textToVideo({ attemptKey: "f", leaseGeneration: 2 }),
+      ctx,
+    ),
+    {
+      refused: "STALE_ATTEMPT",
+    },
+  );
+  // A refusal fences nothing: the same request can be retried later.
+  const off = createFakeEngineV2({
+    unavailable: { textToVideo: "WEIGHTS_ABSENT" },
+  });
+  assert.deepEqual(
+    await off.submit(textToVideo({ attemptKey: "r", leaseGeneration: 5 }), ctx),
+    {
+      refused: "WEIGHTS_ABSENT",
+    },
+  );
+  assert.deepEqual(
+    await off.submit(textToVideo({ attemptKey: "r", leaseGeneration: 4 }), ctx),
+    {
+      refused: "WEIGHTS_ABSENT",
+    },
+  );
+});
+
+test("control values are numbers, booleans or short choices, never paths, URLs or prototype names", () => {
+  for (const controls of [
+    { lora: "C:/m/x.safetensors" },
+    { plugin: "https://evil.example" },
+    { constructor: 1 },
+    { toString: true },
+    { guidance: Number.POSITIVE_INFINITY },
+    { guidance: 1e9 },
+  ])
+    assert.throws(() => textToVideo({ controls }), JSON.stringify(controls));
+  assert.doesNotThrow(() =>
+    textToVideo({ controls: { guidance: 3, style: "film-noir", loop: false } }),
+  );
+  assert.throws(() => textToVideo({ leaseGeneration: 1e300 }));
+});
+
+test("the bridge refuses raw graphs, unlowered inputs and an absent engine before running anything", async () => {
+  const bridged = bridgeV1(createFakeEngine());
+  const ctx = context();
+  assert.deepEqual(
+    await bridged.submit(
+      { ...textToVideo(), graph: { nodes: {} } } as unknown as EngineRequestV2,
+      ctx,
+    ),
+    { refused: "INVALID_REQUEST" },
+  );
+  // The image recipe lowers a first frame only, so a last frame is refused.
+  assert.deepEqual(
+    await bridged.submit(
+      imageToVideo({
+        attemptKey: "two-frames",
+        inputs: [
+          { role: "firstFrame", asset: imageRef },
+          { role: "lastFrame", asset: imageRef },
+        ],
+      }),
+      ctx,
+    ),
+    { refused: "INPUT_UNSUPPORTED" },
+  );
+  // The text recipe lowers no controls, so it offers none.
+  assert.deepEqual(
+    await bridged.submit(
+      textToVideo({ attemptKey: "ctl", controls: { guidance: 2 } }),
+      ctx,
+    ),
+    { refused: "CONTROL_UNSUPPORTED" },
+  );
+  assert.equal(ctx.opened, 0);
+  // A v1 engine that is not available behind the bridge.
+  const absent = bridgeV1({
+    ...createFakeEngine(),
+    capabilities: () => ({ id: "none", available: false, reason: "off" }),
+  });
+  assert.ok(
+    absent
+      .capabilities()
+      .every((c) => !c.available && c.reason === "ENGINE_DISABLED"),
+  );
+  assert.deepEqual(await absent.submit(textToVideo(), ctx), {
+    refused: "ENGINE_DISABLED",
+  });
+  // An execution this bridge never ran is unknown, not an error.
+  assert.equal((await bridged.reconcile("never-submitted")).state, "unknown");
+  assert.deepEqual(await bridged.enumerateArtifacts("never-submitted"), []);
+});
+
+test("artifacts verify: bounded chunks, declared length and hash, for both adapters", async () => {
+  const ctx = context();
+  for (const engine of [
+    createFakeEngineV2({ artifactBytes: 2 * ENGINE_V2_LIMITS.chunkBytes + 5 }),
+    bridgeV1(createFakeEngine()),
+  ]) {
+    const submitted = await engine.submit(
+      textToVideo({ attemptKey: "verify" }),
+      ctx,
+    );
+    assert.ok("executionRef" in submitted);
+    const [artifact] = await engine.enumerateArtifacts(submitted.executionRef);
+    const { bytes } = await readArtifactVerified(
+      engine,
+      submitted.executionRef,
+      artifact!,
+    );
+    assert.equal(bytes, artifact!.byteLength);
+    // A declared hash or length the bytes do not match is refused.
+    await assert.rejects(
+      readArtifactVerified(engine, submitted.executionRef, {
+        ...artifact!,
+        sha256: zeros,
+      }),
+    );
+    await assert.rejects(
+      readArtifactVerified(engine, submitted.executionRef, {
+        ...artifact!,
+        byteLength: artifact!.byteLength - 1,
+      }),
+    );
+  }
+});
+
+test("diagnostics are bounded and carry no paths or URLs", () => {
+  const text = diagnostic(
+    `Failed loading C:\\models\\secret.safetensors from https://host.example/x and /home/u/x ${"é".repeat(600)}`,
+  )!;
+  assert.ok(!/models|https|home\/u/.test(text), text);
+  assert.ok(Array.from(text).length <= ENGINE_V2_LIMITS.diagnosticChars);
 });

@@ -95,10 +95,21 @@ const TranscriptOutput = z
 
 // Named, bounded controls; which ones an engine honours is part of its
 // capability, never assumed from the request.
+const RESERVED_KEYS = new Set(
+  Object.getOwnPropertyNames(Object.prototype).concat("prototype"),
+);
 const Controls = z
   .record(
-    z.string().regex(/^[a-z][a-zA-Z0-9]{0,39}$/),
-    z.union([z.number(), z.boolean(), z.string().max(80)]),
+    z
+      .string()
+      .regex(/^[a-z][a-zA-Z0-9]{0,39}$/)
+      .refine((k) => !RESERVED_KEYS.has(k), "Reserved control name."),
+    z.union([
+      z.number().finite().min(-1e6).max(1e6),
+      z.boolean(),
+      // An enumerated choice, never a path, URL or name of code.
+      z.string().regex(/^[a-z0-9_-]{1,40}$/),
+    ]),
   )
   .refine((c) => Object.keys(c).length <= 32, "At most 32 controls.");
 
@@ -117,7 +128,7 @@ const common = {
   controls: Controls.optional(),
   // The durable attempt this execution belongs to, fenced by generation.
   attemptKey: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),
-  leaseGeneration: z.number().int().positive(),
+  leaseGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   deadlineMs: z.number().int().positive().max(ENGINE_V2_LIMITS.deadlineMs),
   resourcePolicyHash: Sha256,
 };
@@ -132,7 +143,12 @@ const input = <R extends string>(
       asset: AssetRefSchema.refine((a) => media.includes(a.mediaType), {
         message: `A ${role} input is ${media.join(" or ")}.`,
       }),
-      atTicks: z.number().int().nonnegative().optional(),
+      atTicks: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(ENGINE_V2_LIMITS.durationTicks)
+        .optional(),
     })
     .strict();
 
@@ -201,7 +217,10 @@ export const RefusalReason = z.enum([
   "CONTROL_UNSUPPORTED",
   "OUTPUT_UNSUPPORTED",
   "RECIPE_UNKNOWN",
+  "INPUT_UNSUPPORTED",
   "STALE_ATTEMPT",
+  // The same attempt and generation, with a different request.
+  "ATTEMPT_CONFLICT",
   "INVALID_REQUEST",
 ]);
 export type RefusalReason = z.infer<typeof RefusalReason>;
@@ -219,9 +238,15 @@ export const ConstraintsSchema = z
       .positive()
       .max(ENGINE_V2_LIMITS.durationTicks),
     audio: z.boolean(),
-    controls: z.array(z.string()).max(32),
+    controls: z.array(z.string().regex(/^[a-z][a-zA-Z0-9]{0,39}$/)).max(32),
+    // The input roles this engine honours (a request using another refuses).
+    roles: z.array(z.string().regex(/^[a-zA-Z]{1,40}$/)).max(8),
   })
-  .strict();
+  .strict()
+  .refine(
+    (c) => c.minDurationTicks <= c.maxDurationTicks,
+    "Durations in order.",
+  );
 export type Constraints = z.infer<typeof ConstraintsSchema>;
 export const CapabilityV2Schema = z
   .object({
@@ -232,7 +257,16 @@ export const CapabilityV2Schema = z
     constraints: ConstraintsSchema.optional(),
     constraintsHash: Sha256,
   })
-  .strict();
+  .strict()
+  // Available means measured constraints; unavailable means a reason.
+  .refine(
+    (c) => (c.available ? Boolean(c.constraints) : Boolean(c.reason)),
+    "Capability is inconsistent.",
+  )
+  .refine(
+    (c) => c.constraintsHash === constraintsHash(c.constraints ?? null),
+    "Constraints hash does not match.",
+  );
 export type CapabilityV2 = z.infer<typeof CapabilityV2Schema>;
 
 export const constraintsHash = (constraints: Constraints | null) =>
@@ -250,9 +284,13 @@ export function refusal(
     return capability?.reason ?? "ENGINE_DISABLED";
   const c = capability.constraints;
   if (!c) return "HARDWARE_UNQUALIFIED";
+  if (capability.operation !== request.operation) return "ENGINE_DISABLED";
   const supported = new Set(c.controls);
   if (Object.keys(request.controls ?? {}).some((k) => !supported.has(k)))
     return "CONTROL_UNSUPPORTED";
+  const roles = new Set(c.roles);
+  if (request.inputs.some((i) => !roles.has(i.role)))
+    return "INPUT_UNSUPPORTED";
   const out = request.output;
   if (out.kind === "video") {
     if (out.width > c.maxWidth || out.height > c.maxHeight)
@@ -334,6 +372,98 @@ export type EngineAdapterV2 = {
   // After a restart: what is known about an execution, never a resubmit.
   reconcile(executionRef: string): Promise<ExecutionStatus>;
 };
+
+// Diagnostics leave an adapter bounded and without paths or URLs.
+export function diagnostic(text: string | undefined) {
+  if (!text) return undefined;
+  const redacted = text
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/(?:[A-Za-z]:)?[\\/][^\s"']+/g, "[path]");
+  // Cut on code points, never inside a surrogate pair.
+  return Array.from(redacted)
+    .slice(0, ENGINE_V2_LIMITS.diagnosticChars)
+    .join("");
+}
+
+export const requestHash = (request: EngineRequestV2) =>
+  createHash("sha256").update(canonicalJson(request)).digest("hex");
+
+type SubmitResult = { executionRef: string } | { refused: RefusalReason };
+// Attempt fencing shared by adapters. A claim is taken synchronously,
+// before any await, so concurrent submits cannot both run, and an older
+// generation can never replace a newer one. The same generation replays
+// the first result, and only for the same request.
+export class AttemptFence {
+  #slots = new Map<
+    string,
+    { generation: number; hash: string; result: Promise<SubmitResult> }
+  >();
+  claim(
+    request: EngineRequestV2,
+  ):
+    | { kind: "done"; result: Promise<SubmitResult> }
+    | { kind: "fresh"; settle(result: SubmitResult): SubmitResult } {
+    const slot = this.#slots.get(request.attemptKey);
+    const hash = requestHash(request);
+    if (slot && request.leaseGeneration < slot.generation)
+      return {
+        kind: "done",
+        result: Promise.resolve({ refused: "STALE_ATTEMPT" }),
+      };
+    if (slot && request.leaseGeneration === slot.generation)
+      return {
+        kind: "done",
+        result:
+          slot.hash === hash
+            ? slot.result
+            : Promise.resolve({ refused: "ATTEMPT_CONFLICT" }),
+      };
+    let resolve!: (r: SubmitResult) => void;
+    const result = new Promise<SubmitResult>((r) => (resolve = r));
+    const entry = { generation: request.leaseGeneration, hash, result };
+    this.#slots.set(request.attemptKey, entry);
+    return {
+      kind: "fresh",
+      settle: (r) => {
+        resolve(r);
+        // A refusal fences nothing: the earlier holder (if any) returns.
+        if ("refused" in r && this.#slots.get(request.attemptKey) === entry) {
+          if (slot) this.#slots.set(request.attemptKey, slot);
+          else this.#slots.delete(request.attemptKey);
+        }
+        return r;
+      },
+    };
+  }
+}
+
+// The service reads an artifact through this: chunks bounded, the total
+// bounded by the declared length, and the bytes re-hashed.
+export async function readArtifactVerified(
+  adapter: EngineAdapterV2,
+  executionRef: string,
+  artifact: Artifact,
+  sink: (chunk: Uint8Array) => void = () => {},
+) {
+  ArtifactSchema.parse(artifact);
+  const hash = createHash("sha256");
+  let bytes = 0;
+  for await (const chunk of adapter.readArtifact(
+    executionRef,
+    artifact.handle,
+  )) {
+    if (chunk.byteLength > ENGINE_V2_LIMITS.chunkBytes)
+      throw new Error("An artifact chunk is larger than allowed.");
+    bytes += chunk.byteLength;
+    if (bytes > artifact.byteLength)
+      throw new Error("An artifact is longer than it declared.");
+    hash.update(chunk);
+    sink(chunk);
+  }
+  if (bytes !== artifact.byteLength || hash.digest("hex") !== artifact.sha256)
+    throw new Error("An artifact does not match its declared length and hash.");
+  return { bytes };
+}
 
 // Parses a request from outside the service: any unknown field (a graph,
 // URL, path, class or plugin) is refused, as is any wrong role or media.

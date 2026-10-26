@@ -10,6 +10,7 @@ import type {
 } from "./contract.ts";
 import { ENGINE_CONTRACT } from "./contract.ts";
 import {
+  AttemptFence,
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
   EngineRequestV2Schema,
@@ -20,6 +21,7 @@ import {
 import type {
   Artifact,
   AssetRef,
+  CapabilityV2,
   Constraints,
   EngineAdapterV2,
   EngineRequestV2,
@@ -190,9 +192,11 @@ export type FakeEngineV2Options = {
   artifactBytes?: number;
   // Fail the execution after spawning (an engine-side failure).
   failExecutions?: boolean;
+  // Called before each input is read (tests hold one back to race another).
+  beforeInput?: (request: EngineRequestV2) => Promise<void>;
 };
 
-export const FAKE_V2_CONSTRAINTS: Constraints = {
+const FAKE_V2_CONSTRAINTS: Constraints = {
   maxWidth: 1280,
   maxHeight: 720,
   fps: [
@@ -203,6 +207,7 @@ export const FAKE_V2_CONSTRAINTS: Constraints = {
   maxDurationTicks: 705_600_000 * 10,
   audio: false,
   controls: ["guidance"],
+  roles: ["firstFrame", "lastFrame", "source", "mask", "audio"],
 };
 
 // Deterministic artifact bytes, generated chunk by chunk.
@@ -222,7 +227,7 @@ function* fakeBytes(seed: string, length: number, chunk: number) {
 }
 
 // Reads an asset stream to its end, bounded, verifying its hash.
-export async function verifyAsset(
+async function verifyAsset(
   stream: AsyncIterable<Uint8Array>,
   asset: AssetRef,
   maxBytes: number,
@@ -238,16 +243,10 @@ export async function verifyAsset(
 }
 
 export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
-  const constraintsHashValue = constraintsHash(FAKE_V2_CONSTRAINTS);
   const artifactBytes = options.artifactBytes ?? 3 * 1024 * 1024 + 17;
-  type Execution = {
-    request: EngineRequestV2;
-    status: ExecutionStatus;
-    artifact: Artifact | null;
-  };
+  type Execution = { status: ExecutionStatus; artifact: Artifact | null };
   const executions = new Map<string, Execution>();
-  // Per attempt key: the highest lease generation seen, and its execution.
-  const fences = new Map<string, { generation: number; ref: string }>();
+  const fence = new AttemptFence();
   let spawned = 0;
   let seq = 0;
   const known = (ref: string) => {
@@ -255,43 +254,42 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
     if (!e) throw new Error("Unknown engine execution.");
     return e;
   };
+  const capabilities = (): CapabilityV2[] =>
+    Operation.options.map((operation) => {
+      const reason = options.unavailable?.[operation];
+      return reason
+        ? {
+            operation,
+            available: false,
+            reason,
+            constraintsHash: constraintsHash(null),
+          }
+        : {
+            operation,
+            available: true,
+            constraints: FAKE_V2_CONSTRAINTS,
+            constraintsHash: constraintsHash(FAKE_V2_CONSTRAINTS),
+          };
+    });
   const adapter: EngineAdapterV2 & { spawned(): number } = {
     contract: ENGINE_CONTRACT_V2,
     spawned: () => spawned,
-    capabilities: () =>
-      Operation.options.map((operation) => {
-        const reason = options.unavailable?.[operation];
-        return reason
-          ? {
-              operation,
-              available: false,
-              reason,
-              constraintsHash: constraintsHash(null),
-            }
-          : {
-              operation,
-              available: true,
-              constraints: FAKE_V2_CONSTRAINTS,
-              constraintsHash: constraintsHashValue,
-            };
-      }),
+    capabilities,
     async submit(raw, context) {
       const parsed = EngineRequestV2Schema.safeParse(raw);
       if (!parsed.success) return { refused: "INVALID_REQUEST" };
       const request = parsed.data;
-      const fence = fences.get(request.attemptKey);
-      if (fence && request.leaseGeneration < fence.generation)
-        return { refused: "STALE_ATTEMPT" };
-      if (fence && request.leaseGeneration === fence.generation)
-        return { executionRef: fence.ref };
-      const capability = adapter
-        .capabilities()
-        .find((c) => c.operation === request.operation);
-      const refused = refusal(request, capability);
-      if (refused) return { refused };
+      const claim = fence.claim(request);
+      if (claim.kind === "done") return claim.result;
+      const refused = refusal(
+        request,
+        capabilities().find((c) => c.operation === request.operation),
+      );
+      if (refused) return claim.settle({ refused });
       // Inputs are read through the service's handles and checked against
       // their recorded hashes before anything runs.
-      for (const { asset } of request.inputs)
+      for (const { asset } of request.inputs) {
+        await options.beforeInput?.(request);
         if (
           !(await verifyAsset(
             context.openAsset(asset),
@@ -299,13 +297,10 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
             ENGINE_V2_LIMITS.artifactBytes,
           ))
         )
-          return { refused: "INVALID_REQUEST" };
+          return claim.settle({ refused: "INVALID_REQUEST" });
+      }
       spawned++;
       const ref = `fake-v2-${++seq}`;
-      fences.set(request.attemptKey, {
-        generation: request.leaseGeneration,
-        ref,
-      });
       let artifact: Artifact | null = null;
       if (!options.failExecutions) {
         const hash = createHash("sha256");
@@ -323,7 +318,6 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
         };
       }
       executions.set(ref, {
-        request,
         status: options.failExecutions
           ? {
               executionRef: ref,
@@ -333,7 +327,7 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
           : { executionRef: ref, state: "succeeded", progress: 1 },
         artifact,
       });
-      return { executionRef: ref };
+      return claim.settle({ executionRef: ref });
     },
     async status(ref) {
       return { ...known(ref).status };
@@ -344,6 +338,7 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
     },
     async requestCancel(ref) {
       const e = known(ref);
+      // Executions finish within submit, so there is never a running one.
       if (e.status.state === "queued" || e.status.state === "running") {
         e.status = { executionRef: ref, state: "cancelled" };
         e.artifact = null;
