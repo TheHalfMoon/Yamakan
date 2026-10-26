@@ -1,17 +1,24 @@
-// The editor's timeline edits on its local 30 fps edit view. Split and delete
+// The editor's timeline edits on its local edit view, in frames at the
+// project's rate (YU-019; seconds from the timeline round to the nearest
+// frame here, the view boundary). Split and delete
 // run the same typed operations as agents and tools (core/timeline), so both
 // paths produce identical projects: shots keep their order, fades are
 // clamped, and invariants are checked once. Drag and trim updates from the
 // timeline component are converted here and clamp fades with the same rule.
+import { frameRateOf, framesPerSecond } from "../core/project.ts";
 import type { Clip, Project } from "../core/project.ts";
+import { framesToTicks } from "../core/time.ts";
 import { fromEditView, toEditView } from "../core/canonical.ts";
 import { applyBatch, clampFades } from "../core/timeline/operations.ts";
 import type { Operation } from "../core/timeline/operations.ts";
 import type { ClipAnimation } from "../core/timeline/animation-schema.ts";
 import type { TimelineClip } from "./editor/types";
 
-// Flicks per frame of the 30 fps edit view.
+// Flicks per frame of a 30 fps edit view (a fallback with no project open).
 export const FRAME_TICKS = 23_520_000;
+// Flicks at a frame of the project's edit view (exact).
+export const frameTicksOf = (p: Project, frames = 1) =>
+  framesToTicks(frames, frameRateOf(p));
 
 // Applies operations to the local edit view; the revision is unchanged until
 // the project is saved.
@@ -32,13 +39,13 @@ export function splitClip(
 ): Project {
   const c = p.clips.find((c) => c.id === clipId);
   if (!c || p.tracks.find((t) => t.id === c.trackId)?.locked) return p;
-  const at = Math.round(seconds * 30);
+  const at = Math.round(seconds * framesPerSecond(p));
   if (at <= c.startFrame || at >= c.startFrame + c.durationFrames) return p;
   return applyLocal(p, [
     {
       type: "clip.split",
       clipId,
-      atTicks: at * FRAME_TICKS,
+      atTicks: frameTicksOf(p, at),
       newClipId,
     },
   ]);
@@ -63,11 +70,11 @@ export function setClipSound(
       gainDb: patch.gainDb,
       fadeInTicks:
         patch.fadeInFrames !== undefined
-          ? patch.fadeInFrames * FRAME_TICKS
+          ? frameTicksOf(p, patch.fadeInFrames)
           : undefined,
       fadeOutTicks:
         patch.fadeOutFrames !== undefined
-          ? patch.fadeOutFrames * FRAME_TICKS
+          ? frameTicksOf(p, patch.fadeOutFrames)
           : undefined,
     },
   ]);
@@ -194,7 +201,8 @@ export function updateClips(p: Project, updates: TimelineClip[]): Project {
         p.tracks.find((t) => t.id === c.trackId)?.locked
       )
         return clips;
-      const durationFrames = Math.max(1, Math.round((c.end - c.start) * 30));
+      const fps = framesPerSecond(p);
+      const durationFrames = Math.max(1, Math.round((c.end - c.start) * fps));
       const [fadeInFrames, fadeOutFrames] = clampFades(
         durationFrames,
         old.fadeInFrames ?? 0,
@@ -204,14 +212,14 @@ export function updateClips(p: Project, updates: TimelineClip[]): Project {
         ...old,
         id: c.id,
         trackId: c.trackId,
-        startFrame: Math.max(0, Math.round(c.start * 30)),
+        startFrame: Math.max(0, Math.round(c.start * fps)),
         durationFrames,
         // Titles and still images have no source offset (as in the reducer).
         sourceFrame:
           old.title !== null ||
           p.assets.find((a) => a.id === old.assetId)?.kind === "image"
             ? 0
-            : Math.max(0, Math.round((c.sourceIn || 0) * 30)),
+            : Math.max(0, Math.round((c.sourceIn || 0) * fps)),
         ...(old.fadeInFrames !== undefined || old.fadeOutFrames !== undefined
           ? { fadeInFrames, fadeOutFrames }
           : {}),

@@ -32,7 +32,8 @@ export const RESOURCE_POLICY = Object.freeze({
     activeConversionsPerProject: 4,
     renderWallSeconds: 180,
     // Reference preview (T8): cached frames and segments per project, and
-    // the longest segment one request may render (5 s at 30 fps).
+    // the longest segment one request may render (5 s at 30 fps, about
+    // 6.3 s at 24000/1001; still bounded by the wall-clock limit).
     previewCacheBytes: 256 * MiB,
     previewSegmentFrames: 150,
     // Preview requests waiting for the one preview renderer, and each

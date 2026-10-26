@@ -329,9 +329,10 @@
       "W9/M5: setpts and atempo chain for clip speed (rational).",
       "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode.",
       "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled.",
-      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
+      "YU-019: the read margin is one frame of the profile (never less than 1/30 s, so 30 fps is unchanged); the output check names the probe's 1/30 s unit at any profile rate."
     ],
-    "importedSha256": "33d7cc257259a08c03aca174d0e145e7dc215e15a6741f65feca68c3dc825654",
+    "importedSha256": "477f8ed997cf372c4b2d1c5821ac9c4649611a94af8c85f745b36fd22c1c7bb1",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

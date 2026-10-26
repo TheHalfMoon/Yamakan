@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
-import { ProjectSchema } from "../core/project.ts";
+import { ProjectSchema, framesPerSecond } from "../core/project.ts";
 import { RESOURCE_POLICY } from "../core/command/policy.ts";
 import type { Project } from "../core/project.ts";
 import type { RenderJob } from "../core/render.ts";
@@ -45,6 +45,7 @@ import {
   applyLocal,
   deleteClip,
   FRAME_TICKS,
+  frameTicksOf,
   setClipAnimation,
   setClipSound,
   splitClip,
@@ -129,6 +130,10 @@ function App() {
   const [studioOpen, setStudioOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
+  // Frames per second of the open project (30 without one; YU-019) and the
+  // flicks of one of its frames.
+  const fps = p ? framesPerSecond(p) : 30;
+  const frameTicks = p ? frameTicksOf(p) : FRAME_TICKS;
   // The latest history, also between renders: every change goes through
   // putHistory, and commits read their draft here, so a commit chained
   // behind another never pairs a new head with a stale draft (YU-015).
@@ -409,7 +414,10 @@ function App() {
     return saved as Project;
   };
   const sequenceDuration = p
-    ? Math.max(0, ...p.clips.map((c) => (c.startFrame + c.durationFrames) / 30))
+    ? Math.max(
+        0,
+        ...p.clips.map((c) => (c.startFrame + c.durationFrames) / fps),
+      )
     : 0;
   useEffect(() => {
     if (!playing || !p) return;
@@ -486,14 +494,16 @@ function App() {
                 .filter((c) => c.trackId === track.id)
                 .map((c) => c.startFrame + c.durationFrames),
             )
-          : Math.round(time * 30);
+          : Math.round(time * fps);
       const clip = {
         id: crypto.randomUUID(),
         trackId: track.id,
         assetId: a.id,
         startFrame: start,
         durationFrames:
-          a.kind === "image" ? 90 : Math.min(a.durationFrames, 150),
+          a.kind === "image"
+            ? Math.round(3 * fps)
+            : Math.min(a.durationFrames, Math.round(5 * fps)),
         sourceFrame: 0,
         title: null as string | null,
         ...(a.kind === "video"
@@ -951,10 +961,10 @@ function App() {
               aria-label={t("transport.playhead")}
               type="range"
               min="0"
-              step={1 / 30}
+              step={1 / fps}
               max={Math.max(
                 1,
-                ...p.clips.map((c) => (c.startFrame + c.durationFrames) / 30),
+                ...p.clips.map((c) => (c.startFrame + c.durationFrames) / fps),
               )}
               value={playhead}
               onChange={(e) => {
@@ -989,7 +999,7 @@ function App() {
           <ReferencePreview
             projectId={p.id}
             revision={p.revision}
-            frame={Math.round(playhead * 30)}
+            frame={Math.round(playhead * fps)}
             totalFrames={Math.max(
               0,
               ...p.clips.map((c) => c.startFrame + c.durationFrames),
@@ -1078,7 +1088,7 @@ function App() {
                   opacity.find(
                     (k) =>
                       k.time ===
-                      Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                      Math.max(0, clip.durationFrames - 1) * frameTicks,
                   )?.value ??
                   opacity[opacity.length - 1]?.value ??
                   1;
@@ -1087,12 +1097,12 @@ function App() {
                   volume.find(
                     (k) =>
                       k.time ===
-                      Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                      Math.max(0, clip.durationFrames - 1) * frameTicks,
                   )?.value ??
                   volume[volume.length - 1]?.value ??
                   1;
                 const endTicks =
-                  Math.max(0, clip.durationFrames - 1) * FRAME_TICKS;
+                  Math.max(0, clip.durationFrames - 1) * frameTicks;
                 return (
                   <div data-testid="clip-animation-panel" key={clip.id}>
                     <p className="hint">{t("clip.animation.hint")}</p>
@@ -1273,7 +1283,7 @@ function App() {
                       trackId: track.id,
                       assetId: null,
                       startFrame: 0,
-                      durationFrames: 90,
+                      durationFrames: Math.round(3 * fps),
                       sourceFrame: 0,
                       title,
                     },
@@ -1856,7 +1866,7 @@ function App() {
                             ...p.clips.map(
                               (c) => c.startFrame + c.durationFrames,
                             ),
-                          ) / 30,
+                          ) / fps,
                         ),
                       })}
                     </p>

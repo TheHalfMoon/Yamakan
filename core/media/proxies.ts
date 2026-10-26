@@ -34,10 +34,11 @@ import path from "node:path";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { MEDIA_FORMATS, probe } from "../media.ts";
+import { durationFramesAt, MEDIA_FORMATS, probe } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
-import type { Asset } from "../project.ts";
+import { framesToSeconds, type Asset } from "../project.ts";
+import type { Rational } from "../time.ts";
 import type { ProjectStore } from "../store.ts";
 
 // The proxy profile. Changing any of it is a new version (a new cache key).
@@ -241,12 +242,20 @@ function unsupportedReason(asset: Asset) {
 }
 
 async function locate(store: ProjectStore, projectId: string, assetId: string) {
-  const { file, asset } = await store.assetFile(projectId, assetId);
+  const { file, asset, frameRate } = await store.assetFile(projectId, assetId);
   const why = unsupportedReason(asset);
-  if (why) return { file, asset, why } as const;
+  if (why) return { file, asset, frameRate, why } as const;
   const dir = await proxyDir(store, projectId);
   const key = await proxyKey(dir, asset);
-  return { file, asset, why, dir, key, slot: slotOf(dir, key) } as const;
+  return {
+    file,
+    asset,
+    frameRate,
+    why,
+    dir,
+    key,
+    slot: slotOf(dir, key),
+  } as const;
 }
 
 /** The proxy state of an asset (never starts a build). */
@@ -287,7 +296,7 @@ export async function buildProxy(
   if (current.state !== "absent") return current;
   const at = await locate(store, projectId, assetId);
   if (at.why) return unsupported(at.why);
-  const { dir, key, slot, file, asset } = at;
+  const { dir, key, slot, file, asset, frameRate } = at;
   if (builds.has(slot)) return proxyStatus(store, projectId, assetId);
   const waiting = [...builds.values()].filter((b) => b.state === "queued");
   if (waiting.length >= QUEUE_DEPTH)
@@ -311,7 +320,7 @@ export async function buildProxy(
     if (controller.signal.aborted) return;
     build.state = "building";
     try {
-      await runBuild(dir, key, file, asset, build);
+      await runBuild(dir, key, file, asset, build, frameRate);
     } catch (e) {
       if (!controller.signal.aborted) {
         if (e instanceof ProxyUnsupported)
@@ -472,6 +481,7 @@ async function runBuild(
   source: string,
   asset: Asset,
   build: Build,
+  rate: Rational,
 ) {
   const signal = build.controller.signal;
   const sourceInfo = await probe(source);
@@ -504,7 +514,7 @@ async function runBuild(
       "Not enough free disk space for a proxy.",
     );
   await mkdir(build.work, { recursive: true });
-  const seconds = asset.durationFrames / 30;
+  const seconds = framesToSeconds(asset.durationFrames, rate);
   const controller = new AbortController();
   const stop = () => controller.abort();
   signal.addEventListener("abort", stop, { once: true });
@@ -659,7 +669,8 @@ async function runBuild(
     sha256: hash.digest("hex"),
     width: info.width,
     height: info.height,
-    durationFrames: info.durationFrames,
+    // The proxy's frames at the project's rate (the probe counts 1/30 s).
+    durationFrames: durationFramesAt(info.durationTicks, rate),
     sourceStartSeconds: sourceStart,
     proxyStartSeconds: proxyStart,
     frames: expected.length,
@@ -735,10 +746,13 @@ export async function assetThumbnail(
   index: number,
   signal?: AbortSignal,
 ): Promise<{ bytes: Buffer; cached: boolean }> {
-  const { file, asset } = await store.assetFile(projectId, assetId);
+  const { file, asset, frameRate } = await store.assetFile(projectId, assetId);
   if (asset.kind !== "video")
     throw new CommandError("VALIDATION", "Only video has thumbnails.");
-  const seconds = Math.max(1, Math.ceil(asset.durationFrames / 30));
+  const seconds = Math.max(
+    1,
+    Math.ceil(framesToSeconds(asset.durationFrames, frameRate)),
+  );
   if (!Number.isInteger(index) || index < 0 || index >= seconds)
     throw new CommandError(
       "VALIDATION",

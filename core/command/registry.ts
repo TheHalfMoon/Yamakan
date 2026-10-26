@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProjectSchema, Id } from "../project.ts";
+import { ProjectSchema, Id, isSupportedRate } from "../project.ts";
 import { BatchSchema } from "../timeline/operations.ts";
 import {
   AnimationPathSchema,
@@ -165,9 +165,23 @@ export const commands = {
   "yamakan.project.create": define({
     scope: "project:write",
     mutation: true,
-    summary: "Create an empty project.",
-    input: z.object({ name: z.string().min(1).max(120) }).strict(),
-    run: ({ store, receipt }, a) => store.create(a.name, receipt),
+    summary:
+      "Create an empty project (30 fps, or a qualified frame rate: 24000/1001).",
+    input: z
+      .object({
+        name: z.string().min(1).max(120),
+        // YU-019: the project frame rate; absent means 30 fps.
+        frameRate: z
+          .object({
+            num: z.number().int().positive(),
+            den: z.number().int().positive(),
+          })
+          .strict()
+          .refine(isSupportedRate, "Unsupported project frame rate.")
+          .optional(),
+      })
+      .strict(),
+    run: ({ store, receipt }, a) => store.create(a.name, receipt, a.frameRate),
   }),
   "yamakan.project.open": define({
     scope: "project:read",

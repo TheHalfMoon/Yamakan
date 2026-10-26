@@ -5,7 +5,7 @@
 // project saves (T6); conversions that would lose information fail instead.
 // The one normalization: a title's source offset, which nothing reads, is 0.
 import { z } from "zod";
-import { Id, ProjectSchema } from "./project.ts";
+import { Id, ProjectSchema, frameRateOf, isSupportedRate } from "./project.ts";
 import type { Project } from "./project.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import {
@@ -16,6 +16,7 @@ import {
   framesToTicks,
   rational,
   ticksToFrames,
+  type Rational,
 } from "./time.ts";
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
@@ -459,20 +460,28 @@ function upgradeV3(value: Record<string, unknown>) {
   return { ...value, formatVersion: 4 };
 }
 
-const EDIT_FPS = rational(30, 1);
-const toTicks = (frames: number) => framesToTicks(frames, EDIT_FPS);
-const toFrames = (ticks: number, what: string) => {
-  try {
-    return ticksToFrames(ticks, EDIT_FPS, "exact");
-  } catch {
-    throw new CommandError(
-      "CAPABILITY_UNAVAILABLE",
-      `${what} is not frame-aligned at 30 fps; this editor cannot represent it without loss.`,
-    );
-  }
+// Frames of the editing view at the project's rate (YU-019): exact both
+// ways. A canonical time that is not on a frame of the project's rate is
+// refused, never rounded.
+const editRate = (fps: Rational) => {
+  const label = fps.den === 1 ? `${fps.num} fps` : `${fps.num}/${fps.den} fps`;
+  return {
+    toTicks: (frames: number) => framesToTicks(frames, fps),
+    toFrames: (ticks: number, what: string) => {
+      try {
+        return ticksToFrames(ticks, fps, "exact");
+      } catch {
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          `${what} is not frame-aligned at ${label}; this editor cannot represent it without loss.`,
+        );
+      }
+    },
+  };
 };
 
-// Editing shape → canonical. Exact: one 30 fps frame is 23,520,000 flicks.
+// Editing shape → canonical. Exact: one 30 fps frame is 23,520,000 flicks,
+// one 24000/1001 fps frame 29,429,400.
 // The editing shape has no documents: callers pass the revision's own
 // references (the store carries the head's forward), never drop them.
 export function fromEditView(
@@ -481,6 +490,8 @@ export function fromEditView(
   documents: DocumentRef[] = [],
 ): CanonicalProject {
   const p = ProjectSchema.parse(view);
+  const fps = frameRateOf(p);
+  const { toTicks } = editRate(fps);
   return CanonicalProjectSchema.parse({
     format: FORMAT,
     formatVersion: documents.length
@@ -491,7 +502,11 @@ export function fromEditView(
     name: p.name,
     revision: p.revision,
     language,
-    output: { width: p.width, height: p.height, fps: rational(p.fps, 1) },
+    output: {
+      width: p.width,
+      height: p.height,
+      fps: rational(fps.num, fps.den),
+    },
     assets: p.assets.map((a) => ({
       id: a.id,
       name: a.name,
@@ -571,14 +586,18 @@ export function serializeCanonical(project: CanonicalProject): string {
   });
 }
 
-// Canonical → editing shape. Refuses anything the 30 fps editor cannot hold.
+// Canonical → editing shape. Refuses anything the editor cannot hold: a
+// frame rate it is not qualified for, or a time off the project's frames.
 export function toEditView(project: CanonicalProject): Project {
   const p = CanonicalProjectSchema.parse(project);
-  if (p.output.fps.num !== 30 || p.output.fps.den !== 1)
+  const fps = p.output.fps;
+  if (!isSupportedRate(fps))
     throw new CommandError(
       "CAPABILITY_UNAVAILABLE",
-      "This editor supports only 30 fps projects.",
+      "This editor supports 30 and 24000/1001 fps projects only.",
     );
+  const thirty = fps.num === 30 && fps.den === 1;
+  const { toFrames } = editRate(fps);
   for (const a of p.assets)
     if (a.timebase !== null) {
       // Recorded time bases are not representable in the editing shape yet.
@@ -588,11 +607,12 @@ export function toEditView(project: CanonicalProject): Project {
       );
     }
   return ProjectSchema.parse({
-    schemaVersion: 2,
+    // 30 fps projects keep the schema 2 view byte for byte.
+    schemaVersion: thirty ? 2 : 3,
     id: p.id,
     name: p.name,
     revision: p.revision,
-    fps: 30,
+    ...(thirty ? { fps: 30 } : { frameRate: { num: fps.num, den: fps.den } }),
     width: p.output.width,
     height: p.output.height,
     assets: p.assets.map((a) => ({

@@ -1,14 +1,21 @@
 import { mediaUrl } from "./session.ts";
+import { framesPerSecond } from "../core/project.ts";
 import type { Project } from "../core/project.ts";
 import type { TimelineClip, TimelineTrack, MediaItem } from "./editor/types";
 import { previewVolume } from "../core/render/parity.ts";
 // With `proxies`, a video whose edit proxy is ready plays that proxy in
 // the interactive preview (same times and trims; YU-017); everything else,
 // and every export, uses the original.
+// Seconds of the project's frames (the donor UI works in seconds).
+const secondsAt = (p: Project) => {
+  const fps = framesPerSecond(p);
+  return (frames: number) => frames / fps;
+};
 export function editorView(
   p: Project,
   proxies: ReadonlySet<string> = new Set(),
 ) {
+  const s = secondsAt(p);
   const tracks: TimelineTrack[] = p.tracks.map((t) => ({
     id: t.id,
     name: t.name,
@@ -30,25 +37,25 @@ export function editorView(
     ),
     hash: a.hash,
     peaksPath: `/api/v1/projects/${p.id}/assets/${a.id}/peaks`,
-    duration: a.durationFrames / 30,
+    duration: s(a.durationFrames),
   }));
   const clips: TimelineClip[] = p.clips.map((c) => ({
     id: c.id,
     trackId: c.trackId,
     mediaId: c.assetId || `title-${c.id}`,
-    start: c.startFrame / 30,
-    end: (c.startFrame + c.durationFrames) / 30,
-    duration: c.durationFrames / 30,
+    start: s(c.startFrame),
+    end: s(c.startFrame + c.durationFrames),
+    duration: s(c.durationFrames),
     // TimelineClip.speed is a float for the donor UI; canonical keeps Rational.
     speed: c.speed ? c.speed.num / c.speed.den : 1,
-    sourceIn: c.sourceFrame / 30,
+    sourceIn: s(c.sourceFrame),
     // Retimed clips still map source span via speed (sourceOut = in + duration*speed).
-    sourceOut:
-      (c.sourceFrame +
+    sourceOut: s(
+      c.sourceFrame +
         Math.round(
           c.durationFrames * (c.speed ? c.speed.num / c.speed.den : 1),
-        )) /
-      30,
+        ),
+    ),
     effect: null,
     soundEnabled: Boolean(c.sound?.enabled),
     // The export's gain up to 0 dB (an audio clip's own, or a video's

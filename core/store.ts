@@ -11,11 +11,19 @@ import { createReadStream, statfsSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync, backup } from "node:sqlite";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
-import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
+import {
+  ProjectSchema,
+  Id,
+  AssetSchema,
+  createProject,
+  frameRateOf,
+} from "./project.ts";
+import type { Rational } from "./time.ts";
 
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
 import {
+  durationFramesAt,
   mediaHeader,
   MAX_ASSET_BYTES,
   probe,
@@ -1079,8 +1087,8 @@ export class ProjectStore {
     }
   }
 
-  async create(name: string, receipt?: RequestReceipt) {
-    const draft = createProject(name);
+  async create(name: string, receipt?: RequestReceipt, frameRate?: Rational) {
+    const draft = createProject(name, frameRate);
     const p = this.#commit({
       operation: "project.create",
       projectId: draft.id,
@@ -2708,6 +2716,15 @@ export class ProjectStore {
       expectedRevision,
       receipt,
       next: (current, revision) => {
+        // The frame rate is fixed at creation: every frame field and asset
+        // duration is counted at it, so a save never reinterprets them.
+        const rate = frameRateOf(proposed),
+          head = frameRateOf(current());
+        if (rate.num !== head.num || rate.den !== head.den)
+          throw new CommandError(
+            "VALIDATION",
+            "A project's frame rate cannot change on save.",
+          );
         // Asset identities and immutable metadata come only from the validated import path.
         if (canonicalJson(proposed.assets) !== canonicalJson(current().assets))
           throw new CommandError(
@@ -2893,9 +2910,13 @@ export class ProjectStore {
         : metadata.hasVideo
           ? "video"
           : "audio";
+      const durationFrames =
+        kind === "image"
+          ? 0
+          : durationFramesAt(metadata.durationTicks, frameRateOf(p));
       if (
         (kind === "image" && !metadata.hasVideo) ||
-        (kind !== "image" && metadata.durationFrames < 1)
+        (kind !== "image" && durationFrames < 1)
       )
         throw new Error("Media duration or image stream is invalid.");
       const asset: Asset = AssetSchema.parse({
@@ -2907,7 +2928,9 @@ export class ProjectStore {
         bytes: received,
         width: metadata.width,
         height: metadata.height,
-        durationFrames: kind === "image" ? 0 : metadata.durationFrames,
+        // Frames at the project's rate, floored: a final partial frame is
+        // not addressable.
+        durationFrames,
         hasAudio:
           kind === "video"
             ? metadata.hasAudio
@@ -3055,7 +3078,12 @@ export class ProjectStore {
     const p = await this.load(id);
     const a = p.assets.find((a) => a.id === Id.parse(assetId));
     if (!a) throw new Error("Asset not found.");
-    return { file: await this.readyObjectFile(id, a), asset: a };
+    // The project's rate: the asset's durationFrames count its frames.
+    return {
+      file: await this.readyObjectFile(id, a),
+      asset: a,
+      frameRate: frameRateOf(p),
+    };
   }
   async repairAsset(projectId: string, assetId: string) {
     Id.parse(projectId);
