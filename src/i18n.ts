@@ -138,6 +138,25 @@ const en = {
   "director.title": "Director",
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
+  "engine.list": "Generative operations",
+  "engine.unknown":
+    "Whether generative operations can run here is not known right now.",
+  "engine.reason.ENGINE_DISABLED":
+    "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+  "engine.reason.WEIGHTS_ABSENT":
+    "The model files for this operation are not installed on this computer, or failed their check. Yamakan never downloads them.",
+  "engine.reason.HARDWARE_UNQUALIFIED":
+    "This computer is not qualified for this operation, or its qualification has expired.",
+  "engine.reason.RIGHTS_UNQUALIFIED":
+    "The model's license does not allow this use.",
+  "engine.available": "Available.",
+  "engine.present":
+    "The model files are in place; they are checked in full when the engine starts.",
+  "engine.op.textToVideo": "Text to video",
+  "engine.op.imageToVideo": "Image to video",
+  "engine.op.videoEdit": "Video edit",
+  "engine.op.transcribe": "Transcribe",
+  "engine.op.enhance": "Enhance",
   "tools.jobs":
     "Jobs expose progress, cancellation, errors and verified video artifacts. Project paths and arbitrary commands are not accepted by the API.",
   "toolbar.unsaved": "Unsaved changes",
@@ -328,6 +347,22 @@ const ar: Record<MessageKey, string> = {
     "معاينة المشهد المدعومة والحفظ. كاميرا الذكاء الاصطناعي تبقى متوقفة.",
   "director.title": "المخرج",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
+  "engine.list": "عمليات التوليد",
+  "engine.unknown": "لا يُعرف الآن إن كانت عمليات التوليد ممكنة هنا.",
+  "engine.reason.ENGINE_DISABLED":
+    "محركات التوليد متوقفة في هذا الإصدار. التحرير والتصيير والتصدير تعمل بدونها.",
+  "engine.reason.WEIGHTS_ABSENT":
+    "ملفات النموذج لهذه العملية غير مثبتة على هذا الحاسوب، أو لم تجتز فحصها. لا ينزّلها يماكن أبدًا.",
+  "engine.reason.HARDWARE_UNQUALIFIED":
+    "هذا الحاسوب غير مؤهَّل لهذه العملية، أو انتهت صلاحية تأهيله.",
+  "engine.reason.RIGHTS_UNQUALIFIED": "ترخيص النموذج لا يسمح بهذا الاستخدام.",
+  "engine.available": "متاحة.",
+  "engine.present": "ملفات النموذج في مكانها، وتُفحص كاملةً عند تشغيل المحرك.",
+  "engine.op.textToVideo": "نص إلى فيديو",
+  "engine.op.imageToVideo": "صورة إلى فيديو",
+  "engine.op.videoEdit": "تحرير فيديو",
+  "engine.op.transcribe": "تفريغ نصي",
+  "engine.op.enhance": "تحسين",
   "studio.intro":
     "تحرير الصور الطبقي مستورد خلف محوِّل يماكن. يبقى معطّلاً حتى تتحقق أهداف تأهيل الاستوديو.",
   "tools.jobs":

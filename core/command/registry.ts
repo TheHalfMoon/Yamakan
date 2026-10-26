@@ -40,6 +40,7 @@ import {
   migrateCinemaSidecar,
 } from "../documents-legacy.ts";
 import { directorCapability } from "../director-flags.ts";
+import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
   createEmptyStudioDocument,
@@ -133,6 +134,8 @@ export type CommandContext = {
   // Where backups and restored roots go: chosen by the service, never by a
   // request (default: a "-recovery" folder beside the workspace).
   recoveryHome?: string;
+  // Where pinned local models live, chosen by the service (unset: none).
+  modelRoot?: string;
 };
 type RunContext = CommandContext & { receipt?: RequestReceipt };
 
@@ -994,6 +997,32 @@ export const commands = {
     summary: "Report Director availability and unsupported model stages.",
     input: z.object({}).strict(),
     run: () => directorCapability(),
+  }),
+  "yamakan.engines.capabilities": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report which generative operations could run here and, if not, the plain reason (never downloads or installs).",
+    input: z.object({}).strict(),
+    run: async (ctx) => ({
+      operations:
+        // A status answer: presence, size and links, never every weight's
+        // content (an engine start verifies that).
+        (
+          await discoverEngineCapabilities({
+            modelRoot: ctx.modelRoot ?? null,
+            verifyHashes: false,
+          })
+        ).map((d) => ({
+          operation: d.operation,
+          available: d.capability.available,
+          verified: d.verified,
+          reason: d.capability.reason ?? null,
+          message: d.message,
+          version: d.version ?? null,
+          expiresAt: d.expiresAt ?? null,
+        })),
+    }),
   }),
   "yamakan.director.start": define({
     scope: "project:write",

@@ -222,3 +222,24 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 
 - **Not here yet.** No GPU is admitted. No job policy requests the profile yet; the first engine worker does. POSIX refuses any profile.
 - **Rollback.** Omit the profile: workers then run under the unchanged one-process media profile.
+
+## Engine capability discovery (YU-042)
+
+`yamakan.engines.capabilities` (read-only, no parameters) reports each generative operation, whether it could run here, and a plain reason. It never returns which internal check refused. The Director panel shows each reason in the interface language, and says the state is unknown if the call fails. `discoverEngineCapabilities` (core/engines/manifests.ts) decides them.
+
+- **Engines off (this build).** `ENGINE_ENABLED` is false, so discovery does no IO at all and every operation is `ENGINE_DISABLED`.
+- **Pinned manifests only.** No model is pinned in this build (`PINNED_MODEL_MANIFESTS` is empty).
+  - A pin names a model folder, its operation and the manifest's exact SHA-256.
+  - The manifest is read at its one path under the service-chosen model root, never one a request names, and it is bounded at 64 KiB.
+  - No directory is listed or scanned.
+  - Nothing is downloaded, installed or updated, and a manifest that names a source is invalid.
+- **Distinct reasons, before any inference.**
+  - `WEIGHTS_ABSENT` means: nothing pinned, no model root, a missing or unpinned manifest, an invalid manifest, a link, junction or hard link, or a missing, truncated or corrupted file. Hard links are refused even within a model install, by choice: the folder must hold its own copies. Every file is opened once and checked again through its open handle, so a file swapped after the path checks is refused.
+  - File names are a single plain segment: no separator, stream, short name, trailing dot or device name.
+  - `RIGHTS_UNQUALIFIED` means the license is not accepted or commercial use is not allowed.
+  - `HARDWARE_UNQUALIFIED` means the qualification has expired, the host has too little memory, or a GPU is required.
+  - An available operation carries the manifest's measured constraints, its qualification hash and the qualification's expiry.
+  - Order: presence, size and links come first, then rights and qualification, then content. So a corrupt model that is also unlicensed reports `RIGHTS_UNQUALIFIED`.
+- **Point in time.** The status command checks presence, size and links, but never reads every weight. Its answer is `verified: false`, and the panel says the files are in place rather than available. An engine start must run discovery again with `verifyHashes` and load only what that run verified, before the qualification expires.
+- **Model root.** It must be a local folder that is not synced: a cloud placeholder file such as OneDrive's would be fetched when it is read. Offline is the operating system's boundary for a release and is not tested here. The tests check only that the engine modules import nothing that can reach a network, a process or an installer.
+- **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.

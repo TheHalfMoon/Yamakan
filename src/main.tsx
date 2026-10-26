@@ -921,6 +921,7 @@ function App() {
               <p>{t("director.intro")}</p>
               <DirectorPanel
                 projectId={p?.id ?? null}
+                t={t}
                 client={{
                   call: (operation, parameters) =>
                     client.call(operation as never, parameters as never),

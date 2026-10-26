@@ -1,23 +1,101 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIRECTOR_ENABLED,
   directorCapability,
 } from "../../core/director-flags.ts";
+import { MESSAGES, type MessageKey } from "../i18n.ts";
 
 type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
 };
 
+type Translate = (key: MessageKey) => string;
+type EngineOperation = {
+  operation: string;
+  available: boolean;
+  verified: boolean;
+  reason: string | null;
+};
+const known = (key: string): key is MessageKey =>
+  Object.hasOwn(MESSAGES.en, key);
+// Only a well-formed answer is shown; anything else is "not known".
+const parseOperations = (value: unknown): EngineOperation[] | null => {
+  const list = (value as { operations?: unknown } | null)?.operations;
+  if (!Array.isArray(list)) return null;
+  const ok = list.every(
+    (o) =>
+      o &&
+      typeof o.operation === "string" &&
+      typeof o.available === "boolean" &&
+      typeof o.verified === "boolean" &&
+      (o.reason === null || typeof o.reason === "string"),
+  );
+  return ok ? (list as EngineOperation[]) : null;
+};
+
+// Which generative operations could run, each with its plain reason in the
+// interface language. A late answer after unmount is dropped; a failed or
+// malformed answer says the state is not known. Asked once per mount (the
+// host passes a new client object on every render).
+function EngineOperations({ client, t }: { client: Client; t: Translate }) {
+  const [operations, setOperations] = useState<
+    EngineOperation[] | "unknown" | null
+  >(null);
+  const caller = useRef(client);
+  useEffect(() => {
+    let current = true;
+    caller.current
+      .call("yamakan.engines.capabilities", {})
+      .then((result) => {
+        if (current) setOperations(parseOperations(result) ?? "unknown");
+      })
+      .catch(() => {
+        if (current) setOperations("unknown");
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
+  if (!operations) return null;
+  if (operations === "unknown")
+    return <p data-testid="engine-operations-unknown">{t("engine.unknown")}</p>;
+  const label = (op: string) => {
+    const key = `engine.op.${op}`;
+    return known(key) ? t(key) : op;
+  };
+  const reason = (o: EngineOperation) => {
+    if (o.available)
+      return o.verified ? t("engine.available") : t("engine.present");
+    const key = `engine.reason.${o.reason}`;
+    return known(key) ? t(key) : t("engine.unknown");
+  };
+  return (
+    <ul data-testid="engine-operations" aria-label={t("engine.list")}>
+      {operations.map((o) => (
+        <li
+          key={o.operation}
+          data-operation={o.operation}
+          data-available={String(o.available)}
+          data-reason={o.reason ?? ""}
+        >
+          {label(o.operation)}: {reason(o)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type Props = {
   projectId: string | null;
   client: Client;
+  t: Translate;
 };
 
 /**
  * Manual Director controls. Human approval uses browser-principal scopes.
  * Model-dependent stages are listed as unsupported, not invoked.
  */
-export function DirectorPanel({ projectId, client }: Props) {
+export function DirectorPanel({ projectId, client, t }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
   const [detail, setDetail] = useState<string>("");
@@ -59,6 +137,7 @@ export function DirectorPanel({ projectId, client }: Props) {
       <p data-testid="director-unsupported">
         unsupported: {(directorCapability().unsupported ?? []).join(", ")}
       </p>
+      <EngineOperations client={client} t={t} />
       <p>
         <button
           type="button"

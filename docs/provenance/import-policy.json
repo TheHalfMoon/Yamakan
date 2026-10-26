@@ -155,6 +155,14 @@
       "reason": "Yamakan-authored bridge lowering server-owned recipes to the v1 fake (YU-040); no donor copy."
     },
     {
+      "path": "core/engines/manifests.ts",
+      "reason": "Yamakan-authored pinned model manifest discovery (YU-042); no donor copy."
+    },
+    {
+      "path": "core/engines/reasons.ts",
+      "reason": "Yamakan-authored plain refusal reasons for the operation UI (YU-042); no donor copy."
+    },
+    {
       "path": "core/animation/sample.ts",
       "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
     },

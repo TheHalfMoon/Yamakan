@@ -105,6 +105,22 @@ try {
   await panel.waitFor();
   assert.equal(await panel.getAttribute("data-director-enabled"), "true");
   await page.getByTestId("director-unsupported").waitFor();
+  // YU-042: each generative operation with its plain reason (engines off).
+  const engineOps = page.getByTestId("engine-operations");
+  await engineOps.waitFor();
+  const ops = await engineOps.locator("li").evaluateAll((items) =>
+    items.map((li) => ({
+      available: li.getAttribute("data-available"),
+      reason: li.getAttribute("data-reason"),
+      text: li.textContent ?? "",
+    })),
+  );
+  assert.equal(ops.length, 5);
+  for (const op of ops) {
+    assert.equal(op.available, "false");
+    assert.equal(op.reason, "ENGINE_DISABLED");
+    assert.match(op.text, /Generative engines are turned off in this build/);
+  }
 
   await page.getByTestId("director-start").click();
   await page.waitForFunction(
