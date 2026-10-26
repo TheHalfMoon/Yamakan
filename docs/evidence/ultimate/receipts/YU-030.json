@@ -1,0 +1,79 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "9463542",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-030",
+  "objective": "Unify Story/Edit/Finish navigation and project selection",
+  "branch": "feat/yu-030-workspace-shell",
+  "mergedPr": 115,
+  "headCommit": "d2a7d03",
+  "mergeCommit": "bfe61e53ab1fc7941ef180ad147e9cb14b139d15",
+  "flags": "New shell on by default; the prior shell behind ?shell=classic or yamakan.shell=classic (bounded UI flag)",
+  "deviations": [
+    "Quality Lab and Flow are not yet placed as modes; Finish holds the output summary and the collapsed agent tools, not captions/audio/preflight/artifact receipts (export is still started from the shared toolbar)",
+    "Director lives in Story but collapsed under its own heading (its manual stages and raw results check pipelines, kept out of the creative flow, per the security review)",
+    "Design tokens: the repeated shades of src/style.css were named with exact-match replacement only (no visual change); src/editor/editor.css is donor-derived and unchanged",
+    "scripts/qualify-q8-studio.mjs still fails its pre-existing assertion that Studio is disabled (Studio was enabled in 9dd36df; not in CI); only its navigation steps were updated"
+  ],
+  "tests": {
+    "files": [
+      "scripts/browser-e2e.mjs",
+      "scripts/qualify-cinema-activation.mjs",
+      "scripts/qualify-director-activation.mjs",
+      "scripts/qualify-studio-activation.mjs",
+      "scripts/qualify-q10-studio.mjs",
+      "e2e/testerarmy/tests/studio-save.e2e.ts",
+      "e2e/testerarmy/tests/studio-reopen.e2e.ts"
+    ],
+    "result": "Edge E2E: scenes in Story, titles/timeline in Edit, Studio opened from Edit, agent tools from Finish; Finish reports the open project's output size; an unsaved edit survives moving through Finish and Edit and the unsaved marker shows from Edit; keyboard focus moves without opening and Enter/Space open; Arabic arrows mirror; the kept workspace (Finish, not the default) is restored after reload; ?shell=classic shows the prior shell; 0 page errors, 0 external requests. Cinema, Director (opened under Story), Studio activation and Q10 qualifications pass on the new navigation. TesterArmy studio tests were updated but not run here"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product/accessibility review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 7,
+        "finalRound": "no must-fix; doc-placement should-fix applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 2,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "bfe61e53ab1fc7941ef180ad147e9cb14b139d15",
+    "ci": "PR exact head d2a7d03: qualify, qualify-windows-r8, otio-oracle success; push run on bfe61e5: success",
+    "windows": "detached bfe61e5: typecheck, lint, format, provenance, brand, build pass; npm test 588/591 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests); Cinema, Director, Studio activation and Q10 qualifications pass"
+  },
+  "limitations": [
+    "Quality Lab, Flow and Finish's captions/audio/preflight/artifact receipts are not yet placed",
+    "No dedicated test per plan journey; the E2E covers the shared project, assets and selection across the three workspaces",
+    "The Cinema animation loop keeps ticking (without drawing) while Story is hidden; a saved 'story' preference mounts Story at startup",
+    "An unsaved Studio document is not reflected in the shell's unsaved marker (Studio keeps it while mounted)",
+    "Formative usability study (5-8 participants, native Arabic H1) not run: no participant result is claimed",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
