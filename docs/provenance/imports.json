@@ -46,9 +46,10 @@
       "Use individual media playback elements per clip, dispose detached media/context on removal/unmount, mute embedded video sound to match explicit-audio export, and fit portrait video within the project canvas.",
       "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity).",
       "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer.",
-      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
+      "YU-018: embedded video sound follows the clip's sound switch on every frame, not only when the element is created (preview/export parity)."
     ],
-    "importedSha256": "171ace099f199e54dde42ae293c60cb232a106cf461bc2e25e23ceb40eb58d1e",
+    "importedSha256": "7f415f60bcfb2c1fe454cd3add4f4e025d484d9b8c359cb48f3bdd489b2a5310",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

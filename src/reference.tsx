@@ -3,7 +3,7 @@
 // fonts as export. The interactive preview above it is fast but
 // approximate; this one is what the export will contain. It always names
 // the revision it shows, and says so plainly when there are unsaved edits.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "./i18n.ts";
 import { mediaUrl } from "./session.ts";
 
@@ -22,6 +22,22 @@ type Props = {
 };
 
 const SEGMENT_FRAMES = 60;
+// A busy or briefly unavailable renderer is asked again, a few times.
+const RETRIED = new Set(["BUSY", "UNAVAILABLE"]);
+const MAX_ATTEMPTS = 3;
+// Refusals whose text is shown as the service wrote it: named, plain
+// messages (a missing font, no disk space). Anything else (an internal
+// error can carry host details) shows only the general failure.
+const SHOWN_REASONS = new Set([
+  "VALIDATION",
+  "NOT_FOUND",
+  "LIMIT_EXCEEDED",
+  "CAPABILITY_UNAVAILABLE",
+  "RECOVERY_REQUIRED",
+]);
+const REASON_CHARS = 200;
+
+type Failure = { src: string; retry: boolean; reason: string | null };
 
 export function ReferencePreview(props: Props) {
   const { projectId, revision, totalFrames, unsaved, playing, onSave, t } =
@@ -35,24 +51,94 @@ export function ReferencePreview(props: Props) {
     const timer = setTimeout(() => setSettled(frame), 250);
     return () => clearTimeout(timer);
   }, [frame, playing]);
-  // Which image finished, so a cached image that loads at once is never
-  // shown as still rendering.
-  const [loaded, setLoaded] = useState<string | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-  const [segment, setSegment] = useState<string | null>(null);
-  const base = mediaUrl(
-    `/api/v1/projects/${encodeURIComponent(projectId)}/preview?revision=${revision}`,
+  const path = `/api/v1/projects/${encodeURIComponent(projectId)}/preview?revision=${revision}`;
+  const base = mediaUrl(path);
+  // Attempts belong to one frame of one revision: a new frame starts at 0.
+  const view = `${base}|${settled}`;
+  const [tries, setTries] = useState({ view, n: 0 });
+  // Each visit to a frame starts afresh (coming back is not a retry).
+  useEffect(
+    () => setTries((t) => (t.view === view ? t : { view, n: 0 })),
+    [view],
   );
-  // A failed frame (busy renderer, transient error) is asked for again a
-  // few times; the attempt number only changes the address.
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => setAttempt(0), [base, settled]);
+  const attempt = tries.view === view ? tries.n : 0;
   const src = `${base}&kind=frame&start=${settled}${attempt ? `&attempt=${attempt}` : ""}`;
+  // The frame shown (for the revision and address it was asked for) and the
+  // failure of the frame asked for now, with the service's reason when it
+  // is a plain refusal.
+  const [shown, setShown] = useState<{
+    base: string;
+    src: string;
+    url: string;
+  } | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
+  const shownUrl = useRef<string | null>(null);
+  const [segment, setSegment] = useState<string | null>(null);
+  // Each frame is fetched, and a superseded one is abandoned at once (the
+  // service then stops a render nobody waits for). While the next frame of
+  // the same revision renders, the last one stays up, marked as rendering.
   useEffect(() => {
-    if (failed !== src || attempt >= 3) return;
-    const timer = setTimeout(() => setAttempt((n) => n + 1), 1500);
+    if (totalFrames < 1) return;
+    const controller = new AbortController();
+    setFailure(null);
+    void (async () => {
+      try {
+        const response = await fetch(src, { signal: controller.signal });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as {
+            error?: { code?: string; message?: string };
+          } | null;
+          if (controller.signal.aborted) return;
+          const code = body?.error?.code;
+          const retry = code === undefined || RETRIED.has(code);
+          setFailure({
+            src,
+            retry,
+            reason:
+              !retry && SHOWN_REASONS.has(code) && body?.error?.message
+                ? body.error.message.slice(0, REASON_CHARS)
+                : null,
+          });
+          return;
+        }
+        const url = URL.createObjectURL(await response.blob());
+        if (controller.signal.aborted) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (shownUrl.current) URL.revokeObjectURL(shownUrl.current);
+        shownUrl.current = url;
+        setShown({ base, src, url });
+      } catch {
+        if (!controller.signal.aborted)
+          setFailure({ src, retry: true, reason: null });
+      }
+    })();
+    return () => controller.abort();
+  }, [src, base, totalFrames]);
+  // Another revision or project never shows the previous one's frame.
+  useEffect(() => {
+    if (shown && shown.base !== base) {
+      if (shownUrl.current) URL.revokeObjectURL(shownUrl.current);
+      shownUrl.current = null;
+      setShown(null);
+    }
+  }, [base, shown]);
+  useEffect(
+    () => () => {
+      if (shownUrl.current) URL.revokeObjectURL(shownUrl.current);
+    },
+    [],
+  );
+  const failed = failure?.src === src;
+  // Final: a refusal, or a busy renderer after the last attempt. Until then
+  // the last frame stays up, marked as rendering.
+  const final = failed && (!failure?.retry || attempt >= MAX_ATTEMPTS);
+  useEffect(() => {
+    if (!failed || !failure?.retry || attempt >= MAX_ATTEMPTS) return;
+    const timer = setTimeout(() => setTries({ view, n: attempt + 1 }), 1500);
     return () => clearTimeout(timer);
-  }, [failed, src, attempt]);
+  }, [failed, failure, attempt, view]);
   useEffect(() => setSegment(null), [projectId, revision]);
   if (totalFrames < 1)
     return (
@@ -64,6 +150,7 @@ export function ReferencePreview(props: Props) {
         <p>{t("reference.empty")}</p>
       </div>
     );
+  const current = shown?.base === base ? shown : null;
   return (
     <div className="reference" role="region" aria-label={t("reference.region")}>
       <div className="reference-head">
@@ -98,21 +185,28 @@ export function ReferencePreview(props: Props) {
           onEnded={() => setSegment(null)}
         />
       ) : (
-        <img
-          src={src}
-          alt={t("reference.alt", { frame: settled, revision })}
-          data-state={
-            failed === src ? "error" : loaded === src ? "ready" : "loading"
-          }
-          onLoad={() => setLoaded(src)}
-          onError={() => setFailed(src)}
-        />
+        current &&
+        !final && (
+          <img
+            src={current.url}
+            // The frame's address without the media key (tests, support).
+            data-src={`${path}&kind=frame&start=${settled}`}
+            alt={t("reference.alt", { frame: settled, revision })}
+            data-state={current.src === src ? "ready" : "loading"}
+            onError={() =>
+              setFailure({ src: current.src, retry: true, reason: null })
+            }
+          />
+        )
       )}
-      {loaded !== src && failed !== src && !segment ? (
+      {current?.src !== src && !final && !segment ? (
         <small>{t("reference.rendering")}</small>
       ) : null}
-      {failed === src && !segment ? (
-        <small className="error">{t("reference.failed")}</small>
+      {final && !segment ? (
+        <small className="error" role="alert">
+          {t("reference.failed")}
+          {failure?.reason ? ` ${failure.reason}` : ""}
+        </small>
       ) : null}
     </div>
   );

@@ -40,6 +40,7 @@ import {
   migrateCinemaSidecar,
 } from "../documents-legacy.ts";
 import { directorCapability } from "../director-flags.ts";
+import { previewParity } from "../render/parity.ts";
 import { buildProxy, cancelProxy, proxyStatus } from "../media/proxies.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
@@ -716,6 +717,14 @@ export const commands = {
       })
       .strict(),
     run: ({ store }, a) => store.repairAsset(a.projectId, a.assetId),
+  }),
+  "yamakan.preview.parity": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report what the interactive preview shows only approximately for the current revision (the reference preview shows the export).",
+    input: z.object({ projectId: Id }).strict(),
+    run: async ({ store }, a) => previewParity(await store.load(a.projectId)),
   }),
   "yamakan.proxy.status": define({
     scope: "project:read",

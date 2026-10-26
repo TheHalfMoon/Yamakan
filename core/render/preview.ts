@@ -85,9 +85,16 @@ type Pending = {
   promise: Promise<Preview>;
   controller: AbortController;
   waiters: number;
+  // Still counted as waiting (left the count when its turn came, or when
+  // every requester left before it).
+  queued: boolean;
 };
 let queue: Promise<unknown> = Promise.resolve();
 let waiting = 0;
+// Renders everyone left before their turn: they hold no queue place but
+// still wait in the chain until their turn passes, so they are bounded too.
+let abandoned = 0;
+const MAX_ABANDONED_FACTOR = 4;
 const inFlight = new Map<string, Pending>();
 let closed = false;
 
@@ -164,15 +171,22 @@ export async function preview(
     pending = live();
   }
   if (!pending) {
-    if (waiting >= RESOURCE_POLICY.enforced.previewQueueDepth)
+    if (
+      waiting >= RESOURCE_POLICY.enforced.previewQueueDepth ||
+      abandoned >=
+        RESOURCE_POLICY.enforced.previewQueueDepth * MAX_ABANDONED_FACTOR
+    )
       throw new CommandError(
         "BUSY",
         "Too many previews are being rendered; retry shortly.",
       );
     const controller = new AbortController();
     waiting++;
+    let entry: Pending | undefined;
     const turn = queue.then(async () => {
-      waiting--;
+      if (entry?.queued !== false) waiting--;
+      else abandoned--;
+      if (entry) entry.queued = false;
       if (controller.signal.aborted) throw new Error("Cancelled.");
       await removeStaleStaging(dir);
       // Rendering writes a frame or segment; the import reserve stays free.
@@ -216,12 +230,13 @@ export async function preview(
       return result(false);
     });
     queue = turn.catch(() => {});
-    pending = { promise: turn, controller, waiters: 0 };
-    const entry = pending;
-    inFlight.set(file, entry);
+    entry = { promise: turn, controller, waiters: 0, queued: true };
+    pending = entry;
+    const started = entry;
+    inFlight.set(file, started);
     turn
       .finally(() => {
-        if (inFlight.get(file) === entry) inFlight.delete(file);
+        if (inFlight.get(file) === started) inFlight.delete(file);
       })
       .catch(() => {});
   }
@@ -229,7 +244,15 @@ export async function preview(
   entry.waiters++;
   const leave = () => {
     entry.waiters--;
-    if (entry.waiters === 0) entry.controller.abort();
+    if (entry.waiters === 0) {
+      entry.controller.abort();
+      // Abandoned before its turn: its place in the queue is free now.
+      if (entry.queued) {
+        entry.queued = false;
+        waiting--;
+        abandoned++;
+      }
+    }
   };
   if (signal?.aborted) {
     leave();

@@ -619,6 +619,8 @@ const PreviewPlayer = forwardRef<PreviewPlayerHandle, PreviewPlayerProps>(({
             if (media.type === 'audio' || media.type === 'video') {
                 const mediaEl = element as HTMLMediaElement;
                 mediaEl.volume = Math.max(0, Math.min(1, volume));
+                // Embedded sound follows the clip's switch (not only at creation).
+                if (media.type === 'video' && mediaEl.muted === Boolean(clip.soundEnabled)) mediaEl.muted = !clip.soundEnabled;
                 if (Math.abs(mediaEl.playbackRate - speed) > 1e-3) {
                     try {
                         mediaEl.playbackRate = speed;
