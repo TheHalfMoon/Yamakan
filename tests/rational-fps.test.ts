@@ -22,7 +22,12 @@ import {
 } from "../core/canonical.ts";
 import { compilePlan } from "../core/render/plan.ts";
 import { titleFonts } from "../core/render/fonts.ts";
-import { decimalSecondsToTicks, probe } from "../core/media.ts";
+import {
+  decimalSecondsToTicks,
+  durationFramesAt,
+  probe,
+} from "../core/media.ts";
+import { setClipSound } from "../src/edit-ops.ts";
 import {
   FLICKS_PER_SECOND,
   framesToTicks,
@@ -412,4 +417,75 @@ test("a 23.976 project is created, imports 23.976 footage in its own frames, and
   assert.deepEqual(reopened.frameRate, { num: 24000, den: 1001 });
   assert.equal(reopened.clips[0].sourceFrame, 24);
   await queue.close();
+});
+
+test("hostile frame counts are refused by validation, never thrown past it", () => {
+  for (const startFrame of [1e15, 1e300, 18_001, 1.5, -1]) {
+    const p = project23976() as any;
+    p.clips[0].startFrame = startFrame;
+    const parsed = ProjectSchema.safeParse(p);
+    assert.equal(parsed.success, false, String(startFrame));
+  }
+});
+
+test("a save cannot change the project's frame rate", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-rate-save-"));
+  bases.push(root);
+  const store = new ProjectStore(root);
+  handles.push(store);
+  await store.initialize();
+  for (const [from, to] of [
+    [EDIT_RATE_23976, EDIT_RATE_30],
+    [EDIT_RATE_30, EDIT_RATE_23976],
+  ] as const) {
+    const created = await store.create("Rate", undefined, from);
+    const head = await store.load(created.id);
+    const { fps: _fps, frameRate: _rate, ...rest } = head as any;
+    const swapped =
+      to === EDIT_RATE_30
+        ? { ...rest, schemaVersion: 2, fps: 30 }
+        : { ...rest, schemaVersion: 3, frameRate: to };
+    await assert.rejects(
+      store.save(swapped, head.revision),
+      (e: unknown) =>
+        e instanceof CommandError &&
+        e.code === "VALIDATION" &&
+        /frame rate cannot change/.test(e.message),
+    );
+    assert.deepEqual(frameRateOf(await store.load(created.id)), from);
+  }
+});
+
+test("on-grid durations keep their last frame despite ffprobe's six decimals", () => {
+  // 100 frames at 24000/1001 is 4.1708333… s, printed 4.170833.
+  assert.equal(
+    durationFramesAt(decimalSecondsToTicks("4.170833"), EDIT_RATE_23976),
+    100,
+  );
+  // 100 frames at 30 fps prints 3.333333.
+  assert.equal(
+    durationFramesAt(decimalSecondsToTicks("3.333333"), EDIT_RATE_30),
+    100,
+  );
+  // Still floored: a partial final frame is not counted.
+  assert.equal(
+    durationFramesAt(decimalSecondsToTicks("4.16"), EDIT_RATE_23976),
+    99,
+  );
+  assert.equal(
+    durationFramesAt(decimalSecondsToTicks("600.000000"), EDIT_RATE_30),
+    18_000,
+  );
+});
+
+test("clip fades from the editor are counted in the project's frames", () => {
+  const p = project23976();
+  const clip = p.clips.find((c) => c.assetId !== null)!;
+  const next = setClipSound(p, clip.id, { fadeInFrames: 5, fadeOutFrames: 7 });
+  const sound = next.clips.find((c) => c.id === clip.id)!.sound!;
+  assert.deepEqual([sound.fadeInFrames, sound.fadeOutFrames], [5, 7]);
+  assert.equal(
+    fromEditView(next).clips.find((c) => c.id === clip.id)!.sound!.fadeInTicks,
+    5 * FRAME_23976,
+  );
 });

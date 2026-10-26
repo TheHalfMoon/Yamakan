@@ -10,7 +10,7 @@ import { mediaUrl } from "./session.ts";
 type Props = {
   projectId: string;
   revision: number;
-  // Frame at the playhead (30 fps edit frames).
+  // Frame at the playhead (the project's frames).
   frame: number;
   totalFrames: number;
   unsaved: boolean;

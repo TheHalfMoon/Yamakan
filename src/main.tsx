@@ -501,7 +501,9 @@ function App() {
         assetId: a.id,
         startFrame: start,
         durationFrames:
-          a.kind === "image" ? 90 : Math.min(a.durationFrames, 150),
+          a.kind === "image"
+            ? Math.round(3 * fps)
+            : Math.min(a.durationFrames, Math.round(5 * fps)),
         sourceFrame: 0,
         title: null as string | null,
         ...(a.kind === "video"
@@ -1281,7 +1283,7 @@ function App() {
                       trackId: track.id,
                       assetId: null,
                       startFrame: 0,
-                      durationFrames: 90,
+                      durationFrames: Math.round(3 * fps),
                       sourceFrame: 0,
                       title,
                     },

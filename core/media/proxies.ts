@@ -34,11 +34,11 @@ import path from "node:path";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { MEDIA_FORMATS, probe } from "../media.ts";
+import { durationFramesAt, MEDIA_FORMATS, probe } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
 import { framesToSeconds, type Asset } from "../project.ts";
-import { ticksToFrames, type Rational } from "../time.ts";
+import type { Rational } from "../time.ts";
 import type { ProjectStore } from "../store.ts";
 
 // The proxy profile. Changing any of it is a new version (a new cache key).
@@ -670,7 +670,7 @@ async function runBuild(
     width: info.width,
     height: info.height,
     // The proxy's frames at the project's rate (the probe counts 1/30 s).
-    durationFrames: ticksToFrames(info.durationTicks, rate, "floor"),
+    durationFrames: durationFramesAt(info.durationTicks, rate),
     sourceStartSeconds: sourceStart,
     proxyStartSeconds: proxyStart,
     frames: expected.length,

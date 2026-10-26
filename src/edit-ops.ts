@@ -14,7 +14,7 @@ import type { Operation } from "../core/timeline/operations.ts";
 import type { ClipAnimation } from "../core/timeline/animation-schema.ts";
 import type { TimelineClip } from "./editor/types";
 
-// Flicks per frame of a 30 fps edit view.
+// Flicks per frame of a 30 fps edit view (a fallback with no project open).
 export const FRAME_TICKS = 23_520_000;
 // Flicks at a frame of the project's edit view (exact).
 export const frameTicksOf = (p: Project, frames = 1) =>
@@ -70,11 +70,11 @@ export function setClipSound(
       gainDb: patch.gainDb,
       fadeInTicks:
         patch.fadeInFrames !== undefined
-          ? patch.fadeInFrames * FRAME_TICKS
+          ? frameTicksOf(p, patch.fadeInFrames)
           : undefined,
       fadeOutTicks:
         patch.fadeOutFrames !== undefined
-          ? patch.fadeOutFrames * FRAME_TICKS
+          ? frameTicksOf(p, patch.fadeOutFrames)
           : undefined,
     },
   ]);

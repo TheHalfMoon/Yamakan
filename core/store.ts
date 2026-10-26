@@ -18,11 +18,12 @@ import {
   createProject,
   frameRateOf,
 } from "./project.ts";
-import { ticksToFrames, type Rational } from "./time.ts";
+import type { Rational } from "./time.ts";
 
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
 import {
+  durationFramesAt,
   mediaHeader,
   MAX_ASSET_BYTES,
   probe,
@@ -2715,6 +2716,15 @@ export class ProjectStore {
       expectedRevision,
       receipt,
       next: (current, revision) => {
+        // The frame rate is fixed at creation: every frame field and asset
+        // duration is counted at it, so a save never reinterprets them.
+        const rate = frameRateOf(proposed),
+          head = frameRateOf(current());
+        if (rate.num !== head.num || rate.den !== head.den)
+          throw new CommandError(
+            "VALIDATION",
+            "A project's frame rate cannot change on save.",
+          );
         // Asset identities and immutable metadata come only from the validated import path.
         if (canonicalJson(proposed.assets) !== canonicalJson(current().assets))
           throw new CommandError(
@@ -2900,9 +2910,13 @@ export class ProjectStore {
         : metadata.hasVideo
           ? "video"
           : "audio";
+      const durationFrames =
+        kind === "image"
+          ? 0
+          : durationFramesAt(metadata.durationTicks, frameRateOf(p));
       if (
         (kind === "image" && !metadata.hasVideo) ||
-        (kind !== "image" && metadata.durationFrames < 1)
+        (kind !== "image" && durationFrames < 1)
       )
         throw new Error("Media duration or image stream is invalid.");
       const asset: Asset = AssetSchema.parse({
@@ -2915,11 +2929,8 @@ export class ProjectStore {
         width: metadata.width,
         height: metadata.height,
         // Frames at the project's rate, floored: a final partial frame is
-        // not addressable (30 fps gives exactly the probe's own count).
-        durationFrames:
-          kind === "image"
-            ? 0
-            : ticksToFrames(metadata.durationTicks, frameRateOf(p), "floor"),
+        // not addressable.
+        durationFrames,
         hasAudio:
           kind === "video"
             ? metadata.hasAudio

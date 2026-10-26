@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { FLICKS_PER_SECOND } from "./time.ts";
+import { FLICKS_PER_SECOND, ticksToFrames, type Rational } from "./time.ts";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { RESOURCE_POLICY } from "./command/policy.ts";
@@ -77,6 +77,14 @@ export function decimalSecondsToTicks(text: unknown): number {
   return Number((numerator * BigInt(FLICKS_PER_SECOND)) / scale);
 }
 
+// ffprobe prints six decimals, rounded: a duration on a frame boundary can
+// read up to half a microsecond short. Whole frames at a rate, floored after
+// about one microsecond (706 ticks) of that print tolerance.
+const PRINT_TOLERANCE_TICKS = Math.ceil(FLICKS_PER_SECOND / 1_000_000);
+export function durationFramesAt(ticks: number, rate: Rational): number {
+  return ticksToFrames(ticks + PRINT_TOLERANCE_TICKS, rate, "floor");
+}
+
 export async function probe(file: string) {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -144,6 +152,12 @@ export async function probe(file: string) {
   );
   if (!Number.isFinite(duration) || duration > 600)
     throw new Error("Media exceeds ten minutes.");
+  const durationTicks = decimalSecondsToTicks(
+    info.format?.duration || visual?.duration || audio?.duration || 0,
+  );
+  // A duration the exact parser cannot read is refused, never taken as 0.
+  if (duration > 0 && durationTicks === 0)
+    throw new Error("Media duration is unreadable.");
   // A differing nominal and average rate marks variable frame rate; editing
   // such sources waits for a constant-rate derivative (T5).
   const nominal = ratio(visual?.r_frame_rate);
@@ -155,9 +169,7 @@ export async function probe(file: string) {
     // Thirtieths of a second (the probe's own unit, as before) and the exact
     // duration in ticks, from which a project counts its own frames.
     durationFrames: Math.floor(duration * 30),
-    durationTicks: decimalSecondsToTicks(
-      info.format?.duration || visual?.duration || audio?.duration || 0,
-    ),
+    durationTicks,
     hasVideo: Boolean(visual),
     hasAudio: Boolean(audio),
     format: String(info.format?.format_name || ""),

@@ -186,7 +186,14 @@ const ProjectBody = z
       const track = p.tracks.find((t) => t.id === c.trackId);
       const asset = p.assets.find((a) => a.id === c.assetId);
       if (!track) fail("Clip track is missing.");
-      if (frameTicks(c.startFrame + c.durationFrames) > MAX_TIMELINE_TICKS)
+      // Field bounds can fail without stopping this refinement, so the end
+      // is converted to ticks only when it is a bounded, safe frame count.
+      const end = c.startFrame + c.durationFrames;
+      if (
+        Number.isSafeInteger(end) &&
+        end >= 0 &&
+        (end > timelineFrames || frameTicks(end) > MAX_TIMELINE_TICKS)
+      )
         fail("Timeline exceeds ten minutes.");
       if (c.title !== null) {
         if (c.assetId !== null || track?.kind !== "video")

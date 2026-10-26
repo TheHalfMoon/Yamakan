@@ -22,8 +22,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "./store.ts";
 import { AssetSchema, frameRateOf, framesToSeconds } from "./project.ts";
 import type { Asset } from "./project.ts";
-import { ticksToFrames } from "./time.ts";
-import { MEDIA_FORMATS, probe } from "./media.ts";
+import { durationFramesAt, MEDIA_FORMATS, probe } from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { keepMainStream, renderRevision } from "./render.ts";
 import type { RenderJob } from "./render.ts";
@@ -932,7 +931,7 @@ export class JobSupervisor {
       bytes: stored.byteLength,
       width: probed.width,
       height: probed.height,
-      durationFrames: ticksToFrames(probed.durationTicks, rate, "floor"),
+      durationFrames: durationFramesAt(probed.durationTicks, rate),
     });
     await this.#cleanup(row.project_id, jobId, attempt);
     try {
