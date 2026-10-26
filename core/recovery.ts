@@ -90,7 +90,12 @@ const LEGACY = {
   director: /^(run|consent|encoding)-[0-9a-f-]{36}\.json$/,
 } as const;
 type LegacyFolder = keyof typeof LEGACY;
-const LEGACY_LIMITS = { files: 10_000, bytes: 256 * 1024 * 1024 };
+const LEGACY_LIMITS = {
+  files: 10_000,
+  bytes: 256 * 1024 * 1024,
+  // Invalid entries recorded per folder before the folder is marked "limit".
+  invalid: 1_000,
+};
 // Closure gaps named in a manifest or receipt; the counts stay exact.
 const MAX_REPORTED = 200;
 const LegacyPath = z
@@ -175,7 +180,9 @@ const ManifestSchema = z
       // Each file once, and no more bytes than a backup copies.
       .refine(
         (files) =>
-          new Set(files.map((f) => f.path)).size === files.length &&
+          // Names differing only in case are one file on Windows.
+          new Set(files.map((f) => f.path.toLowerCase())).size ===
+            files.length &&
           files.reduce((n, f) => n + f.bytes, 0) <= LEGACY_LIMITS.bytes,
       )
       .optional(),
@@ -188,7 +195,9 @@ const ManifestSchema = z
           })
           .strict(),
       )
-      .max(LEGACY_LIMITS.files + 2)
+      // Copy failures (at most one per file) plus each folder's bounded
+      // invalid entries and its final mark.
+      .max(LEGACY_LIMITS.files + 2 * (LEGACY_LIMITS.invalid + 2))
       .optional(),
     closure: ClosureSchema.optional(),
     restorePolicy: z.array(z.string().max(200)).max(20).optional(),
@@ -429,8 +438,17 @@ async function scanLegacy(root: string) {
       damaged.push({ path: folder, reason: "invalid" });
       continue;
     }
+    let invalid = 0;
+    const refuse = (entry: string) => {
+      invalid++;
+      damaged.push({ path: entry, reason: "invalid" });
+    };
     for (const name of names.sort()) {
       if (!LEGACY[folder].test(name)) continue;
+      if (invalid >= LEGACY_LIMITS.invalid) {
+        damaged.push({ path: folder, reason: "limit" });
+        break;
+      }
       const file = await safePath(root, folder, name).catch(() => null);
       if (!file) {
         damaged.push({ path: folder, reason: "invalid" });
@@ -439,7 +457,7 @@ async function scanLegacy(root: string) {
       const entry = await lstat(file).catch(() => null);
       if (!entry) continue;
       if (!entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1) {
-        damaged.push({ path: `${folder}/${name}`, reason: "invalid" });
+        refuse(`${folder}/${name}`);
         continue;
       }
       if (
@@ -716,6 +734,8 @@ export function restoreWorkspace(
 
 const RESTORED_JOB =
   "Restored from a backup: this job was active in the original workspace. Retry or discard it.";
+const RESTORED_CANCEL =
+  "Restored from a backup: the original workspace had asked to cancel this job. Discard it, or retry to run it after all.";
 const RESTORED_ATTEMPT =
   "Restored from a backup: this attempt belonged to the original workspace's service.";
 
@@ -757,7 +777,8 @@ function fenceRestored(db: DatabaseSync): Fenced {
     );
     // Each a legal transition (core/jobs/rules/yamakan-transitions.ts).
     fenced.jobsHeld = run(
-      "UPDATE jobs SET state = 'reconciliationRequired', error = ?, progress = 0 WHERE state IN ('queued', 'preparing', 'running', 'validating', 'cancelRequested')",
+      "UPDATE jobs SET state = 'reconciliationRequired', error = CASE WHEN cancel_requested = 1 OR state = 'cancelRequested' THEN ? ELSE ? END, cancel_requested = 0, progress = 0 WHERE state IN ('queued', 'preparing', 'running', 'validating', 'cancelRequested')",
+      RESTORED_CANCEL,
       RESTORED_JOB,
     );
     run("UPDATE supervisor SET generation = generation + 1 WHERE id = 1");
@@ -856,13 +877,13 @@ async function restore(
       if (
         check
           .prepare(
-            "SELECT 1 FROM sqlite_master WHERE type IN ('trigger', 'view') LIMIT 1",
+            "SELECT 1 FROM sqlite_master WHERE type IN ('trigger', 'view') OR sql LIKE 'CREATE VIRTUAL%' LIMIT 1",
           )
           .get()
       )
         throw new CommandError(
           "RECOVERY_REQUIRED",
-          "The backup's database holds triggers or views this workspace never creates.",
+          "The backup's database holds triggers, views or virtual tables this workspace never creates.",
         );
       if (userVersion(check) !== manifest.schemaVersion)
         throw new CommandError(

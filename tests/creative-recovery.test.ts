@@ -614,6 +614,23 @@ test("copied jobs, attempts, uploads and agent tokens cannot act in a restored w
   const supervisor = new JobSupervisor(copy);
   assert.equal(supervisor.discard(ids.queued!).detail, "cancelled");
   assert.equal(supervisor.retry(ids.running!).detail, "queued");
+  // The original's cancel request is the reason, not a flag that would
+  // keep a retried job from ever running.
+  const held = supervisor.status(ids.cancelRequested!);
+  assert.match(held.error ?? "", /asked to cancel/);
+  assert.equal(supervisor.retry(ids.cancelRequested!).detail, "queued");
+  const flags = new DatabaseSync(path.join(restored.root, "workspace.sqlite"), {
+    readOnly: true,
+  });
+  assert.equal(
+    (
+      flags
+        .prepare("SELECT cancel_requested FROM jobs WHERE job_id = ?")
+        .get(ids.cancelRequested!) as { cancel_requested: number }
+    ).cancel_requested,
+    0,
+  );
+  flags.close();
   await supervisor.close();
   assert.ok(w.store.principalForAgentToken(agent.token));
 });
