@@ -419,6 +419,7 @@ test("a status answer checks presence, size and links; an engine start also read
   assert.equal(status.detail, "QUALIFIED");
   assert.equal(status.verified, false, "a status answer is never verified");
   assert.match(status.message, /checked in full when the engine starts/);
+  assert.equal(status.message, MESSAGES.en["engine.present"]);
   assert.equal((await t2v(root, [pin])).detail, "FILE_HASH_MISMATCH");
 });
 
