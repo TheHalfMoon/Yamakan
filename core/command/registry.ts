@@ -1016,6 +1016,7 @@ export const commands = {
         ).map((d) => ({
           operation: d.operation,
           available: d.capability.available,
+          verified: d.verified,
           reason: d.capability.reason ?? null,
           message: d.message,
           version: d.version ?? null,

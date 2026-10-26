@@ -190,6 +190,7 @@ test("a pinned, intact, licensed and qualified model is discovered with its cons
   const d = await t2v(root, [pin]);
   assert.equal(d.detail, "QUALIFIED");
   assert.equal(d.capability.available, true);
+  assert.equal(d.verified, true);
   assert.equal(d.capability.qualificationHash, "b".repeat(64));
   assert.equal(d.capability.constraints?.maxWidth, 1280);
   assert.equal(d.version, "1.0.0");
@@ -414,10 +415,10 @@ test("a status answer checks presence, size and links; an engine start also read
   const root = await temp();
   const { dir, pin } = await model(root);
   await writeFile(path.join(dir, "weights.bin"), "WEIGHTS-XXXXXXXXXX");
-  assert.equal(
-    (await t2v(root, [pin], { verifyHashes: false })).detail,
-    "QUALIFIED",
-  );
+  const status = await t2v(root, [pin], { verifyHashes: false });
+  assert.equal(status.detail, "QUALIFIED");
+  assert.equal(status.verified, false, "a status answer is never verified");
+  assert.match(status.message, /checked in full when the engine starts/);
   assert.equal((await t2v(root, [pin])).detail, "FILE_HASH_MISMATCH");
 });
 
@@ -481,7 +482,9 @@ test("discovery and the engine contract import nothing that reaches a network, p
       /\b(fetch|WebSocket|XMLHttpRequest|EventSource|readdir|opendir|glob|watch)\b/,
       `${file}: network or scan`,
     );
-    for (const [, spec] of code.matchAll(/\bfrom\s+"([^"]+)"/g)) {
+    for (const [, spec] of code.matchAll(
+      /\b(?:from|import)\s+["']([^"']+)["']/g,
+    )) {
       if (spec.startsWith(".")) {
         const next = path.resolve(path.dirname(file), spec);
         visit(next);

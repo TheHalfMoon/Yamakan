@@ -150,6 +150,8 @@ const en = {
   "engine.reason.RIGHTS_UNQUALIFIED":
     "The model's license does not allow this use.",
   "engine.available": "Available.",
+  "engine.present":
+    "The model files are in place; they are checked in full when the engine starts.",
   "engine.op.textToVideo": "Text to video",
   "engine.op.imageToVideo": "Image to video",
   "engine.op.videoEdit": "Video edit",
@@ -355,6 +357,7 @@ const ar: Record<MessageKey, string> = {
     "هذا الحاسوب غير مؤهَّل لهذه العملية، أو انتهت صلاحية تأهيله.",
   "engine.reason.RIGHTS_UNQUALIFIED": "ترخيص النموذج لا يسمح بهذا الاستخدام.",
   "engine.available": "متاحة.",
+  "engine.present": "ملفات النموذج في مكانها، وتُفحص كاملةً عند تشغيل المحرك.",
   "engine.op.textToVideo": "نص إلى فيديو",
   "engine.op.imageToVideo": "صورة إلى فيديو",
   "engine.op.videoEdit": "تحرير فيديو",

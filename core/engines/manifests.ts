@@ -133,6 +133,9 @@ export type OperationDiscovery = {
   capability: CapabilityV2;
   detail: DiscoveryDetail;
   message: string;
+  // Available after reading every file's content (an engine start loads
+  // only such an answer); false for a status answer.
+  verified: boolean;
   manifestId?: string;
   version?: string;
   // When the host's qualification for this operation lapses.
@@ -154,6 +157,7 @@ const unavailable = (
   }),
   detail,
   message: engineReasonMessage(reason),
+  verified: false,
   ...(manifest
     ? {
         manifestId: manifest.id,
@@ -200,6 +204,9 @@ async function openChecked(
     await handle.close();
     return "missing";
   }
+  // Same file as the path checks saw (the swap defence on Windows, which
+  // has no O_NOFOLLOW; where a file system reports no inode both are 0 and
+  // the realpath and link-count checks remain).
   if (held.nlink > 1 || held.ino !== info.ino || held.dev !== info.dev) {
     await handle.close();
     return "link";
@@ -326,11 +333,8 @@ async function qualify(
     return unavailable(op, "HARDWARE_UNQUALIFIED", "GPU_REQUIRED", manifest);
   // Last, the costly check: every file's content.
   if (verifyHashes)
-    for (const file of manifest.files) {
-      const hash = await fileHash(
-        handles[manifest.files.indexOf(file)],
-        file.bytes,
-      ).catch(() => null);
+    for (const [i, file] of manifest.files.entries()) {
+      const hash = await fileHash(handles[i], file.bytes).catch(() => null);
       if (hash !== file.sha256)
         return unavailable(
           op,
@@ -349,7 +353,10 @@ async function qualify(
       constraintsHash: constraintsHash(manifest.constraints),
     }),
     detail: "QUALIFIED",
-    message: "Available.",
+    message: verifyHashes
+      ? "Available."
+      : "The model files are in place; they are checked in full when the engine starts.",
+    verified: verifyHashes,
     manifestId: manifest.id,
     version: manifest.version,
     expiresAt: q.expiresAt,

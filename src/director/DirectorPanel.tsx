@@ -13,6 +13,7 @@ type Translate = (key: MessageKey) => string;
 type EngineOperation = {
   operation: string;
   available: boolean;
+  verified: boolean;
   reason: string | null;
 };
 const known = (key: string): key is MessageKey =>
@@ -26,6 +27,7 @@ const parseOperations = (value: unknown): EngineOperation[] | null => {
       o &&
       typeof o.operation === "string" &&
       typeof o.available === "boolean" &&
+      typeof o.verified === "boolean" &&
       (o.reason === null || typeof o.reason === "string"),
   );
   return ok ? (list as EngineOperation[]) : null;
@@ -62,7 +64,8 @@ function EngineOperations({ client, t }: { client: Client; t: Translate }) {
     return known(key) ? t(key) : op;
   };
   const reason = (o: EngineOperation) => {
-    if (o.available) return t("engine.available");
+    if (o.available)
+      return o.verified ? t("engine.available") : t("engine.present");
     const key = `engine.reason.${o.reason}`;
     return known(key) ? t(key) : t("engine.unknown");
   };
