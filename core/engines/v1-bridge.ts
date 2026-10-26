@@ -17,10 +17,12 @@ import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
   EngineRequestV2Schema,
+  ExecutionRef,
   ExecutionStatusSchema,
   constraintsHash,
   diagnostic,
   refusal,
+  underClaim,
 } from "./contract-v2.ts";
 import type {
   Artifact,
@@ -46,6 +48,8 @@ export type Recipe = {
 };
 
 // A fixed request each template is lowered from to fingerprint it.
+// Templates read only prompt, seed and inputs; a template that branches on
+// anything else must bump templateVersion whenever that branching changes.
 const PROBE = {
   prompt: "probe",
   seed: 0,
@@ -160,7 +164,18 @@ export function bridgeV1(
     recipes.map((r) => [r.id, { recipe: r, hash: recipeHash(r) }]),
   );
   const fence = new AttemptFence();
+  // Bounded: the oldest executions are forgotten first (they then read as
+  // unknown, as after a restart).
   const recipeOf = new Map<string, Recipe>();
+  const remember = <V>(
+    map: Map<string, V>,
+    key: string,
+    value: V,
+    limit: number,
+  ) => {
+    map.set(key, value);
+    if (map.size > limit) map.delete(map.keys().next().value!);
+  };
   // Per execution: its artifacts by handle (named by index, so names from
   // v1 can never collide or escape), fetched once.
   const outputsOf = new Map<
@@ -185,7 +200,8 @@ export function bridgeV1(
           },
     );
   };
-  const observe = async (ref: string): Promise<ExecutionStatus> => {
+  const observe = async (raw: string): Promise<ExecutionStatus> => {
+    const ref = ExecutionRef.parse(raw);
     if (!recipeOf.has(ref)) return { executionRef: ref, state: "unknown" };
     const s = await v1.status(ref);
     return ExecutionStatusSchema.parse({
@@ -211,7 +227,7 @@ export function bridgeV1(
       });
       map.set(artifact.handle, { artifact, bytes: o.bytes });
     }
-    outputsOf.set(ref, map);
+    remember(outputsOf, ref, map, 64);
     return map;
   };
   const adapter: EngineAdapterV2 = {
@@ -230,47 +246,61 @@ export function bridgeV1(
         return { refused: "RECIPE_UNKNOWN" };
       const claim = fence.claim(request);
       if (claim.kind === "done") return claim.result;
-      const refused = refusal(request, capabilityOf(known.recipe));
-      if (refused) return claim.settle({ refused });
-      // v1 takes whole byte arrays: read each input through its handle,
-      // bounded by the v1 upload limit, and check its hash.
-      const limit = v1.capabilities().maxUploadBytes ?? 0;
-      const inputs: EngineInputFile[] = [];
-      for (const [i, { asset }] of request.inputs.entries()) {
-        const parts: Uint8Array[] = [];
-        let bytes = 0;
-        for await (const chunk of context.openAsset(asset)) {
-          bytes += chunk.byteLength;
-          if (bytes > limit)
-            return claim.settle({ refused: "INVALID_REQUEST" });
-          parts.push(chunk);
+      return underClaim(claim, async () => {
+        const refused = refusal(request, capabilityOf(known.recipe));
+        if (refused) return { refused };
+        // v1 takes whole byte arrays: read each input through its handle,
+        // bounded by the v1 upload limit, and check its hash.
+        const limit = v1.capabilities().maxUploadBytes ?? 0;
+        const inputs: EngineInputFile[] = [];
+        for (const [i, { asset }] of request.inputs.entries()) {
+          const parts: Uint8Array[] = [];
+          let bytes = 0;
+          for await (const chunk of context.openAsset(asset)) {
+            bytes += chunk.byteLength;
+            if (bytes > limit) return { refused: "INVALID_REQUEST" };
+            parts.push(chunk);
+          }
+          const data = Buffer.concat(parts);
+          if (createHash("sha256").update(data).digest("hex") !== asset.sha256)
+            return { refused: "INVALID_REQUEST" };
+          inputs.push({
+            name: `input-${i}`,
+            bytes: data,
+            sha256: asset.sha256,
+          });
         }
-        const data = Buffer.concat(parts);
-        if (createHash("sha256").update(data).digest("hex") !== asset.sha256)
-          return claim.settle({ refused: "INVALID_REQUEST" });
-        inputs.push({ name: `input-${i}`, bytes: data, sha256: asset.sha256 });
-      }
-      // Only the server's template becomes a graph. Each generation is its
-      // own v1 job: v1 replays by key, so the key carries the generation.
-      const v1Key = `g${createHash("sha256")
-        .update(`${request.attemptKey}\u0000${request.leaseGeneration}`)
-        .digest("hex")
-        .slice(0, 40)}`;
-      const { id } = await v1.submit({
-        graph: known.recipe.template(request),
-        inputs,
-        attemptKey: v1Key,
+        // Only the server's template becomes a graph. Each generation is its
+        // own v1 job: v1 replays by key, so the key carries the generation.
+        const v1Key = `g${createHash("sha256")
+          .update(`${request.attemptKey}\u0000${request.leaseGeneration}`)
+          .digest("hex")
+          .slice(0, 40)}`;
+        const { id } = await v1.submit({
+          graph: known.recipe.template(request),
+          inputs,
+          attemptKey: v1Key,
+        });
+        remember(recipeOf, id, known.recipe, 4096);
+        // A newer generation runs: the one it replaces is cancelled.
+        const older = await claim.superseded;
+        if (older && "executionRef" in older)
+          await v1.cancel(older.executionRef).catch(() => {});
+        return { executionRef: id };
       });
-      recipeOf.set(id, known.recipe);
-      return claim.settle({ executionRef: id });
     },
     status: observe,
     // After a restart this bridge knows nothing of an execution: unknown,
     // never a resubmit.
     reconcile: observe,
     async requestCancel(ref) {
+      // Nothing this bridge can reach: no cancel was sent.
       if (!recipeOf.has(ref))
-        return { requested: true, localProcessExited: false };
+        return {
+          requested: false,
+          localProcessExited: false,
+          remoteOutcome: "unknown",
+        };
       const s = await v1.cancel(ref);
       return {
         requested: true,

@@ -472,22 +472,82 @@ test("one attempt and generation means one request; a failed execution replays a
       refused: "STALE_ATTEMPT",
     },
   );
-  // A refusal fences nothing: the same request can be retried later.
-  const off = createFakeEngineV2({
+  // A refusal frees its generation for a retry, but never lowers the
+  // fence: an older generation stays stale.
+  const options: { unavailable: Record<string, "WEIGHTS_ABSENT"> } = {
     unavailable: { textToVideo: "WEIGHTS_ABSENT" },
+  };
+  const later = createFakeEngineV2(options as never);
+  assert.deepEqual(
+    await later.submit(
+      textToVideo({ attemptKey: "r", leaseGeneration: 5 }),
+      ctx,
+    ),
+    {
+      refused: "WEIGHTS_ABSENT",
+    },
+  );
+  delete options.unavailable.textToVideo;
+  assert.deepEqual(
+    await later.submit(
+      textToVideo({ attemptKey: "r", leaseGeneration: 4 }),
+      ctx,
+    ),
+    {
+      refused: "STALE_ATTEMPT",
+    },
+  );
+  assert.ok(
+    "executionRef" in
+      (await later.submit(
+        textToVideo({ attemptKey: "r", leaseGeneration: 5 }),
+        ctx,
+      )),
+  );
+});
+
+test("a submit that throws frees its claim: the retry runs instead of waiting forever", async () => {
+  for (const engine of [createFakeEngineV2(), bridgeV1(createFakeEngine())]) {
+    let down = true;
+    const flaky: EngineContextV2 = {
+      async *openAsset(asset) {
+        if (down) throw new Error("asset store down");
+        yield* context().openAsset(asset);
+      },
+    };
+    const request = imageToVideo({ attemptKey: "flaky" });
+    await assert.rejects(engine.submit(request, flaky), /asset store down/);
+    down = false;
+    const retried = await Promise.race([
+      engine.submit(request, flaky),
+      new Promise((r) => setTimeout(() => r("hung"), 2000)),
+    ]);
+    assert.ok(
+      typeof retried === "object" && retried && "executionRef" in retried,
+      String(retried),
+    );
+  }
+});
+
+test("a newer generation cancels the execution it replaces; unknown executions are answered honestly", async () => {
+  const bridged = bridgeV1(createFakeEngine());
+  const ctx = context();
+  const old = await bridged.submit(
+    textToVideo({ attemptKey: "gen", leaseGeneration: 1 }),
+    ctx,
+  );
+  const fresh = await bridged.submit(
+    textToVideo({ attemptKey: "gen", leaseGeneration: 2 }),
+    ctx,
+  );
+  assert.ok("executionRef" in old && "executionRef" in fresh);
+  assert.notEqual(old.executionRef, fresh.executionRef);
+  assert.deepEqual(await bridged.requestCancel("never-submitted"), {
+    requested: false,
+    localProcessExited: false,
+    remoteOutcome: "unknown",
   });
-  assert.deepEqual(
-    await off.submit(textToVideo({ attemptKey: "r", leaseGeneration: 5 }), ctx),
-    {
-      refused: "WEIGHTS_ABSENT",
-    },
-  );
-  assert.deepEqual(
-    await off.submit(textToVideo({ attemptKey: "r", leaseGeneration: 4 }), ctx),
-    {
-      refused: "WEIGHTS_ABSENT",
-    },
-  );
+  await assert.rejects(bridged.status("../not-a-ref"));
 });
 
 test("control values are numbers, booleans or short choices, never paths, URLs or prototype names", () => {

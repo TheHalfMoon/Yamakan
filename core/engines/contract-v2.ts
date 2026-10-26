@@ -339,6 +339,7 @@ export const CancellationSchema = z
   .strict();
 export type Cancellation = z.infer<typeof CancellationSchema>;
 // An output by stage-relative name (never a path), its length and hash.
+export const ExecutionRef = Ref;
 export const ArtifactSchema = z
   .object({
     handle: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/),
@@ -376,13 +377,20 @@ export type EngineAdapterV2 = {
 // Diagnostics leave an adapter bounded and without paths or URLs.
 export function diagnostic(text: string | undefined) {
   if (!text) return undefined;
+  // Best effort: URLs, drive paths and multi-segment absolute paths go;
+  // ordinary text such as "1/2" stays. Only a bounded prefix is examined.
   const redacted = text
-    .replace(/https?:\/\/\S+/gi, "[url]")
-    .replace(/(?:[A-Za-z]:)?[\\/][^\s"']+/g, "[path]");
-  // Cut on code points, never inside a surrogate pair.
-  return Array.from(redacted)
-    .slice(0, ENGINE_V2_LIMITS.diagnosticChars)
-    .join("");
+    .slice(0, 4 * ENGINE_V2_LIMITS.diagnosticChars)
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[url]")
+    .replace(/[A-Za-z]:[\\/][^\s"']*/g, "[path]")
+    .replace(/(?:[\\/][^\s\\/"']+){2,}[\\/]?/g, "[path]");
+  // At most diagnosticChars UTF-16 units, never cut inside a pair.
+  let out = "";
+  for (const point of redacted) {
+    if (out.length + point.length > ENGINE_V2_LIMITS.diagnosticChars) break;
+    out += point;
+  }
+  return out;
 }
 
 export const requestHash = (request: EngineRequestV2) =>
@@ -390,27 +398,37 @@ export const requestHash = (request: EngineRequestV2) =>
 
 type SubmitResult = { executionRef: string } | { refused: RefusalReason };
 // Attempt fencing shared by adapters. A claim is taken synchronously,
-// before any await, so concurrent submits cannot both run, and an older
-// generation can never replace a newer one. The same generation replays
-// the first result, and only for the same request.
+// before any await. Per attempt key the highest generation seen only ever
+// rises (a refusal never lowers it), so an older generation is always
+// stale; the current generation replays its first result for the same
+// request, and a refusal or failure frees that generation for a retry.
+// A fresh claim reports the result it supersedes, so the adapter can
+// cancel the older execution. Fences live in memory: once workers exist,
+// the durable JobSupervisor fence is authoritative, and publication of an
+// artifact is fenced by the service (generation and cancellation), not here.
 export class AttemptFence {
-  #slots = new Map<
+  #highest = new Map<string, number>();
+  #current = new Map<
     string,
     { generation: number; hash: string; result: Promise<SubmitResult> }
   >();
-  claim(
-    request: EngineRequestV2,
-  ):
+  claim(request: EngineRequestV2):
     | { kind: "done"; result: Promise<SubmitResult> }
-    | { kind: "fresh"; settle(result: SubmitResult): SubmitResult } {
-    const slot = this.#slots.get(request.attemptKey);
-    const hash = requestHash(request);
-    if (slot && request.leaseGeneration < slot.generation)
+    | {
+        kind: "fresh";
+        superseded: Promise<SubmitResult> | null;
+        settle(result: SubmitResult): SubmitResult;
+      } {
+    const key = request.attemptKey;
+    const highest = this.#highest.get(key) ?? 0;
+    if (request.leaseGeneration < highest)
       return {
         kind: "done",
         result: Promise.resolve({ refused: "STALE_ATTEMPT" }),
       };
-    if (slot && request.leaseGeneration === slot.generation)
+    const hash = requestHash(request);
+    const slot = this.#current.get(key);
+    if (slot && slot.generation === request.leaseGeneration)
       return {
         kind: "done",
         result:
@@ -421,24 +439,43 @@ export class AttemptFence {
     let resolve!: (r: SubmitResult) => void;
     const result = new Promise<SubmitResult>((r) => (resolve = r));
     const entry = { generation: request.leaseGeneration, hash, result };
-    this.#slots.set(request.attemptKey, entry);
+    this.#highest.set(key, request.leaseGeneration);
+    this.#current.set(key, entry);
     return {
       kind: "fresh",
+      superseded:
+        slot && slot.generation < request.leaseGeneration ? slot.result : null,
       settle: (r) => {
         resolve(r);
-        // A refusal fences nothing: the earlier holder (if any) returns.
-        if ("refused" in r && this.#slots.get(request.attemptKey) === entry) {
-          if (slot) this.#slots.set(request.attemptKey, slot);
-          else this.#slots.delete(request.attemptKey);
-        }
+        if ("refused" in r && this.#current.get(key) === entry)
+          this.#current.delete(key);
         return r;
       },
     };
   }
 }
 
+// Runs an adapter's work for a fresh claim: whatever it returns settles the
+// claim, and a throw releases it (as a refusal) before propagating, so a
+// failed submit never leaves its generation waiting forever.
+export async function underClaim(
+  claim: { settle(result: SubmitResult): SubmitResult },
+  work: () => Promise<SubmitResult>,
+) {
+  let result: SubmitResult;
+  try {
+    result = await work();
+  } catch (e) {
+    claim.settle({ refused: "INVALID_REQUEST" });
+    throw e;
+  }
+  return claim.settle(result);
+}
+
 // The service reads an artifact through this: chunks bounded, the total
-// bounded by the declared length, and the bytes re-hashed.
+// bounded by the declared length, and the bytes re-hashed. The sink sees
+// bytes before the final hash check, so it must stage them and discard
+// them if this throws.
 export async function readArtifactVerified(
   adapter: EngineAdapterV2,
   executionRef: string,
@@ -452,6 +489,8 @@ export async function readArtifactVerified(
     executionRef,
     artifact.handle,
   )) {
+    if (!(chunk instanceof Uint8Array))
+      throw new Error("An artifact chunk is not bytes.");
     if (chunk.byteLength > ENGINE_V2_LIMITS.chunkBytes)
       throw new Error("An artifact chunk is larger than allowed.");
     bytes += chunk.byteLength;

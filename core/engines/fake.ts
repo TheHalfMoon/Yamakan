@@ -17,6 +17,7 @@ import {
   Operation,
   constraintsHash,
   refusal,
+  underClaim,
 } from "./contract-v2.ts";
 import type {
   Artifact,
@@ -281,53 +282,67 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
       const request = parsed.data;
       const claim = fence.claim(request);
       if (claim.kind === "done") return claim.result;
-      const refused = refusal(
-        request,
-        capabilities().find((c) => c.operation === request.operation),
-      );
-      if (refused) return claim.settle({ refused });
-      // Inputs are read through the service's handles and checked against
-      // their recorded hashes before anything runs.
-      for (const { asset } of request.inputs) {
-        await options.beforeInput?.(request);
-        if (
-          !(await verifyAsset(
-            context.openAsset(asset),
-            asset,
-            ENGINE_V2_LIMITS.artifactBytes,
+      return underClaim(claim, async () => {
+        const refused = refusal(
+          request,
+          capabilities().find((c) => c.operation === request.operation),
+        );
+        if (refused) return { refused };
+        // Inputs are read through the service's handles and checked against
+        // their recorded hashes before anything runs.
+        for (const { asset } of request.inputs) {
+          await options.beforeInput?.(request);
+          if (
+            !(await verifyAsset(
+              context.openAsset(asset),
+              asset,
+              ENGINE_V2_LIMITS.artifactBytes,
+            ))
+          )
+            return { refused: "INVALID_REQUEST" };
+        }
+        spawned++;
+        const ref = `fake-v2-${++seq}`;
+        let artifact: Artifact | null = null;
+        if (!options.failExecutions) {
+          const hash = createHash("sha256");
+          for (const chunk of fakeBytes(
+            ref,
+            artifactBytes,
+            ENGINE_V2_LIMITS.chunkBytes,
           ))
-        )
-          return claim.settle({ refused: "INVALID_REQUEST" });
-      }
-      spawned++;
-      const ref = `fake-v2-${++seq}`;
-      let artifact: Artifact | null = null;
-      if (!options.failExecutions) {
-        const hash = createHash("sha256");
-        for (const chunk of fakeBytes(
-          ref,
-          artifactBytes,
-          ENGINE_V2_LIMITS.chunkBytes,
-        ))
-          hash.update(chunk);
-        artifact = {
-          handle: request.output.kind === "video" ? "output.mp4" : "output.vtt",
-          mediaType: request.output.kind === "video" ? "video/mp4" : "text/vtt",
-          byteLength: artifactBytes,
-          sha256: hash.digest("hex"),
-        };
-      }
-      executions.set(ref, {
-        status: options.failExecutions
-          ? {
-              executionRef: ref,
-              state: "failed",
-              diagnostic: "Simulated engine failure.",
-            }
-          : { executionRef: ref, state: "succeeded", progress: 1 },
-        artifact,
+            hash.update(chunk);
+          artifact = {
+            handle:
+              request.output.kind === "video" ? "output.mp4" : "output.vtt",
+            mediaType:
+              request.output.kind === "video" ? "video/mp4" : "text/vtt",
+            byteLength: artifactBytes,
+            sha256: hash.digest("hex"),
+          };
+        }
+        executions.set(ref, {
+          status: options.failExecutions
+            ? {
+                executionRef: ref,
+                state: "failed",
+                diagnostic: "Simulated engine failure.",
+              }
+            : { executionRef: ref, state: "succeeded", progress: 1 },
+          artifact,
+        });
+        // A newer generation runs: the one it replaces is cancelled.
+        const older = await claim.superseded;
+        if (older && "executionRef" in older) {
+          const e = executions.get(older.executionRef);
+          if (
+            e &&
+            (e.status.state === "queued" || e.status.state === "running")
+          )
+            e.status = { executionRef: older.executionRef, state: "cancelled" };
+        }
+        return { executionRef: ref };
       });
-      return claim.settle({ executionRef: ref });
     },
     async status(ref) {
       return { ...known(ref).status };
