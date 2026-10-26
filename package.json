@@ -57,7 +57,8 @@
     "qualify:ultimate-environment": "node scripts/qualify-ultimate-environment.mjs",
     "bundle": "node scripts/bundle.ts",
     "bundle:install-dev": "node scripts/bundle.ts install-dev",
-    "bundle:pack-unsigned-rc": "node scripts/bundle.ts pack-unsigned-rc"
+    "bundle:pack-unsigned-rc": "node scripts/bundle.ts pack-unsigned-rc",
+    "benchmark:ultimate": "node scripts/benchmark-ultimate.ts"
   },
   "dependencies": {
     "ag-psd": "31.0.3",
