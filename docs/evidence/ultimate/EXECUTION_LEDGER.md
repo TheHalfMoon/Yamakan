@@ -31,7 +31,8 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-042 missing-weights and qualification discovery (no downloads)                                                                | VERIFIED                       | #109 → `a4b0278` | [receipts/YU-042.json](receipts/YU-042.json); CI and push run green; Windows: 568/573 with 2 load timeouts passing alone (11/11), Studio 1975/1975, Edge E2E and Director activation pass                                   |
 | YU-017 edit proxies and indexed thumbnails                                                                                       | VERIFIED                       | #111 → `c44d041` | [receipts/YU-017.json](receipts/YU-017.json); CI and push run green; Windows: 582/585 (0 fail), Studio 1975/1975, Edge E2E pass                                                                                             |
 | YU-018 preview parity, reference preview and audio clock diagnostics                                                             | VERIFIED                       | #113 → `dc483c9` | [receipts/YU-018.json](receipts/YU-018.json); CI and push run green; Windows (1.8 GB free RAM): load timeouts pass alone 72/72, Studio 1975/1975, Edge E2E pass on rerun                                                    |
-| YU-019…YU-089, YU-091…YU-101 (except YU-040, YU-041, YU-042)                                                                     | PLANNED                        | —                | —                                                                                                                                                                                                                           |
+| YU-030 one project shell: Story, Edit and Finish                                                                                 | VERIFIED                       | #115 → `bfe61e5` | [receipts/YU-030.json](receipts/YU-030.json); CI and push run green; Windows: 588/591 (0 fail), Studio 1975/1975, Edge E2E and four qualifications pass                                                                     |
+| YU-019…YU-089, YU-091…YU-101 (except YU-030, YU-040, YU-041, YU-042)                                                             | PLANNED                        | —                | —                                                                                                                                                                                                                           |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -70,7 +71,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010…YU-018, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-030 (unified Story/Edit/Finish navigation).
+YU-010…YU-018, YU-030, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-019 (rational project fps), YU-031 (story/shot/reference packs), YU-071 (deterministic repair/analysis) and YU-043 (first-engine manifest choice). YU-072, YU-092, YU-093 and YU-101 stay blocked on external authorization.
 
 - 2026-10-26, post-merge run of main `2baa695` with the host at 82% CPU from other applications and a concurrent typecheck: 14 tests hit their 60 s limits; the 10 affected files re-run one at a time pass 85/85. Push CI green.
 
