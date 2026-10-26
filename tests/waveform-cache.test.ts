@@ -275,7 +275,7 @@ test("an asset without audio is refused, and a stream that does not decode fails
   // decoder finds no audio stream and the request fails as invalid media.
   const unknownAudio = {
     assetFile: async () => ({
-      file: (await store.assetFile(project.id, asset.id)).file,
+      ...(await store.assetFile(project.id, asset.id)),
       asset: { ...asset, hasAudio: null },
     }),
     file: store.file.bind(store),

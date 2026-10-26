@@ -1,9 +1,38 @@
 import { z } from "zod";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
+import { FLICKS_PER_SECOND, framesToTicks, type Rational } from "./time.ts";
 const { timelineFrames, mediaDimension } = RESOURCE_POLICY.enforced;
 export const Id = z.uuid();
 const frame = z.number().int().min(0).max(timelineFrames);
+// Project frame rates (YU-019). Every frame field of the editing view counts
+// frames at the project's rate. 30 fps projects keep view schema 2 exactly
+// (fps: 30); other qualified rates use schema 3 with a rational frameRate.
+// Further rates are added only with the same qualification.
+export const EDIT_RATE_30: Rational = Object.freeze({ num: 30, den: 1 });
+export const EDIT_RATE_23976: Rational = Object.freeze({
+  num: 24000,
+  den: 1001,
+});
+export const SUPPORTED_FRAME_RATES: readonly Rational[] = Object.freeze([
+  EDIT_RATE_30,
+  EDIT_RATE_23976,
+]);
+const sameRate = (a: Rational, b: Rational) =>
+  a.num === b.num && a.den === b.den;
+export const isSupportedRate = (r: Rational) =>
+  SUPPORTED_FRAME_RATES.some((x) => sameRate(x, r));
+const FrameRateSchema = z
+  .object({
+    num: z.number().int().positive().max(1_000_000),
+    den: z.number().int().positive().max(1_000_000),
+  })
+  .strict()
+  .refine((r) => isSupportedRate(r) && !sameRate(r, EDIT_RATE_30), {
+    message: "Unsupported project frame rate (30 fps projects use schema 2).",
+  });
+// The longest timeline: ten minutes, whatever the rate.
+const MAX_TIMELINE_TICKS = FLICKS_PER_SECOND * 600;
 export const AssetSchema = z
   .object({
     id: Id,
@@ -103,11 +132,13 @@ const SceneSchema = z
   .strict();
 const ProjectBody = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.union([z.literal(2), z.literal(3)]),
     id: Id,
     name: z.string().min(1).max(120),
     revision: z.number().int().nonnegative(),
-    fps: z.literal(30),
+    // Schema 2: fps 30. Schema 3: frameRate (a qualified non-30 rate).
+    fps: z.literal(30).optional(),
+    frameRate: FrameRateSchema.optional(),
     width: z
       .number()
       .int()
@@ -128,6 +159,15 @@ const ProjectBody = z
   .strict()
   .superRefine((p, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (p.schemaVersion === 2 && (p.fps !== 30 || p.frameRate))
+      fail("A schema 2 project is 30 fps.");
+    if (p.schemaVersion === 3 && (p.fps !== undefined || !p.frameRate))
+      fail("A schema 3 project names its frame rate.");
+    // Only a qualified rate times the timeline (a refused one is already
+    // an issue above, and is never used for arithmetic).
+    const rate =
+      p.frameRate && isSupportedRate(p.frameRate) ? p.frameRate : EDIT_RATE_30;
+    const frameTicks = (frames: number) => framesToTicks(frames, rate);
     const ids = [
       p.id,
       ...p.assets.map((x) => x.id),
@@ -146,7 +186,7 @@ const ProjectBody = z
       const track = p.tracks.find((t) => t.id === c.trackId);
       const asset = p.assets.find((a) => a.id === c.assetId);
       if (!track) fail("Clip track is missing.");
-      if (c.startFrame + c.durationFrames > timelineFrames)
+      if (frameTicks(c.startFrame + c.durationFrames) > MAX_TIMELINE_TICKS)
         fail("Timeline exceeds ten minutes.");
       if (c.title !== null) {
         if (c.assetId !== null || track?.kind !== "video")
@@ -181,14 +221,31 @@ function upgradeEditView(value: unknown) {
 export const ProjectSchema = z.preprocess(upgradeEditView, ProjectBody);
 export type Project = z.infer<typeof ProjectBody>;
 export type Asset = z.infer<typeof AssetSchema>;
+// The project's frame rate (frames of the editing view per second).
+export function frameRateOf(p: { frameRate?: Rational }): Rational {
+  return p.frameRate ?? EDIT_RATE_30;
+}
+// Seconds of `frames` frames at a rate (for FFmpeg arguments and progress;
+// exact frame arithmetic stays in ticks).
+export const framesToSeconds = (frames: number, rate: Rational) =>
+  (frames * rate.den) / rate.num;
+// Frames per second as a number (the browser views in seconds).
+export const framesPerSecond = (p: { frameRate?: Rational }) => {
+  const r = frameRateOf(p);
+  return r.num / r.den;
+};
 export type Clip = z.infer<typeof ClipSchema>;
-export function createProject(name: string): Project {
+export function createProject(
+  name: string,
+  frameRate: Rational = EDIT_RATE_30,
+): Project {
+  const thirty = sameRate(frameRate, EDIT_RATE_30);
   return ProjectSchema.parse({
-    schemaVersion: 2,
+    schemaVersion: thirty ? 2 : 3,
     id: crypto.randomUUID(),
     name,
     revision: 0,
-    fps: 30,
+    ...(thirty ? { fps: 30 } : { frameRate: { ...frameRate } }),
     width: 1280,
     height: 720,
     assets: [],

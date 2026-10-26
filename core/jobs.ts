@@ -20,8 +20,9 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "./store.ts";
-import { AssetSchema } from "./project.ts";
+import { AssetSchema, frameRateOf, framesToSeconds } from "./project.ts";
 import type { Asset } from "./project.ts";
+import { ticksToFrames } from "./time.ts";
 import { MEDIA_FORMATS, probe } from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { keepMainStream, renderRevision } from "./render.ts";
@@ -753,7 +754,10 @@ export class JobSupervisor {
     // in the attempt folder, which the worker could never write.
     const work = path.join(dir, "worker");
     await mkdir(work, { recursive: true });
-    const seconds = Math.max(1, asset.durationFrames / 30);
+    // The asset counts frames at its project's rate (YU-019).
+    const rate = frameRateOf(await this.store.load(row.project_id));
+    const length = framesToSeconds(asset.durationFrames, rate);
+    const seconds = Math.max(1, length);
     let progress = "";
     if (signal.aborted) throw new Error("Cancelled.");
     // The conversion and its published copy share the space above the
@@ -810,7 +814,7 @@ export class JobSupervisor {
           // Constant-rate filling can hold the last frame past the source's
           // recorded duration; the asset keeps the duration it was probed with.
           "-t",
-          String(asset.durationFrames / 30),
+          String(length),
           "-c:v",
           "libx264",
           // The decoder's thread count is set before -i; the encoder's here.
@@ -876,7 +880,8 @@ export class JobSupervisor {
       probed.variableFrameRate ||
       probed.width !== even(asset.width) ||
       probed.height !== even(asset.height) ||
-      Math.abs(probed.durationFrames - asset.durationFrames) > 2
+      // The probe counts thirtieths of a second.
+      Math.abs(probed.durationFrames - Math.round(length * 30)) > 2
     )
       throw new Error("Converted output failed verification.");
     this.#markValidating(jobId, attempt);
@@ -917,6 +922,8 @@ export class JobSupervisor {
     }
     // The derivative joins the project as its own version, so an asset id is
     // always the version bound to its bytes; lineage names the original.
+    // Its frames are counted at the project's rate (YU-019).
+    const rate = frameRateOf(await this.store.load(row.project_id));
     const derived = AssetSchema.parse({
       ...asset,
       id: randomUUID(),
@@ -925,7 +932,7 @@ export class JobSupervisor {
       bytes: stored.byteLength,
       width: probed.width,
       height: probed.height,
-      durationFrames: probed.durationFrames,
+      durationFrames: ticksToFrames(probed.durationTicks, rate, "floor"),
     });
     await this.#cleanup(row.project_id, jobId, attempt);
     try {

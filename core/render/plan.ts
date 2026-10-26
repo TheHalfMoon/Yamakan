@@ -5,6 +5,7 @@
 // It holds no paths, URLs, filters or free text other than title cues;
 // export and (in T8) reference preview both render from it.
 import { createHash } from "node:crypto";
+import { isSupportedRate } from "../project.ts";
 import type { CanonicalProject } from "../canonical.ts";
 import type { Rational } from "../time.ts";
 import { addTicks, rational } from "../time.ts";
@@ -115,12 +116,12 @@ export function compilePlan(
 ): CompiledPlan {
   if (!/^[a-f0-9]{64}$/.test(snapshotHash))
     throw new CommandError("VALIDATION", "Snapshot hash is invalid.");
-  // The qualified MVP profile renders at 30 frames per second; other rates
-  // need their own timing and verification qualification.
-  if (project.output.fps.num !== 30 || project.output.fps.den !== 1)
+  // Qualified render rates: 30 (the MVP profile) and 24000/1001 (YU-019).
+  // Other rates need their own timing and verification qualification.
+  if (!isSupportedRate(project.output.fps))
     throw new CommandError(
       "CAPABILITY_UNAVAILABLE",
-      "Rendering supports 30 frames per second.",
+      "Rendering supports 30 and 24000/1001 frames per second.",
     );
   const trackIndex = new Map(project.tracks.map((t, i) => [t.id, i]));
   // Mute removes a track; solo on any track of a kind keeps only soloed

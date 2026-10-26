@@ -24,7 +24,7 @@ import { RESOURCE_POLICY } from "../command/policy.ts";
 import { MEDIA_FORMATS } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
-import type { Asset } from "../project.ts";
+import { framesToSeconds, type Asset } from "../project.ts";
 import type { ProjectStore } from "../store.ts";
 
 /** Base peaks per second; level L has BASE_RATE / 2^L peaks per second. */
@@ -304,6 +304,8 @@ async function basePeaks(
   projectId: string,
   asset: Asset,
   file: string,
+  // The asset's length (its frames at the project's rate).
+  seconds: number,
   signal?: AbortSignal,
 ) {
   const dir = await store.file(projectId, "cache", "peaks");
@@ -353,11 +355,7 @@ async function basePeaks(
       if (controller.signal.aborted) throw new Error("Cancelled.");
       let peaks: Uint8Array;
       try {
-        peaks = await decodePeaks(
-          file,
-          asset.durationFrames / 30,
-          controller.signal,
-        );
+        peaks = await decodePeaks(file, seconds, controller.signal);
       } catch (e) {
         if (e instanceof CommandError && settled.has(e))
           remember(
@@ -446,7 +444,7 @@ export async function assetPeakTile(
     );
   if (!Number.isInteger(index) || index < 0 || index > MAX_PEAKS)
     throw new CommandError("VALIDATION", "index must be a whole number.");
-  const { file, asset } = await store.assetFile(projectId, assetId);
+  const { file, asset, frameRate } = await store.assetFile(projectId, assetId);
   if (asset.kind === "image" || asset.hasAudio === false)
     throw new CommandError("VALIDATION", "The asset has no audio.");
   const { peaks: base, cached } = await basePeaks(
@@ -454,6 +452,7 @@ export async function assetPeakTile(
     projectId,
     asset,
     file,
+    framesToSeconds(asset.durationFrames, frameRate),
     signal,
   );
   const { peaks, total } = peakTile(base, level, index);

@@ -7,7 +7,7 @@ import { ProjectStore } from "./store.ts";
 import { MEDIA_FORMATS, probe } from "./media.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { CommandError } from "./command/errors.ts";
-import { FLICKS_PER_SECOND } from "./time.ts";
+import { FLICKS_PER_SECOND, framesToTicks } from "./time.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { compilePlan } from "./render/plan.ts";
 import type { RenderPlan } from "./render/plan.ts";
@@ -161,8 +161,10 @@ export function ptsOffset(ticks: number) {
 // changes, so cached previews of unchanged plans are not reused.
 export const RENDERER_VERSION = 3;
 
-// One frame of the 30 fps profile, in flicks.
-const FRAME = FLICKS_PER_SECOND / 30;
+// A read margin of one frame: of the profile, and never less than 1/30 s
+// (so a 30 fps profile reads exactly as before; YU-019).
+const frameMargin = (fps: { num: number; den: number }) =>
+  Math.max(FLICKS_PER_SECOND / 30, framesToTicks(1, fps, "ceil"));
 
 export type RenderReceipt = {
   planHash: string;
@@ -222,6 +224,7 @@ export async function renderPlan(
   let activePlan = plan;
   const { profile } = activePlan;
   const rate = `${profile.fps.num}/${profile.fps.den}`;
+  const FRAME = frameMargin(profile.fps);
   const wStart = window.startTicks;
   const wEnd = wStart + window.durationTicks;
   if (
@@ -635,7 +638,7 @@ export async function renderPlan(
     // workspace's owner-only access; the worker's file is removed.
     await keepMainStream(written, output);
     const probed = await probe(output);
-    // The profile is 30 fps (compilePlan), the unit probe counts frames in.
+    // The probe counts thirtieths of a second, at any profile rate.
     const expectedFrames = Math.round(duration * 30);
     if (
       !probed.hasVideo ||

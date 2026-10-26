@@ -110,7 +110,11 @@ test("canonical values the 30 fps editor cannot hold are refused, not dropped", 
     ...structuredClone(canonical),
     output: { ...canonical.output, fps: { num: 30000, den: 1001 } },
   };
-  assert.throws(() => toEditView(ntsc), /only 30 fps/);
+  // 30000/1001 is not (yet) a qualified rate (YU-019 adds 24000/1001 only).
+  assert.throws(
+    () => toEditView(ntsc),
+    /supports 30 and 24000\/1001 fps projects only/,
+  );
   const timed = structuredClone(canonical);
   timed.assets[1].timebase = { num: 1, den: 48000 };
   assert.throws(() => toEditView(timed), /time bases/);

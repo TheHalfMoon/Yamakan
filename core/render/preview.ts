@@ -21,13 +21,12 @@ import path from "node:path";
 import { ProjectStore } from "../store.ts";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { FLICKS_PER_SECOND } from "../time.ts";
+import { framesToTicks } from "../time.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { RENDERER_VERSION, renderPlan } from "../render.ts";
 import { compilePlan } from "./plan.ts";
 import { titleFonts } from "./fonts.ts";
 
-const FRAME_TICKS = FLICKS_PER_SECOND / 30;
 // Entries used within this many milliseconds are kept while the cache is
 // under twice its bound: a viewer stepping or playing through them still
 // needs them.
@@ -128,7 +127,9 @@ export async function preview(
   const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts());
   // A playhead past the saved timeline (an unsaved clip added at the end, a
   // muted trailing track) shows the saved timeline's last frame.
-  const total = Math.round(plan.durationTicks / FRAME_TICKS);
+  // Windows count frames at the project's rate (YU-019).
+  const frameTicks = framesToTicks(1, plan.profile.fps, "ceil");
+  const total = Math.round(plan.durationTicks / frameTicks);
   const start = Math.min(startFrame, total - 1);
   const count = Math.min(frames, total - start);
   const dir = await store.file(projectId, "cache", "preview");
@@ -210,8 +211,10 @@ export async function preview(
           () => {},
           undefined,
           {
-            startTicks: start * FRAME_TICKS,
-            durationTicks: count * FRAME_TICKS,
+            startTicks: framesToTicks(start, plan.profile.fps, "nearest"),
+            durationTicks:
+              framesToTicks(start + count, plan.profile.fps, "nearest") -
+              framesToTicks(start, plan.profile.fps, "nearest"),
             output: kind === "frame" ? "png" : "mp4",
             wallSeconds: RESOURCE_POLICY.enforced.previewWallSeconds,
           },

@@ -202,3 +202,48 @@ test("hostile size and nesting limits fail closed", () => {
   for (let i = 0; i < OTIO_LIMITS.maxDepth + 2; i++) nest = { child: nest };
   assert.throws(() => fromOtio(JSON.stringify(nest), []), /deeply/);
 });
+
+test("a 24000/1001 project's ranges round-trip through OTIO on its own frames (YU-019)", async () => {
+  const { createProject, EDIT_RATE_23976, ProjectSchema } =
+    await import("../core/project.ts");
+  const { fromEditView } = await import("../core/canonical.ts");
+  const frame = 29_429_400; // flicks per 24000/1001 frame
+  const base = createProject("NTSC", EDIT_RATE_23976);
+  const asset = {
+    id: crypto.randomUUID(),
+    name: "v.mp4",
+    kind: "video" as const,
+    hash: "c".repeat(64),
+    extension: "mp4" as const,
+    bytes: 10,
+    durationFrames: 14_000,
+    width: 1280,
+    height: 720,
+    hasAudio: false,
+  };
+  // Long timestamps: a clip ending just before ten minutes.
+  const view = ProjectSchema.parse({
+    ...base,
+    assets: [asset],
+    clips: [
+      {
+        id: crypto.randomUUID(),
+        trackId: base.tracks[0].id,
+        assetId: asset.id,
+        startFrame: 13_000,
+        durationFrames: 1_385,
+        sourceFrame: 12_001,
+        title: null,
+      },
+    ],
+  });
+  const canonical = fromEditView(view);
+  const proposal = fromOtio(otioJson(canonical), [
+    { id: asset.id, hash: asset.hash },
+  ]);
+  const clip = proposal.clips[0]!;
+  assert.equal(clip.startTicks, 13_000 * frame);
+  assert.equal(clip.durationTicks, 1_385 * frame);
+  assert.equal(clip.sourceStartTicks, 12_001 * frame);
+  assert.equal(clip.assetId, asset.id);
+});

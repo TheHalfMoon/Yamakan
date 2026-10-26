@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { FLICKS_PER_SECOND } from "./time.ts";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { RESOURCE_POLICY } from "./command/policy.ts";
@@ -62,6 +63,18 @@ function rotation(stream: any): number {
   );
   const value = Number(matrix?.rotation ?? stream?.tags?.rotate ?? 0);
   return Number.isFinite(value) ? Math.round(value) : 0;
+}
+
+// Seconds as ffprobe writes them ("12.345000") to ticks, floored, with
+// BigInt arithmetic: no floating product is ever rounded into a frame.
+export function decimalSecondsToTicks(text: unknown): number {
+  const value = typeof text === "number" ? String(text) : text;
+  if (typeof value !== "string" || !/^\d{1,9}(\.\d{1,12})?$/.test(value))
+    return 0;
+  const [whole, fraction = ""] = value.split(".");
+  const scale = 10n ** BigInt(fraction.length);
+  const numerator = BigInt(whole) * scale + BigInt(fraction || "0");
+  return Number((numerator * BigInt(FLICKS_PER_SECOND)) / scale);
 }
 
 export async function probe(file: string) {
@@ -139,7 +152,12 @@ export async function probe(file: string) {
   return {
     width,
     height,
+    // Thirtieths of a second (the probe's own unit, as before) and the exact
+    // duration in ticks, from which a project counts its own frames.
     durationFrames: Math.floor(duration * 30),
+    durationTicks: decimalSecondsToTicks(
+      info.format?.duration || visual?.duration || audio?.duration || 0,
+    ),
     hasVideo: Boolean(visual),
     hasAudio: Boolean(audio),
     format: String(info.format?.format_name || ""),

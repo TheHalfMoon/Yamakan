@@ -322,3 +322,27 @@ The job tray above the workspaces shows the one export job (state, progress, can
   - Finish's captions, audio and loudness, preflight and artifact receipts. Export is still started from the shared toolbar.
   - A dedicated test for each of plan document 11's six journeys. The browser test covers the shared project, the asset library and selection across the three workspaces.
 - **Rollback.** `?shell=classic`, or `yamakan.shell=classic` in this browser, shows the prior shell (Production and Agent tools). It is built from the same parts.
+
+## Project frame rates (YU-019)
+
+A project has one frame rate. Every frame field of its editing view counts frames at that rate. The canonical model is unchanged: time in flicks, which are exact for these rates.
+
+- **Qualified rates: 30 and 24000/1001.**
+  - A 30 fps project keeps the editing view schema 2 (`fps: 30`) and its canonical bytes exactly. Old projects need no migration.
+  - A 24000/1001 project uses view schema 3 with `frameRate: {num: 24000, den: 1001}`. One of its frames is 29,429,400 flicks.
+  - Other rates (25, 30000/1001, 60, …) are refused, by the view, the canonical-to-editing conversion and the render plan, until they are qualified the same way.
+- **No silent rounding.**
+  - Conversions between frames and ticks are exact BigInt arithmetic. A canonical time that is not on one of the project's frames is refused (`CAPABILITY_UNAVAILABLE`), never rounded.
+  - The only rounding happens at the view boundary, and it is explicit:
+    - Seconds from the browser timeline go to the nearest project frame (`src/edit-ops.ts`).
+    - An imported asset's duration is floored to whole project frames, because a final partial frame is not addressable.
+  - The import reads ffprobe's decimal duration into exact ticks, with no floating product. The probe's own duration count stays in thirtieths of a second. Media checks compare against that unit, at any project rate.
+- **Ten minutes at any rate.** The timeline limit is a time (600 s): 14,385 frames at 24000/1001.
+- **Commands.** `yamakan.project.create` takes an optional `frameRate`; leaving it out gives 30 fps. An unqualified rate is a validation error. All other commands are unchanged.
+- **Media at the project's rate.** These all count the project's frames:
+  - the conversion of variable-rate sources;
+  - waveform peaks, proxies and thumbnails;
+  - the reference preview's frame windows;
+  - the editor's playhead, split and timeline.
+- **Rendering.** The render plan already carries the rational profile. The render's read margin is one frame of the profile, and never less than 1/30 s, so 30 fps renders are unchanged. A 23.976 export is verified at `r_frame_rate 24000/1001` with exactly its frame count.
+- **Rollback.** Old 30 fps projects are unaffected. A 23.976 project made by this version is refused (read-only) by a version without YU-019, because its view needs schema 3.

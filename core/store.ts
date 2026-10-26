@@ -11,7 +11,14 @@ import { createReadStream, statfsSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync, backup } from "node:sqlite";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
-import { ProjectSchema, Id, AssetSchema, createProject } from "./project.ts";
+import {
+  ProjectSchema,
+  Id,
+  AssetSchema,
+  createProject,
+  frameRateOf,
+} from "./project.ts";
+import { ticksToFrames, type Rational } from "./time.ts";
 
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
@@ -1079,8 +1086,8 @@ export class ProjectStore {
     }
   }
 
-  async create(name: string, receipt?: RequestReceipt) {
-    const draft = createProject(name);
+  async create(name: string, receipt?: RequestReceipt, frameRate?: Rational) {
+    const draft = createProject(name, frameRate);
     const p = this.#commit({
       operation: "project.create",
       projectId: draft.id,
@@ -2907,7 +2914,12 @@ export class ProjectStore {
         bytes: received,
         width: metadata.width,
         height: metadata.height,
-        durationFrames: kind === "image" ? 0 : metadata.durationFrames,
+        // Frames at the project's rate, floored: a final partial frame is
+        // not addressable (30 fps gives exactly the probe's own count).
+        durationFrames:
+          kind === "image"
+            ? 0
+            : ticksToFrames(metadata.durationTicks, frameRateOf(p), "floor"),
         hasAudio:
           kind === "video"
             ? metadata.hasAudio
@@ -3055,7 +3067,12 @@ export class ProjectStore {
     const p = await this.load(id);
     const a = p.assets.find((a) => a.id === Id.parse(assetId));
     if (!a) throw new Error("Asset not found.");
-    return { file: await this.readyObjectFile(id, a), asset: a };
+    // The project's rate: the asset's durationFrames count its frames.
+    return {
+      file: await this.readyObjectFile(id, a),
+      asset: a,
+      frameRate: frameRateOf(p),
+    };
   }
   async repairAsset(projectId: string, assetId: string) {
     Id.parse(projectId);
