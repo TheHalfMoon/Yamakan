@@ -1,12 +1,56 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DIRECTOR_ENABLED,
   directorCapability,
 } from "../../core/director-flags.ts";
+import { OPERATION_LABELS } from "../../core/engines/reasons.ts";
 
 type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
 };
+
+type EngineOperation = {
+  operation: string;
+  available: boolean;
+  message: string;
+};
+
+// Which generative operations could run, each with its plain reason. A late
+// answer after unmount is dropped; a failed call shows nothing. Asked once
+// per mount (the host passes a new client object on every render).
+function EngineOperations({ client }: { client: Client }) {
+  const [operations, setOperations] = useState<EngineOperation[] | null>(null);
+  const caller = useRef(client);
+  useEffect(() => {
+    let current = true;
+    caller.current
+      .call("yamakan.engines.capabilities", {})
+      .then((result) => {
+        if (current)
+          setOperations(
+            (result as { operations: EngineOperation[] }).operations,
+          );
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, []);
+  if (!operations) return null;
+  return (
+    <ul data-testid="engine-operations" aria-label="Generative operations">
+      {operations.map((o) => (
+        <li
+          key={o.operation}
+          data-operation={o.operation}
+          data-available={String(o.available)}
+        >
+          {OPERATION_LABELS[o.operation] ?? o.operation}: {o.message}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 type Props = {
   projectId: string | null;
@@ -59,6 +103,7 @@ export function DirectorPanel({ projectId, client }: Props) {
       <p data-testid="director-unsupported">
         unsupported: {(directorCapability().unsupported ?? []).join(", ")}
       </p>
+      <EngineOperations client={client} />
       <p>
         <button
           type="button"

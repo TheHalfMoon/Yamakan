@@ -222,3 +222,20 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 
 - **Not here yet.** No GPU is admitted. No job policy requests the profile yet; the first engine worker does. POSIX refuses any profile.
 - **Rollback.** Omit the profile: workers then run under the unchanged one-process media profile.
+
+## Engine capability discovery (YU-042)
+
+`yamakan.engines.capabilities` (read-only, no parameters) reports each generative operation, whether it could run here, and a plain reason. The Director panel shows those reasons. `discoverEngineCapabilities` (core/engines/manifests.ts) decides them.
+
+- **Engines off (this build).** `ENGINE_ENABLED` is false, so discovery does no IO at all and every operation is `ENGINE_DISABLED`.
+- **Pinned manifests only.** No model is pinned in this build (`PINNED_MODEL_MANIFESTS` is empty).
+  - A pin names a model folder, its operation and the manifest's exact SHA-256.
+  - The manifest is read at its one path under the service-chosen model root, never one a request names, and it is bounded at 64 KiB.
+  - No directory is listed or scanned.
+  - Nothing is downloaded, installed or updated, and a manifest that names a source is invalid.
+- **Distinct reasons, before any inference.**
+  - `WEIGHTS_ABSENT` means: nothing pinned, no model root, a missing or unpinned manifest, an invalid manifest, a link or junction, or a missing, truncated or corrupted file. File content is hashed last, after the cheap checks.
+  - `RIGHTS_UNQUALIFIED` means the license is not accepted or commercial use is not allowed.
+  - `HARDWARE_UNQUALIFIED` means the qualification has expired, the host has too little memory, or a GPU is required.
+  - An available operation carries the manifest's measured constraints, its qualification hash and the qualification's expiry.
+- **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.
