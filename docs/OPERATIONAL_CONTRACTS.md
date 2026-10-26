@@ -202,3 +202,20 @@ Capabilities list each operation's measured constraints: resolution, fps, durati
 Adapters report bounded observations (status, cancellation, artifacts, reconcile), never canonical job state. Inputs arrive as streams the service resolves from handles, and are checked against their hashes. Outputs are stage-relative artifact handles with length and hash. The service reads them with `readArtifactVerified` (chunks of at most 1 MiB, total bounded by the declared length, re-hashed). Diagnostics are bounded and have paths and URLs redacted.
 
 `core/engines/v1-bridge.ts` runs v2 requests on the v1 fake. It lowers only server-owned recipe templates, identified by id, hash and operation. `ENGINE_ENABLED` stays false, and nothing routes v2 requests from the command surface yet.
+
+## Engine-worker process profile (YU-041)
+
+`ENGINE_WORKER_PROFILE` (core/process/owner.ts, `profileHash`) is the versioned profile a future generative worker runs under. procd's `SPAWN2` applies version 1 only.
+
+- **The job.** It admits 2 to 8 processes: the worker and its descendants. All of them stay inside one kill-on-close Job Object with no breakaway, so none outlives the job.
+- **Descendants end with the worker.** When the worker exits, its descendants are ended at once, and so is the whole job when procd or the service dies.
+- **The wall budget.** After `wallMs` (1 ms to 6 h) the whole job is ended with exit 1460, and the run reports `wallExceeded`. The budget counts from creation.
+- **Memory and output.** The profile's memory budget is the job's, and procd relays at most 64 MiB of output per job.
+- **What the token gains.** The worker keeps the media worker's restricted, low-integrity token and less-privileged AppContainer, plus the `registryRead` capability. Without that capability, process creation fails in a less-privileged AppContainer (measured on Windows 11 26300). It opens the HKLM keys that ordinary users can read, such as installed software and machine configuration. It opens no admin-only key, no HKCU value, no file and no network, and nothing in the registry can be written.
+- **Tested denials.** Every denial is checked against a positive control in the same environment:
+  - sentinel files, TCP to a local HTTP server, and DNS;
+  - process starts through WMI and Task Scheduler;
+  - registry writes, and junction folders.
+  A COM local-server denial and a breakaway denial are asserted, but they count as qualified only where their controls work.
+- **Not here yet.** No GPU is admitted. No job policy requests the profile yet; the first engine worker does. POSIX refuses any profile.
+- **Rollback.** Omit the profile: workers then run under the unchanged one-process media profile.

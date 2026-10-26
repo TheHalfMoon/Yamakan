@@ -124,36 +124,113 @@ extern "system" {
         size: *mut u32,
     ) -> i32;
 }
-// Whether a value under HKEY_CURRENT_USER can be read.
 #[cfg(windows)]
-fn reads_user_registry(subkey: &str, value: &str) -> bool {
-    use std::{ffi::OsStr, os::windows::ffi::OsStrExt, ptr::null_mut};
-    const HKEY_CURRENT_USER: isize = 0x8000_0001u32 as i32 as isize;
+#[link(name = "advapi32")]
+extern "system" {
+    fn RegSetKeyValueW(
+        key: isize,
+        subkey: *const u16,
+        value: *const u16,
+        kind: u32,
+        data: *const std::ffi::c_void,
+        size: u32,
+    ) -> i32;
+}
+#[cfg(windows)]
+fn wide(t: &str) -> Vec<u16> {
+    use std::{ffi::OsStr, os::windows::ffi::OsStrExt};
+    OsStr::new(t).encode_wide().chain(Some(0)).collect()
+}
+// HKEY_LOCAL_MACHINE for "hklm", else HKEY_CURRENT_USER.
+#[cfg(windows)]
+fn hive(name: &str) -> isize {
+    (if name == "hklm" {
+        0x8000_0002u32
+    } else {
+        0x8000_0001u32
+    }) as i32 as isize
+}
+// Whether a registry value can be read.
+#[cfg(windows)]
+fn reads_registry(root: &str, subkey: &str, value: &str) -> bool {
     const RRF_RT_ANY: u32 = 0x0000_ffff;
-    let w = |t: &str| {
-        OsStr::new(t)
-            .encode_wide()
-            .chain(Some(0))
-            .collect::<Vec<u16>>()
-    };
-    let (k, v) = (w(subkey), w(value));
+    let (k, v) = (wide(subkey), wide(value));
     let mut buffer = [0u8; 256];
     let mut size = buffer.len() as u32;
     unsafe {
         RegGetValueW(
-            HKEY_CURRENT_USER,
+            hive(root),
             k.as_ptr(),
             v.as_ptr(),
             RRF_RT_ANY,
-            null_mut(),
+            std::ptr::null_mut(),
             buffer.as_mut_ptr() as *mut _,
             &mut size,
         ) == 0
     }
 }
+// Whether a registry value can be written (creating its key).
+#[cfg(windows)]
+fn writes_registry(root: &str, subkey: &str) -> bool {
+    let (k, v) = (wide(subkey), wide("probe"));
+    let data = [1u8, 0, 0, 0];
+    unsafe {
+        RegSetKeyValueW(
+            hive(root),
+            k.as_ptr(),
+            v.as_ptr(),
+            4,
+            data.as_ptr() as *const _,
+            4,
+        ) == 0
+    }
+}
 #[cfg(not(windows))]
-fn reads_user_registry(_subkey: &str, _value: &str) -> bool {
+fn reads_registry(_root: &str, _subkey: &str, _value: &str) -> bool {
     false
+}
+#[cfg(not(windows))]
+fn writes_registry(_root: &str, _subkey: &str) -> bool {
+    false
+}
+// Whether a COM class can be activated out of process: a server started
+// outside the worker's job would be an escape.
+#[cfg(windows)]
+#[link(name = "ole32")]
+extern "system" {
+    fn CoInitializeEx(reserved: *mut std::ffi::c_void, flags: u32) -> i32;
+    fn CLSIDFromProgID(progid: *const u16, clsid: *mut [u8; 16]) -> i32;
+    fn CoCreateInstance(
+        clsid: *const [u8; 16],
+        outer: *mut std::ffi::c_void,
+        context: u32,
+        iid: *const [u8; 16],
+        out: *mut *mut std::ffi::c_void,
+    ) -> i32;
+}
+#[cfg(windows)]
+fn activates_local_server(progid: &str) -> String {
+    // IUnknown, activated with CLSCTX_LOCAL_SERVER.
+    const IID_IUNKNOWN: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0xc0, 0, 0, 0, 0, 0, 0, 0x46];
+    let mut clsid = [0u8; 16];
+    let mut out: *mut std::ffi::c_void = std::ptr::null_mut();
+    unsafe {
+        CoInitializeEx(std::ptr::null_mut(), 0);
+        let found = CLSIDFromProgID(wide(progid).as_ptr(), &mut clsid);
+        if found != 0 {
+            return format!("noclass {found:#x}");
+        }
+        let hr = CoCreateInstance(&clsid, std::ptr::null_mut(), 0x4, &IID_IUNKNOWN, &mut out);
+        if hr == 0 {
+            "created".into()
+        } else {
+            format!("denied {hr:#x}")
+        }
+    }
+}
+#[cfg(not(windows))]
+fn activates_local_server(_progid: &str) -> String {
+    "denied".into()
 }
 #[cfg(windows)]
 #[link(name = "kernel32")]
@@ -259,8 +336,15 @@ fn main() {
         "orphan" => {
             // A child left behind on purpose: the job must end it.
             let exe = env::current_exe().unwrap_or_default();
+            // It stays 300 ms after starting the child, so a test can see the
+            // child alive before the worker exits.
             match Command::new(exe).args(["sleep-ms", arg(&args, 1)]).spawn() {
-                Ok(c) => print!("{}", c.id()),
+                Ok(c) => {
+                    use std::io::Write;
+                    println!("{}", c.id());
+                    let _ = std::io::stdout().flush();
+                    thread::sleep(Duration::from_millis(300));
+                }
                 Err(_) => print!("denied"),
             }
         }
@@ -281,14 +365,35 @@ fn main() {
             ));
         }
         "reg" => {
-            print!(
-                "{}",
-                if reads_user_registry(arg(&args, 1), arg(&args, 2)) {
-                    "read"
-                } else {
-                    "denied"
+            // reg hive subkey value
+            let read = reads_registry(arg(&args, 1), arg(&args, 2), arg(&args, 3));
+            print!("{}", if read { "read" } else { "denied" });
+        }
+        "reg-write" => {
+            let written = writes_registry(arg(&args, 1), arg(&args, 2));
+            print!("{}", if written { "written" } else { "denied" });
+        }
+        "com" => {
+            print!("{}", activates_local_server(arg(&args, 1)));
+        }
+        "breakaway" => {
+            // A child that asks to leave the job (CREATE_BREAKAWAY_FROM_JOB).
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                let exe = env::current_exe().unwrap_or_default();
+                let started = Command::new(exe)
+                    .args(["sleep-ms", "100"])
+                    .creation_flags(0x0100_0000)
+                    .spawn();
+                match started {
+                    Ok(mut c) => {
+                        let _ = c.wait();
+                        print!("started")
+                    }
+                    Err(_) => print!("denied"),
                 }
-            );
+            }
         }
         "dns" => {
             print!(

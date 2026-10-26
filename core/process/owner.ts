@@ -30,16 +30,32 @@ export const ownershipMode = (): Ownership =>
 export type WorkerProfile = {
   id: "engine-worker";
   version: 1;
-  // Processes the job admits: the worker and its descendants (1..8).
+  // Processes the job admits: the worker and its descendants (2..8).
   maxProcesses: number;
-  // Wall-clock budget; the whole job is ended when it passes (exit 1460).
+  // Wall-clock budget from creation; the whole job is ended when it passes
+  // (exit 1460, reported as wallExceeded).
   wallMs: number;
+  // The whole job's committed memory (required; procd enforces it).
+  memoryBytes: number;
+  // Fixed by procd for every job, declared here so the hash names them:
+  // relayed output per job, the registry read that process creation in a
+  // less-privileged AppContainer needs (registryRead: keys under HKLM that
+  // ordinary users can read, never HKCU), no GPU, no network.
+  outputBytes: 67_108_864;
+  registry: "hklm-users-read";
+  gpu: "none";
+  network: "none";
 };
 export const ENGINE_WORKER_PROFILE: WorkerProfile = Object.freeze({
   id: "engine-worker",
   version: 1,
   maxProcesses: 4,
   wallMs: 30 * 60 * 1000,
+  memoryBytes: 4 * 1024 * 1024 * 1024,
+  outputBytes: 67_108_864,
+  registry: "hklm-users-read",
+  gpu: "none",
+  network: "none",
 });
 export const WALL_EXIT_CODE = 1460;
 export function profileHash(profile: WorkerProfile) {
@@ -50,20 +66,28 @@ export function profileHash(profile: WorkerProfile) {
         profile.version,
         profile.maxProcesses,
         profile.wallMs,
+        profile.memoryBytes,
+        profile.outputBytes,
+        profile.registry,
+        profile.gpu,
+        profile.network,
       ]),
     )
     .digest("hex");
 }
 function checkProfile(profile: WorkerProfile) {
+  const int = (n: number, min: number, max: number) =>
+    Number.isInteger(n) && n >= min && n <= max;
   if (
     profile.id !== "engine-worker" ||
     profile.version !== 1 ||
-    !Number.isInteger(profile.maxProcesses) ||
-    profile.maxProcesses < 1 ||
-    profile.maxProcesses > 8 ||
-    !Number.isInteger(profile.wallMs) ||
-    profile.wallMs < 1 ||
-    profile.wallMs > 21_600_000
+    !int(profile.maxProcesses, 2, 8) ||
+    !int(profile.wallMs, 1, 21_600_000) ||
+    !int(profile.memoryBytes, 1, 64 * 1024 * 1024 * 1024) ||
+    profile.outputBytes !== 67_108_864 ||
+    profile.registry !== "hklm-users-read" ||
+    profile.gpu !== "none" ||
+    profile.network !== "none"
   )
     throw new CommandError(
       "VALIDATION",
@@ -106,6 +130,8 @@ export type RunResult = {
   // Peak committed memory of the worker's Job Object (Windows); null where
   // no job measures it or procd could not read it.
   peakMemoryBytes: number | null;
+  // The wall budget of its profile ended the job.
+  wallExceeded: boolean;
 };
 // What every finished Windows worker reports to observers (qualification
 // measures real product paths through this, not copies of their commands).
@@ -164,7 +190,12 @@ type Pending = {
   stderr: (chunk: Buffer) => void;
   // `restored`: the worker's writable folders are back to their default
   // label and inherited access.
-  exited: (code: number, restored: boolean, peakBytes: number | null) => void;
+  exited: (
+    code: number,
+    restored: boolean,
+    peakBytes: number | null,
+    walled: boolean,
+  ) => void;
   failed: (message: string) => void;
 };
 
@@ -224,7 +255,7 @@ export class ProcessOwner {
     this.#ready = new Promise<void>((resolve, reject) => {
       const lines = createInterface({ input: child.stdout! });
       lines.on("line", (line) => {
-        const [kind, id, value, extra, peak] = line.split("\t");
+        const [kind, id, value, extra, peak, wall] = line.split("\t");
         if (kind === "READY") return resolve();
         const p = this.#pending.get(id);
         if (!p) return;
@@ -238,6 +269,7 @@ export class ProcessOwner {
             Number(value),
             extra !== "0",
             Number(peak) > 0 ? Number(peak) : null,
+            wall === "1",
           );
         else if (kind === "ERROR")
           p.failed(Buffer.from(value ?? "", "hex").toString("utf8"));
@@ -280,6 +312,16 @@ export class ProcessOwner {
         "VALIDATION",
         "Executable is not on the worker allowlist.",
       );
+    // A profile is checked before anything starts; elsewhere than Windows
+    // no profile can be enforced, so none is accepted.
+    if (options.profile) {
+      checkProfile(options.profile);
+      if (this.ownership !== "windows-job-object")
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "Worker profiles are enforced only by Windows Job Objects.",
+        );
+    }
     if (this.ownership !== "windows-job-object") return this.#runPosix(options);
     this.#active++;
     try {
@@ -297,7 +339,12 @@ export class ProcessOwner {
     let stderr = "";
     let pid = 0;
     let peakMemoryBytes: number | null = null;
+    let wallExceeded = false;
     const started = performance.now();
+    // An engine profile's memory budget is the job's, at most what the run asked.
+    const memoryBytes = options.profile
+      ? Math.min(options.profile.memoryBytes, options.memoryBytes || Infinity)
+      : (options.memoryBytes ?? 0);
     try {
       const code = await new Promise<number>((resolve, reject) => {
         const kill = () => void this.#send(`KILL\t${id}`);
@@ -325,14 +372,15 @@ export class ProcessOwner {
             options.onStderr?.(chunk);
             stderr = (stderr + chunk.toString("utf8")).slice(-limit);
           },
-          exited: (exitCode, restored, peakBytes) => {
+          exited: (exitCode, restored, peakBytes, walled) => {
             settle();
             peakMemoryBytes = peakBytes;
+            wallExceeded = walled;
             this.#report({
               executable: path.basename(executable),
               code: exitCode,
               peakMemoryBytes: peakBytes,
-              memoryLimitBytes: options.memoryBytes ?? 0,
+              memoryLimitBytes: memoryBytes,
               wallMs: performance.now() - started,
             });
             // A folder the worker left in a state procd could not undo is
@@ -358,20 +406,20 @@ export class ProcessOwner {
         });
         this.#refresh();
         options.signal?.addEventListener("abort", kill, { once: true });
-        if (options.profile) checkProfile(options.profile);
         const sent = this.#send(
           [
             ...(options.profile
               ? [
                   "SPAWN2",
                   id,
+                  String(options.profile.version),
                   String(options.profile.maxProcesses),
                   String(options.profile.wallMs),
                 ]
               : ["SPAWN", id]),
             hex(executable),
             hex(path.resolve(options.cwd)),
-            String(options.memoryBytes ?? 0),
+            String(memoryBytes),
             String(options.writable?.length ?? 0),
             ...(options.writable ?? []).map((d) => hex(path.resolve(d))),
             String(options.readable?.length ?? 0),
@@ -395,7 +443,7 @@ export class ProcessOwner {
           );
         }
       });
-      return { code, pid, stderr, peakMemoryBytes };
+      return { code, pid, stderr, peakMemoryBytes, wallExceeded };
     } finally {
       this.#pending.delete(id);
     }
@@ -440,6 +488,7 @@ export class ProcessOwner {
           pid: child.pid ?? 0,
           stderr,
           peakMemoryBytes: null,
+          wallExceeded: false,
         });
       });
     });
