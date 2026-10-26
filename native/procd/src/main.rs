@@ -3,8 +3,9 @@
 //! The service starts one procd and speaks a line protocol over its stdin and
 //! stdout. Each worker is created suspended and already inside its own Job
 //! Object (PROC_THREAD_ATTRIBUTE_JOB_LIST), so it never exists outside
-//! ownership. Jobs are KILL_ON_JOB_CLOSE, allow exactly one active process and
-//! no breakaway, and only procd holds their handles. Therefore:
+//! ownership. Jobs are KILL_ON_JOB_CLOSE, allow no breakaway, and only procd
+//! holds their handles; a media worker's job admits exactly one process, an
+//! engine worker's (SPAWN2) a few, all inside it. Therefore:
 //!   * procd dies (any cause)     -> the OS closes the job handles -> workers die;
 //!   * the service dies           -> procd's stdin closes -> procd terminates
 //!                                   every job and exits;
@@ -22,10 +23,23 @@
 //! Protocol (tab-separated; strings and data are hex-encoded):
 //!   SPAWN id exe cwd jobMemoryBytes writableCount dir... readableCount path... argc arg... envCount key value...
 //!       -> CREATED id pid       (suspended, inside its job)
+//!   SPAWN2 id profileVersion maxProcesses wallMs exe cwd ... (as SPAWN)
+//!       the engine-worker profile (YU-041), version 1 only: the job admits
+//!       up to maxProcesses (2..=8) processes, the worker and its
+//!       descendants, all inside the same job, token and AppContainer;
+//!       after wallMs (1..=21600000) the whole job is terminated (exit
+//!       1460), and when the worker exits its descendants are ended at once.
+//!       Its token also holds the registryRead capability: in a
+//!       less-privileged AppContainer, process creation fails without it
+//!       (measured on Windows 11 26300); it grants read access only to
+//!       registry keys that allow registryRead, no file and no network.
 //!   RESUME id                   -> RESUMED id
 //!   KILL id                     -> (EXITED follows)
 //!   (worker output)             -> OUT id hexChunk | ERR id hexChunk
-//!   (process end, after output) -> EXITED id exitCode restored(1|0) peakJobBytes
+//!   (process end, after output) -> EXITED id exitCode restored(1|0) peakJobBytes wall(1|0) output(1|0)
+//!   (an engine worker's output is capped at MAX_JOB_OUTPUT bytes: past it
+//!   the whole job is ended (exit 1450) and output(1) is reported; a media
+//!   worker's output is not capped)
 //!   errors                      -> ERROR id hexMessage
 //! Executables must be on the allowlist given as arguments at startup.
 
@@ -48,6 +62,16 @@ const STARTF_USESTDHANDLES: u32 = 0x0000_0100;
 const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: usize = 0x0002_0002;
 const PROC_THREAD_ATTRIBUTE_JOB_LIST: usize = 0x0002_000D;
 const JOB_OBJECT_LIMIT_ACTIVE_PROCESS: u32 = 0x0000_0008;
+// The engine-worker profile's bounds (SPAWN2).
+const MAX_PROFILE_PROCESSES: u32 = 8;
+const PROFILE_VERSION: u32 = 1;
+// Output relayed per job (stdout and stderr together).
+const MAX_JOB_OUTPUT: usize = 64 * 1024 * 1024;
+const MAX_WALL_MS: u32 = 21_600_000;
+// ERROR_TIMEOUT: the exit code of a job ended by its wall budget.
+const WALL_EXIT_CODE: u32 = 1460;
+// ERROR_NO_SYSTEM_RESOURCES: the exit code of a job ended by its output cap.
+const OUTPUT_EXIT_CODE: u32 = 1450;
 const JOB_OBJECT_LIMIT_JOB_MEMORY: u32 = 0x0000_0200;
 const JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION: u32 = 0x0000_0400;
 const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x0000_2000;
@@ -56,6 +80,7 @@ const HANDLE_FLAG_INHERIT: u32 = 0x0000_0001;
 const GENERIC_READ: u32 = 0x8000_0000;
 const OPEN_EXISTING: u32 = 3;
 const INFINITE: u32 = 0xFFFF_FFFF;
+const WAIT_TIMEOUT: u32 = 0x0000_0102;
 const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
 const MAX_COMMAND_LINE: usize = 32_766;
 const MAX_REQUEST_LINE: usize = 256 * 1024;
@@ -822,7 +847,7 @@ struct Spawned {
     stderr: Owned,
 }
 
-fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String> {
+fn spawn(id: &str, fields: &[&str], allow: &[String], max_processes: u32) -> Result<Spawned, String> {
     if fields.len() < 5 {
         return Err("SPAWN needs exe, cwd, memory, writable folders and argc".into());
     }
@@ -959,6 +984,7 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
         &cwd,
         &line,
         memory,
+        max_processes,
         &token,
         &capability,
         writable.first().map(String::as_str),
@@ -993,6 +1019,7 @@ fn launch(
     cwd: &str,
     line: &str,
     memory: usize,
+    max_processes: u32,
     token: &Owned,
     capability: &container::Sid,
     temp: Option<&str>,
@@ -1004,11 +1031,13 @@ fn launch(
             return Err(last_error("CreateJobObject"));
         }
         let mut limits = ExtendedLimitInformation::default();
-        // One process only: media workers never start children.
+        // Media workers (SPAWN) are one process and never start children;
+        // an engine worker (SPAWN2) may have a few descendants, all in this
+        // job (no breakaway), so all of them die with it.
         limits.basic.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
             | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION
             | JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
-        limits.basic.active_process_limit = 1;
+        limits.basic.active_process_limit = max_processes;
         if memory > 0 {
             limits.basic.limit_flags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
             limits.job_memory_limit = memory;
@@ -1030,12 +1059,18 @@ fn launch(
         let mut inherited = [stdin.0, stdout_write.0, stderr_write.0];
         let mut jobs = [job.0];
 
-        // The worker's AppContainer and its one enabled capability.
-        let mut capabilities = [SidAndAttributes { sid: capability.as_ptr(), attributes: container::SE_GROUP_ENABLED }];
+        // The worker's AppContainer and its enabled capabilities: its own,
+        // and for an engine worker (descendants) registryRead, without which
+        // a less-privileged AppContainer cannot create a process.
+        let registry = if max_processes > 1 { Some(container::capability_sid("registryRead")?) } else { None };
+        let mut capabilities = vec![SidAndAttributes { sid: capability.as_ptr(), attributes: container::SE_GROUP_ENABLED }];
+        if let Some(sid) = &registry {
+            capabilities.push(SidAndAttributes { sid: sid.as_ptr(), attributes: container::SE_GROUP_ENABLED });
+        }
         let mut security = container::SecurityCapabilities {
             app_container_sid: container::container_sid()?.as_ptr(),
             capabilities: capabilities.as_mut_ptr(),
-            capability_count: 1,
+            capability_count: capabilities.len() as u32,
             reserved: 0,
         };
         let mut size = 0usize;
@@ -1140,8 +1175,16 @@ fn launch(
 }
 
 /// Relays one output pipe to the service until the worker closes it.
-fn relay(out: Out, id: String, kind: &'static str, pipe: Owned) -> std::thread::JoinHandle<()> {
+fn relay(
+    out: Out,
+    id: String,
+    kind: &'static str,
+    pipe: Owned,
+    budget: Arc<std::sync::atomic::AtomicUsize>,
+    limit: usize,
+) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
+        use std::sync::atomic::Ordering;
         let pipe = pipe; // move the owned handle, not its raw field
         let mut buffer = vec![0u8; RELAY_CHUNK];
         loop {
@@ -1150,7 +1193,14 @@ fn relay(out: Out, id: String, kind: &'static str, pipe: Owned) -> std::thread::
             if ok == 0 || read == 0 {
                 break;
             }
-            send(&out, &format!("{kind}\t{id}\t{}", hex_encode(&buffer[..read as usize])));
+            // Past the job's output limit, output is read and discarded (so
+            // the worker never blocks on a full pipe) while the exit watcher
+            // ends the job and reports it.
+            let used = budget.fetch_add(read as usize, Ordering::Relaxed);
+            if used < limit {
+                let keep = (read as usize).min(limit - used);
+                send(&out, &format!("{kind}\t{id}\t{}", hex_encode(&buffer[..keep])));
+            }
         }
     })
 }
@@ -1182,8 +1232,27 @@ fn main() {
             send(&out, &format!("ERROR\t-\t{}", hex_encode(b"invalid request id")));
             continue;
         }
+        // SPAWN2 carries the engine-worker profile before the SPAWN fields.
+        let profile = if command == "SPAWN2" {
+            let number = |i: usize| parts.get(i).filter(|p| p.bytes().all(|b| b.is_ascii_digit())).and_then(|p| p.parse::<u32>().ok());
+            match (number(2), number(3), number(4)) {
+                (Some(PROFILE_VERSION), Some(p), Some(w))
+                    if (2..=MAX_PROFILE_PROCESSES).contains(&p) && (1..=MAX_WALL_MS).contains(&w) =>
+                {
+                    Some((p, w))
+                }
+                _ => {
+                    send(&out, &format!("ERROR\t{id}\t{}", hex_encode(b"bad engine-worker profile")));
+                    continue;
+                }
+            }
+        } else {
+            None
+        };
+        let (max_processes, wall_ms) = profile.unwrap_or((1, 0));
+        let fields: &[&str] = if profile.is_some() { &parts[5.min(parts.len())..] } else { &parts[2..] };
         match command {
-            "SPAWN" => {
+            "SPAWN" | "SPAWN2" => {
                 {
                     let live = workers.lock().unwrap();
                     if live.contains_key(id) || live.len() >= MAX_LIVE_WORKERS {
@@ -1191,22 +1260,53 @@ fn main() {
                         continue;
                     }
                 }
-                match spawn(id, &parts[2..], &allow) {
+                match spawn(id, fields, &allow, max_processes) {
                     Ok(spawned) => {
                         workers.lock().unwrap().insert(id.to_string(), spawned.worker);
                         send(&out, &format!("CREATED\t{id}\t{}", spawned.pid));
+                        // Only an engine worker's output is capped.
+                        let limit = if max_processes > 1 { MAX_JOB_OUTPUT } else { usize::MAX };
+                        let budget = Arc::new(std::sync::atomic::AtomicUsize::new(0));
                         let readers = [
-                            relay(Arc::clone(&out), id.to_string(), "OUT", spawned.stdout),
-                            relay(Arc::clone(&out), id.to_string(), "ERR", spawned.stderr),
+                            relay(Arc::clone(&out), id.to_string(), "OUT", spawned.stdout, Arc::clone(&budget), limit),
+                            relay(Arc::clone(&out), id.to_string(), "ERR", spawned.stderr, Arc::clone(&budget), limit),
                         ];
                         let (out, workers, id, process) =
                             (Arc::clone(&out), Arc::clone(&workers), id.to_string(), spawned.process);
                         std::thread::spawn(move || {
                             let process = process; // move the owned handle
                             let mut code = 0u32;
+                            let (mut ended_wall, mut ended_output) = (false, false);
                             unsafe {
+                                // The wall budget and the output cap end the
+                                // whole job: the worker and every descendant.
+                                let started = std::time::Instant::now();
+                                let terminate = |exit: u32| {
+                                    if let Some(worker) = workers.lock().unwrap().get(&id) {
+                                        TerminateJobObject(worker.job.0, exit);
+                                    }
+                                };
+                                if wall_ms > 0 || limit != usize::MAX {
+                                    while WaitForSingleObject(process.0, 100) == WAIT_TIMEOUT {
+                                        if !ended_output && budget.load(std::sync::atomic::Ordering::Relaxed) > limit {
+                                            ended_output = true;
+                                            terminate(OUTPUT_EXIT_CODE);
+                                        } else if !ended_wall && wall_ms > 0 && started.elapsed().as_millis() >= u128::from(wall_ms) {
+                                            ended_wall = true;
+                                            terminate(WALL_EXIT_CODE);
+                                        }
+                                    }
+                                }
                                 WaitForSingleObject(process.0, INFINITE);
                                 GetExitCodeProcess(process.0, &mut code);
+                                // The worker is gone: so are its descendants,
+                                // now, so none outlives it and the pipes they
+                                // inherited close (an empty job is a no-op).
+                                if max_processes > 1 {
+                                    if let Some(worker) = workers.lock().unwrap().get(&id) {
+                                        TerminateJobObject(worker.job.0, code);
+                                    }
+                                }
                             }
                             // Output is relayed before the exit is reported. A write
                             // end smuggled outside the job could hold a pipe open
@@ -1217,9 +1317,12 @@ fn main() {
                                 std::thread::sleep(std::time::Duration::from_millis(10));
                             }
                             for reader in readers {
-                                if !reader.is_finished() {
-                                    use std::os::windows::io::AsRawHandle;
+                                use std::os::windows::io::AsRawHandle;
+                                // A cancel lands only while the reader is in
+                                // ReadFile: repeat it until the reader ends.
+                                while !reader.is_finished() {
                                     unsafe { CancelSynchronousIo(reader.as_raw_handle() as Handle) };
+                                    std::thread::sleep(std::time::Duration::from_millis(10));
                                 }
                                 let _ = reader.join();
                             }
@@ -1261,7 +1364,21 @@ fn main() {
                                     restored &= release_label(dir);
                                 }
                             }
-                            send(&out, &format!("EXITED\t{id}\t{code}\t{}\t{peak}", u8::from(restored)));
+                            // A wall termination counts only if it ended the worker (its
+                            // code). Output past the cap was discarded, so it is always
+                            // reported, even when the worker exited before the watcher
+                            // ended the job.
+                            let walled = ended_wall && code == WALL_EXIT_CODE;
+                            let flooded = budget.load(std::sync::atomic::Ordering::Relaxed) > limit;
+                            send(
+                                &out,
+                                &format!(
+                                    "EXITED\t{id}\t{code}\t{}\t{peak}\t{}\t{}",
+                                    u8::from(restored),
+                                    u8::from(walled),
+                                    u8::from(flooded)
+                                ),
+                            );
                         });
                     }
                     Err(message) => send(&out, &format!("ERROR\t{id}\t{}", hex_encode(message.as_bytes()))),
