@@ -282,10 +282,11 @@ export function bridgeV1(
           attemptKey: v1Key,
         });
         remember(recipeOf, id, known.recipe, 4096);
-        // A newer generation runs: the one it replaces is cancelled.
-        const older = await claim.superseded;
-        if (older && "executionRef" in older)
-          await v1.cancel(older.executionRef).catch(() => {});
+        // Only the newest generation stays live; the one it replaces (or
+        // this one, if a newer one is live) is cancelled. A cancel that
+        // fails is left to reconcile: the execution's status reports it.
+        const cancel = claim.supersede(id);
+        if (cancel) await v1.cancel(cancel).catch(() => {});
         return { executionRef: id };
       });
     },

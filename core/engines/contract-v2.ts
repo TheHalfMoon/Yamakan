@@ -402,8 +402,11 @@ type SubmitResult = { executionRef: string } | { refused: RefusalReason };
 // rises (a refusal never lowers it), so an older generation is always
 // stale; the current generation replays its first result for the same
 // request, and a refusal or failure frees that generation for a retry.
-// A fresh claim reports the result it supersedes, so the adapter can
-// cancel the older execution. Fences live in memory: once workers exist,
+// The latest live execution per attempt is recorded apart from claims, so
+// refusals and failures in between never lose it: on success an adapter
+// calls supersede(), which names the older execution to cancel (or its own,
+// when a newer generation is already live). Generations are minted by the
+// service alone; a refused claim still raises the highest generation. Fences live in memory: once workers exist,
 // the durable JobSupervisor fence is authoritative, and publication of an
 // artifact is fenced by the service (generation and cancellation), not here.
 export class AttemptFence {
@@ -412,11 +415,12 @@ export class AttemptFence {
     string,
     { generation: number; hash: string; result: Promise<SubmitResult> }
   >();
+  #live = new Map<string, { generation: number; executionRef: string }>();
   claim(request: EngineRequestV2):
     | { kind: "done"; result: Promise<SubmitResult> }
     | {
         kind: "fresh";
-        superseded: Promise<SubmitResult> | null;
+        supersede(executionRef: string): string | null;
         settle(result: SubmitResult): SubmitResult;
       } {
     const key = request.attemptKey;
@@ -443,8 +447,21 @@ export class AttemptFence {
     this.#current.set(key, entry);
     return {
       kind: "fresh",
-      superseded:
-        slot && slot.generation < request.leaseGeneration ? slot.result : null,
+      // This generation's execution is live: returns the execution that
+      // must now be cancelled (an older live one, or this one if a newer
+      // generation went live first), or null.
+      supersede: (executionRef) => {
+        const live = this.#live.get(key);
+        if (live && live.generation > request.leaseGeneration)
+          return executionRef;
+        this.#live.set(key, {
+          generation: request.leaseGeneration,
+          executionRef,
+        });
+        return live && live.executionRef !== executionRef
+          ? live.executionRef
+          : null;
+      },
       settle: (r) => {
         resolve(r);
         if ("refused" in r && this.#current.get(key) === entry)

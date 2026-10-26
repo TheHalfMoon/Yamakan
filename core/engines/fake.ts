@@ -195,6 +195,8 @@ export type FakeEngineV2Options = {
   failExecutions?: boolean;
   // Called before each input is read (tests hold one back to race another).
   beforeInput?: (request: EngineRequestV2) => Promise<void>;
+  // Executions stay running (a long render) until cancelled.
+  stayRunning?: boolean;
 };
 
 const FAKE_V2_CONSTRAINTS: Constraints = {
@@ -328,19 +330,17 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
                 state: "failed",
                 diagnostic: "Simulated engine failure.",
               }
-            : { executionRef: ref, state: "succeeded", progress: 1 },
+            : options.stayRunning
+              ? { executionRef: ref, state: "running", progress: 0.5 }
+              : { executionRef: ref, state: "succeeded", progress: 1 },
           artifact,
         });
-        // A newer generation runs: the one it replaces is cancelled.
-        const older = await claim.superseded;
-        if (older && "executionRef" in older) {
-          const e = executions.get(older.executionRef);
-          if (
-            e &&
-            (e.status.state === "queued" || e.status.state === "running")
-          )
-            e.status = { executionRef: older.executionRef, state: "cancelled" };
-        }
+        // Only the newest generation stays live; the one it replaces (or
+        // this one, if a newer one is live) is cancelled.
+        const cancel = claim.supersede(ref);
+        const e = cancel ? executions.get(cancel) : undefined;
+        if (e && cancel)
+          e.status = { executionRef: cancel, state: "cancelled" };
         return { executionRef: ref };
       });
     },

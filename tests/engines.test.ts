@@ -542,6 +542,66 @@ test("a newer generation cancels the execution it replaces; unknown executions a
   );
   assert.ok("executionRef" in old && "executionRef" in fresh);
   assert.notEqual(old.executionRef, fresh.executionRef);
+  // A refused generation in between does not lose the older live one.
+  const engine = createFakeEngineV2();
+  const one = await engine.submit(
+    textToVideo({ attemptKey: "live", leaseGeneration: 1 }),
+    ctx,
+  );
+  assert.ok("executionRef" in one);
+  assert.deepEqual(
+    await engine.submit(
+      textToVideo({
+        attemptKey: "live",
+        leaseGeneration: 2,
+        controls: { nope: 1 },
+      }),
+      ctx,
+    ),
+    { refused: "CONTROL_UNSUPPORTED" },
+  );
+  const three = await engine.submit(
+    textToVideo({ attemptKey: "live", leaseGeneration: 3 }),
+    ctx,
+  );
+  assert.ok("executionRef" in three);
+  assert.equal((await engine.status(one.executionRef)).state, "cancelled");
+  assert.equal((await engine.status(three.executionRef)).state, "succeeded");
+  // A long-running older execution is cancelled when a newer one runs.
+  const long = createFakeEngineV2({ stayRunning: true });
+  const first = await long.submit(
+    textToVideo({ attemptKey: "long", leaseGeneration: 1 }),
+    ctx,
+  );
+  assert.ok("executionRef" in first);
+  assert.equal((await long.status(first.executionRef)).state, "running");
+  const second = await long.submit(
+    textToVideo({ attemptKey: "long", leaseGeneration: 2 }),
+    ctx,
+  );
+  assert.ok("executionRef" in second);
+  assert.equal((await long.status(first.executionRef)).state, "cancelled");
+  assert.equal((await long.status(second.executionRef)).state, "running");
+  // A stuck older generation never holds up the newer one.
+  const stuck = createFakeEngineV2({
+    beforeInput: (r) =>
+      r.leaseGeneration === 1 ? new Promise(() => {}) : Promise.resolve(),
+  });
+  void stuck.submit(
+    imageToVideo({ attemptKey: "stuck", leaseGeneration: 1 }),
+    ctx,
+  );
+  const newer = await Promise.race([
+    stuck.submit(
+      imageToVideo({ attemptKey: "stuck", leaseGeneration: 2 }),
+      ctx,
+    ),
+    new Promise((r) => setTimeout(() => r("hung"), 2000)),
+  ]);
+  assert.ok(
+    typeof newer === "object" && newer && "executionRef" in newer,
+    String(newer),
+  );
   assert.deepEqual(await bridged.requestCancel("never-submitted"), {
     requested: false,
     localProcessExited: false,
