@@ -22,27 +22,21 @@ export type { DocumentRef } from "./document-ref.ts";
 
 /**
  * AG-DOCS: user-visible document persistence (v5 writes from the UI, CLI
- * and agents) stays off until YU-010…YU-015 qualify together and a reviewed
- * activation receipt exists. The store implements and tests the path; the
- * command surface refuses while this is false.
+ * and agents). On since YU-010…YU-015 qualified together; the activation
+ * receipt is docs/evidence/ultimate/receipts/AG-DOCS.json.
  */
-export const CREATIVE_DOCUMENTS_ENABLED = false;
+export const CREATIVE_DOCUMENTS_ENABLED = true;
 
 /**
  * Whether this service process accepts creative document writes: the
- * build's AG-DOCS flag, or an operator's qualification run started with
- * YAMAKAN_AG_DOCS_QUALIFICATION=1 (real-browser group tests need the path
- * live before activation). The switch is read from the service's own
- * environment only, is never set by the launcher or bundle, and the
- * service announces it at startup. No request can change it.
+ * build's AG-DOCS flag, unless an operator turned writes off again with
+ * YAMAKAN_AG_DOCS_OFF=1 (rollback without a rebuild; stored documents stay
+ * readable and keep their references). The switch is read from the
+ * service's own environment only, the service announces it at startup, and
+ * no request can change it.
  */
 export function creativeDocumentsEnabled(): boolean {
-  return (
-    CREATIVE_DOCUMENTS_ENABLED ||
-    // Never in an installed bundle (YAMAKAN_BUNDLE_INSTALL marks one).
-    (process.env.YAMAKAN_AG_DOCS_QUALIFICATION === "1" &&
-      !process.env.YAMAKAN_BUNDLE_INSTALL)
-  );
+  return CREATIVE_DOCUMENTS_ENABLED && process.env.YAMAKAN_AG_DOCS_OFF !== "1";
 }
 
 export type ValidatedDocument = {

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // YU-011 TesterArmy e2e: the Studio canvas journey against the real local
 // Yamakan service and installed Microsoft Edge, with a hard service kill
-// between saving and reopening. Afterwards the workspace is checked
-// independently of the browser. Test-only; never packaged. No model, no
+// between saving and reopening, then (AG-DOCS group, YU-014) a backup
+// restored into a new workspace where the canvas reopens again. Afterwards
+// each workspace is checked independently of the browser. Test-only; never packaged. No model, no
 // telemetry, no browser download, no hosted service.
 import { fork, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -31,13 +32,12 @@ const stateFile = join(root, "journey-state.json");
 const failures = [];
 const log = (line) => process.stdout.write(`STUDIO-E2E ${line}\n`);
 
-async function startService() {
+async function startService(ws = workspace) {
   const child = fork(join(repo, "server", "main.ts"), [], {
     env: {
       ...process.env,
-      YAMAKAN_WORKSPACE: workspace,
+      YAMAKAN_WORKSPACE: ws,
       YAMAKAN_PORT: String(port),
-      YAMAKAN_AG_DOCS_QUALIFICATION: "1",
     },
     silent: true,
     windowsHide: true,
@@ -56,10 +56,9 @@ async function startService() {
     child.stdout.on("data", check);
     child.once("exit", (code) => reject(new Error(`service exited ${code}: ${out}`)));
   });
-  if (!out.includes("QUALIFICATION RUN")) failures.push("the service did not announce the qualification switch");
   const { writeLaunchLink } = await import(pathToFileURL(join(repo, "core", "launch.ts")).href);
-  await writeLaunchLink(workspace, url);
-  const launch = readFileSync(join(workspace, "launch"), "utf8").split("\n")[0].trim();
+  await writeLaunchLink(ws, url);
+  const launch = readFileSync(join(ws, "launch"), "utf8").split("\n")[0].trim();
   return { child, launch, output: () => out };
 }
 
@@ -134,6 +133,7 @@ async function endBrowsers() {
 }
 
 let service;
+let restoredRoot = null;
 try {
   service = await startService();
   log("phase 1: create, draw, save, conflicting save, reload");
@@ -150,8 +150,27 @@ try {
   if (second !== 0) failures.push(`phase 2 exited ${second}`);
   await endBrowsers();
 
-  // Independent of the browser: what the workspace holds.
-  const db = new DatabaseSync(join(workspace, "workspace.sqlite"), { readOnly: true });
+  // Phase 3 (AG-DOCS group): a backup through the service, restored into a
+  // new workspace; a service on that workspace reopens the same canvas.
+  const { YamakanClient } = await import(pathToFileURL(join(repo, "sdk", "client.ts")).href);
+  const token = readFileSync(join(workspace, "token"), "utf8").trim();
+  const client = new YamakanClient({ baseUrl: url, token });
+  const backup = await client.call("yamakan.workspace.backup", {});
+  if (backup.creative !== "complete") failures.push(`backup is not creatively complete: ${JSON.stringify(backup)}`);
+  const restored = await client.call("yamakan.workspace.restore", { backupId: backup.backupId });
+  if (restored.creative !== "complete") failures.push(`restore is not creatively complete: ${restored.creative}`);
+  service.child.send?.("shutdown");
+  await once(service.child, "exit");
+  log(`restored into a new workspace; starting a service there`);
+  service = await startService(restored.root);
+  const third = await runPhase("studio-reopen.e2e.ts", service.launch);
+  if (third !== 0) failures.push(`phase 3 (restored workspace) exited ${third}`);
+  await endBrowsers();
+  restoredRoot = restored.root;
+
+  // Independent of the browser: what each workspace holds.
+  for (const ws of [workspace, restoredRoot]) {
+  const db = new DatabaseSync(join(ws, "workspace.sqlite"), { readOnly: true });
   try {
     const head = db
       .prepare("SELECT s.bytes FROM snapshots s JOIN projects p ON p.snapshot_hash = s.hash")
@@ -166,7 +185,7 @@ try {
     const bitmaps = db.prepare("SELECT project_id, digest, byte_length FROM studio_bitmaps").all();
     if (bitmaps.length === 0) failures.push("no Studio bitmap was stored");
     for (const b of bitmaps) {
-      const file = join(workspace, "projects", b.project_id, "objects", "sha256", b.digest.slice(0, 2), b.digest);
+      const file = join(ws, "projects", b.project_id, "objects", "sha256", b.digest.slice(0, 2), b.digest);
       const bytes = existsSync(file) ? readFileSync(file) : null;
       if (!bytes || createHash("sha256").update(bytes).digest("hex") !== b.digest || bytes.length !== b.byte_length)
         failures.push(`stored bitmap ${b.digest} is missing or does not match its digest`);
@@ -177,7 +196,7 @@ try {
       failures.push("the saved canvas does not name stored bitmaps");
     const receiving = db.prepare("SELECT count(*) AS n FROM document_uploads WHERE state = 'receiving'").get().n;
     if (receiving !== 0) failures.push(`${receiving} uploads left receiving`);
-    writeFileSync(
+    if (ws === workspace) writeFileSync(
       join(evidence, "summary.json"),
       JSON.stringify(
         {
@@ -185,6 +204,7 @@ try {
           browser: "Microsoft Edge (installed), headless, over CDP",
           runner: "TesterArmy e2e 0.20.0 + @e2e-dev/web 0.14.0 (no model, telemetry disabled)",
           serviceKilledBetweenPhases: true,
+          restoredWorkspaceReopened: true,
           headFormatVersion: project?.formatVersion ?? null,
           documents: docs.length,
           storedBitmaps: bitmaps.length,
@@ -198,9 +218,10 @@ try {
         2,
       ) + "\n",
     );
-    log(`workspace: v${project?.formatVersion} project, ${docs.length} Studio document, ${bitmaps.length} stored bitmaps, canvas names ${named.length}`);
+    log(`${ws === workspace ? "workspace" : "restored workspace"}: v${project?.formatVersion} project, ${docs.length} Studio document, ${bitmaps.length} stored bitmaps, canvas names ${named.length}`);
   } finally {
     db.close();
+  }
   }
 } catch (e) {
   failures.push(e instanceof Error ? e.message : String(e));

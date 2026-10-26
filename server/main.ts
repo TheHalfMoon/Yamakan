@@ -583,9 +583,9 @@ const server = createServer(async (req, res) => {
 server.requestTimeout = 0;
 server.setTimeout(120_000);
 server.listen(port, "127.0.0.1", () => {
-  if (creativeDocumentsEnabled() && !CREATIVE_DOCUMENTS_ENABLED)
+  if (CREATIVE_DOCUMENTS_ENABLED && !creativeDocumentsEnabled())
     console.warn(
-      "QUALIFICATION RUN: creative document persistence (AG-DOCS) is enabled by YAMAKAN_AG_DOCS_QUALIFICATION and is not yet qualified for use.",
+      "Creative document saving (AG-DOCS) is turned off by YAMAKAN_AG_DOCS_OFF; stored documents stay readable.",
     );
   console.log(
     `Yamakan is running at ${origin}; workspace ${root}\nRun npm run open (or your Start-menu shortcut) to sign in in the browser.`,

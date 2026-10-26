@@ -365,17 +365,20 @@ test("canvas media by URL is refused, while text that looks like a URL is kept",
   );
 });
 
-test("the qualification switch never applies in an installed bundle", async () => {
+test("AG-DOCS is on, in an installed bundle too, unless the operator turns it off", async () => {
   const { creativeDocumentsEnabled } = await import("../core/documents.ts");
   const saved = { ...process.env };
   try {
-    delete process.env.YAMAKAN_AG_DOCS_QUALIFICATION;
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
     delete process.env.YAMAKAN_BUNDLE_INSTALL;
-    assert.equal(creativeDocumentsEnabled(), false);
-    process.env.YAMAKAN_AG_DOCS_QUALIFICATION = "1";
     assert.equal(creativeDocumentsEnabled(), true);
     process.env.YAMAKAN_BUNDLE_INSTALL = "C:/Program Files/Yamakan";
+    assert.equal(creativeDocumentsEnabled(), true);
+    process.env.YAMAKAN_AG_DOCS_OFF = "1";
     assert.equal(creativeDocumentsEnabled(), false);
+    // Only exactly "1" turns it off.
+    process.env.YAMAKAN_AG_DOCS_OFF = "true";
+    assert.equal(creativeDocumentsEnabled(), true);
   } finally {
     process.env = saved;
   }

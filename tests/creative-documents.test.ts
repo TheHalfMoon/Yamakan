@@ -105,8 +105,8 @@ async function png(dir: string, color: string) {
   return readFile(file);
 }
 
-test("AG-DOCS stays off and the workspace schema adds document tables", async () => {
-  assert.equal(CREATIVE_DOCUMENTS_ENABLED, false);
+test("AG-DOCS is on and the workspace schema adds document tables", async () => {
+  assert.equal(CREATIVE_DOCUMENTS_ENABLED, true);
   assert.equal(WORKSPACE_SCHEMA_VERSION, 12);
   const { db } = await workspace();
   const tables = (

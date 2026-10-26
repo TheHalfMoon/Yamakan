@@ -499,7 +499,7 @@ test("the route refuses bad headers and oversize before reading, and a cut conne
   stage(store, project.id, studioBytes("B"));
 });
 
-test("with AG-DOCS off the route and the commit command refuse before any work", async () => {
+test("with AG-DOCS turned off the route and the commit command refuse before any work", async () => {
   const { store, project } = await workspace();
   const port = await stagingServer(store, false);
   const { json } = await post(port, project.id, studioBytes());
@@ -509,18 +509,23 @@ test("with AG-DOCS off the route and the commit command refuse before any work",
     queue: {},
     principal: principals["local-client"],
   } as never;
-  await refused(
-    execute(ctx, "yamakan.document.commit", {
-      projectId: project.id,
-      expectedRevision: 0,
-      documentId: randomUUID(),
-      kind: "studio",
-      schemaVersion: 1,
-      expectedContentHash: null,
-      source: { contentHash: "a".repeat(64) },
-    }),
-    "CAPABILITY_UNAVAILABLE",
-  );
+  process.env.YAMAKAN_AG_DOCS_OFF = "1";
+  try {
+    await refused(
+      execute(ctx, "yamakan.document.commit", {
+        projectId: project.id,
+        expectedRevision: 0,
+        documentId: randomUUID(),
+        kind: "studio",
+        schemaVersion: 1,
+        expectedContentHash: null,
+        source: { contentHash: "a".repeat(64) },
+      }),
+      "CAPABILITY_UNAVAILABLE",
+    );
+  } finally {
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
+  }
 });
 
 test("a body dripped slower than the upload deadline is cut off and keeps nothing", async () => {

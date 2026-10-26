@@ -197,11 +197,11 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Report whether this service accepts creative document writes (AG-DOCS), and whether that is a qualification run.",
+      "Report whether this service accepts creative document writes (AG-DOCS), and whether an operator turned them off.",
     input: z.object({}).strict(),
     run: () => ({
       available: creativeDocumentsEnabled(),
-      qualification: creativeDocumentsEnabled() && !CREATIVE_DOCUMENTS_ENABLED,
+      turnedOff: CREATIVE_DOCUMENTS_ENABLED && !creativeDocumentsEnabled(),
     }),
   }),
   "yamakan.document.commit": define({
