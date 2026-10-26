@@ -1,0 +1,68 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "f614882",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-090",
+  "objective": "Build benchmark recording and analysis harness without outputs",
+  "branch": "feat/yu-090-benchmark-harness",
+  "mergedPr": 104,
+  "headCommit": "77a94fb",
+  "mergeCommit": "2baa695c5050bd479875800265c6c8ef5120724c",
+  "deviations": [
+    "Target scripts/benchmark-ultimate.mjs is scripts/benchmark-ultimate.ts (the repository's scripts are TypeScript run by Node's type stripping); the analysis lives in core/quality/benchmark.ts for testability",
+    "Rater effects crossed across prompts are not modelled (prompt-cluster bootstrap with raters and seeds nested within prompt); recorded in the protocol as a version 1 limitation"
+  ],
+  "protocol": {
+    "file": "docs/evidence/ultimate/benchmark-protocol.json",
+    "version": "1.1.0",
+    "sha256": "6d7608dac61d766e657e442dcc8ad77763e7a8d16355c5fc94a63f62cacfe2cb"
+  },
+  "tests": {
+    "files": ["tests/benchmark-harness.test.ts"],
+    "result": "19/19. Known results: exact hand-computed estimate; true 0.7 wins and 0.3 loses; 95% interval covers the truth in >= 50 of 60 synthetic studies. Prompt-clustered interval > 3x naive width (no win claimed). Each integrity problem blocks a label (missing trials, removed retries, retry after success, undeclared seeds, duplicate ids, pairs not showing deciding trials, missing/excess/inattentive votes, mixed modality, missing floor, missing/expired consent). Intention to treat; first attempt vs best within budget; task-success difference; MATCHES rules; Holm family; success floor; consent registry; Holm/Wilson/quantile exactness; blinding; strict records with no credentials."
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness and statistics review",
+      "judge": "session model subagent",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 6,
+        "applied": 6,
+        "finalRound": "clean (one stale comment noted)"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": { "mustFix": 1, "applied": 1, "finalRound": "clean" }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "2baa695c5050bd479875800265c6c8ef5120724c",
+    "ci": "PR exact head 77a94fb: qualify, qualify-windows-r8, otio-oracle success; push run on 2baa695: success",
+    "windows": "detached 2baa695: lint, provenance, build pass; Studio 1975/1975; Edge E2E pass; TesterArmy PASSED; CLI prints protocol 1.1.0. npm test had 14 timeout failures with the host at 82% CPU from other applications (and a concurrent typecheck); the 10 affected files re-run one at a time: 85/85 pass."
+  },
+  "limitations": [
+    "No benchmark has been run: every comparative outcome stays NOT TESTED",
+    "Rater effects crossed across prompts are not modelled",
+    "The key heuristic misses lower-case-only or two-class secrets that match no known prefix",
+    "costMicros and interventionSeconds are recorded but version 1 analyses only the primary endpoint",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
