@@ -29,6 +29,11 @@ import { isLegacyWorkspace } from "../core/migrate.ts";
 import { closeWorkers } from "../core/process/workers.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import {
+  assetThumbnail,
+  closeProxies,
+  proxyFile,
+} from "../core/media/proxies.ts";
+import {
   assetPeakTile,
   PEAK_TILE,
   PEAKS_PER_SECOND,
@@ -154,10 +159,11 @@ function sameToken(value: string, expected: string) {
     b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-// Media reads (asset bytes and their waveform peaks, previews, export
+// Media reads (asset bytes, their waveform peaks, proxies and thumbnails,
+// previews, export
 // downloads) are the only routes the media key opens.
 const MEDIA_ROUTE =
-  /^\/api\/v1\/(projects\/[^/]+\/(assets\/[^/]+(\/peaks)?|preview)|jobs\/[^/]+\/artifact)$/;
+  /^\/api\/v1\/(projects\/[^/]+\/(assets\/[^/]+(\/(peaks|proxy|thumbnail))?|preview)|jobs\/[^/]+\/artifact)$/;
 function authenticate(
   req: import("node:http").IncomingMessage,
   url: URL,
@@ -512,6 +518,47 @@ const server = createServer(async (req, res) => {
         res.end(Buffer.from(tile.peaks));
         return;
       }
+      // Edit proxies and thumbnails (YU-017): rebuildable, never the original.
+      const proxyMatch =
+        /^\/api\/v1\/projects\/([^/]+)\/assets\/([^/]+)\/proxy$/.exec(
+          url.pathname,
+        );
+      if (req.method === "GET" && proxyMatch) {
+        authorize(principal, "yamakan.project.open");
+        const file = await proxyFile(store, proxyMatch[1], proxyMatch[2]);
+        res.setHeader("Cache-Control", "private, no-cache");
+        await media(file, "video/mp4");
+        return;
+      }
+      const thumbnailMatch =
+        /^\/api\/v1\/projects\/([^/]+)\/assets\/([^/]+)\/thumbnail$/.exec(
+          url.pathname,
+        );
+      if (req.method === "GET" && thumbnailMatch) {
+        authorize(principal, "yamakan.project.open");
+        const raw = url.searchParams.get("index");
+        if (raw === null || !/^\d{1,4}$/.test(raw))
+          throw new CommandError("VALIDATION", "index must be a whole number.");
+        const left = new AbortController();
+        res.once("close", () => {
+          if (!res.writableFinished) left.abort();
+        });
+        const shot = await assetThumbnail(
+          store,
+          thumbnailMatch[1],
+          thumbnailMatch[2],
+          Number(raw),
+          left.signal,
+        );
+        res.writeHead(200, {
+          "Content-Type": "image/jpeg",
+          "Content-Length": String(shot.bytes.length),
+          "Cache-Control": "private, max-age=86400, immutable",
+          "X-Thumbnail-Cache": shot.cached ? "hit" : "miss",
+        });
+        res.end(shot.bytes);
+        return;
+      }
       const asset = /^\/api\/v1\/projects\/([^/]+)\/assets\/([^/]+)$/.exec(
         url.pathname,
       );
@@ -604,7 +651,11 @@ server.listen(port, "127.0.0.1", () => {
 const close = async (code = 0) => {
   if (closing) return;
   closing = true;
-  const drained = Promise.all([api.queue.close(), closePreviews()]);
+  const drained = Promise.all([
+    api.queue.close(),
+    closePreviews(),
+    closeProxies(),
+  ]);
   const stopped = new Promise<void>((resolve) => server.close(() => resolve()));
   await drained;
   await stopped;
