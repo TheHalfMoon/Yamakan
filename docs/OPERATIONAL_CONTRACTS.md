@@ -192,3 +192,13 @@ A comparison has exactly one system in slot A and one in slot B (two different s
 ## Versioned qualification policy
 
 T1 defines a server-owned policy; T4 freezes its hash and hardware/fixture profile before media qualification, and T8 freezes parity/latency thresholds before preview qualification. Initial proposed caps: one active decode/render worker, 128 queued jobs, 4 GiB per imported file, 2-hour duration, 16 streams, 3840×2160 moving-video dimensions, 100 megapixels for still inputs, 30-second probe wall time, 1 GiB worker memory and 1 MiB retained diagnostic output. Export wall time is bounded by the frozen duration/profile multiplier plus startup margin. All are qualification candidates, not demonstrated supported limits; probe failures are safe failures. Bind request/snapshot byte maxima, disk-reserve calculation, decoder demuxer/subresource allowlists and total staging/cache quotas to the same policy. A project cannot raise limits. Record exact measured p95 limits before a gate can pass; weakening a frozen release threshold needs independent review and founder release-policy approval.
+
+## Generative engine adapter v2 (YU-040, engines off)
+
+`core/engines/contract-v2.ts` defines operation requests (`textToVideo`, `imageToVideo`, `videoEdit`, `transcribe`, `enhance`), each with its own strict schema. Exact input roles and media types are enforced. Inputs are immutable asset versions by id and SHA-256, and no graph, model class, plugin, URL or path is accepted. Each request carries the recipe id and hash, the model manifest hash, the attempt key, the lease generation, the deadline and the resource policy hash.
+
+Capabilities list each operation's measured constraints: resolution, fps, duration, audio and the named controls honoured. A request is checked against them before any worker is spawned; refusals use the reason codes `ENGINE_DISABLED`, `WEIGHTS_ABSENT`, `HARDWARE_UNQUALIFIED`, `RIGHTS_UNQUALIFIED`, `CONTROL_UNSUPPORTED`, `OUTPUT_UNSUPPORTED`, `RECIPE_UNKNOWN`, `STALE_ATTEMPT` and `INVALID_REQUEST`. A lease generation below the highest seen for its attempt key is refused, and the same generation replays its execution.
+
+Adapters report bounded observations (status, cancellation, artifacts, reconcile), never canonical job state. Inputs arrive as streams the service resolves from handles, and are checked against their hashes. Outputs are stage-relative artifact handles with length and hash, read in chunks of at most 1 MiB for the service to re-hash before publishing.
+
+`core/engines/v1-bridge.ts` runs v2 requests on the v1 fake. It lowers only server-owned recipe templates, identified by id, hash and operation. `ENGINE_ENABLED` stays false, and nothing routes v2 requests from the command surface yet.

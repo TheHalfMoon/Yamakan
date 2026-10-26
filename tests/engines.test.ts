@@ -7,7 +7,22 @@ import {
   ENGINE_ENABLED,
   engineAbsentCapability,
 } from "../core/engines/contract.ts";
-import { createFakeEngine } from "../core/engines/fake.ts";
+import { createFakeEngine, createFakeEngineV2 } from "../core/engines/fake.ts";
+import {
+  ENGINE_CONTRACT_V2,
+  ENGINE_V2_LIMITS,
+  absentCapabilitiesV2,
+  parseRequestV2,
+  type AssetRef,
+  type EngineAdapterV2,
+  type EngineContextV2,
+  type EngineRequestV2,
+} from "../core/engines/contract-v2.ts";
+import {
+  SERVER_RECIPES,
+  bridgeV1,
+  recipeHash,
+} from "../core/engines/v1-bridge.ts";
 
 const graph = {
   nodes: {
@@ -108,4 +123,272 @@ test("engine-absent capability disables the feature with a reason", () => {
   const absent = engineAbsentCapability("no hardware");
   assert.equal(absent.available, false);
   assert.equal(absent.reason, "no hardware");
+});
+
+// ---------------------------------------------------------------------------
+// YU-040: EngineAdapter v2 — operation requests, handles, the v1 bridge.
+// ---------------------------------------------------------------------------
+const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
+const TICKS = 705_600_000;
+const zeros = "0".repeat(64);
+const textToVideo = (extra: Record<string, unknown> = {}): EngineRequestV2 =>
+  parseRequestV2({
+    contract: ENGINE_CONTRACT_V2,
+    operation: "textToVideo",
+    recipeId: "fake.textToVideo.v1",
+    recipeHash: recipeHash(SERVER_RECIPES[0]!),
+    modelManifestHash: zeros,
+    prompt: "A lighthouse at dusk",
+    inputs: [],
+    output: {
+      kind: "video",
+      width: 640,
+      height: 360,
+      fps: { num: 30, den: 1 },
+      durationTicks: 2 * TICKS,
+      audio: false,
+    },
+    attemptKey: "attempt-1",
+    leaseGeneration: 1,
+    deadlineMs: 60_000,
+    resourcePolicyHash: zeros,
+    ...extra,
+  });
+const imageToVideo = (extra: Record<string, unknown> = {}) =>
+  parseRequestV2({
+    ...textToVideo(),
+    operation: "imageToVideo",
+    recipeId: "fake.imageToVideo.v1",
+    recipeHash: recipeHash(SERVER_RECIPES[1]!),
+    inputs: [{ role: "firstFrame", asset: imageRef }],
+    ...extra,
+  });
+const video = (over: Record<string, unknown>) => ({
+  kind: "video",
+  width: 640,
+  height: 360,
+  fps: { num: 30, den: 1 },
+  durationTicks: TICKS,
+  audio: false,
+  ...over,
+});
+// The service side: assets resolved to bounded streams by handle.
+const image = Buffer.from(Array.from({ length: 5000 }, (_, i) => i % 251));
+const imageRef: AssetRef = {
+  assetVersionId: "asset-1",
+  sha256: sha(image),
+  mediaType: "image/png",
+};
+const context = (
+  assets = new Map([[imageRef.assetVersionId, image]]),
+): EngineContextV2 & { opened: number } => {
+  const ctx = {
+    opened: 0,
+    async *openAsset(asset: AssetRef) {
+      ctx.opened++;
+      const bytes = assets.get(asset.assetVersionId);
+      if (!bytes) throw new Error("Unknown asset.");
+      for (let i = 0; i < bytes.length; i += 1024)
+        yield bytes.subarray(i, i + 1024);
+    },
+  };
+  return ctx;
+};
+async function drain(adapter: EngineAdapterV2, ref: string, handle: string) {
+  const hash = createHash("sha256");
+  let bytes = 0;
+  let largest = 0;
+  for await (const chunk of adapter.readArtifact(ref, handle)) {
+    bytes += chunk.byteLength;
+    largest = Math.max(largest, chunk.byteLength);
+    hash.update(chunk);
+  }
+  return { bytes, largest, sha256: hash.digest("hex") };
+}
+
+test("v2 requests are strict per operation: no graph, URL, path, class or plugin", () => {
+  const base = textToVideo();
+  for (const extra of [
+    { graph: { nodes: {} } },
+    { url: "https://example.com/model" },
+    { path: "C:/models/x.safetensors" },
+    { class_type: "KSampler" },
+    { plugin: "custom_nodes/evil" },
+  ])
+    assert.throws(() => parseRequestV2({ ...base, ...extra }));
+  // Inputs are immutable assets by id and hash, never paths.
+  assert.throws(() =>
+    imageToVideo({
+      inputs: [
+        {
+          role: "firstFrame",
+          asset: { ...imageRef, assetVersionId: "../../etc/passwd" },
+        },
+      ],
+    }),
+  );
+  // Roles and media are exact per operation.
+  assert.throws(() =>
+    parseRequestV2({
+      ...base,
+      inputs: [{ role: "firstFrame", asset: imageRef }],
+    }),
+  );
+  assert.throws(() =>
+    imageToVideo({
+      inputs: [
+        { role: "firstFrame", asset: { ...imageRef, mediaType: "video/mp4" } },
+      ],
+    }),
+  );
+  assert.throws(() =>
+    parseRequestV2({ ...base, operation: "transcribe", output: base.output }),
+  );
+});
+
+test("an engine-less build reports every operation disabled and runs nothing", async () => {
+  assert.equal(ENGINE_ENABLED, false);
+  const caps = absentCapabilitiesV2();
+  assert.equal(caps.length, 5);
+  assert.ok(caps.every((c) => !c.available && c.reason === "ENGINE_DISABLED"));
+  const engine = createFakeEngineV2({
+    unavailable: { textToVideo: "WEIGHTS_ABSENT" },
+  });
+  const ctx = context();
+  assert.deepEqual(await engine.submit(textToVideo(), ctx), {
+    refused: "WEIGHTS_ABSENT",
+  });
+  assert.equal(engine.spawned(), 0);
+  assert.equal(ctx.opened, 0);
+});
+
+test("unsupported controls and outputs fail before any worker is spawned", async () => {
+  const engine = createFakeEngineV2();
+  const ctx = context();
+  const cases: [EngineRequestV2, string][] = [
+    [textToVideo({ controls: { cameraOrbit: 1 } }), "CONTROL_UNSUPPORTED"],
+    [
+      textToVideo({ output: video({ width: 1920, height: 1080 }) }),
+      "OUTPUT_UNSUPPORTED",
+    ],
+    [
+      textToVideo({ output: video({ fps: { num: 25, den: 1 } }) }),
+      "OUTPUT_UNSUPPORTED",
+    ],
+    [textToVideo({ output: video({ audio: true }) }), "OUTPUT_UNSUPPORTED"],
+    [
+      textToVideo({ output: video({ durationTicks: 11 * TICKS }) }),
+      "OUTPUT_UNSUPPORTED",
+    ],
+  ];
+  for (const [request, reason] of cases)
+    assert.deepEqual(await engine.submit(request, ctx), { refused: reason });
+  assert.equal(engine.spawned(), 0);
+  // A supported control runs.
+  const ran = await engine.submit(
+    textToVideo({ controls: { guidance: 3 } }),
+    ctx,
+  );
+  assert.ok("executionRef" in ran);
+  assert.equal(engine.spawned(), 1);
+});
+
+test("artifacts are read through bounded handles, and inputs are hash-checked streams", async () => {
+  const engine = createFakeEngineV2({
+    artifactBytes: 3 * ENGINE_V2_LIMITS.chunkBytes + 17,
+  });
+  const ctx = context();
+  const submitted = await engine.submit(imageToVideo(), ctx);
+  assert.ok("executionRef" in submitted);
+  assert.equal(ctx.opened, 1);
+  const [artifact] = await engine.enumerateArtifacts(submitted.executionRef);
+  assert.equal(artifact!.handle, "output.mp4");
+  const read = await drain(engine, submitted.executionRef, artifact!.handle);
+  assert.equal(read.bytes, artifact!.byteLength);
+  assert.equal(read.sha256, artifact!.sha256);
+  assert.ok(read.largest <= ENGINE_V2_LIMITS.chunkBytes, String(read.largest));
+  // An input whose bytes do not match its recorded hash never runs.
+  const tampered = context(
+    new Map([[imageRef.assetVersionId, Buffer.from("other bytes")]]),
+  );
+  assert.deepEqual(
+    await engine.submit(imageToVideo({ attemptKey: "attempt-2" }), tampered),
+    { refused: "INVALID_REQUEST" },
+  );
+  // Handles never name anything else.
+  await assert.rejects(
+    drain(engine, submitted.executionRef, "../workspace.sqlite"),
+  );
+});
+
+test("stale attempts are fenced; the same generation replays its execution", async () => {
+  for (const engine of [createFakeEngineV2(), bridgeV1(createFakeEngine())]) {
+    const ctx = context();
+    const first = await engine.submit(textToVideo({ leaseGeneration: 2 }), ctx);
+    assert.ok("executionRef" in first);
+    assert.deepEqual(
+      await engine.submit(textToVideo({ leaseGeneration: 2 }), ctx),
+      first,
+    );
+    assert.deepEqual(
+      await engine.submit(textToVideo({ leaseGeneration: 1 }), ctx),
+      { refused: "STALE_ATTEMPT" },
+    );
+  }
+});
+
+test("v1 parity: the bridge lowers only server recipes and reports what the v2 fake reports", async () => {
+  const bridged = bridgeV1(createFakeEngine());
+  const native = createFakeEngineV2();
+  const ctx = context();
+  const viaBridge = await bridged.submit(textToVideo(), ctx);
+  const viaNative = await native.submit(textToVideo(), ctx);
+  assert.ok("executionRef" in viaBridge && "executionRef" in viaNative);
+  assert.equal(
+    (await bridged.status(viaBridge.executionRef)).state,
+    "succeeded",
+  );
+  assert.equal(
+    (await native.status(viaNative.executionRef)).state,
+    "succeeded",
+  );
+  const [artifact] = await bridged.enumerateArtifacts(viaBridge.executionRef);
+  const read = await drain(bridged, viaBridge.executionRef, artifact!.handle);
+  assert.equal(read.sha256, artifact!.sha256);
+  assert.equal(read.bytes, artifact!.byteLength);
+  // The image recipe reads its input through the handle into the v1 job.
+  const viaImage = await bridged.submit(
+    imageToVideo({ attemptKey: "img" }),
+    ctx,
+  );
+  assert.ok("executionRef" in viaImage);
+  // An unknown recipe, a changed recipe hash, or a recipe of another
+  // operation is refused; a raw graph has no way in.
+  for (const request of [
+    textToVideo({ recipeId: "fake.unknown.v1" }),
+    textToVideo({ recipeHash: zeros }),
+    textToVideo({
+      recipeId: "fake.imageToVideo.v1",
+      recipeHash: recipeHash(SERVER_RECIPES[1]!),
+    }),
+  ])
+    assert.deepEqual(await bridged.submit(request, ctx), {
+      refused: "RECIPE_UNKNOWN",
+    });
+  // Cancel and reconcile are bounded observations, not job state.
+  assert.deepEqual(await bridged.requestCancel(viaBridge.executionRef), {
+    requested: true,
+    localProcessExited: true,
+    billingOutcome: "notApplicable",
+  });
+  assert.equal(
+    (await bridged.reconcile(viaBridge.executionRef)).state,
+    "succeeded",
+  );
+  // A quarantined v1 output is a failed execution with no artifacts.
+  const probe = bridgeV1(createFakeEngine({ failProbe: true }));
+  const failed = await probe.submit(textToVideo(), ctx);
+  assert.ok("executionRef" in failed);
+  assert.equal((await probe.status(failed.executionRef)).state, "failed");
+  assert.deepEqual(await probe.enumerateArtifacts(failed.executionRef), []);
 });
