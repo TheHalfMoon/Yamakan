@@ -5,10 +5,13 @@
 // prompt, never extra independent samples). It makes no provider or model
 // call and downloads nothing: it only reads records someone else produced.
 //
-// A label stronger than INCONCLUSIVE needs complete, honest records: a
-// missing expected trial, a removed retry, a rater voting twice on one pair
-// or a trial of another modality makes the cohort INCONCLUSIVE with the
-// reason; an empty cohort is NOT TESTED.
+// A label stronger than INCONCLUSIVE needs complete, honest records: every
+// declared prompt, product and seed attempted; attempts numbered 1..n;
+// every comparable slot presented to the declared number of raters, once
+// each; one modality; consent where the category needs it. Otherwise the
+// cohort is INCONCLUSIVE with the reason. An empty cohort is NOT TESTED.
+// Every failed output stays in the analysis (intention to treat): a slot
+// where one side produced nothing usable counts as that side losing.
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
@@ -24,6 +27,11 @@ export const BENCHMARK_LIMITS = Object.freeze({
   votes: 500_000,
   promptsPerCohort: 10_000,
   bytes: 64 * 1024 * 1024,
+  // JSON nesting the observations format ever needs (refused before parse).
+  depth: 8,
+  // Bootstrap draws across all cohorts (resamples × clusters).
+  bootstrapDraws: 2_000_000_000,
+  consents: 10_000,
 });
 
 const Label = z.enum([
@@ -51,6 +59,15 @@ const CategoryId = z.enum([
 const Text = z.string().min(1).max(200);
 const Sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 const RefId = z.string().regex(/^[A-Za-z0-9._:-]{1,80}$/);
+const Status = z.enum([
+  "ok",
+  "failed",
+  "refused",
+  "moderated",
+  "timeout",
+  "unsupported",
+  "network",
+]);
 
 export const ProtocolSchema = z
   .object({
@@ -59,7 +76,10 @@ export const ProtocolSchema = z
     frozenAt: z.string(),
     source: z.string(),
     status: z.string(),
-    labels: z.array(Label).length(5),
+    labels: z
+      .array(Label)
+      .length(5)
+      .refine((l) => new Set(l).size === 5),
     statistics: z
       .object({
         alpha: z.number().gt(0).lt(0.5),
@@ -69,12 +89,18 @@ export const ProtocolSchema = z
       })
       .passthrough(),
     sampling: z
-      .object({ maxSeedsPerPrompt: z.number().int().min(1).max(16) })
+      .object({
+        ratersPerPair: z.number().int().min(1).max(32),
+        maxSeedsPerPrompt: z.number().int().min(1).max(16),
+      })
       .passthrough(),
     retries: z
       .object({
         maxAttempts: z.number().int().min(1).max(16),
-        causeCodes: z.array(z.string()).min(1),
+        // The cause codes the records may use: exactly the trial statuses.
+        causeCodes: z
+          .array(Status)
+          .refine((c) => new Set(c).size === Status.options.length),
       })
       .passthrough(),
     categories: z
@@ -93,22 +119,13 @@ export const ProtocolSchema = z
   .passthrough();
 export type Protocol = z.infer<typeof ProtocolSchema>;
 
-const Status = z.enum([
-  "ok",
-  "failed",
-  "refused",
-  "moderated",
-  "timeout",
-  "unsupported",
-  "network",
-]);
 const Modality = z.enum(["silent", "audio", "none"]);
 const TrialSchema = z
   .object({
     trialId: RefId,
     promptId: RefId,
     product: RefId,
-    seed: z.number().int().nonnegative().max(1_000_000),
+    seed: z.number().int().nonnegative().max(15),
     attempt: z.number().int().positive().max(64),
     status: Status,
     modality: Modality,
@@ -118,9 +135,20 @@ const TrialSchema = z
     costMicros: z.number().int().nonnegative().max(1e15).optional(),
     interventionSeconds: z.number().nonnegative().max(1e7).optional(),
   })
-  .strict();
+  .strict()
+  // A usable output is one with bytes to show.
+  .refine((t) => t.status !== "ok" || Boolean(t.outputSha256), {
+    message: "An ok trial names its output.",
+  });
+// One pair per comparable slot (prompt and seed): the two products' outputs.
 const PairSchema = z
-  .object({ pairId: RefId, promptId: RefId, left: RefId, right: RefId })
+  .object({
+    pairId: RefId,
+    promptId: RefId,
+    seed: z.number().int().nonnegative().max(15),
+    left: RefId,
+    right: RefId,
+  })
   .strict();
 const VoteSchema = z
   .object({
@@ -138,38 +166,69 @@ const CohortSchema = z
     // The system under test and the one it is compared with.
     product: RefId,
     comparator: RefId,
-    // Declared before analysis: every prompt and how many seeds each gets.
+    // Which outcome decides a slot: its first attempt, or the best within
+    // the protocol's attempt budget. The two are separate cohorts.
+    analysis: z.enum(["firstAttempt", "bestWithinBudget"]),
+    // Declared before analysis: every prompt, and seeds 0..seedsPerPrompt-1.
     expected: z
       .object({
-        prompts: z.array(RefId).max(BENCHMARK_LIMITS.promptsPerCohort),
+        prompts: z
+          .array(RefId)
+          .max(BENCHMARK_LIMITS.promptsPerCohort)
+          .refine(
+            (p) => new Set(p).size === p.length,
+            "Prompts are listed once each.",
+          ),
         seedsPerPrompt: z.number().int().min(1).max(16),
       })
       .strict(),
-    // MATCHES is possible only with a margin declared here, in advance.
+    // MATCHES is possible only with a margin declared here, in advance, on
+    // the endpoint's own scale (a preference probability, or a difference
+    // in success rate).
     equivalenceMargin: z.number().gt(0).lt(0.5).optional(),
-    // A win also needs the product's success rate (Wilson lower bound) at
-    // or above this floor, when declared.
+    // A win also needs the product's success rate (lower bound over prompt
+    // clusters) at or above this floor, when declared.
     successFloor: z.number().min(0).max(1).optional(),
     trials: z.array(TrialSchema).max(BENCHMARK_LIMITS.trials),
     pairs: z.array(PairSchema).max(BENCHMARK_LIMITS.votes),
     votes: z.array(VoteSchema).max(BENCHMARK_LIMITS.votes),
   })
   .strict();
+// Consents the records rely on: what each covers and when its media must
+// be deleted. A trial in a category that needs consent names one of these.
+const ConsentSchema = z
+  .object({
+    consentId: RefId,
+    categories: z.array(CategoryId).min(1).max(12),
+    grantedAt: z.iso.date(),
+    deleteBy: z.iso.date(),
+  })
+  .strict();
 export const ObservationsSchema = z
   .object({
     format: z.literal(BENCHMARK_OBSERVATIONS_FORMAT),
     protocolSha256: Sha256,
+    consents: z.array(ConsentSchema).max(BENCHMARK_LIMITS.consents).default([]),
     cohorts: z.array(CohortSchema).max(BENCHMARK_LIMITS.cohorts),
   })
   .strict();
-export type Observations = z.infer<typeof ObservationsSchema>;
-type Cohort = z.infer<typeof CohortSchema>;
+export type Observations = z.input<typeof ObservationsSchema>;
+type Parsed = z.output<typeof ObservationsSchema>;
+type Cohort = z.output<typeof CohortSchema>;
 
 // Secrets never belong in benchmark evidence: refused before parsing.
 const SECRET_KEY =
   /token|secret|password|passwd|api[-_]?key|authorization|cookie|credential/i;
 const SECRET_VALUE =
-  /\bsk-[A-Za-z0-9_-]{16,}|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY|\bghp_[A-Za-z0-9]{20,}|\bAKIA[0-9A-Z]{16}\b|\bxox[bpas]-[A-Za-z0-9-]{10,}/;
+  /\bsk-[A-Za-z0-9_-]{16,}|\b[sr]k_(?:live|test)_[A-Za-z0-9]{10,}|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|\bBasic\s+[A-Za-z0-9+/=]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY|\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}|\bAKIA[0-9A-Z]{16}\b|\bAIza[0-9A-Za-z_-]{30,}|\bxox[bpas]-[A-Za-z0-9-]{10,}|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/;
+// A long run of mixed-case letters and digits reads as a key; hashes and
+// ids in the records are lower-case hex or carry separators.
+const looksLikeKey = (s: string) =>
+  /[A-Za-z0-9+/_]{32,}/.test(s) &&
+  /[a-z]/.test(s) &&
+  /[A-Z]/.test(s) &&
+  /[0-9]/.test(s);
+const secretLike = (s: string) => SECRET_VALUE.test(s) || looksLikeKey(s);
 function assertNoSecrets(value: unknown, at = "$", depth = 0): void {
   if (depth > 32)
     throw new CommandError(
@@ -177,7 +236,7 @@ function assertNoSecrets(value: unknown, at = "$", depth = 0): void {
       "Benchmark records are nested too deeply.",
     );
   if (typeof value === "string") {
-    if (SECRET_VALUE.test(value))
+    if (secretLike(value))
       throw new CommandError(
         "VALIDATION",
         `A value at ${at} looks like a credential; benchmark evidence never holds one.`,
@@ -190,12 +249,12 @@ function assertNoSecrets(value: unknown, at = "$", depth = 0): void {
   }
   if (value && typeof value === "object")
     for (const [k, v] of Object.entries(value)) {
-      if (SECRET_KEY.test(k))
+      if (SECRET_KEY.test(k) || secretLike(k))
         throw new CommandError(
           "VALIDATION",
-          `Field ${at}.${k.slice(0, 40)} would hold a credential; benchmark evidence never holds one.`,
+          `A field at ${at} would hold a credential; benchmark evidence never holds one.`,
         );
-      assertNoSecrets(v, `${at}.${k.slice(0, 40)}`, depth + 1);
+      assertNoSecrets(v, `${at}.${k.slice(0, 20)}`, depth + 1);
     }
 }
 
@@ -216,12 +275,30 @@ export function parseProtocol(text: string): {
   return { protocol, sha256: sha256(text) };
 }
 
-export function parseObservations(text: string): Observations {
+export function parseObservations(text: string): Parsed {
   if (Buffer.byteLength(text) > BENCHMARK_LIMITS.bytes)
     throw new CommandError(
       "LIMIT_EXCEEDED",
       "The observations file is too large to analyse.",
     );
+  // Nesting is bounded before the parser builds anything.
+  let depth = 0;
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (inString) {
+      if (c === 92)
+        i++; // backslash: skip the escaped character
+      else if (c === 34) inString = false;
+    } else if (c === 34) inString = true;
+    else if (c === 91 || c === 123) {
+      if (++depth > BENCHMARK_LIMITS.depth)
+        throw new CommandError(
+          "VALIDATION",
+          "The observations are nested too deeply.",
+        );
+    } else if (c === 93 || c === 125) depth--;
+  }
   const value: unknown = JSON.parse(text);
   assertNoSecrets(value);
   return ObservationsSchema.parse(value);
@@ -321,111 +398,276 @@ function clusterBootstrap(
       sum += c.sum;
       n += c.n;
     }
-    out[r] = n ? sum / n : NaN;
+    // Every cluster holds at least one observation, so n > 0.
+    out[r] = sum / n;
   }
-  return Array.from(out)
-    .filter((x) => !Number.isNaN(x))
-    .sort((x, y) => x - y);
+  return Array.from(out).sort((x, y) => x - y);
 }
-const quantile = (sorted: readonly number[], q: number) =>
-  sorted[
-    Math.min(
-      sorted.length - 1,
-      Math.max(0, Math.floor(q * (sorted.length - 1))),
-    )
-  ]!;
+const quantile = (sorted: readonly number[], q: number) => {
+  // Linear interpolation between order statistics.
+  const at = Math.min(1, Math.max(0, q)) * (sorted.length - 1);
+  const lo = Math.floor(at);
+  const hi = Math.min(sorted.length - 1, lo + 1);
+  return sorted[lo]! + (sorted[hi]! - sorted[lo]!) * (at - lo);
+};
 
 export type Problem =
   | "MISSING_TRIALS"
   | "RETRIES_REMOVED"
   | "TOO_MANY_ATTEMPTS"
+  | "UNDECLARED_SEED"
+  | "SEEDS_OVER_PROTOCOL"
+  | "DUPLICATE_ID"
+  | "DUPLICATE_PAIR"
   | "DUPLICATE_RATER"
+  | "MISSING_VOTES"
+  | "PAIR_WITHOUT_OUTPUTS"
   | "MODALITY_MIXED"
   | "UNKNOWN_PRODUCT"
   | "UNDECLARED_PROMPT"
   | "UNKNOWN_PAIR"
   | "CONSENT_MISSING";
 
+const slotKey = (prompt: string, seed: number) => `${prompt}\u0000${seed}`;
+
+// Each slot's outcome per product under the cohort's analysis: the first
+// attempt, or success if any attempt within the budget succeeded.
+function slotOutcomes(cohort: Cohort, protocol: Protocol) {
+  const outcome = new Map<string, boolean>();
+  for (const t of cohort.trials) {
+    const key = `${slotKey(t.promptId, t.seed)}\u0000${t.product}`;
+    const counts =
+      cohort.analysis === "firstAttempt"
+        ? t.attempt === 1
+        : t.attempt <= protocol.retries.maxAttempts;
+    if (!counts) continue;
+    outcome.set(key, (outcome.get(key) ?? false) || t.status === "ok");
+  }
+  return (prompt: string, seed: number, product: string) =>
+    outcome.get(`${slotKey(prompt, seed)}\u0000${product}`);
+}
+
 // Record integrity: each finding blocks any label stronger than
 // INCONCLUSIVE for the cohort.
-export function integrity(cohort: Cohort, protocol: Protocol) {
+export function integrity(
+  cohort: Cohort,
+  protocol: Protocol,
+  consents: Parsed["consents"] = [],
+) {
   const problems = new Map<Problem, number>();
   const add = (p: Problem) => problems.set(p, (problems.get(p) ?? 0) + 1);
-  const products = new Set([cohort.product, cohort.comparator]);
+  const products = [cohort.product, cohort.comparator];
   const prompts = new Set(cohort.expected.prompts);
+  const seeds = cohort.expected.seedsPerPrompt;
+  if (seeds > protocol.sampling.maxSeedsPerPrompt) add("SEEDS_OVER_PROTOCOL");
   const category = protocol.categories.find((c) => c.id === cohort.category)!;
-  const attempts = new Map<string, number[]>();
+  const covering = new Map(consents.map((c) => [c.consentId, c]));
+  const trialIds = new Set<string>();
+  // Per slot and product: how many attempts, which numbers, the highest.
+  const attempts = new Map<
+    string,
+    { n: number; seen: Set<number>; max: number }
+  >();
   for (const t of cohort.trials) {
-    if (!products.has(t.product)) add("UNKNOWN_PRODUCT");
+    if (trialIds.has(t.trialId)) add("DUPLICATE_ID");
+    trialIds.add(t.trialId);
+    if (!products.includes(t.product)) add("UNKNOWN_PRODUCT");
     if (!prompts.has(t.promptId)) add("UNDECLARED_PROMPT");
+    if (t.seed >= seeds) add("UNDECLARED_SEED");
     if (t.modality !== cohort.modality) add("MODALITY_MIXED");
-    if (category.requiresConsent && !t.consentId) add("CONSENT_MISSING");
-    const key = `${t.promptId}\u0000${t.product}\u0000${t.seed}`;
-    attempts.set(key, [...(attempts.get(key) ?? []), t.attempt]);
+    if (category.requiresConsent) {
+      const consent = t.consentId ? covering.get(t.consentId) : undefined;
+      if (!consent || !consent.categories.includes(cohort.category))
+        add("CONSENT_MISSING");
+    }
+    const key = `${slotKey(t.promptId, t.seed)}\u0000${t.product}`;
+    const a = attempts.get(key) ?? { n: 0, seen: new Set<number>(), max: 0 };
+    a.n++;
+    a.seen.add(t.attempt);
+    a.max = Math.max(a.max, t.attempt);
+    attempts.set(key, a);
   }
-  // Every declared prompt, product and seed slot has its attempts 1..n.
-  const seedsOf = new Map<string, Set<number>>();
-  for (const t of cohort.trials) {
-    const k = `${t.promptId}\u0000${t.product}`;
-    seedsOf.set(k, (seedsOf.get(k) ?? new Set()).add(t.seed));
+  for (const a of attempts.values()) {
+    // Attempts 1..max, each exactly once.
+    if (a.n !== a.max || a.seen.size !== a.n) add("RETRIES_REMOVED");
+    if (a.n > protocol.retries.maxAttempts) add("TOO_MANY_ATTEMPTS");
   }
   for (const prompt of prompts)
-    for (const product of products) {
-      const seeds = seedsOf.get(`${prompt}\u0000${product}`)?.size ?? 0;
-      if (seeds < cohort.expected.seedsPerPrompt) add("MISSING_TRIALS");
-    }
-  for (const list of attempts.values()) {
-    const sorted = [...list].sort((a, b) => a - b);
-    if (sorted.some((a, i) => a !== i + 1)) add("RETRIES_REMOVED");
-    if (sorted.length > protocol.retries.maxAttempts) add("TOO_MANY_ATTEMPTS");
-  }
-  const pairs = new Map(cohort.pairs.map((p) => [p.pairId, p]));
+    for (let seed = 0; seed < seeds; seed++)
+      for (const product of products)
+        if (!attempts.has(`${slotKey(prompt, seed)}\u0000${product}`))
+          add("MISSING_TRIALS");
+  const pairsBySlot = new Map<string, string>();
+  const pairIds = new Set<string>();
+  const outcome = slotOutcomes(cohort, protocol);
   for (const p of cohort.pairs) {
+    if (pairIds.has(p.pairId)) add("DUPLICATE_ID");
+    pairIds.add(p.pairId);
     if (!prompts.has(p.promptId)) add("UNDECLARED_PROMPT");
+    if (p.seed >= seeds) add("UNDECLARED_SEED");
     const sides = new Set([p.left, p.right]);
-    if (sides.size !== 2 || ![...sides].every((s) => products.has(s)))
+    if (sides.size !== 2 || ![...sides].every((s) => products.includes(s)))
       add("UNKNOWN_PRODUCT");
+    const slot = slotKey(p.promptId, p.seed);
+    if (pairsBySlot.has(slot)) add("DUPLICATE_PAIR");
+    pairsBySlot.set(slot, p.pairId);
+    if (
+      !outcome(p.promptId, p.seed, cohort.product) ||
+      !outcome(p.promptId, p.seed, cohort.comparator)
+    )
+      add("PAIR_WITHOUT_OUTPUTS");
   }
+  const votesPerPair = new Map<string, number>();
   const seen = new Set<string>();
   for (const v of cohort.votes) {
-    if (!pairs.has(v.pairId)) add("UNKNOWN_PAIR");
+    if (!pairIds.has(v.pairId)) add("UNKNOWN_PAIR");
     const key = `${v.pairId}\u0000${v.raterId}`;
     if (seen.has(key)) add("DUPLICATE_RATER");
     seen.add(key);
+    votesPerPair.set(v.pairId, (votesPerPair.get(v.pairId) ?? 0) + 1);
   }
+  // Preference cohorts: every slot where both products produced an output
+  // was shown to the declared number of raters (attention failures count
+  // as recorded; dropped votes do not).
+  if (category.primaryEndpoint === "preference")
+    for (const prompt of prompts)
+      for (let seed = 0; seed < seeds; seed++) {
+        if (
+          !outcome(prompt, seed, cohort.product) ||
+          !outcome(prompt, seed, cohort.comparator)
+        )
+          continue;
+        const pair = pairsBySlot.get(slotKey(prompt, seed));
+        if (
+          !pair ||
+          (votesPerPair.get(pair) ?? 0) < protocol.sampling.ratersPerPair
+        )
+          add("MISSING_VOTES");
+      }
   return [...problems].map(([problem, count]) => ({ problem, count }));
 }
 
+type Interval = { lower: number; upper: number };
 type CohortReport = {
   cohort: string;
   category: string;
   endpoint: "preference" | "taskSuccess";
+  analysis: "firstAttempt" | "bestWithinBudget";
   label: Label;
   reasons: string[];
   prompts: number;
   trials: number;
   votes: number;
   excludedVotes: number;
+  // On the endpoint's scale: the probability of preferring the product, or
+  // the product's success rate minus the comparator's.
   estimate: number | null;
-  interval: { lower: number; upper: number } | null;
+  interval: Interval | null;
+  // The interval at this cohort's Holm step level: WINS/LOSES exactly when
+  // it excludes no difference.
+  adjustedInterval: Interval | null;
   pValue: number | null;
   adjustedPValue: number | null;
   success: {
-    product: ReturnType<typeof wilson>;
-    comparator: ReturnType<typeof wilson>;
+    product: number | null;
+    comparator: number | null;
+    productLower: number | null;
   };
 };
 
-// The final attempt per prompt, product and seed decides that slot's
-// outcome (first-attempt analyses are a separate, declared cohort).
-function finalOutcomes(cohort: Cohort) {
-  const last = new Map<string, z.infer<typeof TrialSchema>>();
-  for (const t of cohort.trials) {
-    const key = `${t.promptId}\u0000${t.product}\u0000${t.seed}`;
-    const prior = last.get(key);
-    if (!prior || t.attempt > prior.attempt) last.set(key, t);
-  }
-  return [...last.values()];
+// Per-prompt scores on [0, 1] around 0.5, so both endpoints share one rule.
+function promptScores(
+  cohort: Cohort,
+  protocol: Protocol,
+  report: CohortReport,
+) {
+  const outcome = slotOutcomes(cohort, protocol);
+  const prompts = cohort.expected.prompts;
+  const seeds = cohort.expected.seedsPerPrompt;
+  const clusters = new Map<string, { sum: number; n: number }>();
+  const add = (prompt: string, score: number, weight = 1) => {
+    const c = clusters.get(prompt) ?? { sum: 0, n: 0 };
+    c.sum += score * weight;
+    c.n += weight;
+    clusters.set(prompt, c);
+  };
+  if (report.endpoint === "preference") {
+    const declared = new Set(prompts);
+    const pairs = new Map(cohort.pairs.map((p) => [p.pairId, p]));
+    for (const v of cohort.votes) {
+      const pair = pairs.get(v.pairId);
+      if (!pair || !declared.has(pair.promptId)) continue;
+      if (!v.attentionPassed) {
+        report.excludedVotes++;
+        continue;
+      }
+      const productSide = pair.left === cohort.product ? "left" : "right";
+      add(
+        pair.promptId,
+        v.choice === "tie" ? 0.5 : v.choice === productSide ? 1 : 0,
+      );
+    }
+    // Intention to treat: a slot one side failed counts as that side losing
+    // every rater's vote; a slot both failed, as ties.
+    const raters = protocol.sampling.ratersPerPair;
+    for (const prompt of prompts)
+      for (let seed = 0; seed < seeds; seed++) {
+        const mine = outcome(prompt, seed, cohort.product);
+        const theirs = outcome(prompt, seed, cohort.comparator);
+        if (mine === undefined || theirs === undefined || (mine && theirs))
+          continue;
+        add(prompt, mine ? 1 : theirs ? 0 : 0.5, raters);
+      }
+  } else
+    for (const prompt of prompts) {
+      let mine = 0;
+      let theirs = 0;
+      let n = 0;
+      for (let seed = 0; seed < seeds; seed++) {
+        const a = outcome(prompt, seed, cohort.product);
+        const b = outcome(prompt, seed, cohort.comparator);
+        if (a === undefined || b === undefined) continue;
+        mine += a ? 1 : 0;
+        theirs += b ? 1 : 0;
+        n++;
+      }
+      if (n) add(prompt, 0.5 + (mine - theirs) / n / 2);
+    }
+  return [...clusters.values()];
+}
+
+// The product's and comparator's success rates over prompts (each prompt
+// one cluster), and the product's lower bound by cluster bootstrap.
+function successRates(cohort: Cohort, protocol: Protocol, seed: number) {
+  const outcome = slotOutcomes(cohort, protocol);
+  const rates = (product: string) =>
+    cohort.expected.prompts.flatMap((prompt) => {
+      let ok = 0;
+      let n = 0;
+      for (let s = 0; s < cohort.expected.seedsPerPrompt; s++) {
+        const o = outcome(prompt, s, product);
+        if (o === undefined) continue;
+        n++;
+        if (o) ok++;
+      }
+      return n ? [{ sum: ok, n }] : [];
+    });
+  const mean = (c: { sum: number; n: number }[]) => {
+    const t = c.reduce((a, x) => ({ sum: a.sum + x.sum, n: a.n + x.n }), {
+      sum: 0,
+      n: 0,
+    });
+    return t.n ? t.sum / t.n : null;
+  };
+  const mine = rates(cohort.product);
+  const { alpha, bootstrapResamples } = protocol.statistics;
+  return {
+    product: mean(mine),
+    comparator: mean(rates(cohort.comparator)),
+    productLower: mine.length
+      ? quantile(clusterBootstrap(mine, bootstrapResamples, seed), alpha / 2)
+      : null,
+  };
 }
 
 export function analyse(
@@ -433,30 +675,38 @@ export function analyse(
   protocol: Protocol,
   protocolSha256: string,
 ) {
-  if (observations.protocolSha256 !== protocolSha256)
+  const parsed: Parsed = ObservationsSchema.parse(observations);
+  if (parsed.protocolSha256 !== protocolSha256)
     throw new CommandError(
       "VALIDATION",
       "These observations were recorded against another protocol version.",
     );
   const { alpha, bootstrapResamples, bootstrapSeed } = protocol.statistics;
+  const draws = parsed.cohorts.reduce(
+    (n, c) => n + 2 * bootstrapResamples * c.expected.prompts.length,
+    0,
+  );
+  if (draws > BENCHMARK_LIMITS.bootstrapDraws)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      "These observations need more bootstrap work than one analysis allows; split them.",
+    );
   const reports: CohortReport[] = [];
-  const tested: { index: number; p: number; direction: 1 | -1 }[] = [];
-  observations.cohorts.forEach((cohort, index) => {
+  // Every cohort with records is in the Holm family, declared before any
+  // label: one blocked by its records counts with p = 1.
+  const family: {
+    index: number;
+    p: number;
+    boot: number[] | null;
+    direction: 1 | -1;
+  }[] = [];
+  parsed.cohorts.forEach((cohort, index) => {
     const category = protocol.categories.find((c) => c.id === cohort.category)!;
-    const endpoint = category.primaryEndpoint;
-    const outcomes = finalOutcomes(cohort);
-    const rate = (product: string) => {
-      const mine = outcomes.filter((t) => t.product === product);
-      return wilson(
-        mine.filter((t) => t.status === "ok").length,
-        mine.length,
-        alpha,
-      );
-    };
     const report: CohortReport = {
       cohort: cohort.id,
       category: cohort.category,
-      endpoint,
+      endpoint: category.primaryEndpoint,
+      analysis: cohort.analysis,
       label: "NOT TESTED",
       reasons: [],
       prompts: cohort.expected.prompts.length,
@@ -465,122 +715,91 @@ export function analyse(
       excludedVotes: 0,
       estimate: null,
       interval: null,
+      adjustedInterval: null,
       pValue: null,
       adjustedPValue: null,
-      success: {
-        product: rate(cohort.product),
-        comparator: rate(cohort.comparator),
-      },
+      success: { product: null, comparator: null, productLower: null },
     };
     reports.push(report);
     if (cohort.trials.length === 0 && cohort.votes.length === 0) {
       report.reasons.push("No valid matched run was recorded for this cohort.");
       return;
     }
-    const problems = integrity(cohort, protocol);
-    // Per prompt: the product's score (preference) or success difference.
-    const clusters = new Map<string, { sum: number; n: number }>();
-    if (endpoint === "preference") {
-      const pairs = new Map(cohort.pairs.map((p) => [p.pairId, p]));
-      for (const v of cohort.votes) {
-        const pair = pairs.get(v.pairId);
-        if (!pair) continue;
-        if (!v.attentionPassed) {
-          report.excludedVotes++;
-          continue;
-        }
-        const productSide = pair.left === cohort.product ? "left" : "right";
-        const score =
-          v.choice === "tie" ? 0.5 : v.choice === productSide ? 1 : 0;
-        const c = clusters.get(pair.promptId) ?? { sum: 0, n: 0 };
-        c.sum += score;
-        c.n += 1;
-        clusters.set(pair.promptId, c);
-      }
-    } else {
-      for (const prompt of cohort.expected.prompts) {
-        const of = (product: string) => {
-          const mine = outcomes.filter(
-            (t) => t.promptId === prompt && t.product === product,
-          );
-          return mine.length
-            ? mine.filter((t) => t.status === "ok").length / mine.length
-            : null;
-        };
-        const mine = of(cohort.product);
-        const theirs = of(cohort.comparator);
-        if (mine === null || theirs === null) continue;
-        // Scored on [0, 1] around 0.5 so both endpoints share one rule:
-        // 0.5 + half the success difference.
-        clusters.set(prompt, { sum: 0.5 + (mine - theirs) / 2, n: 1 });
-      }
-    }
-    const list = [...clusters.values()];
-    if (list.length === 0) {
-      report.label = "INCONCLUSIVE";
-      report.reasons.push("No usable comparisons were recorded.");
-      return;
-    }
-    const total = list.reduce(
-      (a, c) => ({ sum: a.sum + c.sum, n: a.n + c.n }),
-      { sum: 0, n: 0 },
-    );
-    report.estimate = total.sum / total.n;
-    const boot = clusterBootstrap(
-      list,
-      bootstrapResamples,
-      bootstrapSeed + index,
-    );
-    report.interval = {
-      lower: quantile(boot, alpha / 2),
-      upper: quantile(boot, 1 - alpha / 2),
-    };
-    const below = boot.filter((x) => x <= 0.5).length / boot.length;
-    const above = boot.filter((x) => x >= 0.5).length / boot.length;
-    report.pValue = Math.min(1, 2 * Math.min(below, above));
+    report.label = "INCONCLUSIVE";
+    const problems = integrity(cohort, protocol, parsed.consents);
     if (problems.length) {
-      report.label = "INCONCLUSIVE";
       for (const { problem, count } of problems)
         report.reasons.push(
           `${problem} (${count}): the records cannot support a comparison label.`,
         );
+      family.push({ index, p: 1, boot: null, direction: 1 });
       return;
     }
-    // MATCHES: the two one-sided (1 - 2·alpha) interval inside the margin.
-    if (cohort.equivalenceMargin !== undefined) {
-      const m = cohort.equivalenceMargin;
-      const lo = quantile(boot, alpha);
-      const hi = quantile(boot, 1 - alpha);
-      if (lo >= 0.5 - m && hi <= 0.5 + m) {
-        report.label = "MATCHES";
-        report.reasons.push(
-          `The ${100 * (1 - 2 * alpha)}% interval lies within the declared margin of ${m}.`,
-        );
-        return;
-      }
+    report.success = successRates(
+      cohort,
+      protocol,
+      bootstrapSeed + 7919 * (index + 1),
+    );
+    const clusters = promptScores(cohort, protocol, report);
+    if (clusters.length === 0) {
+      report.reasons.push("No usable comparisons were recorded.");
+      family.push({ index, p: 1, boot: null, direction: 1 });
+      return;
     }
-    report.label = "INCONCLUSIVE";
-    tested.push({
+    // Back to the endpoint's scale: preference as is, success difference
+    // as twice the distance from 0.5.
+    const scale = (x: number) =>
+      report.endpoint === "preference" ? x : 2 * (x - 0.5);
+    const total = clusters.reduce(
+      (a, c) => ({ sum: a.sum + c.sum, n: a.n + c.n }),
+      { sum: 0, n: 0 },
+    );
+    report.estimate = scale(total.sum / total.n);
+    const boot = clusterBootstrap(
+      clusters,
+      bootstrapResamples,
+      bootstrapSeed + index,
+    );
+    report.interval = {
+      lower: scale(quantile(boot, alpha / 2)),
+      upper: scale(quantile(boot, 1 - alpha / 2)),
+    };
+    const below = boot.filter((x) => x <= 0.5).length / boot.length;
+    const above = boot.filter((x) => x >= 0.5).length / boot.length;
+    report.pValue = Math.min(1, 2 * Math.min(below, above));
+    family.push({
       index,
       p: report.pValue,
-      direction: report.estimate > 0.5 ? 1 : -1,
+      boot,
+      direction: below < above ? 1 : -1,
     });
   });
-  // Holm across every cohort that could claim a direction.
-  const adjusted = holm(tested.map((t) => t.p));
-  tested.forEach((t, k) => {
-    const report = reports[t.index]!;
-    const cohort = observations.cohorts[t.index]!;
+  const adjusted = holm(family.map((f) => f.p));
+  // Holm's step level for each member: alpha / (m - rank).
+  const ranked = family
+    .map((f, k) => ({ k, p: f.p }))
+    .sort((a, b) => a.p - b.p);
+  const level: number[] = Array.from({ length: family.length }, () => alpha);
+  ranked.forEach(({ k }, rank) => (level[k] = alpha / (family.length - rank)));
+  family.forEach((f, k) => {
+    const report = reports[f.index]!;
+    const cohort = parsed.cohorts[f.index]!;
     report.adjustedPValue = adjusted[k]!;
-    if (adjusted[k]! >= alpha) {
-      report.reasons.push(
-        "No difference was established at the adjusted level; this is not a match.",
-      );
-      return;
-    }
-    if (t.direction === 1) {
+    if (!f.boot) return;
+    const scale = (x: number) =>
+      report.endpoint === "preference" ? x : 2 * (x - 0.5);
+    report.adjustedInterval = {
+      lower: scale(quantile(f.boot, level[k]! / 2)),
+      upper: scale(quantile(f.boot, 1 - level[k]! / 2)),
+    };
+    if (adjusted[k]! < alpha) {
+      if (f.direction === -1) {
+        report.label = "LOSES";
+        report.reasons.push("The adjusted comparison favours the comparator.");
+        return;
+      }
       const floor = cohort.successFloor;
-      const lower = report.success.product.lower;
+      const lower = report.success.productLower;
       if (floor !== undefined && (lower === null || lower < floor)) {
         report.reasons.push(
           `Preferred, but the success rate's lower bound is below the declared floor of ${floor}.`,
@@ -589,16 +808,33 @@ export function analyse(
       }
       report.label = "WINS";
       report.reasons.push("The adjusted comparison favours the product.");
-    } else {
-      report.label = "LOSES";
-      report.reasons.push("The adjusted comparison favours the comparator.");
+      return;
     }
+    // No difference established: a match only inside a declared margin,
+    // tested at the cohort's adjusted level (two one-sided tests).
+    if (cohort.equivalenceMargin !== undefined) {
+      const m = cohort.equivalenceMargin;
+      const lo = scale(quantile(f.boot, level[k]!));
+      const hi = scale(quantile(f.boot, 1 - level[k]!));
+      const centre = report.endpoint === "preference" ? 0.5 : 0;
+      if (lo >= centre - m && hi <= centre + m) {
+        report.label = "MATCHES";
+        report.reasons.push(
+          `The adjusted equivalence interval lies within the declared margin of ${m}.`,
+        );
+        return;
+      }
+    }
+    report.reasons.push(
+      "No difference was established at the adjusted level; this is not a match.",
+    );
   });
   return {
     format: BENCHMARK_REPORT_FORMAT,
     protocolVersion: protocol.version,
     protocolSha256,
     analysedCohorts: reports.length,
+    holmFamily: family.length,
     // Categories with no cohort at all are NOT TESTED.
     categories: protocol.categories.map((c) => {
       const mine = reports.filter((r) => r.category === c.id);

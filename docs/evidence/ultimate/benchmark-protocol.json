@@ -8,27 +8,29 @@
   "statistics": {
     "alpha": 0.05,
     "multipleComparisons": "holm",
-    "preferenceInterval": "prompt-cluster bootstrap (raters and seeds nested within prompt)",
+    "preferenceInterval": "prompt-cluster bootstrap: raters and seeds nested within prompt; percentile intervals with linear interpolation. Rater effects crossed across prompts are not modelled (a limitation of version 1).",
     "successInterval": "wilson",
     "bootstrapResamples": 2000,
     "bootstrapSeed": 20261026,
-    "winRule": "adjusted lower preference bound > 0.5 and the category's safety/success floor met",
-    "loseRule": "adjusted upper preference bound < 0.5",
-    "matchRule": "a predeclared equivalence margin, with the adjusted interval inside [0.5 - margin, 0.5 + margin]",
+    "winRule": "Holm-adjusted p-value < alpha in the product's favour (equivalently, the interval at the cohort's Holm step level lies above 0.5), and the declared success floor met by the product's success rate lower bound over prompt clusters",
+    "loseRule": "Holm-adjusted p-value < alpha in the comparator's favour",
+    "matchRule": "no significant difference, and a margin declared before analysis on the endpoint's own scale, with the two one-sided interval at the cohort's Holm step level inside it",
     "otherwise": "INCONCLUSIVE; a failure to detect a difference is never MATCHES",
     "ties": "a tie counts as half a vote for each side",
     "refusals": "kept in the denominator of completion rates with their cause code; never dropped",
-    "pilot": "a 60-task creative pilot and a 5-8 person formative UX study estimate variance only; they establish no superiority"
+    "pilot": "a 60-task creative pilot and a 5-8 person formative UX study estimate variance only; they establish no superiority",
+    "holmFamily": "every cohort with records, declared before any label; a cohort blocked by its records counts with p = 1",
+    "intentionToTreat": "each prompt-and-seed slot's outcome per product comes from the cohort's declared analysis (firstAttempt, or bestWithinBudget = any attempt within the budget succeeded); in preference cohorts a slot one side failed counts as that side losing every rater's vote, and a slot both failed as ties"
   },
   "sampling": {
     "definitivePromptsPerCohort": 240,
     "ratersPerPair": 3,
     "maxSeedsPerPrompt": 3,
-    "note": "Repeated raters and seeds are not independent prompts. Increase the sample or report INCONCLUSIVE when power is inadequate; never shrink the corpus after seeing outcomes."
+    "note": "Repeated raters and seeds are not independent prompts. Every slot where both products produced an output is shown to ratersPerPair raters (fewer recorded votes block a label). Increase the sample or report INCONCLUSIVE when power is inadequate; never shrink the corpus after seeing outcomes."
   },
   "retries": {
     "maxAttempts": 3,
-    "policy": "Every attempt is recorded with a contiguous attempt number; first-attempt and best-within-budget results are separate analyses; every failure and charge stays in the intention-to-treat denominator.",
+    "policy": "Every attempt is recorded with a contiguous attempt number (1..n, each once); a cohort declares firstAttempt or bestWithinBudget analysis, and the two are separate cohorts; every failure stays in the intention-to-treat denominator.",
     "causeCodes": [
       "ok",
       "failed",
@@ -56,7 +58,7 @@
       "raw votes",
       "analysis code version"
     ],
-    "consent": "Likeness and reference media require a recorded consent id; retention and deletion consent are recorded.",
+    "consent": "Likeness and reference media need a consent from the observations' registry (consentId, the categories it covers, grantedAt, deleteBy) that covers the cohort's category.",
     "neverCaptured": [
       "provider keys",
       "tokens",
@@ -64,24 +66,6 @@
       "cookies"
     ]
   },
-  "recordFields": [
-    "trialId",
-    "category",
-    "cohort",
-    "modality",
-    "product",
-    "promptId",
-    "seed",
-    "attempt",
-    "status",
-    "inputSha256",
-    "outputSha256",
-    "consentId",
-    "costMicros",
-    "interventionSeconds",
-    "build",
-    "endpointDate"
-  ],
   "categories": [
     {
       "id": "A",
@@ -191,5 +175,37 @@
       "gate": "approved resource policy and cleanup pass; no inferred cross-hardware speedup",
       "requiresConsent": false
     }
-  ]
+  ],
+  "records": {
+    "trial": [
+      "trialId",
+      "promptId",
+      "product",
+      "seed",
+      "attempt",
+      "status",
+      "modality",
+      "inputSha256",
+      "outputSha256",
+      "consentId",
+      "costMicros",
+      "interventionSeconds"
+    ],
+    "pair": ["pairId", "promptId", "seed", "left", "right"],
+    "vote": ["pairId", "raterId", "choice", "attentionPassed"],
+    "consent": ["consentId", "categories", "grantedAt", "deleteBy"],
+    "cohort": [
+      "id",
+      "category",
+      "modality",
+      "product",
+      "comparator",
+      "analysis",
+      "expected.prompts",
+      "expected.seedsPerPrompt",
+      "equivalenceMargin",
+      "successFloor"
+    ],
+    "note": "Version 1 analyses the primary endpoint only; costMicros and interventionSeconds are recorded for categories H and K and reported by later analyses."
+  }
 }
