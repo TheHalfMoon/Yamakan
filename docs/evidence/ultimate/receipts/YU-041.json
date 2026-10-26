@@ -1,0 +1,74 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "04a805c",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "rust": "cargo 1.97.1 (procd built locally; CI does not build procd)",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "VERIFIED",
+  "task": "YU-041",
+  "objective": "Qualify the engine-worker process profile with no-model stand-ins",
+  "branch": "feat/yu-041-engine-worker-profile",
+  "mergedPr": 107,
+  "headCommit": "0486021",
+  "mergeCommit": "0b50a43d697cb5a47b4e305782476ae042e5cf13",
+  "flags": "ENGINE_ENABLED stays false; no job policy requests the profile yet",
+  "deviations": [
+    "The token gains the registryRead capability: without it, any process creation from a worker in a less-privileged AppContainer fails with ERROR_ACCESS_DENIED on Windows 11 26300 (lpacCom, lpacAppExperience, lpacInstrumentation and lpacCryptoServices do not help). It is added for the engine profile only",
+    "Output is capped (64 MiB, run fails with LIMIT_EXCEEDED) for engine workers only; media workers' output stays uncapped as on main, since a cap silently truncated FFmpeg output"
+  ],
+  "tests": {
+    "files": ["tests/engine-worker-profile.test.ts"],
+    "result": "9/9; with containment, process-owner, sandbox and resource-policy 32/32. Profile versioning/hash and out-of-bounds refusals; descendant bound (media 0, engine 3 of 3, bound 4 gives 3, bound 2 gives 1); sentinels, TCP to a local HTTP server and DNS denied with uncontained controls; no descendant outlives worker exit, cancel, service exit, procd kill or the wall budget (exit 1460, wallExceeded); output past the cap fails the run, under it and media output complete; COM cannot be initialized (noinit 0x80070005) so no WMI access through COM in root\\cimv2, root\\subscription and root\\default (controls connect) and no COM server; Task Scheduler create refused with the host's access-denied text (control creates); breakaway denied 5; junction writable folder refused (real folder accepted); registryRead opens the product key (media denied), not SAM, HKCU or any write. Diagnostics on this host: outside DNS qualified only with network; breakaway control fails when the test runs inside a job"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 1,
+        "applied": 1,
+        "reproduced": true,
+        "finalRound": "no must-fix; WMI wording and localized schtasks check applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 7,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "0b50a43d697cb5a47b4e305782476ae042e5cf13",
+    "ci": "PR exact head 0486021: qualify (rerun after a runner hang in apt-get install), qualify-windows-r8, otio-oracle success; push run on 0b50a43: success",
+    "windows": "detached 0b50a43, procd rebuilt: typecheck, lint, format, provenance, brand, build pass; npm test 558/561 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass"
+  },
+  "limitations": [
+    "Qualified with no-model stand-ins only; a real Python/model runtime needs its own B4 qualification",
+    "Media worker output is uncapped (unchanged from main)",
+    "Direct RPC/ALPC calls to services without COM are not tested",
+    "Breakaway denial counts as qualified only where its control works (not inside a job that forbids breakaway)",
+    "No JOB_OBJECT_UILIMIT restrictions on engine jobs",
+    "No GPU admitted; no job policy requests the profile yet; POSIX refuses any profile",
+    "Inherited-handle and antivirus-lock negatives not covered",
+    "CI does not build procd, so these Windows tests run only locally",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
