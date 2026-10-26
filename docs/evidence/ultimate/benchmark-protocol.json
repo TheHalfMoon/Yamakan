@@ -1,0 +1,222 @@
+{
+  "format": "yamakan.benchmark-protocol/1",
+  "version": "1.1.0",
+  "frozenAt": "2026-10-26",
+  "source": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/16_BENCHMARK_AND_EVALUATION_PLAN.md (Draft PR #86 @ caec7d9)",
+  "status": "Protocol only. No benchmark run, evaluator weight, download, provider call or paid generation is authorized by this file. Every head-to-head outcome is NOT TESTED until a valid matched run exists.",
+  "labels": ["WINS", "MATCHES", "LOSES", "INCONCLUSIVE", "NOT TESTED"],
+  "statistics": {
+    "alpha": 0.05,
+    "multipleComparisons": "holm",
+    "preferenceInterval": "prompt-cluster bootstrap: raters and seeds nested within prompt; percentile intervals with linear interpolation. Rater effects crossed across prompts are not modelled (a limitation of version 1).",
+    "successInterval": "wilson",
+    "bootstrapResamples": 2000,
+    "bootstrapSeed": 20261026,
+    "winRule": "Holm-adjusted p-value < alpha in the product's favour, and the declared success floor (required for preference cohorts, may be 0) met by the product's success rate lower bound over prompt clusters; the interval at the cohort's Holm step level is reported for reference",
+    "loseRule": "Holm-adjusted p-value < alpha in the comparator's favour",
+    "matchRule": "no significant difference, and a margin declared before analysis on the endpoint's own scale, with the two one-sided interval at alpha / m (m = the Holm family) inside it",
+    "otherwise": "INCONCLUSIVE; a failure to detect a difference is never MATCHES",
+    "ties": "a tie counts as half a vote for each side",
+    "refusals": "kept in the denominator of completion rates with their cause code; never dropped",
+    "pilot": "a 60-task creative pilot and a 5-8 person formative UX study estimate variance only; they establish no superiority",
+    "holmFamily": "every cohort with records, declared before any label; a cohort blocked by its records counts with p = 1",
+    "intentionToTreat": "each prompt-and-seed slot's outcome per product comes from its deciding trial under the cohort's declared analysis (firstAttempt: attempt 1; bestWithinBudget: the first successful attempt within the budget, retries following failures only); every slot weighs one (the mean of its raters' votes); in preference cohorts a slot one side failed counts as that side's loss and a slot both failed as a tie"
+  },
+  "sampling": {
+    "definitivePromptsPerCohort": 240,
+    "ratersPerPair": 3,
+    "maxSeedsPerPrompt": 3,
+    "note": "Repeated raters and seeds are not independent prompts. Every slot where both products produced an output is shown to exactly ratersPerPair raters, as a pair naming each side's deciding trial. Increase the sample or report INCONCLUSIVE when power is inadequate; never shrink the corpus after seeing outcomes."
+  },
+  "retries": {
+    "maxAttempts": 3,
+    "policy": "Every attempt is recorded with a contiguous attempt number (1..n, each once); a cohort declares firstAttempt or bestWithinBudget analysis, and the two are separate cohorts; every failure stays in the intention-to-treat denominator.",
+    "causeCodes": [
+      "ok",
+      "failed",
+      "refused",
+      "moderated",
+      "timeout",
+      "unsupported",
+      "network"
+    ]
+  },
+  "blinding": {
+    "randomize": ["left/right position", "task order"],
+    "hidden": ["product", "provider", "model", "cost"],
+    "attentionChecks": true,
+    "exclusionsDocumentedBeforeAnalysis": true
+  },
+  "retention": {
+    "keep": [
+      "protocol manifest and its SHA-256",
+      "input and output hashes",
+      "original media (private evidence store for likeness/reference media)",
+      "logs stripped of secrets",
+      "receipt and cost records",
+      "rater assignment and rubric version",
+      "raw votes",
+      "analysis code version"
+    ],
+    "consent": "Likeness and reference media need a consent from the observations' registry (unique consentId, the categories it covers, grantedAt <= deleteBy) that covers the cohort's category and has not passed its deleteBy date at analysis.",
+    "neverCaptured": [
+      "provider keys",
+      "tokens",
+      "authorization headers",
+      "cookies"
+    ]
+  },
+  "categories": [
+    {
+      "id": "A",
+      "name": "Professional editing",
+      "tasks": "S/M/L/H/A/K profiles; deterministic edit scripts and human finishing briefs",
+      "measures": "canonical expected edits, frame/sample boundaries, export decode, task time and errors, professional editor rubric",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "no data loss or silent effect loss; fixed policy passes on the claimed profile; comparative time/preference interval",
+      "requiresConsent": false
+    },
+    {
+      "id": "B",
+      "name": "Text-to-video",
+      "tasks": "240 balanced prompts after the pilot; common duration and resolution; audio and silent separately",
+      "measures": "prompt fulfilment, motion/physics/artifact proxies, blind preference, usable-take rate",
+      "primaryEndpoint": "preference",
+      "gate": "adjusted 95% lower preference bound > 0.5 with the safety/task success floor",
+      "requiresConsent": false
+    },
+    {
+      "id": "C",
+      "name": "Image-to-video",
+      "tasks": "matched licensed reference images, poses, first/last constraints",
+      "measures": "reference preservation, motion/control adherence, temporal artifacts, blind comparison",
+      "primaryEndpoint": "preference",
+      "gate": "as B; unsupported controls scored separately",
+      "requiresConsent": true
+    },
+    {
+      "id": "D",
+      "name": "Generative editing",
+      "tasks": "source clips with edit-locality masks/instructions",
+      "measures": "source preservation outside the edit, semantic success, temporal/audio continuity, human review",
+      "primaryEndpoint": "preference",
+      "gate": "no unrelated edit accepted silently; matched task-quality interval",
+      "requiresConsent": true
+    },
+    {
+      "id": "E",
+      "name": "Cinematic control",
+      "tasks": "camera/lens/light intents, fixed reference scenes and trajectories where supported",
+      "measures": "framing/trajectory error, labelled optical proxies, blinded cinematographer judgment",
+      "primaryEndpoint": "preference",
+      "gate": "intent-to-control agreement plus measured adherence; metadata-only fails an applied-control claim",
+      "requiresConsent": false
+    },
+    {
+      "id": "F",
+      "name": "Character and scene continuity",
+      "tasks": "repeated consented subjects/environments over 3-8 shots, held-out poses and light",
+      "measures": "identity/scene embedding proxies, human same-identity and continuity ratings",
+      "primaryEndpoint": "preference",
+      "gate": "pack/version correctness mandatory; a pixel identity claim needs a human interval and failure rate",
+      "requiresConsent": true
+    },
+    {
+      "id": "G",
+      "name": "A/V synchronization",
+      "tasks": "speech/percussion/action clips with known onsets; silent and native audio distinct",
+      "measures": "frame/sample onset offsets, lip/audio alignment proxies, listening/viewing rubric",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "profile drift bound; native-language review for dubbing; no universal sync claim",
+      "requiresConsent": true
+    },
+    {
+      "id": "H",
+      "name": "Agentic production",
+      "tasks": "20 pilot briefs, then powered matched projects; imported assets first, generated later",
+      "measures": "editable project completion, tool failures, retries, intervention minutes, restart/revision success",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "every accepted action authorized; no fake completion or double billing; 95% task-success interval",
+      "requiresConsent": false
+    },
+    {
+      "id": "I",
+      "name": "Privacy and recovery",
+      "tasks": "fault injection: crash, kill, ENOSPC, reparse, ACL, backup/restore, offline egress capture",
+      "measures": "exact acknowledged state and assets, denied unauthorized access, no orphans, restore completeness",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "all required negative controls pass on the supported Windows artifact; no average hides a safety failure",
+      "requiresConsent": false
+    },
+    {
+      "id": "J",
+      "name": "UX and task completion",
+      "tasks": "six journeys, Arabic/English, novice and editor cohorts",
+      "measures": "completion, errors, time, accessibility, workload/satisfaction, observations",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "no critical data-loss or accessibility issue; powered counterbalanced comparison before superiority",
+      "requiresConsent": true
+    },
+    {
+      "id": "K",
+      "name": "Cost per finished video",
+      "tasks": "the same accepted deliverable including rejected takes, audio, upscale, export, storage",
+      "measures": "currency micro-units, credits with conversion, operator time, compute cost; actual receipts",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "no unapproved spend; cost per accepted minute with uncertainty; zero disabled inference is not a win",
+      "requiresConsent": false
+    },
+    {
+      "id": "L",
+      "name": "Hardware and resource efficiency",
+      "tasks": "the same media, model, precision, settings and host; cold and warm cohorts",
+      "measures": "process-tree peak RAM/VRAM, disk/cache, energy if metered, wall time per finished minute",
+      "primaryEndpoint": "taskSuccess",
+      "gate": "approved resource policy and cleanup pass; no inferred cross-hardware speedup",
+      "requiresConsent": false
+    }
+  ],
+  "records": {
+    "trial": [
+      "trialId",
+      "promptId",
+      "product",
+      "seed",
+      "attempt",
+      "status",
+      "modality",
+      "inputSha256",
+      "outputSha256",
+      "consentId",
+      "costMicros",
+      "interventionSeconds"
+    ],
+    "pair": [
+      "pairId",
+      "promptId",
+      "seed",
+      "left",
+      "right",
+      "leftTrialId",
+      "rightTrialId"
+    ],
+    "vote": ["pairId", "raterId", "choice", "attentionPassed"],
+    "consent": ["consentId", "categories", "grantedAt", "deleteBy"],
+    "cohort": [
+      "id",
+      "category",
+      "modality",
+      "product",
+      "comparator",
+      "analysis",
+      "expected.prompts",
+      "expected.seedsPerPrompt",
+      "equivalenceMargin",
+      "successFloor"
+    ],
+    "note": "Version 1 analyses the primary endpoint only; costMicros and interventionSeconds are recorded for categories H and K and reported by later analyses."
+  },
+  "changes": [
+    "1.1.0 (2026-10-26, before any run): pairs name their deciding trials; a retry after a success, excess votes and an all-inattentive slot block a label; a success floor is required for preference cohorts; MATCHES at alpha / m; consents are unique, dated and expire; reports state their analysis date."
+  ]
+}
