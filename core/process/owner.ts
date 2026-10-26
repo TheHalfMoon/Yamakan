@@ -8,7 +8,7 @@
 // in an explicitly unqualified development mode.
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +20,61 @@ export type Ownership = "windows-job-object" | "posix-unqualified";
 export const ownershipMode = (): Ownership =>
   process.platform === "win32" ? "windows-job-object" : "posix-unqualified";
 
+// The engine-worker profile (YU-041): what a future generative worker
+// (a runtime with a few helper processes) may do, versioned and hashed so
+// a job's policy can name it exactly. Everything else is the media
+// worker's sandbox: an AppContainer with no network capability, a
+// restricted low-integrity token, reads only of named files, writes only
+// to named folders, and a kill-on-close Job Object (no breakaway), so
+// the worker and every descendant die with the job.
+export type WorkerProfile = {
+  id: "engine-worker";
+  version: 1;
+  // Processes the job admits: the worker and its descendants (1..8).
+  maxProcesses: number;
+  // Wall-clock budget; the whole job is ended when it passes (exit 1460).
+  wallMs: number;
+};
+export const ENGINE_WORKER_PROFILE: WorkerProfile = Object.freeze({
+  id: "engine-worker",
+  version: 1,
+  maxProcesses: 4,
+  wallMs: 30 * 60 * 1000,
+});
+export const WALL_EXIT_CODE = 1460;
+export function profileHash(profile: WorkerProfile) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        profile.id,
+        profile.version,
+        profile.maxProcesses,
+        profile.wallMs,
+      ]),
+    )
+    .digest("hex");
+}
+function checkProfile(profile: WorkerProfile) {
+  if (
+    profile.id !== "engine-worker" ||
+    profile.version !== 1 ||
+    !Number.isInteger(profile.maxProcesses) ||
+    profile.maxProcesses < 1 ||
+    profile.maxProcesses > 8 ||
+    !Number.isInteger(profile.wallMs) ||
+    profile.wallMs < 1 ||
+    profile.wallMs > 21_600_000
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "Unknown or out-of-bounds worker profile.",
+    );
+}
+
 export type RunOptions = {
+  // The engine-worker profile; omitted, the worker is a one-process media
+  // worker (the existing profile, unchanged).
+  profile?: WorkerProfile;
   executable: string;
   args: string[];
   cwd: string;
@@ -304,10 +358,17 @@ export class ProcessOwner {
         });
         this.#refresh();
         options.signal?.addEventListener("abort", kill, { once: true });
+        if (options.profile) checkProfile(options.profile);
         const sent = this.#send(
           [
-            "SPAWN",
-            id,
+            ...(options.profile
+              ? [
+                  "SPAWN2",
+                  id,
+                  String(options.profile.maxProcesses),
+                  String(options.profile.wallMs),
+                ]
+              : ["SPAWN", id]),
             hex(executable),
             hex(path.resolve(options.cwd)),
             String(options.memoryBytes ?? 0),

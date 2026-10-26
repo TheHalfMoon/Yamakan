@@ -59,6 +59,32 @@ fn child() -> bool {
     .status()
     .is_ok()
 }
+// Starts n copies of this probe, each sleeping ms (the engine-worker
+// profile's permitted descendants); returns how many started and their pids.
+fn tree(n: usize, ms: &str) -> (usize, Vec<u32>) {
+    let exe = env::current_exe().unwrap_or_default();
+    let mut started = Vec::new();
+    let mut pids = Vec::new();
+    for _ in 0..n {
+        if let Ok(c) = Command::new(&exe).args(["sleep-ms", ms]).spawn() {
+            pids.push(c.id());
+            started.push(c);
+        }
+    }
+    let count = started.len();
+    for mut c in started {
+        let _ = c.wait();
+    }
+    (count, pids)
+}
+fn resolves(host: &str) -> bool {
+    use std::net::ToSocketAddrs;
+    network_available()
+        && (host, 80)
+            .to_socket_addrs()
+            .map(|mut a| a.next().is_some())
+            .unwrap_or(false)
+}
 fn arg(args: &[String], index: usize) -> &str {
     args.get(index).map(String::as_str).unwrap_or("")
 }
@@ -84,6 +110,50 @@ extern "system" {
         dacl: *mut std::ffi::c_void,
         sacl: *mut std::ffi::c_void,
     ) -> u32;
+}
+#[cfg(windows)]
+#[link(name = "advapi32")]
+extern "system" {
+    fn RegGetValueW(
+        key: isize,
+        subkey: *const u16,
+        value: *const u16,
+        flags: u32,
+        kind: *mut u32,
+        data: *mut std::ffi::c_void,
+        size: *mut u32,
+    ) -> i32;
+}
+// Whether a value under HKEY_CURRENT_USER can be read.
+#[cfg(windows)]
+fn reads_user_registry(subkey: &str, value: &str) -> bool {
+    use std::{ffi::OsStr, os::windows::ffi::OsStrExt, ptr::null_mut};
+    const HKEY_CURRENT_USER: isize = 0x8000_0001u32 as i32 as isize;
+    const RRF_RT_ANY: u32 = 0x0000_ffff;
+    let w = |t: &str| {
+        OsStr::new(t)
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<u16>>()
+    };
+    let (k, v) = (w(subkey), w(value));
+    let mut buffer = [0u8; 256];
+    let mut size = buffer.len() as u32;
+    unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            k.as_ptr(),
+            v.as_ptr(),
+            RRF_RT_ANY,
+            null_mut(),
+            buffer.as_mut_ptr() as *mut _,
+            &mut size,
+        ) == 0
+    }
+}
+#[cfg(not(windows))]
+fn reads_user_registry(_subkey: &str, _value: &str) -> bool {
+    false
 }
 #[cfg(windows)]
 #[link(name = "kernel32")]
@@ -175,6 +245,60 @@ fn main() {
         }
         "child" => {
             print!("{}", if child() { "started" } else { "denied" });
+        }
+        "tree" => {
+            let (count, pids) = tree(arg(&args, 1).parse().unwrap_or(1), arg(&args, 2));
+            print!(
+                "{count}|{}",
+                pids.iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+        }
+        "orphan" => {
+            // A child left behind on purpose: the job must end it.
+            let exe = env::current_exe().unwrap_or_default();
+            match Command::new(exe).args(["sleep-ms", arg(&args, 1)]).spawn() {
+                Ok(c) => print!("{}", c.id()),
+                Err(_) => print!("denied"),
+            }
+        }
+        "spawn-hold" => {
+            // Starts n long-lived children, reports their pids at once, then
+            // holds: the owner, the wall budget or a cancel must end them all.
+            use std::io::Write;
+            let exe = env::current_exe().unwrap_or_default();
+            let n: usize = arg(&args, 1).parse().unwrap_or(1);
+            let pids: Vec<String> = (0..n)
+                .filter_map(|_| Command::new(&exe).args(["sleep-ms", "120000"]).spawn().ok())
+                .map(|c| c.id().to_string())
+                .collect();
+            println!("{}", pids.join(","));
+            let _ = std::io::stdout().flush();
+            thread::sleep(Duration::from_millis(
+                arg(&args, 2).parse::<u64>().unwrap_or(60000),
+            ));
+        }
+        "reg" => {
+            print!(
+                "{}",
+                if reads_user_registry(arg(&args, 1), arg(&args, 2)) {
+                    "read"
+                } else {
+                    "denied"
+                }
+            );
+        }
+        "dns" => {
+            print!(
+                "{}",
+                if resolves(arg(&args, 1)) {
+                    "resolved"
+                } else {
+                    "denied"
+                }
+            );
         }
         "acl" => {
             if !write(arg(&args, 1)) {

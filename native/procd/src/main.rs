@@ -22,6 +22,15 @@
 //! Protocol (tab-separated; strings and data are hex-encoded):
 //!   SPAWN id exe cwd jobMemoryBytes writableCount dir... readableCount path... argc arg... envCount key value...
 //!       -> CREATED id pid       (suspended, inside its job)
+//!   SPAWN2 id maxProcesses wallMs exe cwd ... (as SPAWN)
+//!       the engine-worker profile (YU-041): the job admits up to
+//!       maxProcesses (1..=8) processes, the worker and its descendants,
+//!       all inside the same job, token and AppContainer; after wallMs
+//!       (1..=21600000; 0 = none) the whole job is terminated (exit 1460).
+//!       Its token also holds the registryRead capability: in a
+//!       less-privileged AppContainer, process creation fails without it
+//!       (measured on Windows 11 26300); it grants read access only to
+//!       registry keys that allow registryRead, no file and no network.
 //!   RESUME id                   -> RESUMED id
 //!   KILL id                     -> (EXITED follows)
 //!   (worker output)             -> OUT id hexChunk | ERR id hexChunk
@@ -48,6 +57,11 @@ const STARTF_USESTDHANDLES: u32 = 0x0000_0100;
 const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: usize = 0x0002_0002;
 const PROC_THREAD_ATTRIBUTE_JOB_LIST: usize = 0x0002_000D;
 const JOB_OBJECT_LIMIT_ACTIVE_PROCESS: u32 = 0x0000_0008;
+// The engine-worker profile's bounds (SPAWN2).
+const MAX_PROFILE_PROCESSES: u32 = 8;
+const MAX_WALL_MS: u32 = 21_600_000;
+// ERROR_TIMEOUT: the exit code of a job ended by its wall budget.
+const WALL_EXIT_CODE: u32 = 1460;
 const JOB_OBJECT_LIMIT_JOB_MEMORY: u32 = 0x0000_0200;
 const JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION: u32 = 0x0000_0400;
 const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x0000_2000;
@@ -56,6 +70,7 @@ const HANDLE_FLAG_INHERIT: u32 = 0x0000_0001;
 const GENERIC_READ: u32 = 0x8000_0000;
 const OPEN_EXISTING: u32 = 3;
 const INFINITE: u32 = 0xFFFF_FFFF;
+const WAIT_TIMEOUT: u32 = 0x0000_0102;
 const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
 const MAX_COMMAND_LINE: usize = 32_766;
 const MAX_REQUEST_LINE: usize = 256 * 1024;
@@ -822,7 +837,7 @@ struct Spawned {
     stderr: Owned,
 }
 
-fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String> {
+fn spawn(id: &str, fields: &[&str], allow: &[String], max_processes: u32) -> Result<Spawned, String> {
     if fields.len() < 5 {
         return Err("SPAWN needs exe, cwd, memory, writable folders and argc".into());
     }
@@ -959,6 +974,7 @@ fn spawn(id: &str, fields: &[&str], allow: &[String]) -> Result<Spawned, String>
         &cwd,
         &line,
         memory,
+        max_processes,
         &token,
         &capability,
         writable.first().map(String::as_str),
@@ -993,6 +1009,7 @@ fn launch(
     cwd: &str,
     line: &str,
     memory: usize,
+    max_processes: u32,
     token: &Owned,
     capability: &container::Sid,
     temp: Option<&str>,
@@ -1004,11 +1021,13 @@ fn launch(
             return Err(last_error("CreateJobObject"));
         }
         let mut limits = ExtendedLimitInformation::default();
-        // One process only: media workers never start children.
+        // Media workers (SPAWN) are one process and never start children;
+        // an engine worker (SPAWN2) may have a few descendants, all in this
+        // job (no breakaway), so all of them die with it.
         limits.basic.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
             | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION
             | JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
-        limits.basic.active_process_limit = 1;
+        limits.basic.active_process_limit = max_processes;
         if memory > 0 {
             limits.basic.limit_flags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
             limits.job_memory_limit = memory;
@@ -1030,12 +1049,18 @@ fn launch(
         let mut inherited = [stdin.0, stdout_write.0, stderr_write.0];
         let mut jobs = [job.0];
 
-        // The worker's AppContainer and its one enabled capability.
-        let mut capabilities = [SidAndAttributes { sid: capability.as_ptr(), attributes: container::SE_GROUP_ENABLED }];
+        // The worker's AppContainer and its enabled capabilities: its own,
+        // and for an engine worker (descendants) registryRead, without which
+        // a less-privileged AppContainer cannot create a process.
+        let registry = if max_processes > 1 { Some(container::capability_sid("registryRead")?) } else { None };
+        let mut capabilities = vec![SidAndAttributes { sid: capability.as_ptr(), attributes: container::SE_GROUP_ENABLED }];
+        if let Some(sid) = &registry {
+            capabilities.push(SidAndAttributes { sid: sid.as_ptr(), attributes: container::SE_GROUP_ENABLED });
+        }
         let mut security = container::SecurityCapabilities {
             app_container_sid: container::container_sid()?.as_ptr(),
             capabilities: capabilities.as_mut_ptr(),
-            capability_count: 1,
+            capability_count: capabilities.len() as u32,
             reserved: 0,
         };
         let mut size = 0usize;
@@ -1182,8 +1207,24 @@ fn main() {
             send(&out, &format!("ERROR\t-\t{}", hex_encode(b"invalid request id")));
             continue;
         }
+        // SPAWN2 carries the engine-worker profile before the SPAWN fields.
+        let profile = if command == "SPAWN2" {
+            let processes = parts.get(2).and_then(|p| p.parse::<u32>().ok());
+            let wall = parts.get(3).and_then(|p| p.parse::<u32>().ok());
+            match (processes, wall) {
+                (Some(p), Some(w)) if (1..=MAX_PROFILE_PROCESSES).contains(&p) && w <= MAX_WALL_MS => Some((p, w)),
+                _ => {
+                    send(&out, &format!("ERROR	{id}	{}", hex_encode(b"bad engine-worker profile")));
+                    continue;
+                }
+            }
+        } else {
+            None
+        };
+        let (max_processes, wall_ms) = profile.unwrap_or((1, 0));
+        let fields: &[&str] = if profile.is_some() { &parts[4.min(parts.len())..] } else { &parts[2..] };
         match command {
-            "SPAWN" => {
+            "SPAWN" | "SPAWN2" => {
                 {
                     let live = workers.lock().unwrap();
                     if live.contains_key(id) || live.len() >= MAX_LIVE_WORKERS {
@@ -1191,7 +1232,7 @@ fn main() {
                         continue;
                     }
                 }
-                match spawn(id, &parts[2..], &allow) {
+                match spawn(id, fields, &allow, max_processes) {
                     Ok(spawned) => {
                         workers.lock().unwrap().insert(id.to_string(), spawned.worker);
                         send(&out, &format!("CREATED\t{id}\t{}", spawned.pid));
@@ -1205,6 +1246,13 @@ fn main() {
                             let process = process; // move the owned handle
                             let mut code = 0u32;
                             unsafe {
+                                // The wall budget ends the whole job: the
+                                // worker and every descendant.
+                                if wall_ms > 0 && WaitForSingleObject(process.0, wall_ms) == WAIT_TIMEOUT {
+                                    if let Some(worker) = workers.lock().unwrap().get(&id) {
+                                        TerminateJobObject(worker.job.0, WALL_EXIT_CODE);
+                                    }
+                                }
                                 WaitForSingleObject(process.0, INFINITE);
                                 GetExitCodeProcess(process.0, &mut code);
                             }
