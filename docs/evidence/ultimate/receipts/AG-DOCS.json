@@ -14,8 +14,8 @@
     "browser": "Microsoft Edge (installed)"
   },
   "state": "ACTIVATED",
-  "activationPr": "pending: filled by the follow-up receipt PR",
-  "mergeCommit": "pending: filled by the follow-up receipt PR",
+  "activationPr": 102,
+  "mergeCommit": "75921bc5f8fdfa9c73b7fbdb11cb27c34108e1e3",
   "change": "CREATIVE_DOCUMENTS_ENABLED = true (core/documents.ts). The YAMAKAN_AG_DOCS_QUALIFICATION test switch is removed; YAMAKAN_AG_DOCS_OFF=1 in the service's own environment is the operator rollback.",
   "members": [
     {
@@ -153,7 +153,11 @@
       "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
     }
   ],
-  "postMergeVerification": "pending: filled by the follow-up receipt PR",
+  "postMergeVerification": {
+    "main": "75921bc5f8fdfa9c73b7fbdb11cb27c34108e1e3",
+    "ci": "PR exact head de2a945: qualify, qualify-windows-r8, otio-oracle success; push run on 75921bc: success",
+    "windows": "detached 75921bc: lint, provenance, build pass; npm test 513/519 with 3 fails, all load-only (another worktree's typecheck ran concurrently) and passing alone: http preview route 10 s (33 s loaded), interruption mid-conversion 86 s (187 s), MCP 10k calls 20 s (201 s); 3 POSIX-only skips; test:studio 1975/1975; Edge E2E pass; TesterArmy journey PASSED including the restored-workspace phase"
+  },
   "rollbackProcedure": "Set YAMAKAN_AG_DOCS_OFF=1 in the service's environment and restart: every write path refuses, stored documents and bitmaps stay readable and keep their references. A code rollback sets CREATIVE_DOCUMENTS_ENABLED back to false; v5 projects stay readable either way.",
   "limitations": [
     "The Cinema viewport still saves workspace sidecars (yamakan.scene.save); they are backed up (YU-014) and migratable (YU-012). Moving Cinema UI saves into project documents is follow-up work (YU-030 project selection).",
