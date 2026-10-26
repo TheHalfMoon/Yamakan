@@ -59,7 +59,11 @@
     {
       "kind": "independent security review",
       "judge": "Sonnet subagent (same vendor; not a human)",
-      "findings": { "mustFix": 0, "shouldFix": 4, "applied": 4 }
+      "findings": {
+        "mustFix": 0,
+        "shouldFix": 4,
+        "applied": 4
+      }
     },
     {
       "kind": "delta re-reviews (correctness and security)",
@@ -81,7 +85,7 @@
       "fullReview": "OCR_FULL_REVIEW_BLOCKED: configured backend is a cloud provider (never used); no local generative backend with enough free RAM"
     }
   ],
-  "activation": "AG-DOCS remains off; this receipt is flag-off scope. Group activation needs the separate YU-010…015 group receipt.",
+  "activation": "Merged with AG-DOCS off (flag-off scope). AG-DOCS was activated afterwards by the group receipt (receipts/AG-DOCS.json).",
   "postMergeVerification": {
     "main": "432b863b4087786a67fb548fa3ef4413112be8eb",
     "ci": "PR exact head 4a8602b: qualify, qualify-windows-r8, otio-oracle success; push run on 432b863: success",

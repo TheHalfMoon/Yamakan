@@ -457,6 +457,24 @@ CREATE TABLE outbox(
 `;
 
 type Head = { revision: number; snapshot_hash: string };
+// A new stored document must fit the workspace's document budget; one
+// already stored (by hash) costs nothing more.
+function withinDocumentBudget(db: DatabaseSync, hash: string, bytes: number) {
+  if (db.prepare("SELECT 1 FROM creative_documents WHERE hash = ?").get(hash))
+    return;
+  const used = (
+    db
+      .prepare(
+        "SELECT coalesce(sum(byte_length), 0) AS n FROM creative_documents",
+      )
+      .get() as { n: number }
+  ).n;
+  if (used + bytes > DOCUMENT_LIMITS.workspaceDocumentBytes)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      "The workspace's creative document space is full.",
+    );
+}
 type Commit = {
   operation: string;
   projectId: string;
@@ -1240,8 +1258,8 @@ export class ProjectStore {
    * the hash of a document an earlier revision of this project referenced
    * (revert). `expectedContentHash` is the document's current hash, or null
    * when the id is new: any other current value is a conflict, so two
-   * writers of one document cannot both succeed. The command surface stays
-   * behind CREATIVE_DOCUMENTS_ENABLED (AG-DOCS).
+   * writers of one document cannot both succeed. The command surface
+   * refuses while AG-DOCS is turned off (creativeDocumentsEnabled).
    */
   async commitDocument(
     input: {
@@ -1406,6 +1424,12 @@ export class ProjectStore {
       },
       effects: stagedId
         ? (db, revision) => {
+            const staged = db
+              .prepare(
+                "SELECT content_hash AS hash, length(bytes) AS bytes FROM document_uploads WHERE id = ?",
+              )
+              .get(stagedId) as { hash: string; bytes: number } | undefined;
+            if (staged) withinDocumentBudget(db, staged.hash, staged.bytes);
             db.prepare(
               "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT content_hash, kind, schema_version, asset_ids, object_digests, bytes, length(bytes) FROM document_uploads WHERE id = ? ON CONFLICT(hash) DO NOTHING",
             ).run(stagedId);
@@ -1415,6 +1439,7 @@ export class ProjectStore {
           }
         : validated
           ? (db, revision) => {
+              withinDocumentBudget(db, validated.hash, validated.bytes.length);
               db.prepare(
                 "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
               ).run(
@@ -1547,19 +1572,19 @@ export class ProjectStore {
           "LIMIT_EXCEEDED",
           "Too many staged bytes in progress; commit or wait for one to expire.",
         );
-      // Agents and the CLI share one half, so the browser session (the
-      // person at the keyboard) can always stage its document.
-      if (input.principalId !== "browser-ui") {
-        const others = sum(
-          "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id <> 'browser-ui' AND state IN ('receiving', 'sealed')",
+      // Agents share one bounded pool, so they can never lock out the
+      // browser session or the local CLI and SDK.
+      if (input.principalId.startsWith("agent:")) {
+        const agents = sum(
+          "SELECT coalesce(sum(declared_bytes), 0) AS n FROM document_uploads WHERE principal_id GLOB 'agent:*' AND state IN ('receiving', 'sealed')",
         );
         if (
-          others + input.declaredBytes >
-          DOCUMENT_LIMITS.reservedBytesForOthers
+          agents + input.declaredBytes >
+          DOCUMENT_LIMITS.reservedBytesForAgents
         )
           throw new CommandError(
             "LIMIT_EXCEEDED",
-            "The staged upload space for agents and the CLI is in use; retry later.",
+            "The staged upload space for agents is in use; retry later.",
           );
       }
       const free = this.#options.freeBytes
@@ -1703,15 +1728,22 @@ export class ProjectStore {
           "SELECT count(*) AS n, coalesce(sum(byte_length), 0) AS bytes FROM studio_bitmaps WHERE project_id = ? AND digest IS NOT ?",
         )
         .get(projectId, digest) as { n: number; bytes: number };
+      // And the workspace's, across all projects.
+      const all = db
+        .prepare(
+          "SELECT coalesce(sum(byte_length), 0) AS bytes FROM studio_bitmaps WHERE NOT (project_id = ? AND digest IS ?)",
+        )
+        .get(projectId, digest) as { bytes: number };
       return (
         used.n + 1 > DOCUMENT_LIMITS.projectBitmaps ||
-        used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes
+        used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes ||
+        all.bytes + declaredBytes > DOCUMENT_LIMITS.workspaceBitmapBytes
       );
     };
     if (overBudget(this.#database, null))
       throw new CommandError(
         "LIMIT_EXCEEDED",
-        "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+        "Studio bitmap space is full; unused bitmaps are freed by garbage collection (hourly, an hour after they were last used).",
       );
     let size = 0;
     let head = Buffer.alloc(0);
@@ -1760,7 +1792,7 @@ export class ProjectStore {
         if (!known && overBudget(db, stored.sha256))
           throw new CommandError(
             "LIMIT_EXCEEDED",
-            "This project's Studio bitmap space is full; unused bitmaps are freed by garbage collection.",
+            "Studio bitmap space is full; unused bitmaps are freed by garbage collection (hourly, an hour after they were last used).",
           );
         if (!object)
           db.prepare(

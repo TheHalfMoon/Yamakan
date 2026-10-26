@@ -109,20 +109,25 @@ async function endBrowsers() {
     if (isRunning(pid)) spawnSync("taskkill", ["/PID", pid, "/T", "/F"], { stdio: "ignore" });
     // Edge can re-parent helpers that still hold the profile: end any Edge
     // whose command line names this exact profile.
-    spawnSync(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        "Get-CimInstance Win32_Process -Filter \"Name='msedge.exe'\" | Where-Object { $_.CommandLine -like ('*' + $env:PROFILE_DIR + '*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
-      ],
-      { stdio: "ignore", env: { ...process.env, PROFILE_DIR: profile } },
-    );
-    for (let i = 0; i < 40 && existsSync(profile); i++) {
+    const endProfileHolders = () =>
+      spawnSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          "Get-CimInstance Win32_Process -Filter \"Name='msedge.exe'\" | Where-Object { $_.CommandLine -like ('*' + $env:PROFILE_DIR + '*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+        ],
+        { stdio: "ignore", env: { ...process.env, PROFILE_DIR: profile } },
+      );
+    endProfileHolders();
+    // A helper that outlives the first pass (or restarts) is ended again
+    // while the profile is still held.
+    for (let i = 0; i < 80 && existsSync(profile); i++) {
       try {
         rmSync(profile, { recursive: true, force: true });
       } catch {
+        if (i % 8 === 7) endProfileHolders();
         await new Promise((r) => setTimeout(r, 250));
       }
     }
@@ -204,7 +209,7 @@ try {
           browser: "Microsoft Edge (installed), headless, over CDP",
           runner: "TesterArmy e2e 0.20.0 + @e2e-dev/web 0.14.0 (no model, telemetry disabled)",
           serviceKilledBetweenPhases: true,
-          restoredWorkspaceReopened: true,
+          restoredWorkspaceReopened: restoredRoot !== null && !failures.some((f) => f.startsWith("phase 3")),
           headFormatVersion: project?.formatVersion ?? null,
           documents: docs.length,
           storedBitmaps: bitmaps.length,

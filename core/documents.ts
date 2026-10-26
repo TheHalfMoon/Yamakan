@@ -35,6 +35,8 @@ export const CREATIVE_DOCUMENTS_ENABLED = true;
  * service's own environment only, the service announces it at startup, and
  * no request can change it.
  */
+export const DOCUMENTS_OFF =
+  "Saving creative documents is turned off on this service (YAMAKAN_AG_DOCS_OFF); saved documents stay readable.";
 export function creativeDocumentsEnabled(): boolean {
   return CREATIVE_DOCUMENTS_ENABLED && process.env.YAMAKAN_AG_DOCS_OFF !== "1";
 }

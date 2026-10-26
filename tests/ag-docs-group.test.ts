@@ -6,7 +6,7 @@
 // workspace that a second service opens.
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { fork, spawn, type ChildProcess } from "node:child_process";
+import { execFile, fork, spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { once } from "node:events";
@@ -79,14 +79,22 @@ const scene = (id: string, focal = 35) => ({
 });
 
 // The real service on a workspace, as a user starts it (AG-DOCS on).
-async function service(root: string, port: number) {
+async function service(
+  root: string,
+  port: number,
+  extra: NodeJS.ProcessEnv = {},
+) {
   const url = `http://127.0.0.1:${port}`;
-  const env = {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     YAMAKAN_WORKSPACE: root,
     YAMAKAN_PORT: String(port),
     YAMAKAN_URL: url,
+    ...extra,
   };
+  // Nothing from the host's environment decides this run.
+  if (!("YAMAKAN_AG_DOCS_OFF" in extra)) delete env.YAMAKAN_AG_DOCS_OFF;
+  delete env.YAMAKAN_RECOVERY;
   const child = fork(
     fileURLToPath(new URL("../server/main.ts", import.meta.url)),
     [],
@@ -198,12 +206,53 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
   assert.notEqual(saved.result.isError, true, saved.result.content[0].text);
   mcp.stdin!.end();
 
+  // A scene staged by the CLI (it sends only the file's bytes), committed
+  // with the receipt it prints.
+  const cliScene = randomUUID();
+  const cliFile = path.join(base, "scene.json");
+  await writeFile(cliFile, JSON.stringify(scene(cliScene, 50)));
+  const printed = await new Promise<string>((resolve, reject) =>
+    execFile(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../cli/main.ts", import.meta.url)),
+        "stage-document",
+        project.id,
+        "cinemaScene",
+        "1",
+        cliFile,
+      ],
+      { env: live.env, windowsHide: true },
+      (error, stdout, stderr) =>
+        error ? reject(new Error(stderr || error.message)) : resolve(stdout),
+    ),
+  );
+  const staged = JSON.parse(printed) as {
+    stagedUploadId: string;
+    contentHash: string;
+  };
+  await client.call("yamakan.document.commit", {
+    projectId: project.id,
+    expectedRevision: (await open()).revision,
+    documentId: cliScene,
+    kind: "cinemaScene",
+    schemaVersion: 1,
+    expectedContentHash: null,
+    source: {
+      stagedUploadId: staged.stagedUploadId,
+      contentHash: staged.contentHash,
+    },
+  });
+
   const documents = async () =>
     (await live.client.call("yamakan.document.list", {
       projectId: project.id,
     })) as { id: string; contentHash: string }[];
   const refs = await documents();
-  assert.deepEqual(refs.map((d) => d.id).sort(), [studioId, sceneId].sort());
+  assert.deepEqual(
+    refs.map((d) => d.id).sort(),
+    [studioId, sceneId, cliScene].sort(),
+  );
 
   // An old client's whole-project save keeps both documents.
   const view = await open();
@@ -215,20 +264,26 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
   assert.deepEqual(await documents(), refs);
 
   // Typed batches, undo and redo keep them too.
+  const opening = randomUUID();
+  const hasOpening = async () =>
+    (await open()).scenes.some((s: { id: string }) => s.id === opening);
   await client.call("yamakan.project.applyBatch", {
     projectId: project.id,
     expectedRevision: (await open()).revision,
-    operations: [{ type: "scene.add", sceneId: randomUUID(), name: "Opening" }],
+    operations: [{ type: "scene.add", sceneId: opening, name: "Opening" }],
   });
+  assert.equal(await hasOpening(), true);
   await client.call("yamakan.project.undo", {
     projectId: project.id,
     expectedRevision: (await open()).revision,
   });
+  assert.equal(await hasOpening(), false, "undo removed the scene");
   assert.deepEqual(await documents(), refs);
   await client.call("yamakan.project.redo", {
     projectId: project.id,
     expectedRevision: (await open()).revision,
   });
+  assert.equal(await hasOpening(), true, "redo restored it");
   assert.deepEqual(await documents(), refs);
 
   // A legacy workspace scene migrates into the project, original kept.
@@ -248,7 +303,7 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
     sourceSha256: entry.sourceSha256!,
   });
   const migrated = await documents();
-  assert.equal(migrated.length, 3);
+  assert.equal(migrated.length, 4);
   assert.equal(
     await readFile(path.join(root, "cinema", `${legacyId}.json`), "utf8"),
     legacyBytes,
@@ -315,5 +370,49 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
     legacyBytes,
   );
   await copy.stop();
+
+  // Rollback: saving turned off by the operator; everything stored still
+  // reads, and a save is refused with the reason.
+  const off = await service(restored.root, 24384, { YAMAKAN_AG_DOCS_OFF: "1" });
+  const capability = (await off.client.call(
+    "yamakan.document.capability",
+    {},
+  )) as {
+    available: boolean;
+    turnedOff: boolean;
+  };
+  assert.deepEqual(capability, { available: false, turnedOff: true });
+  for (const [id, bytes] of expected)
+    assert.equal(await bytesOf(off.client, id), bytes);
+  assert.deepEqual(
+    Buffer.from(
+      await (
+        await off.client.studioBitmap(project.id, bitmap.digest)
+      ).arrayBuffer(),
+    ),
+    pixels,
+  );
+  await assert.rejects(
+    off.client.saveDocument({
+      projectId: project.id,
+      expectedRevision: (
+        await off.client.call("yamakan.project.open", { projectId: project.id })
+      ).revision,
+      documentId: randomUUID(),
+      kind: "cinemaScene",
+      schemaVersion: 1,
+      expectedContentHash: null,
+      content: scene(randomUUID()),
+      requestId: "while-off",
+    }),
+    (e: unknown) =>
+      (e as { code?: string }).code === "CAPABILITY_UNAVAILABLE" &&
+      /turned off/.test((e as Error).message),
+  );
+  await assert.rejects(
+    off.client.uploadStudioBitmap(project.id, png([1, 2, 3, 255])),
+    (e: unknown) => (e as { code?: string }).code === "CAPABILITY_UNAVAILABLE",
+  );
+  await off.stop();
   await live.stop();
 });

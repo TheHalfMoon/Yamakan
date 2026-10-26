@@ -23,13 +23,17 @@ export const DOCUMENT_LIMITS = Object.freeze({
   // collected after the garbage-collection grace period.
   projectBitmapBytes: 2 * 1024 * 1024 * 1024,
   projectBitmaps: 10_000,
+  // Across all projects: Studio bitmaps, and distinct stored document bytes
+  // (every retained revision keeps the documents it names).
+  workspaceBitmapBytes: 8 * 1024 * 1024 * 1024,
+  workspaceDocumentBytes: 1024 * 1024 * 1024,
   // Bitmap uploads one principal may have in progress at once.
   activeBitmapUploadsPerPrincipal: 2,
-  // No principal holds more than one document's worth, and the browser
-  // session keeps its own share, so agents and the CLI together can never
-  // lock the person at the keyboard out.
+  // No principal holds more than one document's worth, and agents share
+  // one more document's worth between them, so agents can never lock out
+  // the person at the keyboard or the local CLI and SDK.
   reservedBytesPerPrincipal: 8 * 1024 * 1024,
-  reservedBytesForOthers: 8 * 1024 * 1024,
+  reservedBytesForAgents: 8 * 1024 * 1024,
   uploadTtlMs: 15 * 60 * 1000,
 });
 

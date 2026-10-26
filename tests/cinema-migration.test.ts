@@ -494,6 +494,26 @@ test("the commands: inventory reads; migration is refused while AG-DOCS is turne
       sceneId: A,
       sourceSha256: sha(await readFile(file)),
     });
+  // A scene belongs to the first project it enters: agents never assign.
+  await refused(
+    execute(
+      {
+        ...ctx,
+        principal: {
+          id: "agent:helper",
+          scopes: new Set(["project:write", "project:read"]),
+        },
+      } as CommandContext,
+      "yamakan.scene.migrate",
+      {
+        projectId: project.id,
+        expectedRevision: project.revision,
+        sceneId: A,
+        sourceSha256: sha(await readFile(file)),
+      },
+    ),
+    "SCOPE_DENIED",
+  );
   process.env.YAMAKAN_AG_DOCS_OFF = "1";
   try {
     await refused(migrate(), "CAPABILITY_UNAVAILABLE");

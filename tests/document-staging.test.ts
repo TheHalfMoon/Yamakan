@@ -171,20 +171,30 @@ test("reservations bound active uploads per principal and staged bytes per works
     "LIMIT_EXCEEDED",
     /Too many/,
   );
-  // Agents and the CLI share 8 MiB: with 2000 bytes held, a full document
-  // from an agent does not fit, a smaller one does.
-  refusedSync(
-    () => reserve("agent:a", big),
-    "LIMIT_EXCEEDED",
-    /agents and the CLI/,
-  );
+  // Agents share 8 MiB between them (the local client's bytes do not
+  // count against it): another agent's document no longer fits.
   reserve("agent:a", big - 4000);
-  refusedSync(() => reserve("agent:b", 3000), "LIMIT_EXCEEDED", /agents/);
+  refusedSync(() => reserve("agent:b", 5000), "LIMIT_EXCEEDED", /agents/);
   // The browser session keeps its own share, whatever agents hold...
   reserve("browser-ui", big);
   // ...but no principal holds more than one document's worth.
   refusedSync(() => reserve("browser-ui", 1), "LIMIT_EXCEEDED", /staged bytes/);
   assert.equal(RESOURCE_POLICY.enforced.requestBytes, 2 * 1024 * 1024);
+});
+
+test("agents share one staging pool and can never lock out the local client", async () => {
+  const { store, project } = await workspace();
+  const big = DOCUMENT_LIMITS.documentBytes;
+  const reserve = (principalId: string, declaredBytes: number) =>
+    store.reserveDocumentUpload({
+      ...stageInput(project.id, studioBytes()),
+      principalId,
+      declaredBytes,
+    });
+  reserve("agent:a", big);
+  refusedSync(() => reserve("agent:b", 1), "LIMIT_EXCEEDED", /agents/);
+  // The CLI and SDK stage a whole document whatever agents hold.
+  assert.ok("reserved" in reserve("local-client", big));
 });
 
 test("a restart releases uploads that were still being received, and expired ones", async () => {

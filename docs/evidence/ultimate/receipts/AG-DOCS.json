@@ -1,0 +1,106 @@
+{
+  "format": "yamakan.ultimate-activation-receipt/v1",
+  "group": "AG-DOCS",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d",
+    "rule": "All dependencies verified plus group legacy-save, undo, reopen, complete-backup/restore and actual UI/client tests; separate reviewed activation receipt."
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "432b863",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed)"
+  },
+  "state": "ACTIVATED",
+  "activationPr": "ACTIVATION_PR_PLACEHOLDER",
+  "mergeCommit": "MERGE_PLACEHOLDER",
+  "change": "CREATIVE_DOCUMENTS_ENABLED = true (core/documents.ts). The YAMAKAN_AG_DOCS_QUALIFICATION test switch is removed; YAMAKAN_AG_DOCS_OFF=1 in the service's own environment is the operator rollback.",
+  "members": [
+    {
+      "task": "YU-010",
+      "state": "VERIFIED (flag-off scope)",
+      "prs": [91, 92, 93],
+      "receipt": "ledger rows (slices a, b, c)"
+    },
+    {
+      "task": "YU-011",
+      "state": "VERIFIED",
+      "pr": 94,
+      "receipt": "receipts/YU-011.json"
+    },
+    {
+      "task": "YU-012",
+      "state": "VERIFIED",
+      "pr": 96,
+      "receipt": "receipts/YU-012.json"
+    },
+    {
+      "task": "YU-013",
+      "state": "VERIFIED (part a; part b with YU-014)",
+      "prs": [97, 101],
+      "receipt": "receipts/YU-013a.json, receipts/YU-014.json"
+    },
+    {
+      "task": "YU-014",
+      "state": "VERIFIED",
+      "pr": 101,
+      "receipt": "receipts/YU-014.json"
+    },
+    {
+      "task": "YU-015",
+      "state": "VERIFIED",
+      "pr": 99,
+      "receipt": "receipts/YU-015.json"
+    }
+  ],
+  "groupTests": {
+    "client": {
+      "file": "tests/ag-docs-group.test.ts",
+      "covers": [
+        "real service started as a user starts it (no switch), capability available",
+        "SDK: Studio bitmap upload and a canvas naming it; MCP yamakan_document_save of a Cinema scene; CLI stage-document committed with its printed receipt",
+        "legacy whole-project save (yamakan.project.save) keeps every document",
+        "typed batch, undo and redo through commands: the scene is removed and restored, documents unchanged",
+        "legacy Cinema sidecar inventory and migration into the project, original kept",
+        "hard kill (SIGKILL) and reopen on the same workspace: identical document bytes and bitmap",
+        "backup and restore through commands (creative: complete), a second service on the restored workspace reads identical documents, bitmap and the legacy file",
+        "rollback: a service with YAMAKAN_AG_DOCS_OFF=1 reports turnedOff, reads every document and the bitmap, and refuses saves and bitmap uploads with the operator reason"
+      ]
+    },
+    "browser": {
+      "file": "e2e/testerarmy/run.mjs",
+      "covers": [
+        "installed Edge over CDP: create, draw, save, conflicting save, reload",
+        "service killed between phases; reopen shows the saved canvas",
+        "backup and restore through the SDK; a service on the restored workspace reopens the same canvas in Edge",
+        "each workspace checked independently of the browser (v5 head, one Studio document, stored bitmaps matching their digests)"
+      ]
+    },
+    "refusalPathsUnderRollback": [
+      "tests/document-clients.test.ts (SDK, MCP, CLI against the real service)",
+      "tests/document-staging.test.ts (route and commit)",
+      "tests/cinema-migration.test.ts (migration)",
+      "tests/studio-persistence.test.ts (switch semantics, bundle included)"
+    ]
+  },
+  "hardeningWithActivation": [
+    "Agents cannot migrate legacy scenes (a source belongs to the first project it enters)",
+    "Agents share one staging pool of their own, so they can never lock out the browser session or the local CLI/SDK",
+    "Workspace-wide budgets: Studio bitmaps 8 GiB, distinct stored document bytes 1 GiB",
+    "Garbage collection runs hourly (unreferenced bitmaps and refused uploads' files are freed while the service runs)",
+    "Stored bitmaps stay readable under rollback; Studio opens saved canvases and says saving is turned off",
+    "An unrecognised YAMAKAN_AG_DOCS_OFF value is announced at startup"
+  ],
+  "reviews": "REVIEWS_PLACEHOLDER",
+  "postMergeVerification": "POSTMERGE_PLACEHOLDER",
+  "rollbackProcedure": "Set YAMAKAN_AG_DOCS_OFF=1 in the service's environment and restart: every write path refuses, stored documents and bitmaps stay readable and keep their references. A code rollback sets CREATIVE_DOCUMENTS_ENABLED back to false; v5 projects stay readable either way.",
+  "limitations": [
+    "The Cinema viewport still saves workspace sidecars (yamakan.scene.save); they are backed up (YU-014) and migratable (YU-012). Moving Cinema UI saves into project documents is follow-up work (YU-030 project selection).",
+    "The browser's legacy whole-project save is exercised through the same yamakan.project.save command by the SDK, not from the editor UI after a canvas save",
+    "Workspace budgets are not exercised at their limits by a test",
+    "Browser tabs share one undo writer (YU-015 limitation)",
+    "Full OCR review blocked (cloud provider configured; local model needs more free RAM)"
+  ]
+}
