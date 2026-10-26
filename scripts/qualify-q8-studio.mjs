@@ -100,7 +100,8 @@ try {
 
   // Re-enter with forceMount measurement query (session survives in sessionStorage).
   await page.goto(`${url}/?studioQ8=1`);
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Open Studio", exact: true }).click();
 
   const studio = page.getByTestId("studio-canvas");
   await studio.waitFor();

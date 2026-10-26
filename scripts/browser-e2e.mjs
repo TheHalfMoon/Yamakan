@@ -158,6 +158,13 @@ try {
   });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  // YU-030: the project shell's workspaces (Story, Edit, Finish).
+  const workspace = async (name) => {
+    await page.getByRole("tab", { name, exact: true }).click();
+    await page
+      .getByRole("tabpanel", { name, exact: true })
+      .waitFor({ state: "visible" });
+  };
   // Every request any page of the journey makes (the offline gate's
   // browser side: fonts, previews, media): only loopback, in-page data, or
   // the browser's own built-in pages (its download panel, for example).
@@ -219,8 +226,11 @@ try {
     .filter({ hasText: /Imported \W?music\.wav/ })
     .waitFor();
   await page.getByRole("button", { name: "music.wav audio" }).click();
+  // Scenes are Story's; titles and the timeline are Edit's.
+  await workspace("Story");
   await page.getByRole("button", { name: "Add scene", exact: true }).click();
   await page.getByLabel("Focal length (mm)").fill("85");
+  await workspace("Edit");
   await page.getByLabel("Title text").fill("Yamakan · Local production");
   await page.getByRole("button", { name: "Add title", exact: true }).click();
   // Exercise adopted editor controls and verify their canonical result, not just clicks.
@@ -332,7 +342,9 @@ try {
   }
   // The tool catalog is read with the page's session and shown in place
   // (a new tab would hold no session).
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  // Studio opens as a panel of Edit (YU-030).
+  await workspace("Edit");
+  await page.getByRole("button", { name: "Open Studio", exact: true }).click();
   // P10-01: Studio enabled after Q8–Q10; canvas mounts without forceMount.
   const studio = page.getByTestId("studio-canvas");
   await studio.waitFor();
@@ -345,6 +357,9 @@ try {
     null,
     { timeout: 60000 },
   );
+  // Agent tools are in Finish, out of the editing flow.
+  await workspace("Finish");
+  await page.locator("details.agent-tools > summary").click();
   await page
     .getByRole("button", {
       name: "Show the versioned tool catalog",
@@ -359,7 +374,31 @@ try {
     .locator("pre.catalog")
     .filter({ hasText: "yamakan.studio.open" })
     .waitFor();
-  await page.getByRole("button", { name: "Production", exact: true }).click();
+  // One project in every workspace: Finish reports its own output size.
+  assert.match(
+    await page.getByTestId("finish-output").innerText(),
+    new RegExp(`${saved.width}×${saved.height}`),
+  );
+  // Keyboard: arrows move between workspaces, Home and End to the ends.
+  const selectedTab = () =>
+    page.evaluate(
+      () =>
+        document.querySelector('[role="tab"][aria-selected="true"]')
+          ?.textContent,
+    );
+  await page.getByRole("tab", { name: "Finish", exact: true }).focus();
+  await page.keyboard.press("Home");
+  assert.equal(await selectedTab(), "Story");
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await selectedTab(), "Edit");
+  await page.keyboard.press("End");
+  assert.equal(await selectedTab(), "Finish");
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.textContent),
+    "Finish",
+    "focus follows the selected tab",
+  );
+  await workspace("Edit");
   const picture = saved.clips.filter((c) =>
     saved.assets.some((a) => a.id === c.assetId && a.kind === "image"),
   );
@@ -644,6 +683,14 @@ try {
   await page
     .getByRole("button", { name: /Browser verified production Revision/ })
     .click();
+  // The workspace chosen last is kept across a reload (Edit, here).
+  assert.equal(
+    await page
+      .getByRole("tab", { name: "Edit", exact: true })
+      .getAttribute("aria-selected"),
+    "true",
+  );
+  await workspace("Story");
   await page.getByLabel("Focal length (mm)").waitFor();
   assert.equal(await page.getByLabel("Focal length (mm)").inputValue(), "85");
   assert.equal((await getProject()).clips.length, 4);
@@ -663,6 +710,22 @@ try {
     await page.getByLabel("Scene name").inputValue(),
     "Preserved on switch",
   );
+  // Moving between workspaces keeps an unsaved edit (nothing unmounts).
+  await page.getByLabel("Scene name").fill("Kept across workspaces");
+  await workspace("Finish");
+  await workspace("Edit");
+  assert.equal(
+    await page.getByTestId("shell-unsaved").isVisible(),
+    true,
+    "the shell shows the unsaved edit from every workspace",
+  );
+  await workspace("Story");
+  assert.equal(
+    await page.getByLabel("Scene name").inputValue(),
+    "Kept across workspaces",
+  );
+  await page.getByLabel("Scene name").fill("Preserved on switch");
+  await workspace("Edit");
   // Operate through the same real agent API to layer audio on two tracks and
   // add a portrait video with embedded sound, then verify preview media.
   const imported = await (
@@ -803,6 +866,7 @@ try {
   assert.equal(restored.revision, beforeRestore.revision + 1);
   assert.equal(restored.clips.length, saved.clips.length);
   assert.equal(restored.assets.length, saved.assets.length);
+  await workspace("Story");
   await page
     .getByLabel("Scene name")
     .fill("Unsaved draft retained during recovery");
@@ -888,6 +952,19 @@ try {
     .filter({ hasText: "حُفظت المراجعة" })
     .waitFor();
   assert.equal((await getProject()).scenes[0].camera.shotScale, "close");
+  // Right to left, the next workspace is to the left.
+  await page.getByRole("tab", { name: "القصة", exact: true }).focus();
+  await page.keyboard.press("ArrowLeft");
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector('[role="tab"][aria-selected="true"]')
+          ?.textContent,
+    ),
+    "التحرير",
+  );
+  await page.keyboard.press("ArrowRight");
+  await page.getByRole("tabpanel", { name: "القصة", exact: true }).waitFor();
   await page.screenshot({ path: join(output, "arabic-interface.png") });
   // Keyboard only, right to left: Tab reaches the Arabic backup button and
   // Enter runs it.
@@ -946,6 +1023,14 @@ try {
     head.revision,
   );
   assert.deepEqual(restoreReceipt.quarantined, []);
+  // Rollback (YU-030): ?shell=classic shows the prior two-tab shell.
+  await page.goto(`${url}/?shell=classic`);
+  await page
+    .getByRole("button", { name: "Agent tools", exact: true })
+    .waitFor();
+  assert.equal(await page.getByRole("tablist").count(), 0);
+  await page.goto(`${url}/`);
+  await page.getByRole("tablist").waitFor();
   assert.deepEqual(errors, []);
   const external = requests.filter((u) => !offline(u));
   assert.deepEqual(external, [], "every page request stays on this machine");

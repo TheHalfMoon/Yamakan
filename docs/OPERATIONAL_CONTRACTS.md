@@ -301,3 +301,20 @@ The editor has two previews. The canvas preview is fast and interactive. The ref
   - The export is unaffected.
   - Frame rate was no lower than the previous merge's, measured back to back: 27.1 and 27.4 fps sustained against 26.9 and 26.9. The frame-rate thresholds are unchanged.
 - **Rollback.** Revert the notice and the reference fetch: the reference view goes back to a plain image, and the cache is unchanged.
+
+## Project shell: Story, Edit and Finish (YU-030)
+
+One project shell (`src/workspaces/ProjectShell.tsx`) holds three workspaces over the one open project. They share its asset library, selection, revision history (the toolbar's undo, redo and save) and its job tray.
+
+- **Story:** scene and shot cards (camera intent per scene), Director, and the Cinema previs.
+- **Edit:** the canvas and reference previews, timeline and inspector (clip sound, animation, titles). Studio is a panel opened from Edit ("Open Studio"): its engine loads then, and it stays open.
+- **Finish:** the output summary, the export job and, collapsed, the agent tools (tool catalog and CLI). These are kept out of the editing flow.
+
+The job tray shows the one export job in every workspace. The tabs also show unsaved edits and the job's state from any workspace.
+
+- **Nothing is discarded by moving.** A workspace, once shown, stays mounted, hidden, while another is open. A draft, a Studio document or a Director run survives switching. Switching projects keeps its existing rule: dirty work is saved first.
+- **One project selector.** The projects list in the sidebar is the only one. No workspace opens a project of its own.
+- **Selection policy.** Selection lives in the editor's state and survives switching. The chosen workspace is kept per browser (`yamakan.workspace`) and restored on reload. The open project is chosen from the list after a reload, as before. Only this UI preference is stored, and the project model is unchanged.
+- **Keyboard and direction.** The tabs are a tablist with roving focus. Arrow keys move between them, mirrored in the Arabic interface, and Home and End go to the first and last. The timeline keeps left-to-right time.
+- **Tokens.** The repeated shades of `src/style.css` are named custom properties (`--ink`, `--canvas`, `--surface`, `--surface-hover`, `--line`, `--panel`, `--panel-line`, `--raised`, `--accent`). Only exact matches were replaced, so nothing changes on screen, and the shell's styles use only these. `src/editor/editor.css` is donor-derived and unchanged.
+- **Rollback.** `?shell=classic`, or `yamakan.shell=classic` in this browser, shows the prior shell (Production and Agent tools). It is built from the same parts.

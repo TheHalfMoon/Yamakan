@@ -158,7 +158,8 @@ try {
     .getByRole("heading", { name: "Q10 Studio", exact: true })
     .waitFor();
   await page.goto(`${url}/?studioQ8=1`);
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Open Studio", exact: true }).click();
   await page.waitForFunction(
     () =>
       document
