@@ -362,6 +362,9 @@ test("waiting previews are bounded, and an abandoned request does not render", a
         e instanceof CommandError && e.code === "BUSY" && e.retryable,
     );
     leaving.abort();
+    // YU-018: abandoned requests give their places back at once, not when
+    // their turn would have come.
+    assert.equal(previewsWaiting(), 0);
     const outcomes = await Promise.all(abandoned);
     assert.ok(
       outcomes.every((o) => o === "cancelled"),

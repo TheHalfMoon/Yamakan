@@ -149,3 +149,48 @@ test("the canvas plays each clip at the export's gain up to 0 dB, audio clips in
     ) < 1e-9,
   );
 });
+
+test("muted or soloed-out tracks are not counted; video on an audio track and extreme retimes are", () => {
+  const p = project();
+  const [video, audio] = p.clips;
+  audio.fadeInFrames = 15;
+  // The export drops a muted track, so its fade is no approximation.
+  p.tracks[1].muted = true;
+  assert.equal(previewParity(p).exact, true);
+  p.tracks[1].muted = false;
+  // Solo on the video kind keeps only soloed video tracks; audio unaffected.
+  p.tracks[0].solo = true;
+  assert.deepEqual(
+    previewParity(p).approximations.map((a) => a.kind),
+    ["audioFade"],
+  );
+  p.tracks[0].solo = false;
+  audio.fadeInFrames = 0;
+  video.speed = { num: 1, den: 5 };
+  const extreme = previewParity(p).approximations.find(
+    (a) => a.kind === "extremeRetime",
+  );
+  assert.deepEqual(extreme?.clipIds, [video.id]);
+  video.speed = undefined;
+  // The video asset placed on the audio track.
+  audio.assetId = p.assets[0].id;
+  const onAudio = previewParity(p).approximations.find(
+    (a) => a.kind === "videoOnAudioTrack",
+  );
+  assert.deepEqual(onAudio?.clipIds, [audio.id]);
+});
+
+test("every approximation kind has its words in both languages", async () => {
+  const { MESSAGES } = await import("../src/i18n.ts");
+  for (const kind of [
+    "titleFont",
+    "audioFade",
+    "gainAboveUnity",
+    "animation",
+    "videoOnAudioTrack",
+    "extremeRetime",
+  ]) {
+    const key = `parity.${kind}` as keyof typeof MESSAGES.en;
+    assert.ok(MESSAGES.en[key] && MESSAGES.ar[key], kind);
+  }
+});

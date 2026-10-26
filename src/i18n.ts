@@ -212,7 +212,10 @@ const en = {
   "parity.exact": "This preview shows the timeline as the export will.",
   "parity.approximate":
     "This preview approximates {list}. The reference preview shows what the export contains.",
-  "parity.titleFont": "titles (browser fonts)",
+  "parity.titleFont": "titles (browser fonts and layout)",
+  "parity.videoOnAudioTrack":
+    "video on an audio track (the export plays only its sound)",
+  "parity.extremeRetime": "speed below 1/4 or above 4x",
   "parity.audioFade": "audio fades (not played)",
   "parity.gainAboveUnity": "gain above 0 dB",
   "parity.animation": "clip animation (not drawn)",
@@ -430,7 +433,9 @@ const ar: Record<MessageKey, string> = {
   "parity.exact": "تعرض هذه المعاينة الخط الزمني كما سيظهر في التصدير.",
   "parity.approximate":
     "هذه المعاينة تقريبية في {list}. المعاينة المرجعية تعرض ما يحتويه التصدير.",
-  "parity.titleFont": "العناوين (خطوط المتصفح)",
+  "parity.titleFont": "العناوين (خطوط المتصفح وتخطيطه)",
+  "parity.videoOnAudioTrack": "فيديو على مسار صوتي (التصدير يشغّل صوته فقط)",
+  "parity.extremeRetime": "سرعة أقل من الربع أو أكثر من أربعة أضعاف",
   "parity.audioFade": "تلاشي الصوت (لا يُشغَّل)",
   "parity.gainAboveUnity": "رفع الصوت فوق 0 ديسيبل",
   "parity.animation": "تحريك المقاطع (لا يُرسم)",

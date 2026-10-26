@@ -13,9 +13,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -32,9 +30,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -46,15 +42,14 @@
       "Use individual media playback elements per clip, dispose detached media/context on removal/unmount, mute embedded video sound to match explicit-audio export, and fit portrait video within the project canvas.",
       "Unmute embedded video when the timeline clip has sound enabled (W1 preview/export parity).",
       "W9: playbackRate for constant retime; link soundtouch renderRetimedBuffer.",
-      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
+      "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
+      "YU-018: embedded video sound follows the clip's sound switch on every frame, not only when the element is created (preview/export parity)."
     ],
-    "importedSha256": "171ace099f199e54dde42ae293c60cb232a106cf461bc2e25e23ceb40eb58d1e",
+    "importedSha256": "7f415f60bcfb2c1fe454cd3add4f4e025d484d9b8c359cb48f3bdd489b2a5310",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -70,9 +65,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -85,9 +78,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -100,9 +91,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -115,9 +104,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -130,9 +117,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -145,9 +130,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -160,9 +143,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -175,9 +156,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -190,9 +169,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "src/editor/utils/historyState.test.ts"
-    ]
+    "tests": ["src/editor/utils/historyState.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -205,9 +182,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -220,9 +195,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "src/editor/utils/exportSettings.test.ts"
-    ]
+    "tests": ["src/editor/utils/exportSettings.test.ts"]
   },
   {
     "source": "TheHalfMoon/Ninerr",
@@ -252,9 +225,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "persistence builder",
-    "tests": [
-      "tests/core.test.ts"
-    ]
+    "tests": ["tests/core.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -267,9 +238,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -282,9 +251,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -299,9 +266,7 @@
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
-    "tests": [
-      "tests/journey.test.ts"
-    ]
+    "tests": ["tests/journey.test.ts"]
   },
   {
     "source": "LudwigKienle/ai-video-production-editor",
@@ -352,9 +317,7 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": [
-      "tests/skelet-storage.test.mjs"
-    ]
+    "tests": ["tests/skelet-storage.test.mjs"]
   },
   {
     "source": "TheHalfMoon/Skelet",
@@ -371,9 +334,7 @@
     "authorization": "founder-attested",
     "license": "LicenseRef-NoUpstreamLicenseFile",
     "owner": "storage builder",
-    "tests": [
-      "tests/skelet-storage.test.mjs"
-    ]
+    "tests": ["tests/skelet-storage.test.mjs"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -388,9 +349,7 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/timeline-placement.test.ts"
-    ]
+    "tests": ["tests/timeline-placement.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -405,9 +364,7 @@
     "importedSha256": "c6b1499dec71a5c4d25217a9481a133400a73bad7e6d289f9f1699f1ad47d279",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/timeline-placement.test.ts"
-    ]
+    "tests": ["tests/timeline-placement.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -424,9 +381,7 @@
     "importedSha256": "5857de68f1cbc484d1cd5e9fdc5efff068c8e85b14e92b49db44aa7fdbd9518e",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/timeline-placement.test.ts"
-    ]
+    "tests": ["tests/timeline-placement.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -441,9 +396,7 @@
     "importedSha256": "338eaea8d4ab3f94593b5937262fcae87e3a690532c81e0754d826191800dc8a",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/ripple.test.ts"
-    ]
+    "tests": ["tests/ripple.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -459,9 +412,7 @@
     "importedSha256": "9a07750e1c6b18fbba23ea67aab1d7485938479a74606b66b6bcdd34c1f4297b",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/ripple.test.ts"
-    ]
+    "tests": ["tests/ripple.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -477,9 +428,7 @@
     "importedSha256": "070dbd189d150bb15374d19a7ad94de3333d589e809745c4c721d076447adab5",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/ripple.test.ts"
-    ]
+    "tests": ["tests/ripple.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -488,15 +437,11 @@
     "original": "apps/web/src/ripple/index.ts",
     "imported": "core/timeline/ripple/index.ts",
     "sha256": "9012aa42d40beac820efddfda4fccc3ea8e35bc1b11176145d0624d9e5841630",
-    "modifications": [
-      "Re-exports use .ts extensions."
-    ],
+    "modifications": ["Re-exports use .ts extensions."],
     "importedSha256": "9bd8f4666644fb04472e6d2ff874d1936f6c133f09e72cf3fef63503efc5e36d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/ripple.test.ts"
-    ]
+    "tests": ["tests/ripple.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -511,9 +456,7 @@
     "importedSha256": "b5a5e0eda931ba204b97fff17f079ed7dd81bf7d765bd87851591432650397c7",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -528,9 +471,7 @@
     "importedSha256": "2dd966b83e2d9b6ad15103c756f68805df5a045f6587ee380a072887eb7df683",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -546,9 +487,7 @@
     "importedSha256": "aefc384abb8cdea5d690915e6d7b50eb1786f4fd1b2de951aac35be04f4437b2",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -564,9 +503,7 @@
     "importedSha256": "3fe19ae7047ef7d7b7ab09922ddbc9b760b00287afd4eb8458101f0a4119045d",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -582,9 +519,7 @@
     "importedSha256": "e9c386528ba846933d1f65fdc0edcb95d369b0022e738b838a54469441c3ce09",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -593,15 +528,11 @@
     "original": "apps/web/src/timeline/group-move/index.ts",
     "imported": "core/timeline/group-move/index.ts",
     "sha256": "276581b341b3499227d1cc97d83bb2d539be0a962aa5914a6c80c5c372762069",
-    "modifications": [
-      "Re-exports use .ts extensions."
-    ],
+    "modifications": ["Re-exports use .ts extensions."],
     "importedSha256": "7775a20be0c2c22692a03861424b6a220a7bb77935cddf0c899bddbbe2489a99",
     "license": "MIT",
     "owner": "editing builder",
-    "tests": [
-      "tests/group-move.test.ts"
-    ]
+    "tests": ["tests/group-move.test.ts"]
   },
   {
     "source": "OpenCut-app/opencut-classic",
@@ -615,9 +546,7 @@
       "Float rate → reduced Rational; clamp bounds 1/100..5/1.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -633,9 +562,7 @@
       "Flick-tick scale via BigInt; sourceRange/timelineDuration helpers.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -647,12 +574,8 @@
     "imported": "core/retime/split.ts",
     "sha256": "310f09e97263853575350fc7cfd34e43dba90a0323b1ac133579683aa894d536",
     "importedSha256": "7186cbd5d3476d30cccb068f48a638a1c055665cfc4506c413988ed3b3026455",
-    "modifications": [
-      "RetimeConfig uses Rational."
-    ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "modifications": ["RetimeConfig uses Rational."],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -668,9 +591,7 @@
       "buildConstantRetime takes rational parts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -682,12 +603,8 @@
     "imported": "core/retime/index.ts",
     "sha256": "180f004aca8665ab0975b4d42b4c12ed22ab3741bea3f98a1d7a1aa436cea41a",
     "importedSha256": "53d4fb3f348da521ec394abd1cf94a30721b8add11572fba5609160cdd7a931b",
-    "modifications": [
-      "Drops audio-stretch re-export (lives under src/audio)."
-    ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "modifications": ["Drops audio-stretch re-export (lives under src/audio)."],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -703,9 +620,7 @@
       "Rational rates via rateAsFloat for SoundTouch preview path.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/retime.test.ts"
-    ],
+    "tests": ["tests/retime.test.ts"],
     "license": "MIT",
     "owner": "media builder"
   },
@@ -717,12 +632,8 @@
     "imported": "core/animation/bezier.ts",
     "sha256": "47a241965828c44ae10634ced94919801b90e812eb2d90b130441a1630c022ac",
     "importedSha256": "2e42a3fdfee7ca35feabf4a40da61ca70ef575540aa765b98a5566de30fa9ed3",
-    "modifications": [
-      "Relative ./types.ts imports."
-    ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "modifications": ["Relative ./types.ts imports."],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -738,9 +649,7 @@
       "@/wasm to media-time.ts; clamp to clampOpts from properties.ts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -756,9 +665,7 @@
       "@/wasm to media-time.ts; generateUUID to crypto.randomUUID.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -774,9 +681,7 @@
       "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -792,9 +697,7 @@
       "formatLinearRgba/parseColorToLinearRgba call shape for Yamakan properties.ts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -806,12 +709,8 @@
     "imported": "core/animation/values.ts",
     "sha256": "dd33470ae7d66055a8813a996010c9248171687fea7b6b4e8cf10261cb87e6ee",
     "importedSha256": "2809cf2a717937680463ba0fa950c2130fac1c05d1e8be5f14afdde352cf4d0b",
-    "modifications": [
-      "Relative .ts module imports."
-    ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "modifications": ["Relative .ts module imports."],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -827,9 +726,7 @@
       "MediaTime from media-time.ts; ParamValue from core/timeline/properties.ts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -841,12 +738,8 @@
     "imported": "core/animation/curve-bridge.ts",
     "sha256": "fe0c41d57d7947e3bf04bd84203a94036989a01c9d28e9ff2a732cc58e5f8793",
     "importedSha256": "9d4c425b98e902d1eb16678293eec0f127c187483a6eef21efd6d57bd5807a3f",
-    "modifications": [
-      "@/wasm to media-time.ts."
-    ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "modifications": ["@/wasm to media-time.ts."],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -858,12 +751,8 @@
     "imported": "core/animation/channel-data.ts",
     "sha256": "c47eb1efae64eff665a2aa576f4cd2a6b3503b9dca58133b7a5d9b04e8c1209c",
     "importedSha256": "122d03ba53f4e280bf68568ce17dd68b2a8548ebcfc5ec9abe0e21714bffec37",
-    "modifications": [
-      "Relative ./types.ts imports."
-    ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "modifications": ["Relative ./types.ts imports."],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -879,9 +768,7 @@
       "ChannelEasingMode from properties.ts.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -893,12 +780,8 @@
     "imported": "core/animation/property-groups.ts",
     "sha256": "56dd1c4e2a37a819915035e03189747633fcb30bd1d89006e4811558071b716e",
     "importedSha256": "56956a746f4f5c8e6a50851fc0e4c8f193c8d0e2862e337f769228539ab569ae",
-    "modifications": [
-      "Relative .ts module imports."
-    ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "modifications": ["Relative .ts module imports."],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -913,9 +796,7 @@
     "modifications": [
       "Inlined graphic/effect path prefix checks; excluded effect/graphic channel modules."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -930,9 +811,7 @@
     "modifications": [
       "Stripped graphic/effect exports; re-export ANIMATION_ENABLED from flags.ts."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "owner": "editing builder"
   },
@@ -944,9 +823,7 @@
     "sha256": "89c5501ea9033f42ca2b468382fd9ac62f67ecb0185efd8df0eae68a2a472a37",
     "importedSha256": "89c5501ea9033f42ca2b468382fd9ac62f67ecb0185efd8df0eae68a2a472a37",
     "modifications": [],
-    "tests": [
-      "tests/cinema.test.ts"
-    ],
+    "tests": ["tests/cinema.test.ts"],
     "license": "Apache-2.0 OR MIT",
     "authorization": "public-licence",
     "owner": "cinema builder"
@@ -959,9 +836,7 @@
     "sha256": "bf17dd776a37f7ae4d77db1545972ba0599b6e5a211b24063c98d98d66c0210c",
     "importedSha256": "bf17dd776a37f7ae4d77db1545972ba0599b6e5a211b24063c98d98d66c0210c",
     "modifications": [],
-    "tests": [
-      "tests/cinema.test.ts"
-    ],
+    "tests": ["tests/cinema.test.ts"],
     "license": "Apache-2.0 OR MIT",
     "authorization": "public-licence",
     "owner": "cinema builder"
@@ -974,9 +849,7 @@
     "sha256": "9703bb440a015f09689f18775756d79bd5caa2ca50389e712e6b784c89e09eb2",
     "importedSha256": "9703bb440a015f09689f18775756d79bd5caa2ca50389e712e6b784c89e09eb2",
     "modifications": [],
-    "tests": [
-      "tests/cinema.test.ts"
-    ],
+    "tests": ["tests/cinema.test.ts"],
     "license": "Apache-2.0 OR MIT",
     "authorization": "public-licence",
     "owner": "cinema builder"
@@ -992,9 +865,7 @@
       "Replace EngineEventBus with onCameraUpdated callback; drop @storyteller/* and EditorStates enums; local CameraAspectRatio union; add OrbitControls fallback helper; import cameraMath via relative .ts path.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256."
     ],
-    "tests": [
-      "tests/cinema.test.ts"
-    ],
+    "tests": ["tests/cinema.test.ts"],
     "license": "Apache-2.0 OR MIT",
     "authorization": "public-licence",
     "owner": "cinema builder"
@@ -1009,9 +880,7 @@
       "Translated Python dataclasses to zod; paths become asset ids; bible_version becomes bibleRevision; added likeness consent schemas.",
       "Re-export DIRECTOR_ENABLED and directorCapability from core/director-flags.ts (P10 manual Director activation)."
     ],
-    "tests": [
-      "tests/identity.test.ts"
-    ],
+    "tests": ["tests/identity.test.ts"],
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1027,9 +896,7 @@
       "Translated Character Bible loader rules into zod CharacterAsset and assertReferenceIsImageAsset (shared identity.ts).",
       "Re-export DIRECTOR_ENABLED and directorCapability from core/director-flags.ts (P10 manual Director activation)."
     ],
-    "tests": [
-      "tests/identity.test.ts"
-    ],
+    "tests": ["tests/identity.test.ts"],
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1044,9 +911,7 @@
     "modifications": [
       "Translated format_character_identity/format_environment_identity and validate_identities; excluded LLM generate_identities."
     ],
-    "tests": [
-      "tests/identity.test.ts"
-    ],
+    "tests": ["tests/identity.test.ts"],
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1061,9 +926,7 @@
     "modifications": [
       "Translated JSON Schema to zod; tools_available forced empty; added framework-smoke builtin."
     ],
-    "tests": [
-      "tests/director-stages.test.ts"
-    ],
+    "tests": ["tests/director-stages.test.ts"],
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1078,9 +941,7 @@
     "modifications": [
       "Translated prerequisite/approval/next-stage rules; checkpoints become StageReceipt with output-hash-bound approvals."
     ],
-    "tests": [
-      "tests/director-stages.test.ts"
-    ],
+    "tests": ["tests/director-stages.test.ts"],
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1095,9 +956,7 @@
     "modifications": [
       "Yamakan-authored smoke pipeline adding a timeline stage; tools_available empty."
     ],
-    "tests": [
-      "tests/director-stages.test.ts"
-    ],
+    "tests": ["tests/director-stages.test.ts"],
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder",
@@ -1133,9 +992,7 @@
     "modifications": [
       "Yamakan shared sampler wrapping getScalarChannelValueAtTime for preview/export parity (Q13)."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "authorization": "public-licence",
     "owner": "motion builder"
@@ -1150,9 +1007,7 @@
     "modifications": [
       "Yamakan Q14 property registry replacing @/params; no culori dependency."
     ],
-    "tests": [
-      "tests/animation-params.test.ts"
-    ],
+    "tests": ["tests/animation-params.test.ts"],
     "license": "MIT",
     "authorization": "public-licence",
     "owner": "motion builder"
@@ -1168,9 +1023,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1183,9 +1036,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1198,9 +1049,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1213,9 +1062,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1228,9 +1075,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1243,9 +1088,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1258,9 +1101,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1273,9 +1114,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1288,9 +1127,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1303,9 +1140,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1318,9 +1153,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1333,9 +1166,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1348,9 +1179,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1363,9 +1192,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1378,9 +1205,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1393,9 +1218,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1408,9 +1231,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1423,9 +1244,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1438,9 +1257,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1453,9 +1270,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1468,9 +1283,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1483,9 +1296,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1498,9 +1309,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1513,9 +1322,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1528,9 +1335,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1543,9 +1348,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1558,9 +1361,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1573,9 +1374,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1588,9 +1387,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1603,9 +1400,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1618,9 +1413,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1633,9 +1426,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1648,9 +1439,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1663,9 +1452,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1678,9 +1465,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1693,9 +1478,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1708,9 +1491,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1723,9 +1504,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1738,9 +1517,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1753,9 +1530,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1770,9 +1545,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1785,9 +1558,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1800,9 +1571,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1815,9 +1584,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1830,9 +1597,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1845,9 +1610,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1860,9 +1623,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1875,9 +1636,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1890,9 +1649,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1905,9 +1662,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1920,9 +1675,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1935,9 +1688,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1950,9 +1701,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1965,9 +1714,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1980,9 +1727,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -1995,9 +1740,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2010,9 +1753,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2025,9 +1766,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2040,9 +1779,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2055,9 +1792,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2070,9 +1805,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2085,9 +1818,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2100,9 +1831,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2115,9 +1844,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2130,9 +1857,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2145,9 +1870,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2160,9 +1883,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2175,9 +1896,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2190,9 +1909,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2205,9 +1922,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2220,9 +1935,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2235,9 +1948,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2250,9 +1961,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2265,9 +1974,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2280,9 +1987,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2295,9 +2000,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2310,9 +2013,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2325,9 +2026,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2340,9 +2039,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2355,9 +2052,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2370,9 +2065,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2385,9 +2078,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2400,9 +2091,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2415,9 +2104,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2430,9 +2117,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2445,9 +2130,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2460,9 +2143,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2475,9 +2156,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2490,9 +2169,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2505,9 +2182,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2520,9 +2195,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2535,9 +2208,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2550,9 +2221,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2565,9 +2234,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2580,9 +2247,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2595,9 +2260,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2610,9 +2273,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2625,9 +2286,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2640,9 +2299,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2655,9 +2312,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2670,9 +2325,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2685,9 +2338,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2700,9 +2351,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2715,9 +2364,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2730,9 +2377,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2745,9 +2390,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2760,9 +2403,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2775,9 +2416,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2790,9 +2429,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2805,9 +2442,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2820,9 +2455,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2835,9 +2468,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2850,9 +2481,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2865,9 +2494,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2880,9 +2507,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2895,9 +2520,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2910,9 +2533,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2925,9 +2546,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2940,9 +2559,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2955,9 +2572,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2970,9 +2585,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -2985,9 +2598,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3000,9 +2611,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3015,9 +2624,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3030,9 +2637,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3045,9 +2650,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3060,9 +2663,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3075,9 +2676,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3090,9 +2689,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3105,9 +2702,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3120,9 +2715,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3135,9 +2728,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3150,9 +2741,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3165,9 +2754,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3180,9 +2767,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3195,9 +2780,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3210,9 +2793,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3225,9 +2806,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3240,9 +2819,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3255,9 +2832,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3270,9 +2845,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3285,9 +2858,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3300,9 +2871,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3315,9 +2884,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3330,9 +2897,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3345,9 +2910,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3360,9 +2923,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3375,9 +2936,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3390,9 +2949,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3405,9 +2962,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3420,9 +2975,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3435,9 +2988,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3450,9 +3001,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3465,9 +3014,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3480,9 +3027,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3495,9 +3040,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3510,9 +3053,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3525,9 +3066,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3540,9 +3079,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3555,9 +3092,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3570,9 +3105,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3585,9 +3118,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3600,9 +3131,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3615,9 +3144,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3630,9 +3157,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3645,9 +3170,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3660,9 +3183,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3675,9 +3196,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3690,9 +3209,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3705,9 +3222,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3720,9 +3235,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3735,9 +3248,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3750,9 +3261,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3765,9 +3274,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3780,9 +3287,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3795,9 +3300,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3810,9 +3313,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3825,9 +3326,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3842,9 +3341,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3859,9 +3356,7 @@
     "license": "Apache-2.0",
     "authorization": "public-licence",
     "owner": "studio builder",
-    "tests": [
-      "tests/studio.test.ts"
-    ]
+    "tests": ["tests/studio.test.ts"]
   },
   {
     "source": "TheHalfMoon/Gomrey",
@@ -3877,9 +3372,7 @@
     "license": "Apache-2.0",
     "authorization": "founder-attested",
     "owner": "runtime builder",
-    "tests": [
-      "tests/job-transitions.test.ts"
-    ]
+    "tests": ["tests/job-transitions.test.ts"]
   },
   {
     "source": "TheHalfMoon/Gomrey",
@@ -3895,9 +3388,7 @@
     "license": "Apache-2.0",
     "authorization": "founder-attested",
     "owner": "runtime builder",
-    "tests": [
-      "tests/job-transitions.test.ts"
-    ]
+    "tests": ["tests/job-transitions.test.ts"]
   },
   {
     "source": "TheHalfMoon/Ascout",
@@ -3912,9 +3403,7 @@
     "license": "Apache-2.0",
     "authorization": "founder-attested",
     "owner": "runtime builder",
-    "tests": [
-      "tests/w17-quality-agents.test.ts"
-    ]
+    "tests": ["tests/w17-quality-agents.test.ts"]
   },
   {
     "source": "invoke-ai/InvokeAI",
@@ -3925,9 +3414,7 @@
     "sha256": "a16efe76d7f636eb7daf865bb94c4623890d34b1257736c888f99b46784beaf5",
     "importedSha256": "a16efe76d7f636eb7daf865bb94c4623890d34b1257736c888f99b46784beaf5",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/browserRaster.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/browserRaster.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -3940,9 +3427,7 @@
     "sha256": "8020eff66dac187b6ec9d562c25634975d16d786b7dbd58871c601e0535ba2e1",
     "importedSha256": "8020eff66dac187b6ec9d562c25634975d16d786b7dbd58871c601e0535ba2e1",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/color.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/color.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -3985,9 +3470,7 @@
     "sha256": "c13c2aea938638f8d41a54e75d42743616e6926ad927c335948b88c04e9a72db",
     "importedSha256": "c13c2aea938638f8d41a54e75d42743616e6926ad927c335948b88c04e9a72db",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/editingController.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/editingController.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4030,9 +3513,7 @@
     "sha256": "2b7c82ac6ab1b5dce21c3ac4e074e38b4bf4ca2f49a62f43228bf45344d9aaf4",
     "importedSha256": "2b7c82ac6ab1b5dce21c3ac4e074e38b4bf4ca2f49a62f43228bf45344d9aaf4",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/historyController.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/historyController.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4060,9 +3541,7 @@
     "sha256": "0462df2e7d0c81bea0a28a49ded71b111801a24bd14d92f159e962b6bea779cc",
     "importedSha256": "0462df2e7d0c81bea0a28a49ded71b111801a24bd14d92f159e962b6bea779cc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/layerController.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/layerController.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4135,9 +3614,7 @@
     "sha256": "480763f47c8e5aff93ecc61f687e854f238d66f5f51b6bcc44ee0b69000a6659",
     "importedSha256": "480763f47c8e5aff93ecc61f687e854f238d66f5f51b6bcc44ee0b69000a6659",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/mutationContext.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/mutationContext.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4195,9 +3672,7 @@
     "sha256": "faf0f5b54665013b322a226824374602eba28da4e02b3002812e251342139b82",
     "importedSha256": "faf0f5b54665013b322a226824374602eba28da4e02b3002812e251342139b82",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/rasterController.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/rasterController.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4255,9 +3730,7 @@
     "sha256": "679d26381bdb31be12e78e2eefea6cc7352ea1b39b0cb1a45340796b9f4e11a0",
     "importedSha256": "679d26381bdb31be12e78e2eefea6cc7352ea1b39b0cb1a45340796b9f4e11a0",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/controllers/renderController.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/controllers/renderController.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4390,9 +3863,7 @@
     "sha256": "2c92140fa1cb00eee02dadbada67475bdf5f4fd652e62a8ee4c33094b428cf2c",
     "importedSha256": "2c92140fa1cb00eee02dadbada67475bdf5f4fd652e62a8ee4c33094b428cf2c",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/diagnostics.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/diagnostics.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4405,9 +3876,7 @@
     "sha256": "0b5e5d4fdf2aaee762df0d896f1d279a9c21ccaba34a0a71989ecfb9d63c66c1",
     "importedSha256": "0b5e5d4fdf2aaee762df0d896f1d279a9c21ccaba34a0a71989ecfb9d63c66c1",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/bitmapStore.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/bitmapStore.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4420,9 +3889,7 @@
     "sha256": "d0ed16bf6835d1635ee6bd2ff1c05511df45a0537191502fc883d02eca19d88a",
     "importedSha256": "d0ed16bf6835d1635ee6bd2ff1c05511df45a0537191502fc883d02eca19d88a",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/documentMirror.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/documentMirror.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4435,9 +3902,7 @@
     "sha256": "6e68457933c8f40eb3284b0853578224a73531b02ba265609b269779d2e0a4e3",
     "importedSha256": "6e68457933c8f40eb3284b0853578224a73531b02ba265609b269779d2e0a4e3",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/documentTree.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/documentTree.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4450,9 +3915,7 @@
     "sha256": "50f6e4e4ca59e2f62ac1b5f68308c7d2d3e58a048280c4599490e048c0839b6a",
     "importedSha256": "50f6e4e4ca59e2f62ac1b5f68308c7d2d3e58a048280c4599490e048c0839b6a",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/insertionAnchors.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/insertionAnchors.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4465,9 +3928,7 @@
     "sha256": "97f189bf641089445113b3aa0e7886fe0c3f20332c2ea4de16493e30b9b374e6",
     "importedSha256": "97f189bf641089445113b3aa0e7886fe0c3f20332c2ea4de16493e30b9b374e6",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/insertionAnchors.testStub.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/insertionAnchors.testStub.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4480,9 +3941,7 @@
     "sha256": "08123a044085f932b4b53809da557f03a42422b5ca5765dfe32226c20e773624",
     "importedSha256": "08123a044085f932b4b53809da557f03a42422b5ca5765dfe32226c20e773624",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/layerChangeDecision.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/layerChangeDecision.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4495,9 +3954,7 @@
     "sha256": "6b46ba71abb83ce7aa0c196c518c1b80b4bf546d3801b8c7f1323e7c21a2d6bb",
     "importedSha256": "6b46ba71abb83ce7aa0c196c518c1b80b4bf546d3801b8c7f1323e7c21a2d6bb",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/layerEligibility.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/layerEligibility.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4510,9 +3967,7 @@
     "sha256": "cc9039a6a9a5d861c800fc0c36438dcb3b864ff470cbde2977728e4c1a5261e9",
     "importedSha256": "cc9039a6a9a5d861c800fc0c36438dcb3b864ff470cbde2977728e4c1a5261e9",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/layerFactories.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/layerFactories.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4525,9 +3980,7 @@
     "sha256": "f5931612c2fa638f9345901c936b35f8a0b2c5dfb52e63a7798fa2c6904f8e16",
     "importedSha256": "f5931612c2fa638f9345901c936b35f8a0b2c5dfb52e63a7798fa2c6904f8e16",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/layerStacks.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/layerStacks.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4540,9 +3993,7 @@
     "sha256": "9ac95e1e9824e90451c25419311ae7b87cbc27667b9c123d47f925fcbd28a9ca",
     "importedSha256": "9ac95e1e9824e90451c25419311ae7b87cbc27667b9c123d47f925fcbd28a9ca",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/mergeDown.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/mergeDown.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4555,9 +4006,7 @@
     "sha256": "1af45142f98520f078c7717126eb12970d61b9358f59b3c38d7e3944b3c13a3a",
     "importedSha256": "1af45142f98520f078c7717126eb12970d61b9358f59b3c38d7e3944b3c13a3a",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/mergeVisible.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/mergeVisible.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4570,9 +4019,7 @@
     "sha256": "7edbf342650302fcd98fef2bda3d4821af10b3cf7592b721d3b6707763b6b13e",
     "importedSha256": "7edbf342650302fcd98fef2bda3d4821af10b3cf7592b721d3b6707763b6b13e",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/selectionRepair.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/selectionRepair.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4585,9 +4032,7 @@
     "sha256": "62371c03e1ef150e9719f89a6557140bf719d90d5630ef62d6639fde7fdc4328",
     "importedSha256": "62371c03e1ef150e9719f89a6557140bf719d90d5630ef62d6639fde7fdc4328",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document/sources.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document/sources.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4645,9 +4090,7 @@
     "sha256": "80e5882ea699432735da3228eb7aef93ea276645c686cc3438ef9ef15104f37b",
     "importedSha256": "80e5882ea699432735da3228eb7aef93ea276645c686cc3438ef9ef15104f37b",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document-model/documentModel.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document-model/documentModel.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4660,9 +4103,7 @@
     "sha256": "44520d4f7a1cd3f301ecf52afb3d49b989e9a08b1a1f1d2e29a469b83788a4fc",
     "importedSha256": "44520d4f7a1cd3f301ecf52afb3d49b989e9a08b1a1f1d2e29a469b83788a4fc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/document-model/postconditions.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/document-model/postconditions.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4690,9 +4131,7 @@
     "sha256": "ddb63e94e361d0e6cf82d8bebc7a63e35b236d645a66c4b4ac8a9e4fddc47fbc",
     "importedSha256": "ddb63e94e361d0e6cf82d8bebc7a63e35b236d645a66c4b4ac8a9e4fddc47fbc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/editConcurrency.testStub.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/editConcurrency.testStub.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4705,9 +4144,7 @@
     "sha256": "ad4cd8d419788cf39da01991b86dead1990d5dd41d694c2f16ffaf710e930e1e",
     "importedSha256": "ad4cd8d419788cf39da01991b86dead1990d5dd41d694c2f16ffaf710e930e1e",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/editGate.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/editGate.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4735,9 +4172,7 @@
     "sha256": "26e5382ad90bc66c51bf22c048e8949ade70d750456fc6996210e9e50ad71a57",
     "importedSha256": "26e5382ad90bc66c51bf22c048e8949ade70d750456fc6996210e9e50ad71a57",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/editing/controlPixelEdit.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/editing/controlPixelEdit.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4750,9 +4185,7 @@
     "sha256": "a8ab87beb63ff804f35accac0961a41ca9e0b32f4945a1ad275046fa6efd9081",
     "importedSha256": "a8ab87beb63ff804f35accac0961a41ca9e0b32f4945a1ad275046fa6efd9081",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/engine.heldAssets.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/engine.heldAssets.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4765,9 +4198,7 @@
     "sha256": "84bc2e8219b3dea0bfada1370dc41c3772b036d512ca7c3a2ac9b381b60a3269",
     "importedSha256": "84bc2e8219b3dea0bfada1370dc41c3772b036d512ca7c3a2ac9b381b60a3269",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/engine.mask.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/engine.mask.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4780,9 +4211,7 @@
     "sha256": "ce3dd56e756d163dd7fb7015732a2d356cac2e5ac4ad12f31b9094ecb27b6e73",
     "importedSha256": "ce3dd56e756d163dd7fb7015732a2d356cac2e5ac4ad12f31b9094ecb27b6e73",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/engine.resources.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/engine.resources.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4795,9 +4224,7 @@
     "sha256": "44e52a70a6f69157fc5a2cc08adc579243f600a581bd27c75a7a9d5ee35fc27a",
     "importedSha256": "44e52a70a6f69157fc5a2cc08adc579243f600a581bd27c75a7a9d5ee35fc27a",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/engine.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/engine.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4810,9 +4237,7 @@
     "sha256": "56af57dc61d034a8ccdabb14ab567b79b4b181513fa42b2ca32ece3666791b81",
     "importedSha256": "56af57dc61d034a8ccdabb14ab567b79b4b181513fa42b2ca32ece3666791b81",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/export/psdExport.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/export/psdExport.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4825,9 +4250,7 @@
     "sha256": "a8b84485fae2910c4f7f5e3f23e3d9100a3386aae7dbccfb8c94b90fab85387b",
     "importedSha256": "a8b84485fae2910c4f7f5e3f23e3d9100a3386aae7dbccfb8c94b90fab85387b",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/exportRasterComposite.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/exportRasterComposite.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4840,9 +4263,7 @@
     "sha256": "2a54983e9287df4961b336c6de594f236fd7177eed6404a1a0c4a0b0f38d6b66",
     "importedSha256": "2a54983e9287df4961b336c6de594f236fd7177eed6404a1a0c4a0b0f38d6b66",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/fontReferences.engine.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/fontReferences.engine.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4855,9 +4276,7 @@
     "sha256": "3d4f16f645f2b0edc9446cbf7321ebbcd87c5289229e4659f4639572075a7f65",
     "importedSha256": "3d4f16f645f2b0edc9446cbf7321ebbcd87c5289229e4659f4639572075a7f65",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/fontReferences.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/fontReferences.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4870,9 +4289,7 @@
     "sha256": "622a8dcaf479b7029fbd4b7635b094bf3fcde245f0d4a0344a151abf255a7b02",
     "importedSha256": "622a8dcaf479b7029fbd4b7635b094bf3fcde245f0d4a0344a151abf255a7b02",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/freehand.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/freehand.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4885,9 +4302,7 @@
     "sha256": "5cb10a7630a2f7c64bde27106e1b27f207022038bf7494ce49112f96ba738e81",
     "importedSha256": "5cb10a7630a2f7c64bde27106e1b27f207022038bf7494ce49112f96ba738e81",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/history/documentPatch.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/history/documentPatch.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4900,9 +4315,7 @@
     "sha256": "ee2a484503e84edca71e90522043f3cefeba3d1ab598f328710cbb0fd7564242",
     "importedSha256": "ee2a484503e84edca71e90522043f3cefeba3d1ab598f328710cbb0fd7564242",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/history/history.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/history/history.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4915,9 +4328,7 @@
     "sha256": "4ce1dd3c023d7dd64b6487a2cc194ba091defd0566c04f487fbc696d915465e3",
     "importedSha256": "4ce1dd3c023d7dd64b6487a2cc194ba091defd0566c04f487fbc696d915465e3",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/history/imagePatch.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/history/imagePatch.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4930,9 +4341,7 @@
     "sha256": "caeeea64a6ff44f4a8e51b781aca4e79089304e4678227665055abf7ba258b80",
     "importedSha256": "caeeea64a6ff44f4a8e51b781aca4e79089304e4678227665055abf7ba258b80",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/history/layerSnapshot.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/history/layerSnapshot.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4945,9 +4354,7 @@
     "sha256": "54e514b02427f66b128210ba37c9ee05138fb068658f98c9d76b28a1fa42992f",
     "importedSha256": "54e514b02427f66b128210ba37c9ee05138fb068658f98c9d76b28a1fa42992f",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/input/pointerPipeline.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/input/pointerPipeline.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4960,9 +4367,7 @@
     "sha256": "99c5e63ba9aa08c3bbb9a432e4e3907ebc4cbd22bb9fb3befcc809bc56489112",
     "importedSha256": "99c5e63ba9aa08c3bbb9a432e4e3907ebc4cbd22bb9fb3befcc809bc56489112",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/input/pointerPipeline.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/input/pointerPipeline.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4975,9 +4380,7 @@
     "sha256": "2498b1ad39929e15e361891cff9d737b5fbe53e41565e09610b0fc4ce7155d41",
     "importedSha256": "2498b1ad39929e15e361891cff9d737b5fbe53e41565e09610b0fc4ce7155d41",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/input/wheel.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/input/wheel.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -4990,9 +4393,7 @@
     "sha256": "8d3f728b781855164466027ec5fe17233cccb3c70eb4dae73dd4d88427610f30",
     "importedSha256": "8d3f728b781855164466027ec5fe17233cccb3c70eb4dae73dd4d88427610f30",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/layerExportGuards.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/layerExportGuards.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5005,9 +4406,7 @@
     "sha256": "09905cdc3206318919c4422399d973d318f1a4ca36ebbce3b34f687a2bc64576",
     "importedSha256": "09905cdc3206318919c4422399d973d318f1a4ca36ebbce3b34f687a2bc64576",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/layerRasterizer.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/layerRasterizer.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5020,9 +4419,7 @@
     "sha256": "7a32e686c16308539e21221e823964cba00f6dc12c83466e6f1029cdd64cf5bf",
     "importedSha256": "7a32e686c16308539e21221e823964cba00f6dc12c83466e6f1029cdd64cf5bf",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/math/mat2d.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/math/mat2d.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5035,9 +4432,7 @@
     "sha256": "1680cb0d1f7f6676e807014a059a26f12c5f7c3b5cc64ecf95bca3f64fcfb0bc",
     "importedSha256": "1680cb0d1f7f6676e807014a059a26f12c5f7c3b5cc64ecf95bca3f64fcfb0bc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/math/rect.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/math/rect.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5050,9 +4445,7 @@
     "sha256": "157a0957762ceb5c55152245eccebb65d3081b0cee4f108c701a40b9c4ec5976",
     "importedSha256": "157a0957762ceb5c55152245eccebb65d3081b0cee4f108c701a40b9c4ec5976",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/math/snapping.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/math/snapping.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5065,9 +4458,7 @@
     "sha256": "035f8403fbfa825f23b261ee37ef8880601cf07fda9e5a767e377daab72e5ec0",
     "importedSha256": "035f8403fbfa825f23b261ee37ef8880601cf07fda9e5a767e377daab72e5ec0",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/pressureBands.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/pressureBands.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5080,9 +4471,7 @@
     "sha256": "5179ec4821b000f59a1f4581912ca2958d3f57f5a7985fcf9ad85ec04a887996",
     "importedSha256": "5179ec4821b000f59a1f4581912ca2958d3f57f5a7985fcf9ad85ec04a887996",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/previewPublisher.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/previewPublisher.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5095,9 +4484,7 @@
     "sha256": "2fe98a249d86c68dc4bc04261e9b1ff25639c61988b99dfd7964b713f1f3b5dd",
     "importedSha256": "2fe98a249d86c68dc4bc04261e9b1ff25639c61988b99dfd7964b713f1f3b5dd",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/rasterSnapshotCapture.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/rasterSnapshotCapture.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5110,9 +4497,7 @@
     "sha256": "f2f6ed9ee120596e6afb5b7af685138542722fff11f214681b51144f2c46caf7",
     "importedSha256": "f2f6ed9ee120596e6afb5b7af685138542722fff11f214681b51144f2c46caf7",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/adjustedSurfaceCache.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/adjustedSurfaceCache.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5140,9 +4525,7 @@
     "sha256": "7ea92c7773c4006104ad341f89d625393039440191bb248766e034cd8715ee5b",
     "importedSha256": "7ea92c7773c4006104ad341f89d625393039440191bb248766e034cd8715ee5b",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/adjustments.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/adjustments.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5155,9 +4538,7 @@
     "sha256": "f7487c28e01ba9c176df7a9e8cb580d279ce49e7d978ce9f7db28b61dc652329",
     "importedSha256": "f7487c28e01ba9c176df7a9e8cb580d279ce49e7d978ce9f7db28b61dc652329",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/alphaBounds.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/alphaBounds.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5170,9 +4551,7 @@
     "sha256": "70c726691965a1532dcc299823d4f34bbb4efb87259475347534e50a9a848bd8",
     "importedSha256": "70c726691965a1532dcc299823d4f34bbb4efb87259475347534e50a9a848bd8",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/colorSample.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/colorSample.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5185,9 +4564,7 @@
     "sha256": "2f91c002dffb6216360cfd7d893c8e74ae42f87a5699b73e31085dd7f9967e91",
     "importedSha256": "2f91c002dffb6216360cfd7d893c8e74ae42f87a5699b73e31085dd7f9967e91",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/colorSample.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/colorSample.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5200,9 +4577,7 @@
     "sha256": "e43d478823700a4ec1aff03290d90390af16ba4797f319e3463e7f65d81ae311",
     "importedSha256": "e43d478823700a4ec1aff03290d90390af16ba4797f319e3463e7f65d81ae311",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/compositeFrame.budget.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/compositeFrame.budget.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5215,9 +4590,7 @@
     "sha256": "33d00c87cceb0e1fc2c032ba7f86568f8d1c6fe1d2004ca7c4736d8cde6448a0",
     "importedSha256": "33d00c87cceb0e1fc2c032ba7f86568f8d1c6fe1d2004ca7c4736d8cde6448a0",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/compositeFrame.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/compositeFrame.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5230,9 +4603,7 @@
     "sha256": "77a29f0aad14656dd1a3eb22a0c12f0ea7279b5f4db74dbf44e1ac6c26cc2700",
     "importedSha256": "77a29f0aad14656dd1a3eb22a0c12f0ea7279b5f4db74dbf44e1ac6c26cc2700",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/compositor.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/compositor.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5260,9 +4631,7 @@
     "sha256": "e629837b40cbb15bbfe12f5495fd3637b1cd6743440dc162a36f560b3d844b71",
     "importedSha256": "e629837b40cbb15bbfe12f5495fd3637b1cd6743440dc162a36f560b3d844b71",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/controlTransparency.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/controlTransparency.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5275,9 +4644,7 @@
     "sha256": "cd0a80edb4ecf9733ca9a23d89b45b7f4367a4da253366111d87e9490531742e",
     "importedSha256": "cd0a80edb4ecf9733ca9a23d89b45b7f4367a4da253366111d87e9490531742e",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/decodedBitmapPool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/decodedBitmapPool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5290,9 +4657,7 @@
     "sha256": "c23a873e747c2cdccb4f91fb16a2b1becb8bc572913ebb5650f162de5222ed73",
     "importedSha256": "c23a873e747c2cdccb4f91fb16a2b1becb8bc572913ebb5650f162de5222ed73",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/derivedSurfaceCache.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/derivedSurfaceCache.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5305,9 +4670,7 @@
     "sha256": "0aa36c0c831fea6681953d73794e180dbcb31d72ba322ef87dfe6bcd373a3c1a",
     "importedSha256": "0aa36c0c831fea6681953d73794e180dbcb31d72ba322ef87dfe6bcd373a3c1a",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/floatingSelectionFrame.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/floatingSelectionFrame.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5320,9 +4683,7 @@
     "sha256": "26138deacfb8be0b26cf4cd8193845d1da93d0648827d47e89ee0e1225d650aa",
     "importedSha256": "26138deacfb8be0b26cf4cd8193845d1da93d0648827d47e89ee0e1225d650aa",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/fontLoader.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/fontLoader.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5335,9 +4696,7 @@
     "sha256": "7cea04b7607d516757d4b70c9fccd5f10cfedf6f1fb953820f06cd605711cda0",
     "importedSha256": "7cea04b7607d516757d4b70c9fccd5f10cfedf6f1fb953820f06cd605711cda0",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/fontLoader.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/fontLoader.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5350,9 +4709,7 @@
     "sha256": "6dfd32d765121c1a43449bfaeb3cf5ce065f83be7f1e160bbea8463dfd06f05d",
     "importedSha256": "6dfd32d765121c1a43449bfaeb3cf5ce065f83be7f1e160bbea8463dfd06f05d",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/frameDemand.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/frameDemand.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5365,9 +4722,7 @@
     "sha256": "2cc29b09c60bbab9a9c38e663143f3db85d7e9db1c13da85bfefd8f0baacf530",
     "importedSha256": "2cc29b09c60bbab9a9c38e663143f3db85d7e9db1c13da85bfefd8f0baacf530",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/frameDemandBudget.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/frameDemandBudget.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5395,9 +4750,7 @@
     "sha256": "e5760c884f4c5241b49ab7996e887e691c2841ec65cac60eced2bff828449601",
     "importedSha256": "e5760c884f4c5241b49ab7996e887e691c2841ec65cac60eced2bff828449601",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/golden/goldenHarness.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/golden/goldenHarness.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5425,9 +4778,7 @@
     "sha256": "adc3f8eb538e0a6ae41053c3ff212e3c971fba7760ed756cac40f39fa53a6217",
     "importedSha256": "adc3f8eb538e0a6ae41053c3ff212e3c971fba7760ed756cac40f39fa53a6217",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/groupCompositeScopes.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/groupCompositeScopes.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5440,9 +4791,7 @@
     "sha256": "50161c5d66679ff62921109d9deb609948805fa0cad91545b801af8ae9f6213f",
     "importedSha256": "50161c5d66679ff62921109d9deb609948805fa0cad91545b801af8ae9f6213f",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/layerCache.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/layerCache.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5485,9 +4834,7 @@
     "sha256": "2370b9207849d1b377958eadacd54d2819706f063a8e50f54c8a0ee171e407ce",
     "importedSha256": "2370b9207849d1b377958eadacd54d2819706f063a8e50f54c8a0ee171e407ce",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/layerDisplayEffect.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/layerDisplayEffect.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5500,9 +4847,7 @@
     "sha256": "4ead96cae7889bf77f9de08c34018465145f939cb89dad4f27b0d030fbd5d021",
     "importedSha256": "4ead96cae7889bf77f9de08c34018465145f939cb89dad4f27b0d030fbd5d021",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/maskFill.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/maskFill.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5515,9 +4860,7 @@
     "sha256": "4b8e03adc62e118346db09b396fd121099bad9ce27566963364c7897621ba547",
     "importedSha256": "4b8e03adc62e118346db09b396fd121099bad9ce27566963364c7897621ba547",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/overlayFrame.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/overlayFrame.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5545,9 +4888,7 @@
     "sha256": "c3b14646e8232432bd602f4e6a0684135108aef9383123854ca410eed93214e3",
     "importedSha256": "c3b14646e8232432bd602f4e6a0684135108aef9383123854ca410eed93214e3",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/overlayRenderer.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/overlayRenderer.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5560,9 +4901,7 @@
     "sha256": "50b25071a0bca47be3f566649d7c657696abe51edffdb58efa4cc13cb2a2305f",
     "importedSha256": "50b25071a0bca47be3f566649d7c657696abe51edffdb58efa4cc13cb2a2305f",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/paintCacheTrim.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/paintCacheTrim.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5575,9 +4914,7 @@
     "sha256": "02fd077e7ecd9effcfb22573e6afec0dbcbdccb5ff99762b9962d5ccf1327feb",
     "importedSha256": "02fd077e7ecd9effcfb22573e6afec0dbcbdccb5ff99762b9962d5ccf1327feb",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/paintCacheTrim.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/paintCacheTrim.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5590,9 +4927,7 @@
     "sha256": "1507448dca247632db1123c183b29ae2d047ca377f9ede9e9dfa3ec43d9aba15",
     "importedSha256": "1507448dca247632db1123c183b29ae2d047ca377f9ede9e9dfa3ec43d9aba15",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/raster.testStub.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/raster.testStub.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5605,9 +4940,7 @@
     "sha256": "9cb08f448cde027ae10e1ee1cf085511a7090c72d0b9f4bf8b2133a6d4d6e89f",
     "importedSha256": "9cb08f448cde027ae10e1ee1cf085511a7090c72d0b9f4bf8b2133a6d4d6e89f",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/raster.testStub.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/raster.testStub.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5680,9 +5013,7 @@
     "sha256": "13815a8c1cde704590b8fc8f626f919c9029e98af203d8b692511f6661089259",
     "importedSha256": "13815a8c1cde704590b8fc8f626f919c9029e98af203d8b692511f6661089259",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/scheduler.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/scheduler.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5695,9 +5026,7 @@
     "sha256": "5c767c19f97b6f9db4fa71161f17a4104d3578760fa7f219a8da2b25e54ae438",
     "importedSha256": "5c767c19f97b6f9db4fa71161f17a4104d3578760fa7f219a8da2b25e54ae438",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/render/thumbnail.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/render/thumbnail.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5710,9 +5039,7 @@
     "sha256": "5e5afaa288589a124a71ac49847a16134c5d5b5d979b4f467d40472d60344362",
     "importedSha256": "5e5afaa288589a124a71ac49847a16134c5d5b5d979b4f467d40472d60344362",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/floatingSelection.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/floatingSelection.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5725,9 +5052,7 @@
     "sha256": "9b3d15ec5d82b8fca233a69a1ddecb2f8e83007acc1e96e45cb7ab4741df9ab8",
     "importedSha256": "9b3d15ec5d82b8fca233a69a1ddecb2f8e83007acc1e96e45cb7ab4741df9ab8",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/marchingAnts.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/marchingAnts.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5740,9 +5065,7 @@
     "sha256": "7d50beeba92e32680a2aa3f04c4f3e1c12349cb08a120985f1ed469d4f2dfb4e",
     "importedSha256": "7d50beeba92e32680a2aa3f04c4f3e1c12349cb08a120985f1ed469d4f2dfb4e",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/maskOutline.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/maskOutline.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5755,9 +5078,7 @@
     "sha256": "9aa8b6b43286669acc49f8a963e78814e1864b3c468df7beb68eef98bce0580b",
     "importedSha256": "9aa8b6b43286669acc49f8a963e78814e1864b3c468df7beb68eef98bce0580b",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/selectionHistory.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/selectionHistory.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5770,9 +5091,7 @@
     "sha256": "a7c5ad35e250cb964458e1c1c08fb6ebdce05dafe4e22c33ec2eb22de9b249fe",
     "importedSha256": "a7c5ad35e250cb964458e1c1c08fb6ebdce05dafe4e22c33ec2eb22de9b249fe",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/selectionOpMode.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/selectionOpMode.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5785,9 +5104,7 @@
     "sha256": "fd0fb1310d36f77f3d5f639b08efa58003f56a28c67b23179e0235829e93e92c",
     "importedSha256": "fd0fb1310d36f77f3d5f639b08efa58003f56a28c67b23179e0235829e93e92c",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/selectionOps.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/selectionOps.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5800,9 +5117,7 @@
     "sha256": "f2de834fd5e0ee5b1d76bea760a0850e0ad4ead5617f2e13e87c65d67187f598",
     "importedSha256": "f2de834fd5e0ee5b1d76bea760a0850e0ad4ead5617f2e13e87c65d67187f598",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/selectionPaths.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/selectionPaths.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5830,9 +5145,7 @@
     "sha256": "3ca9b97d9794482b0fe3b3d316d4b6deef0d19dd00e2d79bf883dbf1af3d9ef8",
     "importedSha256": "3ca9b97d9794482b0fe3b3d316d4b6deef0d19dd00e2d79bf883dbf1af3d9ef8",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selection/selectionState.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selection/selectionState.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5845,9 +5158,7 @@
     "sha256": "dd47fda17ffd3ae9bf4e2710f3561c356fbff1da9860a998a08cc58d9a1c7090",
     "importedSha256": "dd47fda17ffd3ae9bf4e2710f3561c356fbff1da9860a998a08cc58d9a1c7090",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/selectObjectBridge.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/selectObjectBridge.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5860,9 +5171,7 @@
     "sha256": "68951f23a52a605b1563a9fb392ef587eef1d56f4c01d81e6df0ded7d3bf22c7",
     "importedSha256": "68951f23a52a605b1563a9fb392ef587eef1d56f4c01d81e6df0ded7d3bf22c7",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/stagedPreviewBlobCache.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/stagedPreviewBlobCache.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5875,9 +5184,7 @@
     "sha256": "637287191b4244a5eedf39c50aa9475034db56a00025a0ccbea05fade782c740",
     "importedSha256": "637287191b4244a5eedf39c50aa9475034db56a00025a0ccbea05fade782c740",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/strokeCommit.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/strokeCommit.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5890,9 +5197,7 @@
     "sha256": "f4151ecb6816418bd3494388c14a27de80e2c58b414d289922a65132623f5ad0",
     "importedSha256": "f4151ecb6816418bd3494388c14a27de80e2c58b414d289922a65132623f5ad0",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/bboxHitTest.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/bboxHitTest.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5905,9 +5210,7 @@
     "sha256": "bd7edbb236f6570a22615e4535f007df5dd58f3eba1a67d82062894aa512c3b8",
     "importedSha256": "bd7edbb236f6570a22615e4535f007df5dd58f3eba1a67d82062894aa512c3b8",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/bboxTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/bboxTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5920,9 +5223,7 @@
     "sha256": "f6506ba726a3e2dce6cf57d3f568de55e7b741a47ae542fa9ac20aafd4ff5812",
     "importedSha256": "f6506ba726a3e2dce6cf57d3f568de55e7b741a47ae542fa9ac20aafd4ff5812",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/colorPickerTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/colorPickerTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5935,9 +5236,7 @@
     "sha256": "77f4b80dc36a02ebc52a42658b8a5c00d9daf522f517d098043c92b05ccfb17e",
     "importedSha256": "77f4b80dc36a02ebc52a42658b8a5c00d9daf522f517d098043c92b05ccfb17e",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/gradientTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/gradientTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5950,9 +5249,7 @@
     "sha256": "623f9ae173ce8f03f9e6b3dec9f2a0018e729016e89a778cc5d939b7de1d939f",
     "importedSha256": "623f9ae173ce8f03f9e6b3dec9f2a0018e729016e89a778cc5d939b7de1d939f",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/lassoTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/lassoTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5965,9 +5262,7 @@
     "sha256": "3ecfdd661ccd59225e3ae65aed8feca01099e5c83b1da6263c3bb6f3cbb8d0b8",
     "importedSha256": "3ecfdd661ccd59225e3ae65aed8feca01099e5c83b1da6263c3bb6f3cbb8d0b8",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/marqueeTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/marqueeTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5980,9 +5275,7 @@
     "sha256": "76bb27dca7c16f7d546cc6646cec0f0d08ee22059cd371305111abb2ac292176",
     "importedSha256": "76bb27dca7c16f7d546cc6646cec0f0d08ee22059cd371305111abb2ac292176",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/moveHitTest.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/moveHitTest.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -5995,9 +5288,7 @@
     "sha256": "c735f28c144b498e7332482a1b2e4d461290b52c1cc7c994df2ad61fdc95aa93",
     "importedSha256": "c735f28c144b498e7332482a1b2e4d461290b52c1cc7c994df2ad61fdc95aa93",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/moveTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/moveTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6010,9 +5301,7 @@
     "sha256": "26b04afad4065362008a81c7f7ebfb2cde2fe7858b566a904ce3d08773465a24",
     "importedSha256": "26b04afad4065362008a81c7f7ebfb2cde2fe7858b566a904ce3d08773465a24",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/paintConstants.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/paintConstants.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6025,9 +5314,7 @@
     "sha256": "370c757b1d6f097cbf4e754e6d35e20dc86559f81a099ec66ac1ce83771ab2fc",
     "importedSha256": "370c757b1d6f097cbf4e754e6d35e20dc86559f81a099ec66ac1ce83771ab2fc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/paintTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/paintTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6040,9 +5327,7 @@
     "sha256": "531d8f93190543ca68f2b7cb4d4e8bec557acbde053c2abeed0ebe9c35ca4863",
     "importedSha256": "531d8f93190543ca68f2b7cb4d4e8bec557acbde053c2abeed0ebe9c35ca4863",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/polylineSession.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/polylineSession.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6055,9 +5340,7 @@
     "sha256": "b986185ce6b5cdd34c5e6624434ce3af4aca9e6714e5010b2adee9db07d2c3f5",
     "importedSha256": "b986185ce6b5cdd34c5e6624434ce3af4aca9e6714e5010b2adee9db07d2c3f5",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/samHitTest.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/samHitTest.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6070,9 +5353,7 @@
     "sha256": "bcf228d1d08d5fa5eff900c2da4f55ed4e3a8b31d5f81e37ae209ec04a59168c",
     "importedSha256": "bcf228d1d08d5fa5eff900c2da4f55ed4e3a8b31d5f81e37ae209ec04a59168c",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/samTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/samTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6085,9 +5366,7 @@
     "sha256": "0bad09eef30e18c063be5cee334739fe90b4122435d8de8376e92d2b8ccf8ce5",
     "importedSha256": "0bad09eef30e18c063be5cee334739fe90b4122435d8de8376e92d2b8ccf8ce5",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/shapeTool.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/shapeTool.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6100,9 +5379,7 @@
     "sha256": "c335ca09e7cf5af5f3b2ed5085191b2e22a6063024d9e4ddc3b301b72716f2c1",
     "importedSha256": "c335ca09e7cf5af5f3b2ed5085191b2e22a6063024d9e4ddc3b301b72716f2c1",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/shapeTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/shapeTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6115,9 +5392,7 @@
     "sha256": "d0216ef5e3cddaa8b564569dd2aaa2d721dd9d6383fb84da99ee74c4fd4a55e2",
     "importedSha256": "d0216ef5e3cddaa8b564569dd2aaa2d721dd9d6383fb84da99ee74c4fd4a55e2",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/strokeEdit.testStub.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/strokeEdit.testStub.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6130,9 +5405,7 @@
     "sha256": "6eed768a103304fdae13fb364b608235df89383a1ce9c4f99d19efc5d9550b26",
     "importedSha256": "6eed768a103304fdae13fb364b608235df89383a1ce9c4f99d19efc5d9550b26",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/strokeSession.browser.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/strokeSession.browser.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6145,9 +5418,7 @@
     "sha256": "4598b482f285a6c0106090137512574df3e50bc4cb6a49c0c6ee791167831186",
     "importedSha256": "4598b482f285a6c0106090137512574df3e50bc4cb6a49c0c6ee791167831186",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/strokeSession.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/strokeSession.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6160,9 +5431,7 @@
     "sha256": "7fc5fd4682ea9124510181d20ff04989cb1d60d9ceef4da4a8b69381a57bb9fc",
     "importedSha256": "7fc5fd4682ea9124510181d20ff04989cb1d60d9ceef4da4a8b69381a57bb9fc",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/textTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/textTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6175,9 +5444,7 @@
     "sha256": "0cfd1db83d2c59109ba51bfbfc3f2f928f768df64796fceac1d0dfc9185f64ae",
     "importedSha256": "0cfd1db83d2c59109ba51bfbfc3f2f928f768df64796fceac1d0dfc9185f64ae",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/tools/transformTool.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/tools/transformTool.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6190,9 +5457,7 @@
     "sha256": "a4d1153ba0a368d7a47f9106663919b717edd43f4818770a5f36b8ff6487f580",
     "importedSha256": "a4d1153ba0a368d7a47f9106663919b717edd43f4818770a5f36b8ff6487f580",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/transform/transformMath.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/transform/transformMath.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6205,9 +5470,7 @@
     "sha256": "da3cfb71446a00f6955a0460ef78b111db10612f8e962cb114a408e58418cfa9",
     "importedSha256": "da3cfb71446a00f6955a0460ef78b111db10612f8e962cb114a408e58418cfa9",
     "modifications": [],
-    "tests": [
-      "src/studio/canvas-engine/viewport.test.ts"
-    ],
+    "tests": ["src/studio/canvas-engine/viewport.test.ts"],
     "license": "Apache-2.0",
     "owner": "studio builder"
   },
@@ -6220,9 +5483,7 @@
     "sha256": "f300758600ecf59b736407f80f6dc8338a9879a062c6bcb16cc739d14814ec75",
     "importedSha256": "f300758600ecf59b736407f80f6dc8338a9879a062c6bcb16cc739d14814ec75",
     "modifications": [],
-    "tests": [
-      "tests/jassub-preview.test.ts"
-    ],
+    "tests": ["tests/jassub-preview.test.ts"],
     "license": "LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0",
     "owner": "media builder",
     "npm": {

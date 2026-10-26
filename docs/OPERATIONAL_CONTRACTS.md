@@ -276,16 +276,24 @@ The editor has two previews. The canvas preview is fast and interactive. The ref
 
 - **Parity, said plainly.**
   - `previewParity` (`core/render/parity.ts`, version `yamakan.preview-parity/v1`) lists what the canvas shows only approximately, and which clips are affected:
-    - titles, drawn with browser fonts rather than the pinned fonts through libass;
+    - titles, drawn with browser fonts and layout rather than the pinned fonts through libass;
+    - a video placed on an audio track, whose picture the canvas draws although the export plays only its sound;
+    - speeds below 1/4 or above 4x, which the browser may silence or clamp;
     - audio fades, which are not played;
     - gain above 0 dB, which cannot play louder than the source;
     - clip animation, which is not drawn.
   - The canvas shows everything in `PREVIEW_PARITY_SUBSET` as the export does: cuts, trims, track order, picture fit, constant retime, still images, sound, and gain up to 0 dB. This includes an audio clip's own gain, which the canvas ignored before YU-018.
-  - The editor states the result under the canvas.
+  - Clips on tracks the export drops (muted, or not soloed when a track of their kind is) are not counted.
+  - The editor states the result under the canvas, and `yamakan.preview.parity` (`project:read`) returns it for the current revision.
+  - Embedded video sound follows the clip's switch on every frame. It used to follow it only when the element was created.
+  - Not listed: loudness normalisation, an export option that the canvas never applies. Solo on a track holding media of the other kind.
 - **Reference preview.**
   - Its cache key is the plan hash, which covers the revision, every asset's content hash, the fonts, the output profile and the compiler version, plus the renderer version and the FFmpeg build. A new revision is a new entry.
   - The view follows the playhead only once it rests (250 ms), and fetches each frame. A superseded frame is abandoned at once, and the service stops a render that nobody is waiting for.
-  - A frame the service cannot render (missing title fonts, no disk space) shows the service's reason and is not retried. A busy renderer is retried up to three times.
+  - A frame the service cannot render shows the service's reason, up to 200 characters, and is not retried. Examples are missing title fonts and no disk space. Reasons are shown only for plain refusals: validation, not found, limit, capability and recovery. Any other error shows only the general failure.
+  - A busy renderer is retried up to three times per frame.
+  - A frame that later renders replaces its failure, and another revision or project never shows the previous one's frame.
+  - A render that everyone left before its turn frees its place in the preview queue at once.
   - The view always names its revision and marks unsaved edits as stale.
-- **Audio clock.** `npm run qualify:playback` records the tone's media time minus the playhead on every animation frame (mean, 95th percentile and maximum, in ms). It does so for sustained play, a seek across a cut, and play while exports render. These figures are measured and reported, not gated. The frame-rate thresholds are unchanged.
+- **Audio clock.** `npm run qualify:playback` records the tone's media time minus the playhead on every animation frame (mean, 95th percentile and maximum, in ms). It does so for sustained play, a seek across a cut, and play while exports render. These figures are measured and reported, not gated. They measure the editor's clock against the media element, so a 33 ms playhead tick sets the noise floor, and they do not measure audible sync. The frame-rate thresholds are unchanged.
 - **Rollback.** Revert the notice and the reference fetch: the reference view goes back to a plain image, and the cache is unchanged.

@@ -488,13 +488,70 @@ try {
   const referenceSrc = await page
     .locator(".reference img")
     .getAttribute("data-src");
+  // data-src carries no media key: the agent reads it with its own token.
+  assert.doesNotMatch(referenceSrc, /media=/);
   const referenceResponse = await page.request.get(
     new URL(referenceSrc, url).href,
+    { headers: agent },
   );
   assert.equal(referenceResponse.ok(), true);
   assert.equal(referenceResponse.headers()["content-type"], "image/png");
   const referencePlanHash = referenceResponse.headers()["x-plan-hash"];
   assert.match(referencePlanHash, /^[a-f0-9]{64}$/);
+  // YU-018 parity on the supported subset: away from the title (the
+  // bottom band, an approximation), the canvas shows the same picture in
+  // the same place as the reference render at that playhead. Compared as
+  // block means (an 8x4 grid over the top two thirds), which the export's
+  // 4:2:0 chroma and the browser's scaling leave alone; a control (the
+  // reference against itself moved by one block) shows the measure can fail.
+  const parityBlocks = await page.evaluate(() => {
+    const img = document.querySelector(".reference img");
+    const canvas = document.querySelector("section.preview canvas");
+    const W = 320;
+    const H = 180;
+    const blocks = (source, shift = 0) => {
+      const scratch = document.createElement("canvas");
+      scratch.width = W;
+      scratch.height = H;
+      const ctx = scratch.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(source, shift, 0, W, H);
+      const d = ctx.getImageData(0, 0, W, H).data;
+      const out = [];
+      for (let by = 0; by < 4; by++)
+        for (let bx = 0; bx < 8; bx++) {
+          const sum = [0, 0, 0];
+          for (let y = by * 30; y < by * 30 + 30; y++)
+            for (let x = bx * 40; x < bx * 40 + 40; x++)
+              for (let c = 0; c < 3; c++) sum[c] += d[(y * W + x) * 4 + c];
+          out.push(sum.map((v) => v / 1200));
+        }
+      return out;
+    };
+    const diff = (a, b) => {
+      let worst = 0;
+      let total = 0;
+      for (let i = 0; i < a.length; i++)
+        for (let c = 0; c < 3; c++) {
+          const d = Math.abs(a[i][c] - b[i][c]);
+          worst = Math.max(worst, d);
+          total += d;
+        }
+      return { mean: total / (a.length * 3), worst };
+    };
+    const reference = blocks(img);
+    return {
+      canvas: diff(reference, blocks(canvas)),
+      control: diff(reference, blocks(img, 40)),
+    };
+  });
+  assert.ok(
+    parityBlocks.canvas.mean < 6 && parityBlocks.canvas.worst < 20,
+    `canvas and reference differ: ${JSON.stringify(parityBlocks.canvas)}`,
+  );
+  assert.ok(
+    parityBlocks.control.mean > parityBlocks.canvas.mean * 2,
+    `the measure tells a shifted picture apart: ${JSON.stringify(parityBlocks)}`,
+  );
   // YU-018: the canvas preview says what it only approximates (this
   // timeline has a title, drawn with browser fonts).
   const parity = page.getByTestId("preview-parity");
@@ -513,10 +570,12 @@ try {
     await page.getByLabel("Playhead").fill(i % 2 ? "1" : "0");
     await page.waitForTimeout(40);
   }
+  // ...and comes to rest on a frame not shown before (frame 21).
+  await page.getByLabel("Playhead").fill("0.7");
   await page.waitForTimeout(900);
   page.off("request", countFrames);
   assert.ok(
-    frameRequests.length <= 2,
+    frameRequests.length >= 1 && frameRequests.length <= 2,
     `rapid scrubs asked for ${frameRequests.length} frames`,
   );
   // A frame the service cannot render (here: its title fonts are missing)
@@ -546,6 +605,18 @@ try {
   await page.waitForTimeout(2500);
   assert.equal(refused, 1, "an unrenderable frame is not retried");
   await page.unroute(/\/preview\?.*kind=frame/);
+  // Once the service can render it again, coming back to that frame shows
+  // it: the earlier failure does not stick.
+  await page.getByLabel("Playhead").fill("1");
+  await page.waitForTimeout(600);
+  await page.getByLabel("Playhead").fill("0.5");
+  await page.waitForFunction(
+    () =>
+      document.querySelector(".reference img")?.getAttribute("data-state") ===
+        "ready" && !document.querySelector(".reference [role=alert]"),
+    null,
+    { timeout: 60000 },
+  );
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Pause", exact: true }).click();

@@ -24,9 +24,14 @@ export const PREVIEW_PARITY_SUBSET = Object.freeze([
 ] as const);
 
 export type Approximation =
-  // Titles are drawn with the browser's fonts and layout; the export uses
-  // the pinned fonts through libass.
+  // Titles are drawn with the browser's fonts, box and layout; the export
+  // uses the pinned fonts through libass.
   | "titleFont"
+  // A video placed on an audio track: the export plays only its sound,
+  // the canvas also draws its picture.
+  | "videoOnAudioTrack"
+  // A retime below 1/4 or above 4x: the browser may silence or clamp it.
+  | "extremeRetime"
   // Fade-ins and fade-outs are not played.
   | "audioFade"
   // Gain above 0 dB cannot be played louder than the source.
@@ -46,17 +51,33 @@ const audible = (p: Project, c: Project["clips"][number]) => {
   return { track, asset };
 };
 
+// The export's rule: mute removes a track; solo on any track of a kind
+// keeps only the soloed tracks of that kind.
+const exported = (p: Project, trackId: string) => {
+  const track = p.tracks.find((t) => t.id === trackId);
+  if (!track) return false;
+  const soloed = p.tracks.some((t) => t.kind === track.kind && t.solo);
+  return !track.muted && (!soloed || Boolean(track.solo));
+};
+
 export function previewParity(p: Project): PreviewParity {
   const found = new Map<Approximation, string[]>();
   const add = (kind: Approximation, id: string) =>
     found.set(kind, [...(found.get(kind) ?? []), id]);
   for (const c of p.clips) {
+    if (!exported(p, c.trackId)) continue;
     if (c.title !== null) {
       add("titleFont", c.id);
       continue;
     }
     const { track, asset } = audible(p, c);
     if (!track || !asset) continue;
+    if (track.kind === "audio" && asset.kind === "video")
+      add("videoOnAudioTrack", c.id);
+    if (c.speed) {
+      const rate = c.speed.num / c.speed.den;
+      if (rate < 0.25 || rate > 4) add("extremeRetime", c.id);
+    }
     // Sound as the export takes it: an audio clip's own fields, or a video
     // clip's embedded sound when enabled.
     const sound =

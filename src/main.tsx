@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { ProjectSchema } from "../core/project.ts";
 import { RESOURCE_POLICY } from "../core/command/policy.ts";
@@ -440,6 +446,9 @@ function App() {
   const shownProxies = useRef<ReadonlySet<string>>(new Set());
   if (!playing) shownProxies.current = proxiesOn ? proxies.ready : new Set();
   const view = p ? editorView(p, shownProxies.current) : null;
+  // What the canvas preview shows only approximately (YU-018), once per
+  // project value (the playhead re-renders this component every frame).
+  const parity = useMemo(() => (p ? previewParity(p) : null), [p]);
   const addAsset = (assetId: string, trackId?: string, time?: number) =>
     edit((p) => {
       const a = p.assets.find((a) => a.id === assetId);
@@ -1162,28 +1171,24 @@ function App() {
                       })}
                     </span>
                   </div>
-                  {(() => {
-                    // What the canvas above shows only approximately (YU-018).
-                    const parity = previewParity(p);
-                    return (
-                      <p
-                        className="parity"
-                        data-testid="preview-parity"
-                        data-exact={String(parity.exact)}
-                        data-approximations={parity.approximations
-                          .map((a) => a.kind)
-                          .join(",")}
-                      >
-                        {parity.exact
-                          ? t("parity.exact")
-                          : t("parity.approximate", {
-                              list: parity.approximations
-                                .map((a) => t(`parity.${a.kind}`))
-                                .join(lang === "ar" ? "، " : ", "),
-                            })}
-                      </p>
-                    );
-                  })()}
+                  {parity ? (
+                    <p
+                      className="parity"
+                      data-testid="preview-parity"
+                      data-exact={String(parity.exact)}
+                      data-approximations={parity.approximations
+                        .map((a) => a.kind)
+                        .join(",")}
+                    >
+                      {parity.exact
+                        ? t("parity.exact")
+                        : t("parity.approximate", {
+                            list: parity.approximations
+                              .map((a) => t(`parity.${a.kind}`))
+                              .join(lang === "ar" ? "، " : ", "),
+                          })}
+                    </p>
+                  ) : null}
                   <ReferencePreview
                     projectId={p.id}
                     revision={p.revision}
