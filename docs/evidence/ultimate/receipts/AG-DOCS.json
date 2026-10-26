@@ -14,8 +14,8 @@
     "browser": "Microsoft Edge (installed)"
   },
   "state": "ACTIVATED",
-  "activationPr": "ACTIVATION_PR_PLACEHOLDER",
-  "mergeCommit": "MERGE_PLACEHOLDER",
+  "activationPr": "pending: filled by the follow-up receipt PR",
+  "mergeCommit": "pending: filled by the follow-up receipt PR",
   "change": "CREATIVE_DOCUMENTS_ENABLED = true (core/documents.ts). The YAMAKAN_AG_DOCS_QUALIFICATION test switch is removed; YAMAKAN_AG_DOCS_OFF=1 in the service's own environment is the operator rollback.",
   "members": [
     {
@@ -93,8 +93,67 @@
     "Stored documents and bitmaps stay readable through the API under rollback; Studio becomes session-only and says saved canvases are kept and return when saving is turned back on",
     "An unrecognised YAMAKAN_AG_DOCS_OFF value is announced at startup"
   ],
-  "reviews": "REVIEWS_PLACEHOLDER",
-  "postMergeVerification": "POSTMERGE_PLACEHOLDER",
+  "reviews": [
+    {
+      "kind": "fresh-context correctness review",
+      "judge": "session model subagent",
+      "rounds": [
+        {
+          "findings": {
+            "mustFix": 1,
+            "shouldFix": 3
+          },
+          "note": "missing activation receipt; rollback hid stored work; untested CLI save and vacuous undo check; all fixed"
+        },
+        {
+          "findings": {
+            "mustFix": 0,
+            "shouldFix": 5
+          },
+          "note": "browser staging share, Studio drawing under rollback, permanent document budget, contract text, MCP default token; fixed or recorded"
+        },
+        {
+          "findings": {
+            "mustFix": 0,
+            "shouldFix": 0
+          },
+          "note": "nits only; half-budget wording corrected"
+        }
+      ]
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": [
+        {
+          "findings": {
+            "mustFix": 0,
+            "shouldFix": 5
+          },
+          "note": "bitmap space never freed, agents claiming legacy scenes, agent staging starvation, unbounded document bytes, missing receipt; fixed"
+        },
+        {
+          "findings": {
+            "mustFix": 0,
+            "shouldFix": 2
+          },
+          "note": "agents could fill workspace document or bitmap budgets for everyone; agents now write only below half"
+        },
+        {
+          "findings": {
+            "mustFix": 0,
+            "shouldFix": 1
+          },
+          "note": "per-project bitmap limits not split for agents; fixed"
+        }
+      ]
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": "pending: filled by the follow-up receipt PR",
   "rollbackProcedure": "Set YAMAKAN_AG_DOCS_OFF=1 in the service's environment and restart: every write path refuses, stored documents and bitmaps stay readable and keep their references. A code rollback sets CREATIVE_DOCUMENTS_ENABLED back to false; v5 projects stay readable either way.",
   "limitations": [
     "The Cinema viewport still saves workspace sidecars (yamakan.scene.save); they are backed up (YU-014) and migratable (YU-012). Moving Cinema UI saves into project documents is follow-up work (YU-030 project selection).",
