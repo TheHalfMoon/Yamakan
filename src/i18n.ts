@@ -12,6 +12,16 @@ const en = {
   "brand.tagline": "Creative production · Offline workspace",
   "nav.production": "Production",
   "nav.tools": "Agent tools",
+  "workspace.label": "Workspaces",
+  "workspace.story": "Story",
+  "workspace.edit": "Edit",
+  "workspace.finish": "Finish",
+  "workspace.storyIntro":
+    "Brief, scenes and shots, with Director and the Cinema previs.",
+  "workspace.finishIntro":
+    "Output, the export job and agent tools. Export from the toolbar; the job shows in every workspace.",
+  "workspace.output": "Output {size}, {seconds} s",
+  "workspace.openStudio": "Open Studio",
   "badge.local": "Local media · CPU rendering",
   "status.initial": "Create or open a project to begin.",
   "session.locked":
@@ -239,6 +249,16 @@ const ar: Record<MessageKey, string> = {
   "brand.tagline": "إنتاج إبداعي · مساحة عمل دون اتصال",
   "nav.production": "الإنتاج",
   "nav.tools": "أدوات الوكلاء",
+  "workspace.label": "مساحات العمل",
+  "workspace.story": "القصة",
+  "workspace.edit": "التحرير",
+  "workspace.finish": "الإنهاء",
+  "workspace.storyIntro":
+    "الموجز والمشاهد واللقطات، مع المخرج ومعاينة السينما.",
+  "workspace.finishIntro":
+    "المُخرَج ومهمة التصدير وأدوات الوكلاء. صدّر من شريط الأدوات؛ تظهر المهمة في كل مساحة عمل.",
+  "workspace.output": "المُخرَج {size}، {seconds} ث",
+  "workspace.openStudio": "فتح الاستوديو",
   "badge.local": "وسائط محلية · تصيير بالمعالج",
   "status.initial": "أنشئ مشروعًا أو افتح مشروعًا للبدء.",
   "session.locked":

@@ -23,6 +23,12 @@ import {
 import { editorView } from "./adapter";
 import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
+import {
+  WorkspacePanel,
+  WorkspaceTabs,
+  classicShell,
+  useWorkspace,
+} from "./workspaces/ProjectShell.tsx";
 import { previewParity } from "../core/render/parity.ts";
 import {
   direction,
@@ -112,6 +118,15 @@ function App() {
     // Workspace backups, loaded on request.
     [backups, setBackups] =
       useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
+  // The workspace shell (YU-030), or the prior shell behind its flag.
+  const [classic] = useState(classicShell);
+  const { workspace, visited, open: showWorkspace } = useWorkspace();
+  // Leaving Edit pauses playback (its player stays mounted, hidden).
+  const openWorkspace = (next: Parameters<typeof showWorkspace>[0]) => {
+    if (next !== "edit") setPlaying(false);
+    showWorkspace(next);
+  };
+  const [studioOpen, setStudioOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const p = history?.present;
   // The latest history, also between renders: every change goes through
@@ -496,6 +511,853 @@ function App() {
     });
   const updateClips = (updates: TimelineClip[]) =>
     edit((p) => applyClipUpdates(p, updates));
+  // The editor's parts, shared by the workspace shell (YU-030) and the
+  // prior two-tab shell kept behind ?shell=classic.
+  const topBar = (p: Project) => (
+    <>
+      {unapplied && unapplied.id === p.id ? (
+        <div className="notice" role="alert">
+          <p>{t("conflict.unapplied")}</p>
+          <button
+            onClick={() => {
+              const url = URL.createObjectURL(
+                new Blob([JSON.stringify(unapplied, null, 2)], {
+                  type: "application/json",
+                }),
+              );
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `yamakan-unapplied-${unapplied.id}.json`;
+              link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+          >
+            {t("conflict.download")}
+          </button>
+          <button onClick={() => setUnapplied(null)}>
+            {t("conflict.dismiss")}
+          </button>
+        </div>
+      ) : null}
+      <div className="toolbar">
+        <div>
+          <h1 dir="auto">{p.name}</h1>
+          <small>
+            {t("projects.revision", { revision: p.revision })}
+            {history?.past.length ? ` · ${t("toolbar.unsaved")}` : ""}
+          </small>
+        </div>
+        <div className="actions">
+          <button
+            disabled={busy}
+            onClick={() => {
+              // A change not yet committed is taken back locally;
+              // committed ones by the service's history, which
+              // undoes only this writer's own steps.
+              if (history?.past.length) {
+                window.clearTimeout(pending.current);
+                putHistory((h) => h && undoHistoryState(h));
+                return;
+              }
+              run(async () => {
+                const undone = ProjectSchema.parse(
+                  await call("yamakan.project.undo", {
+                    projectId: p.id,
+                    expectedRevision: head.current?.revision ?? p.revision,
+                  }),
+                );
+                head.current = undone;
+                putHistory(createHistoryState(undone));
+                setMessage(msg("status.saved", { revision: undone.revision }));
+              });
+            }}
+          >
+            {t("action.undo")}
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (history?.future.length) {
+                putHistory((h) => h && redoHistoryState(h));
+                return;
+              }
+              run(async () => {
+                const redone = ProjectSchema.parse(
+                  await call("yamakan.project.redo", {
+                    projectId: p.id,
+                    expectedRevision: head.current?.revision ?? p.revision,
+                  }),
+                );
+                head.current = redone;
+                putHistory(createHistoryState(redone));
+                setMessage(msg("status.saved", { revision: redone.revision }));
+              });
+            }}
+          >
+            {t("action.redo")}
+          </button>
+          <button
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                await save();
+              })
+            }
+          >
+            {t("action.save")}
+          </button>
+          <button
+            className="primary"
+            disabled={
+              busy ||
+              !p.clips.length ||
+              (job && ["QUEUED", "RUNNING"].includes(job.state)) ||
+              false
+            }
+            onClick={() =>
+              run(async () => {
+                const saved = await save();
+                if (saved)
+                  setJob(
+                    await call("yamakan.export.video", {
+                      projectId: saved.id,
+                      idempotencyKey: crypto.randomUUID(),
+                    }),
+                  );
+              })
+            }
+          >
+            {t("action.export")}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+  const scenesPanel = (p: Project) => (
+    <>
+      <h2>{t("scene.heading")}</h2>
+      <button
+        disabled={busy}
+        onClick={() =>
+          edit((p) => ({
+            ...p,
+            scenes: [
+              ...p.scenes,
+              {
+                id: crypto.randomUUID(),
+                name: t("scene.default", {
+                  n: p.scenes.length + 1,
+                }),
+                referenceAssetId:
+                  p.assets.find((a) => a.kind === "image")?.id || null,
+                camera: {
+                  focalLengthMm: 50,
+                  shotScale: "medium",
+                  movement: "static",
+                },
+              },
+            ],
+          }))
+        }
+      >
+        {t("scene.add")}
+      </button>
+      {p.scenes.map((s) => (
+        <div className="scene" key={s.id}>
+          <label>
+            {t("scene.name")}
+            <input
+              dir="auto"
+              value={s.name}
+              maxLength={120}
+              onChange={(e) =>
+                edit((p) => ({
+                  ...p,
+                  scenes: p.scenes.map((x) =>
+                    x.id === s.id ? { ...x, name: e.target.value } : x,
+                  ),
+                }))
+              }
+            />
+          </label>
+          <label>
+            {t("scene.focal")}
+            <input
+              type="number"
+              min="8"
+              max="300"
+              value={s.camera.focalLengthMm}
+              onChange={(e) =>
+                edit((p) => ({
+                  ...p,
+                  scenes: p.scenes.map((x) =>
+                    x.id === s.id
+                      ? {
+                          ...x,
+                          camera: {
+                            ...x.camera,
+                            focalLengthMm: Number(e.target.value),
+                          },
+                        }
+                      : x,
+                  ),
+                }))
+              }
+            />
+          </label>
+          <label>
+            {t("scene.scale")}
+            <select
+              value={s.camera.shotScale}
+              onChange={(e) =>
+                edit((p) => ({
+                  ...p,
+                  scenes: p.scenes.map((x) =>
+                    x.id === s.id
+                      ? {
+                          ...x,
+                          camera: {
+                            ...x.camera,
+                            shotScale: e.target.value as any,
+                          },
+                        }
+                      : x,
+                  ),
+                }))
+              }
+            >
+              {(["wide", "medium", "close"] as const).map((v) => (
+                <option key={v} value={v}>
+                  {t(`scene.scale.${v}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t("scene.movement")}
+            <select
+              value={s.camera.movement}
+              onChange={(e) =>
+                edit((p) => ({
+                  ...p,
+                  scenes: p.scenes.map((x) =>
+                    x.id === s.id
+                      ? {
+                          ...x,
+                          camera: {
+                            ...x.camera,
+                            movement: e.target.value as any,
+                          },
+                        }
+                      : x,
+                  ),
+                }))
+              }
+            >
+              {(["static", "dolly", "pan", "orbit"] as const).map((v) => (
+                <option key={v} value={v}>
+                  {t(`scene.movement.${v}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ))}
+      <p className="hint">{t("hint.camera")}</p>
+    </>
+  );
+  const jobPanel = () => (
+    <>
+      {job && (
+        <div className="job" role="status">
+          <strong>{t(`job.${job.state}`)}</strong>
+          <progress max="1" value={job.progress} />
+          <small>{formatPercent(lang, job.progress)}</small>
+          {["QUEUED", "RUNNING"].includes(job.state) && (
+            <button
+              onClick={() =>
+                run(async () =>
+                  setJob(
+                    await call("yamakan.job.cancel", {
+                      jobId: job.id,
+                    }),
+                  ),
+                )
+              }
+            >
+              {t("job.cancel")}
+            </button>
+          )}
+          {job.state === "COMPLETED" && (
+            <a
+              className="download"
+              href={mediaUrl(`/api/v1/jobs/${job.id}/artifact`)}
+            >
+              {t("job.download")}
+            </a>
+          )}
+          {job.error && (
+            <p className="error" dir="auto">
+              {job.error}
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+  const studioPanel = () => (
+    <>
+      <h2>{t("studio.title")}</h2>
+      <p>{t("studio.intro")}</p>
+      <StudioCanvas
+        forceMount={
+          new URLSearchParams(window.location.search).get("studioQ8") === "1"
+        }
+        project={p ? { id: p.id, revision: p.revision } : null}
+        client={client as unknown as StudioClient}
+        t={(key) => t(key)}
+        onSaved={(projectId, from, revision) =>
+          // A Studio save changes only the project's documents: a
+          // draft based on the revision it replaced moves to the new
+          // revision unchanged (the service carries documents forward
+          // on its next save). A draft based on anything else is left
+          // alone, so its save still meets another writer's changes.
+          putHistory((h) => {
+            if (!h || h.present.id !== projectId || h.present.revision !== from)
+              return h;
+            const at = (x: Project) => ({ ...x, revision });
+            const present = at(h.present);
+            // The head moves with it (the same object when nothing
+            // is pending, so no commit follows).
+            if (head.current === h.present) head.current = present;
+            else if (
+              head.current?.id === projectId &&
+              head.current.revision === from
+            )
+              head.current = at(head.current);
+            return {
+              past: h.past.map(at),
+              present,
+              future: h.future.map(at),
+            };
+          })
+        }
+      />
+    </>
+  );
+  const cinemaPanel = (active = true) => (
+    <>
+      <h2>{t("cinema.title")}</h2>
+      <p>{t("cinema.intro")}</p>
+      <CinemaViewport active={active} />
+    </>
+  );
+  const directorPanel = () => (
+    <>
+      <h2>{t("director.title")}</h2>
+      <p>{t("director.intro")}</p>
+      {/* A new panel per project: no run of another project stays up. */}
+      <DirectorPanel
+        key={p?.id ?? "none"}
+        projectId={p?.id ?? null}
+        t={t}
+        client={{
+          call: (operation, parameters) =>
+            client.call(operation as never, parameters as never),
+        }}
+      />
+    </>
+  );
+  const catalogPanel = () => (
+    <>
+      <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
+      {/* Shown here: a new tab would hold no session. */}
+      <p>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            run(async () =>
+              setCatalog(JSON.stringify(await client.catalog(), null, 2)),
+            )
+          }
+        >
+          {t("tools.catalog")}
+        </button>
+      </p>
+      {catalog && (
+        <pre className="catalog" dir="ltr">
+          {catalog}
+        </pre>
+      )}
+      <p>{t("tools.jobs")}</p>
+    </>
+  );
+  const editPanel = (
+    p: Project,
+    view: NonNullable<ReturnType<typeof editorView>>,
+    classic: boolean,
+  ) => (
+    <>
+      <div className="production">
+        <section className="preview">
+          <PreviewPlayer
+            timelineClips={view.clips}
+            timelineTracks={view.tracks}
+            mediaItems={view.media}
+            playheadPosition={playhead}
+            isPlaying={playing}
+            onTogglePlayback={() => setPlaying((x) => !x)}
+            canvasWidth={p.width}
+            canvasHeight={p.height}
+            aspectStyle={{ aspectRatio: `${p.width}/${p.height}` }}
+            showControls
+            clipStatusLabel={t("preview.clipStatus", {
+              count: view.clips.length,
+            })}
+          />
+          <div className="transport">
+            <label className="proxy-toggle">
+              <input
+                type="checkbox"
+                data-testid="proxy-toggle"
+                checked={proxiesOn}
+                onChange={(e) => {
+                  setProxiesOn(e.target.checked);
+                  preferProxies(e.target.checked);
+                }}
+              />{" "}
+              {t("proxy.toggle")}
+            </label>
+            <span
+              data-testid="proxy-status"
+              data-proxies-ready={proxies.ready.size}
+            >
+              {proxiesOn
+                ? t("proxy.summary", {
+                    ready: proxies.ready.size,
+                    total: proxies.total,
+                    building: proxies.building,
+                  })
+                : t("proxy.off")}
+            </span>
+            <button
+              onClick={() => setPlaying((x) => !x)}
+              disabled={!p.clips.length}
+            >
+              {playing ? t("transport.pause") : t("transport.play")}
+            </button>
+            <input
+              aria-label={t("transport.playhead")}
+              type="range"
+              min="0"
+              step={1 / 30}
+              max={Math.max(
+                1,
+                ...p.clips.map((c) => (c.startFrame + c.durationFrames) / 30),
+              )}
+              value={playhead}
+              onChange={(e) => {
+                setPlaying(false);
+                setPlayhead(Number(e.target.value));
+              }}
+            />
+            <span>
+              {t("transport.seconds", {
+                seconds: formatSeconds(lang, playhead),
+              })}
+            </span>
+          </div>
+          {parity ? (
+            <p
+              className="parity"
+              data-testid="preview-parity"
+              data-exact={String(parity.exact)}
+              data-approximations={parity.approximations
+                .map((a) => a.kind)
+                .join(",")}
+            >
+              {parity.exact
+                ? t("parity.exact")
+                : t("parity.approximate", {
+                    list: parity.approximations
+                      .map((a) => t(`parity.${a.kind}`))
+                      .join(lang === "ar" ? "، " : ", "),
+                  })}
+            </p>
+          ) : null}
+          <ReferencePreview
+            projectId={p.id}
+            revision={p.revision}
+            frame={Math.round(playhead * 30)}
+            totalFrames={Math.max(
+              0,
+              ...p.clips.map((c) => c.startFrame + c.durationFrames),
+            )}
+            unsaved={Boolean(history?.past.length)}
+            playing={playing}
+            onSave={() => run(async () => void (await save()))}
+            t={t}
+          />
+        </section>
+        <section className="inspector">
+          {classic ? scenesPanel(p) : null}
+          <h2>{t("clip.sound.heading")}</h2>
+          {(() => {
+            const clip = p.clips.find((c) => c.id === selected);
+            const asset = clip?.assetId
+              ? p.assets.find((a) => a.id === clip.assetId)
+              : null;
+            const track = clip
+              ? p.tracks.find((tr) => tr.id === clip.trackId)
+              : null;
+            if (
+              !clip ||
+              clip.title !== null ||
+              track?.kind !== "video" ||
+              asset?.kind !== "video"
+            )
+              return <p className="hint">{t("clip.sound.notVideo")}</p>;
+            if (asset.hasAudio === false)
+              return <p className="hint">{t("clip.sound.noAudio")}</p>;
+            const sound = clip.sound ?? {
+              enabled: false,
+              gainDb: 0,
+              fadeInFrames: 0,
+              fadeOutFrames: 0,
+            };
+            return (
+              <>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={sound.enabled}
+                    disabled={busy}
+                    onChange={(e) =>
+                      edit((proj) =>
+                        setClipSound(proj, clip.id, {
+                          enabled: e.target.checked,
+                        }),
+                      )
+                    }
+                  />{" "}
+                  {t("clip.sound.enable")}
+                </label>
+                <label>
+                  {t("clip.sound.gain")}
+                  <input
+                    type="number"
+                    min={-60}
+                    max={12}
+                    step={0.5}
+                    disabled={busy || !sound.enabled}
+                    value={sound.gainDb ?? 0}
+                    onChange={(e) =>
+                      edit((proj) =>
+                        setClipSound(proj, clip.id, {
+                          gainDb: Number(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+              </>
+            );
+          })()}
+          {ANIMATION_ENABLED ? (
+            <>
+              <h2>{t("clip.animation.heading")}</h2>
+              {(() => {
+                const clip = p.clips.find((c) => c.id === selected);
+                if (!clip || clip.title !== null)
+                  return <p className="hint">{t("clip.animation.none")}</p>;
+                const opacity = clip.animation?.opacity?.keys ?? [];
+                const volume = clip.animation?.volume?.keys ?? [];
+                const startOp = opacity.find((k) => k.time === 0)?.value ?? 1;
+                const endOp =
+                  opacity.find(
+                    (k) =>
+                      k.time ===
+                      Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                  )?.value ??
+                  opacity[opacity.length - 1]?.value ??
+                  1;
+                const startVol = volume.find((k) => k.time === 0)?.value ?? 1;
+                const endVol =
+                  volume.find(
+                    (k) =>
+                      k.time ===
+                      Math.max(0, clip.durationFrames - 1) * FRAME_TICKS,
+                  )?.value ??
+                  volume[volume.length - 1]?.value ??
+                  1;
+                const endTicks =
+                  Math.max(0, clip.durationFrames - 1) * FRAME_TICKS;
+                return (
+                  <div data-testid="clip-animation-panel" key={clip.id}>
+                    <p className="hint">{t("clip.animation.hint")}</p>
+                    <label>
+                      {t("clip.animation.startOpacity")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        disabled={busy}
+                        defaultValue={startOp}
+                        id="anim-start-opacity"
+                      />
+                    </label>
+                    <label>
+                      {t("clip.animation.endOpacity")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        disabled={busy}
+                        defaultValue={endOp}
+                        id="anim-end-opacity"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        const startEl = document.getElementById(
+                          "anim-start-opacity",
+                        ) as HTMLInputElement | null;
+                        const endEl = document.getElementById(
+                          "anim-end-opacity",
+                        ) as HTMLInputElement | null;
+                        const s = Number(startEl?.value ?? 1);
+                        const e = Number(endEl?.value ?? 1);
+                        edit((proj) => {
+                          const live = proj.clips.find((c) => c.id === clip.id);
+                          return setClipAnimation(proj, clip.id, {
+                            opacity: {
+                              keys: [
+                                {
+                                  id: "opacity-start",
+                                  time: 0,
+                                  value: s,
+                                  segmentToNext: "linear",
+                                  tangentMode: "auto",
+                                },
+                                {
+                                  id: "opacity-end",
+                                  time: endTicks,
+                                  value: e,
+                                  segmentToNext: "linear",
+                                  tangentMode: "auto",
+                                },
+                              ],
+                            },
+                            ...(live?.animation?.volume
+                              ? { volume: live.animation.volume }
+                              : {}),
+                          });
+                        });
+                      }}
+                    >
+                      {t("clip.animation.apply")}
+                    </button>
+                    <label>
+                      {t("clip.animation.startVolume")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={4}
+                        step={0.05}
+                        disabled={busy}
+                        defaultValue={startVol}
+                        id="anim-start-volume"
+                      />
+                    </label>
+                    <label>
+                      {t("clip.animation.endVolume")}
+                      <input
+                        type="number"
+                        min={0}
+                        max={4}
+                        step={0.05}
+                        disabled={busy}
+                        defaultValue={endVol}
+                        id="anim-end-volume"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        const startEl = document.getElementById(
+                          "anim-start-volume",
+                        ) as HTMLInputElement | null;
+                        const endEl = document.getElementById(
+                          "anim-end-volume",
+                        ) as HTMLInputElement | null;
+                        const s = Number(startEl?.value ?? 1);
+                        const e = Number(endEl?.value ?? 1);
+                        edit((proj) => {
+                          const live = proj.clips.find((c) => c.id === clip.id);
+                          return setClipAnimation(proj, clip.id, {
+                            ...(live?.animation?.opacity
+                              ? { opacity: live.animation.opacity }
+                              : {}),
+                            volume: {
+                              keys: [
+                                {
+                                  id: "volume-start",
+                                  time: 0,
+                                  value: s,
+                                  segmentToNext: "linear",
+                                  tangentMode: "auto",
+                                },
+                                {
+                                  id: "volume-end",
+                                  time: endTicks,
+                                  value: e,
+                                  segmentToNext: "linear",
+                                  tangentMode: "auto",
+                                },
+                              ],
+                            },
+                          });
+                        });
+                      }}
+                    >
+                      {t("clip.animation.applyVolume")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || !clip.animation}
+                      onClick={() =>
+                        edit((proj) => setClipAnimation(proj, clip.id, null))
+                      }
+                    >
+                      {t("clip.animation.clear")}
+                    </button>
+                  </div>
+                );
+              })()}
+            </>
+          ) : null}
+          <h2>{t("title.heading")}</h2>
+          <label>
+            {t("title.text")}
+            <input
+              dir="auto"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={500}
+            />
+          </label>
+          <button
+            disabled={!title || busy}
+            onClick={() =>
+              edit((p) => {
+                const track = {
+                  id: crypto.randomUUID(),
+                  name: "Titles",
+                  kind: "video" as const,
+                  muted: false,
+                  locked: false,
+                };
+                return {
+                  ...p,
+                  tracks: [...p.tracks, track],
+                  clips: [
+                    ...p.clips,
+                    {
+                      id: crypto.randomUUID(),
+                      trackId: track.id,
+                      assetId: null,
+                      startFrame: 0,
+                      durationFrames: 90,
+                      sourceFrame: 0,
+                      title,
+                    },
+                  ],
+                };
+              })
+            }
+          >
+            {t("title.add")}
+          </button>
+          {classic ? jobPanel() : null}
+        </section>
+      </div>
+      {/* Time runs left to right in every interface language. */}
+      <section className="timeline" dir="ltr">
+        <Timeline
+          tracks={view.tracks}
+          clips={view.clips}
+          mediaItems={view.media}
+          selectedClipId={selected}
+          activeTrackId={activeTrack}
+          playheadPosition={playhead}
+          isSnappingEnabled={snapping}
+          trimMode="normal"
+          onSelectClip={setSelected}
+          onSetActiveTrack={setActiveTrack}
+          onUpdateClip={(c) => updateClips([c])}
+          onBatchUpdateClips={updateClips}
+          onPlayheadUpdate={(time) => {
+            setPlaying(false);
+            setPlayhead(time);
+          }}
+          onSnappingToggle={() => setSnapping((x) => !x)}
+          onSplitClip={(id, time) =>
+            edit((p) => splitClip(p, id, time, crypto.randomUUID()))
+          }
+          onAddTrack={(kind) =>
+            edit((p) => ({
+              ...p,
+              tracks: [
+                ...p.tracks,
+                {
+                  id: crypto.randomUUID(),
+                  name: kind === "video" ? "Picture" : "Audio",
+                  kind,
+                  muted: false,
+                  locked: false,
+                },
+              ],
+            }))
+          }
+          onUpdateTrack={(id, u) =>
+            edit((p) => ({
+              ...p,
+              tracks: p.tracks.map((t) =>
+                t.id === id
+                  ? {
+                      ...t,
+                      name: u.name ?? t.name,
+                      muted: u.isMuted ?? t.muted,
+                      locked: u.isLocked ?? t.locked,
+                      solo: u.isSolo ?? t.solo ?? false,
+                      targeted: u.isTargeted ?? t.targeted ?? false,
+                    }
+                  : t,
+              ),
+            }))
+          }
+          onDropMedia={addAsset}
+          onDeleteClip={() => edit((p) => deleteClip(p, selected))}
+        />
+      </section>
+    </>
+  );
+  const emptyPanel = () => (
+    <section className="empty">
+      <span className="large-mark" aria-hidden="true">
+        Y
+      </span>
+      <h1>{t("empty.title")}</h1>
+      <p>{t("empty.body")}</p>
+      <p>{t("empty.persist")}</p>
+    </section>
+  );
   return (
     <div className="app">
       <header>
@@ -508,14 +1370,23 @@ function App() {
             <small>{t("brand.tagline")}</small>
           </div>
         </div>
-        <nav>
-          <button onClick={() => setTools(false)} aria-pressed={!tools}>
-            {t("nav.production")}
-          </button>
-          <button onClick={() => setTools(true)} aria-pressed={tools}>
-            {t("nav.tools")}
-          </button>
-        </nav>
+        {classic ? (
+          <nav>
+            <button onClick={() => setTools(false)} aria-pressed={!tools}>
+              {t("nav.production")}
+            </button>
+            <button onClick={() => setTools(true)} aria-pressed={tools}>
+              {t("nav.tools")}
+            </button>
+          </nav>
+        ) : (
+          <WorkspaceTabs
+            workspace={workspace}
+            onOpen={openWorkspace}
+            t={t}
+            unsaved={Boolean(history?.past.length)}
+          />
+        )}
         <span className="badge">{t("badge.local")}</span>
         {/* The visible text (the other language's name) is the accessible
             name; it is marked with its own language. */}
@@ -893,851 +1764,113 @@ function App() {
               </button>
             </section>
           )}
-          {tools ? (
-            <section className="tools">
-              <h1>{t("tools.title")}</h1>
-              <p>{t("tools.intro")}</p>
-              <h2>{t("studio.title")}</h2>
-              <p>{t("studio.intro")}</p>
-              <StudioCanvas
-                forceMount={
-                  new URLSearchParams(window.location.search).get(
-                    "studioQ8",
-                  ) === "1"
-                }
-                project={p ? { id: p.id, revision: p.revision } : null}
-                client={client as unknown as StudioClient}
-                t={(key) => t(key)}
-                onSaved={(projectId, from, revision) =>
-                  // A Studio save changes only the project's documents: a
-                  // draft based on the revision it replaced moves to the new
-                  // revision unchanged (the service carries documents forward
-                  // on its next save). A draft based on anything else is left
-                  // alone, so its save still meets another writer's changes.
-                  putHistory((h) => {
-                    if (
-                      !h ||
-                      h.present.id !== projectId ||
-                      h.present.revision !== from
-                    )
-                      return h;
-                    const at = (x: Project) => ({ ...x, revision });
-                    const present = at(h.present);
-                    // The head moves with it (the same object when nothing
-                    // is pending, so no commit follows).
-                    if (head.current === h.present) head.current = present;
-                    else if (
-                      head.current?.id === projectId &&
-                      head.current.revision === from
-                    )
-                      head.current = at(head.current);
-                    return {
-                      past: h.past.map(at),
-                      present,
-                      future: h.future.map(at),
-                    };
-                  })
-                }
-              />
-              <h2>{t("cinema.title")}</h2>
-              <p>{t("cinema.intro")}</p>
-              <CinemaViewport />
-              <h2>{t("director.title")}</h2>
-              <p>{t("director.intro")}</p>
-              <DirectorPanel
-                projectId={p?.id ?? null}
-                t={t}
-                client={{
-                  call: (operation, parameters) =>
-                    client.call(operation as never, parameters as never),
-                }}
-              />
-              <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
-              {/* Shown here: a new tab would hold no session. */}
-              <p>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    run(async () =>
-                      setCatalog(
-                        JSON.stringify(await client.catalog(), null, 2),
-                      ),
-                    )
-                  }
-                >
-                  {t("tools.catalog")}
-                </button>
-              </p>
-              {catalog && (
-                <pre className="catalog" dir="ltr">
-                  {catalog}
-                </pre>
-              )}
-              <p>{t("tools.jobs")}</p>
-            </section>
-          ) : p && view ? (
+          {classic ? (
+            tools ? (
+              <section className="tools">
+                <h1>{t("tools.title")}</h1>
+                <p>{t("tools.intro")}</p>
+                {studioPanel()}
+                {cinemaPanel()}
+                {directorPanel()}
+                {catalogPanel()}
+              </section>
+            ) : p && view ? (
+              <>
+                {topBar(p)}
+                {editPanel(p, view, true)}
+              </>
+            ) : (
+              emptyPanel()
+            )
+          ) : (
             <>
-              {unapplied && unapplied.id === p.id ? (
-                <div className="notice" role="alert">
-                  <p>{t("conflict.unapplied")}</p>
-                  <button
-                    onClick={() => {
-                      const url = URL.createObjectURL(
-                        new Blob([JSON.stringify(unapplied, null, 2)], {
-                          type: "application/json",
-                        }),
-                      );
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = `yamakan-unapplied-${unapplied.id}.json`;
-                      link.click();
-                      setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }}
-                  >
-                    {t("conflict.download")}
-                  </button>
-                  <button onClick={() => setUnapplied(null)}>
-                    {t("conflict.dismiss")}
-                  </button>
-                </div>
-              ) : null}
-              <div className="toolbar">
-                <div>
-                  <h1 dir="auto">{p.name}</h1>
-                  <small>
-                    {t("projects.revision", { revision: p.revision })}
-                    {history.past.length ? ` · ${t("toolbar.unsaved")}` : ""}
-                  </small>
-                </div>
-                <div className="actions">
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      // A change not yet committed is taken back locally;
-                      // committed ones by the service's history, which
-                      // undoes only this writer's own steps.
-                      if (history.past.length) {
-                        window.clearTimeout(pending.current);
-                        putHistory((h) => h && undoHistoryState(h));
-                        return;
-                      }
-                      run(async () => {
-                        const undone = ProjectSchema.parse(
-                          await call("yamakan.project.undo", {
-                            projectId: p.id,
-                            expectedRevision:
-                              head.current?.revision ?? p.revision,
-                          }),
-                        );
-                        head.current = undone;
-                        putHistory(createHistoryState(undone));
-                        setMessage(
-                          msg("status.saved", { revision: undone.revision }),
-                        );
-                      });
-                    }}
-                  >
-                    {t("action.undo")}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      if (history.future.length) {
-                        putHistory((h) => h && redoHistoryState(h));
-                        return;
-                      }
-                      run(async () => {
-                        const redone = ProjectSchema.parse(
-                          await call("yamakan.project.redo", {
-                            projectId: p.id,
-                            expectedRevision:
-                              head.current?.revision ?? p.revision,
-                          }),
-                        );
-                        head.current = redone;
-                        putHistory(createHistoryState(redone));
-                        setMessage(
-                          msg("status.saved", { revision: redone.revision }),
-                        );
-                      });
-                    }}
-                  >
-                    {t("action.redo")}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      run(async () => {
-                        await save();
-                      })
-                    }
-                  >
-                    {t("action.save")}
-                  </button>
-                  <button
-                    className="primary"
-                    disabled={
-                      busy ||
-                      !p.clips.length ||
-                      (job && ["QUEUED", "RUNNING"].includes(job.state)) ||
-                      false
-                    }
-                    onClick={() =>
-                      run(async () => {
-                        const saved = await save();
-                        if (saved)
-                          setJob(
-                            await call("yamakan.export.video", {
-                              projectId: saved.id,
-                              idempotencyKey: crypto.randomUUID(),
-                            }),
-                          );
-                      })
-                    }
-                  >
-                    {t("action.export")}
-                  </button>
-                </div>
-              </div>
-              <div className="production">
-                <section className="preview">
-                  <PreviewPlayer
-                    timelineClips={view.clips}
-                    timelineTracks={view.tracks}
-                    mediaItems={view.media}
-                    playheadPosition={playhead}
-                    isPlaying={playing}
-                    onTogglePlayback={() => setPlaying((x) => !x)}
-                    canvasWidth={p.width}
-                    canvasHeight={p.height}
-                    aspectStyle={{ aspectRatio: `${p.width}/${p.height}` }}
-                    showControls
-                    clipStatusLabel={t("preview.clipStatus", {
-                      count: view.clips.length,
-                    })}
-                  />
-                  <div className="transport">
-                    <label className="proxy-toggle">
-                      <input
-                        type="checkbox"
-                        data-testid="proxy-toggle"
-                        checked={proxiesOn}
-                        onChange={(e) => {
-                          setProxiesOn(e.target.checked);
-                          preferProxies(e.target.checked);
-                        }}
-                      />{" "}
-                      {t("proxy.toggle")}
-                    </label>
-                    <span
-                      data-testid="proxy-status"
-                      data-proxies-ready={proxies.ready.size}
-                    >
-                      {proxiesOn
-                        ? t("proxy.summary", {
-                            ready: proxies.ready.size,
-                            total: proxies.total,
-                            building: proxies.building,
-                          })
-                        : t("proxy.off")}
-                    </span>
-                    <button
-                      onClick={() => setPlaying((x) => !x)}
-                      disabled={!p.clips.length}
-                    >
-                      {playing ? t("transport.pause") : t("transport.play")}
-                    </button>
-                    <input
-                      aria-label={t("transport.playhead")}
-                      type="range"
-                      min="0"
-                      step={1 / 30}
-                      max={Math.max(
-                        1,
-                        ...p.clips.map(
-                          (c) => (c.startFrame + c.durationFrames) / 30,
-                        ),
-                      )}
-                      value={playhead}
-                      onChange={(e) => {
-                        setPlaying(false);
-                        setPlayhead(Number(e.target.value));
-                      }}
-                    />
-                    <span>
-                      {t("transport.seconds", {
-                        seconds: formatSeconds(lang, playhead),
-                      })}
-                    </span>
-                  </div>
-                  {parity ? (
-                    <p
-                      className="parity"
-                      data-testid="preview-parity"
-                      data-exact={String(parity.exact)}
-                      data-approximations={parity.approximations
-                        .map((a) => a.kind)
-                        .join(",")}
-                    >
-                      {parity.exact
-                        ? t("parity.exact")
-                        : t("parity.approximate", {
-                            list: parity.approximations
-                              .map((a) => t(`parity.${a.kind}`))
-                              .join(lang === "ar" ? "، " : ", "),
-                          })}
-                    </p>
-                  ) : null}
-                  <ReferencePreview
-                    projectId={p.id}
-                    revision={p.revision}
-                    frame={Math.round(playhead * 30)}
-                    totalFrames={Math.max(
-                      0,
-                      ...p.clips.map((c) => c.startFrame + c.durationFrames),
-                    )}
-                    unsaved={history.past.length > 0}
-                    playing={playing}
-                    onSave={() => run(async () => void (await save()))}
-                    t={t}
-                  />
+              {p ? topBar(p) : null}
+              {/* The job tray: one export job, seen in every workspace. */}
+              {p ? jobPanel() : null}
+              <WorkspacePanel
+                id="story"
+                workspace={workspace}
+                visited={visited}
+              >
+                {p ? (
+                  <section className="story">
+                    <h2>{t("workspace.story")}</h2>
+                    <p>{t("workspace.storyIntro")}</p>
+                    {scenesPanel(p)}
+                  </section>
+                ) : (
+                  emptyPanel()
+                )}
+                <section className="tools">
+                  {cinemaPanel(workspace === "story")}
+                  {/* Director's manual stages and their raw results are
+                      for checking pipelines, kept out of the story flow. */}
+                  <details className="director">
+                    <summary>{t("director.title")}</summary>
+                    {directorPanel()}
+                  </details>
                 </section>
-                <section className="inspector">
-                  <h2>{t("scene.heading")}</h2>
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      edit((p) => ({
-                        ...p,
-                        scenes: [
-                          ...p.scenes,
-                          {
-                            id: crypto.randomUUID(),
-                            name: t("scene.default", {
-                              n: p.scenes.length + 1,
-                            }),
-                            referenceAssetId:
-                              p.assets.find((a) => a.kind === "image")?.id ||
-                              null,
-                            camera: {
-                              focalLengthMm: 50,
-                              shotScale: "medium",
-                              movement: "static",
-                            },
-                          },
-                        ],
-                      }))
-                    }
-                  >
-                    {t("scene.add")}
-                  </button>
-                  {p.scenes.map((s) => (
-                    <div className="scene" key={s.id}>
-                      <label>
-                        {t("scene.name")}
-                        <input
-                          dir="auto"
-                          value={s.name}
-                          maxLength={120}
-                          onChange={(e) =>
-                            edit((p) => ({
-                              ...p,
-                              scenes: p.scenes.map((x) =>
-                                x.id === s.id
-                                  ? { ...x, name: e.target.value }
-                                  : x,
-                              ),
-                            }))
-                          }
-                        />
-                      </label>
-                      <label>
-                        {t("scene.focal")}
-                        <input
-                          type="number"
-                          min="8"
-                          max="300"
-                          value={s.camera.focalLengthMm}
-                          onChange={(e) =>
-                            edit((p) => ({
-                              ...p,
-                              scenes: p.scenes.map((x) =>
-                                x.id === s.id
-                                  ? {
-                                      ...x,
-                                      camera: {
-                                        ...x.camera,
-                                        focalLengthMm: Number(e.target.value),
-                                      },
-                                    }
-                                  : x,
-                              ),
-                            }))
-                          }
-                        />
-                      </label>
-                      <label>
-                        {t("scene.scale")}
-                        <select
-                          value={s.camera.shotScale}
-                          onChange={(e) =>
-                            edit((p) => ({
-                              ...p,
-                              scenes: p.scenes.map((x) =>
-                                x.id === s.id
-                                  ? {
-                                      ...x,
-                                      camera: {
-                                        ...x.camera,
-                                        shotScale: e.target.value as any,
-                                      },
-                                    }
-                                  : x,
-                              ),
-                            }))
-                          }
-                        >
-                          {(["wide", "medium", "close"] as const).map((v) => (
-                            <option key={v} value={v}>
-                              {t(`scene.scale.${v}`)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        {t("scene.movement")}
-                        <select
-                          value={s.camera.movement}
-                          onChange={(e) =>
-                            edit((p) => ({
-                              ...p,
-                              scenes: p.scenes.map((x) =>
-                                x.id === s.id
-                                  ? {
-                                      ...x,
-                                      camera: {
-                                        ...x.camera,
-                                        movement: e.target.value as any,
-                                      },
-                                    }
-                                  : x,
-                              ),
-                            }))
-                          }
-                        >
-                          {(["static", "dolly", "pan", "orbit"] as const).map(
-                            (v) => (
-                              <option key={v} value={v}>
-                                {t(`scene.movement.${v}`)}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      </label>
-                    </div>
-                  ))}
-                  <p className="hint">{t("hint.camera")}</p>
-                  <h2>{t("clip.sound.heading")}</h2>
-                  {(() => {
-                    const clip = p.clips.find((c) => c.id === selected);
-                    const asset = clip?.assetId
-                      ? p.assets.find((a) => a.id === clip.assetId)
-                      : null;
-                    const track = clip
-                      ? p.tracks.find((tr) => tr.id === clip.trackId)
-                      : null;
-                    if (
-                      !clip ||
-                      clip.title !== null ||
-                      track?.kind !== "video" ||
-                      asset?.kind !== "video"
-                    )
-                      return <p className="hint">{t("clip.sound.notVideo")}</p>;
-                    if (asset.hasAudio === false)
-                      return <p className="hint">{t("clip.sound.noAudio")}</p>;
-                    const sound = clip.sound ?? {
-                      enabled: false,
-                      gainDb: 0,
-                      fadeInFrames: 0,
-                      fadeOutFrames: 0,
-                    };
-                    return (
-                      <>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={sound.enabled}
-                            disabled={busy}
-                            onChange={(e) =>
-                              edit((proj) =>
-                                setClipSound(proj, clip.id, {
-                                  enabled: e.target.checked,
-                                }),
-                              )
-                            }
-                          />{" "}
-                          {t("clip.sound.enable")}
-                        </label>
-                        <label>
-                          {t("clip.sound.gain")}
-                          <input
-                            type="number"
-                            min={-60}
-                            max={12}
-                            step={0.5}
-                            disabled={busy || !sound.enabled}
-                            value={sound.gainDb ?? 0}
-                            onChange={(e) =>
-                              edit((proj) =>
-                                setClipSound(proj, clip.id, {
-                                  gainDb: Number(e.target.value),
-                                }),
-                              )
-                            }
-                          />
-                        </label>
-                      </>
-                    );
-                  })()}
-                  {ANIMATION_ENABLED ? (
-                    <>
-                      <h2>{t("clip.animation.heading")}</h2>
-                      {(() => {
-                        const clip = p.clips.find((c) => c.id === selected);
-                        if (!clip || clip.title !== null)
-                          return (
-                            <p className="hint">{t("clip.animation.none")}</p>
-                          );
-                        const opacity = clip.animation?.opacity?.keys ?? [];
-                        const volume = clip.animation?.volume?.keys ?? [];
-                        const startOp =
-                          opacity.find((k) => k.time === 0)?.value ?? 1;
-                        const endOp =
-                          opacity.find(
-                            (k) =>
-                              k.time ===
-                              Math.max(0, clip.durationFrames - 1) *
-                                FRAME_TICKS,
-                          )?.value ??
-                          opacity[opacity.length - 1]?.value ??
-                          1;
-                        const startVol =
-                          volume.find((k) => k.time === 0)?.value ?? 1;
-                        const endVol =
-                          volume.find(
-                            (k) =>
-                              k.time ===
-                              Math.max(0, clip.durationFrames - 1) *
-                                FRAME_TICKS,
-                          )?.value ??
-                          volume[volume.length - 1]?.value ??
-                          1;
-                        const endTicks =
-                          Math.max(0, clip.durationFrames - 1) * FRAME_TICKS;
-                        return (
-                          <div data-testid="clip-animation-panel" key={clip.id}>
-                            <p className="hint">{t("clip.animation.hint")}</p>
-                            <label>
-                              {t("clip.animation.startOpacity")}
-                              <input
-                                type="number"
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                disabled={busy}
-                                defaultValue={startOp}
-                                id="anim-start-opacity"
-                              />
-                            </label>
-                            <label>
-                              {t("clip.animation.endOpacity")}
-                              <input
-                                type="number"
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                disabled={busy}
-                                defaultValue={endOp}
-                                id="anim-end-opacity"
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => {
-                                const startEl = document.getElementById(
-                                  "anim-start-opacity",
-                                ) as HTMLInputElement | null;
-                                const endEl = document.getElementById(
-                                  "anim-end-opacity",
-                                ) as HTMLInputElement | null;
-                                const s = Number(startEl?.value ?? 1);
-                                const e = Number(endEl?.value ?? 1);
-                                edit((proj) => {
-                                  const live = proj.clips.find(
-                                    (c) => c.id === clip.id,
-                                  );
-                                  return setClipAnimation(proj, clip.id, {
-                                    opacity: {
-                                      keys: [
-                                        {
-                                          id: "opacity-start",
-                                          time: 0,
-                                          value: s,
-                                          segmentToNext: "linear",
-                                          tangentMode: "auto",
-                                        },
-                                        {
-                                          id: "opacity-end",
-                                          time: endTicks,
-                                          value: e,
-                                          segmentToNext: "linear",
-                                          tangentMode: "auto",
-                                        },
-                                      ],
-                                    },
-                                    ...(live?.animation?.volume
-                                      ? { volume: live.animation.volume }
-                                      : {}),
-                                  });
-                                });
-                              }}
-                            >
-                              {t("clip.animation.apply")}
-                            </button>
-                            <label>
-                              {t("clip.animation.startVolume")}
-                              <input
-                                type="number"
-                                min={0}
-                                max={4}
-                                step={0.05}
-                                disabled={busy}
-                                defaultValue={startVol}
-                                id="anim-start-volume"
-                              />
-                            </label>
-                            <label>
-                              {t("clip.animation.endVolume")}
-                              <input
-                                type="number"
-                                min={0}
-                                max={4}
-                                step={0.05}
-                                disabled={busy}
-                                defaultValue={endVol}
-                                id="anim-end-volume"
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => {
-                                const startEl = document.getElementById(
-                                  "anim-start-volume",
-                                ) as HTMLInputElement | null;
-                                const endEl = document.getElementById(
-                                  "anim-end-volume",
-                                ) as HTMLInputElement | null;
-                                const s = Number(startEl?.value ?? 1);
-                                const e = Number(endEl?.value ?? 1);
-                                edit((proj) => {
-                                  const live = proj.clips.find(
-                                    (c) => c.id === clip.id,
-                                  );
-                                  return setClipAnimation(proj, clip.id, {
-                                    ...(live?.animation?.opacity
-                                      ? { opacity: live.animation.opacity }
-                                      : {}),
-                                    volume: {
-                                      keys: [
-                                        {
-                                          id: "volume-start",
-                                          time: 0,
-                                          value: s,
-                                          segmentToNext: "linear",
-                                          tangentMode: "auto",
-                                        },
-                                        {
-                                          id: "volume-end",
-                                          time: endTicks,
-                                          value: e,
-                                          segmentToNext: "linear",
-                                          tangentMode: "auto",
-                                        },
-                                      ],
-                                    },
-                                  });
-                                });
-                              }}
-                            >
-                              {t("clip.animation.applyVolume")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy || !clip.animation}
-                              onClick={() =>
-                                edit((proj) =>
-                                  setClipAnimation(proj, clip.id, null),
-                                )
-                              }
-                            >
-                              {t("clip.animation.clear")}
-                            </button>
-                          </div>
+              </WorkspacePanel>
+              <WorkspacePanel id="edit" workspace={workspace} visited={visited}>
+                {p && view ? editPanel(p, view, false) : emptyPanel()}
+                <section className="tools studio-panel" id="studio-panel">
+                  {/* Studio is a focused panel of Edit (with or without a
+                      project: without one it is session-only), opened on
+                      demand (its engine loads then), shown at once, and
+                      kept open after. */}
+                  {studioOpen ? (
+                    studioPanel()
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStudioOpen(true);
+                        requestAnimationFrame(() =>
+                          document
+                            .getElementById("studio-panel")
+                            ?.scrollIntoView({ block: "start" }),
                         );
-                      })()}
-                    </>
-                  ) : null}
-                  <h2>{t("title.heading")}</h2>
-                  <label>
-                    {t("title.text")}
-                    <input
-                      dir="auto"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      maxLength={500}
-                    />
-                  </label>
-                  <button
-                    disabled={!title || busy}
-                    onClick={() =>
-                      edit((p) => {
-                        const track = {
-                          id: crypto.randomUUID(),
-                          name: "Titles",
-                          kind: "video" as const,
-                          muted: false,
-                          locked: false,
-                        };
-                        return {
-                          ...p,
-                          tracks: [...p.tracks, track],
-                          clips: [
-                            ...p.clips,
-                            {
-                              id: crypto.randomUUID(),
-                              trackId: track.id,
-                              assetId: null,
-                              startFrame: 0,
-                              durationFrames: 90,
-                              sourceFrame: 0,
-                              title,
-                            },
-                          ],
-                        };
-                      })
-                    }
-                  >
-                    {t("title.add")}
-                  </button>
-                  {job && (
-                    <div className="job" role="status">
-                      <strong>{t(`job.${job.state}`)}</strong>
-                      <progress max="1" value={job.progress} />
-                      <small>{formatPercent(lang, job.progress)}</small>
-                      {["QUEUED", "RUNNING"].includes(job.state) && (
-                        <button
-                          onClick={() =>
-                            run(async () =>
-                              setJob(
-                                await call("yamakan.job.cancel", {
-                                  jobId: job.id,
-                                }),
-                              ),
-                            )
-                          }
-                        >
-                          {t("job.cancel")}
-                        </button>
-                      )}
-                      {job.state === "COMPLETED" && (
-                        <a
-                          className="download"
-                          href={mediaUrl(`/api/v1/jobs/${job.id}/artifact`)}
-                        >
-                          {t("job.download")}
-                        </a>
-                      )}
-                      {job.error && (
-                        <p className="error" dir="auto">
-                          {job.error}
-                        </p>
-                      )}
-                    </div>
+                      }}
+                    >
+                      {t("workspace.openStudio")}
+                    </button>
                   )}
                 </section>
-              </div>
-              {/* Time runs left to right in every interface language. */}
-              <section className="timeline" dir="ltr">
-                <Timeline
-                  tracks={view.tracks}
-                  clips={view.clips}
-                  mediaItems={view.media}
-                  selectedClipId={selected}
-                  activeTrackId={activeTrack}
-                  playheadPosition={playhead}
-                  isSnappingEnabled={snapping}
-                  trimMode="normal"
-                  onSelectClip={setSelected}
-                  onSetActiveTrack={setActiveTrack}
-                  onUpdateClip={(c) => updateClips([c])}
-                  onBatchUpdateClips={updateClips}
-                  onPlayheadUpdate={(time) => {
-                    setPlaying(false);
-                    setPlayhead(time);
-                  }}
-                  onSnappingToggle={() => setSnapping((x) => !x)}
-                  onSplitClip={(id, time) =>
-                    edit((p) => splitClip(p, id, time, crypto.randomUUID()))
-                  }
-                  onAddTrack={(kind) =>
-                    edit((p) => ({
-                      ...p,
-                      tracks: [
-                        ...p.tracks,
-                        {
-                          id: crypto.randomUUID(),
-                          name: kind === "video" ? "Picture" : "Audio",
-                          kind,
-                          muted: false,
-                          locked: false,
-                        },
-                      ],
-                    }))
-                  }
-                  onUpdateTrack={(id, u) =>
-                    edit((p) => ({
-                      ...p,
-                      tracks: p.tracks.map((t) =>
-                        t.id === id
-                          ? {
-                              ...t,
-                              name: u.name ?? t.name,
-                              muted: u.isMuted ?? t.muted,
-                              locked: u.isLocked ?? t.locked,
-                              solo: u.isSolo ?? t.solo ?? false,
-                              targeted: u.isTargeted ?? t.targeted ?? false,
-                            }
-                          : t,
-                      ),
-                    }))
-                  }
-                  onDropMedia={addAsset}
-                  onDeleteClip={() => edit((p) => deleteClip(p, selected))}
-                />
-              </section>
+              </WorkspacePanel>
+              <WorkspacePanel
+                id="finish"
+                workspace={workspace}
+                visited={visited}
+              >
+                {p ? (
+                  <section className="finish" data-testid="finish-panel">
+                    <h2>{t("workspace.finish")}</h2>
+                    <p>{t("workspace.finishIntro")}</p>
+                    <p data-testid="finish-output">
+                      {t("workspace.output", {
+                        // A frame size, not a quantity: no digit grouping.
+                        size: `${p.width}×${p.height}`,
+                        seconds: Math.round(
+                          Math.max(
+                            0,
+                            ...p.clips.map(
+                              (c) => c.startFrame + c.durationFrames,
+                            ),
+                          ) / 30,
+                        ),
+                      })}
+                    </p>
+                  </section>
+                ) : (
+                  emptyPanel()
+                )}
+                {/* Agent tools, with or without an open project. */}
+                <details className="agent-tools">
+                  <summary>{t("nav.tools")}</summary>
+                  {catalogPanel()}
+                </details>
+              </WorkspacePanel>
             </>
-          ) : (
-            <section className="empty">
-              <span className="large-mark" aria-hidden="true">
-                Y
-              </span>
-              <h1>{t("empty.title")}</h1>
-              <p>{t("empty.body")}</p>
-              <p>{t("empty.persist")}</p>
-            </section>
           )}
         </main>
       </div>

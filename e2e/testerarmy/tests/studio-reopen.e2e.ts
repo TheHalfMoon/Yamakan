@@ -39,7 +39,8 @@ test("after a service crash the saved Studio canvas reopens with its pixels", as
   );
   await screen.getByRole("button", /Studio journey Revision/).tap();
   await expect(screen.getByRole("heading", "Studio journey")).toBeVisible();
-  await screen.getByRole("button", "Agent tools").tap();
+  await screen.getByRole("tab", "Edit").tap();
+  await screen.getByRole("button", "Open Studio").tap();
   const hash = await until<string>(
     browser,
     `document.querySelector('[data-testid="studio-save-state"][data-state="saved"]')?.getAttribute('data-content-hash') || null`,

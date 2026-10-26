@@ -27,7 +27,8 @@ test('a Studio stroke is saved to the project and a conflicting save is caught',
   await screen.getByLabel('Project name', { exact: true }).fill('Studio journey');
   await screen.getByRole('button', 'Create project').tap();
   await expect(screen.getByRole('heading', 'Studio journey')).toBeVisible();
-  await screen.getByRole('button', 'Agent tools').tap();
+  await screen.getByRole('tab', 'Edit').tap();
+  await screen.getByRole('button', 'Open Studio').tap();
   await until(browser, `${saveState} === 'new'`, 'a new, unsaved Studio canvas');
   await until(
     browser,

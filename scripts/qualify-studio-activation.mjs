@@ -105,7 +105,8 @@ try {
     .waitFor();
 
   // No forceMount query — flag must mount Studio on its own.
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Open Studio", exact: true }).click();
   const studio = page.getByTestId("studio-canvas");
   await studio.waitFor();
   assert.equal(await studio.getAttribute("data-studio-enabled"), "true");

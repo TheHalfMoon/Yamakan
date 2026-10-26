@@ -100,7 +100,8 @@ try {
     .getByRole("heading", { name: "Director act", exact: true })
     .waitFor();
 
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
+  await page.locator("details.director > summary").click();
   const panel = page.getByTestId("director-panel");
   await panel.waitFor();
   assert.equal(await panel.getAttribute("data-director-enabled"), "true");

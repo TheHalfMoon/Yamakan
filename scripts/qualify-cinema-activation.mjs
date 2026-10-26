@@ -100,7 +100,7 @@ try {
     .getByRole("heading", { name: "Cinema act", exact: true })
     .waitFor();
 
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
   const cinema = page.getByTestId("cinema-viewport");
   await cinema.waitFor();
   assert.equal(await cinema.getAttribute("data-cinema-enabled"), "true");
@@ -175,7 +175,7 @@ try {
   // Reload and remount — reopen evidence via list + open.
   await page.reload();
   await page.waitForFunction(() => location.hash === "");
-  await page.getByRole("button", { name: "Agent tools", exact: true }).click();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
   await page.waitForFunction(
     () =>
       document
