@@ -631,6 +631,11 @@ function App() {
                             {t("backups.damaged", { count: b.damaged })}
                           </small>
                         )}
+                        {b.creative !== "complete" && (
+                          <small className="note">
+                            {t("backups.partialScope")}
+                          </small>
+                        )}
                         <button
                           disabled={busy}
                           onClick={() =>
@@ -645,9 +650,14 @@ function App() {
                                       folder: restored.root,
                                       count: restored.quarantined.length,
                                     })
-                                  : msg("backups.restored", {
-                                      folder: restored.root,
-                                    }),
+                                  : restored.fenced.jobsHeld
+                                    ? msg("backups.restoredHeld", {
+                                        folder: restored.root,
+                                        count: restored.fenced.jobsHeld,
+                                      })
+                                    : msg("backups.restored", {
+                                        folder: restored.root,
+                                      }),
                               );
                             })
                           }

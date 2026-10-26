@@ -41,13 +41,15 @@ const en = {
   "projects.history": "History & recovery",
   "backups.title": "Backups",
   "backups.note":
-    "A backup copies the database and verified media to a folder beside this workspace while you keep working. Restoring creates a new workspace folder; this one is not changed.",
+    "A backup copies the database (with creative documents), verified media and older scene files to a folder beside this workspace while you keep working. Restoring creates a new workspace folder; this one is not changed.",
   "backups.create": "Back up now",
   "backups.show": "Show backups",
   "backups.none": "No backups yet.",
   "backups.summary": "{date} · projects: {projects} · {size} MB",
   "backups.damaged": "Damaged media not copied: {count}",
   "backups.incomplete": "{id} · incomplete, cannot be restored",
+  "backups.partialScope":
+    "Not proven complete: an earlier backup format, or something could not be copied.",
   "backups.restore": "Restore to a new folder",
   "backups.made": "Backup created.",
   "backups.madeDamaged":
@@ -56,6 +58,8 @@ const en = {
     "Restored into a new workspace folder: {folder}. Start Yamakan with that folder as its workspace to open it.",
   "backups.restoredQuarantined":
     "Restored into a new workspace folder: {folder}. Media files that could not be verified were quarantined: {count}. Start Yamakan with that folder as its workspace to open it.",
+  "backups.restoredHeld":
+    "Restored into a new workspace folder: {folder}. Jobs copied from this workspace wait there until you retry or discard them: {count}. Start Yamakan with that folder as its workspace to open it.",
   "assets.title": "Assets",
   "assets.import": "Import local media",
   "assets.kind.image": "image",
@@ -227,13 +231,15 @@ const ar: Record<MessageKey, string> = {
   "projects.history": "السجل والاستعادة",
   "backups.title": "النسخ الاحتياطية",
   "backups.note":
-    "تنسخ النسخة الاحتياطية قاعدة البيانات والوسائط المتحقَّق منها إلى مجلد بجوار مساحة العمل هذه وأنت تواصل العمل. تُنشئ الاستعادة مجلد مساحة عمل جديدًا ولا تغيّر هذا المجلد.",
+    "تنسخ النسخة الاحتياطية قاعدة البيانات (ومعها المستندات الإبداعية) والوسائط المتحقَّق منها وملفات المشاهد الأقدم إلى مجلد بجوار مساحة العمل هذه وأنت تواصل العمل. تُنشئ الاستعادة مجلد مساحة عمل جديدًا ولا تغيّر هذا المجلد.",
   "backups.create": "إنشاء نسخة احتياطية الآن",
   "backups.show": "عرض النسخ الاحتياطية",
   "backups.none": "لا توجد نسخ احتياطية بعد.",
   "backups.summary": "{date} · عدد المشاريع: {projects} · {size} ميغابايت",
   "backups.damaged": "وسائط تالفة لم تُنسخ: {count}",
   "backups.incomplete": "{id} · غير مكتملة، لا يمكن استعادتها",
+  "backups.partialScope":
+    "لم يثبت اكتمالها: صيغة نسخ احتياطي أقدم، أو تعذّر نسخ شيء ما.",
   "backups.restore": "استعادة إلى مجلد جديد",
   "backups.made": "أُنشئت النسخة الاحتياطية.",
   "backups.madeDamaged":
@@ -242,6 +248,8 @@ const ar: Record<MessageKey, string> = {
     "استُعيدت في مجلد مساحة عمل جديد: {folder}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
   "backups.restoredQuarantined":
     "استُعيدت في مجلد مساحة عمل جديد: {folder}. عُزلت ملفات وسائط تعذّر التحقق منها، وعددها {count}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
+  "backups.restoredHeld":
+    "استُعيدت في مجلد مساحة عمل جديد: {folder}. تنتظر هناك مهام منسوخة من مساحة العمل هذه حتى تعيد تشغيلها أو تتجاهلها، وعددها {count}. شغّل يماكن مع هذا المجلد مساحةً للعمل لفتحه.",
   "assets.title": "الوسائط",
   "assets.import": "استيراد وسائط محلية",
   "assets.kind.image": "صورة",

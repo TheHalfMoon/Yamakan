@@ -661,7 +661,7 @@ export const commands = {
     scope: "project:recover",
     mutation: true,
     summary:
-      "Back up the workspace (database and verified media) into the service's recovery folder while work continues.",
+      "Back up the workspace (database with creative documents, verified media and legacy scene and Director files) into the service's recovery folder while work continues.",
     input: z.object({}).strict(),
     run: (ctx, _a) =>
       ctx.receipt
