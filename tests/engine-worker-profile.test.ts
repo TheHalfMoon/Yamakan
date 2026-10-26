@@ -369,17 +369,32 @@ test(
   "services cannot start a process for an engine worker: WMI and Task Scheduler, with controls",
   { skip: !windows },
   async () => {
-    // WMI: Win32_Process.Create would run a command from the WMI service,
-    // outside the worker's job. The worker cannot even connect to root\cimv2.
-    // (PowerShell and cscript do not start under the profile at all, so the
-    // native probe makes the call.)
-    assert.equal(
-      spawnSync(probe, ["wmi"], { encoding: "utf8" }).stdout,
-      "connected",
-      "WMI control",
-    );
-    const wmi = await run(["wmi"], { profile: ENGINE_WORKER_PROFILE });
-    assert.match(wmi.stdout, /^denied 0x/, "no connection to the WMI service");
+    // WMI would run a command from its service, outside the worker's job:
+    // Win32_Process.Create (root\cimv2) or a permanent command-line consumer
+    // (root\subscription); root\default holds the registry provider. The
+    // control connects to each. The worker cannot even initialize COM
+    // (access denied), so it reaches none of them; a refused connection
+    // would also do. (PowerShell and cscript do not start under the profile
+    // at all, so the native probe makes the call.)
+    for (const namespace of [
+      "ROOT\\CIMV2",
+      "ROOT\\SUBSCRIPTION",
+      "ROOT\\DEFAULT",
+    ]) {
+      assert.equal(
+        spawnSync(probe, ["wmi", namespace], { encoding: "utf8" }).stdout,
+        "connected",
+        `WMI control: ${namespace}`,
+      );
+      const wmi = await run(["wmi", namespace], {
+        profile: ENGINE_WORKER_PROFILE,
+      });
+      assert.match(
+        wmi.stdout,
+        /^(noinit 0x80070005|denied connect 0x(80070005|80041003))$/,
+        `no connection to ${namespace}`,
+      );
+    }
 
     // Task Scheduler: a task the worker created would run outside its job.
     const dir = await temp("yamakan-escape-");
@@ -410,7 +425,11 @@ test(
       });
       // schtasks ran and was refused by the Task Scheduler (not a failed start).
       assert.notEqual(created.code, 0);
-      assert.match(created.stderr, /Access is denied/, created.stderr);
+      // (It printed its refusal; the message is localized, so only an
+      // English one is matched.)
+      assert.notEqual(created.stderr.trim(), "", "schtasks ran");
+      if (Intl.DateTimeFormat().resolvedOptions().locale.startsWith("en"))
+        assert.match(created.stderr, /Access is denied/, created.stderr);
       const listed = spawnSync(schtasks, ["/Query", "/TN", task], {
         encoding: "utf8",
       });
@@ -426,9 +445,12 @@ test(
   "COM local servers and job breakaway: denied, credited where the control works here",
   { skip: !windows },
   async (t) => {
-    // A local COM server would run outside the job. MMC20.Application needs
-    // elevation on this host, so the control usually fails: then the denial
-    // is recorded, not credited.
+    // A local COM server would run outside the job. The worker cannot
+    // initialize COM at all (access denied), which refuses every server;
+    // the WMI control above shows COM initializes uncontained. Activating
+    // MMC20.Application itself needs elevation on this host, so that
+    // control usually fails: a refusal at activation is then recorded, not
+    // credited.
     const progid = "MMC20.Application";
     const comControl = spawnSync(probe, ["com", progid], {
       encoding: "utf8",
@@ -436,10 +458,10 @@ test(
     const com = await run(["com", progid], { profile: ENGINE_WORKER_PROFILE });
     assert.match(
       com.stdout,
-      /^denied /,
-      "activation refused (not a missing class)",
+      /^(noinit 0x80070005|denied 0x)/,
+      "COM refused (not a missing class)",
     );
-    if (comControl !== "created")
+    if (!com.stdout.startsWith("noinit") && comControl !== "created")
       t.diagnostic(
         `COM control failed (${comControl}): local-server denial not qualified here`,
       );

@@ -215,7 +215,11 @@ fn activates_local_server(progid: &str) -> String {
     let mut clsid = [0u8; 16];
     let mut out: *mut std::ffi::c_void = std::ptr::null_mut();
     unsafe {
-        CoInitializeEx(std::ptr::null_mut(), 0);
+        // Without the COM runtime nothing below can run: reported as its own stage.
+        let init = CoInitializeEx(std::ptr::null_mut(), 0);
+        if init < 0 {
+            return format!("noinit {init:#x}");
+        }
         let found = CLSIDFromProgID(wide(progid).as_ptr(), &mut clsid);
         if found != 0 {
             return format!("noclass {found:#x}");
@@ -237,10 +241,11 @@ fn activates_local_server(_progid: &str) -> String {
 extern "system" {
     fn SysAllocString(text: *const u16) -> *mut u16;
 }
-// Whether the WMI service accepts a connection to root\cimv2 (where
-// Win32_Process.Create starts a process outside the caller's job).
+// Whether the WMI service accepts a connection to a namespace (root\cimv2
+// has Win32_Process.Create, root\subscription permanent command-line
+// consumers: both run a process outside the caller's job).
 #[cfg(windows)]
-fn connects_wmi() -> String {
+fn connects_wmi(namespace: &str) -> String {
     const CLSID_WBEM_LOCATOR: [u8; 16] = [
         0x11, 0xf8, 0x90, 0x45, 0x3a, 0x1d, 0xd0, 0x11, 0x89, 0x1f, 0x00, 0xaa, 0x00, 0x4b, 0x2e,
         0x24,
@@ -262,7 +267,11 @@ fn connects_wmi() -> String {
     ) -> i32;
     let mut locator: *mut std::ffi::c_void = std::ptr::null_mut();
     unsafe {
-        CoInitializeEx(std::ptr::null_mut(), 0);
+        // Without the COM runtime nothing below can run: reported as its own stage.
+        let init = CoInitializeEx(std::ptr::null_mut(), 0);
+        if init < 0 {
+            return format!("noinit {init:#x}");
+        }
         let hr = CoCreateInstance(
             &CLSID_WBEM_LOCATOR,
             std::ptr::null_mut(),
@@ -271,7 +280,7 @@ fn connects_wmi() -> String {
             &mut locator,
         );
         if hr != 0 {
-            return format!("denied {hr:#x}");
+            return format!("nolocator {hr:#x}");
         }
         // IWbemLocator: IUnknown's three methods, then ConnectServer.
         let vtable = *(locator as *const *const usize);
@@ -280,7 +289,7 @@ fn connects_wmi() -> String {
         let mut services: *mut std::ffi::c_void = std::ptr::null_mut();
         let hr = connect(
             locator,
-            SysAllocString(wide("ROOT\\CIMV2").as_ptr()),
+            SysAllocString(wide(namespace).as_ptr()),
             null,
             null,
             null,
@@ -292,12 +301,12 @@ fn connects_wmi() -> String {
         if hr == 0 {
             "connected".into()
         } else {
-            format!("denied {hr:#x}")
+            format!("denied connect {hr:#x}")
         }
     }
 }
 #[cfg(not(windows))]
-fn connects_wmi() -> String {
+fn connects_wmi(_namespace: &str) -> String {
     "denied".into()
 }
 #[cfg(windows)]
@@ -445,7 +454,7 @@ fn main() {
             print!("{}", activates_local_server(arg(&args, 1)));
         }
         "wmi" => {
-            print!("{}", connects_wmi());
+            print!("{}", connects_wmi(arg(&args, 1)));
         }
         "breakaway" => {
             // A child that asks to leave the job (CREATE_BREAKAWAY_FROM_JOB).

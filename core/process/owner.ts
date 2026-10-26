@@ -378,17 +378,6 @@ export class ProcessOwner {
             settle();
             peakMemoryBytes = peakBytes;
             wallExceeded = walled;
-            // Past its profile's output cap the job was ended: the run fails,
-            // never succeeds on partial output.
-            if (flooded) {
-              reject(
-                new CommandError(
-                  "LIMIT_EXCEEDED",
-                  "The worker wrote more output than its profile allows.",
-                ),
-              );
-              return;
-            }
             this.#report({
               executable: path.basename(executable),
               code: exitCode,
@@ -397,15 +386,25 @@ export class ProcessOwner {
               wallMs: performance.now() - started,
             });
             // A folder the worker left in a state procd could not undo is
-            // reported, never ignored: the run fails with the reason.
-            if (restored) resolve(exitCode);
-            else
+            // reported, never ignored: the run fails with the reason (first,
+            // as it needs recovery whatever else happened).
+            if (!restored)
               reject(
                 new CommandError(
                   "RECOVERY_REQUIRED",
                   "A worker's folder could not be restored to the workspace's access after it ran.",
                 ),
               );
+            // Past its profile's output cap the job was ended: the run fails,
+            // never succeeds on partial output.
+            else if (flooded)
+              reject(
+                new CommandError(
+                  "LIMIT_EXCEEDED",
+                  "The worker wrote more output than its profile allows.",
+                ),
+              );
+            else resolve(exitCode);
           },
           failed: (message) => {
             settle();
