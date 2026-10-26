@@ -1,0 +1,79 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "d7bb873",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "ffmpeg": "pinned R8 build (vendor/ffmpeg-win64-r8)",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-018",
+  "objective": "Qualify preview cache/audio clock and visible parity subset",
+  "branch": "feat/yu-018-preview-parity",
+  "mergedPr": 113,
+  "headCommit": "a463247",
+  "mergeCommit": "dc483c9a4c4a0ceb143314bd76a96a44bdb8928b",
+  "flags": "No flag changes; the parity notice and reference-view behaviour are always on",
+  "deviations": [
+    "The preview cache key was not changed: the plan hash already covers revision, every asset's content hash, fonts, output profile and compiler, and the preview key adds renderer version and FFmpeg build (tests/preview.test.ts already covered revision invalidation, abandonment and eviction)",
+    "Audio clock work is diagnostic: drift is measured in the playback qualification, not corrected; the canvas player's existing 0.3 s resync is unchanged",
+    "The missing-font honest state is shown by routing the service's own 501 CAPABILITY_UNAVAILABLE answer in the browser test; the pinned fonts are not removed in-process because other suites read them concurrently",
+    "PreviewPlayer (donor) gained one line so embedded video sound follows the clip's switch every frame; recorded in docs/provenance/imports.json"
+  ],
+  "tests": {
+    "files": [
+      "tests/preview-parity.test.ts",
+      "tests/preview.test.ts",
+      "scripts/browser-e2e.mjs",
+      "scripts/qualify-playback.mjs"
+    ],
+    "result": "preview-parity 7/7 (exact subset; each approximation with its clips; muted and soloed-out tracks not counted; video on an audio track and extreme retimes; canvas volume equals export gain up to 0 dB, audio clips included; en/ar words; yamakan.preview.parity scope and strict input); preview 8/8 incl. abandoned waiters freeing their places at once. Edge E2E: canvas vs reference block means at one playhead (top two thirds, mean < 6/255, worst < 20) with a shifted-reference control; parity notice lists the title approximation; rapid scrubs ask for 1-2 frames; a 501 missing-font answer shows its reason and is requested once; the failed frame shows ready once renderable; 0 page errors, 0 external requests",
+    "playback": "docs/evidence/qualification/playback.json at the head: passed, sustained 27.3 fps (threshold 24), with audioDriftMs per scenario. Every run on this host 2026-10-26 (sustained fps / worst 1 s window): c44d041 base 26.9/19, 26.9/13; 75199b4 27.4/19, 27.1/17, 12.7/0 (fail), 27.3/17, 27.8/22; head code 20.8/0 (fail), 21.5/1 (fail), 27.3/16, 26.8/13, 26.3/5, 26.6/14. Freezes occur on 75199b4 and the head at similar rates (host stalls); nothing in the last round runs during playback. Drift mean ranged about 20-230 ms between runs (the canvas resyncs at 0.3 s)"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 11,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 4,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "dc483c9a4c4a0ceb143314bd76a96a44bdb8928b",
+    "ci": "PR exact head a463247: qualify, qualify-windows-r8, otio-oracle success; push run on dc483c9: success",
+    "windows": "detached dc483c9 with the host at 1.8 GB free RAM: static checks and build pass; npm test 574/591 with 14 load timeouts whose 9 files then pass alone 72/72 (--test-concurrency=1); test:studio 1975/1975; Edge E2E timed out once under that load, then passed (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Preview audio can drift up to about 0.3 s from the picture under load before the canvas resyncs (export unaffected)",
+    "This host shows intermittent ~1 s browser stalls (about 1 run in 3 fails the sustained playback gate, on any commit); the committed receipt is a passing run",
+    "The 4x-queue-depth cap on abandoned preview renders is untested",
+    "The canvas/reference parity check samples one playhead (picture, position, fit)",
+    "Not listed as approximations: loudness normalisation (an export option) and solo across track kinds",
+    "Service reasons in the reference view are shown in English",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
