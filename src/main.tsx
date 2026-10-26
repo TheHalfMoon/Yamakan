@@ -17,6 +17,7 @@ import {
 import { editorView } from "./adapter";
 import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
+import { previewParity } from "../core/render/parity.ts";
 import {
   direction,
   initialLang,
@@ -1161,6 +1162,28 @@ function App() {
                       })}
                     </span>
                   </div>
+                  {(() => {
+                    // What the canvas above shows only approximately (YU-018).
+                    const parity = previewParity(p);
+                    return (
+                      <p
+                        className="parity"
+                        data-testid="preview-parity"
+                        data-exact={String(parity.exact)}
+                        data-approximations={parity.approximations
+                          .map((a) => a.kind)
+                          .join(",")}
+                      >
+                        {parity.exact
+                          ? t("parity.exact")
+                          : t("parity.approximate", {
+                              list: parity.approximations
+                                .map((a) => t(`parity.${a.kind}`))
+                                .join(lang === "ar" ? "، " : ", "),
+                            })}
+                      </p>
+                    );
+                  })()}
                   <ReferencePreview
                     projectId={p.id}
                     revision={p.revision}

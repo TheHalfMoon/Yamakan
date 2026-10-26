@@ -485,7 +485,9 @@ try {
     null,
     { timeout: 60000 },
   );
-  const referenceSrc = await page.locator(".reference img").getAttribute("src");
+  const referenceSrc = await page
+    .locator(".reference img")
+    .getAttribute("data-src");
   const referenceResponse = await page.request.get(
     new URL(referenceSrc, url).href,
   );
@@ -493,6 +495,57 @@ try {
   assert.equal(referenceResponse.headers()["content-type"], "image/png");
   const referencePlanHash = referenceResponse.headers()["x-plan-hash"];
   assert.match(referencePlanHash, /^[a-f0-9]{64}$/);
+  // YU-018: the canvas preview says what it only approximates (this
+  // timeline has a title, drawn with browser fonts).
+  const parity = page.getByTestId("preview-parity");
+  assert.equal(await parity.getAttribute("data-exact"), "false");
+  assert.match(
+    (await parity.getAttribute("data-approximations")) || "",
+    /titleFont/,
+  );
+  // Rapid scrubbing asks for no frame until the playhead rests.
+  const frameRequests = [];
+  const countFrames = (r) => {
+    if (/\/preview\?.*kind=frame/.test(r.url())) frameRequests.push(r.url());
+  };
+  page.on("request", countFrames);
+  for (let i = 0; i < 12; i++) {
+    await page.getByLabel("Playhead").fill(i % 2 ? "1" : "0");
+    await page.waitForTimeout(40);
+  }
+  await page.waitForTimeout(900);
+  page.off("request", countFrames);
+  assert.ok(
+    frameRequests.length <= 2,
+    `rapid scrubs asked for ${frameRequests.length} frames`,
+  );
+  // A frame the service cannot render (here: its title fonts are missing)
+  // says why, and is not asked for again.
+  let refused = 0;
+  await page.route(/\/preview\?.*kind=frame/, (route) => {
+    refused++;
+    return route.fulfill({
+      status: 501,
+      contentType: "application/json",
+      body: JSON.stringify({
+        apiVersion: 1,
+        error: {
+          code: "CAPABILITY_UNAVAILABLE",
+          message: "A pinned title font could not be read.",
+          retryable: false,
+        },
+      }),
+    });
+  });
+  // A frame not asked for before (frame 15).
+  await page.getByLabel("Playhead").fill("0.5");
+  await page
+    .locator(".reference [role=alert]")
+    .filter({ hasText: "A pinned title font could not be read." })
+    .waitFor();
+  await page.waitForTimeout(2500);
+  assert.equal(refused, 1, "an unrenderable frame is not retried");
+  await page.unroute(/\/preview\?.*kind=frame/);
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Pause", exact: true }).click();

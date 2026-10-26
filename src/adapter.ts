@@ -1,6 +1,7 @@
 import { mediaUrl } from "./session.ts";
 import type { Project } from "../core/project.ts";
 import type { TimelineClip, TimelineTrack, MediaItem } from "./editor/types";
+import { previewVolume } from "../core/render/parity.ts";
 // With `proxies`, a video whose edit proxy is ready plays that proxy in
 // the interactive preview (same times and trims; YU-017); everything else,
 // and every export, uses the original.
@@ -50,10 +51,9 @@ export function editorView(
       30,
     effect: null,
     soundEnabled: Boolean(c.sound?.enabled),
-    volume:
-      c.sound?.enabled && c.sound.gainDb !== undefined
-        ? Math.min(1, Math.max(0, 10 ** (c.sound.gainDb / 20)))
-        : undefined,
+    // The export's gain up to 0 dB (an audio clip's own, or a video's
+    // embedded sound); above it, see core/render/parity.ts.
+    volume: previewVolume(p, c),
     ...(c.title !== null
       ? {
           textConfig: {

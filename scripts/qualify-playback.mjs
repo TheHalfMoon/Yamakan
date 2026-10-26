@@ -10,7 +10,9 @@
 // 10 s of play while an export renders (resource pressure). The seek and
 // pressure scenarios are measured and reported, not gated. A negative
 // control (the same play with the CPU throttled 20x) must measure below the
-// threshold, or the run fails. The receipt also
+// threshold, or the run fails. Audio drift (YU-018): on every animation
+// frame while the tone plays, the tone's media time minus the editor's
+// playhead, reported per scenario (not gated). The receipt also
 // records the WebGL renderer the browser reports, since headless Edge may
 // composite in software. It runs only on a clean tree.
 import { chromium } from "playwright-core";
@@ -206,6 +208,24 @@ try {
   const page = await (
     await browser.newContext({ viewport: { width: 1600, height: 1100 } })
   ).newPage();
+  // Every audio element the page creates, for the drift sampler.
+  await page.addInitScript(() => {
+    const elements = [];
+    Object.defineProperty(window, "__audio", { value: elements });
+    const NativeAudio = window.Audio;
+    window.Audio = class extends NativeAudio {
+      constructor(...args) {
+        super(...args);
+        elements.push(this);
+      }
+    };
+    const create = document.createElement.bind(document);
+    document.createElement = (...args) => {
+      const element = create(...args);
+      if (args[0] === "audio") elements.push(element);
+      return element;
+    };
+  });
   const launch = readFileSync(join(root, "workspace", "launch"), "utf8")
     .split("\n")[0]
     .trim();
@@ -242,7 +262,10 @@ try {
         running: true,
         last: -1,
         started: performance.now(),
+        // Tone time minus playhead (seconds), while the tone plays.
+        drift: [],
       };
+      const playhead = document.querySelector('input[aria-label="Playhead"]');
       window.__sampler = state;
       const tick = (now) => {
         if (!state.running) return;
@@ -261,6 +284,14 @@ try {
         }
         if (h !== state.last) state.changes.push([now, red / 256]);
         state.last = h;
+        // The tone starts at 0 with no trim: its media time is the
+        // playhead's. The first half second is play-start latency.
+        const tone = window.__audio.find(
+          (e) => e.getAttribute("src") && !e.paused,
+        );
+        const at = Number(playhead?.value);
+        if (tone && Number.isFinite(at) && at > 0.5)
+          state.drift.push(tone.currentTime - at);
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -271,6 +302,7 @@ try {
       return {
         changes: window.__sampler.changes,
         frames: window.__sampler.frames,
+        drift: window.__sampler.drift,
         started: window.__sampler.started,
         stopped: performance.now(),
       };
@@ -305,6 +337,18 @@ try {
   // Seeks (sets the playhead while paused), starts counting, presses Play and
   // counts for the whole window: play-start latency and any freeze count
   // against the rate.
+  // Mean, 95th percentile and worst absolute drift, in milliseconds.
+  const driftSummary = (drift) => {
+    if (!drift.length) return { samples: 0 };
+    const abs = drift.map((d) => Math.abs(d) * 1000).sort((a, b) => a - b);
+    const round = (x) => Math.round(x * 10) / 10;
+    return {
+      samples: abs.length,
+      mean: round(abs.reduce((a, b) => a + b, 0) / abs.length),
+      p95: round(abs[Math.min(abs.length - 1, Math.floor(abs.length * 0.95))]),
+      max: round(abs[abs.length - 1]),
+    };
+  };
   const playFor = async (from, seconds) => {
     await page.getByLabel("Playhead").fill(String(from));
     await page.waitForTimeout(400);
@@ -336,6 +380,7 @@ try {
       minOneSecondWindow: Math.min(...windows),
       // A 30 fps timeline shows 30 new frames a second when nothing drops.
       droppedEstimate: Math.max(0, Math.round(elapsed * 30 - shown)),
+      audioDriftMs: driftSummary(sample.drift),
       window: [nodeStart, nodeEnd],
     };
   };
