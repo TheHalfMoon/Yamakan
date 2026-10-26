@@ -91,6 +91,10 @@ type Pending = {
 };
 let queue: Promise<unknown> = Promise.resolve();
 let waiting = 0;
+// Renders everyone left before their turn: they hold no queue place but
+// still wait in the chain until their turn passes, so they are bounded too.
+let abandoned = 0;
+const MAX_ABANDONED_FACTOR = 4;
 const inFlight = new Map<string, Pending>();
 let closed = false;
 
@@ -167,7 +171,11 @@ export async function preview(
     pending = live();
   }
   if (!pending) {
-    if (waiting >= RESOURCE_POLICY.enforced.previewQueueDepth)
+    if (
+      waiting >= RESOURCE_POLICY.enforced.previewQueueDepth ||
+      abandoned >=
+        RESOURCE_POLICY.enforced.previewQueueDepth * MAX_ABANDONED_FACTOR
+    )
       throw new CommandError(
         "BUSY",
         "Too many previews are being rendered; retry shortly.",
@@ -177,6 +185,7 @@ export async function preview(
     let entry: Pending | undefined;
     const turn = queue.then(async () => {
       if (entry?.queued !== false) waiting--;
+      else abandoned--;
       if (entry) entry.queued = false;
       if (controller.signal.aborted) throw new Error("Cancelled.");
       await removeStaleStaging(dir);
@@ -241,6 +250,7 @@ export async function preview(
       if (entry.queued) {
         entry.queued = false;
         waiting--;
+        abandoned++;
       }
     }
   };

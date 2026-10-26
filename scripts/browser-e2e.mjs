@@ -498,9 +498,11 @@ try {
   assert.equal(referenceResponse.headers()["content-type"], "image/png");
   const referencePlanHash = referenceResponse.headers()["x-plan-hash"];
   assert.match(referencePlanHash, /^[a-f0-9]{64}$/);
-  // YU-018 parity on the supported subset: away from the title (the
-  // bottom band, an approximation), the canvas shows the same picture in
-  // the same place as the reference render at that playhead. Compared as
+  // YU-018 parity on the supported subset, sampled at one playhead (so
+  // picture, position and fit; trims, retime and cuts are the plan's and
+  // the player's own tests): away from the title (the bottom band, an
+  // approximation), the canvas shows the same picture in the same place as
+  // the reference render at that playhead. Compared as
   // block means (an 8x4 grid over the top two thirds), which the export's
   // 4:2:0 chroma and the browser's scaling leave alone; a control (the
   // reference against itself moved by one block) shows the measure can fail.
@@ -613,7 +615,12 @@ try {
   await page.waitForFunction(
     () =>
       document.querySelector(".reference img")?.getAttribute("data-state") ===
-        "ready" && !document.querySelector(".reference [role=alert]"),
+        "ready" &&
+      /start=15(&|$)/.test(
+        document.querySelector(".reference img")?.getAttribute("data-src") ||
+          "",
+      ) &&
+      !document.querySelector(".reference [role=alert]"),
     null,
     { timeout: 60000 },
   );

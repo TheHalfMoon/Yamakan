@@ -56,6 +56,11 @@ export function ReferencePreview(props: Props) {
   // Attempts belong to one frame of one revision: a new frame starts at 0.
   const view = `${base}|${settled}`;
   const [tries, setTries] = useState({ view, n: 0 });
+  // Each visit to a frame starts afresh (coming back is not a retry).
+  useEffect(
+    () => setTries((t) => (t.view === view ? t : { view, n: 0 })),
+    [view],
+  );
   const attempt = tries.view === view ? tries.n : 0;
   const src = `${base}&kind=frame&start=${settled}${attempt ? `&attempt=${attempt}` : ""}`;
   // The frame shown (for the revision and address it was asked for) and the
@@ -126,6 +131,9 @@ export function ReferencePreview(props: Props) {
     [],
   );
   const failed = failure?.src === src;
+  // Final: a refusal, or a busy renderer after the last attempt. Until then
+  // the last frame stays up, marked as rendering.
+  const final = failed && (!failure?.retry || attempt >= MAX_ATTEMPTS);
   useEffect(() => {
     if (!failed || !failure?.retry || attempt >= MAX_ATTEMPTS) return;
     const timer = setTimeout(() => setTries({ view, n: attempt + 1 }), 1500);
@@ -178,7 +186,7 @@ export function ReferencePreview(props: Props) {
         />
       ) : (
         current &&
-        !failed && (
+        !final && (
           <img
             src={current.url}
             // The frame's address without the media key (tests, support).
@@ -191,10 +199,10 @@ export function ReferencePreview(props: Props) {
           />
         )
       )}
-      {current?.src !== src && !failed && !segment ? (
+      {current?.src !== src && !final && !segment ? (
         <small>{t("reference.rendering")}</small>
       ) : null}
-      {failed && !segment ? (
+      {final && !segment ? (
         <small className="error" role="alert">
           {t("reference.failed")}
           {failure?.reason ? ` ${failure.reason}` : ""}

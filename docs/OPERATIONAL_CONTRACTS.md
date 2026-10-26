@@ -291,9 +291,13 @@ The editor has two previews. The canvas preview is fast and interactive. The ref
   - Its cache key is the plan hash, which covers the revision, every asset's content hash, the fonts, the output profile and the compiler version, plus the renderer version and the FFmpeg build. A new revision is a new entry.
   - The view follows the playhead only once it rests (250 ms), and fetches each frame. A superseded frame is abandoned at once, and the service stops a render that nobody is waiting for.
   - A frame the service cannot render shows the service's reason, up to 200 characters, and is not retried. Examples are missing title fonts and no disk space. Reasons are shown only for plain refusals: validation, not found, limit, capability and recovery. Any other error shows only the general failure.
-  - A busy renderer is retried up to three times per frame.
+  - A busy renderer is retried up to three times per frame, and each visit to a frame starts afresh. Until the last attempt, the last frame stays up, marked as rendering.
   - A frame that later renders replaces its failure, and another revision or project never shows the previous one's frame.
-  - A render that everyone left before its turn frees its place in the preview queue at once.
+  - A render that everyone left before its turn frees its place in the preview queue at once. Such abandoned renders are bounded too: at most four times the queue depth may wait in the chain, and requests beyond that are refused as busy.
   - The view always names its revision and marks unsaved edits as stale.
-- **Audio clock.** `npm run qualify:playback` records the tone's media time minus the playhead on every animation frame (mean, 95th percentile and maximum, in ms). It does so for sustained play, a seek across a cut, and play while exports render. These figures are measured and reported, not gated. They measure the editor's clock against the media element, so a 33 ms playhead tick sets the noise floor, and they do not measure audible sync. The frame-rate thresholds are unchanged.
+- **Audio clock.** `npm run qualify:playback` records the tone's media time minus the playhead on every animation frame (mean, 95th percentile and maximum, in ms). It does so for sustained play, a seek across a cut, and play while exports render. These figures are measured and reported, not gated. They measure the editor's clock against the media element, so a 33 ms playhead tick sets the noise floor, and they do not measure audible sync. Measured on this host (2026-10-26):
+  - Mean drift ranged from about 20 to 230 ms between runs.
+  - The canvas player corrects a clip only once it is 0.3 s off, so under load the preview's sound can sit up to that far from the picture before it catches up.
+  - The export is unaffected.
+  - Frame rate was no lower than the previous merge's, measured back to back: 27.1 and 27.4 fps sustained against 26.9 and 26.9. The frame-rate thresholds are unchanged.
 - **Rollback.** Revert the notice and the reference fetch: the reference view goes back to a plain image, and the cache is unchanged.

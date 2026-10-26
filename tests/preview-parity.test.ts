@@ -194,3 +194,57 @@ test("every approximation kind has its words in both languages", async () => {
     assert.ok(MESSAGES.en[key] && MESSAGES.ar[key], kind);
   }
 });
+
+test("yamakan.preview.parity answers readers for the current revision, with a strict input", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  const { ProjectStore } = await import("../core/store.ts");
+  const { JobSupervisor } = await import("../core/jobs.ts");
+  const { execute } = await import("../core/command/registry.ts");
+  const { CommandError, toCommandError } =
+    await import("../core/command/errors.ts");
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-parity-"));
+  const store = new ProjectStore(root);
+  await store.initialize();
+  const queue = new JobSupervisor(store);
+  try {
+    const project = await store.create("Parity command");
+    const reader = {
+      store,
+      queue,
+      principal: {
+        id: "local-client" as const,
+        scopes: new Set(["project:read" as const]),
+      },
+    };
+    const { result } = await execute(reader, "yamakan.preview.parity", {
+      projectId: project.id,
+    });
+    assert.deepEqual(result, {
+      version: PREVIEW_PARITY_VERSION,
+      exact: true,
+      approximations: [],
+    });
+    await assert.rejects(
+      execute(reader, "yamakan.preview.parity", {
+        projectId: project.id,
+        revision: 1,
+      }),
+      (e: unknown) =>
+        e instanceof Error && toCommandError(e).code === "VALIDATION",
+    );
+    const none = {
+      ...reader,
+      principal: { id: "local-client" as const, scopes: new Set<never>() },
+    };
+    await assert.rejects(
+      execute(none, "yamakan.preview.parity", { projectId: project.id }),
+      (e: unknown) => e instanceof CommandError && e.code === "SCOPE_DENIED",
+    );
+  } finally {
+    await queue.close();
+    store.close();
+    await rm(root, { recursive: true, force: true, maxRetries: 5 });
+  }
+});
