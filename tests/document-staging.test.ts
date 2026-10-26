@@ -193,8 +193,10 @@ test("agents share one staging pool and can never lock out the local client", as
     });
   reserve("agent:a", big);
   refusedSync(() => reserve("agent:b", 1), "LIMIT_EXCEEDED", /agents/);
-  // The CLI and SDK stage a whole document whatever agents hold.
+  // The CLI and SDK stage a whole document whatever agents hold, and the
+  // browser session still stages its own after both.
   assert.ok("reserved" in reserve("local-client", big));
+  assert.ok("reserved" in reserve("browser-ui", big));
 });
 
 test("a restart releases uploads that were still being received, and expired ones", async () => {

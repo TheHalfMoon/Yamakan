@@ -457,9 +457,18 @@ CREATE TABLE outbox(
 `;
 
 type Head = { revision: number; snapshot_hash: string };
+// Agents may fill at most half of a workspace budget, so the person (the
+// browser session, the local CLI and SDK) always keeps the other half.
+const budgetFor = (budget: number, principalId: string | undefined) =>
+  principalId?.startsWith("agent:") ? Math.floor(budget / 2) : budget;
 // A new stored document must fit the workspace's document budget; one
 // already stored (by hash) costs nothing more.
-function withinDocumentBudget(db: DatabaseSync, hash: string, bytes: number) {
+function withinDocumentBudget(
+  db: DatabaseSync,
+  hash: string,
+  bytes: number,
+  principalId: string | undefined,
+) {
   if (db.prepare("SELECT 1 FROM creative_documents WHERE hash = ?").get(hash))
     return;
   const used = (
@@ -469,10 +478,13 @@ function withinDocumentBudget(db: DatabaseSync, hash: string, bytes: number) {
       )
       .get() as { n: number }
   ).n;
-  if (used + bytes > DOCUMENT_LIMITS.workspaceDocumentBytes)
+  if (
+    used + bytes >
+    budgetFor(DOCUMENT_LIMITS.workspaceDocumentBytes, principalId)
+  )
     throw new CommandError(
       "LIMIT_EXCEEDED",
-      "The workspace's creative document space is full.",
+      "The workspace's creative document space is full; stored versions are kept by project history and are not yet pruned.",
     );
 }
 type Commit = {
@@ -1429,7 +1441,13 @@ export class ProjectStore {
                 "SELECT content_hash AS hash, length(bytes) AS bytes FROM document_uploads WHERE id = ?",
               )
               .get(stagedId) as { hash: string; bytes: number } | undefined;
-            if (staged) withinDocumentBudget(db, staged.hash, staged.bytes);
+            if (staged)
+              withinDocumentBudget(
+                db,
+                staged.hash,
+                staged.bytes,
+                input.principalId,
+              );
             db.prepare(
               "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT content_hash, kind, schema_version, asset_ids, object_digests, bytes, length(bytes) FROM document_uploads WHERE id = ? ON CONFLICT(hash) DO NOTHING",
             ).run(stagedId);
@@ -1439,7 +1457,12 @@ export class ProjectStore {
           }
         : validated
           ? (db, revision) => {
-              withinDocumentBudget(db, validated.hash, validated.bytes.length);
+              withinDocumentBudget(
+                db,
+                validated.hash,
+                validated.bytes.length,
+                input.principalId,
+              );
               db.prepare(
                 "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
               ).run(
@@ -1691,6 +1714,7 @@ export class ProjectStore {
     projectId: string,
     source: AsyncIterable<Uint8Array>,
     declaredBytes: number,
+    principalId?: string,
   ): Promise<{
     digest: string;
     byteLength: number;
@@ -1737,7 +1761,8 @@ export class ProjectStore {
       return (
         used.n + 1 > DOCUMENT_LIMITS.projectBitmaps ||
         used.bytes + declaredBytes > DOCUMENT_LIMITS.projectBitmapBytes ||
-        all.bytes + declaredBytes > DOCUMENT_LIMITS.workspaceBitmapBytes
+        all.bytes + declaredBytes >
+          budgetFor(DOCUMENT_LIMITS.workspaceBitmapBytes, principalId)
       );
     };
     if (overBudget(this.#database, null))

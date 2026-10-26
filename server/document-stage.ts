@@ -171,6 +171,7 @@ export async function uploadStudioBitmap(
       projectId,
       req as AsyncIterable<Uint8Array>,
       Number(length),
+      principal.id,
     );
   } finally {
     clearTimeout(timer);

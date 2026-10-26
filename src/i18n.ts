@@ -128,7 +128,7 @@ const en = {
   "studio.state.unavailable":
     "Saving Studio canvases to the project is not enabled on this service.",
   "studio.state.turnedOff":
-    "Saving Studio canvases is turned off on this service; saved canvases open, but changes cannot be saved.",
+    "Saving Studio canvases is turned off on this service. This canvas is not kept; saved canvases are kept and open again when saving is turned back on.",
   "studio.noProject": "Open a project to keep its Studio canvas.",
   "studio.intro":
     "Layered image editing is imported behind a Yamakan host adapter.",
@@ -321,7 +321,7 @@ const ar: Record<MessageKey, string> = {
   "studio.state.unavailable":
     "حفظ لوحات الاستوديو في المشروع غير مفعّل في هذه الخدمة.",
   "studio.state.turnedOff":
-    "حفظ لوحات الاستوديو موقوف في هذه الخدمة؛ تُفتح اللوحات المحفوظة، لكن لا يمكن حفظ التغييرات.",
+    "حفظ لوحات الاستوديو موقوف في هذه الخدمة. لن تُحفظ هذه اللوحة؛ أما اللوحات المحفوظة فتبقى وتُفتح من جديد عند إعادة تشغيل الحفظ.",
   "studio.noProject": "افتح مشروعاً للاحتفاظ بلوحة الاستوديو الخاصة به.",
   "cinema.title": "كاميرا السينما",
   "cinema.intro":

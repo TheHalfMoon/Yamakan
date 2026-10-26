@@ -87,10 +87,10 @@
   },
   "hardeningWithActivation": [
     "Agents cannot migrate legacy scenes (a source belongs to the first project it enters)",
-    "Agents share one staging pool of their own, so they can never lock out the browser session or the local CLI/SDK",
-    "Workspace-wide budgets: Studio bitmaps 8 GiB, distinct stored document bytes 1 GiB",
+    "Agents share one 8 MiB staging pool of their own; with the browser's and the local client's own shares the workspace holds 24 MiB, so agents can never lock out either",
+    "Workspace-wide budgets: Studio bitmaps 8 GiB, distinct stored document bytes 4 GiB; agents may fill at most half of each, so the person keeps the other half",
     "Garbage collection runs hourly (unreferenced bitmaps and refused uploads' files are freed while the service runs)",
-    "Stored bitmaps stay readable under rollback; Studio opens saved canvases and says saving is turned off",
+    "Stored documents and bitmaps stay readable through the API under rollback; Studio becomes session-only and says saved canvases are kept and return when saving is turned back on",
     "An unrecognised YAMAKAN_AG_DOCS_OFF value is announced at startup"
   ],
   "reviews": "REVIEWS_PLACEHOLDER",
@@ -99,7 +99,9 @@
   "limitations": [
     "The Cinema viewport still saves workspace sidecars (yamakan.scene.save); they are backed up (YU-014) and migratable (YU-012). Moving Cinema UI saves into project documents is follow-up work (YU-030 project selection).",
     "The browser's legacy whole-project save is exercised through the same yamakan.project.save command by the SDK, not from the editor UI after a canvas save",
-    "Workspace budgets are not exercised at their limits by a test",
+    "Workspace budgets are not exercised at their limits by a test; stored document versions are never pruned, so the 4 GiB document budget is a lifetime cap until revision pruning exists",
+    "Agent limits apply to agent tokens; an MCP server started without an agent token acts as the local client",
+    "Studio under rollback is checked by code review, not by a browser test",
     "Browser tabs share one undo writer (YU-015 limitation)",
     "Full OCR review blocked (cloud provider configured; local model needs more free RAM)"
   ]

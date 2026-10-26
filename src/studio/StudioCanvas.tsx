@@ -112,9 +112,9 @@ export function StudioCanvas({
         const { createQ10StudioCanvasState } =
           await import("./host/q10Fixture.ts");
         if (cancelled) return;
-        // Project-bound when the service accepts creative documents, or
-        // when an operator turned saving off: stored canvases still open
-        // (a save is then refused with the service's reason).
+        // Project-bound when the service accepts creative documents. When
+        // an operator turned saving off, the canvas is session-only (as
+        // without the service) and says so; stored canvases are kept.
         const capability =
           projectId && client
             ? ((await client.call("yamakan.document.capability", {})) as {
@@ -122,7 +122,7 @@ export function StudioCanvas({
                 turnedOff?: boolean;
               })
             : null;
-        const enabled = Boolean(capability?.available || capability?.turnedOff);
+        const enabled = Boolean(capability?.available);
         if (cancelled) return;
         setPersistence(projectId && client ? enabled : null);
         setTurnedOff(Boolean(capability?.turnedOff));
@@ -339,13 +339,13 @@ export function StudioCanvas({
         )}
       </div>
       {project && persistence === false ? (
-        <p data-testid="studio-save-state" data-state="unavailable">
-          {t?.("studio.state.unavailable")}
-        </p>
-      ) : null}
-      {project && turnedOff ? (
-        <p data-testid="studio-save-state" data-state="turned-off">
-          {t?.("studio.state.turnedOff")}
+        <p
+          data-testid="studio-save-state"
+          data-state={turnedOff ? "turned-off" : "unavailable"}
+        >
+          {t?.(
+            turnedOff ? "studio.state.turnedOff" : "studio.state.unavailable",
+          )}
         </p>
       ) : null}
       {!project && client ? (

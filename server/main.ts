@@ -134,12 +134,17 @@ await api.queue.start();
 // Crash leftovers from an earlier run (older than the grace period), then
 // hourly: unreferenced Studio bitmaps and refused uploads' files are freed
 // while the service runs, not only at its next start.
-const collect = () =>
+let collecting = false;
+const collect = () => {
+  if (collecting) return;
+  collecting = true;
   void store
     .collectGarbage()
     .catch((e: Error) =>
       console.warn("Garbage collection skipped: " + e.message),
-    );
+    )
+    .finally(() => (collecting = false));
+};
 collect();
 setInterval(collect, 60 * 60 * 1000).unref();
 const port = Number(env("PORT") || 4318);

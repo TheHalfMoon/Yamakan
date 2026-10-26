@@ -16,7 +16,7 @@ export const DOCUMENT_LIMITS = Object.freeze({
   // Staged uploads (YU-010b): sealed bytes wait in the workspace database
   // for one commit. Reservations are taken before any byte is read.
   activeUploadsPerPrincipal: 2,
-  reservedUploadBytes: 16 * 1024 * 1024,
+  reservedUploadBytes: 24 * 1024 * 1024,
   // One Studio layer bitmap (PNG) uploaded into the project object store.
   bitmapBytes: 64 * 1024 * 1024,
   // All Studio bitmaps of one project, and how many; unreferenced ones are
@@ -26,7 +26,7 @@ export const DOCUMENT_LIMITS = Object.freeze({
   // Across all projects: Studio bitmaps, and distinct stored document bytes
   // (every retained revision keeps the documents it names).
   workspaceBitmapBytes: 8 * 1024 * 1024 * 1024,
-  workspaceDocumentBytes: 1024 * 1024 * 1024,
+  workspaceDocumentBytes: 4 * 1024 * 1024 * 1024,
   // Bitmap uploads one principal may have in progress at once.
   activeBitmapUploadsPerPrincipal: 2,
   // No principal holds more than one document's worth, and agents share
