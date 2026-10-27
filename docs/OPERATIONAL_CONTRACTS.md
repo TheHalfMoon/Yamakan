@@ -549,7 +549,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - Stills and audio are refused.
     - A damaged stream fails as `MEDIA_INVALID`. A stream whose stored object does not match its size fails as `RECOVERY_REQUIRED`. Neither message contains a host path.
     - A frame time the parser cannot use refuses the whole analysis rather than dropping a cut.
-  - **Cancellation.** A cancel before the analysis starts no worker, and one during it stops the worker. The command itself has no cancel signal yet: a client that disconnects leaves the analysis running to its bound.
+  - **Cancellation.** A cancel that arrives before the analysis begins starts no worker, and one during it stops the worker (tested against the full scan's time). A cancelled request still holds its place in the queue until its turn. Running out of memory is recognised from the worker's peak use (95% of its limit or more). The command itself has no cancel signal yet: a client that disconnects leaves the analysis running to its bound.
 - **Not covered.**
   - Denoise, deshake, black detection and freeze detection each need their own qualification.
   - No test removes `scdet` or simulates running out of memory.

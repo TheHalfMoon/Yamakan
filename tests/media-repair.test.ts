@@ -242,6 +242,11 @@ test("stills, sound, bad thresholds, a truncated stream and a cancel are refused
   const longAsset = (
     await c.store.importAsset(c.projectId, "long.mp4", await readFile(long))
   ).asset;
+  // The whole scan's time, then the same scan cancelled early: it must end
+  // in well under half of that, so the worker was stopped, not finished.
+  const fullStart = Date.now();
+  await detectSceneCuts(c.store, c.projectId, longAsset.id, 10);
+  const full = Date.now() - fullStart;
   const during = new AbortController();
   const started = Date.now();
   const running = detectSceneCuts(
@@ -251,9 +256,21 @@ test("stills, sound, bad thresholds, a truncated stream and a cancel are refused
     10,
     during.signal,
   );
-  setTimeout(() => during.abort(), 300);
+  setTimeout(() => during.abort(), Math.min(300, full / 10));
   assert.match(await failure(running), /^UNAVAILABLE: Cancelled/);
-  assert.ok(Date.now() - started < 10_000, "the cancel stopped the scan");
+  const cancelled = Date.now() - started;
+  assert.ok(
+    cancelled < full / 2,
+    `the cancel stopped the scan (${cancelled} ms of a ${full} ms scan)`,
+  );
+  // One analysis runs and two may wait: a fourth at once is refused.
+  const burst = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      failure(detectSceneCuts(c.store, c.projectId, longAsset.id, 10)),
+    ),
+  );
+  assert.equal(burst.filter((x) => /^BUSY/.test(x)).length, 1);
+  assert.equal(burst.filter((x) => x === "ok").length, 3);
   // The parser bounds what it reports.
   const many = Array.from(
     { length: 1002 },
