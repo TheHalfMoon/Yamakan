@@ -560,6 +560,32 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - An exhausted disk at a named profile. This is covered without a profile by `tests/backup.test.ts`, `tests/jobs.test.ts` and `tests/command.test.ts`.
   - Oversized projects arriving by import or restore.
 
+## Cinematic intent to conditioning (YU-050)
+
+- **Intent (`yamakan.shot-intent` v1).** It covers:
+  - the camera's shot scale and movement;
+  - the lens's focal length (8–300 mm) and depth of field;
+  - the light's key and time of day;
+  - the subject's motion;
+  - guides, which are project media ids for an end frame, a depth map and a pose.
+
+  Enumerated values are written as the engine contract writes control values: lowercase letters, digits, `_` and `-` (for example `extreme_close`). No free text, path or code can be stored.
+
+- **Compiler (`yamakan.controls-compiler/v1`, `core/cinema/control-compiler.ts`).** A fixed table lowers each style field to a named contract control: `shotScale`, `cameraMovement`, `focalLengthMm`, `depthOfField`, `lightKey`, `timeOfDay` and `subjectMotion`. The end frame becomes the contract's `lastFrame` input, as an `AssetRef` (asset version, SHA-256 and media type) of a still in the given project. Each field is lowered against one recipe's declared capability (`constraints.controls` and `roles`) and reported as one of:
+  - **applied:** the recipe declares the control or role, and the value is lowered exactly. v1 has no approximate lowering; that status is reserved.
+  - **metadata:** the recipe does not declare that style control. The intent is returned as previs metadata only, and is never claimed as applied.
+  - **unsupported:** a guide the recipe does not take, and always depth and pose, which have no contract role. Compiling is then refused unless the caller accepts the guide is dropped, which is recorded as **dropped**.
+
+  A guide that is not a still of the given project is refused. The compiler's output has no prompt field, and its controls are only lowered values.
+
+- **Contract conformance.** Before the output is returned, it is validated against the contract's own `ControlsSchema`, now exported from `contract-v2.ts`. A value the contract would reject fails with an error and never reaches an engine. The tests build a full `EngineRequestV2` from the output of every intent value and check it with the contract's schema and `refusal()`, so drift in the contract fails CI.
+- **Provenance.** The result names the recipe by id and hash and the intent by `intentHash`. What reaches the engine is named by `loweredControlsHash`, which is computed over the compiler, the recipe hash, the controls and the inputs. The same controls under another recipe or compiler therefore get another hash, while a change only to metadata keeps the hash.
+- **Command.** `yamakan.cinema.compileControls` (scope `project:read`) takes a `projectId`, resolves guides among that project's assets, and lowers against this build's own server recipes. Today those are only the fake engine's, which declare no style controls, and only the image-to-video recipe takes a first frame.
+- **Not done.**
+  - No real engine declares controls yet.
+  - No evaluation (E) shows any control has a visible effect, so no applied-optics claim is made.
+  - Intents are not yet stored on story shots, so the card's shot control references are still to come.
+
 ## Deterministic media analysis: scene cuts (YU-071)
 
 - **Source inspection.** On 2026-10-27, `ffmpeg -filters` on the bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) listed these analysis and repair filters:
