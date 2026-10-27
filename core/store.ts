@@ -423,9 +423,6 @@ CREATE TABLE director_requests(
 // its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
 // rebuilt with the same columns and rows (foreign keys are checked after,
 // in the same transaction).
-// Caption tracks (YU-024): the document tables accept any kind name the
-// application validates (DocumentKind), so a new kind needs no further
-// rebuild. Same columns and rows; foreign keys checked after.
 // YU-025: provenance of each approved source replacement (relink): the
 // revision it made and the two media versions it swapped.
 const SCHEMA_V15 = `
@@ -441,7 +438,11 @@ CREATE TABLE asset_replacements(
   created_at INTEGER NOT NULL,
   PRIMARY KEY(project_id, revision)
 ) STRICT;
+CREATE INDEX IF NOT EXISTS jobs_batch ON jobs(json_extract(payload, '$.batchId')) WHERE kind = 'export';
 `;
+// Caption tracks (YU-024): the document tables accept any kind name the
+// application validates (DocumentKind), so a new kind needs no further
+// rebuild. Same columns and rows; foreign keys checked after.
 const SCHEMA_V14 = `
 CREATE TABLE creative_documents_v14(
   hash TEXT PRIMARY KEY CHECK(length(hash) = 64),

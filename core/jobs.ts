@@ -112,7 +112,11 @@ export const ExportVariant = z
   })
   .strict();
 export type ExportVariant = z.infer<typeof ExportVariant>;
-export const BATCH_LIMITS = Object.freeze({ variants: 4 });
+export const BATCH_LIMITS = Object.freeze({
+  variants: 4,
+  // The free space a batch needs per output, above the disk reserve.
+  outputBytes: 512 * 1024 * 1024,
+});
 
 const ExportPayload = z
   .object({
@@ -326,10 +330,34 @@ export class JobSupervisor {
         "Each variant of a batch has its own name and size.",
       );
     const project = await this.store.load(projectId);
+    if (this.#closing) throw new Error("Render queue is closing.");
+    // The batch is named by what it asks for too: a retry with the same key
+    // but other variants or settings is another batch, never the old one.
     const batchId = createHash("sha256")
-      .update(`${projectId}:${project.revision}:${key}`)
+      .update(
+        JSON.stringify([
+          projectId,
+          project.revision,
+          key,
+          [...parsed].sort((a, b) => a.name.localeCompare(b.name)),
+          options.normalizeLoudness === true,
+        ]),
+      )
       .digest("hex")
       .slice(0, 32);
+    // Room for every output above the disk reserve (a bound per output, as
+    // the render's own size check), before any is admitted.
+    const space = await statfs(this.store.root);
+    const free = Number(space.bavail) * Number(space.bsize);
+    if (
+      free <
+      RESOURCE_POLICY.enforced.diskReserveBytes +
+        parsed.length * BATCH_LIMITS.outputBytes
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Not enough free disk space for this batch's exports.",
+      );
     this.store.transaction((db) => {
       this.#currentIn(db);
       const existing = db
@@ -354,7 +382,9 @@ export class JobSupervisor {
           randomUUID(),
           projectId,
           project.revision,
-          `${key}-${variant.name}`,
+          // "." is outside a single export's key alphabet, so a batch
+          // output's key never matches (or collides with) one.
+          `b.${batchId}.${variant.name}`,
           JSON.stringify({
             format: "export/1",
             normalizeLoudness: options.normalizeLoudness === true,
@@ -384,7 +414,13 @@ export class JobSupervisor {
     );
     if (!rows.length) throw new CommandError("NOT_FOUND", "Batch not found.");
     const outputs = rows.map((row) => {
-      const { variant } = ExportPayload.parse(safeJson(row.payload));
+      const payload = ExportPayload.safeParse(safeJson(row.payload));
+      if (!payload.success || !payload.data.variant)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "A batch output's record is damaged.",
+        );
+      const { variant } = payload.data;
       const view = this.#view(row);
       return {
         ...view,
@@ -397,6 +433,8 @@ export class JobSupervisor {
             : null,
       };
     });
+    // A job set aside for reconciliation counts as failed until it is
+    // resolved (it may be queued again); one being cancelled, as running.
     const states = outputs.map((o) => o.state);
     // One state for the batch: COMPLETED only when every output is.
     let state: "COMPLETED" | "RUNNING" | "FAILED" | "CANCELLED" = "CANCELLED";
@@ -415,8 +453,16 @@ export class JobSupervisor {
 
   /** Cancels a batch's unfinished outputs; finished ones are kept. */
   cancelBatch(projectId: string, batchId: string) {
-    for (const o of this.batchStatus(projectId, batchId).outputs)
-      if (o.state === "QUEUED" || o.state === "RUNNING") this.cancel(o.id);
+    for (const o of this.batchStatus(projectId, batchId).outputs) {
+      // An output already being cancelled (or finished) is left as it is.
+      if (o.detail === "cancelRequested") continue;
+      if (o.state !== "QUEUED" && o.state !== "RUNNING") continue;
+      try {
+        this.cancel(o.id);
+      } catch {
+        // It finished meanwhile; the status below says how.
+      }
+    }
     return this.batchStatus(projectId, batchId);
   }
 

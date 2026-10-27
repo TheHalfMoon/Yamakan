@@ -1351,7 +1351,12 @@ export const commands = {
       .object({
         projectId: Id,
         expectedRevision: z.number().int().nonnegative(),
-        operations: BatchSchema,
+        // A relink is applied only through yamakan.asset.relinkApply, which
+        // checks the new medium and records its provenance (YU-025).
+        operations: BatchSchema.refine(
+          (ops) => !ops.some((o) => o.type === "asset.relink"),
+          "Relink media with yamakan.asset.relinkApply.",
+        ),
       })
       .strict(),
     run: ({ store, receipt, principal }, a) =>

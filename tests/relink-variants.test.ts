@@ -184,7 +184,28 @@ test("missing media is relinked through an approved proposal; undo returns the o
       await readFile(clip(c.root, "again.mp4", "testsrc2")),
     )
   ).asset;
+  const missing = await run<Batch>(c, "yamakan.export.batch", {
+    idempotencyKey: "before-relink",
+    variants: [VARIANTS[0]],
+  });
+  assert.equal((await finished(c, missing.batchId)).state, "FAILED");
   const before = await head(c);
+  // The generic batch cannot relink: only the approved proposal does.
+  assert.match(
+    await failure(
+      run(c, "yamakan.project.applyBatch", {
+        expectedRevision: before.revision,
+        operations: [
+          {
+            type: "asset.relink",
+            fromAssetId: c.original.id,
+            toAssetId: replacement.id,
+          },
+        ],
+      }),
+    ),
+    /relinkApply/,
+  );
   const proposal = await run<RelinkProposal>(c, "yamakan.asset.relinkPropose", {
     fromAssetId: c.original.id,
     toAssetId: replacement.id,
@@ -379,6 +400,30 @@ test("three aspect variants export as one batch, deterministically, and reopen w
     read.outputs.map((o) => [o.id, o.state, o.planHash]),
     done.outputs.map((o) => [o.id, o.state, o.planHash]),
   );
+  // Re-exported after reopening, the same plans again.
+  const rerun = await run<Batch>(reopened, "yamakan.export.batch", {
+    idempotencyKey: "after-reopen",
+    variants: VARIANTS,
+  });
+  const end = Date.now() + 180_000;
+  let after = rerun;
+  while (after.state === "RUNNING" && Date.now() < end) {
+    await new Promise((res) => setTimeout(res, 200));
+    after = await run<Batch>(reopened, "yamakan.export.batchStatus", {
+      batchId: rerun.batchId,
+    });
+  }
+  assert.equal(after.state, "COMPLETED");
+  assert.deepEqual(
+    after.outputs.map((o) => o.planHash),
+    done.outputs.map((o) => o.planHash),
+  );
+  // The same key asking for other variants is another batch.
+  const other = await run<Batch>(reopened, "yamakan.export.batch", {
+    idempotencyKey: "deliver",
+    variants: [VARIANTS[0]],
+  });
+  assert.notEqual(other.batchId, batch.batchId);
   // Duplicate names or sizes, and too many variants, are refused.
   assert.match(
     await failure(
@@ -404,11 +449,12 @@ test("three aspect variants export as one batch, deterministically, and reopen w
   );
 });
 
-test("a failing output (ENOSPC) fails the batch, a late cancel keeps finished exports, and the source is untouched", async () => {
-  let fail: string | null = null;
+test("a failing output (ENOSPC) fails the batch alone; a cancel keeps finished exports; the source is untouched", async () => {
+  let publishes = 0;
   const c = await workspace({
-    fault: (point, jobId) => {
-      if (point === "before-publish" && jobId === fail)
+    fault: (point) => {
+      // The second output to publish finds the disk full.
+      if (point === "before-publish" && ++publishes === 2)
         throw Object.assign(new Error("ENOSPC: no space left on device"), {
           code: "ENOSPC",
         });
@@ -421,26 +467,68 @@ test("a failing output (ENOSPC) fails the batch, a late cancel keeps finished ex
     idempotencyKey: "full-disk",
     variants: VARIANTS,
   });
-  fail = batch.outputs[1]!.id;
   const done = await finished(c, batch.batchId);
   assert.equal(done.state, "FAILED", "a partial batch is never complete");
   assert.deepEqual(
     done.outputs.map((o) => o.state),
     ["COMPLETED", "FAILED", "COMPLETED"],
   );
-  assert.ok(done.outputs[1]!.error);
-  assert.equal(done.outputs[1]!.artifact, null);
-  assert.equal(done.outputs[1]!.profile, null);
+  const failed = done.outputs[1]!;
+  assert.ok(failed.error);
+  assert.equal(failed.artifact, null);
+  assert.equal(failed.profile, null);
   // A late cancel changes nothing that finished.
-  const cancelled = await run<Batch>(c, "yamakan.export.batchCancel", {
+  const late = await run<Batch>(c, "yamakan.export.batchCancel", {
     batchId: batch.batchId,
   });
   assert.deepEqual(
-    cancelled.outputs.map((o) => [o.state, o.artifact]),
+    late.outputs.map((o) => [o.state, o.artifact]),
     done.outputs.map((o) => [o.state, o.artifact]),
   );
   assert.deepEqual(
     await readFile(await c.store.readyObjectFile(c.projectId, c.original)),
     sourceBefore,
+  );
+});
+
+test("cancelling a running batch cancels its unfinished outputs, twice safely, and leaves earlier exports", async () => {
+  let cancelFrom: Ctx | null = null;
+  let batchId = "";
+  const c = await workspace({
+    fault: (point) => {
+      // While the first output is about to publish, the batch is cancelled.
+      if (point === "before-publish" && cancelFrom && batchId) {
+        const ctx = cancelFrom;
+        cancelFrom = null;
+        ctx.queue.cancelBatch(ctx.projectId, batchId);
+        ctx.queue.cancelBatch(ctx.projectId, batchId);
+      }
+    },
+  });
+  const earlier = await finished(
+    c,
+    (
+      await run<Batch>(c, "yamakan.export.batch", {
+        idempotencyKey: "earlier",
+        variants: [VARIANTS[0]],
+      })
+    ).batchId,
+  );
+  assert.equal(earlier.state, "COMPLETED");
+  const batch = await run<Batch>(c, "yamakan.export.batch", {
+    idempotencyKey: "stopped",
+    variants: VARIANTS,
+  });
+  batchId = batch.batchId;
+  cancelFrom = c;
+  const done = await finished(c, batch.batchId);
+  assert.equal(done.state, "CANCELLED");
+  assert.ok(done.outputs.every((o) => o.state === "CANCELLED" && !o.artifact));
+  const again = await run<Batch>(c, "yamakan.export.batchStatus", {
+    batchId: earlier.batchId,
+  });
+  assert.deepEqual(
+    again.outputs.map((o) => [o.state, o.artifact]),
+    earlier.outputs.map((o) => [o.state, o.artifact]),
   );
 });
