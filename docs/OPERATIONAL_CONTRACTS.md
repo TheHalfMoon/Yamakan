@@ -552,6 +552,59 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - No evaluation (E) shows any control has a visible effect, so no applied-optics claim is made.
   - Intents are not yet stored on story shots, so the card's shot control references are still to come.
 
+## Transcription contract before weights (YU-070)
+
+`core/audio/transcription.ts` qualifies everything around a speech recognizer except the recognizer itself. No whisper.cpp runner or model ships, and nothing is downloaded.
+
+- **Source inspection (whisper.cpp v1.9.5, MIT, `d1be6fd`).**
+  - `examples/cli/cli.cpp` writes `-ojf` JSON with these fields:
+    - `result.language`;
+    - per segment, `offsets` (milliseconds; the segment's t0 and t1 are 10 ms units, written ×10) and `text`;
+    - `tokens` (`text`, `offsets` when timed, `id`, `p`, `t_dtw`), including control tokens such as `[_BEG_]` and `[_TT_61]`.
+  - Strings escape only `"` and `\`, so a control character in recognized text produces invalid JSON.
+  - Audio is read through miniaudio at 16 kHz (`examples/common-whisper.cpp`).
+  - The 100 language codes come from `g_lang` in `src/whisper.cpp`.
+- **PCM.** One asset's sound is extracted to 16 kHz mono 16-bit WAV in a private cache folder. Its header is a canonical 44 bytes with no encoder tag, so the same sound gives the same bytes and SHA-256.
+  - The worker is a bounded, owned FFmpeg worker, one at a time with 2 waiting (more is `BUSY`).
+  - It can be cancelled, has a 600 s wall limit and the worker memory limit, and may read only the source and write only its folder.
+  - Sources longer than an hour, stills and silent footage are refused from the asset's own record, before anything is decoded. The folder is removed on release and on any failure.
+- **Transcript (`yamakan.transcript` v1).** Segments and words are in ticks from the source's start, carrying:
+  - the source asset and hash, its duration, and the PCM's SHA-256;
+  - the recognizer kind, version and model (id and SHA-256);
+  - the language (whisper.cpp's codes);
+  - `recognition`, which is `model` or `none`.
+
+  The schema refuses:
+  - a stand-in that claims recognition;
+  - a model recognizer without named weights;
+  - text on a `none` transcript;
+  - segments out of order, ending before they start or after the source;
+  - words outside their segment;
+  - control characters and bidirectional overrides;
+  - more than 5000 segments.
+
+- **whisper.cpp output.** `parseWhisperJson` refuses rather than repairs. It rejects:
+  - invalid JSON;
+  - a missing field;
+  - negative or backward times;
+  - times beyond the source;
+  - a language other than the one asked for;
+  - output over 8 MiB.
+
+  Control tokens and untimed tokens are dropped from words, and an empty transcription is no speech.
+
+- **Stand-in.** FFmpeg's `silencedetect` (−35 dB, 0.4 s) runs on the same PCM, deterministically and with no model. It reports where there is sound, with no words (`recognition: "none"`).
+- **Caption proposal.** `captionProposal` turns a transcript into a caption document, one cue per segment at whole milliseconds, never overlapping.
+  - Text the stand-in could not recognize becomes the placeholder `[speech]`, and `placeholders` counts them.
+  - Nothing is saved: a person reviews the proposal and applies it with the caption commands.
+  - The proposal is named by a hash of the transcript and the document.
+  - A transcript with no sound has nothing to caption.
+- **Command.** `yamakan.audio.transcribe` (`render:execute`) checks the language, then the source, then refuses with the engine discovery's plain reason. That reason is `ENGINE_DISABLED` while engines are off, and `WEIGHTS_ABSENT` with no pinned model. Even a pinned model would not run, because the recognizer worker is not implemented.
+- **Not done:**
+  - No whisper.cpp binary or model is pinned or bundled, and no real recognition is claimed or measured.
+  - Consent and retention for a voice transcript fall under YU-051's per-stage consent once a recognizer runs.
+  - Stand-in segments are sound regions, not utterances.
+
 ## Deterministic media analysis: scene cuts (YU-071)
 
 - **Source inspection.** On 2026-10-27, `ffmpeg -filters` on the bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) listed these analysis and repair filters:
