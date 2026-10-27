@@ -43,9 +43,23 @@ export const TransformEffectSchema = z
   .strict();
 export type TransformEffect = z.infer<typeof TransformEffectSchema>;
 
+// YU-023: a 3D LUT, applied to the source picture in the policy's Rec.709
+// RGB before the fit. It names an immutable `lut` creative document of
+// the project by id and content hash; it holds no numbers or paths itself.
+export const LutEffectSchema = z
+  .object({
+    type: z.literal("lut"),
+    version: z.literal(1),
+    documentId: z.uuid(),
+    contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+export type LutEffect = z.infer<typeof LutEffectSchema>;
+
 /** Known effect kinds, by `type`; a later kind is added here, versioned. */
 export const ClipEffectSchema = z.discriminatedUnion("type", [
   TransformEffectSchema,
+  LutEffectSchema,
 ]);
 export type ClipEffect = z.infer<typeof ClipEffectSchema>;
 
@@ -66,6 +80,9 @@ export const ClipEffectsSchema = z
   .max(EFFECT_LIMITS.effectsPerClip)
   .refine((list) => list.filter((e) => e.type === "transform").length <= 1, {
     message: "A clip has at most one transform.",
+  })
+  .refine((list) => list.filter((e) => e.type === "lut").length <= 1, {
+    message: "A clip has at most one LUT.",
   });
 export type ClipEffects = z.infer<typeof ClipEffectsSchema>;
 
@@ -96,6 +113,13 @@ export function clipTransform(
 ): TransformEffect | null {
   const t = effects?.find((e) => e.type === "transform") ?? null;
   return t && !isIdentityTransform(t) ? t : null;
+}
+
+/** The clip's LUT, or null when it has none. */
+export function clipLut(
+  effects: ClipEffects | undefined | null,
+): LutEffect | null {
+  return effects?.find((e) => e.type === "lut") ?? null;
 }
 
 /** Whether a stack changes nothing (every effect an identity). */

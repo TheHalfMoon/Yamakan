@@ -43,7 +43,9 @@ export type Approximation =
   // A transform's crop is not drawn (scale and position are; YU-020).
   | "effectCrop"
   // A dissolve is shown as a cut (YU-021).
-  | "transition";
+  | "transition"
+  // A LUT is not applied (YU-023).
+  | "lut";
 
 export type PreviewParity = {
   version: typeof PREVIEW_PARITY_VERSION;
@@ -115,6 +117,7 @@ export function previewParity(p: Project): PreviewParity {
     )
       add("effectCrop", c.id);
     if (c.transition) add("transition", c.id);
+    if (c.effects?.some((e) => e.type === "lut")) add("lut", c.id);
   }
   const approximations = [...found].map(([kind, clipIds]) => ({
     kind,

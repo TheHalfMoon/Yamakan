@@ -416,6 +416,34 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Interchange.** OTIO export carries a transition as `yamakan_transition` metadata, and import accepts it only as a valid transition.
 - **Rollback.** `YAMAKAN_TRANSITIONS_OFF=1` refuses new or changed transitions (by command, batch or whole-project save; restating an unchanged one is accepted); stored ones stay, render, and can be removed. Undo, redo and restore move between stored revisions and are not gated by the switch, so they may bring a transition back. Going back to an earlier build needs projects without transitions (it refuses v7) or a backup.
 
+## Color pipeline and LUTs (YU-023)
+
+- **Policy `sdr-bt709-tv/v1` (frozen).** Every render is SDR Rec.709: BT.709 primaries, transfer and matrix, limited (`tv`) range, 8-bit 4:2:0. Exports are tagged accordingly (`-color_primaries/-color_trc/-colorspace bt709`, `-color_range tv`). Each picture is converted to the policy once, explicitly, from its source's reading, and the timeline's frames carry the same tags, so titles, the PNG reference preview and the export agree. The plan records `colorPolicy`, and each layer records its `color` reading. The render compiler is `yamakan.render-compiler/2`, so every plan hash changed once, and preview caches are re-keyed (renderer version 4).
+- **Before.** Earlier renders were untagged and converted RGB with FFmpeg's default BT.601 matrix. An HD player reading them as BT.709 shifted colours: pure green 253 was shown as 214, and red gained green 23 (measured on the YU-023 chart).
+- **Sources.**
+  - At import, the probe records each picture's pixel format, matrix, range, transfer and primaries.
+  - Tagged BT.709 or BT.601 (`smpte170m`, `bt470bg` and their relatives) is read as tagged.
+  - An untagged YUV source is read as BT.709 from 720 lines up and as BT.601 below, in limited range, or full range for `yuvj` formats and JPEG.
+  - RGB sources (PNG, WebP) have no matrix.
+  - Assets imported before YU-023 have no recorded colour, so the file type and height decide.
+  - Higher bit depths are converted to 8 bits.
+- **Refused at import.** HDR transfers (PQ `smpte2084`, HLG `arib-std-b67`) and BT.2020 primaries or matrices (`CAPABILITY_UNAVAILABLE`). There is no tone mapping, so they are not shown wrongly. Assets already in a project are not re-probed.
+- **LUTs.**
+  - `yamakan.lut.import` parses a 3D `.cube` file strictly:
+    - at most 1.5 MiB, 40,000 lines of 256 characters;
+    - `TITLE`, `LUT_3D_SIZE` 2–33, `DOMAIN_MIN 0 0 0` and `DOMAIN_MAX 1 1 1` only, plus comments;
+    - then exactly size³ lines of three numbers in 0–1 (a 1e-4 overshoot is clamped).
+  - Refused, naming the line: 1D LUTs, any other keyword (including includes or file references), other domains, out-of-range, non-finite or malformed numbers, and missing or extra entries.
+  - The LUT is stored as an immutable `lut` creative document holding only its name, size and 16-bit quantised entries (at most 512 KiB). It cannot be staged or written by the generic document commit.
+- **LUT effect.** A clip uses a LUT through a `lut` effect (`{type: "lut", version: 1, documentId, contentHash}`, at most one per clip) set by `yamakan.clip.setEffects`. Every commit checks that the LUT is a `lut` document of that revision at that version, so the document stays referenced.
+  - The render reads the stored document (verified by hash), writes it once in canonical `.cube` form into the render's own folder, and applies `lut3d` (tetrahedral) to the source in full-range RGB, read as the policy reads it, before crop and fit.
+  - The original file is never used.
+  - The editor's transform panel keeps a clip's LUT.
+- **Interactive preview.** The canvas does not apply a LUT; the parity notice names it (`lut`).
+- **Rollback.**
+  - `YAMAKAN_EFFECTS_OFF=1` refuses new effect values, LUT effects included, and `YAMAKAN_AG_DOCS_OFF=1` refuses LUT imports. Stored LUTs stay and render.
+  - Going back to an earlier build renders untagged BT.601 output again. It refuses projects with a LUT effect (an unknown effect kind) and revisions that reference `lut` documents (an unknown kind).
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.

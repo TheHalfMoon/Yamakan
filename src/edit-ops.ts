@@ -55,17 +55,24 @@ export function splitClip(
   ]);
 }
 
-// A clip's transform (YU-020); an identity transform removes the stack.
+// A clip's transform (YU-020); an identity transform removes it. The
+// clip's other effects (a LUT, YU-023) are kept.
 export function setClipTransform(
   p: Project,
   clipId: string,
   transform: TransformEffect,
 ): Project {
+  const others = (p.clips.find((c) => c.id === clipId)?.effects ?? []).filter(
+    (e) => e.type !== "transform",
+  );
+  const effects = isIdentityTransform(transform)
+    ? others
+    : [transform, ...others];
   return applyLocal(p, [
     {
       type: "clip.setEffects",
       clipId,
-      effects: isIdentityTransform(transform) ? null : [transform],
+      effects: effects.length ? effects : null,
     },
   ]);
 }

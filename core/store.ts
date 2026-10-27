@@ -1295,6 +1295,24 @@ export class ProjectStore {
   // Every asset a referenced document needs stays in the project: a commit
   // that would drop one (or reference a document never stored) is refused.
   #assertDocumentAssets(db: DatabaseSync, project: CanonicalProject) {
+    // YU-023: a clip's LUT is a LUT document of this revision, at the
+    // version it names (checked with the revision's own references).
+    for (const c of project.clips) {
+      const lut = c.effects?.find((e) => e.type === "lut");
+      if (
+        lut &&
+        !project.documents.some(
+          (d) =>
+            d.id === lut.documentId &&
+            d.kind === "lut" &&
+            d.contentHash === lut.contentHash,
+        )
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "A clip's LUT must be a LUT document of this project.",
+        );
+    }
     if (!project.documents.length) return;
     const assets = new Map(project.assets.map((a) => [a.id, a.kind]));
     const read = db.prepare(
@@ -1726,10 +1744,15 @@ export class ProjectStore {
     const kind = DocumentKind.parse(input.kind);
     // Stories, packs and caption tracks are saved inline by their own
     // commands (YU-031, YU-024).
-    if (kind === "story" || kind === "referencePack" || kind === "captions")
+    if (
+      kind === "story" ||
+      kind === "referencePack" ||
+      kind === "captions" ||
+      kind === "lut"
+    )
       throw new CommandError(
         "VALIDATION",
-        "Stories, reference packs and caption tracks are not staged; save them with their own commands.",
+        "Stories, reference packs, caption tracks and LUTs are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,
@@ -3236,6 +3259,7 @@ export class ProjectStore {
         frameRate: metadata.frameRate,
         averageFrameRate: metadata.averageFrameRate,
         variableFrameRate: metadata.variableFrameRate,
+        color: metadata.color,
       });
       this.transaction((db) => registerAsset(db, id, asset, probeRecord));
       return {
@@ -3390,6 +3414,7 @@ export class ProjectStore {
       timebase: result.probed.timebase,
       frameRate: result.probed.frameRate,
       averageFrameRate: result.probed.averageFrameRate,
+      color: result.probed.color,
       variableFrameRate: result.probed.variableFrameRate,
     });
     this.transaction((db) => {

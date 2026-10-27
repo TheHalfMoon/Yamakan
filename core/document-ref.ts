@@ -45,6 +45,8 @@ export const DocumentKind = z.enum([
   "referencePack",
   // YU-024: caption tracks (timed text).
   "captions",
+  // YU-023: 3D color LUTs.
+  "lut",
 ]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
@@ -56,6 +58,7 @@ export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
     story: 1,
     referencePack: 1,
     captions: 1,
+    lut: 1,
   });
 
 export const DocumentRefSchema = z
