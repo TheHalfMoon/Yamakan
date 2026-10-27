@@ -15,6 +15,7 @@ import {
   CaptionDocumentSchema,
   exportCaptions,
   parseCaptions,
+  storedCaptions,
   type CaptionDocument,
 } from "../core/captions.ts";
 import { ProjectStore } from "../core/store.ts";
@@ -271,7 +272,13 @@ test("export round-trips times and mixed-script text; markup in text is written 
   // never reads as ASS override).
   for (const format of ["srt", "vtt"] as const) {
     const text = exportCaptions(doc, format);
-    assert.match(text, /&lt;b&gt;tag&lt;\/b&gt; --&gt; arrow &amp;/);
+    // WebVTT escapes every "&"; SRT leaves a plain one readable.
+    assert.match(
+      text,
+      format === "vtt"
+        ? /&lt;b&gt;tag&lt;\/b&gt; --&gt; arrow &amp; /
+        : /&lt;b&gt;tag&lt;\/b&gt; --&gt; arrow & /,
+    );
     assert.match(text, /\{⁠\\an8\}/);
   }
 });
@@ -790,5 +797,77 @@ test("burned-in cues change the plan, sit above the tracks and stop at the timel
       [p.tracks.length, 1000 * MS, 2000 * MS, "one"],
       [p.tracks.length, 2500 * MS, end, "past the end"],
     ],
+  );
+});
+
+test("line-end spaces, SRT ampersands, damaged tracks, names and header cues", async () => {
+  const doc = (text: string, name = "T") => ({
+    format: "yamakan.captions",
+    formatVersion: 1,
+    name,
+    language: "en",
+    burnIn: false,
+    source: null,
+    cues: [
+      {
+        id: ids(),
+        startTicks: 1000 * MS,
+        endTicks: 2000 * MS,
+        text,
+        source: null,
+      },
+    ],
+  });
+  assert.equal(CaptionDocumentSchema.safeParse(doc("a \nb")).success, false);
+  for (const name of ["a\u202eb", "a\u200bb", "a\u2028b", "a\u0007b"])
+    assert.equal(
+      CaptionDocumentSchema.safeParse(doc("x", name)).success,
+      false,
+      JSON.stringify(name),
+    );
+  // SRT keeps a plain "&" readable and still round-trips an entity-like one.
+  const track = CaptionDocumentSchema.parse(doc("Q&A &amp; AT&T"));
+  const srt = exportCaptions(track, "srt");
+  assert.match(srt, /Q&A &amp;amp; AT&T/);
+  assert.equal(parseCaptions(srt, "srt", ids)[0]!.text, "Q&A &amp; AT&T");
+  assert.equal(
+    parseCaptions(exportCaptions(track, "vtt"), "vtt", ids)[0]!.text,
+    "Q&A &amp; AT&T",
+  );
+  // A stored track that no longer reads is damage, not a client error.
+  assert.equal(
+    refused(() =>
+      storedCaptions("f".repeat(64), () => Buffer.from("{not json")),
+    ),
+    "RECOVERY_REQUIRED",
+  );
+  // A timing line on a later header line is refused too.
+  assert.equal(
+    refused(() =>
+      parseCaptions(
+        "WEBVTT\nKind: captions\n00:01.000 --> 00:02.000\nx\n",
+        "vtt",
+        ids,
+      ),
+    ),
+    "VALIDATION",
+  );
+  // The generic document commit cannot write a caption track.
+  const c = await workspace();
+  assert.equal(
+    await code(
+      head(c).then((h) =>
+        execute(c.browser, "yamakan.document.commit", {
+          projectId: c.projectId,
+          expectedRevision: h.revision,
+          documentId: ids(),
+          kind: "captions",
+          schemaVersion: 1,
+          expectedContentHash: null,
+          source: { contentHash: "c".repeat(64) },
+        }),
+      ),
+    ),
+    "VALIDATION",
   );
 });

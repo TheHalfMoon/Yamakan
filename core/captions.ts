@@ -64,7 +64,9 @@ const CueText = z
   // Every line has text and the cue has no outer whitespace, so an export
   // never writes a blank line inside a cue and a re-import reads it back.
   .refine(
-    (t) => t === t.trim() && t.split("\n").every((l) => l.trim() !== ""),
+    (t) =>
+      t === t.trim() &&
+      t.split("\n").every((l) => l.trim() !== "" && l === l.trimEnd()),
     "A cue has no empty lines and no leading or trailing spaces.",
   );
 
@@ -107,7 +109,9 @@ export const CaptionDocumentSchema = z
         (n) =>
           // Control characters are refused on purpose.
           // oxlint-disable-next-line no-control-regex
-          !/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/.test(n),
+          !/[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(
+            n,
+          ),
         "A track name has no control characters.",
       ),
     language: Language,
@@ -333,9 +337,13 @@ function stamp(ticks: number, format: CaptionFormat) {
 // Text written into a cue: never a timing line, a blank line or a tag.
 // Both formats use entities (this parser and common players decode them in
 // SRT too), so an export reads back exactly.
-function writable(text: string) {
+function writable(text: string, format: CaptionFormat) {
+  // WebVTT escapes every "&"; SRT only one that would read back as an
+  // entity, so players that do not decode entities still show "Q&A".
+  const amp =
+    format === "vtt" ? /&/g : /&(?=(?:lt|gt|amp|nbsp|lrm|rlm|quot|apos|#39);)/g;
   const escaped = text
-    .replace(/&/g, "&amp;")
+    .replace(amp, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   // A brace before a backslash is broken with a word joiner, so no export
@@ -350,7 +358,7 @@ export function exportCaptions(
 ): string {
   const blocks = doc.cues.map((c, n) => {
     const timing = `${stamp(c.startTicks, format)} --> ${stamp(c.endTicks, format)}`;
-    const text = writable(c.text);
+    const text = writable(c.text, format);
     return format === "srt"
       ? `${n + 1}\n${timing}\n${text}`
       : `${timing}\n${text}`;
@@ -458,7 +466,12 @@ export function storedCaptions(
   bytes: () => Buffer,
 ): CaptionDocument {
   const known = parsedTracks.get(contentHash);
-  if (known) return known;
+  if (known) {
+    // Most recently used last, so eviction drops the least recent.
+    parsedTracks.delete(contentHash);
+    parsedTracks.set(contentHash, known);
+    return known;
+  }
   let doc: CaptionDocument;
   try {
     doc = CaptionDocumentSchema.parse(JSON.parse(bytes().toString("utf8")));
@@ -469,8 +482,11 @@ export function storedCaptions(
       "A stored caption track is damaged; restore a verified backup.",
     );
   }
-  if (parsedTracks.size >= 64)
+  // A few tracks (each up to 2 MiB), shared read-only.
+  if (parsedTracks.size >= 16)
     parsedTracks.delete(parsedTracks.keys().next().value!);
+  Object.freeze(doc.cues);
+  Object.freeze(doc);
   parsedTracks.set(contentHash, doc);
   return doc;
 }

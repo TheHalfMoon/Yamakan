@@ -1723,8 +1723,9 @@ export class ProjectStore {
   ): { reserved: string } | { receipt: StagedDocumentReceipt } {
     Id.parse(input.projectId);
     const kind = DocumentKind.parse(input.kind);
-    // Stories and packs are small and saved inline by their own commands.
-    if (kind === "story" || kind === "referencePack")
+    // Stories, packs and caption tracks are saved inline by their own
+    // commands (YU-031, YU-024).
+    if (kind === "story" || kind === "referencePack" || kind === "captions")
       throw new CommandError(
         "VALIDATION",
         "Stories and reference packs are not staged; save them with their commands.",

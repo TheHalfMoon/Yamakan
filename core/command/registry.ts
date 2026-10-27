@@ -277,6 +277,12 @@ export const commands = {
           "VALIDATION",
           "Stories and reference packs are saved with yamakan.story.save and yamakan.pack.save.",
         );
+      // Caption tracks too: their commands check burn-in glyphs (YU-024).
+      if (a.kind === "captions")
+        throw new CommandError(
+          "VALIDATION",
+          "Caption tracks are saved with the yamakan.captions commands.",
+        );
       const project = await store.commitDocument(
         { ...a, principalId: principal.id },
         receipt,

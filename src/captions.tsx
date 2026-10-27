@@ -125,8 +125,11 @@ function CaptionsPanel(props: Props) {
         ...args,
       })) as Saved;
       live.current.onSaved(projectId, from, saved.project.revision);
+      // The command succeeded: a failed re-read is reported, not the save.
+      await load().catch((e) =>
+        setError(e instanceof Error ? e.message : String(e)),
+      );
       setDraft(null);
-      await load();
       return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -192,8 +195,8 @@ function CaptionsPanel(props: Props) {
     });
 
   const split = (cue: Cue) => {
-    const at = live.current.playheadTicks();
-    if (!(at > cue.startTicks && at < cue.endTicks)) {
+    const splitAt = live.current.playheadTicks();
+    if (!(splitAt > cue.startTicks && splitAt < cue.endTicks)) {
       setError(t("captions.splitHint"));
       return;
     }
@@ -201,7 +204,7 @@ function CaptionsPanel(props: Props) {
       documentId: track!.id,
       expectedContentHash: track!.contentHash,
       cueId: cue.id,
-      atTicks: at,
+      atTicks: splitAt,
       newCueId: crypto.randomUUID(),
     });
   };
@@ -362,8 +365,16 @@ function CaptionsPanel(props: Props) {
                 void commit("yamakan.captions.save", {
                   documentId: track.id,
                   expectedContentHash: track.contentHash,
-                  // Edited text loses its outer spaces, as an import does.
-                  cues: cues.map((c) => ({ ...c, text: c.text.trim() })),
+                  // Edited text loses its outer and line-end spaces, as
+                  // an import does.
+                  cues: cues.map((c) => ({
+                    ...c,
+                    text: c.text
+                      .split("\n")
+                      .map((l) => l.trimEnd())
+                      .join("\n")
+                      .trim(),
+                  })),
                 })
               }
             >
@@ -371,7 +382,7 @@ function CaptionsPanel(props: Props) {
             </button>{" "}
             <button
               type="button"
-              disabled={busy || drafting}
+              disabled={busy}
               onClick={() => setDraft(null)}
               hidden={!drafting}
             >

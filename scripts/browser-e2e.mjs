@@ -1006,6 +1006,16 @@ try {
       ),
     });
     await page.getByTestId("captions-editor").waitFor({ timeout: 15000 });
+    // An edit can be discarded: the saved text comes back, Save is off.
+    await page.getByTestId("captions-text").nth(1).fill("Thrown away");
+    await page
+      .getByRole("button", { name: "Discard edits", exact: true })
+      .click();
+    assert.equal(
+      await page.getByTestId("captions-text").nth(1).inputValue(),
+      "Hello",
+    );
+    assert.equal(await page.getByTestId("captions-save").isDisabled(), true);
     await page.getByTestId("captions-text").nth(1).fill("Hello, edited");
     await page.getByTestId("captions-save").click();
     // Saved: the draft is cleared (Save disabled) and nothing is busy.
