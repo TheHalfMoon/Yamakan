@@ -1,0 +1,76 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "fb12d96",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-020",
+  "objective": "Implement a typed transform/crop effect with preview/export parity",
+  "branch": "feat/yu-020-transform-effect",
+  "mergedPr": 121,
+  "headCommit": "f982884",
+  "mergeCommit": "021ccddcd74ba68ef261a490804a423c2737747b",
+  "flags": "Effect writes on; YAMAKAN_EFFECTS_OFF=1 refuses new effect values (command, batch, save) while stored effects keep rendering",
+  "deviations": [
+    "Transform v1 has scale, offset and crop; rotation is not included",
+    "The interactive canvas draws scale and position exactly; it does not draw a crop (the reference preview and export do, and the preview-parity notice names it as effectCrop)",
+    "Projects with effects are canonical v6, which an earlier build refuses as a newer format; projects without effects keep their v4/v5 bytes",
+    "The scaled-pixel budget (1920x1080x16) and the 20-pixel crop minimum are checked when a plan is compiled (preview or export), not when the value is set",
+    "Undo, redo and restore move between stored revisions with the off switch on (documented)",
+    "core/render.ts is donor-derived; its change is recorded in imports.json"
+  ],
+  "tests": {
+    "files": [
+      "tests/effect-parity.test.ts",
+      "tests/canonical.test.ts",
+      "tests/canonical-store.test.ts",
+      "tests/migrate.test.ts",
+      "scripts/browser-e2e.mjs"
+    ],
+    "result": "8 effect tests: export and reference preview match golden regions for crop, scale 0.5 and scale with offset on a two-colour still, and for footage scaled 2x past the frame with a negative offset and 0.5 opacity; an identity transform leaves the plan hash and decoded frame unchanged; persist, undo, redo and reopen; NaN, Infinity, huge or fractional scale, filter/ASS injection strings, version 2, unknown kinds, paths, over-crop, two transforms, an empty stack and an effect on a title are refused; a stored unknown effect is refused, never dropped; the off switch holds and stored effects still render; a tiny source refuses a crop; canonical v6, the editor diff, split, a refused move to an audio track, OTIO round trip and forgery, and the parity notice. Edge E2E: the Transform control commits on Enter, undoes, redoes and saves as the versioned effect, and the live canvas matches the reference render with the half-size transform"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 2,
+        "shouldFixApplied": 6,
+        "finalRound": "no must-fix; one docs should-fix applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 4,
+        "finalRound": "no must-fix, no should-fix; nits applied"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "021ccddcd74ba68ef261a490804a423c2737747b",
+    "ci": "PR exact head f982884: qualify, qualify-windows-r8, otio-oracle success; push run on 021ccdd: success",
+    "windows": "detached 021ccdd: typecheck, lint, format, provenance, brand, build pass; npm test 614/618 with one load-timing failure (engine-worker-profile, while another suite ran) that passes 9/9 when rerun alone; test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No rotation; crop is not drawn on the interactive canvas",
+    "Transform animation channels stay unrendered (YU-022 refuses them before rendering)",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
