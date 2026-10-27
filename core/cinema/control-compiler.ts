@@ -1,24 +1,29 @@
 // Cinematic intent → engine conditioning (YU-050). A shot's intent (camera,
-// lens, light, motion, and guided inputs such as an end frame, a depth map
-// or a pose) is lowered against one recipe's declared capability, by a
-// fixed table, to the engine contract's named, bounded controls and input
-// roles (core/engines/contract-v2.ts). Nothing is ever turned into prompt
-// text, and no control is assumed:
+// lens, light, motion, and guided inputs: an end frame, a depth map or a
+// pose) is lowered against one recipe's declared capability, by a fixed
+// table, to the engine contract's named, bounded controls and input roles
+// (core/engines/contract-v2.ts). The compiler's output has no prompt and no
+// free text, and no control is assumed:
 // - applied: the recipe declares the control (or input role), and the
-//   intent's value is lowered to it exactly;
+//   intent's value is lowered to it exactly (v1 has no approximate
+//   lowering; the status is reserved);
 // - metadata: the recipe does not declare a style control; the intent is
-//   kept as editable previs metadata, and nothing claims it was applied;
-// - unsupported: a guided input the recipe does not take. Compiling is
-//   refused unless the caller accepts that input is dropped (recorded).
-// The report names the intent and the lowered controls by hash, so an
-// attempt can show exactly what reached the engine.
+//   returned as previs metadata only, and nothing claims it was applied;
+// - unsupported: a guided input the recipe does not take, or one the
+//   contract has no role for (depth and pose today). Compiling is refused
+//   unless the caller accepts that the guide is dropped (recorded).
+// The report names the intent, and what reaches the engine under which
+// compiler and recipe, by hash.
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 import { Id } from "../project.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
+import { ControlsSchema, type AssetRef } from "../engines/contract-v2.ts";
 
 export const CONTROLS_COMPILER = "yamakan.controls-compiler/v1";
 
+// Enumerated values are written as the contract's control values are:
+// lowercase, digits, "_" and "-" only.
 export const ShotIntentSchema = z
   .object({
     format: z.literal("yamakan.shot-intent"),
@@ -26,7 +31,7 @@ export const ShotIntentSchema = z
     camera: z
       .object({
         shotScale: z
-          .enum(["extremeWide", "wide", "medium", "close", "extremeClose"])
+          .enum(["extreme_wide", "wide", "medium", "close", "extreme_close"])
           .optional(),
         movement: z
           .enum([
@@ -78,8 +83,7 @@ export const ShotIntentSchema = z
   .strict();
 export type ShotIntent = z.infer<typeof ShotIntentSchema>;
 
-// The fixed lowering table: intent path → the contract's control name, and
-// how its value is written (an enumerated choice or a bounded number).
+// The fixed lowering table: intent path → the contract's control name.
 const STYLE: readonly {
   path: string;
   control: string;
@@ -117,16 +121,26 @@ const STYLE: readonly {
     read: (i) => i.motion.subject,
   },
 ]);
+// Guides → the contract's input roles. Depth and pose have none, so no
+// recipe can take them yet: they are always unsupported.
 const GUIDES: readonly {
   path: string;
-  role: string;
+  role: "lastFrame" | null;
   read: (i: ShotIntent) => string | undefined;
 }[] = Object.freeze([
-  { path: "guides.endFrame", role: "endFrame", read: (i) => i.guides.endFrame },
-  { path: "guides.depth", role: "depth", read: (i) => i.guides.depth },
-  { path: "guides.pose", role: "pose", read: (i) => i.guides.pose },
+  {
+    path: "guides.endFrame",
+    role: "lastFrame",
+    read: (i) => i.guides.endFrame,
+  },
+  { path: "guides.depth", role: null, read: (i) => i.guides.depth },
+  { path: "guides.pose", role: null, read: (i) => i.guides.pose },
 ]);
 export const GUIDE_PATHS = GUIDES.map((g) => g.path);
+// The media types each role takes (as the contract's request schemas).
+const ROLE_MEDIA: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  lastFrame: ["image/png", "image/jpeg"],
+});
 
 export type ControlReport = {
   path: string;
@@ -144,13 +158,15 @@ export type RecipeCapability = {
 };
 
 /**
- * Lowers a shot's intent against a recipe's capability. Refuses when a
- * guided input the recipe does not take is set and not accepted as
- * dropped; style controls it does not take stay metadata.
+ * Lowers a shot's intent against a recipe's capability. `resolve` gives a
+ * guide's project media as the contract's AssetRef (null when it is not
+ * this project's). Refuses when a guide the recipe does not take is set and
+ * not accepted as dropped; style controls it does not take stay metadata.
  */
 export function compileControls(
   intentInput: unknown,
   recipe: RecipeCapability,
+  resolve: (assetId: string) => AssetRef | null,
   acceptDropped: readonly string[] = [],
 ) {
   const parsed = ShotIntentSchema.safeParse(intentInput);
@@ -163,7 +179,7 @@ export function compileControls(
   const controlSet = new Set(recipe.controls);
   const roleSet = new Set(recipe.roles);
   const controls: Record<string, string | number> = {};
-  const inputs: { role: string; assetId: string }[] = [];
+  const inputs: { role: string; asset: AssetRef }[] = [];
   const report: ControlReport[] = [];
   for (const s of STYLE) {
     const value = s.read(intent);
@@ -177,8 +193,14 @@ export function compileControls(
   for (const g of GUIDES) {
     const assetId = g.read(intent);
     if (assetId === undefined) continue;
-    if (roleSet.has(g.role)) {
-      inputs.push({ role: g.role, assetId });
+    if (g.role && roleSet.has(g.role)) {
+      const asset = resolve(assetId);
+      if (!asset || !ROLE_MEDIA[g.role]!.includes(asset.mediaType))
+        throw new CommandError(
+          "VALIDATION",
+          `The ${g.path} guide must be a still of this project.`,
+        );
+      inputs.push({ role: g.role, asset });
       report.push({ path: g.path, status: "applied", to: g.role });
     } else if (acceptDropped.includes(g.path))
       report.push({ path: g.path, status: "dropped", to: null });
@@ -192,13 +214,27 @@ export function compileControls(
       "CAPABILITY_UNAVAILABLE",
       `Recipe ${recipe.recipeId} does not take ${unaccepted.join(", ")}; accept dropping it, or pick a recipe that does.`,
     );
-  const lowered = { controls, inputs };
+  // What reaches the engine is always a valid contract control set.
+  if (!ControlsSchema.safeParse(controls).success)
+    throw new CommandError(
+      "INTERNAL",
+      "The controls compiler lowered an invalid control.",
+    );
   return {
     compiler: CONTROLS_COMPILER,
     recipeId: recipe.recipeId,
     recipeHash: recipe.recipeHash,
     intentHash: sha256Hex(canonicalJson(intent)),
-    loweredControlsHash: sha256Hex(canonicalJson(lowered)),
+    // Bound to the compiler and recipe, so equal controls under another
+    // recipe or table are another hash.
+    loweredControlsHash: sha256Hex(
+      canonicalJson({
+        compiler: CONTROLS_COMPILER,
+        recipeHash: recipe.recipeHash,
+        controls,
+        inputs,
+      }),
+    ),
     controls,
     inputs,
     report,
@@ -211,21 +247,19 @@ export function compileControls(
 }
 
 /** The capability of one of this build's server-owned recipes. */
-export function serverRecipeCapability(
-  recipes: readonly {
+export function serverRecipeCapability<
+  R extends {
     id: string;
     constraints: { controls: readonly string[]; roles: readonly string[] };
-  }[],
-  hash: (recipe: never) => string,
-  recipeId: string,
-): RecipeCapability {
+  },
+>(recipes: readonly R[], hash: (recipe: R) => string, recipeId: string) {
   const recipe = recipes.find((r) => r.id === recipeId);
   if (!recipe)
     throw new CommandError("NOT_FOUND", "This build has no such recipe.");
   return {
     recipeId: recipe.id,
-    recipeHash: hash(recipe as never),
+    recipeHash: hash(recipe),
     controls: recipe.constraints.controls,
     roles: recipe.constraints.roles,
-  };
+  } satisfies RecipeCapability;
 }

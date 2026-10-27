@@ -528,23 +528,29 @@ A project has one frame rate. Every frame field of its editing view counts frame
 
 ## Cinematic intent to conditioning (YU-050)
 
-- **Intent (`yamakan.shot-intent` v1).** A shot's intent covers:
+- **Intent (`yamakan.shot-intent` v1).** It covers:
   - the camera's shot scale and movement;
   - the lens's focal length (8–300 mm) and depth of field;
   - the light's key and time of day;
   - the subject's motion;
-  - guided inputs by project media id: an end frame, a depth map and a pose.
+  - guides, which are project media ids for an end frame, a depth map and a pose.
 
-  Every value is an enumerated choice, a bounded integer or an id. No free text, path or code can be stored.
+  Enumerated values are written as the engine contract writes control values: lowercase letters, digits, `_` and `-` (for example `extreme_close`). No free text, path or code can be stored.
 
-- **Compiler (`yamakan.controls-compiler/v1`, `core/cinema/control-compiler.ts`).** A fixed table lowers each intent field to the engine contract's named control or input role. For example, `camera.movement` becomes `cameraMovement` and `guides.endFrame` becomes role `endFrame`. The table is applied against one recipe's declared capability (`constraints.controls` and `roles`), and each field is reported as one of:
-  - **applied:** the recipe declares the control or role, and the value is lowered exactly.
-  - **metadata:** the recipe does not declare a style control. The intent stays editable previs metadata and is never claimed as applied.
-  - **unsupported:** the recipe does not take a guided input (end frame, depth or pose). Compiling is refused unless the caller accepts that the guide is dropped, which is recorded as **dropped**.
-  - In every case nothing becomes prompt text: the output has no prompt, and the controls carry only lowered values.
-- **Provenance.** The result names the recipe by id and hash, the intent by `intentHash` (its canonical JSON), and what reaches the engine by `loweredControlsHash`. A change that only affects metadata leaves the lowered hash as it was.
-- **Command.** `yamakan.cinema.compileControls` (scope `project:read`) lowers against this build's own server recipes. Those are only the fake engine's today, and they declare no controls, so every field is metadata.
-- **Not done.** No real engine declares controls yet, and no evaluation (E) shows that any control has a visible effect, so no applied-optics claim is made. Intents are not yet stored on story shots.
+- **Compiler (`yamakan.controls-compiler/v1`, `core/cinema/control-compiler.ts`).** A fixed table lowers each style field to a named contract control: `shotScale`, `cameraMovement`, `focalLengthMm`, `depthOfField`, `lightKey`, `timeOfDay` and `subjectMotion`. The end frame becomes the contract's `lastFrame` input, as an `AssetRef` (asset version, SHA-256 and media type) of a still in the given project. Each field is lowered against one recipe's declared capability (`constraints.controls` and `roles`) and reported as one of:
+  - **applied:** the recipe declares the control or role, and the value is lowered exactly. v1 has no approximate lowering; that status is reserved.
+  - **metadata:** the recipe does not declare that style control. The intent is returned as previs metadata only, and is never claimed as applied.
+  - **unsupported:** a guide the recipe does not take, and always depth and pose, which have no contract role. Compiling is then refused unless the caller accepts the guide is dropped, which is recorded as **dropped**.
+
+  A guide that is not a still of the given project is refused. The compiler's output has no prompt field, and its controls are only lowered values.
+
+- **Contract conformance.** Before the output is returned, it is validated against the contract's own `ControlsSchema`, now exported from `contract-v2.ts`. A value the contract would reject fails with an error and never reaches an engine. The tests build a full `EngineRequestV2` from the output of every intent value and check it with the contract's schema and `refusal()`, so drift in the contract fails CI.
+- **Provenance.** The result names the recipe by id and hash and the intent by `intentHash`. What reaches the engine is named by `loweredControlsHash`, which is computed over the compiler, the recipe hash, the controls and the inputs. The same controls under another recipe or compiler therefore get another hash, while a change only to metadata keeps the hash.
+- **Command.** `yamakan.cinema.compileControls` (scope `project:read`) takes a `projectId`, resolves guides among that project's assets, and lowers against this build's own server recipes. Today those are only the fake engine's, which declare no style controls, and only the image-to-video recipe takes a first frame.
+- **Not done.**
+  - No real engine declares controls yet.
+  - No evaluation (E) shows any control has a visible effect, so no applied-optics claim is made.
+  - Intents are not yet stored on story shots, so the card's shot control references are still to come.
 
 ## Bounded animation compilation (YU-022)
 

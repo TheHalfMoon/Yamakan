@@ -1485,9 +1485,10 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Lower a shot's cinematic intent (camera, lens, light, motion; end-frame, depth and pose guides) to one server recipe's declared controls and input roles (YU-050). Each field is reported applied, metadata (previs only, never claimed applied) or unsupported; an unsupported guide refuses unless accepted as dropped. Nothing becomes prompt text. Returns the intent and lowered-controls hashes.",
+      "Lower a shot's cinematic intent (camera, lens, light, motion; end-frame, depth and pose guides of the project's media) to one server recipe's declared controls and contract input roles (YU-050). Each field is reported applied, metadata (previs only, never claimed applied) or unsupported; an unsupported guide refuses unless accepted as dropped. Nothing becomes prompt text. Returns the intent and lowered-controls hashes.",
     input: z
       .object({
+        projectId: Id,
         recipeId: z.string().min(1).max(80),
         intent: ShotIntentSchema,
         acceptDropped: z
@@ -1496,12 +1497,28 @@ export const commands = {
           .default([]),
       })
       .strict(),
-    run: (_ctx, a) =>
-      compileControls(
+    run: async ({ store }, a) => {
+      // Guides are this project's media, named as the contract names them.
+      const assets = (await store.load(a.projectId)).assets;
+      const media: Record<string, "image/png" | "image/jpeg" | "video/mp4"> = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        mp4: "video/mp4",
+      };
+      return compileControls(
         a.intent,
         serverRecipeCapability(SERVER_RECIPES, recipeHash, a.recipeId),
+        (assetId) => {
+          const asset = assets.find((x) => x.id === assetId);
+          const mediaType = asset && media[asset.extension];
+          return asset && mediaType
+            ? { assetVersionId: asset.id, sha256: asset.hash, mediaType }
+            : null;
+        },
         a.acceptDropped,
-      ),
+      );
+    },
   }),
   "yamakan.proxy.status": define({
     scope: "project:read",
