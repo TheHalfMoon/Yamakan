@@ -54,6 +54,7 @@ import {
   serverRecipeCapability,
 } from "../cinema/control-compiler.ts";
 import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
+import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -1519,6 +1520,26 @@ export const commands = {
         a.acceptDropped,
       );
     },
+  }),
+  "yamakan.analysis.sceneCuts": define({
+    scope: "render:execute",
+    mutation: false,
+    summary:
+      "Find the scene cuts of one of the project's video assets (YU-071: FFmpeg scdet, deterministic, threshold 1-100, default 10): the source frames where a new scene starts, with scdet's score. Reads the stored original in a bounded worker and writes nothing.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+        threshold: z
+          .number()
+          .int()
+          .min(SCENE_CUT_LIMITS.minThreshold)
+          .max(SCENE_CUT_LIMITS.maxThreshold)
+          .default(SCENE_CUT_LIMITS.defaultThreshold),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      detectSceneCuts(store, a.projectId, a.assetId, a.threshold),
   }),
   "yamakan.proxy.status": define({
     scope: "project:read",

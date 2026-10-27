@@ -552,6 +552,42 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - No evaluation (E) shows any control has a visible effect, so no applied-optics claim is made.
   - Intents are not yet stored on story shots, so the card's shot control references are still to come.
 
+## Deterministic media analysis: scene cuts (YU-071)
+
+- **Source inspection.** On 2026-10-27, `ffmpeg -filters` on the bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) listed these analysis and repair filters:
+  - `scdet` (scene change)
+  - `blackdetect` and `freezedetect`
+  - `deshake`
+  - the denoisers `hqdn3d`, `nlmeans` and `atadenoise`
+
+  vid.stab is not in the build, so there is no two-pass stabilization. Only `scdet` is relied on and tested.
+
+- **The first qualified operation: scene cuts.**
+  - **Command.** `yamakan.analysis.sceneCuts` (scope `render:execute`) takes a project video asset and a threshold: a whole number from 1 to 100, default 10.
+  - **Method.** It runs `scdet`, which measures the mean absolute luma difference between frames. There is no model and no randomness. It runs on the stored original, in an owned worker that may read only that file.
+  - **Result.** It returns `yamakan.scene-cuts/v1:scdet`, the asset's hash, the threshold, and each cut, which has:
+    - the frame a new scene starts on, counted at the project's rate, as the editor counts the asset's frames;
+    - its time in ticks from the source's first frame;
+    - scdet's score.
+  - **Timing.** The graph converts timestamps to ticks (`settb`) and then counts them from the first frame (`PTS-STARTPTS`). A cut's time is therefore its frame's own timestamp, to the nearest tick, whatever the source's frame rate or start offset.
+  - **No changes.** It writes no media and changes nothing, so the source, its timing and its sound are untouched by construction. There is no derivative to verify, and no restoration claim.
+- **Bounds and refusals.**
+  - **Concurrency.** One analysis runs at a time, and at most 2 wait; beyond that the request is refused as `BUSY`.
+  - **Limits.** Each analysis is bounded:
+    - at most 300 s;
+    - the media worker's memory, reported as `LIMIT_EXCEEDED` when a worker is stopped at that limit;
+    - at most 1,000 cuts and 1 MiB of analysis output, otherwise it asks for a higher threshold.
+  - **Refused inputs.**
+    - Stills and audio are refused.
+    - A damaged stream fails as `MEDIA_INVALID`. A stream whose stored object does not match its size fails as `RECOVERY_REQUIRED`. Neither message contains a host path.
+    - A frame time the parser cannot use refuses the whole analysis rather than dropping a cut.
+  - **Cancellation.** A cancel that arrives before the analysis begins starts no worker, and one during it stops the worker (tested against the full scan's time). A cancelled request still holds its place in the queue until its turn. Running out of memory is recognised from the worker's peak use (95% of its limit or more). The command itself has no cancel signal yet: a client that disconnects leaves the analysis running to its bound.
+- **Not covered.**
+  - Denoise, deshake, black detection and freeze detection each need their own qualification.
+  - No test removes `scdet` or simulates running out of memory.
+  - A partial-output quarantine does not apply, because no output is written.
+  - The editor does not show scene cuts yet.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.
