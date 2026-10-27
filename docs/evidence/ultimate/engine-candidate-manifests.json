@@ -538,6 +538,7 @@
             "symbol": "main"
           }
         ],
+        "loaders": [],
         "loaderEvidence": [
           {
             "path": "wan/textimage2video.py",
@@ -702,7 +703,31 @@
             "sha256": "7cace0da2b446bbbbc57d031ab6cf163a3d59b366da94e5afe36745b746fd81d"
           }
         ],
-        "codeFiles": []
+        "repositoryFiles": [
+          ".gitattributes",
+          ".msc",
+          ".mv",
+          "README.md",
+          "Wan2.2_VAE.pth",
+          "assets/comp_effic.png",
+          "assets/logo.png",
+          "assets/moe_2.png",
+          "assets/moe_arch.png",
+          "assets/performance.png",
+          "assets/vae.png",
+          "config.json",
+          "configuration.json",
+          "diffusion_pytorch_model-00001-of-00003.safetensors",
+          "diffusion_pytorch_model-00002-of-00003.safetensors",
+          "diffusion_pytorch_model-00003-of-00003.safetensors",
+          "diffusion_pytorch_model.safetensors.index.json",
+          "examples/i2v_input.JPG",
+          "google/umt5-xxl/special_tokens_map.json",
+          "google/umt5-xxl/spiece.model",
+          "google/umt5-xxl/tokenizer.json",
+          "google/umt5-xxl/tokenizer_config.json",
+          "models_t5_umt5-xxl-enc-bf16.pth"
+        ]
       },
       "loading": {
         "trustRemoteCode": false,
@@ -766,6 +791,13 @@
             "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
             "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
             "symbol": "WanImageToVideoPipeline"
+          }
+        ],
+        "loaders": [
+          {
+            "package": "transformers",
+            "version": "5.21.0",
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740"
           }
         ],
         "loaderEvidence": [
@@ -836,6 +868,13 @@
             "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
             "line": 364,
             "text": "return torch.load(checkpoint_path, map_location=map_location, weights_only=weights_only, **extra_args)"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/__init__.py",
+            "sha256": "977776eaf81354c8ab65715c64418cef28e1e8cb01b83e1d158631af7f8bf889",
+            "line": 21,
+            "text": "__version__ = \"5.21.0\""
           }
         ],
         "declaredRequirements": null
@@ -977,7 +1016,37 @@
             "sha256": "62cd18f19438e35b32ac63020e2852f566e9b02f46b6cdbd87972a356e3c6f4b"
           }
         ],
-        "codeFiles": []
+        "repositoryFiles": [
+          ".gitattributes",
+          "README.md",
+          "assets/comp_effic.png",
+          "assets/logo.png",
+          "assets/moe_2.png",
+          "assets/moe_arch.png",
+          "assets/performance.png",
+          "assets/vae.png",
+          "examples/i2v_input.JPG",
+          "model_index.json",
+          "scheduler/scheduler_config.json",
+          "text_encoder/config.json",
+          "text_encoder/model-00001-of-00003.safetensors",
+          "text_encoder/model-00002-of-00003.safetensors",
+          "text_encoder/model-00003-of-00003.safetensors",
+          "text_encoder/model.safetensors.index.json",
+          "tokenizer/special_tokens_map.json",
+          "tokenizer/spiece.model",
+          "tokenizer/tokenizer.json",
+          "tokenizer/tokenizer_config.json",
+          "transformer/config.json",
+          "transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+          "transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+          "transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+          "transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+          "transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+          "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "vae/config.json",
+          "vae/diffusion_pytorch_model.safetensors"
+        ]
       },
       "loading": {
         "trustRemoteCode": false,
@@ -1072,6 +1141,13 @@
             "symbol": "CogVideoXPipeline"
           }
         ],
+        "loaders": [
+          {
+            "package": "transformers",
+            "version": "5.21.0",
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740"
+          }
+        ],
         "loaderEvidence": [
           {
             "path": "src/diffusers/pipelines/pipeline_utils.py",
@@ -1140,6 +1216,13 @@
             "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
             "line": 364,
             "text": "return torch.load(checkpoint_path, map_location=map_location, weights_only=weights_only, **extra_args)"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/__init__.py",
+            "sha256": "977776eaf81354c8ab65715c64418cef28e1e8cb01b83e1d158631af7f8bf889",
+            "line": 21,
+            "text": "__version__ = \"5.21.0\""
           }
         ],
         "declaredRequirements": null
@@ -1245,7 +1328,27 @@
             "sha256": "a410e48d988c8224cef392b68db0654485cfd41f345f4a3a81d3e6b765bb995e"
           }
         ],
-        "codeFiles": []
+        "repositoryFiles": [
+          ".gitattributes",
+          ".gitignore",
+          "LICENSE",
+          "README.md",
+          "README_zh.md",
+          "model_index.json",
+          "scheduler/scheduler_config.json",
+          "text_encoder/config.json",
+          "text_encoder/model-00001-of-00002.safetensors",
+          "text_encoder/model-00002-of-00002.safetensors",
+          "text_encoder/model.safetensors.index.json",
+          "tokenizer/added_tokens.json",
+          "tokenizer/special_tokens_map.json",
+          "tokenizer/spiece.model",
+          "tokenizer/tokenizer_config.json",
+          "transformer/config.json",
+          "transformer/diffusion_pytorch_model.safetensors",
+          "vae/config.json",
+          "vae/diffusion_pytorch_model.safetensors"
+        ]
       },
       "loading": {
         "trustRemoteCode": false,

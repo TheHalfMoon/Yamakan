@@ -46,6 +46,14 @@ const Evidence = z
   })
   .strict();
 const DocEvidence = z.object({ path: RelPath, sha256: Sha256 }).strict();
+// A repository file path (dot files included, never a parent segment).
+const RepoPath = z
+  .string()
+  .regex(/^[A-Za-z0-9_.][A-Za-z0-9._/ -]{0,199}$/)
+  .refine(
+    (p) => !p.split("/").some((s) => s === ".." || s === "." || s === ""),
+    "A repository path.",
+  );
 
 // A package licence, as its metadata states it and as SPDX terms.
 const Package = z
@@ -133,6 +141,21 @@ const Candidate = z
               .strict(),
           )
           .min(1),
+        // Packages outside the runtime's own repository whose loaders were
+        // inspected, each at the locked release and its source commit.
+        loaders: z.array(
+          z
+            .object({
+              package: z.string().max(100),
+              version: z.string().max(40),
+              source: z
+                .string()
+                .regex(
+                  /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*@[0-9a-f]{40}$/,
+                ),
+            })
+            .strict(),
+        ),
         // Where the inspected loaders read weights: the safetensors path,
         // the pickle fallback and its weights_only, offline loading.
         loaderEvidence: z.array(Evidence),
@@ -167,8 +190,9 @@ const Candidate = z
         gated: z.boolean(),
         modelIndex: DocEvidence.optional(),
         files: z.array(ModelFile).min(1).max(64),
-        // Every path in the repository at the commit that is code.
-        codeFiles: z.array(RelPath),
+        // Every file path of the repository at the commit (from its tree
+        // listing); code and pickle are derived from it, never declared.
+        repositoryFiles: z.array(RepoPath).max(4096),
       })
       .strict(),
     loading: z
@@ -176,7 +200,7 @@ const Candidate = z
         trustRemoteCode: z.boolean(),
         customPipeline: z.string().max(200).nullable(),
         // The from_pretrained arguments a runner must pass; null where the
-        // candidate has no from_pretrained loader (native).
+        // runner does not choose them (native code calls its own loaders).
         useSafetensors: z.boolean().nullable(),
         localFilesOnly: z.boolean().nullable(),
         unsafeLoads: z.array(Evidence.extend({ weightsOnly: z.boolean() })),
@@ -281,6 +305,16 @@ export type SelectionCaution =
   "MODEL_LICENSE_FROM_CARD_ONLY" | "PACKAGE_LICENSE_NORMALIZED";
 
 const COMMIT = /^[0-9a-f]{40}$/;
+// What a Diffusers pipeline of these candidates imports at load.
+const DIFFUSERS_REQUIRED = [
+  "torch",
+  "transformers",
+  "safetensors",
+  "sentencepiece",
+  "ftfy",
+];
+// Formats a qualified candidate may load: weights only as safetensors.
+const SAFE_FORMATS: readonly string[] = ["safetensors", "json", "tokenizer"];
 // An exact release: digits, dots and an optional PEP 440 pre or post
 // suffix; never a range, wildcard, list, marker or local build (+cpu).
 const EXACT = /^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?$/;
@@ -288,11 +322,14 @@ const EXACT = /^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?$/;
 /** PEP 503: lowercase, runs of -, _ and . become one -. */
 export const normalizePackageName = (name: string) =>
   name.toLowerCase().replace(/[-_.]+/g, "-");
-// A requirement line's project name: before any extras, version or marker.
-const requirementName = (line: string) =>
-  normalizePackageName(
-    /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)/.exec(line)?.[1] ?? "",
-  );
+// A plain project name: no extras, URL, editable flag or marker.
+const PLAIN_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+// Every name-like token of a requirement line (so `-e git+…/dashscope`
+// and `dashscope[cli]` still name dashscope).
+const lineTokens = (line: string) =>
+  normalizePackageName(line)
+    .split(/[^a-z0-9-]+/)
+    .filter(Boolean);
 
 // Packages whose purpose is calling a hosted model or inference service.
 export const REMOTE_SERVICE_PACKAGES: readonly string[] = Object.freeze([
@@ -307,6 +344,12 @@ export const REMOTE_SERVICE_PACKAGES: readonly string[] = Object.freeze([
   "groq",
   "cohere",
   "mistralai",
+  "vertexai",
+  "google-cloud-aiplatform",
+  "boto3",
+  "runwayml",
+  "lumaai",
+  "stability-sdk",
 ]);
 
 // Package licences a bundled runtime may carry: permissive, or file-level
@@ -327,27 +370,44 @@ export const ACCEPTED_PACKAGE_LICENSES: readonly string[] = Object.freeze([
   "CNRI-Python",
   "MPL-2.0",
 ]);
-const ACCEPTED_EXCEPTIONS = new Set(["LLVM-exception"]);
+// The only accepted exception, and the licence it modifies.
+const ACCEPTED_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({
+  "LLVM-exception": "Apache-2.0",
+});
 
-/** Whether every term of an SPDX expression is an accepted licence. */
+/**
+ * Whether an SPDX expression is well formed and every licence in it is
+ * accepted: expression = term ((AND | OR) term)*, term = "(" expression ")"
+ * or a licence with an optional "WITH" exception. Either side of an OR
+ * must be accepted too (conservative: no choosing the accepted branch).
+ */
 export function packageLicenseAccepted(spdx: string | null) {
   if (!spdx) return false;
-  const terms = spdx.replace(/[()]/g, " ").split(/\s+/).filter(Boolean);
-  let expectException = false;
-  let sawLicense = false;
-  for (const t of terms) {
-    if (t === "AND" || t === "OR") continue;
-    if (t === "WITH") {
-      expectException = true;
-      continue;
+  const tokens = spdx.match(/\(|\)|[^\s()]+/g) ?? [];
+  let i = 0;
+  const term = (): boolean => {
+    const t = tokens[i++];
+    if (t === "(") {
+      if (!expression()) return false;
+      return tokens[i++] === ")";
     }
-    if (expectException) {
-      if (!ACCEPTED_EXCEPTIONS.has(t)) return false;
-      expectException = false;
-    } else if (!ACCEPTED_PACKAGE_LICENSES.includes(t)) return false;
-    else sawLicense = true;
-  }
-  return sawLicense && !expectException;
+    if (!t || !ACCEPTED_PACKAGE_LICENSES.includes(t)) return false;
+    if (tokens[i] === "WITH") {
+      const exception = tokens[i + 1];
+      i += 2;
+      return exception !== undefined && ACCEPTED_EXCEPTIONS[exception] === t;
+    }
+    return true;
+  };
+  const expression = (): boolean => {
+    if (!term()) return false;
+    while (tokens[i] === "AND" || tokens[i] === "OR") {
+      i++;
+      if (!term()) return false;
+    }
+    return true;
+  };
+  return expression() && i === tokens.length;
 }
 
 /** A file's format from its name; a manifest must say the same. */
@@ -370,17 +430,24 @@ function wheelMatches(
   if (!p.wheel?.endsWith(".whl")) return false;
   const parts = p.wheel.slice(0, -4).split("-");
   if (parts.length !== 5 && parts.length !== 6) return false;
+  // A build tag starts with a digit.
+  if (parts.length === 6 && !/^\d/.test(parts[2]!)) return false;
   const [name, version] = parts;
   const [python, abi, platform] = parts.slice(-3);
   if (normalizePackageName(name!) !== normalizePackageName(p.name))
     return false;
   if (version !== p.version) return false;
   const minor = Number(interpreter.version.split(".")[1]);
+  // The python tag and the ABI agree: pure py3 has no ABI; cp3N is this
+  // interpreter's own ABI, or the stable ABI (abi3) from 3.N onwards.
   const pythonOk = python!.split(".").some((t) => {
-    if (t === "py3" || t === `cp3${minor}`) return true;
-    // The stable ABI: a cp3N-abi3 wheel runs on any later 3.x.
+    if (t === "py3") return abi === "none";
     const m = /^cp3(\d+)$/.exec(t);
-    return m !== null && abi === "abi3" && Number(m[1]) <= minor;
+    if (!m) return false;
+    const n = Number(m[1]);
+    return abi === "abi3"
+      ? n <= minor
+      : n === minor && (abi === `cp3${minor}` || abi === "none");
   });
   const platformOk = platform!
     .split(".")
@@ -402,11 +469,12 @@ export function selectionBlockers(
       out.add("LICENSE_UNACCEPTED");
   }
   if (c.model.gated) out.add("GATED_MODEL");
-  // Code anywhere in the model repository, or loaded from it.
+  // Code anywhere in the model repository (derived from its full file
+  // list at the commit), or loaded from it.
   if (
     c.loading.trustRemoteCode ||
     c.loading.customPipeline !== null ||
-    c.model.codeFiles.length ||
+    c.model.repositoryFiles.some((p) => fileFormatOf(p) === "code") ||
     c.model.files.some((f) => fileFormatOf(f.path) === "code")
   )
     out.add("REMOTE_CODE");
@@ -415,7 +483,7 @@ export function selectionBlockers(
   const declared = c.runtime.declaredRequirements?.requirements ?? [];
   const names = [
     ...(lock?.packages.map((p) => normalizePackageName(p.name)) ?? []),
-    ...declared.map((r) => requirementName(r.name)),
+    ...declared.flatMap((r) => lineTokens(`${r.name} ${r.spec}`)),
   ];
   if (
     c.remoteServices.length ||
@@ -426,7 +494,7 @@ export function selectionBlockers(
   if (
     declared.some((r) => {
       const m = /^==\s*(\S+)$/.exec(r.spec.trim());
-      return !m || !EXACT.test(m[1]!) || /[[\]]/.test(r.name);
+      return !m || !EXACT.test(m[1]!) || !PLAIN_NAME.test(r.name);
     })
   )
     out.add("UNDEFINED_REQUIREMENTS");
@@ -448,25 +516,35 @@ export function selectionBlockers(
       else if (!packageLicenseAccepted(p.spdx)) out.add("LICENSE_UNACCEPTED");
     }
     // A Diffusers runtime is the locked diffusers release it was inspected
-    // at, with the loaders it relies on.
+    // at, with every inspected loader at its locked release and the
+    // packages its pipelines import.
+    const version = (name: string) =>
+      lock.packages.find((p) => normalizePackageName(p.name) === name)?.version;
     if (c.runtime.kind === "diffusers") {
-      const version = (name: string) =>
-        lock.packages.find((p) => normalizePackageName(p.name) === name)
-          ?.version;
       if (
         !c.runtime.source.version ||
         version("diffusers") !== c.runtime.source.version ||
-        ["torch", "transformers", "safetensors"].some((n) => !version(n))
+        DIFFUSERS_REQUIRED.some((n) => !version(n))
       )
         out.add("UNDEFINED_REQUIREMENTS");
     }
+    if (c.runtime.loaders.some((l) => version(l.package) !== l.version))
+      out.add("UNDEFINED_REQUIREMENTS");
   }
-  // Pickle anywhere, a torch.load without weights_only, a loader that may
-  // fall back to pickle, or a manifest whose formats disagree with names.
+  // Pickle anywhere, a loaded file of no known safe format, a torch.load
+  // without weights_only, a loader that may fall back to pickle, evidence
+  // from a loader not pinned here, or formats that disagree with names.
+  const sources = new Set(c.runtime.loaders.map((l) => l.source));
   if (
     c.model.files.some(
       (f) =>
-        f.format !== fileFormatOf(f.path) || fileFormatOf(f.path) === "pickle",
+        f.format !== fileFormatOf(f.path) ||
+        !SAFE_FORMATS.includes(fileFormatOf(f.path)) ||
+        !c.model.repositoryFiles.includes(f.path),
+    ) ||
+    c.model.repositoryFiles.some((p) => fileFormatOf(p) === "pickle") ||
+    c.runtime.loaderEvidence.some(
+      (e) => e.source !== undefined && !sources.has(e.source),
     ) ||
     c.loading.unsafeLoads.some((u) => !u.weightsOnly) ||
     (c.runtime.kind === "diffusers" &&
@@ -484,8 +562,14 @@ export function selectionCautions(
   const out: SelectionCaution[] = [];
   if (c.model.licenseEvidence?.kind === "card")
     out.push("MODEL_LICENSE_FROM_CARD_ONLY");
+  // Derived, not taken from spdxBasis: SPDX terms the package did not
+  // state itself (as an expression, or verbatim) were mapped.
   const lock = c.lock === null ? null : locks[c.lock];
-  if (lock?.packages.some((p) => p.spdxBasis === "normalized"))
+  if (
+    lock?.packages.some(
+      (p) => p.licenseSource !== "expression" && p.license !== p.spdx,
+    )
+  )
     out.push("PACKAGE_LICENSE_NORMALIZED");
   return out;
 }
@@ -511,9 +595,15 @@ export function parseEngineCandidates(input: unknown) {
           throw new Error(
             `${c.id} claims ${ignored.role}, which its pipeline ignores.`,
           );
-        // The model setting that makes the pipeline ignore it is cited.
+        // The model setting that makes the pipeline ignore it is cited,
+        // from the model index version pinned here.
         const index = c.model.modelIndex;
-        if (!index || !ignored.evidence.some((e) => e.path === index.path))
+        if (
+          !index ||
+          !ignored.evidence.some(
+            (e) => e.path === index.path && e.sha256 === index.sha256,
+          )
+        )
           throw new Error(
             `${c.id}: the ignored ${ignored.role} cites no model setting.`,
           );

@@ -189,8 +189,13 @@ test("a mutable revision, missing or unaccepted licence, or remote code blocks s
     ["REMOTE_CODE"],
   );
   assert.deepEqual(
-    edit((c) => c.model.codeFiles.push("pipeline.py")),
+    edit((c) => c.model.repositoryFiles.push("scripts/pipeline.py")),
     ["REMOTE_CODE"],
+  );
+  // Pickle anywhere in the repository, even unloaded.
+  assert.deepEqual(
+    edit((c) => c.model.repositoryFiles.push("old/model.bin")),
+    ["UNSAFE_LOADING"],
   );
   // A loaded file's format is its name's, whatever the manifest says.
   assert.deepEqual(
@@ -204,6 +209,30 @@ test("a mutable revision, missing or unaccepted licence, or remote code blocks s
     ),
     ["REMOTE_CODE", "UNSAFE_LOADING"],
   );
+  // A loaded file of no known safe format, or not in the repository.
+  assert.deepEqual(
+    edit((c) => {
+      c.model.files.push({
+        path: "x.onnx",
+        bytes: 10,
+        format: "other",
+        gitOid: "0".repeat(40),
+      });
+      c.model.repositoryFiles.push("x.onnx");
+    }),
+    ["UNSAFE_LOADING"],
+  );
+  assert.deepEqual(
+    edit((c) =>
+      c.model.files.push({
+        path: "elsewhere.json",
+        bytes: 10,
+        format: "json",
+        gitOid: "0".repeat(40),
+      }),
+    ),
+    ["UNSAFE_LOADING"],
+  );
   assert.deepEqual(
     edit((c) => (c.loading.localFilesOnly = false)),
     ["NETWORK_LOAD"],
@@ -211,15 +240,51 @@ test("a mutable revision, missing or unaccepted licence, or remote code blocks s
 });
 
 test("a remote service, undefined requirement or pickle load blocks selection", () => {
-  // Remote services by any spelling, in the lock or a requirements file.
-  for (const name of ["dashscope", "DashScope", "dash_scope", "openai"])
+  // Remote services by any spelling, in a pinned requirements file (only
+  // the remote rule trips) or in the lock.
+  const declare = (c: EngineCandidate, name: string, spec = "==1.0.0") =>
+    (c.runtime.declaredRequirements = {
+      path: "requirements.txt",
+      sha256: "e".repeat(64),
+      requirements: [{ name, spec }],
+    });
+  for (const name of [
+    "dashscope",
+    "DashScope",
+    "openai",
+    "fal_client",
+    "Google_GenAI",
+    "boto3",
+  ])
     assert.deepEqual(
-      edit((_c, m) => (pkg(m, "tqdm").name = name)),
-      name === "dash_scope"
-        ? ["UNDEFINED_REQUIREMENTS"]
-        : ["REMOTE_SERVICE", "UNDEFINED_REQUIREMENTS"],
+      edit((c) => declare(c, name)),
+      ["REMOTE_SERVICE"],
       name,
     );
+  assert.deepEqual(
+    edit((c) => declare(c, "numpy")),
+    [],
+  );
+  assert.ok(
+    edit((_c, m) => (pkg(m, "tqdm").name = "dashscope")).includes(
+      "REMOTE_SERVICE",
+    ),
+  );
+  // Not plain names: a direct URL or an editable install is undefined,
+  // and still names the service it pulls in.
+  for (const name of [
+    "foo @ https://example.invalid/foo.zip",
+    "-e git+https://example.invalid/x/dashscope",
+  ])
+    assert.ok(
+      edit((c) => declare(c, name)).includes("UNDEFINED_REQUIREMENTS"),
+      name,
+    );
+  assert.ok(
+    edit((c) =>
+      declare(c, "-e git+https://example.invalid/x/dashscope"),
+    ).includes("REMOTE_SERVICE"),
+  );
   assert.equal(normalizePackageName("Dash_Scope.x"), "dash-scope-x");
   for (const line of [
     "Dashscope",
@@ -391,6 +456,12 @@ test("roles are the contract's per operation, an ignored input is never claimed,
     /claims lastFrame, which its pipeline ignores/,
   );
   const unsupported = clone();
+  // The model index evidence must be the pinned version of it.
+  const stale = clone();
+  for (const e of stale.candidates[1]!.operations[1]!.ignoredInputs[0]!
+    .evidence)
+    if (e.path === "model_index.json") e.sha256 = "f".repeat(64);
+  assert.throws(() => parseEngineCandidates(stale), /cites no model setting/);
   unsupported.candidates[1]!.operations[1]!.ignoredInputs[0]!.evidence =
     unsupported.candidates[1]!.operations[1]!.ignoredInputs[0]!.evidence.filter(
       (e) => e.path !== "model_index.json",
@@ -411,5 +482,68 @@ test("roles are the contract's per operation, an ignored input is never claimed,
   assert.throws(
     () => parseEngineCandidates(noCancel),
     /no stated cancellation/,
+  );
+});
+
+test("licence expressions, wheel tags, loaders and cautions are parsed strictly", () => {
+  for (const [spdx, ok] of [
+    ["MIT", true],
+    ["(MIT OR Apache-2.0) AND BSD-3-Clause", true],
+    ["Apache-2.0 WITH LLVM-exception", true],
+    ["MIT WITH LLVM-exception", false],
+    ["Apache-2.0 WITH LLVM-exception WITH LLVM-exception", false],
+    ["WITH LLVM-exception", false],
+    ["MIT AND", false],
+    ["OR MIT", false],
+    ["MIT MIT", false],
+    ["(MIT", false],
+    ["mit", false],
+    ["MIT OR GPL-3.0-only", false],
+  ] as const)
+    assert.equal(packageLicenseAccepted(spdx), ok, spdx);
+  for (const [wheel, ok] of [
+    ["numpy-2.5.4-1-cp312-cp312-win_amd64.whl", true],
+    ["numpy-2.5.4-x1-cp312-cp312-win_amd64.whl", false],
+    ["numpy-2.5.4-py3-cp312-win_amd64.whl", false],
+    ["numpy-2.5.4-cp312-cp311-win_amd64.whl", false],
+    ["numpy-2.5.4-cp313-abi3-win_amd64.whl", false],
+    ["numpy-2.5.4-cp39-abi3-win_amd64.whl", true],
+    ["numpy-2.5.4-py2-none-any.whl", false],
+    ["numpy-2.5.4-py2.py3-none-any.whl", true],
+  ] as const)
+    assert.deepEqual(
+      edit((_c, m) => (pkg(m, "numpy").wheel = wheel)),
+      ok ? [] : ["UNDEFINED_REQUIREMENTS"],
+      wheel,
+    );
+  // Every inspected loader is the locked release, and loader evidence
+  // comes only from a pinned loader source.
+  assert.deepEqual(
+    edit((_c, m) => {
+      const t = pkg(m, "transformers");
+      t.version = "5.20.0";
+      t.wheel = t.wheel!.replace("5.21.0", "5.20.0");
+    }),
+    ["UNDEFINED_REQUIREMENTS"],
+  );
+  assert.deepEqual(
+    edit((c) => (c.runtime.loaders = [])),
+    ["UNSAFE_LOADING"],
+  );
+  assert.deepEqual(
+    edit((_c, m) => {
+      m.locks[LOCK]!.packages = m.locks[LOCK]!.packages.filter(
+        (p) => p.name !== "ftfy",
+      );
+    }),
+    ["UNDEFINED_REQUIREMENTS"],
+  );
+  // The normalized-licence caution is derived, not taken from the flag.
+  const m = clone();
+  for (const p of m.locks[LOCK]!.packages) p.spdxBasis = "metadata";
+  assert.ok(
+    selectionCautions(m.candidates[2]!, m.locks).includes(
+      "PACKAGE_LICENSE_NORMALIZED",
+    ),
   );
 });

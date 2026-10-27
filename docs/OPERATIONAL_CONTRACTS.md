@@ -261,8 +261,9 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
     - Diffusers' `pipeline_utils.py:1612` shows that pickle fallback is allowed unless `use_safetensors=True`.
     - `model_loading_utils.py` loads safetensors with `load_file`, and calls `torch.load` with `weights_only=True` otherwise.
     - Transformers 5.21.0's `from_pretrained` defaults to `weights_only=True`.
+    - Each loader outside the runtime's repository (Transformers at `dded62b`, whose `__init__.py` says `5.21.0`) is listed with its source commit, and must be the locked release.
   - **Model:** commit, licence evidence, and every loaded file with its size and LFS SHA-256 or git blob id.
-  - **Code:** the repository's code files.
+  - **Repository files:** every file path in the model repository at the commit, from its tree listing. Code and pickle files are derived from that list, never declared.
   - **Loading arguments a runner must pass:**
     - `trust_remote_code` off and no custom pipeline;
     - `use_safetensors=True`;
@@ -280,20 +281,25 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
   - `MISSING_LICENSE`: a model, runtime or package licence that is absent, or has no evidence.
   - `LICENSE_UNACCEPTED`: a licence outside the accepted lists.
     - Models and runtimes must be `apache-2.0`, `mit`, `bsd-2-clause` or `bsd-3-clause`.
-    - Packages must be permissive SPDX terms or MPL-2.0. Every term of an expression must be accepted, and only the `LLVM-exception` exception is allowed, so GPL and LGPL are refused.
+    - Packages must be permissive SPDX terms or MPL-2.0, in a well-formed expression. Every licence must be accepted, on both sides of an `OR` too, and the only exception allowed is `Apache-2.0 WITH LLVM-exception`. So GPL and LGPL are refused.
   - `GATED_MODEL`: a gated model.
   - `REMOTE_CODE`: `trust_remote_code`, a custom pipeline, or code in the model repository or its loaded files.
   - `NETWORK_LOAD`: a loader not limited to local files.
-  - `REMOTE_SERVICE`: a hosted-inference package or code path, such as `dashscope`, by any spelling, extras or marker.
+  - `REMOTE_SERVICE`: a hosted-inference package or code path, such as `dashscope`, under any PEP 503 spelling, or named anywhere in a requirement line (extras, `-e git+…`).
   - `UNDEFINED_REQUIREMENTS`, any of:
     - no lock;
-    - a declared requirement that is not exactly `==<release>`;
-    - a locked package that is a range, a local build, unhashed, duplicated, or not a wheel matching its name, version, CPython 3.12 and `win_amd64`;
-    - a Diffusers runtime whose locked diffusers differs from its tag, or whose lock lacks torch, transformers or safetensors.
-  - `UNSAFE_LOADING`: pickle weights by name, a `torch.load` without `weights_only`, a Diffusers loader without `use_safetensors=True` or without loader evidence, or a file whose stated format disagrees with its name.
+    - a declared requirement that is not a plain name pinned exactly as `==<release>` (a direct URL or an editable install is not);
+    - a locked package that is a range, a local build, unhashed, duplicated, or not a wheel matching its name, version, build tag, CPython 3.12 ABI (or `abi3`) and `win_amd64`;
+    - a Diffusers runtime whose locked diffusers differs from its tag, whose lock lacks torch, transformers, safetensors, sentencepiece or ftfy, or whose inspected loader differs from its locked release.
+  - `UNSAFE_LOADING`, any of:
+    - pickle anywhere in the repository;
+    - a loaded file that is not safetensors, JSON or tokenizer data, or is not in the repository list;
+    - a `torch.load` without `weights_only`;
+    - a Diffusers loader without `use_safetensors=True`, without loader evidence, or with evidence from a loader not listed;
+    - a file whose stated format disagrees with its name.
 - **Cautions:** these are shown, never blocking, and must be checked before release.
   - `MODEL_LICENSE_FROM_CARD_ONLY`: the licence comes from the model card, with no LICENSE file.
-  - `PACKAGE_LICENSE_NORMALIZED`: a prose or classifier licence name was mapped to SPDX terms, for example "BSD License" to BSD-3-Clause. It must be checked against the licence file.
+  - `PACKAGE_LICENSE_NORMALIZED`: a prose or classifier licence name was mapped to SPDX terms, for example "BSD License" to BSD-3-Clause. It is derived from the licence text, not from a flag, and must be checked against the licence file.
 - **Candidates:**
   - **Wan2.2 TI2V-5B, native repository (`1ea34ff`): blocked** (`REMOTE_SERVICE`, `UNDEFINED_REQUIREMENTS`, `UNSAFE_LOADING`).
     - `requirements.txt` gives ranges or no versions, and includes `dashscope` and `flash_attn`.
