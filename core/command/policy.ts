@@ -11,7 +11,7 @@ const GiB = 1024 * MiB;
 // breach fails qualification. A change needs a new policy version. A project
 // or client can never raise a limit.
 export const RESOURCE_POLICY = Object.freeze({
-  policy: "yamakan.resource-policy/v2",
+  policy: "yamakan.resource-policy/v3",
   enforced: Object.freeze({
     requestBytes: 2 * MiB,
     snapshotBytes: 2 * MiB,
@@ -31,6 +31,16 @@ export const RESOURCE_POLICY = Object.freeze({
     // Active constant-rate conversions per project, so exports are not starved.
     activeConversionsPerProject: 4,
     renderWallSeconds: 180,
+    // v3 (YU-026c): an export's wall-clock limit grows with its length,
+    // renderWallSeconds plus this per started output minute, to at most
+    // exportWallMaxSeconds (the conversion limit), so one export never
+    // holds the single render slot longer.
+    exportWallPerMinuteSeconds: 30,
+    exportWallMaxSeconds: 900,
+    // v3: an export is rendered in time segments when a single pass would
+    // composite more than this many clip chains (each holds decoded frames
+    // for the whole pass); each segment renders only the clips it shows.
+    exportSegmentChains: 32,
     // Reference preview (T8): cached frames and segments per project, and
     // the longest segment one request may render (5 s at 30 fps, about
     // 6.3 s at 24000/1001; still bounded by the wall-clock limit).
@@ -133,3 +143,14 @@ export const SCALE_PROFILES = Object.freeze({
     K: Object.freeze({ width: 3840, height: 2160 }),
   }),
 });
+
+/** The wall-clock limit of an export of this many ticks (policy v3). */
+export function exportWallSeconds(durationTicks: number) {
+  const p = RESOURCE_POLICY.enforced;
+  // 705,600,000 ticks a second (core/time.ts; this file imports nothing).
+  const minutes = Math.ceil(durationTicks / (705_600_000 * 60));
+  return Math.min(
+    p.exportWallMaxSeconds,
+    p.renderWallSeconds + p.exportWallPerMinuteSeconds * minutes,
+  );
+}

@@ -216,7 +216,7 @@ test("core failures map to stable, structured error codes", () => {
 });
 
 test("resource policy is versioned, frozen and content-addressed", () => {
-  assert.equal(RESOURCE_POLICY.policy, "yamakan.resource-policy/v2");
+  assert.equal(RESOURCE_POLICY.policy, "yamakan.resource-policy/v3");
   assert.equal(RESOURCE_POLICY_HASH, sha256Hex(canonicalJson(RESOURCE_POLICY)));
   assert.ok(Object.isFrozen(RESOURCE_POLICY.enforced));
   assert.throws(() => {

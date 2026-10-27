@@ -1,7 +1,7 @@
 {
   "format": "yamakan.editor-scale/v1",
   "profiles": "yamakan.scale-profiles/v1",
-  "policy": "yamakan.resource-policy/v2",
+  "policy": "yamakan.resource-policy/v3",
   "host": {
     "os": "win32 10.0.26300",
     "node": "v24.19.0",
@@ -20,43 +20,47 @@
       },
       "batchSaveMs": {
         "count": 1,
-        "max": 16,
-        "total": 16
+        "max": 11,
+        "total": 11
       },
       "clips": 24,
       "tracks": 4,
       "snapshotBytes": 7924,
       "snapshotLimitBytes": 2097152,
       "historyMs": {
-        "edit": 8,
-        "undo": 6,
-        "redo": 5
+        "edit": 6,
+        "undo": 4,
+        "redo": 4
       },
-      "reopenMs": 8,
+      "reopenMs": 7,
       "planCompileMs": 2,
       "planLayers": 24,
-      "referenceFrameMs": 470,
+      "referenceFrameMs": 529,
       "export": {
         "ok": true,
-        "ms": 48531,
+        "ms": 26716,
         "bytes": 750183,
-        "frames": 3600
+        "frames": 3600,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 250,
+        "peakShareOfLimit": 0.12214469909667969
       },
-      "renderWallLimitSeconds": 180,
+      "renderWallLimitSeconds": 240,
       "backup": {
-        "backupMs": 160,
-        "restoreMs": 69,
+        "backupMs": 136,
+        "restoreMs": 57,
         "backupBytes": 444227,
-        "editsDuringBackup": 8,
-        "editsTotal": 9,
+        "editsDuringBackup": 7,
+        "editsTotal": 8,
         "acknowledgedBefore": 5,
-        "lastAcknowledgedDuring": 13,
+        "lastAcknowledgedDuring": 12,
         "restoredRevision": 8,
         "restoredSnapshotIdentical": true,
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 1916851,
+      "workspaceBytes": 1863291,
       "editingQualified": true,
       "exportQualified": true
     },
@@ -72,8 +76,8 @@
       },
       "batchSaveMs": {
         "count": 4,
-        "max": 30,
-        "total": 74
+        "max": 29,
+        "total": 89
       },
       "clips": 200,
       "tracks": 16,
@@ -81,24 +85,27 @@
       "snapshotLimitBytes": 2097152,
       "historyMs": {
         "edit": 23,
-        "undo": 19,
-        "redo": 23
+        "undo": 13,
+        "redo": 12
       },
-      "reopenMs": 25,
-      "planCompileMs": 20,
+      "reopenMs": 17,
+      "planCompileMs": 3,
       "planLayers": 200,
-      "referenceFrameMs": 596,
+      "referenceFrameMs": 423,
       "export": {
         "ok": false,
-        "ms": 139601,
-        "code": "INTERNAL",
-        "message": "FFmpeg failed to render the timeline (exit 4294967284).",
-        "cause": "[libx264 @ 00000292962b82c0] Weighted P-Frames: Y:0.0% UV:0.0% | [libx264 @ 00000292962b82c0] kb/s:98.00 | Conversion failed!"
+        "ms": 479377,
+        "code": "LIMIT_EXCEEDED",
+        "message": "Render time limit exceeded.",
+        "cause": "",
+        "workers": 9,
+        "peakWorkerMiB": 569,
+        "peakShareOfLimit": 0.2777214050292969
       },
-      "renderWallLimitSeconds": 180,
+      "renderWallLimitSeconds": 480,
       "backup": {
-        "backupMs": 242,
-        "restoreMs": 93,
+        "backupMs": 162,
+        "restoreMs": 69,
         "backupBytes": 925607,
         "editsDuringBackup": 5,
         "editsTotal": 6,
@@ -109,7 +116,7 @@
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 2089779,
+      "workspaceBytes": 4277898,
       "editingQualified": true,
       "exportQualified": false
     },
@@ -125,46 +132,49 @@
       },
       "batchSaveMs": {
         "count": 2,
-        "max": 31,
-        "total": 41
+        "max": 17,
+        "total": 24
       },
       "clips": 100,
       "tracks": 2,
       "snapshotBytes": 29544,
       "snapshotLimitBytes": 2097152,
       "historyMs": {
-        "edit": 33,
-        "undo": 22,
-        "redo": 23
+        "edit": 21,
+        "undo": 20,
+        "redo": 20
       },
-      "reopenMs": 17,
+      "reopenMs": 15,
       "planCompileMs": 5,
       "planLayers": 100,
-      "referenceFrameMs": 497,
+      "referenceFrameMs": 370,
       "export": {
-        "ok": false,
-        "ms": 180216,
-        "code": "LIMIT_EXCEEDED",
-        "message": "Render time limit exceeded.",
-        "cause": ""
+        "ok": true,
+        "ms": 101575,
+        "bytes": 6782341,
+        "frames": 18000,
+        "segments": 4,
+        "workers": 10,
+        "peakWorkerMiB": 532,
+        "peakShareOfLimit": 0.2596893310546875
       },
-      "renderWallLimitSeconds": 180,
+      "renderWallLimitSeconds": 480,
       "backup": {
-        "backupMs": 2826,
-        "restoreMs": 406,
-        "backupBytes": 831399,
-        "editsDuringBackup": 21,
-        "editsTotal": 22,
+        "backupMs": 171,
+        "restoreMs": 75,
+        "backupBytes": 679846,
+        "editsDuringBackup": 4,
+        "editsTotal": 5,
         "acknowledgedBefore": 7,
-        "lastAcknowledgedDuring": 28,
-        "restoredRevision": 13,
+        "lastAcknowledgedDuring": 11,
+        "restoredRevision": 8,
         "restoredSnapshotIdentical": true,
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 2856635,
+      "workspaceBytes": 8324552,
       "editingQualified": true,
-      "exportQualified": false
+      "exportQualified": true
     }
   ],
   "refusals": [
@@ -216,13 +226,16 @@
     {
       "name": "probe-40-stills-3min",
       "export": {
-        "ok": false,
-        "ms": 180130,
-        "code": "LIMIT_EXCEEDED",
-        "message": "Render time limit exceeded.",
-        "cause": ""
+        "ok": true,
+        "ms": 30833,
+        "bytes": 2057051,
+        "frames": 5400,
+        "segments": 2,
+        "workers": 6,
+        "peakWorkerMiB": 476,
+        "peakShareOfLimit": 0.23246002197265625
       }
     }
   ],
-  "peakRssMiB": 170
+  "peakRssMiB": 139
 }

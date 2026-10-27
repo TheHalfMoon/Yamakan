@@ -604,10 +604,35 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - T and the 40-still probe reach the 180 s limit.
     - M (15 video tracks of 1080p stills) fails in FFmpeg after 140 s with exit −12 (ENOMEM), most likely the worker's 2 GiB; the cause is inferred.
   - **So export is qualified only at S.** T fits the limit on an idle host, but with no margin under load.
-- **Proposal (measured, not applied; a new policy version needs review).**
-  - Make the render wall-clock limit scale with the timeline's duration, for example 180 s plus 30 s per output minute at 1080p.
-  - Bound the layers composited at once, so that M's 15 stacked 1080p video tracks fit the worker's memory. Today they do not, so M stays edit-qualified and export-unqualified.
-  - A video-heavy project (many distinct video clips) still adds one input per clip, so its command line grows with the clip count.
+- **Segmented export (YU-026c, `yamakan.resource-policy/v3`).** An independent design review of the proposal found:
+  - M's failure was memory, not time. One FFmpeg pass holds a live chain with decoded frames for every clip (200 for M), and it exited with ENOMEM at 140 s, before the 180 s limit.
+  - So a longer limit alone could not help, and a bound on stacked layers adds nothing beyond the 16-track limit.
+
+  What changed:
+  - **Wall-clock limit.** An export's limit is `exportWallSeconds`: 180 s plus 30 s per started output minute, at most 900 s (the conversion limit). That is 480 s at ten minutes. Preview keeps 30 s.
+  - **Segments.** When one pass would composite more than `exportSegmentChains` (32) clip chains, `core/render/segments.ts` halves the timeline on frame boundaries until each window stays within the budget. Each window renders the picture alone, opening only the clips it shows, with absolute timestamps, so it draws what the single pass would.
+  - **Sound and join.** The sound is rendered once over the whole timeline, as M4A, so its fades, crossfades and two-pass loudness are measured once and there are no AAC seams. The concat demuxer then joins the pictures and muxes the sound by stream copy, with no second encode. The parts are removed after the join, and all passes share the export's one limit.
+  - **Tests** (`tests/render-segments.test.ts`):
+    - segments are contiguous, frame-aligned and cover the timeline exactly, at 30 and 24000/1001 fps;
+    - a multi-track timeline with footage, a still and sound, exported in forced segments, has exactly the single pass's 120 frames;
+    - every frame is at least 38 dB PSNR against the single pass (both are lossy and encoded in different GOPs);
+    - the decoded sound is bit-identical.
+  - **Recorded run** (policy v3, idle host). The worker peaks come from each run's Job Objects:
+
+    | Profile                | Export                   | Segments  | Peak worker memory            |
+    | ---------------------- | ------------------------ | --------- | ----------------------------- |
+    | S                      | 27 s                     | 1         | 12% of the limit              |
+    | T (ten minutes, 1080p) | 102 s, 18,000 frames     | 4         | 26%                           |
+    | 40-still probe         | 31 s                     | 2         | 23%                           |
+    | M                      | stops at the 480 s limit | 9 workers | 28% (no longer out of memory) |
+
+    A two-minute probe at M's density (40 clips, 16 tracks) also stops at its 240 s limit. M renders at over 2 s per output second, so ten minutes would need well over 1,200 s, more than the reviewed 900 s cap.
+
+  - **So export is qualified at S and T; M stays editing-qualified only.** Qualifying M needs a reviewed policy change, not done here:
+    - more filter threads per pass, since memory now has headroom;
+    - or segments rendered in parallel, which `activeRenderWorkers: 1` forbids.
+  - A video-heavy project still adds one input per clip in its window, so a window's command line grows with the clips it shows.
+
 - **Not measured.**
   - Browser timeline virtualization at M.
   - History depth and growth.
