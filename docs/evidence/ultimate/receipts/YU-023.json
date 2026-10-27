@@ -1,0 +1,86 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "4b6d652",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-023",
+  "objective": "Qualify SDR color metadata and bounded LUT import",
+  "branch": "feat/yu-023-color",
+  "mergedPr": 130,
+  "headCommit": "977098e",
+  "mergeCommit": "7cdfa86",
+  "flags": "LUT effects follow YAMAKAN_EFFECTS_OFF=1 and LUT imports YAMAKAN_AG_DOCS_OFF=1; the color policy itself has no switch (it corrects every render)",
+  "deviations": [
+    "Policy sdr-bt709-tv/v1 is frozen and applies to every render: each picture is converted once, explicitly, to BT.709 limited range (yuva420p) and the export is tagged; render compiler v2 and renderer version 4 re-key plans and preview caches once",
+    "Before (measured): renders were untagged and converted with FFmpeg's default BT.601 matrix; an HD player reading them as BT.709 showed pure green 253 as 214",
+    "Source color is recorded in the import probe record; assets imported earlier are read by the policy's file-type and height defaults, not re-probed",
+    "Refusal is an allow-list: HDR (PQ, HLG, Dolby Vision or HDR10 side data), BT.2020 and other gamuts, non-SDR transfers and unconvertible matrices; untagged HDR without side data cannot be detected",
+    "LUTs are a creative document kind (lut), parsed from .cube into a 16-bit table; the render writes canonical .cube text into its own folder; the original file is never used",
+    "tests/preview.test.ts compares reference and export frames by full-range BT.709 luma (the grayscale reduction weighed an RGB preview by BT.601), and the rendered-opacity tolerance is 8 levels (one BT.709 limited-range chroma step moves pure red by about 1.8 levels)"
+  ],
+  "performance": {
+    "method": "10 s of 1280x720 at 30 fps, median of 3 exports on Windows",
+    "plainExportMsPerFrame": { "before": 5.48, "after": 5.82 },
+    "lut33MsPerFrame": 49.14,
+    "note": "lut3d tetrahedral runs single-threaded because renders run filters on one thread by design; threading it is a follow-up"
+  },
+  "tests": {
+    "files": [
+      "tests/color-pipeline.test.ts",
+      "tests/preview.test.ts",
+      "tests/animation-complexity.test.ts"
+    ],
+    "result": "8 color tests: an 8-patch chart round-trips within 5 levels from an RGB still, limited-range BT.709, full-range and untagged SD video, in export, read as BT.709, and in the reference preview, tagged bt709/tv; PQ, HLG, BT.2020, linear, P3 and YCgCo (tags in the H.264 VUI) refused; HDR side data detected; tampered recorded tags map only to policy enums; per-layer policy; a real JPEG and an asset without recorded color; identity and inverting LUTs in export and preview, canonical round trip; a LUT keeps a half-transparent overlay's alpha; the editor's transform keeps the LUT; undo; malformed, huge, include-carrying, out-of-range and 1D LUTs, the generic commit, foreign, stale and double LUT effects and in-use re-import refused"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review, applying Alibaba Open Code Review 1.13.3 rules obtained locally with `ocr delegate rule` (no LLM, no cloud)",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 1,
+        "shouldFixApplied": 7,
+        "finalRound": "no must-fix; one should-fix (an unescaped regex) applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 3,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used). Its rule set was applied through delegation mode instead"
+    }
+  ],
+  "ciNotes": [
+    "Linux CI's FFmpeg rounded the opacity ramp 6.1 levels off; fixed by the documented 8-level tolerance in 977098e",
+    "The Qodo bot posted only a billing notice (no review); nothing to address"
+  ],
+  "postMergeVerification": {
+    "main": "7cdfa86",
+    "ci": "PR exact head 977098e: qualify, qualify-windows-r8, otio-oracle success; push run on 7cdfa86: success",
+    "windows": "detached 7cdfa86: typecheck, lint, format, provenance, brand, build pass; npm test 661/664 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No HDR or wide-gamut support (refused); untagged HDR without side data is not detected",
+    "LUTs cost about 49 ms per 720p frame single-threaded",
+    "The interactive canvas is not color managed and applies no LUT (parity notice)",
+    "Not covered by tests: 10-bit sources, transform/opacity/dissolve combined with color, OTIO LUT round trip",
+    "Full OCR LLM review blocked (see reviews)"
+  ]
+}
