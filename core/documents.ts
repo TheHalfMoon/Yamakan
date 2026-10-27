@@ -10,6 +10,7 @@ import { StudioDocumentSchema, parseStudioCanvasJson } from "./studio.ts";
 import type { StudioDocument } from "./studio.ts";
 import { parseScene3D } from "./scene3d.ts";
 import { STORY_LIMITS, validateReferencePack, validateStory } from "./story.ts";
+import { CAPTION_LIMITS, validateCaptions } from "./captions.ts";
 import { DOCUMENT_LIMITS, DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
 import type { DocumentKind } from "./document-ref.ts";
 
@@ -60,17 +61,14 @@ const tooDeep = () =>
     "LIMIT_EXCEEDED",
     `Document nesting exceeds depth ${DOCUMENT_LIMITS.depth}.`,
   );
-const tooMany = () =>
-  new CommandError(
-    "LIMIT_EXCEEDED",
-    `Document exceeds ${DOCUMENT_LIMITS.nodes} JSON nodes.`,
-  );
+const tooMany = (limit: number) =>
+  new CommandError("LIMIT_EXCEEDED", `Document exceeds ${limit} JSON nodes.`);
 
 // One linear pass over the text before JSON.parse, so a hostile document
 // is refused without building it: nesting depth exactly, and an upper bound
 // on values (every value after the first follows a comma, colon or opening
 // bracket, counted outside strings; object members count twice).
-function prescan(text: string) {
+function prescan(text: string, nodes: number) {
   let depth = 0;
   let tokens = 1;
   let inString = false;
@@ -88,16 +86,16 @@ function prescan(text: string) {
       tokens++;
     } else if (c === 0x5d || c === 0x7d) depth--;
     else if (c === 0x2c || c === 0x3a) tokens++;
-    if (tokens > 2 * DOCUMENT_LIMITS.nodes) throw tooMany();
+    if (tokens > 2 * nodes) throw tooMany(nodes);
   }
 }
 
 // Exact bounds on the parsed value, counting each value as it is reached.
-function assertShape(value: unknown) {
+function assertShape(value: unknown, limit: number) {
   const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
   let nodes = 1;
   const push = (child: unknown, depth: number) => {
-    if (++nodes > DOCUMENT_LIMITS.nodes) throw tooMany();
+    if (++nodes > limit) throw tooMany(limit);
     stack.push({ value: child, depth });
   };
   while (stack.length) {
@@ -119,7 +117,11 @@ function assertShape(value: unknown) {
   }
 }
 
-function parseBounded(bytes: Uint8Array, what: string): unknown {
+function parseBounded(
+  bytes: Uint8Array,
+  what: string,
+  nodes: number = DOCUMENT_LIMITS.nodes,
+): unknown {
   if (bytes.byteLength > DOCUMENT_LIMITS.documentBytes)
     throw new CommandError(
       "LIMIT_EXCEEDED",
@@ -131,14 +133,14 @@ function parseBounded(bytes: Uint8Array, what: string): unknown {
   } catch {
     throw new CommandError("VALIDATION", `${what} is not valid UTF-8.`);
   }
-  prescan(text);
+  prescan(text, nodes);
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
     throw new CommandError("VALIDATION", `${what} is not valid JSON.`);
   }
-  assertShape(value);
+  assertShape(value, nodes);
   return value;
 }
 
@@ -266,7 +268,12 @@ export function validateDocument(
       "VALIDATION",
       `Unsupported ${kind} document schema version ${schemaVersion}.`,
     );
-  const value = parseBounded(raw, "Document");
+  // A caption track's cues need more JSON nodes than other kinds (YU-024).
+  const value = parseBounded(
+    raw,
+    "Document",
+    kind === "captions" ? CAPTION_LIMITS.nodes : DOCUMENT_LIMITS.nodes,
+  );
   const { content, assetIds, objectDigests } =
     kind === "studio"
       ? validateStudio(value)
@@ -274,13 +281,18 @@ export function validateDocument(
         ? validateScene(value)
         : kind === "story"
           ? validateStory(value)
-          : validateReferencePack(value);
+          : kind === "captions"
+            ? validateCaptions(value)
+            : validateReferencePack(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
   // Stories and reference packs have their own, smaller ceiling (YU-031).
+  // Caption tracks too (YU-024).
   const limit =
     kind === "story" || kind === "referencePack"
       ? STORY_LIMITS.documentBytes
-      : DOCUMENT_LIMITS.documentBytes;
+      : kind === "captions"
+        ? CAPTION_LIMITS.documentBytes
+        : DOCUMENT_LIMITS.documentBytes;
   if (bytes.byteLength > limit)
     throw new CommandError(
       "LIMIT_EXCEEDED",

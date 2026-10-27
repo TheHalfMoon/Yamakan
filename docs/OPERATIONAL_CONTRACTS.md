@@ -384,3 +384,51 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Values.** Opacity keys are 0–1 and volume keys 0–16; a key outside is refused, and a curve's overshoot between keys is clamped to the range. A value that cannot be computed is refused, never replaced by a default.
 - **Refused before rendering** (when the plan is compiled, so preview and export alike), naming the clip: animation of a channel the renderer does not draw (transform paths; `CAPABILITY_UNAVAILABLE`, so a project that stored such keys must remove them to preview or export), two keys of a channel at one time, keys out of range (`VALIDATION`), and a curve or plan past its cap. Each clip is checked for the channels it draws (opacity on a picture, volume on a sound), and a channel's check is remembered, so repeated previews do not repeat it. Preview windows are taken on the clip's own frame grid, so a window shows the frames the export shows.
 - **Rollback.** `YAMAKAN_ANIMATION_COMPILER=1` makes new plans use the per-frame compiler (version 1) again, under the same range, clamp and frame-grid rules (it is per-frame sampling without merging; volume keys outside 0–16 and opacity keys outside 0–1, which rendered before YU-022, are refused under either version). The plan names the compiler it was rendered with, and an animated plan that names none is rendered with version 1. A first compile of a very large animated timeline samples up to 600,000 frames once; repeated previews reuse the result. Transform animation is a separate, later task.
+
+## Caption tracks (YU-024)
+
+- **Document.** A caption track is a creative document of its project (`captions`, schema 1). It holds:
+  - a name, a language tag and a burn-in setting;
+  - the imported file's text as received, decoded as UTF-8, with its SHA-256, which is checked;
+  - timed cues: id, start and end in whole milliseconds, plain text, and the original index and timestamps.
+
+  Cues are in time order and never overlap. A cue's text has no empty lines and no outer spaces.
+
+- **Limits.**
+  - At most 2,000 cues, each up to 500 characters and 4 lines.
+  - An imported file of at most 512 KiB, with no cue reaching past ten hours.
+  - The canonical document is at most 2 MiB and 20,000 JSON nodes.
+- **Import.**
+  - SRT (`hh:mm:ss,mmm`) and WebVTT (`[hh:]mm:ss.mmm`, header, NOTE blocks) parse to exact millisecond times.
+  - These are refused, naming the line they are on:
+    - a malformed timestamp or cue number, or a timing line over 256 characters;
+    - a cue that ends before it starts, or cues that overlap;
+    - SRT cue settings;
+    - a cue with no blank line after the WebVTT header;
+    - WebVTT STYLE and REGION blocks, which can load other files;
+    - ASS override markup (`{\…}`), also when a tag hides it;
+    - unknown tags;
+    - empty or oversized cues;
+    - a file without cues.
+  - Simple formatting tags are removed and their text kept: `<b>`, `<i>`, `<u>`, `<s>`, `<c.x>`, `<v Name>`, `<lang x>`, `<ruby>`, `<rt>`, `<font …>` and inline timestamps. `<br>` becomes a line break.
+  - Entities are decoded after tags are checked, so an escaped tag stays text. Lines left empty are dropped.
+  - Cue ids are derived from the file, so a retried import replays instead of creating a second track.
+- **Commands.**
+  - `yamakan.captions.import`.
+  - `yamakan.captions.save` changes cues, name, language or burn-in, and keeps the imported file.
+  - `yamakan.captions.split` splits a cue at a whole-millisecond instant inside it. Each part can get its own text, and both keep the original cue's source.
+  - `yamakan.captions.export` returns SRT or WebVTT text with times to the millisecond. Markup in cue text is written as entities in both formats, and a word joiner breaks `{\`. An export therefore reads back as the same text, never as a tag, a timing line or ASS markup.
+  - Each write is a new revision, with compare-and-swap on the revision and on the track's content hash. The editor's draft follows it.
+- **Captions panel** (Finish workspace).
+  - It imports a file in a chosen language, edits cue times and text, splits a cue at the playhead, turns burn-in on, and downloads the track.
+  - While cue edits are unsaved, other caption changes wait. Edits made from an older version of the track are set aside.
+- **Burn-in.**
+  - A track with burn-in on is drawn above every track through the title compiler (escaped plain text, pinned fonts), the same way in the reference preview and the export. Its cues are part of the render plan and its hash.
+  - Saving a burned-in track with a character the pinned font cannot draw is refused, naming the cue.
+  - Each burned-in track is its own layer, in the titles' style and place, so a caption and a title clip shown at the same time overlap.
+  - Cues after the timeline's end are not shown.
+- **Arabic quality.** Automated tests cover timing, escaping, mixed-script round trips and preview/export agreement. Reading quality needs a native reviewer, using the unsigned H1 packet in `docs/evidence/h1-arabic-review-packet/captions/`.
+- **Rollback.**
+  - The AG-DOCS switch turns caption writes off. Stored tracks, with their original files, stay readable and keep rendering.
+  - The workspace database moves to version 14. Its document tables accept any kind the application validates, so new kinds need no further rebuild.
+  - An earlier build refuses a version 14 workspace, so going back needs a backup from before the upgrade.

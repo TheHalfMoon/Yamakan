@@ -50,6 +50,18 @@ import {
   studioCapability,
 } from "../studio.ts";
 import { ConsentPurposeSchema } from "../identity.ts";
+import {
+  CAPTION_LIMITS,
+  CaptionDocumentSchema,
+  CaptionFormat,
+  assertBurnInGlyphs,
+  exportCaptions,
+  importedCueId,
+  storedCaptions,
+  parseCaptions,
+  splitCue,
+  type CaptionDocument,
+} from "../captions.ts";
 import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
   ReferencePackSchema,
@@ -265,6 +277,12 @@ export const commands = {
           "VALIDATION",
           "Stories and reference packs are saved with yamakan.story.save and yamakan.pack.save.",
         );
+      // Caption tracks too: their commands check burn-in glyphs (YU-024).
+      if (a.kind === "captions")
+        throw new CommandError(
+          "VALIDATION",
+          "Caption tracks are saved with the yamakan.captions commands.",
+        );
       const project = await store.commitDocument(
         { ...a, principalId: principal.id },
         receipt,
@@ -430,6 +448,119 @@ export const commands = {
         },
       );
     },
+  }),
+  "yamakan.captions.import": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Import an SRT or WebVTT file's text as a caption track (a new creative document, or a new version of one), kept verbatim beside its timed cues. Malformed timing, overlapping cues, styling/region blocks and markup are refused with their line.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex.nullable(),
+        name: z.string().trim().min(1).max(120),
+        language: CaptionDocumentSchema.shape.language,
+        format: CaptionFormat,
+        text: z.string().max(CAPTION_LIMITS.sourceBytes),
+        burnIn: z.boolean().default(false),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const sha256 = sha256Hex(Buffer.from(a.text, "utf8"));
+      const doc: CaptionDocument = CaptionDocumentSchema.parse({
+        format: "yamakan.captions",
+        formatVersion: 1,
+        name: a.name,
+        language: a.language,
+        burnIn: a.burnIn,
+        source: { format: a.format, sha256, text: a.text },
+        // Cue ids follow from the file, so a retried import replays.
+        cues: parseCaptions(a.text, a.format, (n) => importedCueId(sha256, n)),
+      });
+      return commitCaptions(store, principal.id, receipt, a, doc);
+    },
+  }),
+  "yamakan.captions.save": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Save a caption track's edited cues, name, language or burn-in setting as a new version; the imported file it came from is kept. Compare-and-swap on expectedRevision and expectedContentHash.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex,
+        name: z.string().trim().min(1).max(120).optional(),
+        language: CaptionDocumentSchema.shape.language.optional(),
+        burnIn: z.boolean().optional(),
+        cues: CaptionDocumentSchema.shape.cues.optional(),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const current = readCaptions(store, a.projectId, a.documentId);
+      const doc = CaptionDocumentSchema.parse({
+        ...current,
+        ...(a.name !== undefined ? { name: a.name } : {}),
+        ...(a.language !== undefined ? { language: a.language } : {}),
+        ...(a.burnIn !== undefined ? { burnIn: a.burnIn } : {}),
+        ...(a.cues !== undefined ? { cues: a.cues } : {}),
+      });
+      return commitCaptions(store, principal.id, receipt, a, doc);
+    },
+  }),
+  "yamakan.captions.split": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Split one cue of a caption track at an instant inside it (each part may get its own text) as a new version.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex,
+        cueId: Id,
+        atTicks: Ticks,
+        newCueId: Id,
+        texts: z
+          .object({
+            before: z.string().max(CAPTION_LIMITS.cueText),
+            after: z.string().max(CAPTION_LIMITS.cueText),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const current = readCaptions(store, a.projectId, a.documentId);
+      const doc = splitCue(current, a.cueId, a.atTicks, a.newCueId, a.texts);
+      return commitCaptions(store, principal.id, receipt, a, doc);
+    },
+  }),
+  "yamakan.captions.export": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Export a caption track of the current revision as SRT or WebVTT text (markup-free; times to the millisecond).",
+    input: z
+      .object({ projectId: Id, documentId: Id, format: CaptionFormat })
+      .strict(),
+    run: ({ store }, a) => ({
+      format: a.format,
+      text: exportCaptions(
+        readCaptions(store, a.projectId, a.documentId),
+        a.format,
+      ),
+    }),
   }),
   "yamakan.project.history": define({
     scope: "project:read",
@@ -1545,4 +1676,57 @@ export function catalog() {
     legacyAlias: name.replace(/^yamakan\./, LEGACY_PREFIX),
     inputSchema: z.toJSONSchema(c.input),
   }));
+}
+
+// A caption track of the current revision (YU-024).
+function readCaptions(
+  store: ProjectStore,
+  projectId: string,
+  documentId: string,
+): CaptionDocument {
+  const { ref, bytes } = store.getDocument(projectId, documentId);
+  if (ref.kind !== "captions")
+    throw new CommandError(
+      "VALIDATION",
+      "This document is not a caption track.",
+    );
+  // A stored track that no longer reads is damage, not a client error.
+  return storedCaptions(ref.contentHash, () => bytes);
+}
+
+// Commits a caption track as a new revision (compare-and-swap on the
+// revision and the track's content hash).
+async function commitCaptions(
+  store: ProjectStore,
+  principalId: string,
+  receipt: RequestReceipt | undefined,
+  a: {
+    projectId: string;
+    expectedRevision: number;
+    documentId: string;
+    expectedContentHash: string | null;
+  },
+  doc: CaptionDocument,
+) {
+  // A burned-in track must be drawable with the pinned font (named cue).
+  await assertBurnInGlyphs(doc);
+  const project = await store.commitDocument(
+    {
+      projectId: a.projectId,
+      expectedRevision: a.expectedRevision,
+      documentId: a.documentId,
+      kind: "captions",
+      schemaVersion: 1,
+      expectedContentHash: a.expectedContentHash,
+      source: { bytes: Buffer.from(JSON.stringify(doc), "utf8") },
+      principalId,
+    },
+    receipt,
+  );
+  return {
+    project,
+    document: store
+      .listDocuments(a.projectId)
+      .find((d) => d.id === a.documentId),
+  };
 }

@@ -640,7 +640,10 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
       db.exec(
         `CREATE TABLE ${table}_old ${sql
           .slice(sql.indexOf("("))
-          .replace(", 'story', 'referencePack'", "")}`,
+          .replace(
+            "CHECK(length(kind) BETWEEN 1 AND 32 AND kind NOT GLOB '*[^A-Za-z]*')",
+            "CHECK(kind IN ('studio', 'cinemaScene'))",
+          )}`,
       );
       db.exec(`INSERT INTO ${table}_old SELECT * FROM ${table}`);
       db.exec(`DROP TABLE ${table}`);
@@ -705,7 +708,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   const upgraded = new ProjectStore(c.root);
   handles.push(upgraded);
   await upgraded.initialize();
-  assert.equal(read("PRAGMA user_version").user_version, 13);
+  assert.equal(read("PRAGMA user_version").user_version, 14);
   const db = new DatabaseSync(file, { readOnly: true });
   try {
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);

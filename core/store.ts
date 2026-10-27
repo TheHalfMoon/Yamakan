@@ -170,7 +170,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 13;
+export const WORKSPACE_SCHEMA_VERSION = 14;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -418,6 +418,47 @@ CREATE TABLE director_requests(
 // its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
 // rebuilt with the same columns and rows (foreign keys are checked after,
 // in the same transaction).
+// Caption tracks (YU-024): the document tables accept any kind name the
+// application validates (DocumentKind), so a new kind needs no further
+// rebuild. Same columns and rows; foreign keys checked after.
+const SCHEMA_V14 = `
+CREATE TABLE creative_documents_v14(
+  hash TEXT PRIMARY KEY CHECK(length(hash) = 64),
+  kind TEXT NOT NULL CHECK(length(kind) BETWEEN 1 AND 32 AND kind NOT GLOB '*[^A-Za-z]*'),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  asset_ids TEXT NOT NULL,
+  bytes BLOB NOT NULL,
+  byte_length INTEGER NOT NULL CHECK(byte_length = length(bytes)),
+  object_digests TEXT NOT NULL DEFAULT '[]'
+) STRICT;
+INSERT INTO creative_documents_v14(hash, kind, schema_version, asset_ids, bytes, byte_length, object_digests)
+  SELECT hash, kind, schema_version, asset_ids, bytes, byte_length, object_digests FROM creative_documents;
+DROP TABLE creative_documents;
+ALTER TABLE creative_documents_v14 RENAME TO creative_documents;
+CREATE TABLE document_uploads_v14(
+  id TEXT PRIMARY KEY CHECK(length(id) = 36),
+  project_id TEXT NOT NULL,
+  principal_id TEXT NOT NULL,
+  request_id TEXT NOT NULL CHECK(length(request_id) BETWEEN 1 AND 128),
+  request_digest TEXT NOT NULL CHECK(length(request_digest) = 64),
+  kind TEXT NOT NULL CHECK(length(kind) BETWEEN 1 AND 32 AND kind NOT GLOB '*[^A-Za-z]*'),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  declared_bytes INTEGER NOT NULL CHECK(declared_bytes > 0),
+  body_sha256 TEXT NOT NULL CHECK(length(body_sha256) = 64),
+  state TEXT NOT NULL CHECK(state IN ('receiving', 'sealed', 'consumed')),
+  content_hash TEXT CHECK(content_hash IS NULL OR length(content_hash) = 64),
+  asset_ids TEXT,
+  bytes BLOB,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  consumed_revision INTEGER,
+  object_digests TEXT,
+  UNIQUE(principal_id, project_id, request_id)
+) STRICT;
+INSERT INTO document_uploads_v14 SELECT id, project_id, principal_id, request_id, request_digest, kind, schema_version, declared_bytes, body_sha256, state, content_hash, asset_ids, bytes, created_at, expires_at, consumed_revision, object_digests FROM document_uploads;
+DROP TABLE document_uploads;
+ALTER TABLE document_uploads_v14 RENAME TO document_uploads;
+`;
 const SCHEMA_V13 = `
 CREATE TABLE creative_documents_v13(
   hash TEXT PRIMARY KEY CHECK(length(hash) = 64),
@@ -742,11 +783,12 @@ export class ProjectStore {
         SCHEMA_V11,
         SCHEMA_V12,
         SCHEMA_V13,
+        SCHEMA_V14,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
       // every reference before committing.
-      const rebuilds = new Set([12]);
+      const rebuilds = new Set([12, 13]);
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
         const rebuild = rebuilds.has(v);
@@ -770,8 +812,15 @@ export class ProjectStore {
           db.exec(steps[v]);
           if (
             rebuild &&
-            db.prepare("PRAGMA foreign_key_check(snapshot_document_refs)").all()
-              .length
+            ["snapshot_document_refs", "story_document_versions"].some(
+              (table) =>
+                db
+                  .prepare(
+                    "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = ?",
+                  )
+                  .get(table) &&
+                db.prepare(`PRAGMA foreign_key_check(${table})`).all().length,
+            )
           )
             throw new CommandError(
               "RECOVERY_REQUIRED",
@@ -1331,6 +1380,24 @@ export class ProjectStore {
       );
     return { ref, bytes };
   }
+  /**
+   * A document named by a revision's own reference (its content hash), for
+   * rendering that revision (YU-024 captions): verified against its hash.
+   */
+  documentBytes(ref: DocumentRef): Buffer {
+    const row = this.#database
+      .prepare(
+        "SELECT bytes FROM creative_documents WHERE hash = ? AND kind = ?",
+      )
+      .get(ref.contentHash, ref.kind) as { bytes: Uint8Array } | undefined;
+    const bytes = row ? Buffer.from(row.bytes) : null;
+    if (!bytes || sha256Hex(bytes) !== ref.contentHash)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "Stored document does not match its hash.",
+      );
+    return bytes;
+  }
   /** Recorded migrations of one legacy source (YU-012), oldest first. */
   legacyMigrations(sourceKind: "cinema-sidecar", sourceName: string) {
     return (
@@ -1656,11 +1723,12 @@ export class ProjectStore {
   ): { reserved: string } | { receipt: StagedDocumentReceipt } {
     Id.parse(input.projectId);
     const kind = DocumentKind.parse(input.kind);
-    // Stories and packs are small and saved inline by their own commands.
-    if (kind === "story" || kind === "referencePack")
+    // Stories, packs and caption tracks are saved inline by their own
+    // commands (YU-031, YU-024).
+    if (kind === "story" || kind === "referencePack" || kind === "captions")
       throw new CommandError(
         "VALIDATION",
-        "Stories and reference packs are not staged; save them with their commands.",
+        "Stories, reference packs and caption tracks are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,

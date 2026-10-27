@@ -125,6 +125,13 @@ export type CompiledPlan = { plan: RenderPlan; ass: string | null };
 export type CompilePlanOptions = {
   /** When true and LOUDNORM_ENABLED, attach the default loudnorm target. */
   normalizeLoudness?: boolean;
+  /**
+   * YU-024: the revision's burned-in caption tracks, each a list of cues in
+   * time order (read from its caption documents by the caller). They are
+   * drawn above every track, through the title compiler, within the
+   * timeline's duration.
+   */
+  captions?: { startTicks: number; endTicks: number; text: string }[][];
 };
 
 // Compiles the plan for `project` at its revision. `snapshotHash` is the
@@ -288,6 +295,19 @@ export function compilePlan(
     pixelFormat: "yuv420p",
     fit: "contain",
   };
+  // Burned-in captions (YU-024): above every track, each track on its own
+  // layer, cut to the timeline (a cue after its end is not shown).
+  (options.captions ?? []).forEach((track, n) => {
+    for (const cue of track) {
+      if (cue.startTicks >= durationTicks) break;
+      cues.push({
+        layer: project.tracks.length + n,
+        startTicks: cue.startTicks,
+        endTicks: Math.min(cue.endTicks, durationTicks),
+        text: cue.text,
+      });
+    }
+  });
   const compiled = cues.length
     ? compileTitles(cues, profile.width, profile.height, fonts)
     : null;
