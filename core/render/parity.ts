@@ -41,7 +41,9 @@ export type Approximation =
   // Clip animation (opacity, transform) is not drawn.
   | "animation"
   // A transform's crop is not drawn (scale and position are; YU-020).
-  | "effectCrop";
+  | "effectCrop"
+  // A dissolve is shown as a cut (YU-021).
+  | "transition";
 
 export type PreviewParity = {
   version: typeof PREVIEW_PARITY_VERSION;
@@ -112,6 +114,7 @@ export function previewParity(p: Project): PreviewParity {
         transform.crop.bottom)
     )
       add("effectCrop", c.id);
+    if (c.transition) add("transition", c.id);
   }
   const approximations = [...found].map(([kind, clipIds]) => ({
     kind,

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 import { ClipEffectsSchema } from "./effects/registry.ts";
+import { EditTransitionSchema } from "./transitions.ts";
 import { FLICKS_PER_SECOND, framesToTicks, type Rational } from "./time.ts";
 const { timelineFrames, mediaDimension } = RESOURCE_POLICY.enforced;
 export const Id = z.uuid();
@@ -109,6 +110,8 @@ export const ClipSchema = z
     animation: ClipAnimationSchema.optional(),
     // YU-020: versioned effect stack; absent when unused.
     effects: ClipEffectsSchema.optional(),
+    // YU-021: the dissolve into this clip, in frames.
+    transition: EditTransitionSchema.optional(),
   })
   .strict();
 const ShotSchema = z

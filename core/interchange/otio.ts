@@ -5,6 +5,7 @@ import type { CanonicalProject } from "../canonical.ts";
 import { FLICKS_PER_SECOND } from "../time.ts";
 import { CommandError } from "../command/errors.ts";
 import { ClipEffectsSchema, type ClipEffects } from "../effects/registry.ts";
+import { TransitionSchema, type Transition } from "../transitions.ts";
 
 export const OTIO_RATE = FLICKS_PER_SECOND;
 export const OTIO_LIMITS = Object.freeze({
@@ -79,6 +80,8 @@ export type OtioProposalClip = {
   remoteUrlIgnored: boolean;
   /** The clip's effects (YU-020), carried as Yamakan metadata. */
   effects?: ClipEffects;
+  /** The dissolve into the clip (YU-021), carried as Yamakan metadata. */
+  transition?: Transition;
 };
 
 export type OtioProposal = {
@@ -140,6 +143,9 @@ export function toOtio(project: CanonicalProject): TimelineJson {
             // metadata so a round trip keeps it (YU-020).
             ...(c.effects
               ? { yamakan_effects: JSON.stringify(c.effects) }
+              : {}),
+            ...(c.transition
+              ? { yamakan_transition: JSON.stringify(c.transition) }
               : {}),
           },
         };
@@ -326,8 +332,36 @@ export function fromOtio(
               )
             : null;
         if (!parsedEffects?.success)
-          throw new CommandError("VALIDATION", "OTIO clip effects are invalid.");
+          throw new CommandError(
+            "VALIDATION",
+            "OTIO clip effects are invalid.",
+          );
         effects = parsedEffects.data;
+      }
+      const transitionText = (
+        clipChild.metadata as Record<string, unknown> | undefined
+      )?.yamakan_transition;
+      let transition: Transition | undefined;
+      if (transitionText !== undefined) {
+        const parsed =
+          typeof transitionText === "string" &&
+          transitionText.length <= OTIO_LIMITS.maxString
+            ? TransitionSchema.safeParse(
+                (() => {
+                  try {
+                    return JSON.parse(transitionText);
+                  } catch {
+                    return null;
+                  }
+                })(),
+              )
+            : null;
+        if (!parsed?.success)
+          throw new CommandError(
+            "VALIDATION",
+            "OTIO clip transition is invalid.",
+          );
+        transition = parsed.data;
       }
       clips.push({
         trackKind,
@@ -342,6 +376,7 @@ export function fromOtio(
         assetId,
         remoteUrlIgnored,
         ...(effects ? { effects } : {}),
+        ...(transition ? { transition } : {}),
       });
       timelineCursor = startTicks + duration;
     }

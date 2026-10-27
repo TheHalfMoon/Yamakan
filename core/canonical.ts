@@ -22,6 +22,7 @@ import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
 import { ClipEffectsSchema, isIdentityStack } from "./effects/registry.ts";
+import { TransitionSchema, transitionProblem } from "./transitions.ts";
 import { DOCUMENT_LIMITS, DocumentRefSchema } from "./document-ref.ts";
 import type { DocumentRef } from "./document-ref.ts";
 import { canonicalJson } from "./hash/canonical.ts";
@@ -36,20 +37,27 @@ const DOCUMENTLESS_FORMAT_VERSION = 4;
 // v6, so a build without effects refuses it as a newer format (recovery
 // guidance) instead of reading it with its effects dropped.
 export const EFFECTS_FORMAT_VERSION = 6;
+// v7 (YU-021) adds clip transitions, under the same rule: only a project
+// with a transition is written as v7.
+export const TRANSITIONS_FORMAT_VERSION = 7;
 // The newest version this build reads.
-export const LATEST_FORMAT_VERSION = EFFECTS_FORMAT_VERSION;
+export const LATEST_FORMAT_VERSION = TRANSITIONS_FORMAT_VERSION;
 const hasEffects = (p: { clips: { effects?: unknown }[] }) =>
   p.clips.some((c) => c.effects !== undefined);
+const hasTransitions = (p: { clips: { transition?: unknown }[] }) =>
+  p.clips.some((c) => c.transition !== undefined);
 // The version a project is written as: the oldest that holds it.
 const versionFor = (p: {
-  clips: { effects?: unknown }[];
+  clips: { effects?: unknown; transition?: unknown }[];
   documents: unknown[];
 }) =>
-  hasEffects(p)
-    ? EFFECTS_FORMAT_VERSION
-    : p.documents.length
-      ? FORMAT_VERSION
-      : DOCUMENTLESS_FORMAT_VERSION;
+  hasTransitions(p)
+    ? TRANSITIONS_FORMAT_VERSION
+    : hasEffects(p)
+      ? EFFECTS_FORMAT_VERSION
+      : p.documents.length
+        ? FORMAT_VERSION
+        : DOCUMENTLESS_FORMAT_VERSION;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -128,6 +136,9 @@ const CanonicalClip = z
     // YU-020: versioned effect stack (transform/crop). Absent when unused,
     // so projects without effects keep their bytes.
     effects: ClipEffectsSchema.optional(),
+    // YU-021: the dissolve from the previous clip on its track into this
+    // one (core/transitions.ts). Absent when the cut is a plain cut.
+    transition: TransitionSchema.optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -162,6 +173,7 @@ const ProjectBody = z
       z.literal(DOCUMENTLESS_FORMAT_VERSION),
       z.literal(FORMAT_VERSION),
       z.literal(EFFECTS_FORMAT_VERSION),
+      z.literal(TRANSITIONS_FORMAT_VERSION),
     ]),
     id: Id,
     name: z.string().min(1).max(120),
@@ -294,6 +306,10 @@ const ProjectBody = z
           fail("Clip extends beyond its source.");
       }
     }
+    for (const c of p.clips) {
+      const problem = transitionProblem(p, c);
+      if (problem) fail(problem);
+    }
     for (const track of p.tracks) {
       const onTrack = p.clips.filter((c) => c.trackId === track.id);
       const elements = onTrack.map((c) => ({
@@ -346,9 +362,9 @@ export const CanonicalProjectSchema = z.preprocess((value, ctx) => {
 // One parsed form: version 4 without documents, version 5 with them.
 function normalizeVersion<
   T extends {
-    formatVersion: 4 | 5 | 6;
+    formatVersion: 4 | 5 | 6 | 7;
     documents: unknown[];
-    clips: { effects?: unknown }[];
+    clips: { effects?: unknown; transition?: unknown }[];
   },
 >(p: T): T {
   return { ...p, formatVersion: versionFor(p) };
@@ -598,6 +614,15 @@ export function fromEditView(
         ...(c.effects && !isIdentityStack(c.effects)
           ? { effects: c.effects }
           : {}),
+        ...(c.transition
+          ? {
+              transition: {
+                kind: c.transition.kind,
+                durationTicks: toTicks(c.transition.durationFrames),
+                audio: c.transition.audio,
+              },
+            }
+          : {}),
       };
     }),
   });
@@ -714,6 +739,18 @@ export function toEditView(project: CanonicalProject): Project {
         : {}),
       ...(c.animation ? { animation: c.animation } : {}),
       ...(c.effects ? { effects: c.effects } : {}),
+      ...(c.transition
+        ? {
+            transition: {
+              kind: c.transition.kind,
+              durationFrames: toFrames(
+                c.transition.durationTicks,
+                "Transition duration",
+              ),
+              audio: c.transition.audio,
+            },
+          }
+        : {}),
     })),
   });
 }

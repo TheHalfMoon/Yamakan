@@ -435,6 +435,15 @@ export async function renderPlan(
           picture = faded;
         }
       }
+      // A dissolve in (YU-021): the layer's alpha rises from 0 at its
+      // first frame to 1 after the dissolve, in timeline time.
+      if (layer.dissolveInTicks) {
+        const dissolved = `${clip}x`;
+        filters.push(
+          `[${picture}]format=yuva420p,fade=t=in:st=${seconds(layer.startTicks)}:d=${seconds(layer.dissolveInTicks)}:alpha=1[${dissolved}]`,
+        );
+        picture = dissolved;
+      }
       filters.push(
         `[${visual}][${picture}]overlay=x=${shaped?.overlay.x ?? "(W-w)/2"}:y=${shaped?.overlay.y ?? "(H-h)/2"}:enable='gte(t,${start})*lt(t,${end})':eof_action=pass[${next}]`,
       );
@@ -481,6 +490,12 @@ export async function renderPlan(
           a.fadeInTicks ? `afade=t=in:st=0:d=${seconds(a.fadeInTicks)}` : null,
           a.fadeOutTicks
             ? `afade=t=out:st=${seconds(a.durationTicks - a.fadeOutTicks)}:d=${seconds(a.fadeOutTicks)}`
+            : null,
+          a.crossfadeInTicks
+            ? `afade=t=in:st=0:d=${seconds(a.crossfadeInTicks)}:curve=qsin`
+            : null,
+          a.crossfadeOutTicks
+            ? `afade=t=out:st=${seconds(a.durationTicks - a.crossfadeOutTicks)}:d=${seconds(a.crossfadeOutTicks)}:curve=qsin`
             : null,
         ].filter(Boolean);
         const delay =

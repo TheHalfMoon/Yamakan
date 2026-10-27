@@ -114,6 +114,12 @@ function clipOps(head: Canon, c: Clip): Operation[] {
     });
   if (c.effects)
     ops.push({ type: "clip.setEffects", clipId: c.id, effects: c.effects });
+  if (c.transition)
+    ops.push({
+      type: "clip.setTransition",
+      clipId: c.id,
+      transition: c.transition,
+    });
   return ops;
 }
 
@@ -242,6 +248,12 @@ function inPlaceOps(a: Clip, b: Clip): Operation[] | null {
       type: "clip.setEffects",
       clipId: b.id,
       effects: b.effects ?? null,
+    });
+  if (!same(a.transition ?? null, b.transition ?? null))
+    ops.push({
+      type: "clip.setTransition",
+      clipId: b.id,
+      transition: b.transition ?? null,
     });
   return ops;
 }

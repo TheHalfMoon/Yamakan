@@ -35,6 +35,12 @@ import { getSourceTimeAtClipTime } from "../retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import {
+  TRANSITIONS_OFF,
+  TransitionSchema,
+  previousClip,
+  transitionWritesEnabled,
+} from "../transitions.ts";
+import {
   AnimationPathSchema,
   ClipAnimationSchema,
 } from "./animation-schema.ts";
@@ -160,6 +166,15 @@ export const OperationSchema = z.discriminatedUnion("type", [
       clipId: Id,
       assetId: Id,
       sourceStartTicks: Ticks,
+    })
+    .strict(),
+  z
+    .object({
+      // YU-021: the dissolve from the previous clip into this one; null
+      // makes the cut a plain cut again.
+      type: z.literal("clip.setTransition"),
+      clipId: Id,
+      transition: TransitionSchema.nullable(),
     })
     .strict(),
   z
@@ -484,6 +499,8 @@ function apply(p: CanonicalProject, op: Operation): void {
         fadeOutTicks: Math.min(c.fadeOutTicks, c.durationTicks - first),
         sound: secondSound,
       };
+      // The dissolve into the clip stays at its start; the new cut is a cut.
+      delete second.transition;
       c.durationTicks = first;
       c.fadeOutTicks = 0;
       c.fadeInTicks = Math.min(c.fadeInTicks, first);
@@ -633,6 +650,23 @@ function apply(p: CanonicalProject, op: Operation): void {
       c.title = null;
       c.assetId = asset.id;
       c.sourceStartTicks = op.sourceStartTicks;
+      return;
+    }
+    case "clip.setTransition": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (op.transition === null) {
+        delete c.transition;
+        return;
+      }
+      if (!transitionWritesEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", TRANSITIONS_OFF);
+      // Both clips change on screen, so the outgoing one must be editable.
+      const before = previousClip(p.clips, c);
+      if (before) unlocked(p, before.trackId);
+      // The batch's validation (core/transitions.ts) names anything that
+      // keeps it from drawing, once every operation of the batch is applied.
+      c.transition = op.transition;
       return;
     }
     case "clip.setSpeed": {

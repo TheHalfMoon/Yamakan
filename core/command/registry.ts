@@ -5,7 +5,8 @@ import {
   AnimationPathSchema,
   ClipAnimationSchema,
 } from "../timeline/animation-schema.ts";
-import { Ticks } from "../time.ts";
+import { Ticks, framesToTicks } from "../time.ts";
+import { TransitionAudio } from "../transitions.ts";
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
@@ -849,6 +850,63 @@ export const commands = {
         a.projectId,
         a.expectedRevision,
         [{ type: "clip.setEffects", clipId: a.clipId, effects: a.effects }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.transition.set": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Dissolve from the previous clip on a video track into this one (YU-021, centredDissolve/v1): an even number of frames centred on the cut, using source handles on both sides, with an equal-power sound crossfade or a sound cut. Clip times are unchanged. Undoable like any edit.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        durationFrames: z.number().int().min(2).max(120),
+        audio: TransitionAudio.default("equalPower"),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        (canonical) => [
+          {
+            type: "clip.setTransition",
+            clipId: a.clipId,
+            transition: {
+              kind: "dissolve",
+              durationTicks: framesToTicks(
+                a.durationFrames,
+                canonical.output.fps,
+              ),
+              audio: a.audio,
+            },
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.transition.remove": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Make the cut into this clip a plain cut again (removes its transition). Undoable like any edit.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [{ type: "clip.setTransition", clipId: a.clipId, transition: null }],
         principal.id,
         receipt,
       ),

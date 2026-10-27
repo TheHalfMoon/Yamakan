@@ -32,6 +32,7 @@ import {
   clipTransform,
   type TransformEffect,
 } from "../effects/registry.ts";
+import { TRANSITION_POLICY, previousClip } from "../transitions.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -75,6 +76,12 @@ export type VideoLayer = {
    * plan without effects (and its hash) is exactly as before.
    */
   transform?: TransformEffect;
+  /**
+   * YU-021: the layer dissolves in over its first this-many ticks (alpha
+   * k/D at its k-th frame), over the previous clip extended under it.
+   * Present only for a clip with a transition, so other plans are as before.
+   */
+  dissolveInTicks?: number;
 };
 
 export type AudioInstruction = {
@@ -93,6 +100,10 @@ export type AudioInstruction = {
   speed: Rational;
   /** Present only when ANIMATION_ENABLED; render applies volume. */
   animation?: ClipAnimation;
+  /** YU-021: equal-power (quarter-sine) crossfade in over the first ticks. */
+  crossfadeInTicks?: number;
+  /** YU-021: equal-power crossfade out over the last ticks. */
+  crossfadeOutTicks?: number;
 };
 export type RenderPlan = {
   format: typeof RENDER_PLAN_FORMAT;
@@ -115,6 +126,8 @@ export type RenderPlan = {
    * animated (so a plan without animation, and its hash, is as before).
    */
   animationCompiler?: AnimationCompiler;
+  /** YU-021: present only when a transition is drawn. */
+  transitionPolicy?: typeof TRANSITION_POLICY;
   /** Two-pass loudnorm; null when normalization is off for this export. */
   loudnorm: LoudnormSpec | null;
   planHash: string;
@@ -248,6 +261,43 @@ export function compilePlan(
         });
     }
   }
+  // Transitions (YU-021, core/transitions.ts): each dissolve becomes
+  // handle-extended layers and sounds, so the compiler below and the render
+  // need no other notion of a transition. Clip times are validated already.
+  let transitions = 0;
+  for (const c of active) {
+    const t = c.transition;
+    if (!t) continue;
+    const before = previousClip(project.clips, c);
+    if (!before)
+      throw new CommandError(
+        "VALIDATION",
+        "A transition has no previous clip.",
+      );
+    const half = t.durationTicks / 2;
+    const outgoing = layers.find((x) => x.clipId === before.id);
+    const incoming = layers.find((x) => x.clipId === c.id);
+    if (!outgoing || !incoming) continue;
+    transitions++;
+    outgoing.durationTicks += half;
+    incoming.startTicks -= half;
+    incoming.durationTicks += half;
+    if (incoming.kind === "video") incoming.sourceStartTicks -= half;
+    incoming.dissolveInTicks = t.durationTicks;
+    if (t.audio !== "equalPower") continue;
+    const soundOut = audio.find((x) => x.clipId === before.id);
+    const soundIn = audio.find((x) => x.clipId === c.id);
+    if (soundOut) {
+      soundOut.durationTicks += half;
+      soundOut.crossfadeOutTicks = t.durationTicks;
+    }
+    if (soundIn) {
+      soundIn.startTicks -= half;
+      soundIn.sourceStartTicks -= half;
+      soundIn.durationTicks += half;
+      soundIn.crossfadeInTicks = t.durationTicks;
+    }
+  }
   if (!layers.length && !cues.length)
     throw new CommandError(
       "VALIDATION",
@@ -337,6 +387,7 @@ export function compilePlan(
     )
       ? { animationCompiler: compiler }
       : {}),
+    ...(transitions ? { transitionPolicy: TRANSITION_POLICY } : {}),
   };
   const planHash = createHash("sha256")
     .update(JSON.stringify(body))
