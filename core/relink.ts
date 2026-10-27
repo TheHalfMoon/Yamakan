@@ -41,9 +41,9 @@ export const RelinkProposalSchema = z
     to: Media,
     clipIds: z.array(Id).min(1).max(200),
     // How the new medium differs (shown before approval; none refuses).
-    differences: z.array(
-      z.enum(["bytes", "name", "size", "aspect", "duration", "sound"]),
-    ),
+    differences: z
+      .array(z.enum(["bytes", "name", "size", "aspect", "duration", "sound"]))
+      .max(6),
     proposalHash: Sha256,
   })
   .strict();

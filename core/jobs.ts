@@ -345,6 +345,16 @@ export class JobSupervisor {
       )
       .digest("hex")
       .slice(0, 32);
+    // A batch already admitted is returned as it is (an idempotent retry).
+    const known = this.store.read(
+      (db) =>
+        db
+          .prepare(
+            "SELECT 1 FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ? LIMIT 1",
+          )
+          .get(projectId, batchId) !== undefined,
+    );
+    if (known) return this.batchStatus(projectId, batchId);
     // Room for every output above the disk reserve (a bound per output, as
     // the render's own size check), before any is admitted.
     const space = await statfs(this.store.root);
@@ -362,7 +372,7 @@ export class JobSupervisor {
       this.#currentIn(db);
       const existing = db
         .prepare(
-          "SELECT count(*) AS n FROM jobs WHERE project_id = ? AND kind = 'export' AND json_extract(payload, '$.batchId') = ?",
+          "SELECT count(*) AS n FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ?",
         )
         .get(projectId, batchId) as { n: number };
       if (existing.n) return;
@@ -408,7 +418,7 @@ export class JobSupervisor {
       (db) =>
         db
           .prepare(
-            "SELECT * FROM jobs WHERE project_id = ? AND kind = 'export' AND json_extract(payload, '$.batchId') = ? ORDER BY rowid",
+            "SELECT * FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ? ORDER BY rowid",
           )
           .all(projectId, batchId) as Row[],
     );

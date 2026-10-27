@@ -438,7 +438,7 @@ CREATE TABLE asset_replacements(
   created_at INTEGER NOT NULL,
   PRIMARY KEY(project_id, revision)
 ) STRICT;
-CREATE INDEX IF NOT EXISTS jobs_batch ON jobs(json_extract(payload, '$.batchId')) WHERE kind = 'export';
+CREATE INDEX IF NOT EXISTS jobs_batch ON jobs(json_extract(payload, '$.batchId')) WHERE kind = 'export' AND json_valid(payload);
 `;
 // Caption tracks (YU-024): the document tables accept any kind name the
 // application validates (DocumentKind), so a new kind needs no further
