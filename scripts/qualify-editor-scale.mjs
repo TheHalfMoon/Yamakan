@@ -543,7 +543,8 @@ for (const name of only)
   );
 report.refusals = await refusals();
 // Recorded probe: 40 1080p stills on one track over three minutes, the
-// smallest still-heavy export found to fail (export only).
+// a small still-heavy export that fails
+// (export only; how it fails has varied between runs).
 {
   const probeResult = await measure({
     name: "probe-40-stills-3min",

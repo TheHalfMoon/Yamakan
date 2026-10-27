@@ -497,7 +497,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - Ten to twelve edits commit while each backup runs.
     - Each restored workspace holds one revision between the last revision acknowledged before the backup and the last one acknowledged during it.
     - That revision is byte-identical to the live workspace's copy, and one more edit commits in the restored workspace.
-    - Backup takes at most 0.95 s and restore at most 0.15 s.
+    - Backup takes at most 0.95 s and restore about 0.15 s.
   - **Refusals.** L, H, A and K are each refused with their own message, and the project is unchanged (no clamp). The test also accepts 200 clips, 16 tracks, a clip ending exactly at ten minutes, and a 1920×1080 output. The clip and track refusals now name the limit ("A project holds at most 200 clips.").
   - **Memory.** The script's peak resident memory (service code only, workers excluded) is 232 MiB.
 - **Export is qualified only at S.**
@@ -506,8 +506,8 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - **T** passes the 180 s render wall-clock limit ("Render time limit exceeded").
   - **The recorded probe fails too.** It has 40 1080p stills on one track over three minutes, and FFmpeg wrote no output (exit 69, "Nothing was written into output file").
   - **Other runs, observed but not recorded.**
-    - T failed within seconds with PNG decoder buffer errors, "Cannot allocate memory" and exit 0xC00000FD.
-    - The likely cause is that each still is fed with `-loop 1`, which decodes as fast as it is read. Later clips then queue full frames until the overlay reaches them, inside the worker's 2 GiB.
+    - T's failure was not the same in every run. Some runs failed within seconds with PNG decoder buffer errors, "Cannot allocate memory" and exit 0xC00000FD, while the recorded run reached the wall-clock limit.
+    - The likely cause, not confirmed, is that each still is fed with `-loop 1`, which decodes as fast as it is read. Later clips then queue full frames until the overlay reaches them, inside the worker's 2 GiB.
 - **Proposal (not applied; follow-up YU-026b).**
   - Feed stills by a pull-based `loop` filter from one decoded frame.
   - Reference inputs so the command line no longer grows with each clip's full path.
