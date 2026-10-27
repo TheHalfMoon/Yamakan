@@ -36,7 +36,8 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 | YU-031 story documents and reference packs                                                                                       | VERIFIED                       | #119 → `905f81a` | [receipts/YU-031.json](receipts/YU-031.json); CI green on exact head (qualify rerun after an install stall); Windows: 607/610 (0 fail), Studio 1975/1975, Edge E2E and Director qualification pass                          |
 | YU-020 typed transform/crop clip effect                                                                                          | VERIFIED                       | #121 → `021ccdd` | [receipts/YU-020.json](receipts/YU-020.json); CI and push run green; Windows: 614/618 (one load-timing flake, 9/9 alone), Studio 1975/1975, Edge E2E pass                                                                   |
 | YU-022 bounded opacity/volume animation compilation                                                                              | VERIFIED                       | #123 → `5e51b28` | [receipts/YU-022.json](receipts/YU-022.json); CI green on exact head; Windows: 624/627 (0 fail), Studio 1975/1975, Edge E2E pass                                                                                            |
-| YU-021, YU-023…YU-089, YU-091…YU-101 (except YU-030, YU-031, YU-040, YU-041, YU-042)                                             | PLANNED                        | —                | —                                                                                                                                                                                                                           |
+| YU-024 editable imported caption tracks                                                                                          | VERIFIED                       | #125 → `c408bbe` | [receipts/YU-024.json](receipts/YU-024.json); CI and push run green; Windows: 633/640 (4 transient, 14/14 alone), Studio 1975/1975, Edge E2E pass; H1 Arabic review pending                                                 |
+| YU-021, YU-023, YU-025…YU-089, YU-091…YU-101 (except YU-030, YU-031, YU-040, YU-041, YU-042)                                     | PLANNED                        | —                | —                                                                                                                                                                                                                           |
 
 ## Development tool status (Windows 11, this PC)
 
@@ -75,7 +76,7 @@ States: PLANNED → IMPLEMENTED (code + tests on a branch) → MERGED (exact-hea
 
 ## Next eligible
 
-YU-010…YU-020, YU-022, YU-030, YU-031, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-024 (editable caption tracks) at P1, then YU-043 (first-engine manifest choice), YU-050, YU-051 and YU-071. YU-072, YU-092, YU-093 and YU-101 stay blocked on external authorization.
+YU-010…YU-020, YU-022, YU-024, YU-030, YU-031, YU-040…YU-042 and YU-090 are VERIFIED; AG-DOCS is activated. Next by the plan's DAG: YU-032 (take compare/replace) at P1, then YU-021, YU-023, YU-025, YU-026, YU-043, YU-050, YU-051, YU-070 and YU-071. YU-072, YU-092, YU-093 and YU-101 stay blocked on external authorization; H1 (native Arabic review) is open for titles and captions.
 
 - 2026-10-26, post-merge run of main `2baa695` with the host at 82% CPU from other applications and a concurrent typecheck: 14 tests hit their 60 s limits; the 10 affected files re-run one at a time pass 85/85. Push CI green.
 
