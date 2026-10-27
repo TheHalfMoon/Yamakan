@@ -658,14 +658,14 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - a picture-only join works;
     - a cancel during the second window stops the export and leaves no parts.
   - **Not tested:** a dissolve, a LUT or animation across a boundary, and two-pass loudness in segmented mode. These use the same per-window filter text as the single pass.
-  - **Recorded run** (policy v3, idle host). The worker peaks come from each run's Job Objects:
+  - **Recorded run** (policy v3, idle host, one run per profile). The worker peaks come from each run's Job Objects:
 
-    | Profile                | Export                   | Segments  | Peak worker memory            |
-    | ---------------------- | ------------------------ | --------- | ----------------------------- |
-    | S                      | 27 s                     | 1         | 12% of the limit              |
-    | T (ten minutes, 1080p) | 102 s, 18,000 frames     | 4         | 26%                           |
-    | 40-still probe         | 31 s                     | 2         | 23%                           |
-    | M                      | stops at the 480 s limit | 9 workers | 28% (no longer out of memory) |
+    | Profile                | Export                   | Segments      | Peak worker memory                     |
+    | ---------------------- | ------------------------ | ------------- | -------------------------------------- |
+    | S                      | 27 s                     | 1             | 12% of the limit                       |
+    | T (ten minutes, 1080p) | 102 s, 18,000 frames     | 4             | 26%                                    |
+    | 40-still probe         | 31 s                     | 2             | 23%                                    |
+    | M                      | stops at the 480 s limit | 9 workers ran | 28%; no ENOMEM in the windows that ran |
 
     A two-minute probe at M's density (40 clips, 16 tracks) also stops at its 240 s limit. M renders at over 2 s per output second, so ten minutes would need well over 1,200 s, more than the reviewed 900 s cap.
 

@@ -16,7 +16,8 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Evidence** (`docs/evidence/ultimate/editor-scale.json`):
   - S exports in 27 s and T in 102 s (4 segments), and the 40-still probe exports.
   - Worker peaks are 12% to 28% of the limit.
-  - M no longer runs out of memory, but it exceeds 480 s, at over 2 s per output second.
+  - M exceeds 480 s, at over 2 s per output second. The windows that ran stayed within memory, but the later windows never ran.
+  - These figures come from one run per profile on an idle host.
 - **Not decided:** raising filter threads or allowing parallel segment workers to qualify M. Each needs its own measurement and review.
 - **To change:** a new policy version, measured with `scripts/qualify-editor-scale.mjs`.
 
