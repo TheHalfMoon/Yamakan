@@ -7,6 +7,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { createInterface } from "node:readline";
+import { createServer, type AddressInfo } from "node:net";
+// A free loopback port for a child server (tests run concurrently, so no
+// two may share a fixed one).
+const freePort = () =>
+  new Promise<number>((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const { port } = probe.address() as AddressInfo;
+      probe.close(() => resolve(port));
+    });
+  });
 
 // Every test folder is removed when the file's tests finish; each test
 // waits for its server to exit first.
@@ -18,7 +30,7 @@ after(() =>
 test("MCP stdio exposes registry tools and runs the shared command path", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-mcp-"));
   bases.push(root);
-  const port = 24319;
+  const port = await freePort();
   const env = {
     ...process.env,
     YAMAKAN_WORKSPACE: root,
