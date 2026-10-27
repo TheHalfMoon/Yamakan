@@ -90,6 +90,9 @@ for (const [label, fps] of [
       at += p.durationTicks;
     }
     assert.equal(at, plan.durationTicks, "covers the timeline exactly");
+    // A timeline that would need more windows than the join may read is
+    // refused, not split without bound.
+    assert.throws(() => planSegments(plan, 0), /too many clips at once/);
   });
 
 test("a timeline exported in segments matches its single-pass export", async () => {
@@ -166,6 +169,7 @@ test("a timeline exported in segments matches its single-pass export", async () 
   const video = head.tracks.find((t) => t.kind === "video")!.id;
   const audio = head.tracks.find((t) => t.kind === "audio")!.id;
   const upper = crypto.randomUUID();
+  const titles = crypto.randomUUID();
   const F = 23_520_000;
   const clip = (
     trackId: string,
@@ -194,6 +198,18 @@ test("a timeline exported in segments matches its single-pass export", async () 
       clip(upper, still.id, 20, 40),
       clip(upper, clipA.id, 75, 30),
       clip(audio, tone.id, 10, 100),
+      // A title on its own track, across segment boundaries.
+      { type: "track.add", trackId: titles, name: "Titles", kind: "video" },
+      {
+        type: "clip.add",
+        clipId: crypto.randomUUID(),
+        trackId: titles,
+        assetId: null,
+        title: "Seam",
+        startTicks: 45 * F,
+        durationTicks: 20 * F,
+        sourceStartTicks: 0,
+      },
     ],
   });
   const p = await store.load(project.id);
@@ -264,6 +280,21 @@ test("a timeline exported in segments matches its single-pass export", async () 
   const worst = Math.min(...frames);
   assert.ok(worst >= 38, `worst frame PSNR ${worst} dB`);
   // The same decoded sound, bit for bit.
+  const times = (f: string) =>
+    ffprobe([
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "packet=pts_time",
+      "-of",
+      "csv=p=0",
+      f,
+    ])
+      .trim()
+      .split(/\r?\n/)
+      .map(Number)
+      .sort((a, b) => a - b);
+  assert.deepEqual(times(joined.output), times(single.output));
   const sound = (f: string) =>
     ffmpeg(["-i", f, "-map", "0:a:0", "-f", "md5", "-"])
       .toString("utf8")
@@ -274,6 +305,213 @@ test("a timeline exported in segments matches its single-pass export", async () 
     (await readdir(path.dirname(joined.output))).filter((n) =>
       ["seg", "sound"].includes(n),
     ),
+    [],
+  );
+});
+
+async function workspace(name: string) {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-segments-"));
+  bases.push(root);
+  const store = new ProjectStore(root);
+  handles.push(store);
+  await store.initialize();
+  const queue = new JobSupervisor(store);
+  handles.push(queue);
+  const ctx = {
+    store,
+    queue,
+    principal: {
+      id: "browser-ui" as const,
+      scopes: new Set(Scopes) as ReadonlySet<Scope>,
+    },
+  };
+  const project = (await execute(ctx, "yamakan.project.create", { name }))
+    .result as Project;
+  const make = async (file: string, args: string[]) => {
+    const at = path.join(root, file);
+    ffmpeg([...args, at]);
+    return (await store.importAsset(project.id, file, await readFile(at)))
+      .asset;
+  };
+  const planOf = async (operations: object[]) => {
+    const head = await store.load(project.id);
+    await execute(ctx, "yamakan.project.applyBatch", {
+      projectId: project.id,
+      expectedRevision: head.revision,
+      operations,
+    });
+    const p = await store.load(project.id);
+    const stored = store.revisionCanonical(project.id, p.revision);
+    // A small output keeps a ten-minute timeline quick to render.
+    return compilePlan(
+      {
+        ...stored.project,
+        output: { ...stored.project.output, width: 320, height: 180 },
+      },
+      stored.snapshotHash,
+      await titleFonts(),
+      {},
+    );
+  };
+  return {
+    root,
+    store,
+    project,
+    make,
+    planOf,
+    head: () => store.load(project.id),
+  };
+}
+
+test("a ten-minute timeline with sound to its end exports in segments, and a picture-only one joins too", async () => {
+  const w = await workspace("Ten minutes");
+  const still = await w.make("s.png", [
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=blue:s=160x90",
+    "-frames:v",
+    "1",
+  ]);
+  const tone = await w.make("tone.wav", [
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=330:duration=600",
+  ]);
+  const head = await w.head();
+  const video = head.tracks.find((t) => t.kind === "video")!.id;
+  const audio = head.tracks.find((t) => t.kind === "audio")!.id;
+  const TEN = 18000 * 23_520_000;
+  const add = (trackId: string, assetId: string) => ({
+    type: "clip.add",
+    clipId: crypto.randomUUID(),
+    trackId,
+    assetId,
+    title: null,
+    startTicks: 0,
+    durationTicks: TEN,
+    sourceStartTicks: 0,
+  });
+  const { plan, ass } = await w.planOf([
+    add(video, still.id),
+    add(audio, tone.id),
+  ]);
+  const halves = [
+    { startTicks: 0, durationTicks: TEN / 2 },
+    { startTicks: TEN / 2, durationTicks: TEN / 2 },
+  ];
+  const out = await renderSegmented(
+    w.store,
+    plan,
+    ass,
+    ["exports", "ten"],
+    halves,
+    new AbortController().signal,
+    () => {},
+  );
+  assert.equal(out.receipt.hasAudio, true);
+  const packets = (stream: string) =>
+    Number(
+      ffprobe([
+        "-count_packets",
+        "-select_streams",
+        stream,
+        "-show_entries",
+        "stream=nb_read_packets",
+        "-of",
+        "csv=p=0",
+        out.output,
+      ]).trim(),
+    );
+  assert.equal(packets("v:0"), 18000);
+  // 600 s of 48 kHz AAC: 1024 samples a packet.
+  assert.ok(
+    Math.abs(packets("a:0") - (600 * 48000) / 1024) <= 2,
+    String(packets("a:0")),
+  );
+  // Picture only: no sound pass, the join maps the picture alone.
+  const quiet = await workspace("Quiet");
+  const blue = await quiet.make("s.png", [
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=blue:s=160x90",
+    "-frames:v",
+    "1",
+  ]);
+  const qhead = await quiet.head();
+  const qvideo = qhead.tracks.find((t) => t.kind === "video")!.id;
+  const q = await quiet.planOf([
+    { ...add(qvideo, blue.id), durationTicks: 90 * 23_520_000 },
+  ]);
+  const parts = [0, 1, 2].map((i) => ({
+    startTicks: i * 30 * 23_520_000,
+    durationTicks: 30 * 23_520_000,
+  }));
+  const silent = await renderSegmented(
+    quiet.store,
+    q.plan,
+    q.ass,
+    ["exports", "quiet"],
+    parts,
+    new AbortController().signal,
+    () => {},
+  );
+  assert.equal(silent.receipt.hasAudio, false);
+});
+
+test("a cancel during a segmented export stops it and leaves no parts", async () => {
+  const w = await workspace("Cancel");
+  const still = await w.make("s.png", [
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=green:s=160x90",
+    "-frames:v",
+    "1",
+  ]);
+  const head = await w.head();
+  const video = head.tracks.find((t) => t.kind === "video")!.id;
+  const { plan, ass } = await w.planOf([
+    {
+      type: "clip.add",
+      clipId: crypto.randomUUID(),
+      trackId: video,
+      assetId: still.id,
+      title: null,
+      startTicks: 0,
+      durationTicks: 1800 * 23_520_000,
+      sourceStartTicks: 0,
+    },
+  ]);
+  const quarters = [0, 1, 2, 3].map((i) => ({
+    startTicks: i * 450 * 23_520_000,
+    durationTicks: 450 * 23_520_000,
+  }));
+  const controller = new AbortController();
+  let parts = 0;
+  const failure = await renderSegmented(
+    w.store,
+    plan,
+    ass,
+    ["exports", "cancel"],
+    quarters,
+    controller.signal,
+    (p) => {
+      // Cancel once the second window is under way.
+      if (p > 0.3 && !controller.signal.aborted) controller.abort();
+      parts++;
+    },
+  ).then(
+    () => "ok",
+    (e: Error) => e.message,
+  );
+  assert.equal(failure, "Cancelled.");
+  assert.ok(parts > 0);
+  const dir = await w.store.file(w.project.id, "exports", "cancel");
+  assert.deepEqual(
+    (await readdir(dir)).filter((n) => ["seg", "sound"].includes(n)),
     [],
   );
 });
