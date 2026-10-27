@@ -51,7 +51,11 @@ const RepoPath = z
   .string()
   .regex(/^[A-Za-z0-9_.][A-Za-z0-9._/ -]{0,199}$/)
   .refine(
-    (p) => !p.split("/").some((s) => s === ".." || s === "." || s === ""),
+    (p) =>
+      !p.split("/").some((s) => s === ".." || s === "." || s === "") &&
+      // Windows drops a trailing space or dot, so "x.py " would be x.py.
+      !/[ .]$/.test(p) &&
+      !p.split("/").some((s) => /[ .]$/.test(s)),
     "A repository path.",
   );
 
@@ -66,8 +70,8 @@ const Package = z
     licenseSource: z.enum(["expression", "license", "classifier"]).nullable(),
     spdx: z.string().max(200).nullable(),
     // "metadata" when the package states SPDX terms itself; "normalized"
-    // when a prose or classifier name was mapped to them (to be checked
-    // against the licence file before release).
+    // when a prose or classifier name was mapped to them. Informational:
+    // the caution is derived from license and licenseSource, not this.
     spdxBasis: z.enum(["metadata", "normalized"]).nullable(),
   })
   .strict();
@@ -332,6 +336,8 @@ const lineTokens = (line: string) =>
     .filter(Boolean);
 
 // Packages whose purpose is calling a hosted model or inference service.
+// A denylist, so finite; it fails closed (boto3, the general AWS SDK,
+// blocks a closure that pulls it in until reviewed).
 export const REMOTE_SERVICE_PACKAGES: readonly string[] = Object.freeze([
   "dashscope",
   "openai",

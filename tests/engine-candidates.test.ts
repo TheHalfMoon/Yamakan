@@ -192,6 +192,12 @@ test("a mutable revision, missing or unaccepted licence, or remote code blocks s
     edit((c) => c.model.repositoryFiles.push("scripts/pipeline.py")),
     ["REMOTE_CODE"],
   );
+  // A name Windows would shorten (trailing space or dot) is not a path.
+  for (const name of ["scripts/x.py ", "x.bin.", "dir./x.json"]) {
+    const m = clone();
+    m.candidates[1]!.model.repositoryFiles.push(name);
+    assert.throws(() => parseEngineCandidates(m), /repository path/, name);
+  }
   // Pickle anywhere in the repository, even unloaded.
   assert.deepEqual(
     edit((c) => c.model.repositoryFiles.push("old/model.bin")),
