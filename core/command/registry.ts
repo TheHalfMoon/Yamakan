@@ -73,6 +73,18 @@ import {
   verifyReferencePack,
   verifyStory,
 } from "../story.ts";
+import {
+  TAKE_LIMITS,
+  TakeProposalSchema,
+  assertTakeMedia,
+  compareTakes,
+  listTakes,
+  proposeReplace,
+  replaceOperations,
+  shotWithTake,
+} from "../takes.ts";
+import { fromEditView } from "../canonical.ts";
+import type { DocumentRef } from "../document-ref.ts";
 import { randomUUID } from "node:crypto";
 import {
   advanceStage,
@@ -174,6 +186,27 @@ type Definition<S extends z.ZodType, R> = {
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
 };
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
+
+// YU-032: a story and the head it is read with, from one revision.
+async function readStory(
+  store: ProjectStore,
+  a: { projectId: string; documentId: string },
+) {
+  const head = await store.load(a.projectId);
+  const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
+  if (ref.kind !== "story")
+    throw new CommandError("VALIDATION", "This document is not a story.");
+  if ((await store.load(a.projectId)).revision !== head.revision)
+    throw new CommandError(
+      "REVISION_CONFLICT",
+      "The project changed while it was read; try again.",
+    );
+  return {
+    story: StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8"))),
+    ref,
+    canonical: fromEditView(head),
+  };
+}
 
 const home = (ctx: CommandContext) =>
   ctx.recoveryHome ?? defaultRecoveryHome(ctx.store.root);
@@ -445,6 +478,147 @@ export const commands = {
             );
           story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
           verifyStory(story, c);
+        },
+      );
+    },
+  }),
+  "yamakan.take.list": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "List a story's shots with their alternative takes (media versions and lineage) and, for each assembled shot, the clip that shows it and which take that clip shows. Changes nothing.",
+    input: z.object({ projectId: Id, documentId: Id }).strict(),
+    run: async ({ store }, a) => {
+      const { story, ref, canonical } = await readStory(store, a);
+      return listTakes(story, ref, canonical);
+    },
+  }),
+  "yamakan.take.compare": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Compare up to 8 takes of one story shot side by side (media version, size, whether each covers the shot's clip, and a small preview: a footage thumbnail index or the still) without changing anything.",
+    input: z
+      .object({
+        projectId: Id,
+        documentId: Id,
+        shotId: Id,
+        takeIds: z.array(Id).min(1).max(TAKE_LIMITS.compare),
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      const { story, ref, canonical } = await readStory(store, a);
+      return compareTakes(story, ref, canonical, a.shotId, a.takeIds);
+    },
+  }),
+  "yamakan.take.proposeReplace": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Propose making an assembled story shot's clip show another of its takes: the exact clip mapping, bound to this revision, story version and media versions, and named by its hash. Changes nothing; apply it with yamakan.take.apply.",
+    input: z
+      .object({
+        projectId: Id,
+        documentId: Id,
+        shotId: Id,
+        takeId: Id,
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      const { story, ref, canonical } = await readStory(store, a);
+      return proposeReplace(
+        story,
+        ref,
+        canonical,
+        a.projectId,
+        a.shotId,
+        a.takeId,
+      );
+    },
+  }),
+  "yamakan.take.apply": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Apply a take replacement proposal as one undoable revision. Refused unless the head, the story version, the media versions and the proposal's hash are exactly those it was made from, the take's media is ready with its probe recorded, and the shot's reference consents are still usable. The original take stays in the story and its media in the project.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        proposal: TakeProposalSchema,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      const p = a.proposal;
+      if (p.projectId !== a.projectId || p.revision !== a.expectedRevision)
+        throw new CommandError(
+          "REVISION_CONFLICT",
+          "The proposal was made for another revision; propose it again.",
+        );
+      // The take's media is on disk at its size before the commit; inside
+      // it, its ready object and probe are checked under the write lock.
+      const head = await store.load(a.projectId);
+      for (const m of p.mappings) {
+        const asset = head.assets.find((x) => x.id === m.to.assetId);
+        if (!asset)
+          throw new CommandError(
+            "VALIDATION",
+            "The take's media is not in this project.",
+          );
+        await store.readyObjectFile(a.projectId, asset);
+      }
+      let story: StoryDocument | null = null;
+      let ref: DocumentRef | null = null;
+      return store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        (canonical) => {
+          const again = proposeReplace(
+            story!,
+            ref!,
+            canonical,
+            a.projectId,
+            p.shotId,
+            p.takeId,
+          );
+          // The whole proposal, not only its hash: what was reviewed is
+          // exactly what is applied.
+          if (canonicalJson(again) !== canonicalJson(p))
+            throw new CommandError(
+              "REVISION_CONFLICT",
+              "The proposal no longer matches the project; propose it again.",
+            );
+          return replaceOperations(again);
+        },
+        principal.id,
+        receipt,
+        (c) => {
+          const read = store.getDocument(a.projectId, p.documentId);
+          if (read.ref.kind !== "story")
+            throw new CommandError(
+              "VALIDATION",
+              "This document is not a story.",
+            );
+          if (read.ref.contentHash !== p.storyContentHash)
+            throw new CommandError(
+              "REVISION_CONFLICT",
+              "The story changed since the proposal; propose it again.",
+            );
+          ref = read.ref;
+          story = StoryDocumentSchema.parse(
+            JSON.parse(read.bytes.toString("utf8")),
+          );
+          // The chosen take and the shot's reference pins, consents included.
+          verifyStory(shotWithTake(story, p.shotId, p.takeId), c);
+          for (const m of p.mappings) {
+            const asset = c.project.assets.find((x) => x.id === m.to.assetId);
+            if (!asset)
+              throw new CommandError(
+                "VALIDATION",
+                "The take's media is not in this project.",
+              );
+            assertTakeMedia(c.db, a.projectId, asset);
+          }
         },
       );
     },

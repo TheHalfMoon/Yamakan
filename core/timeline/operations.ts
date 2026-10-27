@@ -13,10 +13,7 @@ import { CommandError } from "../command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./overlap.ts";
 import { resolveTimelineSnap } from "./snapping.ts";
 import type { SnapPoint } from "./snapping.ts";
-import {
-  applySceneTracksToProject,
-  projectToSceneTracks,
-} from "./adapters.ts";
+import { applySceneTracksToProject, projectToSceneTracks } from "./adapters.ts";
 import {
   applyRippleAdjustments,
   computeRippleAdjustments,
@@ -153,6 +150,16 @@ export const OperationSchema = z.discriminatedUnion("type", [
       clipId: Id,
       // YU-020: the clip's whole effect stack; null removes it.
       effects: ClipEffectsSchema.nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      // YU-032: the clip shows another still or footage of this project
+      // (a take), keeping its place, length, effects and animation.
+      type: z.literal("clip.replaceMedia"),
+      clipId: Id,
+      assetId: Id,
+      sourceStartTicks: Ticks,
     })
     .strict(),
   z
@@ -576,6 +583,54 @@ function apply(p: CanonicalProject, op: Operation): void {
       // A stack that changes nothing is stored as none.
       if (op.effects && !isIdentityStack(op.effects)) c.effects = op.effects;
       else delete c.effects;
+      return;
+    }
+    case "clip.replaceMedia": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (track(p, c.trackId).kind !== "video")
+        throw invalid("Only a clip on a video track shows a take.");
+      const asset = p.assets.find((a) => a.id === op.assetId);
+      if (!asset || asset.kind === "audio")
+        throw invalid("A take is a still or footage of this project.");
+      if (c.speed && c.speed.num !== c.speed.den)
+        throw invalid("Reset the clip's speed before replacing its take.");
+      const before = p.assets.find((a) => a.id === c.assetId) ?? null;
+      // Unlinked sound stays with the media it came from.
+      if (
+        before?.kind === "video" &&
+        p.clips.some(
+          (o) =>
+            o.assetId === before.id && track(p, o.trackId).kind === "audio",
+        )
+      )
+        throw invalid(
+          "Relink the clip's unlinked sound before replacing its take.",
+        );
+      if (asset.kind === "image" && op.sourceStartTicks !== 0)
+        throw invalid("A still take starts at the beginning of its source.");
+      if (
+        asset.kind === "video" &&
+        !(op.sourceStartTicks + c.durationTicks <= asset.durationTicks)
+      )
+        throw invalid("The take is shorter than the clip.");
+      if (asset.kind === "video") {
+        // Sound the editor turned off stays off; a take without sound has
+        // none to play.
+        const kept =
+          c.sound && before?.kind === "video" && before.hasAudio === true
+            ? c.sound.enabled
+            : true;
+        c.sound = {
+          enabled: kept && asset.hasAudio === true,
+          gainDb: c.sound?.gainDb ?? 0,
+          fadeInTicks: c.sound?.fadeInTicks ?? 0,
+          fadeOutTicks: c.sound?.fadeOutTicks ?? 0,
+        };
+      } else c.sound = null;
+      c.title = null;
+      c.assetId = asset.id;
+      c.sourceStartTicks = op.sourceStartTicks;
       return;
     }
     case "clip.setSpeed": {

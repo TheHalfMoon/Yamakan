@@ -367,6 +367,26 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Rollback.** The AG-DOCS switch (`YAMAKAN_AG_DOCS_OFF=1`) turns story and pack writes off; stored documents stay readable. The workspace database moves to version 13, which rebuilds the two document tables to accept the new kinds with the same rows (foreign keys checked in the same transaction) and adds the table of committed story and pack versions. Stored versions are never pruned; any future pruning must also remove their rows there. An earlier build refuses a version 13 workspace, so going back to one needs a verified backup from before the upgrade.
 - **UI.** The Director panel lists the project's stories and packs: shots and title cards, and how many references link a likeness consent (linked, not necessarily still usable). It lists them again at each revision of the open project or on request, and reads their content only when a version changed.
 
+## Take compare and replace (YU-032)
+
+- **Takes and lineage.** A story shot keeps up to 8 alternative takes. A take may record its `lineage`: an optional label, the `outputHash` of its own media version, and up to 8 `inputs` (project media pinned by asset id and SHA-256) it was made from. Each is checked against the project's media when the story is saved. A story version is immutable, so its lineage is too, and the media a story names (inputs included) stays in every revision that holds it.
+- **Read-only commands.** These change nothing:
+  - `yamakan.take.list` lists a story's shots and takes. For each assembled shot it gives the clip that shows it and which take that clip shows (same media and in-point).
+  - `yamakan.take.compare` compares up to 8 takes of one shot. For each it gives the media version, size and sound, and whether the take covers the shot's clip. Its preview is the indexed thumbnail of the middle second for footage (a 90-pixel JPEG drawn from the edit proxy when there is one), or the still itself. No original is decoded by the command.
+  - `yamakan.take.proposeReplace` returns the exact clip mapping a replacement would make: the clip, its place and length, and the media and in-point it shows now and would show. The mapping is bound to the project, the revision, the story's content hash and both media versions, and named by the SHA-256 of its canonical JSON. It is checked against a copy of the head, so refusals come at proposal time.
+- **Apply.** `yamakan.take.apply` takes the proposal and the expected revision, and commits one revision that changes only that clip.
+  - The proposal must be for this revision. Inside the commit it is recomputed from the head and the current story version, and only an identical proposal is applied. A stale, forged or story-changed proposal is refused (`REVISION_CONFLICT`).
+  - The take's media must be this project's ready object at its size, checked on disk first and under the write lock. Its probe must have been recorded at import; otherwise it is refused. The chosen take and the shot's reference pins are checked again, so a revoked or expired consent refuses it.
+- **Replacement (`clip.replaceMedia`).**
+  - The clip keeps its id, place, length, track, effects and animation. It takes the take's media and in-point, and its title is cleared, so a title card can be replaced by a take.
+  - Footage keeps the clip's embedded-sound settings. Sound the editor turned off stays off, and a take with no audio plays none. A still has no sound settings.
+  - Refused: a locked track, a retimed clip, a clip whose sound is unlinked onto an audio track (relink it first), a still that does not start at 0, and a take shorter than the clip. A shot shown by more than one clip, for example after a split, is refused too.
+- **Undo and rollback.**
+  - Undo is a new revision with exactly the old clip. The original take stays in the story and its media in the project, so undo, redo and restore bring it back byte for byte.
+  - As with assembly, undo and redo do not check consents again.
+  - The story's `selectedTakeId` is the storyboard's choice for assembly. A replacement changes the timeline, not the story.
+  - Stories without lineage keep their canonical bytes. An earlier build refuses a story with lineage as invalid, so going back needs stories saved without it.
+
 ## Clip effects: transform and crop (YU-020)
 
 - **Model.** A footage or still clip on a video track may carry `effects`, a versioned stack of at most 4 effects with at most one `transform` (version 1). Absent means none, so projects without effects keep their canonical bytes (v4 or v5) and render plans; a stack that changes nothing is stored as none. A project with effects is stored as canonical v6, which an earlier build refuses as a newer format (recovery guidance) rather than reading it without its effects. An effect kind or version this build does not know fails validation, in the editor, in a stored snapshot and in preflight; an effect is never dropped silently.
