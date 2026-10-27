@@ -21,6 +21,11 @@ import {
 } from "../audio/loudnorm.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
+import {
+  EFFECT_LIMITS,
+  clipTransform,
+  type TransformEffect,
+} from "../effects/registry.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -59,6 +64,11 @@ export type VideoLayer = {
    * Render applies opacity; transform paths are residual.
    */
   animation?: ClipAnimation;
+  /**
+   * YU-020: present only when the clip has a non-identity transform, so a
+   * plan without effects (and its hash) is exactly as before.
+   */
+  transform?: TransformEffect;
 };
 
 export type AudioInstruction = {
@@ -181,10 +191,36 @@ export function compilePlan(
         ...anim,
       });
     else {
+      const transform = clipTransform(c.effects);
+      if (transform) {
+        const { crop, scale } = transform;
+        if (
+          (crop.left || crop.top || crop.right || crop.bottom) &&
+          (a.width < EFFECT_LIMITS.cropSourcePixels ||
+            a.height < EFFECT_LIMITS.cropSourcePixels)
+        )
+          throw new CommandError(
+            "VALIDATION",
+            `A source smaller than ${EFFECT_LIMITS.cropSourcePixels} pixels cannot be cropped.`,
+          );
+        // The fitted picture is at most the frame; scaled, it must stay
+        // within the pixel budget.
+        if (
+          project.output.width *
+            project.output.height *
+            (scale / 1000) ** 2 >
+          EFFECT_LIMITS.scaledPixels
+        )
+          throw new CommandError(
+            "LIMIT_EXCEEDED",
+            "This scale makes the picture too large to render at this output size.",
+          );
+      }
       layers.push({
         ...timing,
         kind: a.kind === "image" ? "image" : "video",
         ...anim,
+        ...(transform ? { transform } : {}),
       });
       if (a.kind === "video" && c.sound?.enabled)
         audio.push({

@@ -21,6 +21,7 @@ import {
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
+import { ClipEffectsSchema, isIdentityStack } from "./effects/registry.ts";
 import { DOCUMENT_LIMITS, DocumentRefSchema } from "./document-ref.ts";
 import type { DocumentRef } from "./document-ref.ts";
 import { canonicalJson } from "./hash/canonical.ts";
@@ -31,6 +32,24 @@ export const FORMAT = "yamakan.project";
 // unaffected (serializeCanonical).
 export const FORMAT_VERSION = 5;
 const DOCUMENTLESS_FORMAT_VERSION = 4;
+// v6 (YU-020) adds clip effects. Only a project with effects is written as
+// v6, so a build without effects refuses it as a newer format (recovery
+// guidance) instead of reading it with its effects dropped.
+export const EFFECTS_FORMAT_VERSION = 6;
+// The newest version this build reads.
+export const LATEST_FORMAT_VERSION = EFFECTS_FORMAT_VERSION;
+const hasEffects = (p: { clips: { effects?: unknown }[] }) =>
+  p.clips.some((c) => c.effects !== undefined);
+// The version a project is written as: the oldest that holds it.
+const versionFor = (p: {
+  clips: { effects?: unknown }[];
+  documents: unknown[];
+}) =>
+  hasEffects(p)
+    ? EFFECTS_FORMAT_VERSION
+    : p.documents.length
+      ? FORMAT_VERSION
+      : DOCUMENTLESS_FORMAT_VERSION;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -106,6 +125,9 @@ const CanonicalClip = z
     speed: RationalSchema.optional(),
     // W16/M6: OpenCut-shaped animation channel map (path → channel). Absent when unused.
     animation: ClipAnimationSchema.optional(),
+    // YU-020: versioned effect stack (transform/crop). Absent when unused,
+    // so projects without effects keep their bytes.
+    effects: ClipEffectsSchema.optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -139,6 +161,7 @@ const ProjectBody = z
     formatVersion: z.union([
       z.literal(DOCUMENTLESS_FORMAT_VERSION),
       z.literal(FORMAT_VERSION),
+      z.literal(EFFECTS_FORMAT_VERSION),
     ]),
     id: Id,
     name: z.string().min(1).max(120),
@@ -208,6 +231,16 @@ const ProjectBody = z
       const audible = track?.kind === "audio";
       if (!audible && (c.gainDb !== 0 || c.fadeInTicks || c.fadeOutTicks))
         fail("Gain and fades apply to audio clips only.");
+      if (
+        c.effects &&
+        (c.title !== null ||
+          track?.kind !== "video" ||
+          !p.assets.some(
+            (a) =>
+              a.id === c.assetId && (a.kind === "video" || a.kind === "image"),
+          ))
+      )
+        fail("Effects apply to footage and stills on video tracks only.");
       const asset = p.assets.find((a) => a.id === c.assetId);
       const videoMedia =
         c.title === null && track?.kind === "video" && asset?.kind === "video";
@@ -312,14 +345,13 @@ export const CanonicalProjectSchema = z.preprocess((value, ctx) => {
 }, ProjectBody.transform(normalizeVersion));
 // One parsed form: version 4 without documents, version 5 with them.
 function normalizeVersion<
-  T extends { formatVersion: 4 | 5; documents: unknown[] },
+  T extends {
+    formatVersion: 4 | 5 | 6;
+    documents: unknown[];
+    clips: { effects?: unknown }[];
+  },
 >(p: T): T {
-  return {
-    ...p,
-    formatVersion: p.documents.length
-      ? FORMAT_VERSION
-      : DOCUMENTLESS_FORMAT_VERSION,
-  };
+  return { ...p, formatVersion: versionFor(p) };
 }
 export type CanonicalProject = z.output<typeof ProjectBody>;
 
@@ -345,7 +377,7 @@ export function inspectFormat(value: unknown): {
       format === FORMAT &&
       formatVersion !== null &&
       formatVersion >= 1 &&
-      formatVersion <= FORMAT_VERSION,
+      formatVersion <= LATEST_FORMAT_VERSION,
   };
 }
 
@@ -441,7 +473,10 @@ function upgradeV2(value: Record<string, unknown>) {
 export function parseCanonical(value: unknown): CanonicalProject {
   const info = inspectFormat(value);
   if (!info.supported) {
-    if (info.format === FORMAT && (info.formatVersion ?? 0) > FORMAT_VERSION)
+    if (
+      info.format === FORMAT &&
+      (info.formatVersion ?? 0) > LATEST_FORMAT_VERSION
+    )
       throw new CommandError(
         "RECOVERY_REQUIRED",
         `Project format version ${info.formatVersion} is newer than this build supports; it can be inspected but not edited.`,
@@ -494,9 +529,7 @@ export function fromEditView(
   const { toTicks } = editRate(fps);
   return CanonicalProjectSchema.parse({
     format: FORMAT,
-    formatVersion: documents.length
-      ? FORMAT_VERSION
-      : DOCUMENTLESS_FORMAT_VERSION,
+    formatVersion: versionFor({ clips: p.clips, documents }),
     documents,
     id: p.id,
     name: p.name,
@@ -561,6 +594,10 @@ export function fromEditView(
         sound,
         ...(c.speed ? { speed: c.speed } : {}),
         ...(c.animation ? { animation: c.animation } : {}),
+        // A stack that changes nothing is stored as none, however it came.
+        ...(c.effects && !isIdentityStack(c.effects)
+          ? { effects: c.effects }
+          : {}),
       };
     }),
   });
@@ -571,19 +608,13 @@ export function fromEditView(
 export function serializeCanonical(project: CanonicalProject): string {
   const p = CanonicalProjectSchema.parse(project);
   const { documents, ...rest } = p;
-  if (!documents.length)
-    return canonicalJson({
-      ...rest,
-      formatVersion: DOCUMENTLESS_FORMAT_VERSION,
-    });
+  const formatVersion = versionFor(p);
+  if (formatVersion === DOCUMENTLESS_FORMAT_VERSION)
+    return canonicalJson({ ...rest, formatVersion });
   const ordered = [...documents].sort((a, b) =>
     a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
   );
-  return canonicalJson({
-    ...rest,
-    formatVersion: FORMAT_VERSION,
-    documents: ordered,
-  });
+  return canonicalJson({ ...rest, formatVersion, documents: ordered });
 }
 
 // Canonical → editing shape. Refuses anything the editor cannot hold: a
@@ -682,6 +713,7 @@ export function toEditView(project: CanonicalProject): Project {
         ? { speed: c.speed }
         : {}),
       ...(c.animation ? { animation: c.animation } : {}),
+      ...(c.effects ? { effects: c.effects } : {}),
     })),
   });
 }

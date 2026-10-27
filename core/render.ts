@@ -29,6 +29,7 @@ import {
 } from "./audio/loudnorm.ts";
 import { withMeasuredLoudnorm } from "./render/plan.ts";
 import { ANIMATION_ENABLED } from "./animation/flags.ts";
+import { transformFilters } from "./effects/registry.ts";
 import {
   opacityFilterChain,
   renderableAnimationChannels,
@@ -408,9 +409,13 @@ export async function renderPlan(
             : `setpts=(PTS-STARTPTS)/${speed}+(${from - leadClip})`;
         timed = `[${index}:v]trim=duration=${span},${flicks},${setpts}`;
       }
-      filters.push(
-        `${timed},fps=${rate},scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease,setsar=1[${clip}]`,
-      );
+      // The contain fit, as before; a transform (YU-020) crops before it
+      // and scales after it, and moves the overlay from the centre.
+      const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease,setsar=1`;
+      const shaped = layer.transform
+        ? transformFilters(layer.transform, fit)
+        : null;
+      filters.push(`${timed},fps=${rate},${shaped?.picture ?? fit}[${clip}]`);
       let picture = clip;
       if (ANIMATION_ENABLED && layer.animation) {
         const channels = renderableAnimationChannels(layer.animation);
@@ -428,7 +433,7 @@ export async function renderPlan(
         }
       }
       filters.push(
-        `[${visual}][${picture}]overlay=x=(W-w)/2:y=(H-h)/2:enable='gte(t,${start})*lt(t,${end})':eof_action=pass[${next}]`,
+        `[${visual}][${picture}]overlay=x=${shaped?.overlay.x ?? "(W-w)/2"}:y=${shaped?.overlay.y ?? "(H-h)/2"}:enable='gte(t,${start})*lt(t,${end})':eof_action=pass[${next}]`,
       );
       visual = next;
     }

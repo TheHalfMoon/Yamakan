@@ -512,6 +512,53 @@ try {
     assert.equal(animClip.animation.opacity.keys[0].value, 0.2);
     assert.equal(animClip.animation.opacity.keys.at(-1).value, 0.8);
   }
+  // YU-020 Transform: a bounded control → undo/redo → persist as a
+  // versioned effect in thousandths.
+  await page.getByTitle("reference.png · 00:00:00:00 → 00:00:01:00").click();
+  await page.getByTestId("clip-transform-panel").waitFor({ timeout: 15000 });
+  await page.getByTestId("transform-scale").fill("50");
+  await page.getByTestId("transform-scale").press("Enter");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  assert.equal(await page.getByTestId("transform-scale").inputValue(), "100");
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  assert.equal(await page.getByTestId("transform-scale").inputValue(), "50");
+  // Opacity back to 1: the parity check below compares the interactive
+  // canvas (picture, position and fit; it draws no animated opacity) with
+  // the reference render, so it then checks the transform's interactive
+  // subset (scale about the centre) against the export's own placement.
+  await page.locator("#anim-start-opacity").fill("1");
+  await page.locator("#anim-end-opacity").fill("1");
+  await page
+    .getByRole("button", { name: "Apply opacity keyframes", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved revision" })
+    .waitFor();
+  {
+    const saved = await getProject();
+    const clip = saved.clips.find(
+      (c) =>
+        saved.assets.some(
+          (a) => a.id === c.assetId && a.name === "reference.png",
+        ) && c.startFrame === 0,
+    );
+    assert.deepEqual(
+      clip?.effects,
+      [
+        {
+          type: "transform",
+          version: 1,
+          scale: 500,
+          offsetX: 0,
+          offsetY: 0,
+          crop: { left: 0, top: 0, right: 0, bottom: 0 },
+        },
+      ],
+      "the transform persists as a versioned effect",
+    );
+  }
   // Reference preview: the saved revision's frame, rendered by the export's
   // plan compiler, and marked stale while the unlock is unsaved.
   await page.getByTitle("Lock track (Alt+L)").first().click();

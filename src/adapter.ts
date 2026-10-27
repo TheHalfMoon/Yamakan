@@ -3,6 +3,7 @@ import { framesPerSecond } from "../core/project.ts";
 import type { Project } from "../core/project.ts";
 import type { TimelineClip, TimelineTrack, MediaItem } from "./editor/types";
 import { previewVolume } from "../core/render/parity.ts";
+import { clipTransform } from "../core/effects/registry.ts";
 // With `proxies`, a video whose edit proxy is ready plays that proxy in
 // the interactive preview (same times and trims; YU-017); everything else,
 // and every export, uses the original.
@@ -57,6 +58,21 @@ export function editorView(
         ),
     ),
     effect: null,
+    // The interactive subset of a transform (YU-020): scale about the
+    // centre and the offset, as the export places them. A crop shows in
+    // the reference preview and the export only.
+    ...(() => {
+      const t = clipTransform(c.effects);
+      return t
+        ? {
+            transform: {
+              scale: t.scale / 1000,
+              opacity: 1,
+              position: { x: 50 + t.offsetX / 10, y: 50 + t.offsetY / 10 },
+            },
+          }
+        : {};
+    })(),
     soundEnabled: Boolean(c.sound?.enabled),
     // The export's gain up to 0 dB (an audio clip's own, or a video's
     // embedded sound); above it, see core/render/parity.ts.

@@ -281,8 +281,9 @@ The editor has two previews. The canvas preview is fast and interactive. The ref
     - speeds below 1/4 or above 4x, which the browser may silence or clamp;
     - audio fades, which are not played;
     - gain above 0 dB, which cannot play louder than the source;
-    - clip animation, which is not drawn.
-  - The canvas shows everything in `PREVIEW_PARITY_SUBSET` as the export does: cuts, trims, track order, picture fit, constant retime, still images, sound, and gain up to 0 dB. This includes an audio clip's own gain, which the canvas ignored before YU-018.
+    - clip animation, which is not drawn;
+  - a transform's crop, which is not drawn (YU-020).
+  - The canvas shows everything in `PREVIEW_PARITY_SUBSET` as the export does: cuts, trims, track order, picture fit, constant retime, still images, sound, gain up to 0 dB, and a transform's scale and position (YU-020). This includes an audio clip's own gain, which the canvas ignored before YU-018.
   - Clips on tracks the export drops (muted, or not soloed when a track of their kind is) are not counted.
   - The editor states the result under the canvas, and `yamakan.preview.parity` (`project:read`) returns it for the current revision.
   - Embedded video sound follows the clip's switch on every frame. It used to follow it only when the element was created.
@@ -365,3 +366,13 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Principals.** Linking a likeness consent requires the browser session. Agents can save stories, and packs without likeness entries. Inline saves are bounded by the creative-document storage budget (agents share their own share of it), 32 documents per project and the revision limit; they are not staged.
 - **Rollback.** The AG-DOCS switch (`YAMAKAN_AG_DOCS_OFF=1`) turns story and pack writes off; stored documents stay readable. The workspace database moves to version 13, which rebuilds the two document tables to accept the new kinds with the same rows (foreign keys checked in the same transaction) and adds the table of committed story and pack versions. Stored versions are never pruned; any future pruning must also remove their rows there. An earlier build refuses a version 13 workspace, so going back to one needs a verified backup from before the upgrade.
 - **UI.** The Director panel lists the project's stories and packs: shots and title cards, and how many references link a likeness consent (linked, not necessarily still usable). It lists them again at each revision of the open project or on request, and reads their content only when a version changed.
+
+## Clip effects: transform and crop (YU-020)
+
+- **Model.** A footage or still clip on a video track may carry `effects`, a versioned stack of at most 4 effects with at most one `transform` (version 1). Absent means none, so projects without effects keep their canonical bytes (v4 or v5) and render plans; a stack that changes nothing is stored as none. A project with effects is stored as canonical v6, which an earlier build refuses as a newer format (recovery guidance) rather than reading it without its effects. An effect kind or version this build does not know fails validation, in the editor, in a stored snapshot and in preflight; an effect is never dropped silently.
+- **Transform v1.** All values are integers in thousandths: `scale` 100–4000 (0.1x–4x), `offsetX`/`offsetY` −1000–1000 (of the frame's width/height), and `crop` `left`/`top`/`right`/`bottom` 0–900 with at least a tenth of the picture kept each way. No NaN, filter text, script or path can be stored.
+- **Semantics.** Crop the source, fit the result inside the frame (contain, as without a transform), scale it about its centre, then move it from the centre by the offset. Export and the reference preview compile the same plan, so they draw it identically; an identity transform compiles to nothing. A scaled picture is bounded to 1920×1080×16 pixels (the largest output at 4x), and a source smaller than 20 pixels cannot be cropped; both are refused when the plan is compiled (preview or export), not when the value is set.
+- **Commands.** `yamakan.clip.setEffects` sets or (with null) removes a clip's stack as one revision, undoable and redoable like any edit; the editor's Transform panel exposes only these bounded controls (percent in the panel, thousandths stored).
+- **Interactive preview.** The playing canvas shows scale and position exactly as the export places them; a crop shows in the reference preview and the export only, and the preview-parity notice names it (`effectCrop`).
+- **Interchange.** OTIO export carries a clip's effects as `yamakan_effects` metadata, and import accepts them only as a valid stack (refused otherwise).
+- **Rollback.** `YAMAKAN_EFFECTS_OFF=1` refuses new effect values (by command, batch or whole-project save); stored effects stay, render and remain readable. Undo, redo and restore move between stored revisions and may bring effects back or take them away. Going back to an earlier build needs projects without effects (it refuses v6) or a backup.

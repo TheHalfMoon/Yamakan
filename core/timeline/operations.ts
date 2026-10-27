@@ -28,6 +28,12 @@ import {
   snapGroupEdges,
 } from "./group-move/index.ts";
 import { clampRetimeRate } from "../retime/rate.ts";
+import {
+  ClipEffectsSchema,
+  EFFECTS_OFF,
+  effectWritesEnabled,
+  isIdentityStack,
+} from "../effects/registry.ts";
 import { getSourceTimeAtClipTime } from "../retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
@@ -139,6 +145,14 @@ export const OperationSchema = z.discriminatedUnion("type", [
       gainDb: z.number().min(-60).max(12).optional(),
       fadeInTicks: Ticks.optional(),
       fadeOutTicks: Ticks.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("clip.setEffects"),
+      clipId: Id,
+      // YU-020: the clip's whole effect stack; null removes it.
+      effects: ClipEffectsSchema.nullable(),
     })
     .strict(),
   z
@@ -552,6 +566,16 @@ function apply(p: CanonicalProject, op: Operation): void {
         c.sound.fadeInTicks,
         c.sound.fadeOutTicks,
       );
+      return;
+    }
+    case "clip.setEffects": {
+      if (!effectWritesEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", EFFECTS_OFF);
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      // A stack that changes nothing is stored as none.
+      if (op.effects && !isIdentityStack(op.effects)) c.effects = op.effects;
+      else delete c.effects;
       return;
     }
     case "clip.setSpeed": {

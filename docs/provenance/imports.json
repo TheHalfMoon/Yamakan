@@ -330,9 +330,10 @@
       "W18: optional two-pass loudnorm on the mixed audio bus when the plan carries measured loudnorm values (numeric filter args only); measure pass before final encode.",
       "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
-      "YU-019: the read margin is one frame of the profile (never less than 1/30 s, so 30 fps is unchanged); the output check names the probe's 1/30 s unit at any profile rate."
+      "YU-019: the read margin is one frame of the profile (never less than 1/30 s, so 30 fps is unchanged); the output check names the probe's 1/30 s unit at any profile rate.",
+      "YU-020: a layer's transform (crop before the contain fit, scale after it, overlay offset from the centre) is compiled from bounded integers in core/effects/registry.ts; a layer without one is unchanged."
     ],
-    "importedSha256": "477f8ed997cf372c4b2d1c5821ac9c4649611a94af8c85f745b36fd22c1c7bb1",
+    "importedSha256": "8fb0cacc2880107c91b8bf99dc90c70c5e6367d030566304cf8b2c0ac32a1150",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

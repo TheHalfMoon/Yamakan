@@ -29,7 +29,7 @@ import { LegacyProjectStore } from "./legacy-store.ts";
 import { EDIT_VIEW_FORMAT, ProjectStore } from "./store.ts";
 import {
   FORMAT,
-  FORMAT_VERSION,
+  LATEST_FORMAT_VERSION,
   fromEditView,
   inspectFormat,
   parseCanonical,
@@ -298,7 +298,10 @@ async function migrateDatabaseProject(
       if (sha256Hex(text) !== row.snapshot_hash) throw new Error("hash");
       const value: unknown = JSON.parse(text);
       const info = inspectFormat(value);
-      if (info.format === FORMAT && (info.formatVersion ?? 0) > FORMAT_VERSION)
+      if (
+        info.format === FORMAT &&
+        (info.formatVersion ?? 0) > LATEST_FORMAT_VERSION
+      )
         newerFormat = true;
       const project =
         row.format === EDIT_VIEW_FORMAT

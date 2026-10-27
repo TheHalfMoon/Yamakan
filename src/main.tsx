@@ -42,12 +42,19 @@ import {
 } from "./i18n.ts";
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
+  IDENTITY_TRANSFORM,
+  isIdentityTransform,
+  TransformEffectSchema,
+  type TransformEffect,
+} from "../core/effects/registry.ts";
+import {
   applyLocal,
   deleteClip,
   FRAME_TICKS,
   frameTicksOf,
   setClipAnimation,
   setClipSound,
+  setClipTransform,
   splitClip,
   updateClips as applyClipUpdates,
 } from "./edit-ops.ts";
@@ -1073,6 +1080,156 @@ function App() {
                   />
                 </label>
               </>
+            );
+          })()}
+          <h2>{t("clip.transform.heading")}</h2>
+          {(() => {
+            const clip = p.clips.find((c) => c.id === selected);
+            const asset = clip?.assetId
+              ? p.assets.find((a) => a.id === clip.assetId)
+              : null;
+            const track = clip
+              ? p.tracks.find((tr) => tr.id === clip.trackId)
+              : null;
+            if (
+              !clip ||
+              clip.title !== null ||
+              track?.kind !== "video" ||
+              (asset?.kind !== "video" && asset?.kind !== "image")
+            )
+              return <p className="hint">{t("clip.transform.none")}</p>;
+            const current =
+              clip.effects?.find((e) => e.type === "transform") ??
+              IDENTITY_TRANSFORM;
+            // Percent in the panel, thousandths in the project; inputs
+            // outside the bounds are clamped, never stored.
+            const pct = (v: number) => Math.round(v) / 10;
+            const set = (patch: Partial<TransformEffect>) => {
+              const next = {
+                ...current,
+                ...patch,
+                crop: { ...current.crop, ...patch.crop },
+              };
+              if (!TransformEffectSchema.safeParse(next).success) return;
+              edit((proj) => setClipTransform(proj, clip.id, next));
+            };
+            const field = (
+              key: MessageKey,
+              value: number,
+              min: number,
+              max: number,
+              apply: (permille: number) => Partial<TransformEffect>,
+              testId: string,
+            ) => (
+              <label>
+                {t(key)}
+                {/* Typed freely; committed (clamped) on blur or Enter, so a
+                    half-typed value is never stored. A new stored value
+                    resets the field (its key). */}
+                <input
+                  key={`${testId}:${value}`}
+                  type="number"
+                  min={min / 10}
+                  max={max / 10}
+                  step={1}
+                  disabled={busy}
+                  defaultValue={pct(value)}
+                  data-testid={testId}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  onBlur={(e) => {
+                    const text = e.currentTarget.value.trim();
+                    const n = Number(text);
+                    if (text === "" || !Number.isFinite(n)) {
+                      e.currentTarget.value = String(pct(value));
+                      return;
+                    }
+                    const permille = Math.round(
+                      Math.min(max, Math.max(min, n * 10)),
+                    );
+                    if (permille === value) {
+                      e.currentTarget.value = String(pct(value));
+                      return;
+                    }
+                    set(apply(permille));
+                  }}
+                />
+              </label>
+            );
+            const crop = current.crop;
+            return (
+              <div data-testid="clip-transform-panel" key={clip.id}>
+                {field(
+                  "clip.transform.scale",
+                  current.scale,
+                  100,
+                  4000,
+                  (v) => ({ scale: v }),
+                  "transform-scale",
+                )}
+                {field(
+                  "clip.transform.offsetX",
+                  current.offsetX,
+                  -1000,
+                  1000,
+                  (v) => ({ offsetX: v }),
+                  "transform-offset-x",
+                )}
+                {field(
+                  "clip.transform.offsetY",
+                  current.offsetY,
+                  -1000,
+                  1000,
+                  (v) => ({ offsetY: v }),
+                  "transform-offset-y",
+                )}
+                {field(
+                  "clip.transform.cropLeft",
+                  crop.left,
+                  0,
+                  900 - crop.right,
+                  (v) => ({ crop: { ...crop, left: v } }),
+                  "transform-crop-left",
+                )}
+                {field(
+                  "clip.transform.cropTop",
+                  crop.top,
+                  0,
+                  900 - crop.bottom,
+                  (v) => ({ crop: { ...crop, top: v } }),
+                  "transform-crop-top",
+                )}
+                {field(
+                  "clip.transform.cropRight",
+                  crop.right,
+                  0,
+                  900 - crop.left,
+                  (v) => ({ crop: { ...crop, right: v } }),
+                  "transform-crop-right",
+                )}
+                {field(
+                  "clip.transform.cropBottom",
+                  crop.bottom,
+                  0,
+                  900 - crop.top,
+                  (v) => ({ crop: { ...crop, bottom: v } }),
+                  "transform-crop-bottom",
+                )}
+                <button
+                  type="button"
+                  disabled={busy || isIdentityTransform(current)}
+                  data-testid="transform-reset"
+                  onClick={() =>
+                    edit((proj) =>
+                      setClipTransform(proj, clip.id, IDENTITY_TRANSFORM),
+                    )
+                  }
+                >
+                  {t("clip.transform.reset")}
+                </button>
+                <p className="hint">{t("clip.transform.cropHint")}</p>
+              </div>
             );
           })()}
           {ANIMATION_ENABLED ? (

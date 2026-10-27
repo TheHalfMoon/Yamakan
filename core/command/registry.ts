@@ -50,6 +50,7 @@ import {
   studioCapability,
 } from "../studio.ts";
 import { ConsentPurposeSchema } from "../identity.ts";
+import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
   ReferencePackSchema,
   StoryDocumentSchema,
@@ -519,6 +520,28 @@ export const commands = {
         a.projectId,
         a.expectedRevision,
         [{ type: "clip.setSpeed", clipId: a.clipId, speed: a.speed }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.clip.setEffects": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Set a footage or still clip's effect stack (YU-020: one versioned transform with crop, scale and offset, in bounded integer thousandths), or remove it with null. Undoable like any edit.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        effects: ClipEffectsSchema.nullable(),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [{ type: "clip.setEffects", clipId: a.clipId, effects: a.effects }],
         principal.id,
         receipt,
       ),
