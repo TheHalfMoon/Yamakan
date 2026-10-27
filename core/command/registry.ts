@@ -55,6 +55,7 @@ import {
 } from "../cinema/control-compiler.ts";
 import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
 import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
+import { assertLanguage, assertTranscribable } from "../audio/transcription.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -77,7 +78,15 @@ import {
 } from "../captions.ts";
 import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
+  CONTINUITY_STAGES,
+  resolveContinuity,
+  verifySelectedContinuity,
+  verifyStoryContinuity,
+} from "../continuity.ts";
+import {
+  ContinuityRefSchema,
   ReferencePackSchema,
+  STORY_LIMITS,
   StoryDocumentSchema,
   type StoryDocument,
   assembleOperations,
@@ -414,7 +423,12 @@ export const commands = {
           expectedContentHash: a.expectedContentHash,
           source: { bytes: Buffer.from(JSON.stringify(a.story), "utf8") },
           principalId: principal.id,
-          verify: (c) => verifyStory(a.story, c),
+          verify: (c) => {
+            verifyStory(a.story, c);
+            // Takes' continuity references stay traceable (no consent
+            // needed to keep history).
+            verifyStoryContinuity(a.story, c);
+          },
         },
         receipt,
       );
@@ -521,6 +535,9 @@ export const commands = {
             );
           story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
           verifyStory(story, c);
+          // Each selected take is attached: its references' consents must
+          // be usable now (YU-051).
+          verifySelectedContinuity(story, c);
         },
       );
     },
@@ -753,7 +770,13 @@ export const commands = {
             JSON.parse(read.bytes.toString("utf8")),
           );
           // The chosen take and the shot's reference pins, consents included.
-          verifyStory(shotWithTake(story, p.shotId, p.takeId), c);
+          const one = shotWithTake(story, p.shotId, p.takeId);
+          verifyStory(one, c);
+          // And the references the take was made with, consents usable now
+          // (YU-051): a check at attempt time is not an approval here.
+          const continuity =
+            one.scenes[0]!.shots[0]!.takes[0]!.lineage?.continuity;
+          if (continuity?.length) resolveContinuity(c, continuity, "attach");
           for (const m of p.mappings) {
             const asset = c.project.assets.find((x) => x.id === m.to.assetId);
             if (!asset)
@@ -764,6 +787,38 @@ export const commands = {
             assertTakeMedia(c.db, a.projectId, asset);
           }
         },
+      );
+    },
+  }),
+  "yamakan.continuity.check": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Check continuity references (one entry of one reference pack version this project holds, and an optional identity encoding by id and payload hash) for a stage (YU-051): record checks they are traceable; attempt and attach also check every consent they rely on is usable now. Advisory: it changes nothing and approves nothing; take.apply and story.assemble check again. Metadata validity is reported apart from the continuity score, which stays unmeasured.",
+    input: z
+      .object({
+        projectId: Id,
+        stage: z.enum(CONTINUITY_STAGES),
+        references: z
+          .array(ContinuityRefSchema)
+          .min(1)
+          .max(STORY_LIMITS.inputsPerTake),
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      const project = await store.load(a.projectId);
+      return store.read((db) =>
+        resolveContinuity(
+          {
+            db,
+            project,
+            held: (documentId, hash, kind) =>
+              store.holdsDocument(a.projectId, documentId, hash, kind),
+            nowMs: Date.now(),
+          },
+          a.references,
+          a.stage,
+        ),
       );
     },
   }),
@@ -1883,6 +1938,41 @@ export const commands = {
     summary: "Report Director availability and unsupported model stages.",
     input: z.object({}).strict(),
     run: () => directorCapability(),
+  }),
+  "yamakan.audio.transcribe": define({
+    scope: "render:execute",
+    mutation: false,
+    summary:
+      "Transcribe one project asset's sound (YU-070): checks the language (whisper.cpp's list) and the source (sound, at most an hour), then refuses with the plain reason while no recognizer is qualified here: no whisper.cpp runner or weights ship in this build. Never downloads or installs anything.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+        language: z.string().min(2).max(16),
+      })
+      .strict(),
+    run: async (ctx, a) => {
+      assertLanguage(a.language);
+      const { asset, frameRate } = await ctx.store.assetFile(
+        a.projectId,
+        a.assetId,
+      );
+      assertTranscribable(asset, frameRate);
+      const transcribe = (
+        await discoverEngineCapabilities({
+          modelRoot: ctx.modelRoot ?? null,
+          verifyHashes: false,
+        })
+      ).find((d) => d.operation === "transcribe")!;
+      // Even a pinned model would not run: the recognizer worker is not
+      // implemented yet, so nothing is claimed to be recognized.
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        transcribe.capability.available
+          ? "Transcription is not available in this build."
+          : transcribe.message,
+      );
+    },
   }),
   "yamakan.engines.capabilities": define({
     scope: "project:read",

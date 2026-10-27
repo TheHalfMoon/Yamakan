@@ -1,0 +1,65 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "037cc7a",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-051",
+  "objective": "Version continuity references and consent checks at attempt/attach",
+  "parts": [
+    {
+      "part": "YU-051 continuity references and per-stage consent",
+      "branch": "feat/yu-051-continuity-consent",
+      "mergedPr": 144,
+      "headCommit": "42fd90a",
+      "mergeCommit": "fdfffcc"
+    }
+  ],
+  "flags": "none",
+  "deviations": [
+    "A take's lineage names the pack-version entries and identity encoding (id and payload hash) it was made with; a voice reference is project audio under voice-clone consent",
+    "record (story.save) needs references traceable only; attempt and attach (take.apply in its commit, story.assemble per selected take) also need present media and every consent usable now; an encoding is checked under its own consent",
+    "yamakan.continuity.check is advisory; metadata validity is reported apart from a continuity score that stays unmeasured"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Continuity references and per-stage consent)",
+  "tests": {
+    "files": ["tests/continuity-consent.test.ts"],
+    "result": "10/10: pack update keeps old takes traceable; revoked grant blocks apply and assemble and keeps history; revocation race (smoke and both deterministic orders); foreign references; forged encoding hashes; old approval and expiry; voice rules; missing media per stage"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only correctness and security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 1,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix; requested media-missing test and epoch wording added in 5d4cb56"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "0322049",
+    "ci": "PR exact head 42fd90a green; push run 40597952715 on 0322049: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 0322049 (YU-051 and YU-070 together): typecheck, lint, format, provenance, brand, build pass; npm test 703/708 with 2 failures in tests/interruption.test.ts (a backup-kill timing assertion and its EBUSY cleanup, under concurrent load) that pass alone 3/3 in three runs, 3 POSIX-only skips; test:studio 5/5 and 1975/1975; Edge E2E pass (0 page errors)"
+  },
+  "limitations": [
+    "No generation submits yet: the attempt stage runs through the check command",
+    "Placing a medium directly by clip editing is not gated; consents and encodings are workspace-wide; no attach-after-restore test"
+  ]
+}

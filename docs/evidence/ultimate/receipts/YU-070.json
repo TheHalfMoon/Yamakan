@@ -1,0 +1,66 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "fdfffcc",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-070",
+  "objective": "Qualify transcription contract/native stand-in before weights",
+  "parts": [
+    {
+      "part": "YU-070 transcription contract and model-free stand-in",
+      "branch": "feat/yu-070-transcription",
+      "mergedPr": 145,
+      "headCommit": "3ce52eb",
+      "mergeCommit": "0322049"
+    }
+  ],
+  "flags": "none; no recognizer or weights",
+  "deviations": [
+    "whisper.cpp v1.9.5 (d1be6fd, MIT) inspected: -ojf JSON shape, ms offsets, escaping of only quotes and backslashes, miniaudio 16 kHz input, 100 languages",
+    "Bounded, deterministic 16 kHz mono PCM extraction (checked 44-byte header, private folder, an hour at most); yamakan.transcript v1 with recognizer, model hash and language provenance and a recognition flag",
+    "Strict whisper -ojf parser (malformed output refused, never repaired); a silencedetect stand-in that locates sound and claims no words; reviewable caption proposals with a neutral [sound] placeholder",
+    "yamakan.audio.transcribe validates language and source, then refuses with the engine reason"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Transcription contract before weights)",
+  "tests": {
+    "files": ["tests/transcription-contract.test.ts"],
+    "result": "8/8: deterministic PCM; stand-in and whisper-shaped cue timestamps round-trip through captions import and export; no speech; malformed segments; missing weights; unsupported language; over an hour; held folders never swept"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only correctness and containment review, upstream facts spot-checked",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix; the held-folder sweep fixed in a65fd8f"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "0322049",
+    "ci": "PR exact head 3ce52eb green; push run 40597952715 on 0322049: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 0322049 (YU-051 and YU-070 together): typecheck, lint, format, provenance, brand, build pass; npm test 703/708 with 2 failures in tests/interruption.test.ts (a backup-kill timing assertion and its EBUSY cleanup, under concurrent load) that pass alone 3/3 in three runs, 3 POSIX-only skips; test:studio 5/5 and 1975/1975; Edge E2E pass (0 page errors)"
+  },
+  "limitations": [
+    "No recognizer runs and none is claimed or measured; consent and retention apply once one does (YU-051 voice-clone)",
+    "Stand-in segments are sound regions, not utterances"
+  ]
+}
