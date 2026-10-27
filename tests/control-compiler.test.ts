@@ -254,6 +254,18 @@ test("depth, pose and an untaken end frame refuse or are dropped, guides must be
   ]);
   assert.deepEqual([dropped.controls, dropped.inputs], [{}, []]);
   assert.equal("prompt" in dropped, false);
+  // A guide from elsewhere is refused even when it would only be dropped.
+  assert.match(
+    failure(() =>
+      compileControls(
+        { ...intent, guides: { depth: crypto.randomUUID() } },
+        plain,
+        resolve,
+        ["guides.depth"],
+      ),
+    ),
+    /^VALIDATION: .*guides.depth guide is not media of this project/,
+  );
   // A guide that is not this project's still is refused.
   assert.match(
     failure(() =>
@@ -263,7 +275,7 @@ test("depth, pose and an untaken end frame refuse or are dropped, guides must be
         resolve,
       ),
     ),
-    /^VALIDATION: .*still of this project/,
+    /^VALIDATION: .*guides.endFrame guide is not media of this project/,
   );
   assert.match(
     failure(() =>
@@ -356,9 +368,7 @@ test("the command resolves guides in the given project and lowers against this b
     "lens.focalLengthMm",
     "light.timeOfDay",
   ]);
-  // The shipped image-to-video recipe takes only a first frame, so an end
-  // frame (here another project's still) is refused before it is resolved;
-  // resolution to this project's media is covered above.
+  // Another project's still is refused as a guide of this project.
   assert.match(
     String(
       await call({
@@ -367,7 +377,7 @@ test("the command resolves guides in the given project and lowers against this b
         intent: { ...intent, guides: { endFrame: asset.id } },
       }),
     ),
-    /^CAPABILITY_UNAVAILABLE: .*guides.endFrame/,
+    /^VALIDATION: .*guides.endFrame guide is not media of this project/,
   );
   assert.match(
     String(

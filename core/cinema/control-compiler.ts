@@ -189,6 +189,16 @@ export function compileControls(
       report.push({ path: s.path, status: "applied", to: s.control });
     } else report.push({ path: s.path, status: "metadata", to: null });
   }
+  // Every guide that is set must be this project's media, even one that
+  // will only be dropped.
+  for (const g of GUIDES) {
+    const assetId = g.read(intent);
+    if (assetId !== undefined && !resolve(assetId))
+      throw new CommandError(
+        "VALIDATION",
+        `The ${g.path} guide is not media of this project.`,
+      );
+  }
   const unaccepted: string[] = [];
   for (const g of GUIDES) {
     const assetId = g.read(intent);
