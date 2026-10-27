@@ -497,7 +497,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - Five to twenty-one edits commit while each backup runs.
     - Each restored workspace holds one revision between the last revision acknowledged before the backup and the last one acknowledged during it.
     - That revision is byte-identical to the live workspace's copy, and one more edit commits in the restored workspace.
-    - Backup takes at most 2.8 s and restore at most 0.41 s (T, under load; S and M take 0.25 s or less).
+    - Backup takes at most 2.83 s and restore at most 0.41 s (T, under load; S and M take 0.25 s or less).
   - **Refusals.** L, H, A and K are each refused with their own message, and the project is unchanged (no clamp). The test also accepts 200 clips, 16 tracks, a clip ending exactly at ten minutes, and a 1920×1080 output. The clip and track refusals now name the limit ("A project holds at most 200 clips.").
   - **Memory.** The script's peak resident memory (service code only, workers excluded) is 170 MiB.
 - **Export.**
@@ -505,19 +505,19 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - M's worker launch was refused: "command line too long", because each clip was its own FFmpeg input.
     - T reached the 180 s wall-clock limit.
     - 40 1080p stills over three minutes failed in FFmpeg. Each still was fed with `-loop 1`, which decodes as fast as it is read, so frames queued until the overlay reached them.
-  - **YU-026b** changes how stills are read. Each still in the render window is now one input, split to every clip that shows it; the branches share one decoded frame. Each clip repeats its frame with a pull-based `loop` filter at exact output-frame times, so frames are made only as the timeline reaches them. Video clips keep one seeked input per clip.
+  - **YU-026b** changes how stills are read. Each still in the render window is now one input, split to every clip that shows it; the branches share one decoded frame. Each clip repeats its frame with a pull-based `loop` filter at the output rate (one frame apart at 30 and 24000/1001 fps), so frames are made only as the timeline reaches them. Video clips keep one seeked input per clip. Memory is bounded by the decoded size of the window's distinct stills (each held once), not by the number of clips.
   - **After YU-026b**, in separate `--probe` runs on this host, not recorded in the JSON:
     - The 40-still, three-minute timeline exports in 38 s.
     - T exports in 120 s.
     - M launches now, and still exceeds the 180 s limit.
-  - **The recorded run**, with other work loading the host to about 64% CPU:
+  - **The recorded run**, while other work loaded the host (about 64% CPU, observed, not recorded):
     - S exports in 49 s.
     - T and the 40-still probe reach the 180 s limit.
-    - M's 15 stacked 1080p layers run out of the worker's 2 GiB (exit −12, after 140 s).
+    - M (15 video tracks of 1080p stills) fails in FFmpeg after 140 s with exit −12 (ENOMEM), most likely the worker's 2 GiB; the cause is inferred.
   - **So export is qualified only at S.** T fits the limit on an idle host, but with no margin under load.
 - **Proposal (measured, not applied; a new policy version needs review).**
   - Make the render wall-clock limit scale with the timeline's duration, for example 180 s plus 30 s per output minute at 1080p.
-  - Bound the layers composited at once, so that M's 16 stacked 1080p tracks fit the worker's memory. Today they do not, so M stays edit-qualified and export-unqualified.
+  - Bound the layers composited at once, so that M's 15 stacked 1080p video tracks fit the worker's memory. Today they do not, so M stays edit-qualified and export-unqualified.
   - A video-heavy project (many distinct video clips) still adds one input per clip, so its command line grows with the clip count.
 - **Not measured.**
   - Browser timeline virtualization at M.

@@ -398,7 +398,8 @@ export async function renderPlan(
     // split to every clip that shows it (the branches share one decoded
     // frame). A clip repeats its frame with a pull-based loop, so frames
     // are made only as the timeline reaches them: a still-heavy timeline
-    // neither floods memory nor needs one input per clip.
+    // neither queues frames nor needs one input per clip. Memory is the
+    // decoded size of the window's distinct stills, each held once.
     const stills = new Map<string, string[]>();
     for (const layer of plan.layers) {
       if (layer.kind !== "image") continue;
@@ -441,7 +442,10 @@ export async function renderPlan(
         // clip's part of the window plus one frame, each copy at its exact
         // timeline time, and ended by the overlay's enable window.
         const frames = Math.ceil((to - from) / FRAME) + 1;
-        timed = `[${stillBranches.get(layer.clipId)}]loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
+        const branch = stillBranches.get(layer.clipId);
+        if (!branch)
+          throw new CommandError("VALIDATION", "A still layer has no input.");
+        timed = `[${branch}]loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
       } else {
         // Every source frame keeps its own timeline time, clip start plus
         // its distance from the clip's source start, in export and in any
