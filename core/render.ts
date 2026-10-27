@@ -10,6 +10,7 @@ import { CommandError } from "./command/errors.ts";
 import { FLICKS_PER_SECOND, framesToTicks } from "./time.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { compilePlan } from "./render/plan.ts";
+import { burnedInCaptions } from "./captions.ts";
 import type { RenderPlan } from "./render/plan.ts";
 import { titleFonts } from "./render/fonts.ts";
 import type { PinnedFont } from "./render/fonts.ts";
@@ -736,6 +737,7 @@ export async function renderRevision(
   );
   const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
     normalizeLoudness: options.normalizeLoudness,
+    captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),
   });
   const rendered = await renderPlan(
     store,

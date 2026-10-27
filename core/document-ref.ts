@@ -43,12 +43,20 @@ export const DocumentKind = z.enum([
   "cinemaScene",
   "story",
   "referencePack",
+  // YU-024: caption tracks (timed text).
+  "captions",
 ]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
 // The schema version each kind is validated against today.
 export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
-  Object.freeze({ studio: 1, cinemaScene: 1, story: 1, referencePack: 1 });
+  Object.freeze({
+    studio: 1,
+    cinemaScene: 1,
+    story: 1,
+    referencePack: 1,
+    captions: 1,
+  });
 
 export const DocumentRefSchema = z
   .object({

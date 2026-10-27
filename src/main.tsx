@@ -66,6 +66,7 @@ import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
+import { Captions } from "./captions.tsx";
 import type {
   Operation,
   OperationInput,
@@ -168,6 +169,28 @@ function App() {
   const headGen = useRef(0);
   const refresh = async () =>
     setProjects(await call("yamakan.project.list", {}));
+  // A document save (Studio, captions) changes only the project's
+  // documents: a draft based on the revision it replaced moves to the new
+  // revision unchanged (the service carries documents forward on its next
+  // save). A draft based on anything else is left alone, so its save still
+  // meets another writer's changes.
+  const documentSaved = (projectId: string, from: number, revision: number) =>
+    putHistory((h) => {
+      if (!h || h.present.id !== projectId || h.present.revision !== from)
+        return h;
+      const at = (x: Project) => ({ ...x, revision });
+      const present = at(h.present);
+      // The head moves with it (the same object when nothing is pending,
+      // so no commit follows).
+      if (head.current === h.present) head.current = present;
+      else if (head.current?.id === projectId && head.current.revision === from)
+        head.current = at(head.current);
+      return {
+        past: h.past.map(at),
+        present,
+        future: h.future.map(at),
+      };
+    });
   useEffect(() => {
     refresh().catch((e) =>
       setMessage(
@@ -833,32 +856,7 @@ function App() {
         project={p ? { id: p.id, revision: p.revision } : null}
         client={client as unknown as StudioClient}
         t={(key) => t(key)}
-        onSaved={(projectId, from, revision) =>
-          // A Studio save changes only the project's documents: a
-          // draft based on the revision it replaced moves to the new
-          // revision unchanged (the service carries documents forward
-          // on its next save). A draft based on anything else is left
-          // alone, so its save still meets another writer's changes.
-          putHistory((h) => {
-            if (!h || h.present.id !== projectId || h.present.revision !== from)
-              return h;
-            const at = (x: Project) => ({ ...x, revision });
-            const present = at(h.present);
-            // The head moves with it (the same object when nothing
-            // is pending, so no commit follows).
-            if (head.current === h.present) head.current = present;
-            else if (
-              head.current?.id === projectId &&
-              head.current.revision === from
-            )
-              head.current = at(head.current);
-            return {
-              past: h.past.map(at),
-              present,
-              future: h.future.map(at),
-            };
-          })
-        }
+        onSaved={documentSaved}
       />
     </>
   );
@@ -2028,6 +2026,20 @@ function App() {
                         ),
                       })}
                     </p>
+                    {/* Caption tracks (YU-024). */}
+                    <Captions
+                      key={p.id}
+                      projectId={p.id}
+                      revision={p.revision}
+                      playheadTicks={Math.round(playhead * 1000) * 705_600}
+                      lang={lang}
+                      t={t}
+                      client={{
+                        call: (operation, parameters) =>
+                          client.call(operation as never, parameters as never),
+                      }}
+                      onSaved={documentSaved}
+                    />
                   </section>
                 ) : (
                   emptyPanel()

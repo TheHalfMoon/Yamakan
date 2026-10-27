@@ -10,6 +10,7 @@ import { StudioDocumentSchema, parseStudioCanvasJson } from "./studio.ts";
 import type { StudioDocument } from "./studio.ts";
 import { parseScene3D } from "./scene3d.ts";
 import { STORY_LIMITS, validateReferencePack, validateStory } from "./story.ts";
+import { CAPTION_LIMITS, validateCaptions } from "./captions.ts";
 import { DOCUMENT_LIMITS, DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
 import type { DocumentKind } from "./document-ref.ts";
 
@@ -274,13 +275,18 @@ export function validateDocument(
         ? validateScene(value)
         : kind === "story"
           ? validateStory(value)
-          : validateReferencePack(value);
+          : kind === "captions"
+            ? validateCaptions(value)
+            : validateReferencePack(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
   // Stories and reference packs have their own, smaller ceiling (YU-031).
+  // Caption tracks too (YU-024).
   const limit =
     kind === "story" || kind === "referencePack"
       ? STORY_LIMITS.documentBytes
-      : DOCUMENT_LIMITS.documentBytes;
+      : kind === "captions"
+        ? CAPTION_LIMITS.documentBytes
+        : DOCUMENT_LIMITS.documentBytes;
   if (bytes.byteLength > limit)
     throw new CommandError(
       "LIMIT_EXCEEDED",

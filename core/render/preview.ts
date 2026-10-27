@@ -25,6 +25,7 @@ import { framesToTicks } from "../time.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { RENDERER_VERSION, renderPlan } from "../render.ts";
 import { compilePlan } from "./plan.ts";
+import { burnedInCaptions } from "../captions.ts";
 import { titleFonts } from "./fonts.ts";
 
 // Entries used within this many milliseconds are kept while the cache is
@@ -124,7 +125,10 @@ export async function preview(
     projectId,
     revision,
   );
-  const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts());
+  const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
+    // Burned-in captions are the export's (YU-024).
+    captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),
+  });
   // A playhead past the saved timeline (an unsaved clip added at the end, a
   // muted trailing track) shows the saved timeline's last frame.
   // Windows count frames at the project's rate (YU-019).

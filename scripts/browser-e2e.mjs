@@ -983,6 +983,73 @@ try {
     .filter({ hasText: `revision ${restored.revision + 1}.` })
     .waitFor();
   assert.equal((await getProject()).revision, restored.revision + 1);
+  // YU-024 Captions: import an SRT in Finish, edit a cue, save, burn it in;
+  // each is a revision the editor's draft follows, so the next save works.
+  {
+    const apiCall = async (name, args) =>
+      (
+        await (
+          await page.request.post(`${url}/api/v1/call`, {
+            headers: agent,
+            data: { name, arguments: args },
+          })
+        ).json()
+      ).result;
+    await workspace("Finish");
+    await page.getByTestId("captions-panel").waitFor();
+    await page.getByTestId("captions-file").setInputFiles({
+      name: "bilingual.srt",
+      mimeType: "application/x-subrip",
+      buffer: Buffer.from(
+        "1\r\n00:00:00,200 --> 00:00:00,800\r\nمرحبا\r\n\r\n2\r\n00:00:01,000 --> 00:00:01,600\r\n<i>Hello</i>\r\n",
+        "utf8",
+      ),
+    });
+    await page.getByTestId("captions-editor").waitFor({ timeout: 15000 });
+    await page.getByTestId("captions-text").nth(1).fill("Hello, edited");
+    await page.getByTestId("captions-save").click();
+    // Saved: the draft is cleared (Save disabled) and nothing is busy.
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[data-testid="captions-save"]')
+          ?.hasAttribute("disabled") === true &&
+        !document
+          .querySelector('[data-testid="captions-burn-in"]')
+          ?.hasAttribute("disabled"),
+    );
+    // The box shows the saved track, so it ticks once the save lands.
+    await page.getByTestId("captions-burn-in").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-testid="captions-burn-in"]')?.checked ===
+          true &&
+        !document
+          .querySelector('[data-testid="captions-burn-in"]')
+          ?.hasAttribute("disabled"),
+    );
+    const docs = await apiCall("yamakan.document.list", { projectId });
+    const ref = docs.find((d) => d.kind === "captions");
+    assert.ok(ref, "the caption track is a document of the project");
+    const track = await apiCall("yamakan.document.get", {
+      projectId,
+      documentId: ref.id,
+    });
+    assert.equal(track.content.burnIn, true);
+    assert.deepEqual(
+      track.content.cues.map((c) => c.text),
+      ["مرحبا", "Hello, edited"],
+    );
+    assert.match(track.content.source.text, /<i>Hello<\/i>/);
+    const srt = await apiCall("yamakan.captions.export", {
+      projectId,
+      documentId: ref.id,
+      format: "srt",
+    });
+    assert.match(srt.text, /00:00:01,000 --> 00:00:01,600\nHello, edited/);
+    // Back where the flow was (the scene controls are in Story).
+    await workspace("Story");
+  }
   // Arabic interface: right-to-left page, Arabic labels, left-to-right
   // timeline; translated choices still store canonical values; remembered
   // across a reload; then back to English. The switch is named by its
