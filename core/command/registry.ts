@@ -54,7 +54,10 @@ import {
   CAPTION_LIMITS,
   CaptionDocumentSchema,
   CaptionFormat,
+  assertBurnInGlyphs,
   exportCaptions,
+  importedCueId,
+  storedCaptions,
   parseCaptions,
   splitCue,
   type CaptionDocument,
@@ -461,18 +464,16 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const sha256 = sha256Hex(Buffer.from(a.text, "utf8"));
       const doc: CaptionDocument = CaptionDocumentSchema.parse({
         format: "yamakan.captions",
         formatVersion: 1,
         name: a.name,
         language: a.language,
         burnIn: a.burnIn,
-        source: {
-          format: a.format,
-          sha256: sha256Hex(Buffer.from(a.text, "utf8")),
-          text: a.text,
-        },
-        cues: parseCaptions(a.text, a.format, randomUUID),
+        source: { format: a.format, sha256, text: a.text },
+        // Cue ids follow from the file, so a retried import replays.
+        cues: parseCaptions(a.text, a.format, (n) => importedCueId(sha256, n)),
       });
       return commitCaptions(store, principal.id, receipt, a, doc);
     },
@@ -1683,7 +1684,8 @@ function readCaptions(
       "VALIDATION",
       "This document is not a caption track.",
     );
-  return CaptionDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
+  // A stored track that no longer reads is damage, not a client error.
+  return storedCaptions(ref.contentHash, () => bytes);
 }
 
 // Commits a caption track as a new revision (compare-and-swap on the
@@ -1700,6 +1702,8 @@ async function commitCaptions(
   },
   doc: CaptionDocument,
 ) {
+  // A burned-in track must be drawable with the pinned font (named cue).
+  await assertBurnInGlyphs(doc);
   const project = await store.commitDocument(
     {
       projectId: a.projectId,

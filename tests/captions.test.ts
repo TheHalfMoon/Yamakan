@@ -25,6 +25,9 @@ import { mediaTools } from "../core/process/workers.ts";
 import { renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import type { Project } from "../core/project.ts";
+import { compilePlan } from "../core/render/plan.ts";
+import { titleFonts } from "../core/render/fonts.ts";
+import { fromEditView } from "../core/canonical.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -259,19 +262,18 @@ test("export round-trips times and mixed-script text; markup in text is written 
       format,
     );
     assert.equal(back[0]!.text, doc.cues[0]!.text, format);
-    // The tag and arrow come back as text, never as markup or timing.
-    assert.ok(back[1]!.text.includes("tag"), format);
-    assert.ok(!back[1]!.text.includes("<b>") || format === "vtt", format);
+    // The tag and arrow come back as the same text, never as markup or a
+    // timing line (only the word joiner that breaks "{\" is added).
+    assert.equal(back[1]!.text, "a <b>tag</b> --> arrow & {⁠\\an8}", format);
   }
-  // Markup in a cue's text is written as text: escaped entities in WebVTT
-  // and angle quotes in SRT (so "-->" cannot form either way), and a word joiner
-  // between "{" and "\" in both (so it never reads as ASS override).
-  const vtt = exportCaptions(doc, "vtt");
-  assert.match(vtt, /&lt;b&gt;tag&lt;\/b&gt;/);
-  assert.match(vtt, /--&gt;/);
-  const srt = exportCaptions(doc, "srt");
-  assert.match(srt, /--›/);
-  for (const text of [vtt, srt]) assert.match(text, /\{⁠\\an8\}/);
+  // Markup in a cue's text is written as entities in both formats (so
+  // "-->" cannot form), with a word joiner between "{" and "\" (so it
+  // never reads as ASS override).
+  for (const format of ["srt", "vtt"] as const) {
+    const text = exportCaptions(doc, format);
+    assert.match(text, /&lt;b&gt;tag&lt;\/b&gt; --&gt; arrow &amp;/);
+    assert.match(text, /\{⁠\\an8\}/);
+  }
 });
 
 async function workspace() {
@@ -607,4 +609,186 @@ test("the native Arabic review fixtures parse to the same cues as SRT and WebVTT
   );
   // The italic tag is removed; its text, and the diacritics, are kept.
   assert.equal(srt[4]!.text, "تشكيل: مُحَمَّدٌ، كِتَابٌ، قُرْآنٌ");
+});
+
+test("blank or padded lines, sub-millisecond times and hidden markup are refused; empty lines are dropped", () => {
+  const cue = (text: string, startTicks = 1000 * MS, endTicks = 2000 * MS) => ({
+    format: "yamakan.captions",
+    formatVersion: 1,
+    name: "T",
+    language: "en",
+    burnIn: false,
+    source: null,
+    cues: [{ id: ids(), startTicks, endTicks, text, source: null }],
+  });
+  for (const text of ["a\n\nb", " a", "a\n  \nb", "a "])
+    assert.equal(
+      CaptionDocumentSchema.safeParse(cue(text)).success,
+      false,
+      JSON.stringify(text),
+    );
+  assert.equal(
+    CaptionDocumentSchema.safeParse(cue("a", 1000 * MS + 1)).success,
+    false,
+    "whole milliseconds only",
+  );
+  // Lines left empty by removed tags or entities are dropped on import.
+  const [parsed] = parseCaptions(
+    "1\n00:00:01,000 --> 00:00:02,000\na\n<i></i>\n&nbsp;\nb<br>c\n",
+    "srt",
+    ids,
+  );
+  assert.equal(parsed!.text, "a\nb\nc");
+  // ASS markup hidden behind a removed tag is still refused.
+  assert.equal(
+    refused(() =>
+      parseCaptions(
+        "1\n00:00:01,000 --> 00:00:02,000\n{<i>\\an8}x\n",
+        "srt",
+        ids,
+      ),
+    ),
+    "VALIDATION",
+  );
+  // A cue right after the WebVTT header, and a file without cues.
+  assert.equal(
+    refused(() =>
+      parseCaptions("WEBVTT\n00:01.000 --> 00:02.000\nx\n", "vtt", ids),
+    ),
+    "VALIDATION",
+  );
+  assert.equal(
+    refused(() => parseCaptions("WEBVTT\n", "vtt", ids)),
+    "VALIDATION",
+  );
+  assert.equal(
+    refused(() => parseCaptions("", "srt", ids)),
+    "VALIDATION",
+  );
+  // Hours past 9 in WebVTT, exactly ten hours, touching cues, a digits-only
+  // text line, CR line endings, and entities.
+  const edge = parseCaptions(
+    "WEBVTT\r\r09:59:57.000 --> 09:59:58.000\r1234\r\r09:59:58.000 --> 10:00:00.000\rA &quot;B&quot; &#39;C&#39;\r",
+    "vtt",
+    ids,
+  );
+  assert.deepEqual(
+    edge.map((c) => [c.startTicks / MS, c.endTicks / MS, c.text]),
+    [
+      [35_997_000, 35_998_000, "1234"],
+      [35_998_000, 36_000_000, `A "B" 'C'`],
+    ],
+  );
+});
+
+test("a hostile timing line is refused quickly", () => {
+  const started = Date.now();
+  const line = `00:00:01.000 --> 00:00:02.000${" ".repeat(100_000)}x y`;
+  assert.equal(
+    refused(() => parseCaptions(`WEBVTT\n\n${line}\ntext\n`, "vtt", ids)),
+    "VALIDATION",
+  );
+  assert.ok(Date.now() - started < 1000, `${Date.now() - started} ms`);
+});
+
+test("the full cue limit commits, a retried import replays, and burn-in refuses undrawable text", async () => {
+  const c = await workspace();
+  const at = (ms: number) =>
+    `${String(Math.floor(ms / 3_600_000)).padStart(2, "0")}:${String(Math.floor(ms / 60_000) % 60).padStart(2, "0")}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")},${String(ms % 1000).padStart(3, "0")}`;
+  const full = Array.from(
+    { length: CAPTION_LIMITS.cues },
+    (_, i) =>
+      `${i + 1}\n${at(i * 200)} --> ${at(i * 200 + 150)}\nCue ${i + 1}\n`,
+  ).join("\n");
+  const documentId = ids();
+  const args = {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    documentId,
+    expectedContentHash: null,
+    name: "Long",
+    language: "en",
+    format: "srt",
+    text: full,
+  };
+  const retrying = { ...c.browser, requestId: "import-long" };
+  const first = (await execute(retrying, "yamakan.captions.import", args))
+    .result as {
+    project: { revision: number };
+    document: { contentHash: string };
+  };
+  assert.equal(
+    CaptionDocumentSchema.parse(
+      JSON.parse(
+        c.store.getDocument(c.projectId, documentId).bytes.toString("utf8"),
+      ),
+    ).cues.length,
+    CAPTION_LIMITS.cues,
+  );
+  // A retry after a lost response replays the same revision and version.
+  const again = (await execute(retrying, "yamakan.captions.import", args))
+    .result as {
+    project: { revision: number };
+    document: { contentHash: string };
+  };
+  assert.equal(again.project.revision, first.project.revision);
+  assert.equal(again.document.contentHash, first.document.contentHash);
+  // An emoji the pinned font cannot draw: burn-in is refused, naming the cue.
+  try {
+    await execute(c.browser, "yamakan.captions.import", {
+      ...args,
+      expectedRevision: (await head(c)).revision,
+      documentId: ids(),
+      text: "1\n00:00:01,000 --> 00:00:02,000\nok\n\n2\n00:00:03,000 --> 00:00:04,000\n🎬 action\n",
+      burnIn: true,
+    });
+    assert.fail("refused");
+  } catch (e) {
+    assert.equal(toCommandError(e).code, "VALIDATION");
+    assert.match((e as Error).message, /^Cue 2 /);
+  }
+  // A forged copy of the imported file is refused by the generic commit.
+  const doc = JSON.parse(
+    c.store.getDocument(c.projectId, documentId).bytes.toString("utf8"),
+  );
+  doc.source.text = "forged";
+  assert.equal(
+    await code(
+      c.store.commitDocument({
+        projectId: c.projectId,
+        expectedRevision: (await head(c)).revision,
+        documentId,
+        kind: "captions",
+        schemaVersion: 1,
+        expectedContentHash: first.document.contentHash,
+        source: { bytes: Buffer.from(JSON.stringify(doc)) },
+      }),
+    ),
+    "VALIDATION",
+  );
+});
+
+test("burned-in cues change the plan, sit above the tracks and stop at the timeline's end", async () => {
+  const c = await workspace();
+  const fonts = await titleFonts();
+  const p = fromEditView(await head(c));
+  const without = compilePlan(p, "0".repeat(64), fonts).plan;
+  const end = 90 * F; // the timeline is three seconds
+  const { plan } = compilePlan(p, "0".repeat(64), fonts, {
+    captions: [
+      [
+        { startTicks: 1000 * MS, endTicks: 2000 * MS, text: "one" },
+        { startTicks: 2500 * MS, endTicks: 4000 * MS, text: "past the end" },
+        { startTicks: 3000 * MS, endTicks: 3500 * MS, text: "after it" },
+      ],
+    ],
+  });
+  assert.notEqual(plan.planHash, without.planHash);
+  assert.deepEqual(
+    plan.titles!.cues.map((x) => [x.layer, x.startTicks, x.endTicks, x.text]),
+    [
+      [p.tracks.length, 1000 * MS, 2000 * MS, "one"],
+      [p.tracks.length, 2500 * MS, end, "past the end"],
+    ],
+  );
 });

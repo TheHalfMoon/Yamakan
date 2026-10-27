@@ -12,7 +12,7 @@
 
 ## Procedure (human)
 
-1. Open a project of at least 12 seconds, go to **Finish → Captions**, import each fixture (language Arabic), and turn on **Burn into the picture**.
+1. Open a project of at least 12 seconds, go to **Finish → Captions**, choose **Arabic** as the language of the imported file, import each fixture, and turn on **Burn into the picture**.
 2. Look at the reference preview and an export at each cue (0.5 s, 2.6 s, 5.1 s, 7.6 s, 10.0 s).
 3. Download the track as SRT and WebVTT and re-import each; the cues should come back unchanged.
 4. Fill the table. Record the exact git SHA and the pinned font hashes from `docs/evidence/h1-arabic-review-packet/CHECKLIST.md`.

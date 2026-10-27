@@ -387,9 +387,48 @@ A project has one frame rate. Every frame field of its editing view counts frame
 
 ## Caption tracks (YU-024)
 
-- **Document.** A caption track is a creative document of its project (`captions`, schema 1): name, language tag, a burn-in setting, the imported file kept verbatim (format, SHA-256, text) and timed cues (id, start and end in ticks, plain text, and the original index and timestamps). Cues are in time order and never overlap. At most 2,000 cues of 500 characters and 4 lines; a file of at most 512 KiB; nothing past ten hours; 2 MiB of canonical bytes.
-- **Import.** SRT (`hh:mm:ss,mmm`) and WebVTT (`[hh:]mm:ss.mmm`, header, NOTE blocks) parse to exact millisecond times. Refused with the line they are on: malformed timestamps or cue numbers, a cue that ends before it starts, overlapping cues, SRT cue settings, WebVTT STYLE and REGION blocks (which can load other files), ASS override markup (`{\…}`), unknown tags, empty or oversized cues. Simple formatting tags (`<b>`, `<i>`, `<u>`, `<c.x>`, `<v Name>`, `<lang x>`, `<ruby>`, `<rt>`, `<font …>`, inline timestamps) are removed, keeping their text; entities are decoded after tags are checked, so an escaped tag is text.
-- **Commands.** `yamakan.captions.import`, `yamakan.captions.save` (cues, name, language, burn-in; the imported file is kept), `yamakan.captions.split` (a cue at an instant inside it, each part with its own text) and `yamakan.captions.export` (SRT or WebVTT text, times to the millisecond; markup in text is written as text, so no export reads back as a tag, a timing line or ASS markup). Each write is a new revision (compare-and-swap on the revision and the track's content hash); the editor's draft follows it.
-- **Burn-in.** A track with burn-in on is drawn above every track through the title compiler (escaped plain text, pinned fonts, glyph coverage checked), in the reference preview and the export alike; its cues are part of the render plan and its hash. Each burned-in track is its own layer; cues after the timeline's end are not shown.
-- **Arabic quality.** Automated tests cover timing, escaping, mixed-script round trips and preview/export agreement; reading quality needs the native review packet in `docs/evidence/h1-arabic-review-packet/captions/` (H1, unsigned).
-- **Rollback.** The AG-DOCS switch turns caption writes off; stored tracks (with their original files) stay readable and keep rendering. The workspace database moves to version 14, whose document tables accept any kind the application validates (no further rebuild for new kinds); an earlier build refuses a version 14 workspace, so going back needs a backup from before the upgrade.
+- **Document.** A caption track is a creative document of its project (`captions`, schema 1). It holds:
+  - a name, a language tag and a burn-in setting;
+  - the imported file's text as received, decoded as UTF-8, with its SHA-256, which is checked;
+  - timed cues: id, start and end in whole milliseconds, plain text, and the original index and timestamps.
+
+  Cues are in time order and never overlap. A cue's text has no empty lines and no outer spaces.
+
+- **Limits.**
+  - At most 2,000 cues, each up to 500 characters and 4 lines.
+  - An imported file of at most 512 KiB, with no cue reaching past ten hours.
+  - The canonical document is at most 2 MiB and 20,000 JSON nodes.
+- **Import.**
+  - SRT (`hh:mm:ss,mmm`) and WebVTT (`[hh:]mm:ss.mmm`, header, NOTE blocks) parse to exact millisecond times.
+  - These are refused, naming the line they are on:
+    - a malformed timestamp or cue number, or a timing line over 256 characters;
+    - a cue that ends before it starts, or cues that overlap;
+    - SRT cue settings;
+    - a cue with no blank line after the WebVTT header;
+    - WebVTT STYLE and REGION blocks, which can load other files;
+    - ASS override markup (`{\…}`), also when a tag hides it;
+    - unknown tags;
+    - empty or oversized cues;
+    - a file without cues.
+  - Simple formatting tags are removed and their text kept: `<b>`, `<i>`, `<u>`, `<s>`, `<c.x>`, `<v Name>`, `<lang x>`, `<ruby>`, `<rt>`, `<font …>` and inline timestamps. `<br>` becomes a line break.
+  - Entities are decoded after tags are checked, so an escaped tag stays text. Lines left empty are dropped.
+  - Cue ids are derived from the file, so a retried import replays instead of creating a second track.
+- **Commands.**
+  - `yamakan.captions.import`.
+  - `yamakan.captions.save` changes cues, name, language or burn-in, and keeps the imported file.
+  - `yamakan.captions.split` splits a cue at a whole-millisecond instant inside it. Each part can get its own text, and both keep the original cue's source.
+  - `yamakan.captions.export` returns SRT or WebVTT text with times to the millisecond. Markup in cue text is written as entities in both formats, and a word joiner breaks `{\`. An export therefore reads back as the same text, never as a tag, a timing line or ASS markup.
+  - Each write is a new revision, with compare-and-swap on the revision and on the track's content hash. The editor's draft follows it.
+- **Captions panel** (Finish workspace).
+  - It imports a file in a chosen language, edits cue times and text, splits a cue at the playhead, turns burn-in on, and downloads the track.
+  - While cue edits are unsaved, other caption changes wait. Edits made from an older version of the track are set aside.
+- **Burn-in.**
+  - A track with burn-in on is drawn above every track through the title compiler (escaped plain text, pinned fonts), the same way in the reference preview and the export. Its cues are part of the render plan and its hash.
+  - Saving a burned-in track with a character the pinned font cannot draw is refused, naming the cue.
+  - Each burned-in track is its own layer, in the titles' style and place, so a caption and a title clip shown at the same time overlap.
+  - Cues after the timeline's end are not shown.
+- **Arabic quality.** Automated tests cover timing, escaping, mixed-script round trips and preview/export agreement. Reading quality needs a native reviewer, using the unsigned H1 packet in `docs/evidence/h1-arabic-review-packet/captions/`.
+- **Rollback.**
+  - The AG-DOCS switch turns caption writes off. Stored tracks, with their original files, stay readable and keep rendering.
+  - The workspace database moves to version 14. Its document tables accept any kind the application validates, so new kinds need no further rebuild.
+  - An earlier build refuses a version 14 workspace, so going back needs a backup from before the upgrade.

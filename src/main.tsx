@@ -146,6 +146,9 @@ function App() {
   // putHistory, and commits read their draft here, so a commit chained
   // behind another never pairs a new head with a stale draft (YU-015).
   const historyNow = useRef(history);
+  // The playhead, read when a caption cue is split (YU-024).
+  const playheadNow = useRef(playhead);
+  playheadNow.current = playhead;
   const putHistory = (
     next: typeof history | ((h: typeof history) => typeof history),
   ) => {
@@ -2031,7 +2034,9 @@ function App() {
                       key={p.id}
                       projectId={p.id}
                       revision={p.revision}
-                      playheadTicks={Math.round(playhead * 1000) * 705_600}
+                      playheadTicks={() =>
+                        Math.round(playheadNow.current * 1000) * 705_600
+                      }
                       lang={lang}
                       t={t}
                       client={{
