@@ -1,0 +1,67 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "e73abcf",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-071",
+  "objective": "Qualify deterministic repair/analysis operations",
+  "parts": [
+    {
+      "part": "YU-071 scene-cut analysis (FFmpeg scdet)",
+      "branch": "feat/yu-071-scene-cuts",
+      "mergedPr": 138,
+      "headCommit": "4c42fc7",
+      "mergeCommit": "7f17434"
+    }
+  ],
+  "flags": "none",
+  "deviations": [
+    "One operation selected first, as the card asks: scene-cut detection (`yamakan.analysis.sceneCuts`, scope render:execute). Denoise and stabilize were source-inspected in the bundled FFmpeg 7.1.1 filter list but not implemented",
+    "Analysis only: it reads the stored original in a bounded worker and writes nothing, so source, PTS and audio are preserved by construction",
+    "Times are exact: the stream is retimed to flicks (settb=1/705600000) and the integer pts is parsed, never FFmpeg's rounded pts_time; frames by nearest rounding",
+    "One analysis at a time with at most two waiting (a fourth is BUSY); 300 s wall limit; a cancel before the start runs no worker and a mid-run cancel stops it (tested against the measured full scan time)"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Deterministic media analysis: scene cuts)",
+  "tests": {
+    "files": ["tests/media-repair.test.ts"],
+    "result": "4/4: cuts found at the exact source frames of a synthetic edit, deterministic across runs and thresholds bounded; a damaged stream fails safely inside FFmpeg; early and mid-run cancels stop the worker; a burst of four gives exactly one BUSY"
+  },
+  "reviews": [
+    {
+      "kind": "combined correctness and security review, applying Alibaba Open Code Review 1.13.3 rules via `ocr delegate rule`",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 3,
+        "shouldFixApplied": "all",
+        "finalRound": "one should-fix (mid-run cancel test strength), fixed in 4c42fc7"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "7f17434",
+    "ci": "PR exact head 4c42fc7 green; push run 40584976544 on 7f17434: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 7f17434: typecheck, lint, format, provenance, brand, build pass; npm test 674/677 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass"
+  },
+  "limitations": [
+    "No editor UI shows scene cuts yet",
+    "Denoise and stabilize are not implemented",
+    "No partial-output quarantine applies, because nothing is written"
+  ]
+}
