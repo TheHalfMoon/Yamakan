@@ -298,6 +298,7 @@ export async function extractPcm(
   await sweepStale(root);
   const dir = path.join(root, `${randomUUID()}.partial`);
   await mkdir(dir);
+  active.add(dir);
   try {
     await inTurn(() =>
       ffmpeg(
@@ -353,6 +354,7 @@ export async function extractPcm(
       asset,
     };
   } catch (e) {
+    active.delete(dir);
     await remove(dir);
     throw e;
   }
@@ -362,16 +364,24 @@ export async function extractPcm(
 const remove = (dir: string) =>
   rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 
-export const releasePcm = (pcm: Pcm) => remove(pcm.dir);
+export const releasePcm = async (pcm: Pcm) => {
+  active.delete(pcm.dir);
+  await remove(pcm.dir);
+};
 
-// Folders left by a crash (older than any extraction can run) are removed.
+// Folders of extractions this service holds (waiting, running or handed
+// out and not yet released): never swept, however old.
+const active = new Set<string>();
+
+// Folders left by a crash are removed: old, and not held by this service.
+// A failure here never fails the extraction that triggered it.
 async function sweepStale(root: string) {
   const cutoff = Date.now() - 2 * TRANSCRIPTION_LIMITS.wallSeconds * 1000;
   for (const name of await readdir(root).catch(() => [])) {
-    if (!name.endsWith(".partial")) continue;
     const at = path.join(root, name);
+    if (!name.endsWith(".partial") || active.has(at)) continue;
     const info = await stat(at).catch(() => null);
-    if (info && info.mtimeMs < cutoff) await remove(at);
+    if (info && info.mtimeMs < cutoff) await remove(at).catch(() => {});
   }
 }
 

@@ -8,7 +8,15 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  utimes,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../core/store.ts";
@@ -536,4 +544,25 @@ test("rounding-level overruns are clamped, empty segments dropped, and a swallow
   const p = captionProposal(inner, { name: "Draft" });
   assert.equal(p.document.cues.length, 1);
   assert.deepEqual(p.dropped, [{ segment: 2, text: "inner" }]);
+});
+
+test("a crash's old folder is swept; a folder still held is not", async () => {
+  const c = await workspace();
+  const held = await extractPcm(c.store, c.projectId, c.speech.id);
+  const cache = path.dirname(held.dir);
+  const stale = path.join(cache, "crashed.partial");
+  await mkdir(stale);
+  const old = new Date(
+    Date.now() - 3 * TRANSCRIPTION_LIMITS.wallSeconds * 1000,
+  );
+  await utimes(stale, old, old);
+  await utimes(held.dir, old, old);
+  const next = await extractPcm(c.store, c.projectId, c.speech.id);
+  try {
+    await assert.rejects(access(stale));
+    await access(held.file);
+  } finally {
+    await releasePcm(held);
+    await releasePcm(next);
+  }
 });
