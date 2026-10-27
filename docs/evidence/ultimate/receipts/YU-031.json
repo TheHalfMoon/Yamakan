@@ -1,0 +1,80 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "64718c4",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-031",
+  "objective": "Add story/shot/reference pack lifecycle",
+  "branch": "feat/yu-031-story-packs",
+  "mergedPr": 119,
+  "headCommit": "560a210",
+  "mergeCommit": "905f81a57ba11af5261d9d11d87a65c8e690b28c",
+  "flags": "Story and pack writes follow the AG-DOCS switch (YAMAKAN_AG_DOCS_OFF=1 turns them off; stored documents stay readable)",
+  "deviations": [
+    "Commands are yamakan.story.save, yamakan.pack.save and yamakan.story.assemble (command namespaces are lowercase); shots are edited through the story document, not a separate shot command",
+    "Workspace schema 13 rebuilds creative_documents and document_uploads to accept the new kinds and adds story_document_versions; an earlier build refuses a v13 workspace, so going back needs a backup from before the upgrade (as with YU-013's v12); no automatic pre-upgrade backup is taken",
+    "Redo of an assembly restores that timeline without re-checking consents (the clips are project media); consumers of a likeness reference must check consent at use (assertConsentUsable)",
+    "Story and pack saves are inline (not staged), bounded by the document storage budget, 32 documents per project and the revision limit",
+    "The Director panel lists stories and packs read-only; assembly and editing are commands (CLI, SDK, agents, REST/MCP)",
+    "core/director/runtime.ts is donor-derived; its assertConsentUsable addition is recorded in imports.json"
+  ],
+  "tests": {
+    "files": [
+      "tests/story-packs.test.ts",
+      "tests/creative-documents.test.ts",
+      "tests/streaming-import.test.ts",
+      "scripts/qualify-director-activation.mjs"
+    ],
+    "result": "7 story-pack tests: a three-shot manual storyboard (footage, still, title card) assembles onto the timeline and reopens with references and timings; missing media, audio takes and references, duplicate ids, a stray selected take, a take past its source, unheld and cross-document pins, a stale media version, a missing or mismatched consent, a revoked consent (save and assemble) and the generic document commit are refused; agents cannot link a consent; 256 KiB and 200-shot limits; AG-DOCS off switch; 24000/1001 off-frame timings refused; 200 shots assemble in one revision and a retry replays; an earlier pinned version is accepted; v12 to v13 keeps a referenced document and a staged upload, and a broken reference refuses the upgrade at v12. Director qualification (Edge): a story saved by another client shows after refresh and assembles 2 clips, 0 page errors"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 9,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 1,
+        "shouldFixApplied": 8,
+        "finalRound": "no must-fix; one should-fix (v13 table added after earlier branch commits) accepted as stated: no workspace shipped at v13 without it"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "ciNotes": [
+    "First CI run on c1fd1e9 failed: three upgrade-path tests dropped tables without the new story_document_versions; fixed in 560a210 (the earlier local full run predated that table)",
+    "On 560a210 the Linux qualify job was cancelled in the Playwright browser install step after npm test passed; the rerun passed"
+  ],
+  "postMergeVerification": {
+    "main": "905f81a57ba11af5261d9d11d87a65c8e690b28c",
+    "ci": "PR exact head 560a210: qualify (rerun), qualify-windows-r8, otio-oracle success",
+    "windows": "detached 905f81a: typecheck, lint, format, provenance, brand, build pass; npm test 607/610 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests); Director qualification pass"
+  },
+  "limitations": [
+    "No browser UI to build or assemble a storyboard; the panel lists stories and packs",
+    "Consent links are checked at save and assembly only; generation that would use a likeness reference does not exist yet (engines off)",
+    "Rates other than 30 and 24000/1001 stay refused",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
