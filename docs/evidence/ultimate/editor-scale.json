@@ -1,0 +1,228 @@
+{
+  "format": "yamakan.editor-scale/v1",
+  "profiles": "yamakan.scale-profiles/v1",
+  "policy": "yamakan.resource-policy/v2",
+  "host": {
+    "os": "win32 10.0.26300",
+    "node": "v24.19.0",
+    "cpus": 12
+  },
+  "measured": [
+    {
+      "profile": "S",
+      "limits": {
+        "name": "S",
+        "clips": 24,
+        "tracks": 4,
+        "timelineFrames": 3600,
+        "width": 1280,
+        "height": 720
+      },
+      "batchSaveMs": {
+        "count": 1,
+        "max": 30,
+        "total": 30
+      },
+      "clips": 24,
+      "tracks": 4,
+      "snapshotBytes": 7924,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 17,
+        "undo": 14,
+        "redo": 13
+      },
+      "reopenMs": 16,
+      "planCompileMs": 5,
+      "planLayers": 24,
+      "referenceFrameMs": 746,
+      "export": {
+        "ok": true,
+        "ms": 68364,
+        "bytes": 750183,
+        "frames": 3600
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 311,
+        "restoreMs": 115,
+        "backupBytes": 440131,
+        "editsDuringBackup": 11,
+        "editsTotal": 12,
+        "acknowledgedBefore": 5,
+        "lastAcknowledgedDuring": 16,
+        "restoredRevision": 9,
+        "restoredSnapshotIdentical": true,
+        "editedAfterRestore": true,
+        "retained": true
+      },
+      "workspaceBytes": 2065094,
+      "editingQualified": true,
+      "exportQualified": true
+    },
+    {
+      "profile": "M",
+      "limits": {
+        "name": "M",
+        "clips": 200,
+        "tracks": 16,
+        "timelineFrames": 18000,
+        "width": 1920,
+        "height": 1080
+      },
+      "batchSaveMs": {
+        "count": 4,
+        "max": 59,
+        "total": 165
+      },
+      "clips": 200,
+      "tracks": 16,
+      "snapshotBytes": 60224,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 61,
+        "undo": 53,
+        "redo": 38
+      },
+      "reopenMs": 28,
+      "planCompileMs": 9,
+      "planLayers": 200,
+      "referenceFrameMs": 1246,
+      "export": {
+        "ok": false,
+        "ms": 516,
+        "code": "CAPABILITY_UNAVAILABLE",
+        "message": "Worker launch failed: command line too long",
+        "cause": ""
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 753,
+        "restoreMs": 153,
+        "backupBytes": 974759,
+        "editsDuringBackup": 10,
+        "editsTotal": 11,
+        "acknowledgedBefore": 9,
+        "lastAcknowledgedDuring": 19,
+        "restoredRevision": 11,
+        "restoredSnapshotIdentical": true,
+        "editedAfterRestore": true,
+        "retained": true
+      },
+      "workspaceBytes": 2611585,
+      "editingQualified": true,
+      "exportQualified": false
+    },
+    {
+      "profile": "T",
+      "limits": {
+        "name": "T",
+        "clips": 100,
+        "tracks": 2,
+        "timelineFrames": 18000,
+        "width": 1920,
+        "height": 1080
+      },
+      "batchSaveMs": {
+        "count": 2,
+        "max": 51,
+        "total": 71
+      },
+      "clips": 100,
+      "tracks": 2,
+      "snapshotBytes": 29544,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 55,
+        "undo": 35,
+        "redo": 39
+      },
+      "reopenMs": 26,
+      "planCompileMs": 6,
+      "planLayers": 100,
+      "referenceFrameMs": 686,
+      "export": {
+        "ok": false,
+        "ms": 180249,
+        "code": "LIMIT_EXCEEDED",
+        "message": "Render time limit exceeded.",
+        "cause": ""
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 950,
+        "restoreMs": 149,
+        "backupBytes": 700326,
+        "editsDuringBackup": 12,
+        "editsTotal": 13,
+        "acknowledgedBefore": 7,
+        "lastAcknowledgedDuring": 19,
+        "restoredRevision": 9,
+        "restoredSnapshotIdentical": true,
+        "editedAfterRestore": true,
+        "retained": true
+      },
+      "workspaceBytes": 2163841,
+      "editingQualified": true,
+      "exportQualified": false
+    }
+  ],
+  "refusals": [
+    {
+      "profile": "H",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: A project holds at most 16 tracks."
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "A",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: Timeline exceeds ten minutes."
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "K",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "project.width: Too big: expected number to be <=1920; project.height: Too big: expected number to be <=1080"
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "L",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: A project holds at most 200 clips."
+      },
+      "unchanged": true
+    }
+  ],
+  "unmeasured": [
+    "Browser timeline virtualization at M (no browser in this script)",
+    "History depth and growth (one edit, undo and redo are measured)",
+    "Decode and preview-cache costs beyond one reference frame",
+    "An exhausted disk at a named profile (covered without a profile by tests/backup.test.ts, tests/jobs.test.ts and tests/command.test.ts)",
+    "Oversized projects arriving by import or restore (only editing commands are refused here)"
+  ],
+  "probes": [
+    {
+      "name": "probe-40-stills-3min",
+      "export": {
+        "ok": false,
+        "ms": 1760,
+        "code": "INTERNAL",
+        "message": "FFmpeg failed to render the timeline (exit 69).",
+        "cause": "[out#0/mp4 @ 000001cb8bf55900] Nothing was written into output file, because at least one of its streams received no packets. | frame=    0 fps=0.0 q=0.0 Lsize=       0KiB time=N/A bitrate=N/A speed=N/A     | Conversion failed!"
+      }
+    }
+  ],
+  "peakRssMiB": 232
+}

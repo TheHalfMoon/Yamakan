@@ -470,6 +470,56 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Resources.** Variants run through the existing render queue, one render at a time, within its active-job limit. A batch is admitted only with 512 MiB of free space per output above the disk reserve. A failing output (for example `ENOSPC`) fails alone and leaves no artifact.
 - **Rollback.** The workspace database moves to schema 15, which adds one table and an index of batch jobs; an earlier build refuses a version 15 workspace. Export jobs of a batch carry their variant in the job payload, which an earlier build cannot read either.
 
+## Editor scale profiles (YU-026)
+
+- **Profiles (`SCALE_PROFILES`, `yamakan.scale-profiles/v1`).**
+  - **Named and measured profiles.** Each profile counts every track, the default audio track included.
+    - **S**, a typical project: 24 clips, 4 tracks (3 video layers), 2 minutes, 1280×720.
+    - **M**, the enforced maximum: 200 clips, 16 tracks, ten minutes at 30 fps, 1920×1080.
+    - **T**, a full-length single video track: 100 clips, 2 tracks, ten minutes, 1080p.
+  - **Refused, one past a limit each:** L (201 clips), H (17 tracks), A (ten minutes plus one frame), K (3840×2160 output).
+  - **Two separate qualifications.** The evidence marks each profile as editing-qualified or export-qualified on its own, so being named never implies that a profile exports.
+  - No limit was raised. A limit changes only by a new, reviewed policy version, after it has been measured.
+- **Measurement.**
+  - `scripts/qualify-editor-scale.mjs` builds each named profile through the command layer.
+  - It measures batched saves, the snapshot, one edit with undo and redo, reopening, the plan compile, one reference frame, and the full export.
+  - It also runs a backup while edits keep committing, then restores the backup and edits the restored workspace.
+  - A full run writes `docs/evidence/ultimate/editor-scale.json`, including the host details and one recorded export probe.
+  - `--probe clips:tracks:frames:WxH` measures one unnamed profile without changing the evidence.
+- **Results (Windows, 12 CPUs, Node 24, one run).**
+  - **Editing is qualified at S, M and T.**
+    - A batched save of 64 operations takes at most 59 ms.
+    - An edit, undo or redo takes at most 61 ms.
+    - Reopening takes at most 28 ms, and a plan compile at most 9 ms.
+    - One reference frame takes at most 1.25 s.
+    - M's snapshot is 60 KB, against the 2 MiB limit.
+  - **Backup under stress.**
+    - Ten to twelve edits commit while each backup runs.
+    - Each restored workspace holds one revision between the last revision acknowledged before the backup and the last one acknowledged during it.
+    - That revision is byte-identical to the live workspace's copy, and one more edit commits in the restored workspace.
+    - Backup takes at most 0.95 s and restore at most 0.15 s.
+  - **Refusals.** L, H, A and K are each refused with their own message, and the project is unchanged (no clamp). The test also accepts 200 clips, 16 tracks, a clip ending exactly at ten minutes, and a 1920×1080 output. The clip and track refusals now name the limit ("A project holds at most 200 clips.").
+  - **Memory.** The script's peak resident memory (service code only, workers excluded) is 232 MiB.
+- **Export is qualified only at S.**
+  - **S** exports in 68 s, about 19 ms per frame for 3 stacked 720p layers.
+  - **M** cannot be exported on Windows. The worker launch is refused ("command line too long"). Each clip is its own FFmpeg input (whitelists, seek, an absolute path), so 200 inputs pass the Windows 32,767-character command line; this cause is inferred from the code, not recorded.
+  - **T** passes the 180 s render wall-clock limit ("Render time limit exceeded").
+  - **The recorded probe fails too.** It has 40 1080p stills on one track over three minutes, and FFmpeg wrote no output (exit 69, "Nothing was written into output file").
+  - **Other runs, observed but not recorded.**
+    - T failed within seconds with PNG decoder buffer errors, "Cannot allocate memory" and exit 0xC00000FD.
+    - The likely cause is that each still is fed with `-loop 1`, which decodes as fast as it is read. Later clips then queue full frames until the overlay reaches them, inside the worker's 2 GiB.
+- **Proposal (not applied; follow-up YU-026b).**
+  - Feed stills by a pull-based `loop` filter from one decoded frame.
+  - Reference inputs so the command line no longer grows with each clip's full path.
+  - Then re-measure M and T, and propose a render wall-clock limit that scales with the timeline's duration.
+  - Until then, the export limits are effectively far below the editing limits. An export that cannot run fails with an explicit error and leaves no partial file.
+- **Not measured.**
+  - Browser timeline virtualization at M.
+  - History depth and growth.
+  - Decode and preview-cache costs beyond one frame.
+  - An exhausted disk at a named profile. This is covered without a profile by `tests/backup.test.ts`, `tests/jobs.test.ts` and `tests/command.test.ts`.
+  - Oversized projects arriving by import or restore.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.
