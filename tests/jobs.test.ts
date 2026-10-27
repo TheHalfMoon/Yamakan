@@ -453,7 +453,9 @@ test(
   async () => {
     const width = 2 * (200 + Math.floor(Math.random() * 400));
     const { store, project } = await workspace(18000, width);
-    const marker = `s=${width}x180:`;
+    // The graph is a file (YU-022); the input paths sit in this test's
+    // own workspace, which no other FFmpeg names.
+    const marker = path.basename(store.root);
     const supervisor = new JobSupervisor(store);
     await supervisor.start();
     const job = await supervisor.submit(project.id, "owner-killed");
@@ -498,7 +500,9 @@ test(
   async () => {
     const width = 2 * (200 + Math.floor(Math.random() * 400));
     const { store, project } = await workspace(30, width);
-    const marker = `s=${width}x180:`;
+    // The graph is a file (YU-022); the input paths sit in this test's
+    // own workspace, which no other FFmpeg names.
+    const marker = path.basename(store.root);
     // The fault applies to the next owner started.
     const running = workers().ownerPid;
     if (running) {

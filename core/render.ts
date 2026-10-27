@@ -518,7 +518,7 @@ export async function renderPlan(
         const measureArgs = [
           ...args,
           "-filter_complex_script",
-          "graph-measure.txt",
+          path.join(dir, "graph-measure.txt"),
           "-map",
           "[audio]",
           "-f",
@@ -566,7 +566,12 @@ export async function renderPlan(
       flag: "wx",
     });
     readable.push(path.join(dir, "graph.txt"));
-    args.push("-filter_complex_script", "graph.txt", "-map", "[picture]");
+    args.push(
+      "-filter_complex_script",
+      path.join(dir, "graph.txt"),
+      "-map",
+      "[picture]",
+    );
     if (window.output === "png")
       args.push(
         "-frames:v",
