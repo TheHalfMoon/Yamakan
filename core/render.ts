@@ -33,6 +33,8 @@ import { ANIMATION_ENABLED } from "./animation/flags.ts";
 import { transformFilters } from "./effects/registry.ts";
 import {
   LutDocumentSchema,
+  PROBED_FIELD_LENGTH,
+  PROBED_KEYS,
   cubeText,
   type ProbedColor,
 } from "./effects/color.ts";
@@ -353,6 +355,8 @@ export async function renderPlan(
       documentId: string;
       contentHash: string;
     }) => {
+      if (!/^[a-f0-9]{64}$/.test(ref.contentHash))
+        throw new CommandError("VALIDATION", "A LUT reference is invalid.");
       const known = luts.get(ref.contentHash);
       if (known) return known;
       const bytes = store.documentBytes({
@@ -361,9 +365,13 @@ export async function renderPlan(
         schemaVersion: 1,
         contentHash: ref.contentHash,
       });
-      const parsed = LutDocumentSchema.safeParse(
-        JSON.parse(bytes.toString("utf8")),
-      );
+      let value: unknown = null;
+      try {
+        value = JSON.parse(bytes.toString("utf8"));
+      } catch {
+        // Reported below as damage.
+      }
+      const parsed = LutDocumentSchema.safeParse(value);
       if (!parsed.success)
         throw new CommandError(
           "RECOVERY_REQUIRED",
@@ -460,7 +468,7 @@ export async function renderPlan(
       let graded = "";
       if (layer.lut) {
         const name = await lutFile(layer.lut);
-        graded = `${reading ? `scale=${reading}:out_range=pc,` : ""}format=gbrp,lut3d=file=luts/${name}:interp=tetrahedral,`;
+        graded = `${reading ? `scale=${reading}:out_range=pc,` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
       }
       const sourceReading = !layer.lut && reading ? `:${reading}` : "";
       const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease${sourceReading}:out_color_matrix=bt709:out_range=tv,setsar=1,format=yuva420p`;
@@ -782,27 +790,31 @@ export async function renderPlan(
   }
 }
 
-// Keeps only the main data stream of a file a worker wrote, in a new file
-// this service creates (it inherits the folder's access, not the
-// worker's), and removes the worker's file.
 /**
  * YU-023: the color tags each asset's probe recorded at import, when they
  * have the probe's shape (assets imported before YU-023 have none).
  */
 export function recordedColors(store: ProjectStore) {
   return (assetId: string): ProbedColor | null => {
-    const c = (store.assetVersion(assetId)?.probe as { color?: unknown } | null)
-      ?.color as Record<string, unknown> | null | undefined;
-    const keys = ["pixelFormat", "matrix", "range", "transfer", "primaries"];
-    return c &&
-      keys.every(
-        (k) => typeof c[k] === "string" && (c[k] as string).length <= 40,
-      )
-      ? (Object.fromEntries(keys.map((k) => [k, c[k]])) as ProbedColor)
+    const probe = store.assetVersion(assetId)?.probe as {
+      color?: Record<string, unknown> | null;
+    } | null;
+    const c = probe?.color;
+    if (!c) return null;
+    const valid = PROBED_KEYS.every(
+      (k) =>
+        typeof c[k] === "string" &&
+        (c[k] as string).length <= PROBED_FIELD_LENGTH,
+    );
+    return valid
+      ? (Object.fromEntries(PROBED_KEYS.map((k) => [k, c[k]])) as ProbedColor)
       : null;
   };
 }
 
+// Keeps only the main data stream of a file a worker wrote, in a new file
+// this service creates (it inherits the folder's access, not the
+// worker's), and removes the worker's file.
 export async function keepMainStream(written: string, kept: string) {
   if (!(await lstat(written)).isFile())
     throw new Error("Rendered output is not a regular file.");

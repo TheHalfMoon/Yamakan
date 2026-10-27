@@ -422,23 +422,28 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Before.** Earlier renders were untagged and converted RGB with FFmpeg's default BT.601 matrix. An HD player reading them as BT.709 shifted colours: pure green 253 was shown as 214, and red gained green 23 (measured on the YU-023 chart).
 - **Sources.**
   - At import, the probe records each picture's pixel format, matrix, range, transfer and primaries.
-  - Tagged BT.709 or BT.601 (`smpte170m`, `bt470bg` and their relatives) is read as tagged.
-  - An untagged YUV source is read as BT.709 from 720 lines up and as BT.601 below, in limited range, or full range for `yuvj` formats and JPEG.
+  - A tagged matrix is read as tagged: BT.709, BT.601 (`smpte170m`, `bt470bg`), FCC or SMPTE 240M.
+  - An untagged YUV source is read as BT.709 from 720 lines up and as BT.601 below, in limited range. JPEG and `yuvj` formats (JFIF) are read as full-range BT.601 at any size.
   - RGB sources (PNG, WebP) have no matrix.
   - Assets imported before YU-023 have no recorded colour, so the file type and height decide.
   - Higher bit depths are converted to 8 bits.
-- **Refused at import.** HDR transfers (PQ `smpte2084`, HLG `arib-std-b67`) and BT.2020 primaries or matrices (`CAPABILITY_UNAVAILABLE`). There is no tone mapping, so they are not shown wrongly. Assets already in a project are not re-probed.
+- **Refused at import (`CAPABILITY_UNAVAILABLE`).** The policy is an allow-list, so anything it does not convert is refused rather than shown wrongly. There is no tone mapping.
+  - Refused: HDR transfers (PQ `smpte2084`, HLG `arib-std-b67`) and HDR side data (Dolby Vision, mastering display or content light level, HDR10+).
+  - Refused: BT.2020 and any other primaries outside BT.709, BT.601 and SMPTE 240M (P3 included); any transfer outside the SDR set (`bt709`, `smpte170m`, `bt470bg`, `bt470m`, `iec61966-2-1`, `gamma22`, `gamma28`, or untagged); and other matrices (`ycgco`, `ictcp`, chroma-derived).
+  - HDR that is untagged and carries no side data cannot be detected. Assets already in a project are not re-probed.
 - **LUTs.**
   - `yamakan.lut.import` parses a 3D `.cube` file strictly:
     - at most 1.5 MiB, 40,000 lines of 256 characters;
     - `TITLE`, `LUT_3D_SIZE` 2–33, `DOMAIN_MIN 0 0 0` and `DOMAIN_MAX 1 1 1` only, plus comments;
     - then exactly size³ lines of three numbers in 0–1 (a 1e-4 overshoot is clamped).
   - Refused, naming the line: 1D LUTs, any other keyword (including includes or file references), other domains, out-of-range, non-finite or malformed numbers, and missing or extra entries.
-  - The LUT is stored as an immutable `lut` creative document holding only its name, size and 16-bit quantised entries (at most 512 KiB). It cannot be staged or written by the generic document commit.
+  - The LUT is stored as an immutable `lut` creative document holding only its name, size and 16-bit quantized entries (at most 512 KiB). It cannot be staged or written by the generic document commit.
 - **LUT effect.** A clip uses a LUT through a `lut` effect (`{type: "lut", version: 1, documentId, contentHash}`, at most one per clip) set by `yamakan.clip.setEffects`. Every commit checks that the LUT is a `lut` document of that revision at that version, so the document stays referenced.
-  - The render reads the stored document (verified by hash), writes it once in canonical `.cube` form into the render's own folder, and applies `lut3d` (tetrahedral) to the source in full-range RGB, read as the policy reads it, before crop and fit.
+  - The render reads the stored document (verified by hash), writes it once in canonical `.cube` form into the render's own folder, and applies `lut3d` (tetrahedral) to the source in full-range RGB with alpha (`gbrap`), read as the policy reads it, before crop and fit. A transparent still keeps its transparency.
   - The original file is never used.
   - The editor's transform panel keeps a clip's LUT.
+  - A LUT a clip uses is not replaced in place: import the new version under a new document id, then point the clip to it.
+- **Cost (measured on Windows, 10 s of 1280×720 at 30 fps, median of 3).** The policy's conversion takes a plain export from 5.48 to 5.82 ms per frame (+6%). A 33³ LUT runs at about 49 ms per frame, because renders run filters on one thread by design. Threading the LUT filter is a follow-up.
 - **Interactive preview.** The canvas does not apply a LUT; the parity notice names it (`lut`).
 - **Rollback.**
   - `YAMAKAN_EFFECTS_OFF=1` refuses new effect values, LUT effects included, and `YAMAKAN_AG_DOCS_OFF=1` refuses LUT imports. Stored LUTs stay and render.

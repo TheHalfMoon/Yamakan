@@ -21,6 +21,9 @@ import { closePreviews, preview } from "../core/render/preview.ts";
 import type { Project } from "../core/project.ts";
 import { cubeText, identityCube, parseCube } from "../core/effects/color.ts";
 import { previewParity } from "../core/render/parity.ts";
+import { setClipTransform } from "../src/edit-ops.ts";
+import { IDENTITY_TRANSFORM } from "../core/effects/registry.ts";
+import { DatabaseSync } from "node:sqlite";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -145,6 +148,15 @@ function chartVideo(c: Ctx, name: string, args: string[], size = "320x180") {
   ]);
   return file;
 }
+
+// Color tags written into the stream itself (H.264 VUI), as cameras do.
+const vui = (p: number, t: number, m: number) => [
+  "",
+  "-pix_fmt",
+  "yuv420p",
+  "-bsf:v",
+  `h264_metadata=colour_primaries=${p}:transfer_characteristics=${t}:matrix_coefficients=${m}`,
+];
 
 async function place(c: Ctx, file: string, name: string) {
   const { asset } = await c.store.importAsset(
@@ -291,47 +303,17 @@ test("a color chart round-trips from every SDR source form within the frozen tol
 
 test("HDR and BT.2020 sources are refused at import; the policy is recorded per layer", async () => {
   const c = await workspace();
-  for (const [name, tags] of [
-    [
-      "pq.mp4",
-      [
-        "-color_trc",
-        "smpte2084",
-        "-color_primaries",
-        "bt2020",
-        "-colorspace",
-        "bt2020nc",
-      ],
-    ],
-    [
-      "hlg.mp4",
-      [
-        "-color_trc",
-        "arib-std-b67",
-        "-color_primaries",
-        "bt2020",
-        "-colorspace",
-        "bt2020nc",
-      ],
-    ],
-    [
-      "wide.mp4",
-      [
-        "-color_primaries",
-        "bt2020",
-        "-colorspace",
-        "bt2020nc",
-        "-color_trc",
-        "bt709",
-      ],
-    ],
+  for (const [name, tags, pattern] of [
+    ["pq.mp4", vui(9, 16, 9), /^CAPABILITY_UNAVAILABLE: HDR video/],
+    ["hlg.mp4", vui(9, 18, 9), /^CAPABILITY_UNAVAILABLE: HDR video/],
+    ["wide.mp4", vui(9, 1, 9), /^CAPABILITY_UNAVAILABLE: Wide-gamut BT\.2020/],
   ] as const) {
-    const file = chartVideo(c, name, ["", ...tags]);
+    const file = chartVideo(c, name, tags);
     assert.match(
       await failure(
         c.store.importAsset(c.projectId, name, await readFile(file)),
       ),
-      /^CAPABILITY_UNAVAILABLE: (HDR video|Wide-gamut BT\.2020)/,
+      pattern,
       name,
     );
   }
@@ -395,7 +377,8 @@ test("a LUT is stored as an immutable document and applied the same in export an
   const c = await workspace();
   await place(c, c.chart, "chart.png");
   // An identity LUT leaves the chart as it was.
-  await setLut(c, await importLut(c, identityCube(17), "Identity"));
+  const identityRef = await importLut(c, identityCube(17), "Identity");
+  await setLut(c, identityRef);
   const identity = await exported(c);
   assertChart(rgb(identity.output), "identity LUT (export)");
   assertChart(await previewRgb(c), "identity LUT (preview)");
@@ -440,11 +423,9 @@ test("a LUT is stored as an immutable document and applied the same in export an
     expectedRevision: p.revision,
   });
   const undone = await head(c);
-  assert.equal(
-    (undone.clips[0]!.effects![0] as { documentId: string }).documentId !==
-      invert.documentId,
-    true,
-  );
+  assert.deepEqual(undone.clips[0]!.effects, [
+    { type: "lut", version: 1, ...identityRef },
+  ]);
   assert.deepEqual(
     previewParity(undone).approximations.find((x) => x.kind === "lut")?.clipIds,
     [undone.clips[0]!.id],
@@ -492,7 +473,7 @@ test("malformed, huge or referencing LUTs, and LUT effects without their documen
   const lut = await importLut(c, INVERT);
   assert.match(
     await failure(setLut(c, { ...lut, contentHash: "0".repeat(64) })),
-    /LUT document of this project/,
+    /LUT document of this project|another version of this LUT/,
   );
   assert.match(
     await failure(
@@ -501,7 +482,7 @@ test("malformed, huge or referencing LUTs, and LUT effects without their documen
         contentHash: lut.contentHash,
       }),
     ),
-    /LUT document of this project/,
+    /LUT document of this project|another version of this LUT/,
   );
   const p = await head(c);
   assert.match(
@@ -517,5 +498,158 @@ test("malformed, huge or referencing LUTs, and LUT effects without their documen
       }),
     ),
     /at most one LUT/,
+  );
+});
+
+test("a LUT keeps an overlay's transparency, and the editor's transform keeps a clip's LUT", async () => {
+  const c = await workspace();
+  await place(c, c.chart, "chart.png");
+  // A half-transparent white still on a second video track, above.
+  const veil = path.join(c.root, "veil.png");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=white@0.5:s=320x180,format=rgba",
+    "-frames:v",
+    "1",
+    veil,
+  ]);
+  const { asset } = await c.store.importAsset(
+    c.projectId,
+    "veil.png",
+    await readFile(veil),
+  );
+  const p = await head(c);
+  const top = crypto.randomUUID(),
+    veilClip = crypto.randomUUID();
+  await execute(c.browser, "yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: p.revision,
+    operations: [
+      { type: "track.add", trackId: top, name: "Veil", kind: "video" },
+      {
+        type: "clip.add",
+        clipId: veilClip,
+        trackId: top,
+        assetId: asset.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 15 * FRAME,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  const plain = patches(rgb((await exported(c)).output));
+  // Half white over the chart: each channel moves halfway to 255.
+  plain.forEach((got, n) =>
+    got.forEach((v, ch) =>
+      assert.ok(
+        Math.abs(v - (CHART[n]![ch]! + 255) / 2) <= 2 * TOLERANCE,
+        `veiled patch ${n}: ${got}`,
+      ),
+    ),
+  );
+  const lut = await importLut(c, identityCube(9), "Identity");
+  const q = await head(c);
+  await execute(c.browser, "yamakan.clip.setEffects", {
+    projectId: c.projectId,
+    expectedRevision: q.revision,
+    clipId: veilClip,
+    effects: [{ type: "lut", version: 1, ...lut }],
+  });
+  const graded = patches(rgb((await exported(c)).output));
+  graded.forEach((got, n) =>
+    got.forEach((v, ch) =>
+      assert.ok(
+        Math.abs(v - plain[n]![ch]!) <= TOLERANCE,
+        `LUT on the veil changed patch ${n}: ${got} vs ${plain[n]}`,
+      ),
+    ),
+  );
+  // The editor's transform panel keeps the LUT beside the transform.
+  const edited = setClipTransform(await head(c), veilClip, {
+    ...IDENTITY_TRANSFORM,
+    scale: 500,
+  });
+  assert.deepEqual(
+    edited.clips.find((x) => x.id === veilClip)!.effects!.map((e) => e.type),
+    ["transform", "lut"],
+  );
+  const reset = setClipTransform(edited, veilClip, IDENTITY_TRANSFORM);
+  assert.deepEqual(
+    reset.clips.find((x) => x.id === veilClip)!.effects!.map((e) => e.type),
+    ["lut"],
+  );
+});
+
+test("a JPEG and an asset without recorded color are read by the policy's defaults; other transfers, gamuts and matrices are refused", async () => {
+  const c = await workspace();
+  const jpeg = path.join(c.root, "chart.jpg");
+  ffmpeg([
+    "-i",
+    c.chart,
+    "-vf",
+    "scale=1280:720:flags=neighbor",
+    "-q:v",
+    "1",
+    jpeg,
+  ]);
+  const jpegAsset = await place(c, jpeg, "chart.jpg");
+  const first = await exported(c);
+  // JFIF: tagged BT.601 (bt470bg) full range.
+  assert.deepEqual(first.plan.layers[0]!.color, {
+    matrix: "bt601",
+    range: "pc",
+    assumed: false,
+  });
+  assertChart(rgb(first.output), "JPEG (export)");
+  // An asset imported before YU-023 has no recorded color: the file type
+  // and height decide, the same way.
+  const db = new DatabaseSync(path.join(c.root, "workspace.sqlite"));
+  db.prepare("UPDATE asset_versions SET probe = NULL WHERE version_id = ?").run(
+    jpegAsset.id,
+  );
+  db.close();
+  const legacy = await exported(c);
+  assert.deepEqual(legacy.plan.layers[0]!.color, {
+    matrix: "bt601",
+    range: "pc",
+    assumed: true,
+  });
+  assertChart(rgb(legacy.output), "JPEG without recorded color (export)");
+  for (const [name, tags, pattern] of [
+    ["linear.mp4", vui(1, 8, 1), /linear transfer/],
+    ["p3.mp4", vui(12, 1, 1), /smpte432 primaries/],
+    ["ycgco.mp4", vui(1, 1, 8), /ycgco matrix/],
+  ] as const) {
+    const file = chartVideo(c, name, tags);
+    assert.match(
+      await failure(
+        c.store.importAsset(c.projectId, name, await readFile(file)),
+      ),
+      pattern,
+      name,
+    );
+  }
+});
+
+test("re-importing a LUT a clip uses is refused with a way forward", async () => {
+  const c = await workspace();
+  await place(c, c.chart, "chart.png");
+  const lut = await importLut(c, INVERT);
+  await setLut(c, lut);
+  assert.match(
+    await failure(
+      execute(c.browser, "yamakan.lut.import", {
+        projectId: c.projectId,
+        expectedRevision: (await head(c)).revision,
+        documentId: lut.documentId,
+        expectedContentHash: lut.contentHash,
+        name: "Identity",
+        text: identityCube(5),
+      }),
+    ),
+    /another version of this LUT/,
   );
 });

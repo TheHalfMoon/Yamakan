@@ -89,7 +89,12 @@ import {
   shotWithTake,
 } from "../takes.ts";
 import { fromEditView, type CanonicalProject } from "../canonical.ts";
-import { LUT_LIMITS, parseCube, type LutDocument } from "../effects/color.ts";
+import {
+  LUT_LIMITS,
+  LutError,
+  parseCube,
+  type LutDocument,
+} from "../effects/color.ts";
 import type { DocumentRef } from "../document-ref.ts";
 import { randomUUID } from "node:crypto";
 import {
@@ -672,7 +677,7 @@ export const commands = {
       try {
         lut = parseCube(a.text, a.name);
       } catch (e) {
-        if (e instanceof Error && "lut" in e)
+        if (e instanceof LutError)
           throw new CommandError("VALIDATION", e.message);
         throw e;
       }

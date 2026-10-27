@@ -19,7 +19,11 @@ import {
   frameRateOf,
 } from "./project.ts";
 import type { Rational } from "./time.ts";
-import { EFFECTS_OFF, effectWritesEnabled } from "./effects/registry.ts";
+import {
+  EFFECTS_OFF,
+  clipLut,
+  effectWritesEnabled,
+} from "./effects/registry.ts";
 import { TRANSITIONS_OFF, transitionWritesEnabled } from "./transitions.ts";
 
 import type { Project, Asset } from "./project.ts";
@@ -1298,16 +1302,15 @@ export class ProjectStore {
     // YU-023: a clip's LUT is a LUT document of this revision, at the
     // version it names (checked with the revision's own references).
     for (const c of project.clips) {
-      const lut = c.effects?.find((e) => e.type === "lut");
-      if (
-        lut &&
-        !project.documents.some(
-          (d) =>
-            d.id === lut.documentId &&
-            d.kind === "lut" &&
-            d.contentHash === lut.contentHash,
-        )
-      )
+      const lut = clipLut(c.effects);
+      if (!lut) continue;
+      const doc = project.documents.find((d) => d.id === lut.documentId);
+      if (doc?.kind === "lut" && doc.contentHash !== lut.contentHash)
+        throw new CommandError(
+          "VALIDATION",
+          "A clip uses another version of this LUT: a LUT a clip uses is not replaced (import the new version under a new document id, then point the clip to it).",
+        );
+      if (doc?.kind !== "lut")
         throw new CommandError(
           "VALIDATION",
           "A clip's LUT must be a LUT document of this project.",

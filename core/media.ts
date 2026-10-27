@@ -5,7 +5,11 @@ import path from "node:path";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { CommandError } from "./command/errors.ts";
 import { mediaTools, workers } from "./process/workers.ts";
-import { probedColor, unsupportedColor } from "./effects/color.ts";
+import {
+  hasHdrSideData,
+  probedColor,
+  unsupportedColor,
+} from "./effects/color.ts";
 export const MAX_ASSET_BYTES = RESOURCE_POLICY.enforced.assetImportBytes;
 const { mediaDimension, probeStreams, probeWallSeconds, workerMemoryBytes } =
   RESOURCE_POLICY.enforced;
@@ -166,7 +170,7 @@ export async function probe(file: string) {
   const isStill = Number(visual?.nb_frames) === 1 || duration === 0;
   // YU-023: the picture's color tags, kept; HDR and wide gamut refused.
   const color = visual ? probedColor(visual) : null;
-  const unsupported = color && unsupportedColor(color);
+  const unsupported = color && unsupportedColor(color, hasHdrSideData(visual));
   if (unsupported)
     throw new CommandError("CAPABILITY_UNAVAILABLE", unsupported);
   return {

@@ -6,11 +6,13 @@
 //   picture is converted to that once, explicitly, from what its source is.
 // - Sources. A source's matrix and range come from its own tags, read at
 //   import. An untagged YUV source is read as BT.709 when it is at least
-//   720 lines high and as BT.601 below, in limited range (full range for
-//   JPEG-style "yuvj" formats). RGB sources (PNG, WebP) have no matrix.
+//   720 lines high and as BT.601 below, in limited range; JPEG and "yuvj"
+//   (JFIF) are full-range BT.601. RGB sources (PNG, WebP) have no matrix.
 //   Higher bit depths are converted to 8 bits.
-// - Refused at import. HDR transfers (PQ, HLG) and wide-gamut BT.2020
-//   sources: there is no tone mapping, so they are not shown wrongly.
+// - Refused at import. HDR (PQ, HLG, Dolby Vision or HDR10 side data),
+//   BT.2020 and other gamuts, transfers and matrices outside what the
+//   scaler converts: an allow-list, with no tone mapping, so nothing is
+//   shown wrongly. Untagged HDR without side data cannot be detected.
 //
 // LUTs: a 3D `.cube` file is parsed strictly (bounded size, one form, no
 // other keywords, no file references) and stored as an immutable `lut`
@@ -21,7 +23,8 @@ import { CommandError } from "../command/errors.ts";
 
 export const COLOR_POLICY = "sdr-bt709-tv/v1";
 
-export type SourceMatrix = "bt709" | "bt601";
+// The scaler's names for the matrices it converts from.
+export type SourceMatrix = "bt709" | "bt601" | "fcc" | "smpte240m";
 export type SourceRange = "tv" | "pc";
 /** How a source's pixels are read: null for RGB sources. */
 export type SourceColor = {
@@ -31,26 +34,67 @@ export type SourceColor = {
   assumed: boolean;
 } | null;
 
-// ffprobe's names for the transfers and primaries this build refuses.
+// What the policy reads, by ffprobe's names; any other value is refused
+// (an allow-list: a transfer, gamut or matrix this build does not convert
+// is never shown as if it were SDR Rec.709).
+const SDR_TRANSFERS = new Set([
+  "bt709",
+  "smpte170m",
+  "bt470bg",
+  "bt470m",
+  "iec61966-2-1",
+  "gamma22",
+  "gamma28",
+  "unknown",
+  "unspecified",
+]);
+const SDR_PRIMARIES = new Set([
+  "bt709",
+  "smpte170m",
+  "bt470bg",
+  "bt470m",
+  "smpte240m",
+  "unknown",
+  "unspecified",
+]);
+// Matrices the scaler converts from: BT.709, the BT.601 family, SMPTE 240M.
+const MATRICES: Readonly<Record<string, SourceMatrix>> = Object.freeze({
+  bt709: "bt709",
+  smpte170m: "bt601",
+  bt470bg: "bt601",
+  fcc: "fcc",
+  smpte240m: "smpte240m",
+});
+const UNTAGGED = new Set(["unknown", "unspecified", "gbr"]);
 const HDR_TRANSFERS = new Set(["smpte2084", "arib-std-b67"]);
 const WIDE_GAMUT = new Set(["bt2020", "bt2020nc", "bt2020c"]);
-const BT601 = new Set(["smpte170m", "bt470bg", "bt470m", "fcc", "smpte240m"]);
+// Side data that marks HDR even without HDR tags (Dolby Vision profile 5,
+// HDR10 mastering metadata, HDR10+).
+const HDR_SIDE_DATA =
+  /dovi|dolby vision|mastering display|content light level|hdr10+|dynamic hdr/i;
 const RGB_FORMATS =
   /^(rgb|bgr|argb|abgr|rgba|bgra|gbr|pal8|gray|ya|monob|monow|0rgb|rgb0|0bgr|bgr0)/;
+// An untagged YUV source this tall or taller is read as BT.709 (HD).
+const HD_LINES = 720;
+// Each probed field is kept to this many characters.
+export const PROBED_FIELD_LENGTH = 40;
+export const PROBED_KEYS = [
+  "pixelFormat",
+  "matrix",
+  "range",
+  "transfer",
+  "primaries",
+] as const;
 
-export type ProbedColor = {
-  pixelFormat: string;
-  matrix: string;
-  range: string;
-  transfer: string;
-  primaries: string;
-};
+export type ProbedColor = Record<(typeof PROBED_KEYS)[number], string>;
 
 /** The probe's color fields of a video stream, as reported (bounded). */
-export function probedColor(stream: Record<string, unknown> | undefined) {
+export function probedColor(
+  stream: Record<string, unknown> | undefined,
+): ProbedColor {
   const field = (key: string) =>
     typeof stream?.[key] === "string"
-      ? (stream[key] as string).slice(0, 40)
+      ? (stream[key] as string).slice(0, PROBED_FIELD_LENGTH)
       : "unknown";
   return {
     pixelFormat: field("pix_fmt"),
@@ -58,15 +102,37 @@ export function probedColor(stream: Record<string, unknown> | undefined) {
     range: field("color_range"),
     transfer: field("color_transfer"),
     primaries: field("color_primaries"),
-  } satisfies ProbedColor;
+  };
+}
+
+/** Whether a stream carries HDR side data (Dolby Vision, HDR10 metadata). */
+export function hasHdrSideData(stream: Record<string, unknown> | undefined) {
+  const list = stream?.side_data_list;
+  return (
+    Array.isArray(list) &&
+    list.some(
+      (x) =>
+        typeof x?.side_data_type === "string" &&
+        HDR_SIDE_DATA.test(x.side_data_type as string),
+    )
+  );
 }
 
 /** Why a source is outside the SDR policy, or null when it is inside. */
-export function unsupportedColor(c: ProbedColor): string | null {
-  if (HDR_TRANSFERS.has(c.transfer))
-    return "HDR video (PQ or HLG) is not supported: Yamakan renders SDR Rec.709 only and has no tone mapping.";
+export function unsupportedColor(
+  c: ProbedColor,
+  hdrSideData = false,
+): string | null {
+  if (HDR_TRANSFERS.has(c.transfer) || hdrSideData)
+    return "HDR video (PQ, HLG or Dolby Vision) is not supported: Yamakan renders SDR Rec.709 only and has no tone mapping.";
   if (WIDE_GAMUT.has(c.primaries) || WIDE_GAMUT.has(c.matrix))
     return "Wide-gamut BT.2020 video is not supported: Yamakan renders SDR Rec.709 only.";
+  if (!SDR_PRIMARIES.has(c.primaries))
+    return `Video with ${c.primaries} primaries (a wide or other gamut) is not supported: Yamakan renders SDR Rec.709 only.`;
+  if (!SDR_TRANSFERS.has(c.transfer))
+    return `Video with the ${c.transfer} transfer is not supported: Yamakan renders SDR Rec.709 only.`;
+  if (!MATRICES[c.matrix] && !UNTAGGED.has(c.matrix))
+    return `Video with the ${c.matrix} matrix is not supported: Yamakan reads BT.709, BT.601 and SMPTE 240M.`;
   return null;
 }
 
@@ -77,21 +143,19 @@ export function sourceColor(
 ): SourceColor {
   const pix = c?.pixelFormat ?? "unknown";
   const ext = fallback.extension;
+  const jpeg = ext === "jpg" || ext === "jpeg" || pix.startsWith("yuvj");
   // Without a recorded probe (an asset imported before YU-023), the file
   // type decides: PNG and WebP are RGB, JPEG is full-range BT.601.
-  if (pix === "unknown") {
-    if (ext === "png" || ext === "webp") return null;
-    if (ext === "jpg" || ext === "jpeg")
-      return { matrix: "bt601", range: "pc", assumed: true };
-  } else if (RGB_FORMATS.test(pix)) return null;
-  let matrix: SourceMatrix = fallback.height >= 720 ? "bt709" : "bt601";
-  const tagged = c !== null && (c.matrix === "bt709" || BT601.has(c.matrix));
-  if (tagged) matrix = c.matrix === "bt709" ? "bt709" : "bt601";
-  const fullRangeType =
-    pix.startsWith("yuvj") || ext === "jpg" || ext === "jpeg";
-  let range: SourceRange = fullRangeType ? "pc" : "tv";
+  if (pix === "unknown" && (ext === "png" || ext === "webp")) return null;
+  if (pix !== "unknown" && RGB_FORMATS.test(pix)) return null;
+  // JFIF is BT.601 whatever its size; other untagged YUV goes by height.
+  let matrix: SourceMatrix = "bt601";
+  if (!jpeg && fallback.height >= HD_LINES) matrix = "bt709";
+  const tagged = c !== null && c.matrix in MATRICES;
+  if (tagged) matrix = MATRICES[c.matrix]!;
+  let range: SourceRange = jpeg ? "pc" : "tv";
   const rangeTagged = c?.range === "tv" || c?.range === "pc";
-  if (rangeTagged) range = c!.range as SourceRange;
+  if (rangeTagged) range = c.range as SourceRange;
   return { matrix, range, assumed: !tagged || !rangeTagged };
 }
 
@@ -139,7 +203,9 @@ export type LutDocument = z.infer<typeof LutDocumentSchema>;
 
 function base64Length(s: string): number {
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(s) || s.length % 4) return -1;
-  const pad = s.endsWith("==") ? 2 : s.endsWith("=") ? 1 : 0;
+  let pad = 0;
+  if (s.endsWith("==")) pad = 2;
+  else if (s.endsWith("=")) pad = 1;
   return (s.length / 4) * 3 - pad;
 }
 
@@ -173,7 +239,7 @@ export function parseCube(text: string, fallbackName: string): LutDocument {
     const key = parts[0]!;
     if (key === "TITLE") {
       const m = /^TITLE\s+"([^"]*)"$/.exec(line);
-      if (!m || title !== null || size || values.length)
+      if (!m || title !== null || values.length)
         throw lutError(`Line ${n}: TITLE is one quoted name before the table.`);
       title = m[1]!;
       return;
@@ -265,9 +331,9 @@ export function identityCube(size: number): string {
   return lines.join("\n");
 }
 
-function lutError(message: string) {
-  return Object.assign(new Error(message), { lut: true as const });
-}
+/** A .cube file this build does not accept (reported as VALIDATION). */
+export class LutError extends Error {}
+const lutError = (message: string) => new LutError(message);
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 function toBase64(bytes: Uint8Array): string {
