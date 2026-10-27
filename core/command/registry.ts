@@ -72,6 +72,7 @@ import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
   CONTINUITY_STAGES,
   resolveContinuity,
+  verifySelectedContinuity,
   verifyStoryContinuity,
 } from "../continuity.ts";
 import {
@@ -526,6 +527,9 @@ export const commands = {
             );
           story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
           verifyStory(story, c);
+          // Each selected take is attached: its references' consents must
+          // be usable now (YU-051).
+          verifySelectedContinuity(story, c);
         },
       );
     },
@@ -782,7 +786,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Check continuity references (one entry of one reference pack version this project holds, and an optional identity encoding by id and payload hash) for a stage (YU-051): record checks they are traceable; attempt and attach also check every consent they rely on is usable now. Changes nothing and approves nothing: take.apply checks again. Metadata validity is reported apart from the continuity score, which stays unmeasured.",
+      "Check continuity references (one entry of one reference pack version this project holds, and an optional identity encoding by id and payload hash) for a stage (YU-051): record checks they are traceable; attempt and attach also check every consent they rely on is usable now. Advisory: it changes nothing and approves nothing; take.apply and story.assemble check again. Metadata validity is reported apart from the continuity score, which stays unmeasured.",
     input: z
       .object({
         projectId: Id,

@@ -362,7 +362,7 @@ test("a revoked grant blocks new effects and keeps history", async () => {
   await c.saveStory();
 });
 
-test("a check before an attempt is not an approval at attach; expiry counts too", async () => {
+test("a check before an attempt is not an approval at attach; expiry counts too", async (t) => {
   const c = await workspace();
   assert.equal((await c.check("attempt")).metadataValid, true);
   const proposal = await c.propose(c.takes.b);
@@ -378,16 +378,10 @@ test("a check before an attempt is not an approval at attach; expiry counts too"
   const fresh = await workspace();
   const later = await fresh.propose(fresh.takes.b);
   const realNow = Date.now;
-  Date.now = () => realNow() + 2 * DAY;
-  try {
-    assert.match(
-      await failure(fresh.check("attempt")),
-      /^VALIDATION: .*expired/,
-    );
-    assert.match(await failure(fresh.apply(later)), /^VALIDATION: .*expired/);
-  } finally {
-    Date.now = realNow;
-  }
+  const clock = t.mock.method(Date, "now", () => realNow() + 2 * DAY);
+  assert.match(await failure(fresh.check("attempt")), /^VALIDATION: .*expired/);
+  assert.match(await failure(fresh.apply(later)), /^VALIDATION: .*expired/);
+  clock.mock.restore();
   assert.equal(await fresh.clipAsset(), fresh.asset.a.id);
   // Traceable all the same.
   assert.equal((await fresh.check("record")).metadataValid, true);
@@ -416,6 +410,47 @@ test("a revocation racing an attach either lands after it or refuses it", async 
   if (applied === "ok") await c.apply(await c.propose(c.takes.a));
   assert.match(
     await failure(c.apply(await c.propose(c.takes.b))),
+    /^VALIDATION: .*revoked/,
+  );
+  // Both orders, deterministically: an attach committed before the
+  // revocation stands; one after it is refused.
+  const d = await workspace();
+  await d.apply(await d.propose(d.takes.b));
+  assert.equal(await d.clipAsset(), d.asset.b.id);
+  await d.call("yamakan.consent.revoke", {
+    consentId: d.consents.voiceConsent,
+  });
+  assert.equal(await d.clipAsset(), d.asset.b.id);
+  await d.apply(await d.propose(d.takes.a));
+  assert.match(
+    await failure(d.apply(await d.propose(d.takes.b))),
+    /^VALIDATION: .*revoked/,
+  );
+});
+
+test("an encoding is checked under the consent it was recorded with", async () => {
+  const c = await workspace();
+  // recordEncoding takes any purpose its consent has: here likeness-generate.
+  const recorded = await c.call<{ id: string; payloadHash: string }>(
+    "yamakan.identity.encode",
+    {
+      characterId: "lead",
+      purpose: "likeness-generate",
+      consentId: c.consents.likeness,
+      provider: "stand-in",
+      method: "none",
+      payloadHash: "12".repeat(32),
+    },
+  );
+  const refs = c.refs();
+  refs[0]!.encoding = { id: recorded.id, payloadHash: recorded.payloadHash };
+  assert.deepEqual(
+    (await c.check("attempt", refs)).references[0]!.consentsChecked,
+    [c.consents.likeness, c.consents.likeness],
+  );
+  await c.call("yamakan.consent.revoke", { consentId: c.consents.likeness });
+  assert.match(
+    await failure(c.check("attempt", refs)),
     /^VALIDATION: .*revoked/,
   );
 });
@@ -494,6 +529,11 @@ test("foreign references, forged encoding hashes and misplaced encodings are ref
       /does not match a recorded one/,
     ],
     [[...ref({}), ...ref({})], /each reference entry once/],
+    // Same bytes, another document id: the version is checked per document.
+    [
+      [...ref({}), ...ref({ packDocumentId: id(), entryId: c.entries.lead })],
+      /does not hold/,
+    ],
   ] as const) {
     assert.match(await failure(c.check("record", [...refs])), pattern);
     // A story naming them is refused at save, before anything is kept.
@@ -569,4 +609,59 @@ test("a voice reference is project audio under voice-clone consent", async () =>
     await failure(c.savePack(consentOnRoom, c.packV1)),
     /^VALIDATION: (pack: )?Only a character or voice reference links a consent/,
   );
+});
+
+test("assembling a story attaches its selected takes, so a revoked consent refuses it", async () => {
+  const c = await workspace();
+  const storyId = crypto.randomUUID();
+  const takeId = crypto.randomUUID();
+  const story: StoryDocument = {
+    format: "yamakan.story",
+    formatVersion: 1,
+    title: "Second",
+    scenes: [
+      {
+        id: crypto.randomUUID(),
+        name: "Two",
+        shots: [
+          {
+            id: crypto.randomUUID(),
+            name: "Close",
+            durationTicks: 30 * FRAME,
+            notes: "",
+            referencePacks: [],
+            takes: [
+              {
+                id: takeId,
+                assetId: c.asset.b.id,
+                sourceStartTicks: 0,
+                lineage: {
+                  outputHash: c.asset.b.hash,
+                  inputs: [],
+                  continuity: c.refs(),
+                },
+              },
+            ],
+            selectedTakeId: takeId,
+          },
+        ],
+      },
+    ],
+  };
+  await c.run("yamakan.story.save", {
+    expectedRevision: (await c.head()).revision,
+    documentId: storyId,
+    expectedContentHash: null,
+    story,
+  });
+  await c.call("yamakan.consent.revoke", { consentId: c.consents.likeness });
+  const before = await c.head();
+  const assemble = () =>
+    c.run("yamakan.story.assemble", {
+      expectedRevision: before.revision,
+      documentId: storyId,
+      trackId: before.tracks.find((t) => t.kind === "video")!.id,
+    });
+  assert.match(await failure(assemble()), /^VALIDATION: .*revoked/);
+  assert.equal((await c.head()).revision, before.revision);
 });

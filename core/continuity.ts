@@ -3,11 +3,13 @@
 // reference pack version (core/story.ts), and the identity encoding it
 // used by id and payload hash. Each stage checks what it must:
 // - record (a story is saved): the references are traceable, meaning the
-//   project holds that pack version, the entry is in it, its media is the
-//   pinned version and a named encoding is the recorded one. Consent is not
-//   required, so a revocation never erases the history of old takes.
+//   project holds that pack version, the entry is in it and a named
+//   encoding is the recorded one. Neither consent nor the entry's media is
+//   required, so a revocation or a removed medium never erases the history
+//   of old takes.
 // - attempt (before a generation is submitted) and attach (before a take
-//   is put on the timeline): as record, and every consent the references
+//   is put on the timeline): as record, the pinned media is present, and
+//   every consent the references
 //   rely on is usable now (purpose, expiry, revocation, restore epoch),
 //   read inside the caller's transaction. A check at one stage is never an
 //   approval for a later one: attach checks again.
@@ -20,6 +22,7 @@ import type { Project } from "./project.ts";
 import type { DocumentKind } from "./document-ref.ts";
 import { sha256Hex } from "./hash/canonical.ts";
 import { assertConsentUsable } from "./director/runtime.ts";
+import type { ConsentPurpose } from "./identity.ts";
 import {
   ReferencePackSchema,
   consentPurposeOf,
@@ -76,6 +79,7 @@ type EncodingRow = {
   character_id: string;
   consent_id: string;
   payload_hash: string;
+  purpose: ConsentPurpose;
 };
 
 export type ResolvedReference = ContinuityRef & {
@@ -84,6 +88,9 @@ export type ResolvedReference = ContinuityRef & {
   assetId: string;
   assetHash: string;
   characterId: string | null;
+  // Whether the pinned media version is still in the project (required
+  // at attempt and attach).
+  mediaPresent: boolean;
   // Which consents were checked usable at this stage (none at record).
   consentsChecked: string[];
 };
@@ -104,18 +111,21 @@ export function resolveContinuity(
     throw invalid("A take names each reference entry once.");
   const packs = new Map<string, ReferencePack>();
   const references: ResolvedReference[] = refs.map((ref) => {
+    // Keyed by document and version: identical bytes held under another
+    // document (or by another project) are not this pack.
+    const key = `${ref.packDocumentId}:${ref.packContentHash}`;
     const pack =
-      packs.get(ref.packContentHash) ??
-      packs
-        .set(ref.packContentHash, packVersion(c, ref))
-        .get(ref.packContentHash)!;
+      packs.get(key) ?? packs.set(key, packVersion(c, ref)).get(key)!;
     const entry = pack.entries.find((e) => e.id === ref.entryId);
     if (!entry)
       throw invalid(
         `A continuity reference names an entry that pack "${pack.name}" does not have in that version.`,
       );
+    // The pinned media version must still be this project's to be used;
+    // keeping the record of an old take does not need it.
     const asset = c.project.assets.find((a) => a.id === entry.assetId);
-    if (!asset || asset.hash !== entry.assetHash)
+    const mediaPresent = Boolean(asset && asset.hash === entry.assetHash);
+    if (stage !== "record" && !mediaPresent)
       throw invalid(
         `Reference "${entry.label}" no longer matches its media version in this project.`,
       );
@@ -125,7 +135,7 @@ export function resolveContinuity(
         throw invalid("Only a character reference names an identity encoding.");
       encoding = c.db
         .prepare(
-          "SELECT character_id, consent_id, payload_hash FROM identity_encodings WHERE id = ?",
+          "SELECT e.character_id, e.consent_id, e.payload_hash, c.purpose FROM identity_encodings e JOIN likeness_consents c ON c.id = e.consent_id WHERE e.id = ?",
         )
         .get(ref.encoding.id) as EncodingRow | undefined;
       // A forged or altered hash, or another character's encoding.
@@ -148,11 +158,12 @@ export function resolveContinuity(
         });
         consentsChecked.push(entry.consentId);
       }
-      // An encoding is usable only while its own consent is.
+      // An encoding is usable only while the consent it was recorded under
+      // is (for that consent's own purpose).
       if (encoding) {
         assertConsentUsable(c.db, encoding.consent_id, {
           characterId: encoding.character_id,
-          purpose: "identity-encode",
+          purpose: encoding.purpose,
           nowMs: c.nowMs,
         });
         consentsChecked.push(encoding.consent_id);
@@ -162,16 +173,17 @@ export function resolveContinuity(
       ...ref,
       role: entry.role,
       label: entry.label,
-      assetId: asset.id,
-      assetHash: asset.hash,
+      assetId: entry.assetId,
+      assetHash: entry.assetHash,
+      mediaPresent,
       characterId: entry.characterId,
       consentsChecked,
     };
   });
   return {
     stage,
-    // The references are what they say: held versions, real entries, the
-    // pinned media and the recorded encodings.
+    // The references are what they say: held versions, real entries and
+    // the recorded encodings (and, at attempt and attach, present media).
     metadataValid: true as const,
     consentChecked: stage !== "record",
     references,
@@ -183,6 +195,29 @@ export function resolveContinuity(
         "Matching hashes show which references a take named, not that it resembles them.",
     },
   };
+}
+
+/**
+ * Assembly attaches each shot's selected take: its continuity references
+ * are checked at the attach stage, consents usable now.
+ */
+export function verifySelectedContinuity(
+  story: {
+    scenes: {
+      shots: {
+        selectedTakeId: string | null;
+        takes: { id: string; lineage?: { continuity?: ContinuityRef[] } }[];
+      }[];
+    }[];
+  },
+  c: ContinuityContext,
+) {
+  for (const scene of story.scenes)
+    for (const shot of scene.shots) {
+      const take = shot.takes.find((t) => t.id === shot.selectedTakeId);
+      if (take?.lineage?.continuity?.length)
+        resolveContinuity(c, take.lineage.continuity, "attach");
+    }
 }
 
 /** Every take's continuity references in a story, checked as traceable. */
