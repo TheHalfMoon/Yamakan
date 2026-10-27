@@ -379,8 +379,10 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - The take's media must be this project's ready object at its size, checked on disk first and under the write lock. Its probe must have been recorded at import; otherwise it is refused. The chosen take and the shot's reference pins are checked again, so a revoked or expired consent refuses it.
 - **Replacement (`clip.replaceMedia`).**
   - The clip keeps its id, place, length, track, effects and animation. It takes the take's media and in-point, and its title is cleared, so a title card can be replaced by a take.
-  - Footage keeps the clip's embedded-sound settings. Sound the editor turned off stays off, and a take with no audio plays none. A still has no sound settings.
-  - Refused: a locked track, a retimed clip, a clip whose sound is unlinked onto an audio track (relink it first), a still that does not start at 0, and a take shorter than the clip. A shot shown by more than one clip, for example after a split, is refused too.
+  - Footage keeps the clip's embedded-sound gain and fades. Sound the editor turned off stays off, and a take with no audio plays none. After a take with no audio (or a still, which has no sound settings), the next take plays its own sound if it has any.
+  - Refused: a locked track, a retimed clip, a clip whose sound is unlinked onto an audio track (relink it first), a take whose sound is unlinked elsewhere, a still that does not start at 0, and a take shorter than the clip. A shot shown by more than one clip (for example after a split) is refused, and so is a clip that no longer shows the shot's title card or one of its takes. The clip is found by the shot's id, so this check keeps it from being taken for another story's shot.
+  - The operation is also part of `yamakan.project.applyBatch`, like `clip.add`. The checks there are the timeline's own: project media, not audio, fitting the clip. The probe, consent, lineage and story binding are guaranteed only through `yamakan.take.apply`.
+  - `yamakan.take.list` reports a shot it cannot resolve to one clip in its `problem` field; compare and propose refuse such a shot. Two takes with the same media and in-point look the same on the timeline, and the first is reported as the one shown.
 - **Undo and rollback.**
   - Undo is a new revision with exactly the old clip. The original take stays in the story and its media in the project, so undo, redo and restore bring it back byte for byte.
   - As with assembly, undo and redo do not check consents again.

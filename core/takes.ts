@@ -134,7 +134,8 @@ export function listTakes(
         try {
           clip = shotClip(project, shot.id);
         } catch (e) {
-          problem = e instanceof CommandError ? e.message : String(e);
+          if (!(e instanceof CommandError)) throw e;
+          problem = e.message;
         }
         return {
           sceneId: scene.id,
@@ -273,8 +274,15 @@ export function proposeReplace(
   if (!clip)
     throw invalid("Assemble the story before replacing a shot's take.");
   if (shows(clip, take)) throw invalid("The shot already shows this take.");
+  // The clip is this story shot's: its title card or one of its takes (a
+  // shot id alone could be another story's shot of the same id).
+  if (clip.title === null && !shot.takes.some((t) => shows(clip, t)))
+    throw invalid(
+      "The shot's clip no longer shows one of this shot's takes; replace it in the editor.",
+    );
   const asset = assetOf(project, take.assetId);
-  if (!asset || asset.kind === "audio")
+  if (!asset) throw notFound("The take's media is no longer in this project.");
+  if (asset.kind === "audio")
     throw invalid("A take is a still or footage of this project.");
   if (take.lineage && take.lineage.outputHash !== asset.hash)
     throw invalid("The take does not match its recorded media version.");

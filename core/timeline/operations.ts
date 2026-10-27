@@ -596,13 +596,15 @@ function apply(p: CanonicalProject, op: Operation): void {
       if (c.speed && c.speed.num !== c.speed.den)
         throw invalid("Reset the clip's speed before replacing its take.");
       const before = p.assets.find((a) => a.id === c.assetId) ?? null;
-      // Unlinked sound stays with the media it came from.
-      if (
-        before?.kind === "video" &&
+      // Unlinked sound stays with the media it came from, and a take whose
+      // sound is unlinked elsewhere would play it twice.
+      const unlinkedFrom = (id: string) =>
         p.clips.some(
-          (o) =>
-            o.assetId === before.id && track(p, o.trackId).kind === "audio",
-        )
+          (o) => o.assetId === id && track(p, o.trackId).kind === "audio",
+        );
+      if (
+        (before?.kind === "video" && unlinkedFrom(before.id)) ||
+        (asset.kind === "video" && unlinkedFrom(asset.id))
       )
         throw invalid(
           "Relink the clip's unlinked sound before replacing its take.",
@@ -616,7 +618,7 @@ function apply(p: CanonicalProject, op: Operation): void {
         throw invalid("The take is shorter than the clip.");
       if (asset.kind === "video") {
         // Sound the editor turned off stays off; a take without sound has
-        // none to play.
+        // none to play, and the take after it plays its own if it has any.
         const kept =
           c.sound && before?.kind === "video" && before.hasAudio === true
             ? c.sound.enabled

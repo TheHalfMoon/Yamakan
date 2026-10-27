@@ -557,8 +557,10 @@ export const commands = {
         );
       // The take's media is on disk at its size before the commit; inside
       // it, its ready object and probe are checked under the write lock.
+      // At another head the commit replays a retry or refuses a conflict,
+      // so the media is not looked at.
       const head = await store.load(a.projectId);
-      for (const m of p.mappings) {
+      for (const m of head.revision === a.expectedRevision ? p.mappings : []) {
         const asset = head.assets.find((x) => x.id === m.to.assetId);
         if (!asset)
           throw new CommandError(

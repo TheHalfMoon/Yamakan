@@ -21,6 +21,7 @@ import type { ReferencePack, StoryDocument } from "../core/story.ts";
 import type { TakeProposal } from "../core/takes.ts";
 import { fromEditView } from "../core/canonical.ts";
 import { applyBatch } from "../core/timeline/operations.ts";
+import { IDENTITY_TRANSFORM } from "../core/effects/registry.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -675,4 +676,97 @@ test("a locked track, a retimed clip and unlinked sound refuse the replacement a
     await message(propose(c, documentId, shots[2].id, t.a3)),
     /locked/,
   );
+});
+
+test("a replacement keeps the clip's effects, animation and sound gain and fades, and refuses a take whose sound is unlinked elsewhere", async () => {
+  const c = await workspace();
+  const { documentId, t, shots } = await assembled(c);
+  await apply(c, await propose(c, documentId, shots[1].id, t.b2));
+  const close = await clipOf(c, shots[1].id);
+  await run(c, "yamakan.project.applyBatch", {
+    expectedRevision: (await head(c)).revision,
+    operations: [
+      {
+        type: "clip.setEffects",
+        clipId: close.id,
+        effects: [{ ...IDENTITY_TRANSFORM, scale: 1500 }],
+      },
+      {
+        type: "clip.upsertAnimationKeyframe",
+        clipId: close.id,
+        channel: "opacity",
+        timeTicks: 0,
+        value: 0.5,
+      },
+      {
+        type: "clip.setSound",
+        clipId: close.id,
+        enabled: false,
+        gainDb: -6,
+        fadeInTicks: 5 * FRAME,
+      },
+    ],
+  });
+  const before = (await exported(c)).clips.find((x) => x.id === close.id)!;
+  // Footage to a still and back: effects and animation stay throughout.
+  await apply(c, await propose(c, documentId, shots[1].id, t.still2));
+  const still = (await exported(c)).clips.find((x) => x.id === close.id)!;
+  assert.deepEqual(
+    [still.effects, still.animation, still.sound],
+    [before.effects, before.animation, null],
+  );
+  await apply(c, await propose(c, documentId, shots[1].id, t.b2));
+  const back = (await exported(c)).clips.find((x) => x.id === close.id)!;
+  assert.deepEqual(
+    [back.effects, back.animation],
+    [before.effects, before.animation],
+  );
+  // A take whose sound is unlinked onto an audio track elsewhere.
+  await apply(c, await propose(c, documentId, shots[0].id, t.b1));
+  const wide = await clipOf(c, shots[0].id);
+  assert.equal(wide.sound?.enabled, true);
+  const p = fromEditView(await head(c));
+  const audio = p.tracks.find((x) => x.kind === "audio")!;
+  const cardClip = await clipOf(c, shots[2].id);
+  const unlinked = applyBatch(p, [
+    {
+      type: "clip.unlinkSound",
+      clipId: wide.id,
+      audioTrackId: audio.id,
+      audioClipId: id(),
+    },
+  ]);
+  assert.throws(
+    () =>
+      applyBatch(unlinked, [
+        {
+          type: "clip.replaceMedia",
+          clipId: cardClip.id,
+          assetId: c.imported.b.id,
+          sourceStartTicks: 0,
+        },
+      ]),
+    /unlinked sound/,
+  );
+
+  // Footage to footage keeps the sound gain and fades.
+  await run(c, "yamakan.project.applyBatch", {
+    expectedRevision: (await head(c)).revision,
+    operations: [
+      {
+        type: "clip.setSound",
+        clipId: wide.id,
+        enabled: false,
+        gainDb: -6,
+        fadeInTicks: 5 * FRAME,
+      },
+    ],
+  });
+  await apply(c, await propose(c, documentId, shots[0].id, t.a1));
+  assert.deepEqual((await clipOf(c, shots[0].id)).sound, {
+    enabled: false,
+    gainDb: -6,
+    fadeInTicks: 5 * FRAME,
+    fadeOutTicks: 0,
+  });
 });
