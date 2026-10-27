@@ -24,6 +24,10 @@ import type {
   StoryDocument,
 } from "../core/story.ts";
 import type { TakeProposal } from "../core/takes.ts";
+import {
+  resolveContinuity,
+  type ContinuityContext,
+} from "../core/continuity.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -391,6 +395,8 @@ test("a revocation racing an attach either lands after it or refuses it", async 
   const c = await workspace();
   const proposal = await c.propose(c.takes.b);
   const revision = (await c.head()).revision;
+  // A smoke test of a real overlap; the deterministic orders below are
+  // the proof.
   const [applied, revoked] = await Promise.all([
     failure(c.apply(proposal)),
     failure(
@@ -664,4 +670,36 @@ test("assembling a story attaches its selected takes, so a revoked consent refus
     });
   assert.match(await failure(assemble()), /^VALIDATION: .*revoked/);
   assert.equal((await c.head()).revision, before.revision);
+});
+
+test("a medium missing from the project keeps the record but refuses attempt and attach", async () => {
+  // No command removes an asset (asset versions are immutable), so this
+  // runs the resolver itself on the real workspace with the still left out
+  // of the project view.
+  const c = await workspace();
+  const project = await c.head();
+  const context = (db: ContinuityContext["db"]): ContinuityContext => ({
+    db,
+    project: {
+      ...project,
+      assets: project.assets.filter((a) => a.id !== c.asset.still.id),
+    },
+    held: (documentId, hash, kind) =>
+      c.store.holdsDocument(c.projectId, documentId, hash, kind),
+    nowMs: Date.now(),
+  });
+  const record = c.store.read((db) =>
+    resolveContinuity(context(db), c.refs(), "record"),
+  );
+  assert.equal(record.metadataValid, true);
+  assert.deepEqual(
+    record.references.map((r) => r.mediaPresent),
+    [false, true],
+  );
+  for (const stage of ["attempt", "attach"] as const)
+    assert.throws(
+      () =>
+        c.store.read((db) => resolveContinuity(context(db), c.refs(), stage)),
+      /no longer matches its media version/,
+    );
 });

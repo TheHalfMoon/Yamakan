@@ -398,7 +398,8 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - No generation submits yet (engines are off), so the attempt stage runs only through the check command. It is the check a submission must call.
   - Stored reference media is not deleted when consent is revoked. A revocation blocks new use and cannot be undone, but placing the medium directly with clip editing is not gated.
   - Consents, characters and identity encodings are workspace-wide, not per project. An encoding is accepted only for the entry's character with its exact id and payload hash.
-  - The restore-epoch rule is covered by the existing consent tests, not by an attach-after-restore test.
+  - The restore epoch is enforced by `assertConsentUsable`, which every attempt and attach check calls. There is no attach-after-restore test.
+  - No command removes an asset, because asset versions are immutable, so the media check at attempt and attach is defensive. It is tested on the resolver directly.
 
 ## Take compare and replace (YU-032)
 
