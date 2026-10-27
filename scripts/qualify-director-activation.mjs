@@ -183,10 +183,11 @@ try {
     '[data-testid="story-packs"] li[data-kind="story"]',
   );
   await storyRow.waitFor();
-  assert.equal(
-    (await storyRow.innerText()).trim(),
-    "Night walk: 2 shots, 2 held by title cards",
-  );
+  // The title is bidi-isolated (FSI…PDI) by the shared translate().
+  const shown = (await storyRow.innerText())
+    .replace(/[\u2066-\u2069]/g, "")
+    .trim();
+  assert.equal(shown, "Night walk — shots: 2; title cards: 2");
   const assembled = await call("yamakan.story.assemble", {
     projectId: project.id,
     expectedRevision: saved.result.project.revision,
@@ -199,7 +200,7 @@ try {
     JSON.stringify(assembled).slice(0, 400),
   );
   result.story = {
-    shown: "Night walk: 2 shots, 2 held by title cards",
+    shown,
     assembledClips: assembled.result.clips.length,
   };
 

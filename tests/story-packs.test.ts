@@ -47,7 +47,7 @@ function ffmpeg(args: string[]) {
   );
 }
 
-async function workspace() {
+async function workspace(frameRate?: { num: number; den: number }) {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-story-"));
   bases.push(root);
   const store = new ProjectStore(root);
@@ -64,7 +64,10 @@ async function workspace() {
     },
   };
   const project = (
-    await execute(browser, "yamakan.project.create", { name: "Storyboard" })
+    await execute(browser, "yamakan.project.create", {
+      name: "Storyboard",
+      ...(frameRate ? { frameRate } : {}),
+    })
   ).result as Project;
   const footage = path.join(root, "footage.mp4");
   ffmpeg([
@@ -488,65 +491,245 @@ test("agents save packs without likeness links, and limits and the off switch ho
   }
 });
 
-test("a version 12 workspace upgrades its document tables and keeps every document", async () => {
+test("timings are on the project's frames at 24000/1001, and a long story assembles in one revision", async () => {
+  const c = await workspace({ num: 24000, den: 1001 });
+  const NTSC = 29_429_400; // flicks per 24000/1001 frame
+  const card = (durationTicks: number) => ({
+    id: id(),
+    name: "Card",
+    durationTicks,
+    notes: "",
+    referencePacks: [],
+    takes: [],
+    selectedTakeId: null,
+  });
+  const board = (shots: ReturnType<typeof card>[]): StoryDocument => ({
+    format: "yamakan.story",
+    formatVersion: 1,
+    title: "Long",
+    scenes: [
+      { id: id(), name: "One", shots: shots.slice(0, 100) },
+      { id: id(), name: "Two", shots: shots.slice(100) },
+    ],
+  });
+  // One second is 23.976 frames: refused when saved, not at assembly.
+  assert.equal(
+    await code(saveStory(c, id(), board([card(705_600_000)]))),
+    "VALIDATION",
+  );
+  const offTake = story(c, null);
+  offTake.scenes[0].shots[0].durationTicks = 24 * NTSC;
+  offTake.scenes[0].shots[0].takes[0].sourceStartTicks = 1;
+  assert.equal(await code(saveStory(c, id(), offTake)), "VALIDATION");
+  // 200 shots of one frame each: 403 operations, one revision.
+  const storyId = id();
+  await saveStory(
+    c,
+    storyId,
+    board(Array.from({ length: 200 }, () => card(NTSC))),
+  );
+  const before = await head(c);
+  const track = before.tracks.find((t) => t.kind === "video")!.id;
+  assert.equal(
+    await code(
+      execute(c.browser, "yamakan.story.assemble", {
+        projectId: c.projectId,
+        expectedRevision: before.revision,
+        documentId: storyId,
+        trackId: track,
+        startTicks: 1,
+      }),
+    ),
+    "VALIDATION",
+  );
+  const retrying = { ...c.browser, requestId: "assemble-once" };
+  const assembled = (
+    await execute(retrying, "yamakan.story.assemble", {
+      projectId: c.projectId,
+      expectedRevision: before.revision,
+      documentId: storyId,
+      trackId: track,
+    })
+  ).result as Project;
+  assert.equal(assembled.revision, before.revision + 1);
+  assert.equal(assembled.clips.length, 200);
+  assert.deepEqual(
+    fromEditView(assembled)
+      .clips.map((x) => x.startTicks / NTSC)
+      .sort((a, b) => a - b)
+      .slice(0, 3),
+    [0, 1, 2],
+  );
+  // A retry after a lost response replays the same result.
+  const replay = (
+    await execute(retrying, "yamakan.story.assemble", {
+      projectId: c.projectId,
+      expectedRevision: before.revision,
+      documentId: storyId,
+      trackId: track,
+    })
+  ).result as Project;
+  assert.equal(replay.revision, assembled.revision);
+  assert.deepEqual(
+    replay.clips.map((x) => x.id),
+    assembled.clips.map((x) => x.id),
+  );
+});
+
+test("a pin names a version of its own pack; an earlier held version is accepted", async () => {
+  const c = await workspace();
+  const consent = await grant(c);
+  const first = id(),
+    second = id();
+  const firstHash = await savePack(c, first, pack(c, consent.id));
+  const other = pack(c, consent.id);
+  other.name = "Another pack";
+  const secondHash = await savePack(c, second, other);
+  // The hash of the second pack under the first pack's id: refused.
+  assert.equal(
+    await code(
+      saveStory(
+        c,
+        id(),
+        story(c, { documentId: first, contentHash: secondHash }),
+      ),
+    ),
+    "VALIDATION",
+  );
+  // A new version of the first pack; the earlier version stays pinnable.
+  const changed = pack(c, consent.id);
+  changed.name = "Lead and alley, second look";
+  await execute(c.browser, "yamakan.pack.save", {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    documentId: first,
+    expectedContentHash: firstHash,
+    pack: changed,
+  });
+  assert.equal(
+    await code(
+      saveStory(
+        c,
+        id(),
+        story(c, { documentId: first, contentHash: firstHash }),
+      ),
+    ),
+    "ok",
+  );
+  // A still take starts at the beginning of its source.
+  const stillOffset = story(c, null);
+  stillOffset.scenes[0].shots[1].takes[0].sourceStartTicks = FRAME;
+  assert.equal(await code(saveStory(c, id(), stillOffset)), "VALIDATION");
+});
+
+test("a version 12 workspace upgrades its document tables, keeping documents and their references", async () => {
   const c = await workspace();
   await c.queue.close();
   c.store.close();
-  // Put the two tables back as version 12 defined them.
   const file = path.join(c.root, "workspace.sqlite");
-  const db = new DatabaseSync(file);
-  db.exec("PRAGMA foreign_keys = OFF");
-  db.exec("BEGIN");
-  for (const table of ["creative_documents", "document_uploads"]) {
-    const { sql } = db
-      .prepare("SELECT sql FROM sqlite_schema WHERE name = ?")
-      .get(table) as { sql: string };
-    db.exec(
-      `CREATE TABLE ${table}_old ${sql
-        .slice(sql.indexOf("("))
-        .replace(", 'story', 'referencePack'", "")}`,
+  // Put the two tables back as version 12 defined them, holding a studio
+  // document a snapshot references and a staged upload.
+  const downgrade = (orphan: boolean) => {
+    const db = new DatabaseSync(file);
+    db.exec("PRAGMA foreign_keys = OFF");
+    db.exec("BEGIN");
+    for (const table of ["creative_documents", "document_uploads"]) {
+      const { sql } = db
+        .prepare("SELECT sql FROM sqlite_schema WHERE name = ?")
+        .get(table) as { sql: string };
+      db.exec(
+        `CREATE TABLE ${table}_old ${sql
+          .slice(sql.indexOf("("))
+          .replace(", 'story', 'referencePack'", "")}`,
+      );
+      db.exec(`INSERT INTO ${table}_old SELECT * FROM ${table}`);
+      db.exec(`DROP TABLE ${table}`);
+      db.exec(`ALTER TABLE ${table}_old RENAME TO ${table}`);
+    }
+    const { hash: snapshot } = db
+      .prepare("SELECT hash FROM snapshots LIMIT 1")
+      .get() as { hash: string };
+    db.prepare(
+      "INSERT OR IGNORE INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, 'studio', 1, '[]', x'7b7d', 2)",
+    ).run("e".repeat(64));
+    db.prepare(
+      "INSERT OR IGNORE INTO snapshot_document_refs(snapshot_hash, document_hash) VALUES (?, ?)",
+    ).run(snapshot, orphan ? "f".repeat(64) : "e".repeat(64));
+    db.prepare(
+      "INSERT OR IGNORE INTO document_uploads(id, project_id, principal_id, request_id, request_digest, kind, schema_version, declared_bytes, body_sha256, state, created_at, expires_at) VALUES (?, ?, 'browser-ui', 'r1', ?, 'studio', 1, 2, ?, 'sealed', ?, ?)",
+    ).run(
+      "00000000-0000-4000-8000-000000000001",
+      c.projectId,
+      "a".repeat(64),
+      "b".repeat(64),
+      Date.now(),
+      Date.now() + 3_600_000,
     );
-    db.exec(`INSERT INTO ${table}_old SELECT * FROM ${table}`);
-    db.exec(`DROP TABLE ${table}`);
-    db.exec(`ALTER TABLE ${table}_old RENAME TO ${table}`);
-  }
-  db.exec("PRAGMA user_version = 12");
-  db.exec("COMMIT");
-  assert.throws(() =>
-    db
-      .prepare(
-        "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, 'story', 1, '[]', x'00', 1)",
-      )
-      .run("d".repeat(64)),
+    db.exec("PRAGMA user_version = 12");
+    db.exec("COMMIT");
+    assert.throws(() =>
+      db
+        .prepare(
+          "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, 'story', 1, '[]', x'00', 1)",
+        )
+        .run("d".repeat(64)),
+    );
+    db.close();
+  };
+  const read = (sql: string, ...args: string[]) => {
+    const db = new DatabaseSync(file, { readOnly: true });
+    try {
+      return db.prepare(sql).get(...args) as Record<string, number>;
+    } finally {
+      db.close();
+    }
+  };
+  // A reference to a missing document: the upgrade refuses and leaves the
+  // database at version 12.
+  downgrade(true);
+  const refused = new ProjectStore(c.root);
+  await assert.rejects(
+    refused.initialize(),
+    (e: unknown) => toCommandError(e).code === "RECOVERY_REQUIRED",
   );
-  // A studio row stands for the documents a version 12 workspace holds.
-  db.prepare(
-    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, bytes, byte_length) VALUES (?, 'studio', 1, '[]', x'7b7d', 2)",
-  ).run("e".repeat(64));
-  db.close();
+  assert.equal(read("PRAGMA user_version").user_version, 12);
+  {
+    const db = new DatabaseSync(file);
+    db.prepare(
+      "DELETE FROM snapshot_document_refs WHERE document_hash = ?",
+    ).run("f".repeat(64));
+    db.close();
+  }
+  downgrade(false);
   const upgraded = new ProjectStore(c.root);
   handles.push(upgraded);
   await upgraded.initialize();
-  const check = new DatabaseSync(file, { readOnly: true });
+  assert.equal(read("PRAGMA user_version").user_version, 13);
+  const db = new DatabaseSync(file, { readOnly: true });
   try {
-    assert.equal(
-      (check.prepare("PRAGMA user_version").get() as { user_version: number })
-        .user_version,
-      13,
-    );
-    assert.deepEqual(check.prepare("PRAGMA foreign_key_check").all(), []);
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
     assert.equal(
       (
-        check
+        db
           .prepare(
-            "SELECT count(*) AS n FROM creative_documents WHERE hash = ?",
+            "SELECT count(*) AS n FROM snapshot_document_refs r JOIN creative_documents c ON c.hash = r.document_hash WHERE c.hash = ?",
           )
           .get("e".repeat(64)) as { n: number }
       ).n,
       1,
     );
+    assert.equal(
+      (
+        db
+          .prepare(
+            "SELECT count(*) AS n FROM document_uploads WHERE request_id = 'r1'",
+          )
+          .get() as { n: number }
+      ).n,
+      1,
+    );
   } finally {
-    check.close();
+    db.close();
   }
   // The upgraded workspace takes a story.
   const after = {

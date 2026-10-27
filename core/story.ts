@@ -12,10 +12,11 @@ import type { DatabaseSync } from "node:sqlite";
 import { CommandError } from "./command/errors.ts";
 import { Id, frameRateOf, type Project } from "./project.ts";
 import type { DocumentRef } from "./document-ref.ts";
-import { Ticks, framesToTicks } from "./time.ts";
+import { Ticks, framesToTicks, ticksToFrames, type Rational } from "./time.ts";
 import type { CanonicalProject } from "./canonical.ts";
 import type { Operation } from "./timeline/operations.ts";
 import { assertConsentUsable } from "./director/runtime.ts";
+import { sha256Hex } from "./hash/canonical.ts";
 
 export const STORY_LIMITS = Object.freeze({
   // Canonical bytes of one story or reference pack (well under the 8 MiB
@@ -192,8 +193,13 @@ export type CommitContext = {
   // The head's editing view and its document references.
   project: Project;
   documents: DocumentRef[];
-  // Whether this project held a document version of a kind in any revision.
-  held: (contentHash: string, kind: DocumentRef["kind"]) => boolean;
+  // Whether a revision of this project named this version of this
+  // document (by its id and content hash) as a document of this kind.
+  held: (
+    documentId: string,
+    contentHash: string,
+    kind: DocumentRef["kind"],
+  ) => boolean;
   nowMs: number;
 };
 
@@ -207,15 +213,31 @@ const assetOf = (p: Project, id: string) => {
   return a;
 };
 
+/** Ticks on the project's frames, or a refusal naming what is off them. */
+export function assertOnFrames(ticks: number, rate: Rational, what: string) {
+  try {
+    ticksToFrames(ticks, rate, "exact");
+  } catch {
+    throw new CommandError(
+      "VALIDATION",
+      `${what} is not on this project's frames (${rate.num}/${rate.den} fps).`,
+    );
+  }
+}
+
 /**
- * Inside the commit transaction: a story's takes are this project's stills
- * or footage and fit their source, and its pins name reference pack
- * versions this project holds whose consents are still usable.
+ * Inside the commit transaction: a story's timings are on the project's
+ * frames, its takes are this project's stills or footage and fit their
+ * source, and its pins name reference pack versions this project held
+ * whose consents are still usable.
  */
 export function verifyStory(story: StoryDocument, c: CommitContext) {
   const rate = frameRateOf(c.project);
+  // Each pinned version is read and checked once per commit.
+  const checked = new Set<string>();
   for (const sc of story.scenes)
     for (const shot of sc.shots) {
+      assertOnFrames(shot.durationTicks, rate, `Shot "${shot.name}"`);
       for (const take of shot.takes) {
         const asset = assetOf(c.project, take.assetId);
         if (asset.kind === "audio")
@@ -223,6 +245,16 @@ export function verifyStory(story: StoryDocument, c: CommitContext) {
             "VALIDATION",
             "A take is a still or footage, not audio.",
           );
+        if (asset.kind === "image" && take.sourceStartTicks !== 0)
+          throw new CommandError(
+            "VALIDATION",
+            "A still take starts at the beginning of its source.",
+          );
+        assertOnFrames(
+          take.sourceStartTicks,
+          rate,
+          `A take of shot "${shot.name}"`,
+        );
         if (
           asset.kind === "video" &&
           take.sourceStartTicks + shot.durationTicks >
@@ -233,13 +265,21 @@ export function verifyStory(story: StoryDocument, c: CommitContext) {
             `Take of shot "${shot.name}" runs past the end of its source.`,
           );
       }
-      for (const pin of shot.referencePacks) verifyPin(pin, c);
+      for (const pin of shot.referencePacks) {
+        const key = `${pin.documentId}:${pin.contentHash}`;
+        if (checked.has(key)) continue;
+        verifyPin(pin, c);
+        checked.add(key);
+      }
     }
 }
 
 function verifyPin(pin: z.infer<typeof PackPinSchema>, c: CommitContext) {
   const ref = c.documents.find((d) => d.id === pin.documentId);
-  if (ref?.kind !== "referencePack" || !c.held(pin.contentHash, ref.kind))
+  if (
+    ref?.kind !== "referencePack" ||
+    !c.held(pin.documentId, pin.contentHash, ref.kind)
+  )
     throw new CommandError(
       "VALIDATION",
       "A shot pins a reference pack version this project does not hold.",
@@ -249,15 +289,32 @@ function verifyPin(pin: z.infer<typeof PackPinSchema>, c: CommitContext) {
       "SELECT bytes FROM creative_documents WHERE hash = ? AND kind = 'referencePack'",
     )
     .get(pin.contentHash) as { bytes: Uint8Array } | undefined;
-  if (!row)
-    throw new CommandError(
+  // Stored bytes are checked against their name before they are trusted.
+  const damaged = () =>
+    new CommandError(
       "RECOVERY_REQUIRED",
-      "A pinned reference pack is missing from the workspace.",
+      "A pinned reference pack is missing or damaged in the workspace; restore a verified backup.",
     );
-  const pack = ReferencePackSchema.parse(
-    JSON.parse(Buffer.from(row.bytes).toString("utf8")),
-  );
-  verifyConsents(pack, c);
+  if (!row || sha256Hex(Buffer.from(row.bytes)) !== pin.contentHash)
+    throw damaged();
+  let pack: ReferencePack;
+  try {
+    pack = ReferencePackSchema.parse(
+      JSON.parse(Buffer.from(row.bytes).toString("utf8")),
+    );
+  } catch {
+    throw damaged();
+  }
+  try {
+    verifyConsents(pack, c);
+  } catch (e) {
+    if (!(e instanceof CommandError) || pin.contentHash === ref.contentHash)
+      throw e;
+    throw new CommandError(
+      "VALIDATION",
+      `${e.message} It is used by an earlier version of pack "${pack.name}"; pin its current version instead.`,
+    );
+  }
 }
 
 /**

@@ -53,12 +53,13 @@ import { ConsentPurposeSchema } from "../identity.ts";
 import {
   ReferencePackSchema,
   StoryDocumentSchema,
+  type StoryDocument,
   assembleOperations,
+  assertOnFrames,
   linksConsent,
   verifyReferencePack,
   verifyStory,
 } from "../story.ts";
-import { fromEditView } from "../canonical.ts";
 import { randomUUID } from "node:crypto";
 import {
   advanceStage,
@@ -389,41 +390,43 @@ export const commands = {
       })
       .strict(),
     run: async ({ store, principal, receipt }, a) => {
-      const head = await store.load(a.projectId);
-      if (head.revision !== a.expectedRevision)
-        throw new CommandError(
-          "REVISION_CONFLICT",
-          "Revision conflict; reopen before saving.",
-        );
-      const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
-      if (ref.kind !== "story")
-        throw new CommandError("VALIDATION", "This document is not a story.");
-      const story = StoryDocumentSchema.parse(
-        JSON.parse(bytes.toString("utf8")),
-      );
-      const canonical = fromEditView(head);
-      const start =
-        a.startTicks ??
-        Math.max(
-          0,
-          ...canonical.clips
-            .filter((c) => c.trackId === a.trackId)
-            .map((c) => c.startTicks + c.durationTicks),
-        );
-      const operations = assembleOperations(
-        story,
-        canonical,
-        a.trackId,
-        start,
-        randomUUID,
-      );
+      // The story is read, checked and turned into operations inside the
+      // commit, so a retry with the same request id replays its result.
+      let story: StoryDocument | null = null;
       return store.applyOperations(
         a.projectId,
         a.expectedRevision,
-        operations,
+        (canonical) => {
+          if (a.startTicks !== undefined)
+            assertOnFrames(a.startTicks, canonical.output.fps, "The start");
+          const start =
+            a.startTicks ??
+            Math.max(
+              0,
+              ...canonical.clips
+                .filter((c) => c.trackId === a.trackId)
+                .map((c) => c.startTicks + c.durationTicks),
+            );
+          return assembleOperations(
+            story!,
+            canonical,
+            a.trackId,
+            start,
+            randomUUID,
+          );
+        },
         principal.id,
         receipt,
-        (c) => verifyStory(story, c),
+        (c) => {
+          const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
+          if (ref.kind !== "story")
+            throw new CommandError(
+              "VALIDATION",
+              "This document is not a story.",
+            );
+          story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
+          verifyStory(story, c);
+        },
       );
     },
   }),

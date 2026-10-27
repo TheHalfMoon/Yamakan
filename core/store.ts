@@ -46,6 +46,7 @@ import {
 } from "./canonical.ts";
 import {
   DOCUMENT_LIMITS,
+  DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   DocumentRefSchema,
   missingDocumentAssets,
@@ -744,10 +745,29 @@ export class ProjectStore {
         if (rebuild) db.exec("PRAGMA foreign_keys = OFF");
         db.exec("BEGIN IMMEDIATE");
         try {
+          // Another process may have upgraded while this one waited.
+          const { user_version: at } = db
+            .prepare("PRAGMA user_version")
+            .get() as { user_version: number };
+          if (at < v)
+            throw new CommandError(
+              "RECOVERY_REQUIRED",
+              "Workspace database version changed during its upgrade.",
+            );
+          if (at > v) {
+            db.exec("ROLLBACK");
+            v = at - 1;
+            continue;
+          }
           db.exec(steps[v]);
-          if (rebuild && db.prepare("PRAGMA foreign_key_check").all().length)
-            throw new Error(
-              "Workspace upgrade would break a document reference.",
+          if (
+            rebuild &&
+            db.prepare("PRAGMA foreign_key_check(snapshot_document_refs)").all()
+              .length
+          )
+            throw new CommandError(
+              "RECOVERY_REQUIRED",
+              "Workspace upgrade would break a document reference; the database was left as it was. Diagnose it (npm run recovery -- diagnose).",
             );
           db.exec(`PRAGMA user_version = ${v + 1}`);
           db.exec("COMMIT");
@@ -1367,6 +1387,16 @@ export class ProjectStore {
     Id.parse(input.projectId);
     Id.parse(input.documentId);
     const kind = DocumentKind.parse(input.kind);
+    // Stories and packs are checked against the project and the consent
+    // ledger on every commit; a caller that brings no check is refused.
+    if (
+      (kind === "story" || kind === "referencePack") &&
+      (!input.verify || !("bytes" in input.source))
+    )
+      throw new CommandError(
+        "VALIDATION",
+        "Stories and reference packs are saved with their own commands.",
+      );
     if (input.migration && !("bytes" in input.source))
       throw new CommandError(
         "VALIDATION",
@@ -1563,21 +1593,36 @@ export class ProjectStore {
           db: this.#database,
           project,
           documents: this.listDocuments(input.projectId),
-          held: (hash, kind) => this.#held(input.projectId, hash, kind),
-          nowMs: now,
+          held: (documentId, hash, kind) =>
+            this.#held(input.projectId, documentId, hash, kind),
+          // Read under the write lock, so a consent cannot expire unseen.
+          nowMs: Date.now(),
         });
         return { ...project, revision };
       },
     });
   }
-  // Whether any revision of this project referenced a document version.
-  #held(projectId: string, contentHash: string, kind: DocumentKind) {
+  // Whether a revision of this project named this version of this document.
+  // A snapshot is canonical JSON, so its reference to the document is the
+  // exact text below (keys sorted).
+  #held(
+    projectId: string,
+    documentId: string,
+    contentHash: string,
+    kind: DocumentKind,
+  ) {
+    const ref = canonicalJson({
+      contentHash,
+      id: Id.parse(documentId),
+      kind,
+      schemaVersion: DOCUMENT_SCHEMA_VERSIONS[kind],
+    });
     return Boolean(
       this.#database
         .prepare(
-          "SELECT 1 FROM snapshot_document_refs d JOIN revisions r ON r.snapshot_hash = d.snapshot_hash JOIN creative_documents c ON c.hash = d.document_hash WHERE r.project_id = ? AND d.document_hash = ? AND c.kind = ?",
+          "SELECT 1 FROM snapshot_document_refs d JOIN revisions r ON r.snapshot_hash = d.snapshot_hash JOIN snapshots s ON s.hash = d.snapshot_hash JOIN creative_documents c ON c.hash = d.document_hash WHERE r.project_id = ? AND d.document_hash = ? AND c.kind = ? AND instr(CAST(s.bytes AS TEXT), ?) > 0 LIMIT 1",
         )
-        .get(projectId, contentHash, kind),
+        .get(projectId, contentHash, kind, ref),
     );
   }
   /**
@@ -2662,14 +2707,16 @@ export class ProjectStore {
   async applyOperations(
     projectId: string,
     expectedRevision: number,
-    operations: Operation[],
+    // The operations, or (YU-031 story assembly) a builder that makes them
+    // from the head inside the commit, so a retry replays and the head the
+    // operations were made from is the head they apply to.
+    operations: Operation[] | ((head: CanonicalProject) => Operation[]),
     author: string,
     receipt?: RequestReceipt,
     // Checks against the head inside the commit (YU-031 story assembly).
     verify?: (context: DocumentCommitContext) => void,
   ) {
     Id.parse(projectId);
-    const now = Date.now();
     return this.#commit({
       operation: "project.applyBatch",
       projectId,
@@ -2681,13 +2728,21 @@ export class ProjectStore {
           db: this.#database,
           project: head,
           documents: this.listDocuments(projectId),
-          held: (hash, kind) => this.#held(projectId, hash, kind),
-          nowMs: now,
+          held: (documentId, hash, kind) =>
+            this.#held(projectId, documentId, hash, kind),
+          // Read under the write lock, so a consent cannot expire unseen.
+          nowMs: Date.now(),
         });
-        return {
-          ...toEditView(applyBatch(fromEditView(head), operations)),
-          revision,
-        };
+        const canonical = fromEditView(head);
+        const ops =
+          typeof operations === "function" ? operations(canonical) : operations;
+        // A batch holds at most 64 operations; a built assembly may hold
+        // more, applied in order within this one revision (it is bounded
+        // by the story's own limits).
+        let next = canonical;
+        for (let i = 0; i < ops.length || i === 0; i += 64)
+          next = applyBatch(next, ops.slice(i, i + 64));
+        return { ...toEditView(next), revision };
       },
       effects: (db, revision) => {
         const at = this.#cursor(db, projectId);
