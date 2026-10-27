@@ -1,0 +1,67 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "aae8b12",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-043",
+  "objective": "Close first-engine source/runtime manifest and qualification choice",
+  "parts": [
+    {
+      "part": "YU-043 engine candidate manifests and selection rules",
+      "branch": "feat/yu-043-engine-manifests",
+      "mergedPr": 143,
+      "headCommit": "787228b",
+      "mergeCommit": "037cc7a"
+    }
+  ],
+  "flags": "none; no weights downloaded and no candidate selected",
+  "deviations": [
+    "Wan2.2 TI2V-5B native (1ea34ff) blocked: DashScope prompt extension, unpinned requirements with dashscope and flash_attn, pickle .pth loaded by torch.load without weights_only",
+    "Wan2.2 TI2V-5B Diffusers (b8fff73) and CogVideoX-2b (1137dac) on diffusers v0.42.1 eligible for qualification, with a 49-wheel hashed CPython 3.12.13 win_amd64 lock (CPU torch) resolved metadata-only",
+    "Selection rules derive from the data (file formats from names, wheel tags from file names, SPDX licence grammar, PEP 503 names); a declared status must equal the computed blockers",
+    "Wan's expand_timesteps ignores last_image, so lastFrame is recorded as ignored; cancellation is a process kill (the interrupt flag still decodes); no pipeline takes a style control",
+    "Comparison predeclared (rights, footprint, peak memory, wall per output second, p95 cancel latency, determinism, blind review); results and winner null pending weights and GPU authorization"
+  ],
+  "evidence": "docs/evidence/ultimate/engine-candidate-manifests.json",
+  "tests": {
+    "files": ["tests/engine-candidates.test.ts"],
+    "result": "7/7: every blocker (mutable revision, missing or unaccepted licence, remote code, network load, remote service, undefined requirements, unsafe loading) and parser edge case; roles checked per operation by the engine contract"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only correctness and supply-chain review, upstream lines spot-checked at the pinned commits",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 5,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix; one should-fix (Windows-shortened paths) fixed in 987bb34"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "037cc7a",
+    "ci": "PR exact head 787228b green; push run 40596869096 on 037cc7a: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 037cc7a: typecheck, lint, format, provenance, brand, build pass; npm test 686/689 (0 fail, 3 POSIX-only skips); test:studio 5/5 and 1975/1975; Edge E2E pass (0 page errors)"
+  },
+  "limitations": [
+    "No weights were downloaded and nothing was run: no candidate is qualified or chosen",
+    "A CUDA lock is not resolved; the YU-042 model manifest cannot hold a Diffusers layout (v2 needed); offline loading is a future runner's duty"
+  ]
+}
