@@ -363,7 +363,13 @@ function fresh(p: CanonicalProject, id: string) {
   if (used) throw invalid("Identifier is already in use.");
 }
 
-function apply(p: CanonicalProject, op: Operation): void {
+// `original` is the project before the batch (for checks that compare a
+// clip with what it was, such as a restated transition with the switch off).
+function apply(
+  p: CanonicalProject,
+  op: Operation,
+  original: CanonicalProject = p,
+): void {
   switch (op.type) {
     case "track.add":
       fresh(p, op.trackId);
@@ -663,11 +669,15 @@ function apply(p: CanonicalProject, op: Operation): void {
         delete c.transition;
         return;
       }
-      // With the switch off, only an unchanged transition is accepted (an
-      // editor save that recreates a clip keeps it).
+      // With the switch off, only a transition the clip already had (now,
+      // or before this batch: an editor save that recreates the clip
+      // restates it) is accepted.
+      const restated = (x: { transition?: unknown } | undefined) =>
+        JSON.stringify(x?.transition ?? null) === JSON.stringify(op.transition);
       if (
         !transitionWritesEnabled() &&
-        JSON.stringify(c.transition ?? null) !== JSON.stringify(op.transition)
+        !restated(c) &&
+        !restated(original.clips.find((x) => x.id === c.id))
       )
         throw new CommandError("CAPABILITY_UNAVAILABLE", TRANSITIONS_OFF);
       // Both clips change on screen, so the outgoing one must be editable.
@@ -1081,7 +1091,7 @@ export function applyBatch(
   const next = structuredClone(project);
   ops.forEach((op, index) => {
     try {
-      apply(next, op);
+      apply(next, op, project);
     } catch (e) {
       if (e instanceof CommandError || e instanceof RangeError)
         throw new CommandError(

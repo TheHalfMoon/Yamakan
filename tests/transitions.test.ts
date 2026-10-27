@@ -755,6 +755,19 @@ test("a transition stays bound to its outgoing clip: ripple and insert never re-
       ),
       /^CAPABILITY_UNAVAILABLE/,
     );
+    // The editor's save diff recreates a clip it cannot edit in place:
+    // the same transition restated in that batch is kept.
+    const before = await head(c);
+    const changed = structuredClone(before);
+    const moved = changed.clips.find((x) => x.id === third)!;
+    moved.sourceFrame += 1;
+    const ops = operationsBetween(before, changed)!;
+    assert.ok(ops.some((o) => o.type === "clip.remove"));
+    assert.equal(await failure(batch(c, ops)), "ok");
+    assert.deepEqual(
+      fromEditView(await head(c)).clips.find((x) => x.id === third)!.transition,
+      kept,
+    );
   } finally {
     delete process.env.YAMAKAN_TRANSITIONS_OFF;
   }
