@@ -47,6 +47,7 @@ import {
 import { directorCapability } from "../director-flags.ts";
 import { previewParity } from "../render/parity.ts";
 import { buildProxy, cancelProxy, proxyStatus } from "../media/proxies.ts";
+import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -1473,6 +1474,26 @@ export const commands = {
       "Report what the interactive preview shows only approximately for the current revision (the reference preview shows the export).",
     input: z.object({ projectId: Id }).strict(),
     run: async ({ store }, a) => previewParity(await store.load(a.projectId)),
+  }),
+  "yamakan.analysis.sceneCuts": define({
+    scope: "render:execute",
+    mutation: false,
+    summary:
+      "Find the scene cuts of one of the project's video assets (YU-071: FFmpeg scdet, deterministic, threshold 1-100, default 10): the source frames where a new scene starts, with scdet's score. Reads the stored original in a bounded worker and writes nothing.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+        threshold: z
+          .number()
+          .int()
+          .min(SCENE_CUT_LIMITS.minThreshold)
+          .max(SCENE_CUT_LIMITS.maxThreshold)
+          .default(SCENE_CUT_LIMITS.defaultThreshold),
+      })
+      .strict(),
+    run: ({ store }, a) =>
+      detectSceneCuts(store, a.projectId, a.assetId, a.threshold),
   }),
   "yamakan.proxy.status": define({
     scope: "project:read",

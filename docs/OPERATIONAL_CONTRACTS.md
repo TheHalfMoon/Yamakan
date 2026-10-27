@@ -520,6 +520,26 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - An exhausted disk at a named profile. This is covered without a profile by `tests/backup.test.ts`, `tests/jobs.test.ts` and `tests/command.test.ts`.
   - Oversized projects arriving by import or restore.
 
+## Deterministic media analysis: scene cuts (YU-071)
+
+- **Source inspection.** The bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) carries these analysis and repair filters:
+  - `scdet` (scene change),
+  - `blackdetect`, `freezedetect`,
+  - `deshake`,
+  - `hqdn3d`, `nlmeans`, `atadenoise` (denoisers).
+
+  It does not carry vid.stab, so there is no two-pass stabilization. Linux CI's FFmpeg also has `scdet`.
+
+- **The first qualified operation: scene cuts.**
+  - `yamakan.analysis.sceneCuts` (scope `render:execute`) takes a project video asset and a threshold, a whole number 1–100 with a default of 10. It runs `scdet` (the mean absolute luma difference between frames; no model, no randomness) on the stored original in an owned worker. The worker may read only that file, and its time, memory and output are bounded.
+  - It returns `yamakan.scene-cuts/v1:scdet`, the asset's hash, the threshold, and each cut: the frame a new scene starts on, counted at the project's rate as the editor counts the asset's frames; its exact time in ticks from the source's start; and scdet's score. A cut's time comes from the frame's own timestamp, so a 24000/1001 source's cut sits exactly on its source frame.
+  - It writes no media and changes nothing, so the source, its timing and its sound are untouched by construction. There is no derivative to verify, and no restoration claim.
+- **Bounds and refusals.**
+  - At most 1,000 cuts and 1 MiB of analysis output; otherwise it is refused, with advice to raise the threshold.
+  - The wall clock is the conversion limit (900 s), and the worker memory is the media worker limit.
+  - Stills and audio are refused. A damaged or unreadable stream fails as `MEDIA_INVALID`, or `RECOVERY_REQUIRED` for a missing object, with no host path. A cancel stops the worker.
+- **Not qualified here.** Denoise, deshake, black detection and freeze detection; each needs its own qualification. Neither scene detection nor any other operation is shown in the editor yet.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.
