@@ -31,6 +31,7 @@ import { withMeasuredLoudnorm } from "./render/plan.ts";
 import { ANIMATION_ENABLED } from "./animation/flags.ts";
 import { transformFilters } from "./effects/registry.ts";
 import {
+  ANIMATION_COMPILER_V1,
   opacityFilterChain,
   renderableAnimationChannels,
   volumeFilterChain,
@@ -427,6 +428,7 @@ export async function renderPlan(
               rangeStartTicks: from,
               rangeEndTicks: to,
               fps: profile.fps,
+              compiler: plan.animationCompiler ?? ANIMATION_COMPILER_V1,
             }),
           );
           picture = faded;
@@ -464,7 +466,12 @@ export async function renderPlan(
             ? renderableAnimationChannels(a.animation).volume
             : undefined;
         const volumeAnim = animVol
-          ? volumeFilterChain(animVol, a.durationTicks, profile.fps)
+          ? volumeFilterChain(
+              animVol,
+              a.durationTicks,
+              profile.fps,
+              plan.animationCompiler ?? ANIMATION_COMPILER_V1,
+            )
           : [];
         const shaping = [
           ...tempo,
@@ -500,10 +507,18 @@ export async function renderPlan(
           ...filters,
           `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${measurePassFilter(activePlan.loudnorm.target)}[audio]`,
         ];
+        // The graph goes in a file the worker may read, not on the
+        // command line: an animated timeline's graph can exceed it (YU-022).
+        await writeFile(
+          path.join(dir, "graph-measure.txt"),
+          measureFilters.join(";\n"),
+          { flag: "wx" },
+        );
+        readable.push(path.join(dir, "graph-measure.txt"));
         const measureArgs = [
           ...args,
-          "-filter_complex",
-          measureFilters.join(";"),
+          "-filter_complex_script",
+          path.join(dir, "graph-measure.txt"),
           "-map",
           "[audio]",
           "-f",
@@ -546,7 +561,17 @@ export async function renderPlan(
         `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${loudTail}[audio]`,
       );
     }
-    args.push("-filter_complex", filters.join(";"), "-map", "[picture]");
+    // As above: the graph is a file the worker may read (YU-022).
+    await writeFile(path.join(dir, "graph.txt"), filters.join(";\n"), {
+      flag: "wx",
+    });
+    readable.push(path.join(dir, "graph.txt"));
+    args.push(
+      "-filter_complex_script",
+      path.join(dir, "graph.txt"),
+      "-map",
+      "[picture]",
+    );
     if (window.output === "png")
       args.push(
         "-frames:v",

@@ -331,9 +331,10 @@
       "P10-02: when ANIMATION_ENABLED, apply opacity (colorchannelmixer) and volume piecewise filters from plan.animation via shared sampleScalarChannelsAtTime (core/render/animation-filters.ts); transform channels remain uncompiled.",
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
       "YU-019: the read margin is one frame of the profile (never less than 1/30 s, so 30 fps is unchanged); the output check names the probe's 1/30 s unit at any profile rate.",
-      "YU-020: a layer's transform (crop before the contain fit, scale after it, overlay offset from the centre) is compiled from bounded integers in core/effects/registry.ts; a layer without one is unchanged."
+      "YU-020: a layer's transform (crop before the contain fit, scale after it, overlay offset from the centre) is compiled from bounded integers in core/effects/registry.ts; a layer without one is unchanged.",
+      "YU-022: the filter graph (and the loudness measure pass's) is written to a script file the worker may read (-filter_complex_script), not passed on the command line; opacity and volume chains take the plan's animation compiler (version 1 when an animated plan names none)."
     ],
-    "importedSha256": "8fb0cacc2880107c91b8bf99dc90c70c5e6367d030566304cf8b2c0ac32a1150",
+    "importedSha256": "1f428c64a4168ca85111870d652bee417923055201675aeb70ca3e36308c4a8f",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
