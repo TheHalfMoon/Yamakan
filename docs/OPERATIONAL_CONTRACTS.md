@@ -244,6 +244,95 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 - **Model root.** It must be a local folder that is not synced: a cloud placeholder file such as OneDrive's would be fetched when it is read. Offline is the operating system's boundary for a release and is not tested here. The tests check only that the engine modules import nothing that can reach a network, a process or an installer.
 - **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.
 
+## First-engine candidates (YU-043)
+
+`docs/evidence/ultimate/engine-candidate-manifests.json` (`yamakan.engine-candidates` v1) freezes what each finalist would load, from source inspection at pinned commits. No weights were downloaded.
+
+`core/engines/candidates.ts` validates it with `parseEngineCandidates`, `selectionBlockers` and `selectionCautions`. The status a candidate declares must equal the computed one, so no candidate can be marked eligible by hand. The rules work from the data itself, never from a flag the author set:
+
+- a file's format comes from its name;
+- a wheel's name, version and tags come from its file name;
+- a licence comes from its SPDX terms;
+- a package name is compared after PEP 503 normalization.
+
+- **What is pinned:**
+  - **Runtime source:** commit, licence file hash and entry pipeline files.
+  - **Loaders:** line-quoted evidence of where the loaders read weights.
+    - Diffusers' `pipeline_utils.py:1612` shows that pickle fallback is allowed unless `use_safetensors=True`.
+    - `model_loading_utils.py` loads safetensors with `load_file`, and calls `torch.load` with `weights_only=True` otherwise.
+    - Transformers 5.21.0's `from_pretrained` defaults to `weights_only=True`.
+    - Each loader outside the runtime's repository (Transformers at `dded62b`, whose `__init__.py` says `5.21.0`) is listed with its source commit, and must be the locked release.
+  - **Model:** commit, licence evidence, and every loaded file with its size and LFS SHA-256 or git blob id.
+  - **Repository files:** every file path in the model repository at the commit, from its tree listing. Code and pickle files are derived from that list, never declared.
+  - **Loading arguments a runner must pass:**
+    - `trust_remote_code` off and no custom pipeline;
+    - `use_safetensors=True`;
+    - `local_files_only=True`;
+    - every `torch.load`, with its `weights_only`.
+
+  Each quoted line was read from the fetched file at its line number when the manifest was generated.
+
+- **Python closure:** the lock `diffusers-0.42.1-cp312-win_amd64` holds 49 wheels.
+  - Each wheel has an exact version, file name, SHA-256, licence text and SPDX terms.
+  - It was resolved metadata-only by `pip install --dry-run --report` under CPython 3.12.13.
+  - The PyPI torch wheel for Windows is CPU-only; a CUDA lock is not resolved.
+- **Selection is blocked by:**
+  - `MUTABLE_REVISION`: a revision that is not a full commit id.
+  - `MISSING_LICENSE`: a model, runtime or package licence that is absent, or has no evidence.
+  - `LICENSE_UNACCEPTED`: a licence outside the accepted lists.
+    - Models and runtimes must be `apache-2.0`, `mit`, `bsd-2-clause` or `bsd-3-clause`.
+    - Packages must be permissive SPDX terms or MPL-2.0, in a well-formed expression. Every licence must be accepted, on both sides of an `OR` too, and the only exception allowed is `Apache-2.0 WITH LLVM-exception`. So GPL and LGPL are refused.
+  - `GATED_MODEL`: a gated model.
+  - `REMOTE_CODE`: `trust_remote_code`, a custom pipeline, or code in the model repository or its loaded files.
+  - `NETWORK_LOAD`: a loader not limited to local files.
+  - `REMOTE_SERVICE`: a hosted-inference package or code path, such as `dashscope`, under any PEP 503 spelling, or named anywhere in a requirement line (extras, `-e git+…`).
+  - `UNDEFINED_REQUIREMENTS`, any of:
+    - no lock;
+    - a declared requirement that is not a plain name pinned exactly as `==<release>` (a direct URL or an editable install is not);
+    - a locked package that is a range, a local build, unhashed, duplicated, or not a wheel matching its name, version, build tag, CPython 3.12 ABI (or `abi3`) and `win_amd64`;
+    - a Diffusers runtime whose locked diffusers differs from its tag, whose lock lacks torch, transformers, safetensors, sentencepiece or ftfy, or whose inspected loader differs from its locked release.
+  - `UNSAFE_LOADING`, any of:
+    - pickle anywhere in the repository;
+    - a loaded file that is not safetensors, JSON or tokenizer data, or is not in the repository list;
+    - a `torch.load` without `weights_only`;
+    - a Diffusers loader without `use_safetensors=True`, without loader evidence, or with evidence from a loader not listed;
+    - a file whose stated format disagrees with its name.
+- **Cautions:** these are shown, never blocking, and must be checked before release.
+  - `MODEL_LICENSE_FROM_CARD_ONLY`: the licence comes from the model card, with no LICENSE file.
+  - `PACKAGE_LICENSE_NORMALIZED`: a prose or classifier licence name was mapped to SPDX terms, for example "BSD License" to BSD-3-Clause. It is derived from the licence text, not from a flag, and must be checked against the licence file.
+- **Candidates:**
+  - **Wan2.2 TI2V-5B, native repository (`1ea34ff`): blocked** (`REMOTE_SERVICE`, `UNDEFINED_REQUIREMENTS`, `UNSAFE_LOADING`).
+    - `requirements.txt` gives ranges or no versions, and includes `dashscope` and `flash_attn`.
+    - `generate.py:346` extends prompts through DashScope.
+    - The T5 encoder and VAE are pickle `.pth` files loaded by `torch.load` without `weights_only` (`wan/modules/t5.py:496`, `vae2_2.py:883`).
+  - **Wan2.2 TI2V-5B in Diffusers format (`b8fff73`) on diffusers v0.42.1: eligible for qualification.**
+    - It supports text to video (`WanPipeline`) and image to video with a first frame (`WanImageToVideoPipeline`).
+    - This model's `model_index.json` sets `expand_timesteps: true`. With it, a `last_image` is accepted and silently ignored (`pipeline_wan_i2v.py:428-429`), so `lastFrame` is recorded as an ignored input and a recipe must refuse it.
+    - The licence comes from the model card only.
+  - **CogVideoX-2b (`1137dac`) on diffusers v0.42.1: eligible for qualification.** It supports text to video only, and its LICENSE file is Apache-2.0.
+- **Controls:**
+  - No inspected pipeline takes a camera, lens, light or motion parameter, so no candidate declares a contract control.
+  - The parameters examined were the prompt, negative prompt, size, frame count, steps, guidance and generator.
+  - A request control a recipe lacks is refused as `CONTROL_UNSUPPORTED`, and a shot intent's style stays previs metadata (YU-050).
+- **Cancellation:**
+  - Both pipelines stop cooperatively at denoising-step granularity, through `callback_on_step_end` and `_interrupt`.
+  - The loop then skips the remaining steps, but still runs the VAE decode (`pipeline_wan.py:592`, `:673`; `pipeline_cogvideox.py:719`, `:787`).
+  - A Yamakan cancel must therefore stop the worker process, never rely on the flag.
+- **Gaps before any candidate can be pinned:**
+  - The YU-042 model manifest holds at most 16 files, directly inside one folder. Diffusers uses subfolders, and Wan2.2 loads 20 files, so a model-manifest v2 with relative paths is needed.
+  - Offline loading (`local_files_only`, `use_safetensors`, `HF_HUB_OFFLINE=1`) is the duty of a runner that does not exist yet.
+- **Comparison, predeclared and not run.**
+  - **What runs:** text to video for both eligible candidates, with the same prompts and seeds, at each candidate's documented default size.
+  - **Criteria:**
+    - rights;
+    - footprint;
+    - peak memory;
+    - wall time per output second;
+    - p95 cancel latency;
+    - determinism;
+    - blind human quality review under the YU-090 protocol.
+  - **No winner** (`winner: null`, `results: null`). A winner is refused without an executed comparison with results. Running it needs the owner's authorization to download weights and use a GPU host.
+
 ## Edit proxies and thumbnails (YU-017)
 
 An edit proxy is a small H.264 copy of a video asset that the interactive preview plays for smooth editing. It is at most 540 lines tall, has a keyframe every 15 frames, and keeps the source's own timestamps and audio. `core/media/proxies.ts` makes and serves it.
