@@ -1,0 +1,74 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "0d29c39",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless",
+    "ffmpeg": "vendored 7.1.1 (accepts -filter_complex_script with a deprecation warning); CI Linux uses Ubuntu's apt FFmpeg"
+  },
+  "state": "VERIFIED",
+  "task": "YU-022",
+  "objective": "Replace frame-sized animation filter chains with bounded compilation",
+  "branch": "feat/yu-022-bounded-animation",
+  "mergedPr": 123,
+  "headCommit": "3173ba3",
+  "mergeCommit": "5e51b28ff2994c671eaaffc8668a83c434db28f8",
+  "flags": "Compiler v2 on; YAMAKAN_ANIMATION_COMPILER=1 selects the per-frame compiler (v1) for new plans",
+  "deviations": [
+    "Bounded segments of the per-frame samples (explicit tolerances: opacity 1/255, volume 1/200), not analytic piecewise curves; every frame stays within half a tolerance of v1",
+    "Key values outside opacity 0-1 or volume 0-16, which rendered before, are refused under either compiler; overshoot between keys is clamped",
+    "Transform animation channels, previously stored and silently ignored, are refused before preview/export (CAPABILITY_UNAVAILABLE) until transform animation is built",
+    "The filter graph (and the loudness measure pass's) is written to a script file passed by absolute path, so long graphs no longer meet the command-line limit; core/render.ts change recorded in imports.json",
+    "Render startup/RSS was not measured as a separate benchmark; graph size is asserted instead (a ten-minute ramp: at most 256 segments instead of 18,000)"
+  ],
+  "tests": {
+    "files": [
+      "tests/animation-complexity.test.ts",
+      "tests/animation-wiring.test.ts",
+      "tests/jobs.test.ts"
+    ],
+    "result": "9 animation-complexity tests: v2 within half a tolerance of v1 on every frame (holds, steps, linear, Bezier, ends; 30 and 24000/1001); graph size bounded (ten-minute ramp <=256 vs 18,000; +6 dB volume ramp <=400); rendered video and audio follow the curve, steps and ends with a bounded graph; the two-key windowed sampler equals whole-channel sampling on random curves and edge cases; windows match the export's frames; v1 selectable and tolerances pinned to the version; duplicate keys, out-of-range and non-finite values, transform channels, per-channel and per-plan budgets refused; empty channels draw nothing. jobs.test.ts finds FFmpeg by its workspace (the graph is now a file)"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 3,
+        "shouldFixApplied": 9,
+        "finalRound": "no must-fix; empty-channel should-fix applied"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 4,
+        "shouldFixApplied": 8,
+        "finalRound": "must-fix (empty channel reaching v1) closed; no remaining findings"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "postMergeVerification": {
+    "main": "5e51b28ff2994c671eaaffc8668a83c434db28f8",
+    "ci": "PR exact head 3173ba3: qualify, qualify-windows-r8, otio-oracle success",
+    "windows": "detached 5e51b28: typecheck, lint, format, provenance, brand, build pass; npm test 624/627 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Transform animation is not rendered (refused before rendering)",
+    "No separate startup/RSS benchmark",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
