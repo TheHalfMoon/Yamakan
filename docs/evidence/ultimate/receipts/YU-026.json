@@ -1,0 +1,87 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "2039363",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-026",
+  "objective": "Qualify scale profiles before raising project limits",
+  "parts": [
+    {
+      "part": "YU-026 profiles and measurement",
+      "branch": "feat/yu-026-scale-profiles-v2",
+      "mergedPr": 135,
+      "headCommit": "bd44efc",
+      "mergeCommit": "4cb19e3"
+    },
+    {
+      "part": "YU-026b stills read once and looped on demand",
+      "branch": "feat/yu-026b-export-scale",
+      "mergedPr": 136,
+      "headCommit": "19db9d9",
+      "mergeCommit": "52b744a"
+    }
+  ],
+  "flags": "none; no limit was raised",
+  "deviations": [
+    "SCALE_PROFILES (yamakan.scale-profiles/v1): S, M (the enforced maximum) and T measured; L, H, A, K refused exactly; each limit itself accepted",
+    "Editing (saves, history, reopen, compile, reference frame, backup during edits with byte-identical restore and an edit afterwards) is qualified at S, M and T",
+    "Export: before YU-026b only S; M exceeded the Windows command line and 1080p still-heavy timelines failed in FFmpeg. YU-026b reads each still once (split) and loops it on demand: a 40-still timeline exports in 38 s and T in 120 s in solo probes (not recorded); M launches but exceeds the 180 s wall or the worker memory",
+    "Proposal measured, not applied: a duration-scaled render wall-clock limit and a bound on layers composited at once (a new policy version needs review)",
+    "Unmeasured: browser timeline virtualization at M, history depth, decode/cache costs, an exhausted disk at a named profile (covered without a profile by existing tests), oversized import or restore"
+  ],
+  "evidence": "docs/evidence/ultimate/editor-scale.json (recorded with other work loading the host)",
+  "tests": {
+    "files": [
+      "tests/editor-scale.test.ts",
+      "tests/render-stills.test.ts",
+      "scripts/qualify-editor-scale.mjs"
+    ],
+    "result": "editor-scale: M equals the enforced maximum and each refused profile is one past it; each limit accepted exactly and one more refused with its own message, project unchanged. render-stills: at 30 and 24000/1001 fps a still shows on exactly its clip's frames (first and last included), a reference frame inside the clip matches the export, one still used by two clips is read once (split=2, no -loop). Still-dependent suites 57/57"
+  },
+  "reviews": [
+    {
+      "kind": "combined fresh-context correctness and security review of YU-026, applying the review rules",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 4,
+        "shouldFixApplied": 5,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "combined correctness and security review of YU-026b, applying Alibaba Open Code Review 1.13.3 rules via `ocr delegate rule`",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 1,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 6,
+        "finalRound": "no must-fix; should-fixes applied in 19db9d9"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": ["The Qodo bot posted only billing notices (no review)"],
+  "postMergeVerification": {
+    "main": "52b744a",
+    "ci": "PR exact heads bd44efc and 19db9d9 green; push runs on 4cb19e3 and 52b744a: success",
+    "windows": "detached 4cb19e3: npm test 668/671 (0 fail); detached 52b744a: typecheck, lint, format, provenance, brand, build pass; npm test 670/673 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Export is qualified only at S; M and T exceed the render wall-clock limit (T under load), M also the worker memory",
+    "Video-heavy projects still add one FFmpeg input per clip (command line grows with the clip count)",
+    "Timings vary with host load; the recorded run had other work loading the host"
+  ]
+}
