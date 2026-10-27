@@ -269,7 +269,7 @@ test("stills, sound, bad thresholds, a truncated stream and a cancel are refused
       failure(detectSceneCuts(c.store, c.projectId, longAsset.id, 10)),
     ),
   );
-  assert.equal(burst.filter((x) => /^BUSY/.test(x)).length, 1);
+  assert.equal(burst.filter((x) => x.startsWith("BUSY")).length, 1);
   assert.equal(burst.filter((x) => x === "ok").length, 3);
   // The parser bounds what it reports.
   const many = Array.from(
