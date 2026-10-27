@@ -334,9 +334,10 @@
       "YU-020: a layer's transform (crop before the contain fit, scale after it, overlay offset from the centre) is compiled from bounded integers in core/effects/registry.ts; a layer without one is unchanged.",
       "YU-022: the filter graph (and the loudness measure pass's) is written to a script file the worker may read (-filter_complex_script), not passed on the command line; opacity and volume chains take the plan's animation compiler (version 1 when an animated plan names none).",
       "YU-024: a revision's burned-in caption tracks (read by content hash) are passed to compilePlan, so they render with titles.",
-      "YU-021: a layer with a dissolve gets an alpha fade-in (format=yuva420p, fade=t=in:alpha=1) in timeline time, and a crossfaded sound gets a quarter-sine afade (curve=qsin); both formatted from bounded plan integers, with no stored expressions."
+      "YU-021: a layer with a dissolve gets an alpha fade-in (format=yuva420p, fade=t=in:alpha=1) in timeline time, and a crossfaded sound gets a quarter-sine afade (curve=qsin); both formatted from bounded plan integers, with no stored expressions.",
+      "YU-023: every picture is converted once to the frozen SDR policy (scale in_color_matrix/in_range to bt709 limited range, yuva420p), the base and the output are tagged BT.709 limited range, and a clip's LUT is written from its stored document as canonical .cube text in the render folder for lut3d on gbrap (alpha kept); the renderer version is 4."
     ],
-    "importedSha256": "bc94b42c1c7527ffc19def46509a394a89d70cbb97a090fa2daddd7922c46837",
+    "importedSha256": "610891cd769d013b50df3148f9670cd6d7f7caeebfe13c5d510276875bef6200",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

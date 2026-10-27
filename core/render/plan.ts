@@ -29,10 +29,17 @@ import {
 } from "./animation-filters.ts";
 import {
   EFFECT_LIMITS,
+  clipLut,
   clipTransform,
   type TransformEffect,
 } from "../effects/registry.ts";
 import { TRANSITION_POLICY, previousClip } from "../transitions.ts";
+import {
+  COLOR_POLICY,
+  sourceColor,
+  type ProbedColor,
+  type SourceColor,
+} from "../effects/color.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -40,7 +47,9 @@ function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
 }
 
 export const RENDER_PLAN_FORMAT = "yamakan.render-plan/v1";
-export const COMPILER_VERSION = "yamakan.render-compiler/1";
+// v2 (YU-023): every picture is converted to the frozen color policy and
+// the output is tagged, so every plan and render changed.
+export const COMPILER_VERSION = "yamakan.render-compiler/2";
 
 // MVP output profile: SDR 8-bit 4:2:0, square pixels, fixed rational frame
 // rate, 48 kHz stereo, picture fit inside the frame (letterboxed).
@@ -82,6 +91,10 @@ export type VideoLayer = {
    * Present only for a clip with a transition, so other plans are as before.
    */
   dissolveInTicks?: number;
+  /** YU-023: how the source's pixels are read (null for RGB sources). */
+  color: SourceColor;
+  /** YU-023: the LUT document applied before the fit, when there is one. */
+  lut?: { documentId: string; contentHash: string };
 };
 
 export type AudioInstruction = {
@@ -112,6 +125,8 @@ export type RenderPlan = {
   revision: number;
   snapshotHash: string;
   profile: OutputProfile;
+  /** YU-023: the color policy every picture is converted to. */
+  colorPolicy: typeof COLOR_POLICY;
   durationTicks: number;
   layers: VideoLayer[];
   audio: AudioInstruction[];
@@ -145,6 +160,12 @@ export type CompilePlanOptions = {
    * timeline's duration.
    */
   captions?: { startTicks: number; endTicks: number; text: string }[][];
+  /**
+   * YU-023: a source's color tags, as probed when it was imported (null
+   * when the asset has no recorded probe: the policy then decides from its
+   * file type).
+   */
+  colors?: (assetId: string) => ProbedColor | null;
 };
 
 // Compiles the plan for `project` at its revision. `snapshotHash` is the
@@ -223,6 +244,7 @@ export function compilePlan(
       });
     else {
       const transform = clipTransform(c.effects);
+      const lut = clipLut(c.effects);
       if (transform) {
         const { crop, scale } = transform;
         if (
@@ -248,6 +270,15 @@ export function compilePlan(
       layers.push({
         ...timing,
         kind: a.kind === "image" ? "image" : "video",
+        color: sourceColor(options.colors?.(a.id) ?? null, {
+          height: a.height,
+          extension: a.extension,
+        }),
+        ...(lut
+          ? {
+              lut: { documentId: lut.documentId, contentHash: lut.contentHash },
+            }
+          : {}),
         ...anim,
         ...(transform ? { transform } : {}),
       });
@@ -377,6 +408,7 @@ export function compilePlan(
     revision: project.revision,
     snapshotHash,
     profile,
+    colorPolicy: COLOR_POLICY,
     durationTicks,
     layers,
     audio,
@@ -421,6 +453,7 @@ export function withMeasuredLoudnorm(
     revision: plan.revision,
     snapshotHash: plan.snapshotHash,
     profile: plan.profile,
+    colorPolicy: plan.colorPolicy,
     durationTicks: plan.durationTicks,
     layers: plan.layers,
     audio: plan.audio,

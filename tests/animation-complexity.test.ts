@@ -271,7 +271,9 @@ test("rendered opacity and volume follow the sampled curve, steps and ends inclu
   );
   assert.equal(out.plan.animationCompiler, ANIMATION_COMPILER);
   // Video: each frame's red at the centre is the curve's value at that
-  // frame's middle, times 255 (within encoder rounding).
+  // frame's middle, times 255, within encoder rounding: 8 levels, since in
+  // the policy's BT.709 limited range one chroma step moves pure red by
+  // about 1.8 levels (YU-023), and FFmpeg builds round it differently.
   const frames = ffmpeg([
     "-i",
     out.output,
@@ -297,7 +299,7 @@ test("rendered opacity and volume follow the sampled curve, steps and ends inclu
     const r = frames[i * 12]!;
     const want = reference[i]!.value * 255;
     assert.ok(
-      Math.abs(r - want) <= 6,
+      Math.abs(r - want) <= 8,
       `frame ${i}: red ${r}, curve ${want.toFixed(1)}`,
     );
   }

@@ -23,7 +23,7 @@ import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
 import { framesToTicks } from "../time.ts";
 import { mediaTools, workers } from "../process/workers.ts";
-import { RENDERER_VERSION, renderPlan } from "../render.ts";
+import { RENDERER_VERSION, recordedColors, renderPlan } from "../render.ts";
 import { compilePlan } from "./plan.ts";
 import { burnedInCaptions } from "../captions.ts";
 import { titleFonts } from "./fonts.ts";
@@ -128,6 +128,7 @@ export async function preview(
   const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
     // Burned-in captions are the export's (YU-024).
     captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),
+    colors: recordedColors(store),
   });
   // A playhead past the saved timeline (an unsaved clip added at the end, a
   // muted trailing track) shows the saved timeline's last frame.

@@ -89,6 +89,12 @@ import {
   shotWithTake,
 } from "../takes.ts";
 import { fromEditView, type CanonicalProject } from "../canonical.ts";
+import {
+  LUT_LIMITS,
+  LutError,
+  parseCube,
+  type LutDocument,
+} from "../effects/color.ts";
 import type { DocumentRef } from "../document-ref.ts";
 import { randomUUID } from "node:crypto";
 import {
@@ -333,6 +339,12 @@ export const commands = {
         throw new CommandError(
           "VALIDATION",
           "Caption tracks are saved with the yamakan.captions commands.",
+        );
+      // LUTs come only from a parsed .cube file (YU-023).
+      if (a.kind === "lut")
+        throw new CommandError(
+          "VALIDATION",
+          "LUTs are imported with yamakan.lut.import.",
         );
       const project = await store.commitDocument(
         { ...a, principalId: principal.id },
@@ -641,6 +653,53 @@ export const commands = {
           }
         },
       );
+    },
+  }),
+  "yamakan.lut.import": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Import a 3D .cube LUT (YU-023: LUT_3D_SIZE 2 to 33, the 0 to 1 domain, entries between 0 and 1; no other keywords, includes or file references) as an immutable LUT document of a new revision. A clip uses it through a lut effect (yamakan.clip.setEffects). Compare-and-swap on expectedRevision and expectedContentHash (null for a new LUT).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex.nullable(),
+        name: z.string().trim().min(1).max(120),
+        text: z.string().max(LUT_LIMITS.sourceBytes),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      let lut: LutDocument;
+      try {
+        lut = parseCube(a.text, a.name);
+      } catch (e) {
+        if (e instanceof LutError)
+          throw new CommandError("VALIDATION", e.message);
+        throw e;
+      }
+      const project = await store.commitDocument(
+        {
+          projectId: a.projectId,
+          expectedRevision: a.expectedRevision,
+          documentId: a.documentId,
+          kind: "lut",
+          schemaVersion: 1,
+          expectedContentHash: a.expectedContentHash,
+          source: { bytes: Buffer.from(JSON.stringify(lut), "utf8") },
+          principalId: principal.id,
+        },
+        receipt,
+      );
+      return {
+        project,
+        document: store
+          .listDocuments(a.projectId)
+          .find((d) => d.id === a.documentId),
+      };
     },
   }),
   "yamakan.captions.import": define({

@@ -32,6 +32,13 @@ import { withMeasuredLoudnorm } from "./render/plan.ts";
 import { ANIMATION_ENABLED } from "./animation/flags.ts";
 import { transformFilters } from "./effects/registry.ts";
 import {
+  LutDocumentSchema,
+  PROBED_FIELD_LENGTH,
+  PROBED_KEYS,
+  cubeText,
+  type ProbedColor,
+} from "./effects/color.ts";
+import {
   ANIMATION_COMPILER_V1,
   opacityFilterChain,
   renderableAnimationChannels,
@@ -161,8 +168,9 @@ export function ptsOffset(ticks: number) {
 }
 
 // Version of how this module draws a plan. Bump it whenever the drawing
-// changes, so cached previews of unchanged plans are not reused.
-export const RENDERER_VERSION = 3;
+// changes, so cached previews of unchanged plans are not reused (4:
+// YU-023 color conversion and tags).
+export const RENDERER_VERSION = 4;
 
 // A read margin of one frame: of the profile, and never less than 1/30 s
 // (so a 30 fps profile reads exactly as before; YU-019).
@@ -339,11 +347,49 @@ export async function renderPlan(
       );
       return inputs++;
     };
+    // YU-023: each LUT the plan names is read from its stored document
+    // (verified against its hash), written once in canonical .cube form
+    // into this render's folder, and given to the worker to read.
+    const luts = new Map<string, string>();
+    const lutFile = async (ref: {
+      documentId: string;
+      contentHash: string;
+    }) => {
+      if (!/^[a-f0-9]{64}$/.test(ref.contentHash))
+        throw new CommandError("VALIDATION", "A LUT reference is invalid.");
+      const known = luts.get(ref.contentHash);
+      if (known) return known;
+      const bytes = store.documentBytes({
+        id: ref.documentId,
+        kind: "lut",
+        schemaVersion: 1,
+        contentHash: ref.contentHash,
+      });
+      let value: unknown = null;
+      try {
+        value = JSON.parse(bytes.toString("utf8"));
+      } catch {
+        // Reported below as damage.
+      }
+      const parsed = LutDocumentSchema.safeParse(value);
+      if (!parsed.success)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "A stored LUT is damaged; restore a verified backup.",
+        );
+      const name = `${ref.contentHash}.cube`;
+      await mkdir(path.join(dir, "luts"), { recursive: true });
+      const file = path.join(dir, "luts", name);
+      await writeFile(file, cubeText(parsed.data), { flag: "wx" });
+      readable.push(file);
+      luts.set(ref.contentHash, name);
+      return name;
+    };
     // Timestamps stay absolute (timeline time) through the graph, so the
     // plan's title script times titles in any window; the output is reset
     // to start at zero at the end.
     const filters = [
-      `color=c=black:s=${profile.width}x${profile.height}:r=${rate}:d=${total},setpts=PTS+${ptsOffset(wStart)},format=yuv420p[base]`,
+      `color=c=black:s=${profile.width}x${profile.height}:r=${rate}:d=${total},setpts=PTS+${ptsOffset(wStart)},format=yuv420p,setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv[base]`,
     ];
     let visual = "base";
     let n = 0;
@@ -413,11 +459,25 @@ export async function renderPlan(
       }
       // The contain fit, as before; a transform (YU-020) crops before it
       // and scales after it, and moves the overlay from the centre.
-      const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease,setsar=1`;
+      // YU-023: one explicit conversion from the source's matrix and range
+      // to the policy's BT.709 limited range (alpha kept for overlays). A
+      // LUT is applied first, in full-range RGB read the same way.
+      const reading = layer.color
+        ? `in_color_matrix=${layer.color.matrix}:in_range=${layer.color.range}`
+        : null;
+      let graded = "";
+      if (layer.lut) {
+        const name = await lutFile(layer.lut);
+        graded = `${reading ? `scale=${reading}:out_range=pc,` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
+      }
+      const sourceReading = !layer.lut && reading ? `:${reading}` : "";
+      const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease${sourceReading}:out_color_matrix=bt709:out_range=tv,setsar=1,format=yuva420p`;
       const shaped = layer.transform
         ? transformFilters(layer.transform, fit)
         : null;
-      filters.push(`${timed},fps=${rate},${shaped?.picture ?? fit}[${clip}]`);
+      filters.push(
+        `${timed},fps=${rate},${graded}${shaped?.picture ?? fit}[${clip}]`,
+      );
       let picture = clip;
       if (ANIMATION_ENABLED && layer.animation) {
         const channels = renderableAnimationChannels(layer.animation);
@@ -625,6 +685,15 @@ export async function renderPlan(
         "20",
         "-pix_fmt",
         profile.pixelFormat,
+        // YU-023: tagged as the policy's SDR Rec.709 limited range.
+        "-color_primaries",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-colorspace",
+        "bt709",
+        "-color_range",
+        "tv",
         "-r",
         rate,
         "-t",
@@ -721,6 +790,28 @@ export async function renderPlan(
   }
 }
 
+/**
+ * YU-023: the color tags each asset's probe recorded at import, when they
+ * have the probe's shape (assets imported before YU-023 have none).
+ */
+export function recordedColors(store: ProjectStore) {
+  return (assetId: string): ProbedColor | null => {
+    const probe = store.assetVersion(assetId)?.probe as {
+      color?: Record<string, unknown> | null;
+    } | null;
+    const c = probe?.color;
+    if (!c) return null;
+    const valid = PROBED_KEYS.every(
+      (k) =>
+        typeof c[k] === "string" &&
+        (c[k] as string).length <= PROBED_FIELD_LENGTH,
+    );
+    return valid
+      ? (Object.fromEntries(PROBED_KEYS.map((k) => [k, c[k]])) as ProbedColor)
+      : null;
+  };
+}
+
 // Keeps only the main data stream of a file a worker wrote, in a new file
 // this service creates (it inherits the folder's access, not the
 // worker's), and removes the worker's file.
@@ -753,6 +844,7 @@ export async function renderRevision(
   const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
     normalizeLoudness: options.normalizeLoudness,
     captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),
+    colors: recordedColors(store),
   });
   const rendered = await renderPlan(
     store,
