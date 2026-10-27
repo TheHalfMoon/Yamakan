@@ -51,6 +51,16 @@ import {
 } from "../studio.ts";
 import { ConsentPurposeSchema } from "../identity.ts";
 import {
+  ReferencePackSchema,
+  StoryDocumentSchema,
+  assembleOperations,
+  linksConsent,
+  verifyReferencePack,
+  verifyStory,
+} from "../story.ts";
+import { fromEditView } from "../canonical.ts";
+import { randomUUID } from "node:crypto";
+import {
   advanceStage,
   approveStage,
   directorNext,
@@ -246,6 +256,13 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      // Stories and packs are checked against the project and the consent
+      // ledger on every commit, so they are written only by their commands.
+      if (a.kind === "story" || a.kind === "referencePack")
+        throw new CommandError(
+          "VALIDATION",
+          "Stories and reference packs are saved with yamakan.story.save and yamakan.pack.save.",
+        );
       const project = await store.commitDocument(
         { ...a, principalId: principal.id },
         receipt,
@@ -272,6 +289,142 @@ export const commands = {
     run: ({ store }, a) => {
       const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
       return { ...ref, content: JSON.parse(bytes.toString("utf8")) };
+    },
+  }),
+  "yamakan.story.save": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Save a story document (scenes, shots and takes with stable ids and timings in ticks; shots pin reference pack versions) as a new revision. Compare-and-swap on expectedRevision and expectedContentHash (null for a new story).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex.nullable(),
+        story: StoryDocumentSchema,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const project = await store.commitDocument(
+        {
+          projectId: a.projectId,
+          expectedRevision: a.expectedRevision,
+          documentId: a.documentId,
+          kind: "story",
+          schemaVersion: 1,
+          expectedContentHash: a.expectedContentHash,
+          source: { bytes: Buffer.from(JSON.stringify(a.story), "utf8") },
+          principalId: principal.id,
+          verify: (c) => verifyStory(a.story, c),
+        },
+        receipt,
+      );
+      return {
+        project,
+        document: store
+          .listDocuments(a.projectId)
+          .find((d) => d.id === a.documentId),
+      };
+    },
+  }),
+  "yamakan.pack.save": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Save a reference pack (role-tagged project stills or footage pinned by SHA-256; a character entry links a usable likeness-generate consent, from the browser session only) as a new revision. Compare-and-swap on expectedRevision and expectedContentHash (null for a new pack).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex.nullable(),
+        pack: ReferencePackSchema,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      if (linksConsent(a.pack) && principal.id !== "browser-ui")
+        throw new CommandError(
+          "SCOPE_DENIED",
+          "Linking a likeness consent requires the browser session.",
+        );
+      const project = await store.commitDocument(
+        {
+          projectId: a.projectId,
+          expectedRevision: a.expectedRevision,
+          documentId: a.documentId,
+          kind: "referencePack",
+          schemaVersion: 1,
+          expectedContentHash: a.expectedContentHash,
+          source: { bytes: Buffer.from(JSON.stringify(a.pack), "utf8") },
+          principalId: principal.id,
+          verify: (c) => verifyReferencePack(a.pack, c),
+        },
+        receipt,
+      );
+      return {
+        project,
+        document: store
+          .listDocuments(a.projectId)
+          .find((d) => d.id === a.documentId),
+      };
+    },
+  }),
+  "yamakan.story.assemble": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Place a story's shots on a video track in order (the selected take, or a title card of the shot's name without one), from startTicks or after the track's last clip; each story scene and shot becomes the timeline scene and shot of the same id. Refuses a take, reference or consent that is no longer usable.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        trackId: Id,
+        startTicks: Ticks.optional(),
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      const head = await store.load(a.projectId);
+      if (head.revision !== a.expectedRevision)
+        throw new CommandError(
+          "REVISION_CONFLICT",
+          "Revision conflict; reopen before saving.",
+        );
+      const { ref, bytes } = store.getDocument(a.projectId, a.documentId);
+      if (ref.kind !== "story")
+        throw new CommandError("VALIDATION", "This document is not a story.");
+      const story = StoryDocumentSchema.parse(
+        JSON.parse(bytes.toString("utf8")),
+      );
+      const canonical = fromEditView(head);
+      const start =
+        a.startTicks ??
+        Math.max(
+          0,
+          ...canonical.clips
+            .filter((c) => c.trackId === a.trackId)
+            .map((c) => c.startTicks + c.durationTicks),
+        );
+      const operations = assembleOperations(
+        story,
+        canonical,
+        a.trackId,
+        start,
+        randomUUID,
+      );
+      return store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        operations,
+        principal.id,
+        receipt,
+        (c) => verifyStory(story, c),
+      );
     },
   }),
   "yamakan.project.history": define({

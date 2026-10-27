@@ -85,8 +85,132 @@ function EngineOperations({ client, t }: { client: Client; t: Translate }) {
   );
 }
 
+type StoryItem =
+  | { kind: "story"; id: string; title: string; shots: number; cards: number }
+  | {
+      kind: "pack";
+      id: string;
+      name: string;
+      entries: number;
+      likeness: number;
+    };
+const fill = (text: string, values: Record<string, string | number>) =>
+  text.replace(/\{(\w+)\}/g, (m, k: string) =>
+    Object.hasOwn(values, k) ? String(values[k]) : m,
+  );
+// A story or pack as read back (YU-031); anything malformed is skipped.
+function storyItem(value: unknown): StoryItem | null {
+  const v = value as Record<string, unknown> | null;
+  if (!v || typeof v.id !== "string") return null;
+  const content = v.content as Record<string, unknown> | null;
+  if (v.kind === "story" && content && Array.isArray(content.scenes)) {
+    const shots = content.scenes.flatMap((s: { shots?: unknown }) =>
+      Array.isArray(s?.shots)
+        ? (s.shots as { selectedTakeId?: unknown }[])
+        : [],
+    );
+    return {
+      kind: "story",
+      id: v.id,
+      title: String(content.title ?? ""),
+      shots: shots.length,
+      cards: shots.filter((s) => s?.selectedTakeId === null).length,
+    };
+  }
+  if (v.kind === "referencePack" && content && Array.isArray(content.entries)) {
+    const entries = content.entries as { consentId?: unknown }[];
+    return {
+      kind: "pack",
+      id: v.id,
+      name: String(content.name ?? ""),
+      entries: entries.length,
+      likeness: entries.filter((e) => typeof e?.consentId === "string").length,
+    };
+  }
+  return null;
+}
+
+// The project's stories and reference packs, read again at each revision
+// of the open project, or when asked (another client may have saved one).
+function StoryPacks({
+  projectId,
+  revision,
+  client,
+  t,
+}: {
+  projectId: string;
+  revision: number | null;
+  client: Client;
+  t: Translate;
+}) {
+  const [items, setItems] = useState<StoryItem[] | "unknown" | null>(null);
+  const [reads, setReads] = useState(0);
+  const caller = useRef(client);
+  useEffect(() => {
+    let current = true;
+    (async () => {
+      const refs = (await caller.current.call("yamakan.document.list", {
+        projectId,
+      })) as { id?: unknown; kind?: unknown }[];
+      const wanted = (Array.isArray(refs) ? refs : []).filter(
+        (r) =>
+          typeof r?.id === "string" &&
+          (r.kind === "story" || r.kind === "referencePack"),
+      );
+      const read = await Promise.all(
+        wanted.map((r) =>
+          caller.current.call("yamakan.document.get", {
+            projectId,
+            documentId: r.id,
+          }),
+        ),
+      );
+      return read.map(storyItem).filter((x): x is StoryItem => x !== null);
+    })()
+      .then((list) => {
+        if (current) setItems(list);
+      })
+      .catch(() => {
+        if (current) setItems("unknown");
+      });
+    return () => {
+      current = false;
+    };
+  }, [projectId, revision, reads]);
+  if (!items || items === "unknown") return null;
+  return (
+    <section
+      data-testid="story-packs"
+      data-reads={reads}
+      aria-label={t("story.list")}
+    >
+      <button
+        type="button"
+        data-testid="story-refresh"
+        onClick={() => setReads((n) => n + 1)}
+      >
+        {t("story.refresh")}
+      </button>
+      {items.length ? (
+        <ul>
+          {items.map((item) => (
+            <li key={item.id} data-kind={item.kind}>
+              {item.kind === "story"
+                ? fill(t("story.summary"), item)
+                : fill(t("story.pack"), item)}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>{t("story.none")}</p>
+      )}
+    </section>
+  );
+}
+
 type Props = {
   projectId: string | null;
+  revision?: number | null;
   client: Client;
   t: Translate;
 };
@@ -95,7 +219,12 @@ type Props = {
  * Manual Director controls. Human approval uses browser-principal scopes.
  * Model-dependent stages are listed as unsupported, not invoked.
  */
-export function DirectorPanel({ projectId, client, t }: Props) {
+export function DirectorPanel({
+  projectId,
+  revision = null,
+  client,
+  t,
+}: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
   const [detail, setDetail] = useState<string>("");
@@ -138,6 +267,15 @@ export function DirectorPanel({ projectId, client, t }: Props) {
         unsupported: {(directorCapability().unsupported ?? []).join(", ")}
       </p>
       <EngineOperations client={client} t={t} />
+      {projectId ? (
+        <StoryPacks
+          key={projectId}
+          projectId={projectId}
+          revision={revision}
+          client={client}
+          t={t}
+        />
+      ) : null}
       <p>
         <button
           type="button"

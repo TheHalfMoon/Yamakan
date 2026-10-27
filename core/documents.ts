@@ -9,6 +9,7 @@ import { CommandError } from "./command/errors.ts";
 import { StudioDocumentSchema, parseStudioCanvasJson } from "./studio.ts";
 import type { StudioDocument } from "./studio.ts";
 import { parseScene3D } from "./scene3d.ts";
+import { STORY_LIMITS, validateReferencePack, validateStory } from "./story.ts";
 import { DOCUMENT_LIMITS, DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
 import type { DocumentKind } from "./document-ref.ts";
 
@@ -267,12 +268,23 @@ export function validateDocument(
     );
   const value = parseBounded(raw, "Document");
   const { content, assetIds, objectDigests } =
-    kind === "studio" ? validateStudio(value) : validateScene(value);
+    kind === "studio"
+      ? validateStudio(value)
+      : kind === "cinemaScene"
+        ? validateScene(value)
+        : kind === "story"
+          ? validateStory(value)
+          : validateReferencePack(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
-  if (bytes.byteLength > DOCUMENT_LIMITS.documentBytes)
+  // Stories and reference packs have their own, smaller ceiling (YU-031).
+  const limit =
+    kind === "story" || kind === "referencePack"
+      ? STORY_LIMITS.documentBytes
+      : DOCUMENT_LIMITS.documentBytes;
+  if (bytes.byteLength > limit)
     throw new CommandError(
       "LIMIT_EXCEEDED",
-      `Canonical document exceeds ${DOCUMENT_LIMITS.documentBytes} bytes.`,
+      `Canonical document exceeds ${limit} bytes.`,
     );
   return {
     kind,

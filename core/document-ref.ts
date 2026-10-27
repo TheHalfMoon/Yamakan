@@ -37,12 +37,18 @@ export const DOCUMENT_LIMITS = Object.freeze({
   uploadTtlMs: 15 * 60 * 1000,
 });
 
-export const DocumentKind = z.enum(["studio", "cinemaScene"]);
+// YU-031 adds story documents and reference packs.
+export const DocumentKind = z.enum([
+  "studio",
+  "cinemaScene",
+  "story",
+  "referencePack",
+]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
 // The schema version each kind is validated against today.
 export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
-  Object.freeze({ studio: 1, cinemaScene: 1 });
+  Object.freeze({ studio: 1, cinemaScene: 1, story: 1, referencePack: 1 });
 
 export const DocumentRefSchema = z
   .object({

@@ -346,3 +346,20 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - the editor's playhead, split and timeline.
 - **Rendering.** The render plan already carries the rational profile. The render's read margin is one frame of the profile, and never less than 1/30 s, so 30 fps renders are unchanged. A 23.976 export is verified at `r_frame_rate 24000/1001` with exactly its frame count.
 - **Rollback.** Old 30 fps projects are unaffected. A 23.976 project made by this version is refused (read-only) by a version without YU-019, because its view needs schema 3.
+
+## Stories and reference packs (YU-031)
+
+- **Documents.** A story (`story`, schema 1) and a reference pack (`referencePack`, schema 1) are creative documents like Studio canvases and Cinema scenes: canonical, content-addressed and immutable, kept by every revision that names them. Each is at most 256 KiB of canonical JSON. A story holds at most 50 scenes, 100 shots per scene and 200 shots in all, 8 takes and 4 pinned packs per shot. A pack holds at most 64 entries.
+- **Story.** Scenes, shots and takes have stable ids, unique across the story. A shot has a duration in ticks, notes, its takes (a project still or footage and a source start), a selected take or none, and pins reference pack versions by document id and content hash.
+- **Reference pack.** Each entry has a role (`character`, `environment`, `prop`, `wardrobe`, `style`, `camera`) and names a project still or footage pinned by its SHA-256. A `character` entry names its character and a likeness consent for `likeness-generate`; no other role links a consent. The pack claims nothing about identity fidelity.
+- **Commands.** `yamakan.story.save` and `yamakan.pack.save` commit a new revision (compare-and-swap on the revision and the document's content hash). `yamakan.story.assemble` places a story's shots on one video track in order: the selected take as a clip, or a title card of the shot's name when it has no take, so a storyboard needs no generator. Each story scene and shot becomes the timeline scene and shot of the same id, and a shot already on the timeline is refused. Stories and packs cannot be staged or written by `yamakan.document.commit`.
+- **Checks, inside the commit's transaction.**
+  - Takes and entries must be this project's stills or footage (not audio), and takes must fit their source.
+  - A pack entry must match the asset's current SHA-256.
+  - Pinned packs must be versions this project held.
+  - Every linked consent must exist and match its character and purpose. It must also be unrevoked, unexpired, and from (or revalidated in) the current execution epoch.
+  - Assembly checks all of this again, so a revoked consent refuses the assembly of a story pinning its pack.
+  - The consent ledger is separate from project revisions: an undo or restore never brings back a revoked consent.
+- **Principals.** Linking a likeness consent requires the browser session. Agents can save stories, and packs without likeness entries.
+- **Rollback.** The AG-DOCS switch (`YAMAKAN_AG_DOCS_OFF=1`) turns story and pack writes off; stored documents stay readable. The workspace database moves to version 13, which rebuilds the two document tables to accept the new kinds with the same rows (foreign keys checked in the same transaction). An earlier build refuses a version 13 workspace, so going back to one needs a verified backup from before the upgrade.
+- **UI.** The Director panel lists the project's stories and packs: shots and title cards, and how many references have likeness consent. It reads them again at each revision of the open project or on request.
