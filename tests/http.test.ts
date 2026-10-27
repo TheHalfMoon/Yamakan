@@ -7,12 +7,24 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { request } from "node:http";
+import { createServer, type AddressInfo } from "node:net";
 import { mediaTools } from "../core/process/workers.ts";
 import {
   describeAccess,
   readableByOtherAccounts,
 } from "../core/process/access.ts";
 import { writeLaunchLink } from "../core/launch.ts";
+// A free loopback port for a child server (tests run concurrently, so no
+// two may share a fixed one).
+const freePort = () =>
+  new Promise<number>((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const { port } = probe.address() as AddressInfo;
+      probe.close(() => resolve(port));
+    });
+  });
 
 // Every test folder is removed when the file's tests finish; each test
 // waits for its server to exit first.
@@ -525,7 +537,7 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
 test("a VFR upload returns 202 with a conversion job; the converted asset joins the project", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-http-vfr-"));
   bases.push(root);
-  const port = 24319;
+  const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
   const script = fileURLToPath(new URL("../server/main.ts", import.meta.url));
   const child = fork(script, [], {

@@ -98,7 +98,7 @@ const TranscriptOutput = z
 const RESERVED_KEYS = new Set(
   Object.getOwnPropertyNames(Object.prototype).concat("prototype"),
 );
-const Controls = z
+export const ControlsSchema = z
   .record(
     z
       .string()
@@ -125,7 +125,7 @@ const common = {
     .nonnegative()
     .max(2 ** 32 - 1)
     .optional(),
-  controls: Controls.optional(),
+  controls: ControlsSchema.optional(),
   // The durable attempt this execution belongs to, fenced by generation.
   attemptKey: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),
   leaseGeneration: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
