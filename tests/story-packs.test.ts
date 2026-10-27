@@ -665,6 +665,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
       Date.now(),
       Date.now() + 3_600_000,
     );
+    db.exec("DROP TABLE IF EXISTS story_document_versions");
     db.exec("PRAGMA user_version = 12");
     db.exec("COMMIT");
     assert.throws(() =>

@@ -308,7 +308,11 @@ function verifyPin(pin: z.infer<typeof PackPinSchema>, c: CommitContext) {
   try {
     verifyConsents(pack, c);
   } catch (e) {
-    if (!(e instanceof CommandError) || pin.contentHash === ref.contentHash)
+    if (
+      !(e instanceof CommandError) ||
+      e.code !== "VALIDATION" ||
+      pin.contentHash === ref.contentHash
+    )
       throw e;
     throw new CommandError(
       "VALIDATION",

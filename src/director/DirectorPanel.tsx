@@ -160,8 +160,8 @@ function StoryPacks({
           (r.kind === "story" || r.kind === "referencePack"),
       );
       const key = wanted.map((r) => `${r.id}:${r.contentHash}`).join(",");
+      // Skipped only when these versions were already shown in full.
       if (key === versions.current) return null;
-      versions.current = key;
       // One unreadable document does not hide the others.
       const read = await Promise.allSettled(
         wanted.map((r) =>
@@ -171,12 +171,16 @@ function StoryPacks({
           }),
         ),
       );
-      return read
+      const items = read
         .map((r) => (r.status === "fulfilled" ? storyItem(r.value) : null))
         .filter((x): x is StoryItem => x !== null);
+      const complete = read.every((r) => r.status === "fulfilled");
+      return { key: complete ? key : null, items };
     })()
-      .then((list) => {
-        if (current && list) setItems(list);
+      .then((read) => {
+        if (!current || !read) return;
+        versions.current = read.key;
+        setItems(read.items);
       })
       .catch(() => {
         versions.current = null;

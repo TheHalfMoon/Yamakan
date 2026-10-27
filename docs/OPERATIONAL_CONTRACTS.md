@@ -357,7 +357,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - Shot durations and take starts must be on the project's frames (30 or 24000/1001), a still take starts at 0, and an explicit assembly start must be on a frame too.
   - Takes and entries must be this project's stills or footage (not audio), and takes must fit their source.
   - A pack entry must match the asset's current SHA-256.
-  - A pin must name a version of that pack that a revision of this project held (an earlier version is allowed), and the stored bytes must match their hash.
+  - A pin must name a version of that pack that this project committed (an earlier version is allowed; each story and pack version is recorded with its commit), and the stored bytes must match their hash.
   - Every linked consent must exist and match its character and purpose. It must also be unrevoked, unexpired, and from (or revalidated in) the current execution epoch.
   - Assembly checks all of this again, so a revoked consent refuses the assembly of a story pinning its pack.
   - The consent ledger is separate from project revisions: an undo or restore never brings back a revoked consent. Consents are workspace-wide and named by character, so a pack may link any usable consent for its character.
