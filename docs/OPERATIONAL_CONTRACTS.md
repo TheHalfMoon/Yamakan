@@ -526,6 +526,26 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - An exhausted disk at a named profile. This is covered without a profile by `tests/backup.test.ts`, `tests/jobs.test.ts` and `tests/command.test.ts`.
   - Oversized projects arriving by import or restore.
 
+## Cinematic intent to conditioning (YU-050)
+
+- **Intent (`yamakan.shot-intent` v1).** A shot's intent covers:
+  - the camera's shot scale and movement;
+  - the lens's focal length (8–300 mm) and depth of field;
+  - the light's key and time of day;
+  - the subject's motion;
+  - guided inputs by project media id: an end frame, a depth map and a pose.
+
+  Every value is an enumerated choice, a bounded integer or an id. No free text, path or code can be stored.
+
+- **Compiler (`yamakan.controls-compiler/v1`, `core/cinema/control-compiler.ts`).** A fixed table lowers each intent field to the engine contract's named control or input role. For example, `camera.movement` becomes `cameraMovement` and `guides.endFrame` becomes role `endFrame`. The table is applied against one recipe's declared capability (`constraints.controls` and `roles`), and each field is reported as one of:
+  - **applied:** the recipe declares the control or role, and the value is lowered exactly.
+  - **metadata:** the recipe does not declare a style control. The intent stays editable previs metadata and is never claimed as applied.
+  - **unsupported:** the recipe does not take a guided input (end frame, depth or pose). Compiling is refused unless the caller accepts that the guide is dropped, which is recorded as **dropped**.
+  - In every case nothing becomes prompt text: the output has no prompt, and the controls carry only lowered values.
+- **Provenance.** The result names the recipe by id and hash, the intent by `intentHash` (its canonical JSON), and what reaches the engine by `loweredControlsHash`. A change that only affects metadata leaves the lowered hash as it was.
+- **Command.** `yamakan.cinema.compileControls` (scope `project:read`) lowers against this build's own server recipes. Those are only the fake engine's today, and they declare no controls, so every field is metadata.
+- **Not done.** No real engine declares controls yet, and no evaluation (E) shows that any control has a visible effect, so no applied-optics claim is made. Intents are not yet stored on story shots.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.

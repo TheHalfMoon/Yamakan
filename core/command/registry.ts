@@ -47,6 +47,13 @@ import {
 import { directorCapability } from "../director-flags.ts";
 import { previewParity } from "../render/parity.ts";
 import { buildProxy, cancelProxy, proxyStatus } from "../media/proxies.ts";
+import {
+  GUIDE_PATHS,
+  ShotIntentSchema,
+  compileControls,
+  serverRecipeCapability,
+} from "../cinema/control-compiler.ts";
+import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -1473,6 +1480,28 @@ export const commands = {
       "Report what the interactive preview shows only approximately for the current revision (the reference preview shows the export).",
     input: z.object({ projectId: Id }).strict(),
     run: async ({ store }, a) => previewParity(await store.load(a.projectId)),
+  }),
+  "yamakan.cinema.compileControls": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Lower a shot's cinematic intent (camera, lens, light, motion; end-frame, depth and pose guides) to one server recipe's declared controls and input roles (YU-050). Each field is reported applied, metadata (previs only, never claimed applied) or unsupported; an unsupported guide refuses unless accepted as dropped. Nothing becomes prompt text. Returns the intent and lowered-controls hashes.",
+    input: z
+      .object({
+        recipeId: z.string().min(1).max(80),
+        intent: ShotIntentSchema,
+        acceptDropped: z
+          .array(z.enum(GUIDE_PATHS as [string, ...string[]]))
+          .max(GUIDE_PATHS.length)
+          .default([]),
+      })
+      .strict(),
+    run: (_ctx, a) =>
+      compileControls(
+        a.intent,
+        serverRecipeCapability(SERVER_RECIPES, recipeHash, a.recipeId),
+        a.acceptDropped,
+      ),
   }),
   "yamakan.proxy.status": define({
     scope: "project:read",
