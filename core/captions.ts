@@ -107,10 +107,9 @@ export const CaptionDocumentSchema = z
       .max(120)
       .refine(
         (n) =>
-          // Control characters are refused on purpose.
+          // Control characters are refused on purpose. (Zero-width joiner
+          // and non-joiner are kept: Persian and Arabic words use them.)
           // oxlint-disable-next-line no-control-regex
-          // (Zero-width joiner and non-joiner are kept: Persian and
-          // Arabic words use them.)
           !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(
             n,
           ),
