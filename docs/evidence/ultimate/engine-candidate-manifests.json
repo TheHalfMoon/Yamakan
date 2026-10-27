@@ -4,8 +4,9 @@
   "task": "YU-043",
   "inspectedAt": "2026-10-27",
   "method": [
-    "Source files fetched at pinned commits (raw.githubusercontent.com, huggingface.co resolve/<commit>) and hashed; file trees from the Hugging Face API at each pinned commit. No weights were downloaded.",
-    "The Python closure was resolved metadata-only with pip 26.2.1 `install --dry-run --ignore-installed --only-binary=:all: --report`, run under CPython 3.12.13 (win_amd64) from the requirements diffusers==0.42.1, transformers, torch, accelerate, sentencepiece, ftfy and protobuf. A second resolution under CPython 3.14 gave the identical set."
+    "Source files were fetched at pinned commits (raw.githubusercontent.com; huggingface.co resolve/<commit>) and hashed; each evidence line was read from the fetched file at its line number. Model file trees came from the Hugging Face API at each pinned commit. No weights were downloaded.",
+    "The Python closure was resolved metadata-only with pip 26.2.1 (`pip --python <CPython 3.12.13> install --dry-run --ignore-installed --only-binary=:all: --report`) from the requirements diffusers==0.42.1, transformers, torch, accelerate, sentencepiece, ftfy and protobuf.",
+    "Package licences are the packages' own SPDX expressions where given (spdxBasis metadata); prose or classifier names were mapped to SPDX terms (spdxBasis normalized) and must be checked against each licence file before release."
   ],
   "locks": {
     "diffusers-0.42.1-cp312-win_amd64": {
@@ -23,7 +24,9 @@
           "wheel": "diffusers-0.42.1-py3-none-any.whl",
           "sha256": "9154faa704ce00e0b77f568e0d64786064368528aab5fc14eeea92f87d788014",
           "license": "Apache 2.0 License",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "normalized"
         },
         {
           "name": "huggingface_hub",
@@ -31,7 +34,9 @@
           "wheel": "huggingface_hub-2.3.0-py3-none-any.whl",
           "sha256": "5da369600233568a126eb5578754935b2add9446b42d9e2fc0927d56840ac1a5",
           "license": "Apache-2.0",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "click",
@@ -39,7 +44,9 @@
           "wheel": "click-8.5.0-py3-none-any.whl",
           "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "hf-xet",
@@ -47,7 +54,9 @@
           "wheel": "hf_xet-1.7.0-cp38-abi3-win_amd64.whl",
           "sha256": "2b7bb5727889b0f2436dbaaad8fc4c3e66b8240d992716989e0c086b4278b1bc",
           "license": "Apache-2.0",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "httpx2",
@@ -55,7 +64,9 @@
           "wheel": "httpx2-2.16.0-py3-none-any.whl",
           "sha256": "fd2c5d7909e8d86fe92d53020c310ca0e4e431b838c207c5754b9bbf0308d49a",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "httpcore2",
@@ -63,7 +74,9 @@
           "wheel": "httpcore2-2.16.0-py3-none-any.whl",
           "sha256": "5c4358319f2602d984ad93182c9fee5160f22e9da7babdda870a5e7c4e2dc34f",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "transformers",
@@ -71,7 +84,9 @@
           "wheel": "transformers-5.21.0-py3-none-any.whl",
           "sha256": "8803a8712932aa3441c1e8bb340e66d5e3eca079fe65d9b717ede2f3ead01c79",
           "license": "Apache 2.0 License",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "normalized"
         },
         {
           "name": "tokenizers",
@@ -79,7 +94,9 @@
           "wheel": "tokenizers-0.23.3-cp310-abi3-win_amd64.whl",
           "sha256": "1f0823bb00c5fdc98e487354d54dd55a03848d61a1a0bf29a68c77f24f3b26c3",
           "license": "Apache Software License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "normalized"
         },
         {
           "name": "torch",
@@ -87,7 +104,9 @@
           "wheel": "torch-2.14.1-cp312-cp312-win_amd64.whl",
           "sha256": "38bee9f2a2ccfc6898172a5075e4ba52522fbe143eeb099674fc67ab390e858d",
           "license": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "accelerate",
@@ -95,7 +114,9 @@
           "wheel": "accelerate-1.15.0-py3-none-any.whl",
           "sha256": "97eacca0b73e45cb867dbf8c5d5d4dc32219544300e0c8992c7334dc2ef33cec",
           "license": "Apache",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "normalized"
         },
         {
           "name": "sentencepiece",
@@ -103,7 +124,9 @@
           "wheel": "sentencepiece-0.2.2-cp312-cp312-win_amd64.whl",
           "sha256": "7c6e7bf684dc12145bfa685d3060beaea55139134ba848289bee514ed42e7383",
           "license": "Apache-2.0",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "ftfy",
@@ -111,7 +134,9 @@
           "wheel": "ftfy-6.3.1-py3-none-any.whl",
           "sha256": "7c70eb532015cd2f9adb53f101fb6c7945988d023a085d127d1573dc49dd0083",
           "license": "Apache-2.0",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "protobuf",
@@ -119,7 +144,9 @@
           "wheel": "protobuf-7.36.2-cp310-abi3-win_amd64.whl",
           "sha256": "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353",
           "license": "3-Clause BSD License",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "normalized"
         },
         {
           "name": "anyio",
@@ -127,7 +154,9 @@
           "wheel": "anyio-4.15.1-py3-none-any.whl",
           "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "filelock",
@@ -135,7 +164,9 @@
           "wheel": "filelock-4.2.4-py3-none-any.whl",
           "sha256": "301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "fsspec",
@@ -143,7 +174,9 @@
           "wheel": "fsspec-2026.9.0-py3-none-any.whl",
           "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "h11",
@@ -151,7 +184,9 @@
           "wheel": "h11-0.16.0-py3-none-any.whl",
           "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
           "license": "MIT",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "idna",
@@ -159,7 +194,9 @@
           "wheel": "idna-3.20-py3-none-any.whl",
           "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "networkx",
@@ -167,7 +204,9 @@
           "wheel": "networkx-3.7-py3-none-any.whl",
           "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "numpy",
@@ -175,7 +214,9 @@
           "wheel": "numpy-2.5.4-cp312-cp312-win_amd64.whl",
           "sha256": "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
           "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "packaging",
@@ -183,7 +224,9 @@
           "wheel": "packaging-26.3-py3-none-any.whl",
           "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
           "license": "Apache-2.0 OR BSD-2-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0 OR BSD-2-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "PyYAML",
@@ -191,7 +234,9 @@
           "wheel": "pyyaml-6.0.3-cp312-cp312-win_amd64.whl",
           "sha256": "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
           "license": "MIT",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "regex",
@@ -199,7 +244,9 @@
           "wheel": "regex-2026.9.29-cp312-cp312-win_amd64.whl",
           "sha256": "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649",
           "license": "Apache-2.0 AND CNRI-Python",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0 AND CNRI-Python",
+          "spdxBasis": "metadata"
         },
         {
           "name": "safetensors",
@@ -207,7 +254,9 @@
           "wheel": "safetensors-0.8.0-cp310-abi3-win_amd64.whl",
           "sha256": "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f",
           "license": "Apache Software License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "normalized"
         },
         {
           "name": "setuptools",
@@ -215,7 +264,9 @@
           "wheel": "setuptools-84.2.1-py3-none-any.whl",
           "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "sympy",
@@ -223,7 +274,9 @@
           "wheel": "sympy-1.14.0-py3-none-any.whl",
           "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
           "license": "BSD",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "normalized"
         },
         {
           "name": "mpmath",
@@ -231,7 +284,9 @@
           "wheel": "mpmath-1.3.0-py3-none-any.whl",
           "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
           "license": "BSD",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "normalized"
         },
         {
           "name": "tqdm",
@@ -239,7 +294,9 @@
           "wheel": "tqdm-4.70.1-py3-none-any.whl",
           "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
           "license": "MPL-2.0 AND MIT",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MPL-2.0 AND MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "truststore",
@@ -247,7 +304,9 @@
           "wheel": "truststore-0.10.5-py3-none-any.whl",
           "sha256": "9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "typing_extensions",
@@ -255,7 +314,9 @@
           "wheel": "typing_extensions-4.16.0-py3-none-any.whl",
           "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
           "license": "PSF-2.0",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "PSF-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "colorama",
@@ -263,7 +324,9 @@
           "wheel": "colorama-0.4.6-py2.py3-none-any.whl",
           "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
           "license": "BSD License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "normalized"
         },
         {
           "name": "importlib_metadata",
@@ -271,7 +334,9 @@
           "wheel": "importlib_metadata-10.1.0-py3-none-any.whl",
           "sha256": "cf45ce66a929c64e994185a809c04840d0501db17e663810d993d0f4829265c7",
           "license": "Apache-2.0",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "zipp",
@@ -279,7 +344,9 @@
           "wheel": "zipp-4.1.2-py3-none-any.whl",
           "sha256": "b30cb6cd253122169c47de245ca24a86bac2a5d3802ba15bf7ba6414eb9e144d",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "Jinja2",
@@ -287,7 +354,9 @@
           "wheel": "jinja2-3.1.6-py3-none-any.whl",
           "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
           "license": "BSD License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "normalized"
         },
         {
           "name": "MarkupSafe",
@@ -295,7 +364,9 @@
           "wheel": "markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
           "sha256": "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
           "license": "BSD-3-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "pillow",
@@ -303,7 +374,9 @@
           "wheel": "pillow-13.0.0-cp312-cp312-win_amd64.whl",
           "sha256": "ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b",
           "license": "MIT-CMU",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT-CMU",
+          "spdxBasis": "metadata"
         },
         {
           "name": "psutil",
@@ -311,7 +384,9 @@
           "wheel": "psutil-7.2.2-cp37-abi3-win_amd64.whl",
           "sha256": "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988",
           "license": "BSD-3-Clause",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "BSD-3-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "requests",
@@ -319,7 +394,9 @@
           "wheel": "requests-2.34.2-py3-none-any.whl",
           "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
           "license": "Apache-2.0",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "Apache-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "charset-normalizer",
@@ -327,7 +404,9 @@
           "wheel": "charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl",
           "sha256": "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc",
           "license": "MIT",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "urllib3",
@@ -335,7 +414,9 @@
           "wheel": "urllib3-2.8.0-py3-none-any.whl",
           "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "certifi",
@@ -343,7 +424,9 @@
           "wheel": "certifi-2026.10.23-py3-none-any.whl",
           "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
           "license": "MPL-2.0",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MPL-2.0",
+          "spdxBasis": "metadata"
         },
         {
           "name": "typer",
@@ -351,7 +434,9 @@
           "wheel": "typer-0.27.3-py3-none-any.whl",
           "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "annotated-doc",
@@ -359,7 +444,9 @@
           "wheel": "annotated_doc-0.0.5-py3-none-any.whl",
           "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
           "license": "MIT",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "rich",
@@ -367,7 +454,9 @@
           "wheel": "rich-15.0.0-py3-none-any.whl",
           "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
           "license": "MIT",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "MIT",
+          "spdxBasis": "metadata"
         },
         {
           "name": "Pygments",
@@ -375,7 +464,9 @@
           "wheel": "pygments-2.21.0-py3-none-any.whl",
           "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
           "license": "BSD-2-Clause",
-          "licenseSource": "expression"
+          "licenseSource": "expression",
+          "spdx": "BSD-2-Clause",
+          "spdxBasis": "metadata"
         },
         {
           "name": "markdown-it-py",
@@ -383,7 +474,9 @@
           "wheel": "markdown_it_py-4.2.0-py3-none-any.whl",
           "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
           "license": "MIT License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "MIT",
+          "spdxBasis": "normalized"
         },
         {
           "name": "mdurl",
@@ -391,7 +484,9 @@
           "wheel": "mdurl-0.1.2-py3-none-any.whl",
           "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
           "license": "MIT License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "MIT",
+          "spdxBasis": "normalized"
         },
         {
           "name": "shellingham",
@@ -399,7 +494,9 @@
           "wheel": "shellingham-1.5.4-py2.py3-none-any.whl",
           "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
           "license": "ISC License",
-          "licenseSource": "license"
+          "licenseSource": "license",
+          "spdx": "ISC",
+          "spdxBasis": "normalized"
         },
         {
           "name": "wcwidth",
@@ -407,7 +504,9 @@
           "wheel": "wcwidth-0.9.4-cp310-abi3-win_amd64.whl",
           "sha256": "f28d77153303450ee13ebbe888297e75cf532c754555b6cabafc9bdda16c421c",
           "license": "MIT License",
-          "licenseSource": "classifier"
+          "licenseSource": "classifier",
+          "spdx": "MIT",
+          "spdxBasis": "normalized"
         }
       ]
     }
@@ -437,6 +536,14 @@
             "path": "generate.py",
             "sha256": "cae024b99a3d105fe273a8dfe724ea656f9c1a876ccc8534a8c2fbfb716950e7",
             "symbol": "main"
+          }
+        ],
+        "loaderEvidence": [
+          {
+            "path": "wan/textimage2video.py",
+            "sha256": "228f2fabf23014ed41ec6b8cd713d5be7371bb558501c71a62a0258b491a877b",
+            "line": 103,
+            "text": "self.model = WanModel.from_pretrained(checkpoint_dir)"
           }
         ],
         "declaredRequirements": {
@@ -600,21 +707,21 @@
       "loading": {
         "trustRemoteCode": false,
         "customPipeline": null,
-        "useSafetensors": false,
-        "localFilesOnly": true,
+        "useSafetensors": null,
+        "localFilesOnly": null,
         "unsafeLoads": [
           {
             "path": "wan/modules/t5.py",
             "sha256": "8b0cebf3192c542f92a344255a06c203df3ba24160715899a055cc8de0cd930f",
             "line": 496,
-            "call": "torch.load(checkpoint_path, map_location='cpu')",
+            "text": "model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))",
             "weightsOnly": false
           },
           {
             "path": "wan/modules/vae2_2.py",
             "sha256": "eab5ce4aa1ce03af2978f2a8e8364c419f5fbb8535d265ac86b0b02ddcf0c1f6",
             "line": 883,
-            "call": "torch.load(pretrained_path, map_location=device)",
+            "text": "torch.load(pretrained_path, map_location=device), assign=True)",
             "weightsOnly": false
           }
         ]
@@ -624,8 +731,9 @@
           "name": "dashscope",
           "evidence": {
             "path": "generate.py",
+            "sha256": "cae024b99a3d105fe273a8dfe724ea656f9c1a876ccc8534a8c2fbfb716950e7",
             "line": 346,
-            "text": "prompt_extend_method == \"dashscope\""
+            "text": "if args.prompt_extend_method == \"dashscope\":"
           }
         }
       ],
@@ -640,6 +748,7 @@
         "source": {
           "repo": "huggingface/diffusers",
           "tag": "v0.42.1",
+          "version": "0.42.1",
           "commit": "2a1433913c7044f34fa4767dd84b28bba0bb0ecf",
           "license": "apache-2.0",
           "licenseEvidence": {
@@ -657,6 +766,76 @@
             "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
             "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
             "symbol": "WanImageToVideoPipeline"
+          }
+        ],
+        "loaderEvidence": [
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 801,
+            "text": "use_safetensors = kwargs.pop(\"use_safetensors\", None)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 785,
+            "text": "local_files_only = kwargs.pop(\"local_files_only\", None)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 807,
+            "text": "trust_remote_code = kwargs.pop(\"trust_remote_code\", False)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 1612,
+            "text": "allow_pickle = True if (use_safetensors is None or use_safetensors is False) else False"
+          },
+          {
+            "path": "src/diffusers/models/modeling_utils.py",
+            "sha256": "d25adc6d8b2e02a54fa1f98347f57315009eb2df197cb42130ee8daea9a65fc7",
+            "line": 1074,
+            "text": "allow_pickle = False"
+          },
+          {
+            "path": "src/diffusers/models/modeling_utils.py",
+            "sha256": "d25adc6d8b2e02a54fa1f98347f57315009eb2df197cb42130ee8daea9a65fc7",
+            "line": 1336,
+            "text": "\"Defaulting to unsafe serialization. Pass `allow_pickle=False` to raise an error instead.\""
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 171,
+            "text": "return safetensors.torch.load_file(checkpoint_file, device=map_location)"
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 176,
+            "text": "weights_only_kwarg = {\"weights_only\": True} if is_torch_version(\">=\", \"1.13\") else {}"
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 186,
+            "text": "return torch.load(checkpoint_file, map_location=map_location, **weights_only_kwarg, **extra_args)"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/modeling_utils.py",
+            "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
+            "line": 3835,
+            "text": "weights_only: bool = True,"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/modeling_utils.py",
+            "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
+            "line": 364,
+            "text": "return torch.load(checkpoint_path, map_location=map_location, weights_only=weights_only, **extra_args)"
           }
         ],
         "declaredRequirements": null
@@ -824,12 +1003,26 @@
             {
               "parameter": "last_image",
               "role": "lastFrame",
-              "evidence": {
-                "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
-                "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
-                "line": 428,
-                "text": "if self.config.expand_timesteps: video_condition = image"
-              }
+              "evidence": [
+                {
+                  "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
+                  "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
+                  "line": 428,
+                  "text": "if self.config.expand_timesteps:"
+                },
+                {
+                  "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
+                  "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
+                  "line": 429,
+                  "text": "video_condition = image"
+                },
+                {
+                  "path": "model_index.json",
+                  "sha256": "6a72faeb564b0e894aea8fc4ef27241106eb739e8584e869b61589a65473add7",
+                  "line": 5,
+                  "text": "\"expand_timesteps\": true,"
+                }
+              ]
             }
           ],
           "controls": []
@@ -849,7 +1042,7 @@
             "path": "src/diffusers/pipelines/wan/pipeline_wan.py",
             "sha256": "e80e0bbb05db93a614e5c01733482ac56f0c426dc02abe3bb11383285fddd0a3",
             "line": 673,
-            "text": "vae decode after the loop"
+            "text": "video = self.vae.decode(latents, return_dict=False)[0]"
           }
         ],
         "decodesAfterInterrupt": true,
@@ -864,6 +1057,7 @@
         "source": {
           "repo": "huggingface/diffusers",
           "tag": "v0.42.1",
+          "version": "0.42.1",
           "commit": "2a1433913c7044f34fa4767dd84b28bba0bb0ecf",
           "license": "apache-2.0",
           "licenseEvidence": {
@@ -876,6 +1070,76 @@
             "path": "src/diffusers/pipelines/cogvideo/pipeline_cogvideox.py",
             "sha256": "abd30e0f3ee65fa9c5e065d378c5c2b142843a0c0d195f4a3e7bcf71696d6562",
             "symbol": "CogVideoXPipeline"
+          }
+        ],
+        "loaderEvidence": [
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 801,
+            "text": "use_safetensors = kwargs.pop(\"use_safetensors\", None)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 785,
+            "text": "local_files_only = kwargs.pop(\"local_files_only\", None)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 807,
+            "text": "trust_remote_code = kwargs.pop(\"trust_remote_code\", False)"
+          },
+          {
+            "path": "src/diffusers/pipelines/pipeline_utils.py",
+            "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+            "line": 1612,
+            "text": "allow_pickle = True if (use_safetensors is None or use_safetensors is False) else False"
+          },
+          {
+            "path": "src/diffusers/models/modeling_utils.py",
+            "sha256": "d25adc6d8b2e02a54fa1f98347f57315009eb2df197cb42130ee8daea9a65fc7",
+            "line": 1074,
+            "text": "allow_pickle = False"
+          },
+          {
+            "path": "src/diffusers/models/modeling_utils.py",
+            "sha256": "d25adc6d8b2e02a54fa1f98347f57315009eb2df197cb42130ee8daea9a65fc7",
+            "line": 1336,
+            "text": "\"Defaulting to unsafe serialization. Pass `allow_pickle=False` to raise an error instead.\""
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 171,
+            "text": "return safetensors.torch.load_file(checkpoint_file, device=map_location)"
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 176,
+            "text": "weights_only_kwarg = {\"weights_only\": True} if is_torch_version(\">=\", \"1.13\") else {}"
+          },
+          {
+            "path": "src/diffusers/models/model_loading_utils.py",
+            "sha256": "eab67b24f08101f320a7dec1ce21740579087af6bab738b63c073968941272f0",
+            "line": 186,
+            "text": "return torch.load(checkpoint_file, map_location=map_location, **weights_only_kwarg, **extra_args)"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/modeling_utils.py",
+            "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
+            "line": 3835,
+            "text": "weights_only: bool = True,"
+          },
+          {
+            "source": "huggingface/transformers@dded62b5e641816d552098b1b8de578d17121740",
+            "path": "src/transformers/modeling_utils.py",
+            "sha256": "251aaae7733affbb7cdb5aa05a84157c46cac02518d868898cd6d6282cc14571",
+            "line": 364,
+            "text": "return torch.load(checkpoint_path, map_location=map_location, weights_only=weights_only, **extra_args)"
           }
         ],
         "declaredRequirements": null
@@ -1014,7 +1278,7 @@
             "path": "src/diffusers/pipelines/cogvideo/pipeline_cogvideox.py",
             "sha256": "abd30e0f3ee65fa9c5e065d378c5c2b142843a0c0d195f4a3e7bcf71696d6562",
             "line": 787,
-            "text": "vae decode after the loop"
+            "text": "video = self.decode_latents(latents)"
           }
         ],
         "decodesAfterInterrupt": true,
@@ -1022,9 +1286,10 @@
       }
     }
   ],
-  "unsupportedControls": {
-    "reason": "No inspected pipeline's __call__ takes a camera, lens, light or motion parameter.",
-    "pipelineParameters": [
+  "controls": {
+    "supported": [],
+    "reason": "No inspected pipeline's __call__ takes a camera, lens, light or motion parameter, so no candidate declares a contract control; a shot intent's style stays previs metadata (YU-050).",
+    "examinedParameters": [
       "prompt",
       "negative_prompt",
       "height",
@@ -1033,11 +1298,13 @@
       "num_inference_steps",
       "guidance_scale",
       "generator"
-    ]
+    ],
+    "requestControlRefusal": "CONTROL_UNSUPPORTED"
   },
   "interfaceGaps": [
-    "The YU-042 model manifest (yamakan.model-manifest/v1) names files directly inside one model folder, at most 16. A Diffusers layout has subfolders (text_encoder/, transformer/, vae/) (Wan2.2 TI2V-5B loads 20 files, CogVideoX-2b 14), so a model-manifest v2 with relative paths is needed before any Diffusers candidate can be pinned.",
-    "A CUDA lock (download.pytorch.org wheels) is not resolved; the PyPI torch wheel for Windows is CPU-only."
+    "The YU-042 model manifest (yamakan.model-manifest/v1) names at most 16 files, each directly inside one model folder. A Diffusers layout has subfolders (text_encoder/, transformer/, vae/), and Wan2.2 TI2V-5B loads 20 files, so a model-manifest v2 with relative paths is needed before any Diffusers candidate can be pinned.",
+    "A CUDA lock (download.pytorch.org wheels) is not resolved; the PyPI torch wheel for Windows is CPU-only.",
+    "Offline loading is a runner duty: from_pretrained with local_files_only=True and use_safetensors=True, and HF_HUB_OFFLINE=1 in the worker's environment. No runner exists yet."
   ],
   "comparison": {
     "operation": "textToVideo",
@@ -1046,7 +1313,7 @@
     "criteria": [
       {
         "id": "rights",
-        "rule": "Model, runtime and every locked package licence accepted; no gated or remote service."
+        "rule": "Model, runtime and every locked package licence accepted; no gated model or remote service."
       },
       {
         "id": "footprint",
@@ -1075,6 +1342,7 @@
     ],
     "executed": false,
     "blockedBy": "Downloading weights and running a GPU host need the owner's authorization, which is not granted; until then no candidate is run.",
+    "results": null,
     "winner": null
   }
 }
