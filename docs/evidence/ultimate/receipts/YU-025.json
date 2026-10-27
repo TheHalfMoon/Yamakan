@@ -1,0 +1,79 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "7cdfa86",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-025",
+  "objective": "Implement verified relink and batch aspect/export variants",
+  "branch": "feat/yu-025-relink-variants",
+  "mergedPr": 133,
+  "headCommit": "4dff3bc",
+  "mergeCommit": "5eadedf",
+  "flags": "none new; relink writes are project edits (undoable); batch exports use the existing render queue",
+  "deviations": [
+    "Relink replaces a medium by another already imported into the project (hashed and probed); no client path, no in-place replacement of an object",
+    "Relink compatibility: same kind, enough source for every clip (speed included), sound where a clip plays it; differences (bytes, name, size, aspect, duration, sound) are shown before approval; color tags are not compared (documented)",
+    "Apply recomputes the hash-named proposal at the head; the internal asset.relink operation is refused by the generic applyBatch",
+    "Provenance lives in a new asset_replacements table (workspace schema 15), written once per apply; redo/restore write none (documented)",
+    "Export variants change only the output size (same contain fit); a batch is up to 4 variants, admitted together, and COMPLETED only when every output is"
+  ],
+  "tests": {
+    "files": [
+      "tests/relink-variants.test.ts",
+      "tests/streaming-import.test.ts",
+      "tests/story-packs.test.ts",
+      "tests/captions.test.ts",
+      "tests/creative-documents.test.ts"
+    ],
+    "result": "5 relink/variant tests: missing media fails export, a same-name/different-bytes replacement is shown, applied and renders with provenance, stale proposal refused, undo returns the old source, applyBatch cannot relink; too-short, wrong-kind, unknown and forged partial relinks refused with nothing recorded; three aspect variants complete with probed sizes, idempotent retry, identical plan hashes across batches and after reopen, another variant set is another batch, duplicates and >4 refused; ENOSPC on one output fails only it and the batch, late cancel changes nothing, source bytes untouched; a running batch cancelled twice is CANCELLED with no artifacts and earlier exports kept. Schema-15 downgrade fixtures updated"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review, applying Alibaba Open Code Review 1.13.3 rules obtained locally with `ocr delegate rule` (no LLM, no cloud)",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 3,
+        "shouldFixApplied": 10,
+        "finalRound": "no must-fix; one should-fix (retry versus the disk check) applied in 4dff3bc"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 3,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used). Its rule set was applied through delegation mode instead"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); nothing to address"
+  ],
+  "postMergeVerification": {
+    "main": "5eadedf",
+    "ci": "PR exact head 4dff3bc: qualify, qualify-windows-r8, otio-oracle success; push run on 5eadedf: success",
+    "windows": "detached 5eadedf: typecheck, lint, format, provenance, brand, build pass; npm test 666/669 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No editor UI for relink or batch export yet (commands only)",
+    "Relink does not compare color tags; story takes and pack entries stay pinned to the old medium",
+    "The disk check at batch admission is advisory (point in time)",
+    "Full OCR LLM review blocked (see reviews)"
+  ]
+}
