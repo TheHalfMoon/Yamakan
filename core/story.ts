@@ -27,6 +27,7 @@ export const STORY_LIMITS = Object.freeze({
   // A whole story assembles onto one timeline (200 clips at most).
   shots: 200,
   takesPerShot: 8,
+  inputsPerTake: 8,
   packsPerShot: 4,
   entriesPerPack: 64,
 });
@@ -35,12 +36,31 @@ const Name = z.string().trim().min(1).max(120);
 const Note = z.string().max(2_000);
 const Sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 
+const MediaPinSchema = z
+  .object({
+    assetId: Id,
+    assetHash: Sha256,
+  })
+  .strict();
+
+// YU-032: where a take came from. The output is the take's own media
+// version; the inputs are the project media versions it was made from.
+// A story version is immutable, so its lineage is too.
+const TakeLineageSchema = z
+  .object({
+    label: Name.optional(),
+    outputHash: Sha256,
+    inputs: z.array(MediaPinSchema).max(STORY_LIMITS.inputsPerTake),
+  })
+  .strict();
+
 const TakeSchema = z
   .object({
     id: Id,
     assetId: Id,
     // Where the take starts in its source; it plays for the shot's duration.
     sourceStartTicks: Ticks,
+    lineage: TakeLineageSchema.optional(),
   })
   .strict();
 
@@ -172,7 +192,11 @@ export function validateStory(value: unknown) {
   const assetIds = new Set<string>();
   for (const sc of content.scenes)
     for (const shot of sc.shots)
-      for (const take of shot.takes) assetIds.add(take.assetId);
+      for (const take of shot.takes) {
+        assetIds.add(take.assetId);
+        for (const input of take.lineage?.inputs ?? [])
+          assetIds.add(input.assetId);
+      }
   return { content, assetIds: [...assetIds].sort(), objectDigests: [] };
 }
 
@@ -264,6 +288,19 @@ export function verifyStory(story: StoryDocument, c: CommitContext) {
             "VALIDATION",
             `Take of shot "${shot.name}" runs past the end of its source.`,
           );
+        if (take.lineage) {
+          if (take.lineage.outputHash !== asset.hash)
+            throw new CommandError(
+              "VALIDATION",
+              `A take of shot "${shot.name}" does not match its recorded media version.`,
+            );
+          for (const input of take.lineage.inputs)
+            if (assetOf(c.project, input.assetId).hash !== input.assetHash)
+              throw new CommandError(
+                "VALIDATION",
+                `A take of shot "${shot.name}" names an input that does not match its media version.`,
+              );
+        }
       }
       for (const pin of shot.referencePacks) {
         const key = `${pin.documentId}:${pin.contentHash}`;
