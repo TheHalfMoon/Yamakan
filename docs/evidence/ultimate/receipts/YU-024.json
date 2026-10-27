@@ -1,0 +1,84 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "8870935",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-024",
+  "objective": "Add editable imported caption tracks",
+  "branch": "feat/yu-024-captions",
+  "mergedPr": 125,
+  "headCommit": "0e153a2",
+  "mergeCommit": "c408bbe3ab73bab3145699dbbd32053b1581b5f0",
+  "flags": "Caption writes follow the AG-DOCS switch (YAMAKAN_AG_DOCS_OFF=1); stored tracks stay readable and keep rendering",
+  "deviations": [
+    "Caption tracks are a creative document kind (cue refs live in the document, referenced by the canonical project), not fields of the canonical project",
+    "The panel is src/captions.tsx in the Finish workspace, not src/editor/components/Captions.tsx (a donor folder)",
+    "Burned-in captions use the titles' style and place; a caption and a title clip shown at once overlap (documented)",
+    "Workspace schema 14 rebuilds the document tables with an application-validated kind check (no rebuild for later kinds); an earlier build refuses a v14 workspace",
+    "Caption tracks are written only by their commands (glyph-checked), not by the generic document commit or staging",
+    "Imported text is kept as received (decoded as UTF-8), with a checked SHA-256 of that text"
+  ],
+  "tests": {
+    "files": [
+      "tests/captions.test.ts",
+      "tests/story-packs.test.ts",
+      "tests/creative-documents.test.ts",
+      "scripts/browser-e2e.mjs"
+    ],
+    "result": "12 caption tests: exact SRT/WebVTT parsing and refusals (malformed timestamps, overlaps, settings, STYLE/REGION, ASS markup also behind tags, unknown tags, oversized and empty input, header cues); mixed Arabic/Latin round trips through both formats; import/edit/stale-hash/overlap/split/export through commands; burned-in captions draw the same in reference preview and export; v13 to v14 upgrade; native Arabic fixtures parse identically; blank or padded lines and sub-millisecond times refused; a hostile timing line refused in about 1 ms; 2,000 cues committed; retried import replays; undrawable glyphs refused naming the cue; forged source refused; plan hash, layer and timeline-end clipping; SRT ampersands; damaged tracks RECOVERY_REQUIRED; names; generic commit refused. Edge E2E: import an SRT in Finish, discard an edit, edit and save, burn in, stored track and SRT export checked, no panel error, the editor's next save still works"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 4,
+      "findings": {
+        "mustFix": 3,
+        "shouldFixApplied": 16,
+        "finalRound": "no findings"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 2,
+        "shouldFixApplied": 10,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "H1 native Arabic review",
+      "fullReview": "NOT DONE: fixtures and checklist in docs/evidence/h1-arabic-review-packet/captions/ await a named native reviewer; language quality is not claimed"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "ciNotes": [
+    "The Linux qualify job stalled twice in apt-get install and was cancelled and rerun",
+    "A lint suppression misplaced by a review nit failed CI once (oxlint --deny-warnings); fixed in 0e153a2"
+  ],
+  "postMergeVerification": {
+    "main": "c408bbe3ab73bab3145699dbbd32053b1581b5f0",
+    "ci": "PR exact head 0e153a2: qualify (rerun), qualify-windows-r8, otio-oracle success; push run on c408bbe: success",
+    "windows": "detached c408bbe: typecheck, lint, format, provenance, brand, build pass; npm test 633/640 with 4 transient failures (two worker launches failing with CreateProcess error 2, and a locked-file cleanup) whose files pass 14/14 when rerun alone; test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Arabic reading quality is unreviewed (H1 pending)",
+    "No ASR: captions are imported or typed only",
+    "Captions and titles share one style and position",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
