@@ -31,6 +31,7 @@ import { withMeasuredLoudnorm } from "./render/plan.ts";
 import { ANIMATION_ENABLED } from "./animation/flags.ts";
 import { transformFilters } from "./effects/registry.ts";
 import {
+  ANIMATION_COMPILER_V1,
   opacityFilterChain,
   renderableAnimationChannels,
   volumeFilterChain,
@@ -427,7 +428,7 @@ export async function renderPlan(
               rangeStartTicks: from,
               rangeEndTicks: to,
               fps: profile.fps,
-              compiler: plan.animationCompiler,
+              compiler: plan.animationCompiler ?? ANIMATION_COMPILER_V1,
             }),
           );
           picture = faded;
@@ -469,7 +470,7 @@ export async function renderPlan(
               animVol,
               a.durationTicks,
               profile.fps,
-              plan.animationCompiler,
+              plan.animationCompiler ?? ANIMATION_COMPILER_V1,
             )
           : [];
         const shaping = [

@@ -17,6 +17,7 @@ import { mediaTime } from "../animation/media-time.ts";
 import type { Channel } from "../animation/types.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 import { CommandError } from "../command/errors.ts";
+import { sha256Hex } from "../hash/canonical.ts";
 
 /**
  * The compilers a render plan may name. Version 2's tolerances and caps
@@ -242,8 +243,9 @@ export function assertChannelRenderable(
   durationTicks: number,
   fps: Rational,
   compiler: AnimationCompiler,
-): { segments: number; samples: number } {
-  if (!channel?.keys.length) return { segments: 0, samples: 0 };
+  totals: { segments: number; samples: number },
+) {
+  if (!channel?.keys.length) return;
   if (!RENDERED.has(path))
     throw new CommandError(
       "CAPABILITY_UNAVAILABLE",
@@ -257,26 +259,38 @@ export function assertChannelRenderable(
       `Clip ${clipId}'s ${path} animation has two keys at one time.`,
     );
   const range = CHANNEL_RANGE[rendered];
-  if (channel.keys.some((k) => k.value < range.min || k.value > range.max))
+  if (channel.keys.some((k) => !(k.value >= range.min && k.value <= range.max)))
     throw new CommandError(
       "VALIDATION",
       `Clip ${clipId}'s ${path} keys must be between ${range.min} and ${range.max}.`,
     );
-  const memo = JSON.stringify([path, channel, durationTicks, fps, compiler]);
-  const known = checked.get(memo);
-  const samples = frames(0, durationTicks, fps).length;
-  if (known !== undefined) return { segments: known, samples };
-  const segments = segmentsFor(compiler)(
-    channel,
-    rendered,
-    0,
-    durationTicks,
-    fps,
-  ).length;
-  if (checked.size >= CHECKED_ENTRIES)
-    checked.delete(checked.keys().next().value!);
-  checked.set(memo, segments);
-  return { segments, samples };
+  // The plan's sample budget is checked before this channel is sampled
+  // (its frame count is arithmetic), so a large plan is refused cheaply.
+  totals.samples += frameCount(durationTicks, fps);
+  assertPlanAnimationBudget(totals, compiler);
+  const memo = sha256Hex(
+    JSON.stringify([path, channel, durationTicks, fps, compiler]),
+  );
+  let segments = checked.get(memo);
+  if (segments === undefined) {
+    segments = segmentsFor(compiler)(
+      channel,
+      rendered,
+      0,
+      durationTicks,
+      fps,
+    ).length;
+    if (checked.size >= CHECKED_ENTRIES)
+      checked.delete(checked.keys().next().value!);
+    checked.set(memo, segments);
+  }
+  totals.segments += segments;
+  assertPlanAnimationBudget(totals, compiler);
+}
+
+/** Frames over [0, durationTicks), counted without sampling. */
+function frameCount(durationTicks: number, fps: Rational) {
+  return durationTicks > 0 ? Math.ceil(durationTicks / frameTicksFor(fps)) : 0;
 }
 
 /** A plan's totals must stay within the plan budgets (version 2). */
@@ -391,7 +405,7 @@ export function opacityConstantAtLocalTime(
   channel: Channel<number>,
   localTicks: number,
 ): string {
-  const v = sampleAnimationPathAtLocalTime(channel, "opacity", localTicks, 1);
+  const v = sampler(channel, "opacity")(localTicks);
   return `format=yuva420p,colorchannelmixer=aa=${decimal(clamp("opacity", v))}`;
 }
 
@@ -412,15 +426,14 @@ export function assertAnimationRenderable(
   for (const [path, channel] of Object.entries(animation)) {
     if (!channel?.keys.length) continue;
     if (RENDERED.has(path) && !drawn.has(path)) continue;
-    const r = assertChannelRenderable(
+    assertChannelRenderable(
       clipId,
       path,
       channel as Channel<number>,
       durationTicks,
       fps,
       compiler,
+      totals,
     );
-    totals.segments += r.segments;
-    totals.samples += r.samples;
   }
 }

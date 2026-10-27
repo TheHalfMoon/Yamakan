@@ -332,9 +332,9 @@
       "Yamakan complete rebrand: relocated under first-party path; update imports and importedSha256.",
       "YU-019: the read margin is one frame of the profile (never less than 1/30 s, so 30 fps is unchanged); the output check names the probe's 1/30 s unit at any profile rate.",
       "YU-020: a layer's transform (crop before the contain fit, scale after it, overlay offset from the centre) is compiled from bounded integers in core/effects/registry.ts; a layer without one is unchanged.",
-      "YU-022: the filter graph (and the loudness measure pass's) is written to a script file the worker may read (-filter_complex_script), not passed on the command line; opacity and volume chains take the plan's animation compiler."
+      "YU-022: the filter graph (and the loudness measure pass's) is written to a script file the worker may read (-filter_complex_script), not passed on the command line; opacity and volume chains take the plan's animation compiler (version 1 when an animated plan names none)."
     ],
-    "importedSha256": "efc657ecca8a215de0ddddeaba9e7261c4ceb0fc02f5245cc4f6e32b0e2008b8",
+    "importedSha256": "018a6882bcd6aac797e60678a91973952899dcd12ab504486322368613f32221",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

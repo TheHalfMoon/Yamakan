@@ -561,3 +561,42 @@ test("out-of-range keys, non-finite curves and plan budgets are refused", async 
   assert.equal(budget(MAX_PLAN_SEGMENTS + 1, 10), "LIMIT_EXCEEDED");
   assert.equal(budget(10, MAX_PLAN_SAMPLES + 1), "LIMIT_EXCEEDED");
 });
+
+test("edge cases of the windowed sampler: one or two keys, keys on frame middles, holds, unsorted keys", () => {
+  const mid = Math.floor(F / 2);
+  const cases: [string, Channel<number>][] = [
+    ["one key", channel(key("a", 7 * F + mid, 0.3, "linear"))],
+    [
+      "two keys on frame middles, held ends",
+      {
+        keys: [key("a", 3 * F + mid, 0.1), key("b", 20 * F + mid, 0.9)],
+        extrapolation: { before: "hold", after: "hold" },
+      },
+    ],
+    [
+      "linear ends, unsorted, before 0 and past the end",
+      {
+        keys: [
+          key("c", 70 * F, 0.2, "bezier", {
+            leftHandle: { dt: mediaTime({ ticks: -5 * F }), dv: 0.2 },
+            tangentMode: "broken",
+          }),
+          key("a", -10 * F, 0.5, "bezier"),
+          key("b", 30 * F + mid, 0.8, "linear"),
+        ],
+        extrapolation: { before: "linear", after: "linear" },
+      },
+    ],
+  ];
+  for (const [label, curve] of cases) {
+    const windowed = perFrameSegments(curve, "opacity", 0, 60 * F, FPS30);
+    for (const frame of windowed) {
+      const at = frame.t0 + Math.floor((frame.t1 - frame.t0) / 2);
+      const whole = Math.min(
+        1,
+        Math.max(0, sampleAnimationPathAtLocalTime(curve, "opacity", at, 1)),
+      );
+      assert.equal(frame.value, whole, `${label} at ${at}`);
+    }
+  }
+});
