@@ -55,6 +55,7 @@ import {
 } from "../cinema/control-compiler.ts";
 import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
 import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
+import { assertLanguage, assertTranscribable } from "../audio/transcription.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import {
   StudioDocumentSchema,
@@ -1937,6 +1938,41 @@ export const commands = {
     summary: "Report Director availability and unsupported model stages.",
     input: z.object({}).strict(),
     run: () => directorCapability(),
+  }),
+  "yamakan.audio.transcribe": define({
+    scope: "render:execute",
+    mutation: false,
+    summary:
+      "Transcribe one project asset's sound (YU-070): checks the language (whisper.cpp's list) and the source (sound, at most an hour), then refuses with the plain reason while no recognizer is qualified here: no whisper.cpp runner or weights ship in this build. Never downloads or installs anything.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+        language: z.string().min(2).max(16),
+      })
+      .strict(),
+    run: async (ctx, a) => {
+      assertLanguage(a.language);
+      const { asset, frameRate } = await ctx.store.assetFile(
+        a.projectId,
+        a.assetId,
+      );
+      assertTranscribable(asset, frameRate);
+      const transcribe = (
+        await discoverEngineCapabilities({
+          modelRoot: ctx.modelRoot ?? null,
+          verifyHashes: false,
+        })
+      ).find((d) => d.operation === "transcribe")!;
+      // Even a pinned model would not run: the recognizer worker is not
+      // implemented yet, so nothing is claimed to be recognized.
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        transcribe.capability.available
+          ? "Transcription is not available in this build."
+          : transcribe.message,
+      );
+    },
   }),
   "yamakan.engines.capabilities": define({
     scope: "project:read",
