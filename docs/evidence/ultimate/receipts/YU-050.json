@@ -1,0 +1,69 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "7f17434",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-050",
+  "objective": "Compile cinematic intent to explicitly supported conditioning",
+  "parts": [
+    {
+      "part": "YU-050 controls compiler (yamakan.controls-compiler/v1)",
+      "branch": "feat/yu-050-control-compiler",
+      "mergedPr": 139,
+      "headCommit": "8777baf",
+      "mergeCommit": "61c0012"
+    }
+  ],
+  "flags": "none",
+  "deviations": [
+    "Intent (yamakan.shot-intent v1) lowers by a fixed table to the engine contract v2's own named controls and input roles; enums are lowercase snake case as the contract's control values are written",
+    "An end frame becomes the contract's lastFrame role as an AssetRef of a PNG or JPEG still of the given project; depth and pose have no contract role, so they are always unsupported (refused unless accepted as dropped, which is recorded)",
+    "The output is validated with the contract's exported ControlsSchema; tests build a full EngineRequestV2 from every intent value and check it with EngineRequestV2Schema and refusal(), so contract drift fails CI",
+    "loweredControlsHash is computed over {compiler, recipeHash, controls, inputs}",
+    "This build's server recipes (the fake engine's) declare no style controls, so every style field is reported as previs metadata, never as applied"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Cinematic intent to conditioning)",
+  "tests": {
+    "files": ["tests/control-compiler.test.ts"],
+    "result": "5/5: contract-valid request and refusal() null; every enum value; the hash bound to the compiler and recipe; dropped and foreign guides refused; the command resolves only the project's media"
+  },
+  "reviews": [
+    {
+      "kind": "combined correctness and contract review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 6,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix, no should-fix; one nit applied in 4a48754"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The branch was behind main after #138; main was merged in (8777baf, both conflicts additive) and CI ran green on that head",
+    "d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "61c0012",
+    "ci": "PR exact head 8777baf green; push run 40591549316 on 61c0012: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 61c0012: typecheck, lint, format, provenance, brand, build pass; npm test 678/682 with 1 failure (the HTTP VFR upload test at its 10 s startup timeout) that passes alone (tests/http.test.ts 3/3, 1.8 s), 3 POSIX-only skips; test:studio 5/5 and 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No real engine declares controls, and no evaluation shows any control has a visible effect: no applied-optics claim",
+    "Intents are not yet stored on story shots",
+    "The VFR test's timeout was most likely a shared fixed test port (24319) between two concurrently run test files, fixed separately in #141"
+  ]
+}
