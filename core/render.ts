@@ -169,8 +169,9 @@ export function ptsOffset(ticks: number) {
 
 // Version of how this module draws a plan. Bump it whenever the drawing
 // changes, so cached previews of unchanged plans are not reused (4:
-// YU-023 color conversion and tags).
-export const RENDERER_VERSION = 4;
+// YU-023 color conversion and tags; 5: YU-026b stills read once and
+// looped on demand).
+export const RENDERER_VERSION = 5;
 
 // A read margin of one frame: of the profile, and never less than 1/30 s
 // (so a 30 fps profile reads exactly as before; YU-019).
@@ -393,6 +394,34 @@ export async function renderPlan(
     ];
     let visual = "base";
     let n = 0;
+    // YU-026b: each still in the window is read once, as one input, and
+    // split to every clip that shows it (the branches share one decoded
+    // frame). A clip repeats its frame with a pull-based loop, so frames
+    // are made only as the timeline reaches them: a still-heavy timeline
+    // neither floods memory nor needs one input per clip.
+    const stills = new Map<string, string[]>();
+    for (const layer of plan.layers) {
+      if (layer.kind !== "image") continue;
+      const from = Math.max(layer.startTicks, wStart);
+      const to = Math.min(layer.startTicks + layer.durationTicks, wEnd);
+      if (to <= from) continue;
+      const key = layer.assetSha256;
+      stills.set(key, [...(stills.get(key) ?? []), layer.clipId]);
+    }
+    const stillBranches = new Map<string, string>();
+    let s = 0;
+    for (const [key, clipIds] of stills) {
+      const layer = plan.layers.find((x) => x.assetSha256 === key)!;
+      const index = await input(layer, []);
+      const labels = clipIds.map((_, k) => `s${s}_${k}`);
+      filters.push(
+        labels.length === 1
+          ? `[${index}:v]null[${labels[0]}]`
+          : `[${index}:v]split=${labels.length}${labels.map((l) => `[${l}]`).join("")}`,
+      );
+      clipIds.forEach((clipId, k) => stillBranches.set(clipId, labels[k]!));
+      s++;
+    }
     for (const layer of plan.layers) {
       // The part of the clip inside the window.
       const from = Math.max(layer.startTicks, wStart);
@@ -408,11 +437,11 @@ export async function renderPlan(
       const flicks = `settb=1/${FLICKS_PER_SECOND}`;
       let timed: string;
       if (layer.kind === "image") {
-        // A still: one frame looped for the clip's part of the window, cut
-        // one frame long and ended by the overlay's enable window.
-        const cut = seconds(to - from + FRAME);
-        const index = await input(layer, ["-loop", "1", "-t", cut]);
-        timed = `[${index}:v]trim=duration=${cut},${flicks},setpts=PTS-STARTPTS+(${from})`;
+        // A still: its one frame repeated at the output rate for the
+        // clip's part of the window plus one frame, each copy at its exact
+        // timeline time, and ended by the overlay's enable window.
+        const frames = Math.ceil((to - from) / FRAME) + 1;
+        timed = `[${stillBranches.get(layer.clipId)}]loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
       } else {
         // Every source frame keeps its own timeline time, clip start plus
         // its distance from the clip's source start, in export and in any

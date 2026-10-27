@@ -486,33 +486,39 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - It also runs a backup while edits keep committing, then restores the backup and edits the restored workspace.
   - A full run writes `docs/evidence/ultimate/editor-scale.json`, including the host details and one recorded export probe.
   - `--probe clips:tracks:frames:WxH` measures one unnamed profile without changing the evidence.
-- **Results (Windows, 12 CPUs, Node 24, one run).**
+- **Results (Windows, 12 CPUs, Node 24; one run, recorded with other work loading the host).**
   - **Editing is qualified at S, M and T.**
-    - A batched save of 64 operations takes at most 59 ms.
-    - An edit, undo or redo takes at most 61 ms.
-    - Reopening takes at most 28 ms, and a plan compile at most 9 ms.
-    - One reference frame takes at most 1.25 s.
+    - A batched save of 64 operations takes at most 31 ms.
+    - An edit, undo or redo takes at most 33 ms.
+    - Reopening takes at most 25 ms, and a plan compile at most 20 ms.
+    - One reference frame takes at most 0.6 s.
     - M's snapshot is 60 KB, against the 2 MiB limit.
   - **Backup under stress.**
-    - Ten to twelve edits commit while each backup runs.
+    - Five to twenty-one edits commit while each backup runs.
     - Each restored workspace holds one revision between the last revision acknowledged before the backup and the last one acknowledged during it.
     - That revision is byte-identical to the live workspace's copy, and one more edit commits in the restored workspace.
-    - Backup takes at most 0.95 s and restore about 0.15 s.
+    - Backup takes at most 2.8 s and restore at most 0.41 s (T, under load; S and M take 0.25 s or less).
   - **Refusals.** L, H, A and K are each refused with their own message, and the project is unchanged (no clamp). The test also accepts 200 clips, 16 tracks, a clip ending exactly at ten minutes, and a 1920×1080 output. The clip and track refusals now name the limit ("A project holds at most 200 clips.").
-  - **Memory.** The script's peak resident memory (service code only, workers excluded) is 232 MiB.
-- **Export is qualified only at S.**
-  - **S** exports in 68 s, about 19 ms per frame for 3 stacked 720p layers.
-  - **M** cannot be exported on Windows. The worker launch is refused ("command line too long"). Each clip is its own FFmpeg input (whitelists, seek, an absolute path), so 200 inputs pass the Windows 32,767-character command line; this cause is inferred from the code, not recorded.
-  - **T** passes the 180 s render wall-clock limit ("Render time limit exceeded").
-  - **The recorded probe fails too.** It has 40 1080p stills on one track over three minutes, and FFmpeg wrote no output (exit 69, "Nothing was written into output file").
-  - **Other runs, observed but not recorded.**
-    - T's failure was not the same in every run. Some runs failed within seconds with PNG decoder buffer errors, "Cannot allocate memory" and exit 0xC00000FD, while the recorded run reached the wall-clock limit.
-    - The likely cause, not confirmed, is that each still is fed with `-loop 1`, which decodes as fast as it is read. Later clips then queue full frames until the overlay reaches them, inside the worker's 2 GiB.
-- **Proposal (not applied; follow-up YU-026b).**
-  - Feed stills by a pull-based `loop` filter from one decoded frame.
-  - Reference inputs so the command line no longer grows with each clip's full path.
-  - Then re-measure M and T, and propose a render wall-clock limit that scales with the timeline's duration.
-  - Until then, the export limits are effectively far below the editing limits. An export that cannot run fails with an explicit error and leaves no partial file.
+  - **Memory.** The script's peak resident memory (service code only, workers excluded) is 170 MiB.
+- **Export.**
+  - **Before YU-026b** (`4cb19e3`), export was qualified only at S:
+    - M's worker launch was refused: "command line too long", because each clip was its own FFmpeg input.
+    - T reached the 180 s wall-clock limit.
+    - 40 1080p stills over three minutes failed in FFmpeg. Each still was fed with `-loop 1`, which decodes as fast as it is read, so frames queued until the overlay reached them.
+  - **YU-026b** changes how stills are read. Each still in the render window is now one input, split to every clip that shows it; the branches share one decoded frame. Each clip repeats its frame with a pull-based `loop` filter at exact output-frame times, so frames are made only as the timeline reaches them. Video clips keep one seeked input per clip.
+  - **After YU-026b**, in separate `--probe` runs on this host, not recorded in the JSON:
+    - The 40-still, three-minute timeline exports in 38 s.
+    - T exports in 120 s.
+    - M launches now, and still exceeds the 180 s limit.
+  - **The recorded run**, with other work loading the host to about 64% CPU:
+    - S exports in 49 s.
+    - T and the 40-still probe reach the 180 s limit.
+    - M's 15 stacked 1080p layers run out of the worker's 2 GiB (exit −12, after 140 s).
+  - **So export is qualified only at S.** T fits the limit on an idle host, but with no margin under load.
+- **Proposal (measured, not applied; a new policy version needs review).**
+  - Make the render wall-clock limit scale with the timeline's duration, for example 180 s plus 30 s per output minute at 1080p.
+  - Bound the layers composited at once, so that M's 16 stacked 1080p tracks fit the worker's memory. Today they do not, so M stays edit-qualified and export-unqualified.
+  - A video-heavy project (many distinct video clips) still adds one input per clip, so its command line grows with the clip count.
 - **Not measured.**
   - Browser timeline virtualization at M.
   - History depth and growth.
