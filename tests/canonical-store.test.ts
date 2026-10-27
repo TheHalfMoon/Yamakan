@@ -66,7 +66,7 @@ test("a newer project format is inspectable but never edited or rewritten", asyn
   const { store, project, db, plant } = await workspace();
   const future = {
     ...fromEditView({ ...project, revision: 1 }),
-    formatVersion: 7,
+    formatVersion: 8,
     futureTimeline: { tracks: ["kept"] },
   };
   const planted = plant("yamakan.project/1", future, 1);
@@ -128,7 +128,7 @@ test("restore never overwrites a head written in a newer format", async () => {
   const { store, project, db, plant } = await workspace();
   const future = {
     ...fromEditView({ ...project, revision: 1 }),
-    formatVersion: 7,
+    formatVersion: 8,
   };
   const planted = plant("yamakan.project/1", future, 1);
   const history = await store.history(project.id);

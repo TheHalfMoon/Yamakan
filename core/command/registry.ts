@@ -5,7 +5,12 @@ import {
   AnimationPathSchema,
   ClipAnimationSchema,
 } from "../timeline/animation-schema.ts";
-import { Ticks } from "../time.ts";
+import { Ticks, framesToTicks } from "../time.ts";
+import {
+  TRANSITION_LIMITS,
+  TransitionAudio,
+  previousClip,
+} from "../transitions.ts";
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
@@ -83,7 +88,7 @@ import {
   replaceOperations,
   shotWithTake,
 } from "../takes.ts";
-import { fromEditView } from "../canonical.ts";
+import { fromEditView, type CanonicalProject } from "../canonical.ts";
 import type { DocumentRef } from "../document-ref.ts";
 import { randomUUID } from "node:crypto";
 import {
@@ -186,6 +191,19 @@ type Definition<S extends z.ZodType, R> = {
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
 };
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
+
+// YU-021: the clip a transition into this one comes from.
+function outgoingClip(project: CanonicalProject, clipId: string) {
+  const clip = project.clips.find((c) => c.id === clipId);
+  if (!clip) throw new CommandError("NOT_FOUND", "Clip not found.");
+  const before = previousClip(project.clips, clip);
+  if (!before)
+    throw new CommandError(
+      "VALIDATION",
+      "A transition needs its clip to start where the previous clip on its track ends.",
+    );
+  return before.id;
+}
 
 // YU-032: a story and the head it is read with, from one revision.
 async function readStory(
@@ -849,6 +867,68 @@ export const commands = {
         a.projectId,
         a.expectedRevision,
         [{ type: "clip.setEffects", clipId: a.clipId, effects: a.effects }],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.transition.set": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Dissolve from the previous clip on a video track into this one (YU-021, centredDissolve/v1): an even number of frames centred on the cut, using source handles on both sides, with an equal-power sound crossfade or a sound cut. Clip times are unchanged. Undoable like any edit.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+        durationFrames: z
+          .number()
+          .int()
+          .min(TRANSITION_LIMITS.minFrames)
+          .max(TRANSITION_LIMITS.maxFrames),
+        audio: TransitionAudio.default("equalPower"),
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        (canonical) => [
+          {
+            type: "clip.setTransition",
+            clipId: a.clipId,
+            transition: {
+              kind: "dissolve",
+              fromClipId: outgoingClip(canonical, a.clipId),
+              durationTicks: framesToTicks(
+                a.durationFrames,
+                canonical.output.fps,
+              ),
+              audio: a.audio,
+            },
+          },
+        ],
+        principal.id,
+        receipt,
+      ),
+  }),
+  "yamakan.transition.remove": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Make the cut into this clip a plain cut again (removes its transition). Undoable like any edit.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        clipId: Id,
+      })
+      .strict(),
+    run: ({ store, receipt, principal }, a) =>
+      store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        [{ type: "clip.setTransition", clipId: a.clipId, transition: null }],
         principal.id,
         receipt,
       ),

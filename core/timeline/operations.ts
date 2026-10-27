@@ -35,6 +35,12 @@ import { getSourceTimeAtClipTime } from "../retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import {
+  TRANSITIONS_OFF,
+  TransitionSchema,
+  previousClip,
+  transitionWritesEnabled,
+} from "../transitions.ts";
+import {
   AnimationPathSchema,
   ClipAnimationSchema,
 } from "./animation-schema.ts";
@@ -160,6 +166,15 @@ export const OperationSchema = z.discriminatedUnion("type", [
       clipId: Id,
       assetId: Id,
       sourceStartTicks: Ticks,
+    })
+    .strict(),
+  z
+    .object({
+      // YU-021: the dissolve from the previous clip into this one; null
+      // makes the cut a plain cut again.
+      type: z.literal("clip.setTransition"),
+      clipId: Id,
+      transition: TransitionSchema.nullable(),
     })
     .strict(),
   z
@@ -348,7 +363,13 @@ function fresh(p: CanonicalProject, id: string) {
   if (used) throw invalid("Identifier is already in use.");
 }
 
-function apply(p: CanonicalProject, op: Operation): void {
+// `original` is the project before the batch (for checks that compare a
+// clip with what it was, such as a restated transition with the switch off).
+function apply(
+  p: CanonicalProject,
+  op: Operation,
+  original: CanonicalProject = p,
+): void {
   switch (op.type) {
     case "track.add":
       fresh(p, op.trackId);
@@ -484,6 +505,12 @@ function apply(p: CanonicalProject, op: Operation): void {
         fadeOutTicks: Math.min(c.fadeOutTicks, c.durationTicks - first),
         sound: secondSound,
       };
+      // The dissolve into the clip stays at its start; the new cut is a cut.
+      // A dissolve out of the clip now comes from its second part.
+      delete second.transition;
+      for (const other of p.clips)
+        if (other.transition?.fromClipId === c.id)
+          other.transition.fromClipId = second.id;
       c.durationTicks = first;
       c.fadeOutTicks = 0;
       c.fadeInTicks = Math.min(c.fadeInTicks, first);
@@ -633,6 +660,32 @@ function apply(p: CanonicalProject, op: Operation): void {
       c.title = null;
       c.assetId = asset.id;
       c.sourceStartTicks = op.sourceStartTicks;
+      return;
+    }
+    case "clip.setTransition": {
+      const c = clip(p, op.clipId);
+      unlocked(p, c.trackId);
+      if (op.transition === null) {
+        delete c.transition;
+        return;
+      }
+      // With the switch off, only a transition the clip already had (now,
+      // or before this batch: an editor save that recreates the clip
+      // restates it) is accepted.
+      const restated = (x: { transition?: unknown } | undefined) =>
+        JSON.stringify(x?.transition ?? null) === JSON.stringify(op.transition);
+      if (
+        !transitionWritesEnabled() &&
+        !restated(c) &&
+        !restated(original.clips.find((x) => x.id === c.id))
+      )
+        throw new CommandError("CAPABILITY_UNAVAILABLE", TRANSITIONS_OFF);
+      // Both clips change on screen, so the outgoing one must be editable.
+      const before = previousClip(p.clips, c);
+      if (before) unlocked(p, before.trackId);
+      // The batch's validation (core/transitions.ts) names anything that
+      // keeps it from drawing, once every operation of the batch is applied.
+      c.transition = op.transition;
       return;
     }
     case "clip.setSpeed": {
@@ -1038,7 +1091,7 @@ export function applyBatch(
   const next = structuredClone(project);
   ops.forEach((op, index) => {
     try {
-      apply(next, op);
+      apply(next, op, project);
     } catch (e) {
       if (e instanceof CommandError || e instanceof RangeError)
         throw new CommandError(

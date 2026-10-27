@@ -20,6 +20,7 @@ import {
 } from "./project.ts";
 import type { Rational } from "./time.ts";
 import { EFFECTS_OFF, effectWritesEnabled } from "./effects/registry.ts";
+import { TRANSITIONS_OFF, transitionWritesEnabled } from "./transitions.ts";
 
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
@@ -2973,6 +2974,24 @@ export class ProjectStore {
             )
           )
             throw new CommandError("CAPABILITY_UNAVAILABLE", EFFECTS_OFF);
+        }
+        // With transition writes off (YU-021), a save may keep or remove a
+        // transition, never add or change one.
+        if (!transitionWritesEnabled()) {
+          const before = new Map(
+            current().clips.map((c) => [
+              c.id,
+              canonicalJson(c.transition ?? null),
+            ]),
+          );
+          if (
+            proposed.clips.some(
+              (c) =>
+                c.transition !== undefined &&
+                before.get(c.id) !== canonicalJson(c.transition),
+            )
+          )
+            throw new CommandError("CAPABILITY_UNAVAILABLE", TRANSITIONS_OFF);
         }
         // Asset identities and immutable metadata come only from the validated import path.
         if (canonicalJson(proposed.assets) !== canonicalJson(current().assets))
