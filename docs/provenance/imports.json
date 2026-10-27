@@ -335,9 +335,10 @@
       "YU-022: the filter graph (and the loudness measure pass's) is written to a script file the worker may read (-filter_complex_script), not passed on the command line; opacity and volume chains take the plan's animation compiler (version 1 when an animated plan names none).",
       "YU-024: a revision's burned-in caption tracks (read by content hash) are passed to compilePlan, so they render with titles.",
       "YU-021: a layer with a dissolve gets an alpha fade-in (format=yuva420p, fade=t=in:alpha=1) in timeline time, and a crossfaded sound gets a quarter-sine afade (curve=qsin); both formatted from bounded plan integers, with no stored expressions.",
-      "YU-023: every picture is converted once to the frozen SDR policy (scale in_color_matrix/in_range to bt709 limited range, yuva420p), the base and the output are tagged BT.709 limited range, and a clip's LUT is written from its stored document as canonical .cube text in the render folder for lut3d on gbrap (alpha kept); the renderer version is 4."
+      "YU-023: every picture is converted once to the frozen SDR policy (scale in_color_matrix/in_range to bt709 limited range, yuva420p), the base and the output are tagged BT.709 limited range, and a clip's LUT is written from its stored document as canonical .cube text in the render folder for lut3d on gbrap (alpha kept); the renderer version is 4.",
+      "YU-025: renderRevision takes an export variant's output size, rendering the same revision with that profile (the same contain fit)."
     ],
-    "importedSha256": "610891cd769d013b50df3148f9670cd6d7f7caeebfe13c5d510276875bef6200",
+    "importedSha256": "3ad39da786541eb24b1a4adbd338b5cbeadcc78bd68b141d0597bc9b1ce78213",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

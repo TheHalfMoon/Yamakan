@@ -668,6 +668,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
       Date.now(),
       Date.now() + 3_600_000,
     );
+    db.exec("DROP TABLE IF EXISTS asset_replacements");
     db.exec("DROP TABLE IF EXISTS story_document_versions");
     db.exec("PRAGMA user_version = 12");
     db.exec("COMMIT");
@@ -708,7 +709,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   const upgraded = new ProjectStore(c.root);
   handles.push(upgraded);
   await upgraded.initialize();
-  assert.equal(read("PRAGMA user_version").user_version, 14);
+  assert.equal(read("PRAGMA user_version").user_version, 15);
   const db = new DatabaseSync(file, { readOnly: true });
   try {
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);

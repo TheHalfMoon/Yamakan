@@ -16,7 +16,7 @@ import {
   unlink,
 } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "./store.ts";
@@ -91,11 +91,44 @@ type Row = {
 };
 
 // The only payload this build executes; anything else is quarantined.
+// YU-025: an export variant renders the same revision at another output
+// size (an aspect variant), with the same contain fit; its plan and
+// profile are frozen by the revision and the size.
+export const ExportVariant = z
+  .object({
+    name: z.string().regex(/^[a-z0-9-]{1,16}$/),
+    width: z
+      .number()
+      .int()
+      .min(16)
+      .max(1920)
+      .refine((x) => x % 2 === 0, "Width is even."),
+    height: z
+      .number()
+      .int()
+      .min(16)
+      .max(1080)
+      .refine((x) => x % 2 === 0, "Height is even."),
+  })
+  .strict();
+export type ExportVariant = z.infer<typeof ExportVariant>;
+export const BATCH_LIMITS = Object.freeze({
+  variants: 4,
+  // The free space a batch needs per output, above the disk reserve.
+  outputBytes: 512 * 1024 * 1024,
+});
+
 const ExportPayload = z
   .object({
     format: z.literal("export/1"),
     /** W18: optional two-pass loudnorm on the mixed audio bus. */
     normalizeLoudness: z.boolean().optional(),
+    /** YU-025: the variant's output size, and the batch it belongs to. */
+    variant: ExportVariant.optional(),
+    batchId: z
+      .string()
+      .regex(/^[a-f0-9]{32}$/)
+      .optional(),
   })
   .strict();
 const DerivativePayload = z
@@ -266,6 +299,181 @@ export class JobSupervisor {
     });
     this.#pump();
     return this.#view(row);
+  }
+
+  /**
+   * YU-025: one export per variant of the current revision, admitted
+   * together or not at all (the active-job limit counts the whole batch).
+   * A retry with the same key returns the same batch.
+   */
+  async submitBatch(
+    projectId: string,
+    key: string,
+    variants: ExportVariant[],
+    options: { normalizeLoudness?: boolean } = {},
+  ) {
+    if (this.#closing) throw new Error("Render queue is closing.");
+    this.#current();
+    if (!this.#generation) await this.start();
+    if (!/^[a-zA-Z0-9_-]{1,60}$/.test(key))
+      throw new Error("Invalid idempotency key.");
+    const parsed = z
+      .array(ExportVariant)
+      .min(1)
+      .max(BATCH_LIMITS.variants)
+      .parse(variants);
+    const names = new Set(parsed.map((v) => v.name));
+    const sizes = new Set(parsed.map((v) => `${v.width}x${v.height}`));
+    if (names.size !== parsed.length || sizes.size !== parsed.length)
+      throw new CommandError(
+        "VALIDATION",
+        "Each variant of a batch has its own name and size.",
+      );
+    const project = await this.store.load(projectId);
+    if (this.#closing) throw new Error("Render queue is closing.");
+    // The batch is named by what it asks for too: a retry with the same key
+    // but other variants or settings is another batch, never the old one.
+    const batchId = createHash("sha256")
+      .update(
+        JSON.stringify([
+          projectId,
+          project.revision,
+          key,
+          [...parsed].sort((a, b) => a.name.localeCompare(b.name)),
+          options.normalizeLoudness === true,
+        ]),
+      )
+      .digest("hex")
+      .slice(0, 32);
+    // A batch already admitted is returned as it is (an idempotent retry).
+    const known = this.store.read(
+      (db) =>
+        db
+          .prepare(
+            "SELECT 1 FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ? LIMIT 1",
+          )
+          .get(projectId, batchId) !== undefined,
+    );
+    if (known) return this.batchStatus(projectId, batchId);
+    // Room for every output above the disk reserve (a bound per output, as
+    // the render's own size check), before any is admitted.
+    const space = await statfs(this.store.root);
+    const free = Number(space.bavail) * Number(space.bsize);
+    if (
+      free <
+      RESOURCE_POLICY.enforced.diskReserveBytes +
+        parsed.length * BATCH_LIMITS.outputBytes
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Not enough free disk space for this batch's exports.",
+      );
+    this.store.transaction((db) => {
+      this.#currentIn(db);
+      const existing = db
+        .prepare(
+          "SELECT count(*) AS n FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ?",
+        )
+        .get(projectId, batchId) as { n: number };
+      if (existing.n) return;
+      const active = (
+        db
+          .prepare(
+            `SELECT count(*) AS n FROM jobs WHERE state NOT IN (${terminalSql})`,
+          )
+          .get() as { n: number }
+      ).n;
+      if (active + parsed.length > RESOURCE_POLICY.enforced.activeJobs)
+        throw new CommandError("LIMIT_EXCEEDED", "Too many active jobs.");
+      for (const variant of parsed)
+        db.prepare(
+          "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', ?, ?, ?, ?, 'queued')",
+        ).run(
+          randomUUID(),
+          projectId,
+          project.revision,
+          // "." is outside a single export's key alphabet, so a batch
+          // output's key never matches (or collides with) one.
+          `b.${batchId}.${variant.name}`,
+          JSON.stringify({
+            format: "export/1",
+            normalizeLoudness: options.normalizeLoudness === true,
+            variant,
+            batchId,
+          }),
+        );
+    });
+    this.#pump();
+    return this.batchStatus(projectId, batchId);
+  }
+
+  /**
+   * A batch's outputs: each variant's job, its error and verified profile.
+   * The batch succeeds only when every output did; one failure fails it.
+   */
+  batchStatus(projectId: string, batchId: string) {
+    if (!/^[a-f0-9]{32}$/.test(batchId))
+      throw new CommandError("VALIDATION", "Invalid batch id.");
+    const rows = this.store.read(
+      (db) =>
+        db
+          .prepare(
+            "SELECT * FROM jobs WHERE project_id = ? AND kind = 'export' AND json_valid(payload) AND json_extract(payload, '$.batchId') = ? ORDER BY rowid",
+          )
+          .all(projectId, batchId) as Row[],
+    );
+    if (!rows.length) throw new CommandError("NOT_FOUND", "Batch not found.");
+    const outputs = rows.map((row) => {
+      const payload = ExportPayload.safeParse(safeJson(row.payload));
+      if (!payload.success || !payload.data.variant)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "A batch output's record is damaged.",
+        );
+      const { variant } = payload.data;
+      const view = this.#view(row);
+      return {
+        ...view,
+        variant: variant!,
+        // A render's output is verified against its plan's profile, so a
+        // finished output is exactly this size.
+        profile:
+          view.state === "COMPLETED"
+            ? { width: variant!.width, height: variant!.height }
+            : null,
+      };
+    });
+    // A job set aside for reconciliation counts as failed until it is
+    // resolved (it may be queued again); one being cancelled, as running.
+    const states = outputs.map((o) => o.state);
+    // One state for the batch: COMPLETED only when every output is.
+    let state: "COMPLETED" | "RUNNING" | "FAILED" | "CANCELLED" = "CANCELLED";
+    if (states.every((s) => s === "COMPLETED")) state = "COMPLETED";
+    else if (states.some((s) => s === "QUEUED" || s === "RUNNING"))
+      state = "RUNNING";
+    else if (states.some((s) => s === "FAILED")) state = "FAILED";
+    return {
+      batchId,
+      projectId,
+      revision: rows[0]!.frozen_revision,
+      state,
+      outputs,
+    };
+  }
+
+  /** Cancels a batch's unfinished outputs; finished ones are kept. */
+  cancelBatch(projectId: string, batchId: string) {
+    for (const o of this.batchStatus(projectId, batchId).outputs) {
+      // An output already being cancelled (or finished) is left as it is.
+      if (o.detail === "cancelRequested") continue;
+      if (o.state !== "QUEUED" && o.state !== "RUNNING") continue;
+      try {
+        this.cancel(o.id);
+      } catch {
+        // It finished meanwhile; the status below says how.
+      }
+    }
+    return this.batchStatus(projectId, batchId);
   }
 
   status(jobId: string) {
@@ -703,6 +911,12 @@ export class JobSupervisor {
       (pid) => this.#markRunning(jobId, attempt, pid),
       {
         normalizeLoudness: exportPayload.normalizeLoudness === true,
+        output: exportPayload.variant
+          ? {
+              width: exportPayload.variant.width,
+              height: exportPayload.variant.height,
+            }
+          : undefined,
       },
     );
     this.#markValidating(jobId, attempt);
