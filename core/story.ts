@@ -1,4 +1,5 @@
-// Story documents and reference packs (YU-031): creative documents of a
+// Story documents and reference packs (YU-031, voice and take continuity
+// references YU-051): creative documents of a
 // project, immutable and content-addressed like Studio canvases and Cinema
 // scenes (core/documents.ts), so every version is kept by the revisions
 // that name it. A story holds scenes, shots and takes with stable ids and
@@ -46,11 +47,28 @@ const MediaPinSchema = z
 // YU-032: where a take came from. The output is the take's own media
 // version; the inputs are the project media versions it was made from.
 // A story version is immutable, so its lineage is too.
+// YU-051: one entry of one immutable reference pack version a take was
+// made with, and the identity encoding it used (by id and payload hash).
+// core/continuity.ts resolves and checks these per stage.
+export const ContinuityRefSchema = z
+  .object({
+    packDocumentId: Id,
+    packContentHash: Sha256,
+    entryId: Id,
+    encoding: z.object({ id: Id, payloadHash: Sha256 }).strict().optional(),
+  })
+  .strict();
+export type ContinuityRef = z.infer<typeof ContinuityRefSchema>;
+
 const TakeLineageSchema = z
   .object({
     label: Name.optional(),
     outputHash: Sha256,
     inputs: z.array(MediaPinSchema).max(STORY_LIMITS.inputsPerTake),
+    continuity: z
+      .array(ContinuityRefSchema)
+      .max(STORY_LIMITS.inputsPerTake)
+      .optional(),
   })
   .strict();
 
@@ -131,7 +149,12 @@ export const REFERENCE_ROLES = [
   "wardrobe",
   "style",
   "camera",
+  // YU-051: a speaker's voice, from project audio, under voice-clone consent.
+  "voice",
 ] as const;
+type ReferenceRole = (typeof REFERENCE_ROLES)[number];
+// The roles that are a person's likeness or voice, so need consent.
+const PERSONAL_ROLES: readonly ReferenceRole[] = ["character", "voice"];
 
 const PackEntrySchema = z
   .object({
@@ -161,16 +184,19 @@ export const ReferencePackSchema = z
     if (new Set(ids).size !== ids.length)
       fail("Reference entry identifiers must be unique.");
     for (const e of p.entries)
-      if (e.role === "character") {
+      if (PERSONAL_ROLES.includes(e.role)) {
         if (e.characterId === null || e.consentId === null)
-          fail("A character reference needs its character and a consent.");
+          fail(`A ${e.role} reference needs its character and a consent.`);
       } else if (e.characterId !== null || e.consentId !== null)
-        fail("Only a character reference links a likeness consent.");
+        fail("Only a character or voice reference links a consent.");
   });
 export type ReferencePack = z.infer<typeof ReferencePackSchema>;
 
 // The purpose a likeness reference is collected for.
 export const REFERENCE_CONSENT_PURPOSE = "likeness-generate" as const;
+/** The consent purpose a personal reference relies on. */
+export const consentPurposeOf = (role: ReferenceRole) =>
+  role === "voice" ? ("voice-clone" as const) : REFERENCE_CONSENT_PURPOSE;
 
 const schemaError = (e: unknown, what: string): never => {
   if (e instanceof z.ZodError)
@@ -366,10 +392,15 @@ function verifyPin(pin: z.infer<typeof PackPinSchema>, c: CommitContext) {
 export function verifyReferencePack(pack: ReferencePack, c: CommitContext) {
   for (const e of pack.entries) {
     const asset = assetOf(c.project, e.assetId);
-    if (asset.kind === "audio")
+    if (e.role === "voice" && asset.kind !== "audio")
       throw new CommandError(
         "VALIDATION",
-        "A reference is a still or footage, not audio.",
+        `Voice reference "${e.label}" is project audio.`,
+      );
+    if (e.role !== "voice" && asset.kind === "audio")
+      throw new CommandError(
+        "VALIDATION",
+        "A reference is a still or footage, not audio (except a voice).",
       );
     if (asset.hash !== e.assetHash)
       throw new CommandError(
@@ -385,7 +416,7 @@ function verifyConsents(pack: ReferencePack, c: CommitContext) {
     if (e.consentId !== null && e.characterId !== null)
       assertConsentUsable(c.db, e.consentId, {
         characterId: e.characterId,
-        purpose: REFERENCE_CONSENT_PURPOSE,
+        purpose: consentPurposeOf(e.role),
         nowMs: c.nowMs,
       });
 }
