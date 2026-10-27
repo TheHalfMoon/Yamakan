@@ -1,0 +1,80 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "95906ac",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-021",
+  "objective": "Add one frame-exact crossfade transition",
+  "branch": "feat/yu-021-crossfade",
+  "mergedPr": 129,
+  "headCommit": "f9437e3",
+  "mergeCommit": "4b6d652",
+  "flags": "YAMAKAN_TRANSITIONS_OFF=1 refuses new or changed transitions (command, batch, save); stored ones stay, render and can be removed",
+  "deviations": [
+    "The transition is stored on the incoming clip (with fromClipId naming its outgoing clip) rather than as a separate list of refs; adjacency is re-validated on every project",
+    "Named policy centeredDissolve/v1: an even number of frames centred on the cut, using source handles; clip times and the timeline length never change",
+    "One video dissolve (alpha k/D over the outgoing clip) and one sound option (equal-power quarter-sine crossfade, or a cut); titles, audio, retimed and animated clips are refused",
+    "Edits that would break a transition are refused (remove it first) rather than silently dropping it",
+    "Canonical v7 is written only for projects with a transition; an earlier build refuses v7",
+    "The interactive canvas shows a dissolve as a cut and the preview-parity notice names it"
+  ],
+  "tests": {
+    "files": [
+      "tests/transitions.test.ts",
+      "tests/canonical.test.ts",
+      "tests/canonical-store.test.ts",
+      "tests/migrate.test.ts"
+    ],
+    "result": "9 transition tests: golden boundary frames of a 10-frame dissolve in export and reference preview (exact A at frame 25 and exact B at 35 within 4 levels); equal-power level steady within 1.5 dB with both tones mid-crossfade and none under cut; persist/undo/redo/reopen, canonical round trip, v7 accepted and v8 refused, edit diff both ways, OTIO; refusals (zero, negative, odd and too-long durations, missing handles either side, longer than a clip, gaps, retimed, animated, locked, titles, sound fade at the cut, unknown clip); ripple refused not re-targeted, split rebinding, switch on command/save/editor recreate; loudnorm plan keeps the policy; 23.976 plan timing and a footage-into-still render with exact frames 18/24/30 and the exact extended sound length. Three newer-format fixtures moved from v7 to v8"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review, applying Alibaba Open Code Review 1.13.3 rules obtained locally with `ocr delegate rule` (no LLM, no cloud)",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 1,
+        "shouldFixApplied": 7,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 1,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used). Its rule set was applied through delegation mode instead"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only a billing notice (no review); nothing to address",
+    "The main push run's Linux job stalled in apt-get install and was cancelled and rerun"
+  ],
+  "postMergeVerification": {
+    "main": "4b6d652",
+    "ci": "PR exact head f9437e3: qualify, qualify-windows-r8, otio-oracle success; push run on 4b6d652: success (the Linux job stalled in apt-get and was cancelled and rerun)",
+    "windows": "detached 4b6d652: typecheck, lint, format, provenance, brand, build pass; npm test 649/656 with 4 failures while review agents ran tests in parallel (export-golden, preview, story-packs, streaming-import), whose files pass 34/34 when rerun serially; 3 POSIX-only skips; test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "Only one transition kind (centred dissolve); no wipes, no asymmetric alignment",
+    "The interactive canvas shows a dissolve as a cut",
+    "Undo, redo and restore are not gated by the switch",
+    "Full OCR LLM review blocked (see reviews)"
+  ]
+}
