@@ -1,0 +1,1080 @@
+{
+  "format": "yamakan.engine-candidates",
+  "formatVersion": 1,
+  "task": "YU-043",
+  "inspectedAt": "2026-10-27",
+  "method": [
+    "Source files fetched at pinned commits (raw.githubusercontent.com, huggingface.co resolve/<commit>) and hashed; file trees from the Hugging Face API at each pinned commit. No weights were downloaded.",
+    "The Python closure was resolved metadata-only with pip 26.2.1 `install --dry-run --ignore-installed --only-binary=:all: --report`, run under CPython 3.12.13 (win_amd64) from the requirements diffusers==0.42.1, transformers, torch, accelerate, sentencepiece, ftfy and protobuf. A second resolution under CPython 3.14 gave the identical set."
+  ],
+  "locks": {
+    "diffusers-0.42.1-cp312-win_amd64": {
+      "interpreter": {
+        "implementation": "cpython",
+        "version": "3.12.13",
+        "platform": "win_amd64"
+      },
+      "resolver": "pip 26.2.1 --dry-run --report",
+      "accelerator": "cpu",
+      "packages": [
+        {
+          "name": "diffusers",
+          "version": "0.42.1",
+          "wheel": "diffusers-0.42.1-py3-none-any.whl",
+          "sha256": "9154faa704ce00e0b77f568e0d64786064368528aab5fc14eeea92f87d788014",
+          "license": "Apache 2.0 License",
+          "licenseSource": "license"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "2.3.0",
+          "wheel": "huggingface_hub-2.3.0-py3-none-any.whl",
+          "sha256": "5da369600233568a126eb5578754935b2add9446b42d9e2fc0927d56840ac1a5",
+          "license": "Apache-2.0",
+          "licenseSource": "license"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "wheel": "click-8.5.0-py3-none-any.whl",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.7.0",
+          "wheel": "hf_xet-1.7.0-cp38-abi3-win_amd64.whl",
+          "sha256": "2b7bb5727889b0f2436dbaaad8fc4c3e66b8240d992716989e0c086b4278b1bc",
+          "license": "Apache-2.0",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "httpx2",
+          "version": "2.16.0",
+          "wheel": "httpx2-2.16.0-py3-none-any.whl",
+          "sha256": "fd2c5d7909e8d86fe92d53020c310ca0e4e431b838c207c5754b9bbf0308d49a",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "httpcore2",
+          "version": "2.16.0",
+          "wheel": "httpcore2-2.16.0-py3-none-any.whl",
+          "sha256": "5c4358319f2602d984ad93182c9fee5160f22e9da7babdda870a5e7c4e2dc34f",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "transformers",
+          "version": "5.21.0",
+          "wheel": "transformers-5.21.0-py3-none-any.whl",
+          "sha256": "8803a8712932aa3441c1e8bb340e66d5e3eca079fe65d9b717ede2f3ead01c79",
+          "license": "Apache 2.0 License",
+          "licenseSource": "license"
+        },
+        {
+          "name": "tokenizers",
+          "version": "0.23.3",
+          "wheel": "tokenizers-0.23.3-cp310-abi3-win_amd64.whl",
+          "sha256": "1f0823bb00c5fdc98e487354d54dd55a03848d61a1a0bf29a68c77f24f3b26c3",
+          "license": "Apache Software License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "torch",
+          "version": "2.14.1",
+          "wheel": "torch-2.14.1-cp312-cp312-win_amd64.whl",
+          "sha256": "38bee9f2a2ccfc6898172a5075e4ba52522fbe143eeb099674fc67ab390e858d",
+          "license": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "accelerate",
+          "version": "1.15.0",
+          "wheel": "accelerate-1.15.0-py3-none-any.whl",
+          "sha256": "97eacca0b73e45cb867dbf8c5d5d4dc32219544300e0c8992c7334dc2ef33cec",
+          "license": "Apache",
+          "licenseSource": "license"
+        },
+        {
+          "name": "sentencepiece",
+          "version": "0.2.2",
+          "wheel": "sentencepiece-0.2.2-cp312-cp312-win_amd64.whl",
+          "sha256": "7c6e7bf684dc12145bfa685d3060beaea55139134ba848289bee514ed42e7383",
+          "license": "Apache-2.0",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "ftfy",
+          "version": "6.3.1",
+          "wheel": "ftfy-6.3.1-py3-none-any.whl",
+          "sha256": "7c70eb532015cd2f9adb53f101fb6c7945988d023a085d127d1573dc49dd0083",
+          "license": "Apache-2.0",
+          "licenseSource": "license"
+        },
+        {
+          "name": "protobuf",
+          "version": "7.36.2",
+          "wheel": "protobuf-7.36.2-cp310-abi3-win_amd64.whl",
+          "sha256": "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353",
+          "license": "3-Clause BSD License",
+          "licenseSource": "license"
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "wheel": "anyio-4.15.1-py3-none-any.whl",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "filelock",
+          "version": "4.2.4",
+          "wheel": "filelock-4.2.4-py3-none-any.whl",
+          "sha256": "301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.9.0",
+          "wheel": "fsspec-2026.9.0-py3-none-any.whl",
+          "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "wheel": "h11-0.16.0-py3-none-any.whl",
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "license": "MIT",
+          "licenseSource": "license"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "wheel": "idna-3.20-py3-none-any.whl",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "networkx",
+          "version": "3.7",
+          "wheel": "networkx-3.7-py3-none-any.whl",
+          "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "numpy",
+          "version": "2.5.4",
+          "wheel": "numpy-2.5.4-cp312-cp312-win_amd64.whl",
+          "sha256": "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
+          "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "wheel": "packaging-26.3-py3-none-any.whl",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "license": "Apache-2.0 OR BSD-2-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "wheel": "pyyaml-6.0.3-cp312-cp312-win_amd64.whl",
+          "sha256": "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
+          "license": "MIT",
+          "licenseSource": "license"
+        },
+        {
+          "name": "regex",
+          "version": "2026.9.29",
+          "wheel": "regex-2026.9.29-cp312-cp312-win_amd64.whl",
+          "sha256": "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649",
+          "license": "Apache-2.0 AND CNRI-Python",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "safetensors",
+          "version": "0.8.0",
+          "wheel": "safetensors-0.8.0-cp310-abi3-win_amd64.whl",
+          "sha256": "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f",
+          "license": "Apache Software License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "setuptools",
+          "version": "84.2.1",
+          "wheel": "setuptools-84.2.1-py3-none-any.whl",
+          "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "sympy",
+          "version": "1.14.0",
+          "wheel": "sympy-1.14.0-py3-none-any.whl",
+          "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+          "license": "BSD",
+          "licenseSource": "license"
+        },
+        {
+          "name": "mpmath",
+          "version": "1.3.0",
+          "wheel": "mpmath-1.3.0-py3-none-any.whl",
+          "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+          "license": "BSD",
+          "licenseSource": "license"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "wheel": "tqdm-4.70.1-py3-none-any.whl",
+          "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+          "license": "MPL-2.0 AND MIT",
+          "licenseSource": "license"
+        },
+        {
+          "name": "truststore",
+          "version": "0.10.5",
+          "wheel": "truststore-0.10.5-py3-none-any.whl",
+          "sha256": "9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "wheel": "typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "license": "PSF-2.0",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "colorama",
+          "version": "0.4.6",
+          "wheel": "colorama-0.4.6-py2.py3-none-any.whl",
+          "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+          "license": "BSD License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "importlib_metadata",
+          "version": "10.1.0",
+          "wheel": "importlib_metadata-10.1.0-py3-none-any.whl",
+          "sha256": "cf45ce66a929c64e994185a809c04840d0501db17e663810d993d0f4829265c7",
+          "license": "Apache-2.0",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "zipp",
+          "version": "4.1.2",
+          "wheel": "zipp-4.1.2-py3-none-any.whl",
+          "sha256": "b30cb6cd253122169c47de245ca24a86bac2a5d3802ba15bf7ba6414eb9e144d",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "Jinja2",
+          "version": "3.1.6",
+          "wheel": "jinja2-3.1.6-py3-none-any.whl",
+          "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+          "license": "BSD License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.4",
+          "wheel": "markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+          "sha256": "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
+          "license": "BSD-3-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "pillow",
+          "version": "13.0.0",
+          "wheel": "pillow-13.0.0-cp312-cp312-win_amd64.whl",
+          "sha256": "ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b",
+          "license": "MIT-CMU",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "psutil",
+          "version": "7.2.2",
+          "wheel": "psutil-7.2.2-cp37-abi3-win_amd64.whl",
+          "sha256": "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988",
+          "license": "BSD-3-Clause",
+          "licenseSource": "license"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "wheel": "requests-2.34.2-py3-none-any.whl",
+          "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+          "license": "Apache-2.0",
+          "licenseSource": "license"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "wheel": "charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl",
+          "sha256": "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc",
+          "license": "MIT",
+          "licenseSource": "license"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "wheel": "urllib3-2.8.0-py3-none-any.whl",
+          "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.10.23",
+          "wheel": "certifi-2026.10.23-py3-none-any.whl",
+          "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1",
+          "license": "MPL-2.0",
+          "licenseSource": "license"
+        },
+        {
+          "name": "typer",
+          "version": "0.27.3",
+          "wheel": "typer-0.27.3-py3-none-any.whl",
+          "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "annotated-doc",
+          "version": "0.0.5",
+          "wheel": "annotated_doc-0.0.5-py3-none-any.whl",
+          "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+          "license": "MIT",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "rich",
+          "version": "15.0.0",
+          "wheel": "rich-15.0.0-py3-none-any.whl",
+          "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+          "license": "MIT",
+          "licenseSource": "license"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.21.0",
+          "wheel": "pygments-2.21.0-py3-none-any.whl",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "license": "BSD-2-Clause",
+          "licenseSource": "expression"
+        },
+        {
+          "name": "markdown-it-py",
+          "version": "4.2.0",
+          "wheel": "markdown_it_py-4.2.0-py3-none-any.whl",
+          "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+          "license": "MIT License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "mdurl",
+          "version": "0.1.2",
+          "wheel": "mdurl-0.1.2-py3-none-any.whl",
+          "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+          "license": "MIT License",
+          "licenseSource": "classifier"
+        },
+        {
+          "name": "shellingham",
+          "version": "1.5.4",
+          "wheel": "shellingham-1.5.4-py2.py3-none-any.whl",
+          "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+          "license": "ISC License",
+          "licenseSource": "license"
+        },
+        {
+          "name": "wcwidth",
+          "version": "0.9.4",
+          "wheel": "wcwidth-0.9.4-cp310-abi3-win_amd64.whl",
+          "sha256": "f28d77153303450ee13ebbe888297e75cf532c754555b6cabafc9bdda16c421c",
+          "license": "MIT License",
+          "licenseSource": "classifier"
+        }
+      ]
+    }
+  },
+  "candidates": [
+    {
+      "id": "wan2.2-ti2v-5b-native",
+      "status": "blocked",
+      "runtime": {
+        "kind": "native",
+        "source": {
+          "repo": "Wan-Video/Wan2.2",
+          "commit": "1ea34ff48f87168174e12956e200b1d908b1c5ff",
+          "license": "apache-2.0",
+          "licenseEvidence": {
+            "path": "LICENSE.txt",
+            "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+          }
+        },
+        "entry": [
+          {
+            "path": "wan/textimage2video.py",
+            "sha256": "228f2fabf23014ed41ec6b8cd713d5be7371bb558501c71a62a0258b491a877b",
+            "symbol": "WanTI2V"
+          },
+          {
+            "path": "generate.py",
+            "sha256": "cae024b99a3d105fe273a8dfe724ea656f9c1a876ccc8534a8c2fbfb716950e7",
+            "symbol": "main"
+          }
+        ],
+        "declaredRequirements": {
+          "path": "requirements.txt",
+          "sha256": "8338a62490c93cfbf908bb289bbaa3fb104e5606415bb48cca6cae5175313c44",
+          "requirements": [
+            {
+              "name": "torch",
+              "spec": ">=2.4.0"
+            },
+            {
+              "name": "torchvision",
+              "spec": ">=0.19.0"
+            },
+            {
+              "name": "torchaudio",
+              "spec": ""
+            },
+            {
+              "name": "opencv-python",
+              "spec": ">=4.9.0.80"
+            },
+            {
+              "name": "diffusers",
+              "spec": ">=0.31.0"
+            },
+            {
+              "name": "transformers",
+              "spec": ">=4.49.0,<=4.51.3"
+            },
+            {
+              "name": "tokenizers",
+              "spec": ">=0.20.3"
+            },
+            {
+              "name": "accelerate",
+              "spec": ">=1.1.1"
+            },
+            {
+              "name": "tqdm",
+              "spec": ""
+            },
+            {
+              "name": "imageio[ffmpeg]",
+              "spec": ""
+            },
+            {
+              "name": "easydict",
+              "spec": ""
+            },
+            {
+              "name": "ftfy",
+              "spec": ""
+            },
+            {
+              "name": "dashscope",
+              "spec": ""
+            },
+            {
+              "name": "imageio-ffmpeg",
+              "spec": ""
+            },
+            {
+              "name": "flash_attn",
+              "spec": ""
+            },
+            {
+              "name": "numpy",
+              "spec": ">=1.23.5,<2"
+            }
+          ]
+        }
+      },
+      "lock": null,
+      "model": {
+        "repo": "Wan-AI/Wan2.2-TI2V-5B",
+        "commit": "921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+        "license": "apache-2.0",
+        "licenseEvidence": {
+          "kind": "card",
+          "path": "README.md",
+          "sha256": "e357cb3ac077f8739755b0fb38fe8424c76534b19b4a84f6138856abb00abf69"
+        },
+        "gated": false,
+        "files": [
+          {
+            "path": "Wan2.2_VAE.pth",
+            "bytes": 2818839170,
+            "format": "pickle",
+            "sha256": "20eb789667fa5e60e7516bf509512f6cb61f01b0aa0695eadaea930c13892b36"
+          },
+          {
+            "path": "config.json",
+            "bytes": 251,
+            "format": "json",
+            "gitOid": "abb356dedbca416450700e180a6622626d789601"
+          },
+          {
+            "path": "configuration.json",
+            "bytes": 43,
+            "format": "json",
+            "gitOid": "d64db5cb6ceecfb2c7f0929427dc5f48bc4b7f37"
+          },
+          {
+            "path": "diffusion_pytorch_model-00001-of-00003.safetensors",
+            "bytes": 9825014472,
+            "format": "safetensors",
+            "sha256": "720b06c4ade5e87c1246bba8ac95b664c638749cd9b102cf84d823bb44c026a1"
+          },
+          {
+            "path": "diffusion_pytorch_model-00002-of-00003.safetensors",
+            "bytes": 9995661736,
+            "format": "safetensors",
+            "sha256": "09ec5ef720d8396f6cfa51fbdcbdb2327e37722afd6e89fd38f1e7e5e782c283"
+          },
+          {
+            "path": "diffusion_pytorch_model-00003-of-00003.safetensors",
+            "bytes": 178558176,
+            "format": "safetensors",
+            "sha256": "6306f7894c345de9093ad588771c2abfaeb668a81f7a6d9a918bd26ba3568e49"
+          },
+          {
+            "path": "diffusion_pytorch_model.safetensors.index.json",
+            "bytes": 72865,
+            "format": "json",
+            "gitOid": "2a1d8b9ee7cd1456f79f944ae15c87724d49110e"
+          },
+          {
+            "path": "google/umt5-xxl/special_tokens_map.json",
+            "bytes": 6623,
+            "format": "json",
+            "gitOid": "14855e7052ffbb595057dfd791d293c1c940db2c"
+          },
+          {
+            "path": "google/umt5-xxl/spiece.model",
+            "bytes": 4548313,
+            "format": "tokenizer",
+            "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458"
+          },
+          {
+            "path": "google/umt5-xxl/tokenizer.json",
+            "bytes": 16837417,
+            "format": "json",
+            "sha256": "6e197b4d3dbd71da14b4eb255f4fa91c9c1f2068b20a2de2472967ca3d22602b"
+          },
+          {
+            "path": "google/umt5-xxl/tokenizer_config.json",
+            "bytes": 61728,
+            "format": "json",
+            "gitOid": "4e1cc1cd85599ce0b47fd0a746af188fe4043ff2"
+          },
+          {
+            "path": "models_t5_umt5-xxl-enc-bf16.pth",
+            "bytes": 11361920418,
+            "format": "pickle",
+            "sha256": "7cace0da2b446bbbbc57d031ab6cf163a3d59b366da94e5afe36745b746fd81d"
+          }
+        ],
+        "codeFiles": []
+      },
+      "loading": {
+        "trustRemoteCode": false,
+        "customPipeline": null,
+        "useSafetensors": false,
+        "localFilesOnly": true,
+        "unsafeLoads": [
+          {
+            "path": "wan/modules/t5.py",
+            "sha256": "8b0cebf3192c542f92a344255a06c203df3ba24160715899a055cc8de0cd930f",
+            "line": 496,
+            "call": "torch.load(checkpoint_path, map_location='cpu')",
+            "weightsOnly": false
+          },
+          {
+            "path": "wan/modules/vae2_2.py",
+            "sha256": "eab5ce4aa1ce03af2978f2a8e8364c419f5fbb8535d265ac86b0b02ddcf0c1f6",
+            "line": 883,
+            "call": "torch.load(pretrained_path, map_location=device)",
+            "weightsOnly": false
+          }
+        ]
+      },
+      "remoteServices": [
+        {
+          "name": "dashscope",
+          "evidence": {
+            "path": "generate.py",
+            "line": 346,
+            "text": "prompt_extend_method == \"dashscope\""
+          }
+        }
+      ],
+      "operations": [],
+      "cancellation": null
+    },
+    {
+      "id": "wan2.2-ti2v-5b-diffusers",
+      "status": "eligibleForQualification",
+      "runtime": {
+        "kind": "diffusers",
+        "source": {
+          "repo": "huggingface/diffusers",
+          "tag": "v0.42.1",
+          "commit": "2a1433913c7044f34fa4767dd84b28bba0bb0ecf",
+          "license": "apache-2.0",
+          "licenseEvidence": {
+            "path": "LICENSE",
+            "sha256": "f9e2070c247517b1ddf65f7b11b393484a18da91a958fd18a97bd0f241c3125c"
+          }
+        },
+        "entry": [
+          {
+            "path": "src/diffusers/pipelines/wan/pipeline_wan.py",
+            "sha256": "e80e0bbb05db93a614e5c01733482ac56f0c426dc02abe3bb11383285fddd0a3",
+            "symbol": "WanPipeline"
+          },
+          {
+            "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
+            "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
+            "symbol": "WanImageToVideoPipeline"
+          }
+        ],
+        "declaredRequirements": null
+      },
+      "lock": "diffusers-0.42.1-cp312-win_amd64",
+      "model": {
+        "repo": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+        "commit": "b8fff7315c768468a5333511427288870b2e9635",
+        "license": "apache-2.0",
+        "licenseEvidence": {
+          "kind": "card",
+          "path": "README.md",
+          "sha256": "b7120bb210ab14defe6cabd7ac4bf568d0f5fde42f88ea4ac3cfec9516dc2c0c"
+        },
+        "gated": false,
+        "modelIndex": {
+          "path": "model_index.json",
+          "sha256": "6a72faeb564b0e894aea8fc4ef27241106eb739e8584e869b61589a65473add7"
+        },
+        "files": [
+          {
+            "path": "model_index.json",
+            "bytes": 499,
+            "format": "json",
+            "gitOid": "fe52bfbdc8e5bbc8a6a607dd301f6e1ab0889cd1"
+          },
+          {
+            "path": "scheduler/scheduler_config.json",
+            "bytes": 820,
+            "format": "json",
+            "gitOid": "950d26faea717c8902ee197982026cb9c1b6463e"
+          },
+          {
+            "path": "text_encoder/config.json",
+            "bytes": 855,
+            "format": "json",
+            "gitOid": "ab4a73bce055c6e32e66133032dcb3adfb26ee8d"
+          },
+          {
+            "path": "text_encoder/model-00001-of-00003.safetensors",
+            "bytes": 4935812536,
+            "format": "safetensors",
+            "sha256": "a8e861969c7433e707cc5a74065d795d36cca07ec96eb6763eb4083df7248f58"
+          },
+          {
+            "path": "text_encoder/model-00002-of-00003.safetensors",
+            "bytes": 4983103192,
+            "format": "safetensors",
+            "sha256": "d57d948ece4837d850b7a859a4415121d57cacf8b9ee1d4db200c67f592902d7"
+          },
+          {
+            "path": "text_encoder/model-00003-of-00003.safetensors",
+            "bytes": 1442935480,
+            "format": "safetensors",
+            "sha256": "0da9ee284e21d1406df708788db1d502d95d75f69faa25cd26151bf8829b7c5f"
+          },
+          {
+            "path": "text_encoder/model.safetensors.index.json",
+            "bytes": 22476,
+            "format": "json",
+            "gitOid": "f3d3d4da90eb33e14c92d88ea346370fa3c0b5b2"
+          },
+          {
+            "path": "tokenizer/special_tokens_map.json",
+            "bytes": 7079,
+            "format": "json",
+            "gitOid": "2ed25bf989a28d20b5d4b5822fbc24666d12a6f7"
+          },
+          {
+            "path": "tokenizer/spiece.model",
+            "bytes": 4548313,
+            "format": "tokenizer",
+            "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458"
+          },
+          {
+            "path": "tokenizer/tokenizer.json",
+            "bytes": 16837459,
+            "format": "json",
+            "sha256": "20a46ac256746594ed7e1e3ef733b83fbc5a6f0922aa7480eda961743de080ef"
+          },
+          {
+            "path": "tokenizer/tokenizer_config.json",
+            "bytes": 61758,
+            "format": "json",
+            "gitOid": "09d434f9457238f697f4c208aab47f58caa15bfe"
+          },
+          {
+            "path": "transformer/config.json",
+            "bytes": 495,
+            "format": "json",
+            "gitOid": "8180887e8ed86e4fd842824fb15fcabf43d19512"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+            "bytes": 4978254344,
+            "format": "safetensors",
+            "sha256": "511bec832a201caa410d09c5ce7dbbf8ad2708c345d82038f684fc74cce982be"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+            "bytes": 4846784976,
+            "format": "safetensors",
+            "sha256": "7c42724912b1911429125dc50c0e9a49ccbada5a601b657d4ed2e15e7597c193"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+            "bytes": 4972658392,
+            "format": "safetensors",
+            "sha256": "e9c3d0c76de786566382f8258101fea973ae37681c6e9fe0e5fe1fb93b806424"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+            "bytes": 4846785080,
+            "format": "safetensors",
+            "sha256": "a331121771790939678db6f585553fd5184609f7d02593c699a4d241b0d834c5"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+            "bytes": 354751840,
+            "format": "safetensors",
+            "sha256": "78b655685c47efdb2349f36826bb101264e9f212a16325d584aeb5f53c88e719"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model.safetensors.index.json",
+            "bytes": 73297,
+            "format": "json",
+            "gitOid": "4ced518ff3eb023a0477eeab55f2a4d45d6fd43a"
+          },
+          {
+            "path": "vae/config.json",
+            "bytes": 1701,
+            "format": "json",
+            "gitOid": "29f65bc63e9daadb95e4c1a8344d162be4b7d533"
+          },
+          {
+            "path": "vae/diffusion_pytorch_model.safetensors",
+            "bytes": 2818777808,
+            "format": "safetensors",
+            "sha256": "62cd18f19438e35b32ac63020e2852f566e9b02f46b6cdbd87972a356e3c6f4b"
+          }
+        ],
+        "codeFiles": []
+      },
+      "loading": {
+        "trustRemoteCode": false,
+        "customPipeline": null,
+        "useSafetensors": true,
+        "localFilesOnly": true,
+        "unsafeLoads": []
+      },
+      "remoteServices": [],
+      "operations": [
+        {
+          "operation": "textToVideo",
+          "pipelineClass": "WanPipeline",
+          "roles": [],
+          "ignoredInputs": [],
+          "controls": []
+        },
+        {
+          "operation": "imageToVideo",
+          "pipelineClass": "WanImageToVideoPipeline",
+          "roles": ["firstFrame"],
+          "ignoredInputs": [
+            {
+              "parameter": "last_image",
+              "role": "lastFrame",
+              "evidence": {
+                "path": "src/diffusers/pipelines/wan/pipeline_wan_i2v.py",
+                "sha256": "f174e962c4aba48ef31808d3427eb00c6324029f9cf3d4c111b21812be5966d6",
+                "line": 428,
+                "text": "if self.config.expand_timesteps: video_condition = image"
+              }
+            }
+          ],
+          "controls": []
+        }
+      ],
+      "cancellation": {
+        "mechanism": "callback_on_step_end sets the pipeline's _interrupt flag; the denoising loop then skips each remaining step",
+        "granularity": "denoisingStep",
+        "evidence": [
+          {
+            "path": "src/diffusers/pipelines/wan/pipeline_wan.py",
+            "sha256": "e80e0bbb05db93a614e5c01733482ac56f0c426dc02abe3bb11383285fddd0a3",
+            "line": 592,
+            "text": "if self.interrupt:"
+          },
+          {
+            "path": "src/diffusers/pipelines/wan/pipeline_wan.py",
+            "sha256": "e80e0bbb05db93a614e5c01733482ac56f0c426dc02abe3bb11383285fddd0a3",
+            "line": 673,
+            "text": "vae decode after the loop"
+          }
+        ],
+        "decodesAfterInterrupt": true,
+        "containment": "processKill"
+      }
+    },
+    {
+      "id": "cogvideox-2b-diffusers",
+      "status": "eligibleForQualification",
+      "runtime": {
+        "kind": "diffusers",
+        "source": {
+          "repo": "huggingface/diffusers",
+          "tag": "v0.42.1",
+          "commit": "2a1433913c7044f34fa4767dd84b28bba0bb0ecf",
+          "license": "apache-2.0",
+          "licenseEvidence": {
+            "path": "LICENSE",
+            "sha256": "f9e2070c247517b1ddf65f7b11b393484a18da91a958fd18a97bd0f241c3125c"
+          }
+        },
+        "entry": [
+          {
+            "path": "src/diffusers/pipelines/cogvideo/pipeline_cogvideox.py",
+            "sha256": "abd30e0f3ee65fa9c5e065d378c5c2b142843a0c0d195f4a3e7bcf71696d6562",
+            "symbol": "CogVideoXPipeline"
+          }
+        ],
+        "declaredRequirements": null
+      },
+      "lock": "diffusers-0.42.1-cp312-win_amd64",
+      "model": {
+        "repo": "zai-org/CogVideoX-2b",
+        "commit": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+        "license": "apache-2.0",
+        "licenseEvidence": {
+          "kind": "file",
+          "path": "LICENSE",
+          "sha256": "4c3f6aeb71e12415a59117dfd35cfc177514424f0356c81798fde1a239d0b6a8"
+        },
+        "gated": false,
+        "modelIndex": {
+          "path": "model_index.json",
+          "sha256": "c1a0f395ec8dec5411275a71a72ef6bae3b6326277e8a89a0e3791de6c2d3f0d"
+        },
+        "files": [
+          {
+            "path": "model_index.json",
+            "bytes": 411,
+            "format": "json",
+            "gitOid": "fb567b55facec3424156baa3ae3e1968cc4526b9"
+          },
+          {
+            "path": "scheduler/scheduler_config.json",
+            "bytes": 482,
+            "format": "json",
+            "gitOid": "1cd0fa68fef783c8cdf693df52963325916c08e8"
+          },
+          {
+            "path": "text_encoder/config.json",
+            "bytes": 783,
+            "format": "json",
+            "gitOid": "9bb422ed546933cdd114d6f86f08008317aa51ae"
+          },
+          {
+            "path": "text_encoder/model-00001-of-00002.safetensors",
+            "bytes": 4994582104,
+            "format": "safetensors",
+            "sha256": "4f2751ceeb2a96edd693e539dc5d6bba0b8d3814f49a9b3798403a0cec4b2e3d"
+          },
+          {
+            "path": "text_encoder/model-00002-of-00002.safetensors",
+            "bytes": 4530066248,
+            "format": "safetensors",
+            "sha256": "f63154532130422309532ff56f11945fbea8266c958e3133e8e5aef85c6293c7"
+          },
+          {
+            "path": "text_encoder/model.safetensors.index.json",
+            "bytes": 19885,
+            "format": "json",
+            "gitOid": "c8728bc3dca59d2616a2a594cbac3ddb9eb77d5b"
+          },
+          {
+            "path": "tokenizer/added_tokens.json",
+            "bytes": 2593,
+            "format": "json",
+            "gitOid": "3f5132007c4fcf42b75b65c8b6aa49c7098bcdf4"
+          },
+          {
+            "path": "tokenizer/special_tokens_map.json",
+            "bytes": 2543,
+            "format": "json",
+            "gitOid": "17ade346a1042cbe0c1436f5bedcbd85c099d582"
+          },
+          {
+            "path": "tokenizer/spiece.model",
+            "bytes": 791656,
+            "format": "tokenizer",
+            "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86"
+          },
+          {
+            "path": "tokenizer/tokenizer_config.json",
+            "bytes": 20617,
+            "format": "json",
+            "gitOid": "161715af5ee99558c9fcce7b31d3d547a72c349b"
+          },
+          {
+            "path": "transformer/config.json",
+            "bytes": 758,
+            "format": "json",
+            "gitOid": "d60c8d31d51203a80c264afdf873c20f1cf2c0cb"
+          },
+          {
+            "path": "transformer/diffusion_pytorch_model.safetensors",
+            "bytes": 3387650264,
+            "format": "safetensors",
+            "sha256": "8fbb6a5e67c70885a8ed8e33df144ac61253e45977be5035fa18cfdf77d386c7"
+          },
+          {
+            "path": "vae/config.json",
+            "bytes": 879,
+            "format": "json",
+            "gitOid": "c402176986b75b2f31dd0837ea8a412f52a57eca"
+          },
+          {
+            "path": "vae/diffusion_pytorch_model.safetensors",
+            "bytes": 862388596,
+            "format": "safetensors",
+            "sha256": "a410e48d988c8224cef392b68db0654485cfd41f345f4a3a81d3e6b765bb995e"
+          }
+        ],
+        "codeFiles": []
+      },
+      "loading": {
+        "trustRemoteCode": false,
+        "customPipeline": null,
+        "useSafetensors": true,
+        "localFilesOnly": true,
+        "unsafeLoads": []
+      },
+      "remoteServices": [],
+      "operations": [
+        {
+          "operation": "textToVideo",
+          "pipelineClass": "CogVideoXPipeline",
+          "roles": [],
+          "ignoredInputs": [],
+          "controls": []
+        }
+      ],
+      "cancellation": {
+        "mechanism": "callback_on_step_end sets the pipeline's _interrupt flag; the denoising loop then skips each remaining step",
+        "granularity": "denoisingStep",
+        "evidence": [
+          {
+            "path": "src/diffusers/pipelines/cogvideo/pipeline_cogvideox.py",
+            "sha256": "abd30e0f3ee65fa9c5e065d378c5c2b142843a0c0d195f4a3e7bcf71696d6562",
+            "line": 719,
+            "text": "if self.interrupt:"
+          },
+          {
+            "path": "src/diffusers/pipelines/cogvideo/pipeline_cogvideox.py",
+            "sha256": "abd30e0f3ee65fa9c5e065d378c5c2b142843a0c0d195f4a3e7bcf71696d6562",
+            "line": 787,
+            "text": "vae decode after the loop"
+          }
+        ],
+        "decodesAfterInterrupt": true,
+        "containment": "processKill"
+      }
+    }
+  ],
+  "unsupportedControls": {
+    "reason": "No inspected pipeline's __call__ takes a camera, lens, light or motion parameter.",
+    "pipelineParameters": [
+      "prompt",
+      "negative_prompt",
+      "height",
+      "width",
+      "num_frames",
+      "num_inference_steps",
+      "guidance_scale",
+      "generator"
+    ]
+  },
+  "interfaceGaps": [
+    "The YU-042 model manifest (yamakan.model-manifest/v1) names files directly inside one model folder, at most 16. A Diffusers layout has subfolders (text_encoder/, transformer/, vae/) (Wan2.2 TI2V-5B loads 20 files, CogVideoX-2b 14), so a model-manifest v2 with relative paths is needed before any Diffusers candidate can be pinned.",
+    "A CUDA lock (download.pytorch.org wheels) is not resolved; the PyPI torch wheel for Windows is CPU-only."
+  ],
+  "comparison": {
+    "operation": "textToVideo",
+    "candidates": ["wan2.2-ti2v-5b-diffusers", "cogvideox-2b-diffusers"],
+    "sameOperation": "Each candidate runs the same fixed prompt set and seeds at its own documented default size and frame count; per-second-of-output metrics make them comparable.",
+    "criteria": [
+      {
+        "id": "rights",
+        "rule": "Model, runtime and every locked package licence accepted; no gated or remote service."
+      },
+      {
+        "id": "footprint",
+        "rule": "Bytes of loaded model files (computed from this manifest)."
+      },
+      {
+        "id": "peakMemory",
+        "rule": "Peak resident and device memory per job, measured by the worker."
+      },
+      {
+        "id": "wallPerOutputSecond",
+        "rule": "Wall time per second of output video, median over the prompt set."
+      },
+      {
+        "id": "cancelLatency",
+        "rule": "Time from cancel to worker exit (process kill), p95."
+      },
+      {
+        "id": "determinism",
+        "rule": "Same seed, same host: identical output hash on a repeat run."
+      },
+      {
+        "id": "quality",
+        "rule": "Blind side-by-side human review under the YU-090 benchmark protocol."
+      }
+    ],
+    "executed": false,
+    "blockedBy": "Downloading weights and running a GPU host need the owner's authorization, which is not granted; until then no candidate is run.",
+    "winner": null
+  }
+}

@@ -244,6 +244,55 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 - **Model root.** It must be a local folder that is not synced: a cloud placeholder file such as OneDrive's would be fetched when it is read. Offline is the operating system's boundary for a release and is not tested here. The tests check only that the engine modules import nothing that can reach a network, a process or an installer.
 - **Rollback.** Revert the command and the panel's list. `ENGINE_DISABLED` stays the safe answer.
 
+## First-engine candidates (YU-043)
+
+`docs/evidence/ultimate/engine-candidate-manifests.json` (`yamakan.engine-candidates` v1) freezes what each finalist would load. It was built from source inspection at pinned commits, and no weights were downloaded. `core/engines/candidates.ts` validates it with `parseEngineCandidates` and `selectionBlockers`. The status a candidate declares must equal the computed one, so no candidate can be marked eligible by hand.
+
+- **What is pinned for each candidate:**
+  - **Runtime source:** the repository commit, its licence file's SHA-256, and the hashed pipeline file of each entry class.
+  - **Model:** the repository commit, its licence evidence, and every loaded file with its byte size and its LFS SHA-256 or git blob id.
+  - **Code files:** any code files the model repository carries.
+  - **Loading policy:**
+    - `trust_remote_code` is off, and there is no custom pipeline;
+    - safetensors only;
+    - local files only;
+    - every `torch.load` call is listed with whether it passes `weights_only`.
+- **Python closure:** the lock `diffusers-0.42.1-cp312-win_amd64` holds 49 wheels, each with an exact version, file name, SHA-256 and licence.
+  - It was resolved metadata-only by `pip install --dry-run --report` under CPython 3.12.13. A resolution under CPython 3.14 gave the identical set.
+  - The PyPI torch wheel for Windows is CPU-only. A CUDA lock is not resolved yet.
+- **Selection is blocked by any of:**
+  - a revision that is not a full commit id (`MUTABLE_REVISION`);
+  - a model, runtime or package licence that is missing or not accepted (`MISSING_LICENSE`);
+  - a gated model;
+  - remote code: `trust_remote_code`, a custom pipeline, code files in the model repository, or a loader that may download;
+  - a remote inference service package or code path, such as `dashscope` (`REMOTE_SERVICE`);
+  - no lock, or any requirement that is a range or unhashed (`UNDEFINED_REQUIREMENTS`);
+  - pickle weights, or a `torch.load` without `weights_only` (`UNSAFE_LOADING`).
+- **Candidates:**
+  - **Wan2.2 TI2V-5B, native repository (`1ea34ff`): blocked.**
+    - `requirements.txt` gives only ranges or no version, and includes `dashscope` and `flash_attn`.
+    - `generate.py` can extend prompts through DashScope.
+    - The T5 encoder and VAE are pickle `.pth` files, loaded by `torch.load` without `weights_only` (`wan/modules/t5.py:496`, `vae2_2.py:883`).
+  - **Wan2.2 TI2V-5B in Diffusers format (`b8fff73`) on diffusers v0.42.1: eligible for qualification.**
+    - It supports text to video (`WanPipeline`) and image to video (`WanImageToVideoPipeline`, with a first frame).
+    - With this model's `expand_timesteps` setting, a `last_image` is accepted and silently ignored (`pipeline_wan_i2v.py:428`). So `lastFrame` is recorded as an ignored input, and a recipe must refuse it.
+    - Its repository has no LICENSE file; the Apache-2.0 licence comes from the model card only.
+  - **CogVideoX-2b (`1137dac`) on diffusers v0.42.1: eligible for qualification.** It supports text to video only, and its LICENSE file is Apache-2.0.
+- **Controls:** no inspected pipeline takes a camera, lens, light or motion parameter, so every candidate declares no style control. A shot intent's style stays previs metadata under YU-050.
+- **Cancellation:** both pipelines stop cooperatively at denoising-step granularity, through `callback_on_step_end` and `_interrupt`. The loop then skips the remaining steps but still runs the VAE decode. A Yamakan cancel must therefore stop the worker process, never rely on the flag.
+- **Interface gap:** the YU-042 model manifest holds at most 16 files, directly inside one folder. A Diffusers layout has subfolders (`text_encoder/`, `transformer/`, `vae/`), and Wan2.2 TI2V-5B loads 20 files, so a model-manifest v2 with relative paths is needed before either eligible candidate can be pinned.
+- **Comparison, predeclared and not run.**
+  - **What runs:** text to video for both eligible candidates, with the same prompt set and seeds, each at its documented default size.
+  - **Criteria:**
+    - rights;
+    - model footprint;
+    - peak memory;
+    - wall time per output second;
+    - p95 cancel latency;
+    - determinism;
+    - blind human quality review under the YU-090 protocol.
+  - **No winner** (`winner: null`): a winner is refused without an executed comparison. Running it needs the owner's authorization to download weights and use a GPU host.
+
 ## Edit proxies and thumbnails (YU-017)
 
 An edit proxy is a small H.264 copy of a video asset that the interactive preview plays for smooth editing. It is at most 540 lines tall, has a keyframe every 15 frames, and keeps the source's own timestamps and audio. `core/media/proxies.ts` makes and serves it.

@@ -163,6 +163,10 @@
       "reason": "Yamakan-authored plain refusal reasons for the operation UI (YU-042); no donor copy."
     },
     {
+      "path": "core/engines/candidates.ts",
+      "reason": "Yamakan-authored first-engine candidate manifest validator (YU-043); no donor copy."
+    },
+    {
       "path": "core/animation/sample.ts",
       "reason": "Yamakan shared animation sampler (Q13); not a donor file copy."
     },
