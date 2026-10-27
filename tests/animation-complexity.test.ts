@@ -11,6 +11,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   ANIMATION_COMPILER,
+  ANIMATION_COMPILER_V1,
+  MAX_PLAN_SAMPLES,
+  MAX_PLAN_SEGMENTS,
+  assertPlanAnimationBudget,
+  sampleAnimationPathAtLocalTime,
   OPACITY_TOLERANCE,
   VOLUME_TOLERANCE,
   boundedSegments,
@@ -108,8 +113,8 @@ test("bounded segments match the per-frame reference within half a tolerance on 
       [FPS30, OPACITY_TOLERANCE, "opacity"],
       [FPS23976, VOLUME_TOLERANCE, "volume"],
     ] as const) {
-      const reference = perFrameSegments(curve, p, 0, duration, fps, 1);
-      const bounded = boundedSegments(curve, p, 0, duration, fps, 1, tol);
+      const reference = perFrameSegments(curve, p, 0, duration, fps);
+      const bounded = boundedSegments(curve, p, 0, duration, fps);
       // The segments tile the span exactly, on frame boundaries.
       assert.equal(bounded[0]!.t0, 0, label);
       assert.equal(bounded.at(-1)!.t1, reference.at(-1)!.t1, label);
@@ -130,18 +135,10 @@ test("graph size follows the curve's travel, not the clip's frames", () => {
   const tenMinutes = 18_000 * F;
   const ramp = channel(key("a", 0, 0, "linear"), key("b", tenMinutes, 1));
   assert.equal(
-    perFrameSegments(ramp, "opacity", 0, tenMinutes, FPS30, 1).length,
+    perFrameSegments(ramp, "opacity", 0, tenMinutes, FPS30).length,
     18_000,
   );
-  const bounded = boundedSegments(
-    ramp,
-    "opacity",
-    0,
-    tenMinutes,
-    FPS30,
-    1,
-    OPACITY_TOLERANCE,
-  );
+  const bounded = boundedSegments(ramp, "opacity", 0, tenMinutes, FPS30);
   assert.ok(bounded.length <= 256, String(bounded.length));
   // The filter text is bounded the same way: one filter per segment.
   const chain = opacityFilterChain("in", "out", ramp, {
@@ -151,15 +148,19 @@ test("graph size follows the curve's travel, not the clip's frames", () => {
     fps: FPS30,
   });
   assert.ok(chain.length <= 257, String(chain.length));
-  assert.ok(chain.join(";").length < 40_000);
+  // (The graph goes to FFmpeg as a file, not on the command line.)
+  assert.ok(chain.join(";").length < 30_000);
+  // A long volume ramp to 2x (+6 dB) compiles too: 400 steps at 1/200.
+  const louder = channel(key("a", 0, 0, "linear"), key("b", 1800 * F, 2));
+  const louderSegs = boundedSegments(louder, "volume", 0, 1800 * F, FPS30);
+  assert.ok(louderSegs.length <= 401, String(louderSegs.length));
   // Holds and steps are one segment per key, however long.
   const steps = channel(
     key("a", 0, 0.25, "step"),
     key("b", 6000 * F, 0.75, "step"),
   );
   assert.equal(
-    boundedSegments(steps, "volume", 0, tenMinutes, FPS30, 1, VOLUME_TOLERANCE)
-      .length,
+    boundedSegments(steps, "volume", 0, tenMinutes, FPS30).length,
     2,
   );
   assert.equal(volumeFilterChain(steps, tenMinutes, FPS30).length, 2);
@@ -281,13 +282,21 @@ test("rendered opacity and volume follow the sampled curve, steps and ends inclu
     "rgb24",
     "pipe:1",
   ]);
-  const reference = perFrameSegments(opacity, "opacity", 0, 60 * F, FPS30, 1);
+  const reference = perFrameSegments(opacity, "opacity", 0, 60 * F, FPS30);
+  // The rendered graph for this clip is bounded: 20 ramp levels, 2 holds.
+  const graph = opacityFilterChain("i", "o", opacity, {
+    clipStartTicks: 0,
+    rangeStartTicks: 0,
+    rangeEndTicks: 60 * F,
+    fps: FPS30,
+  });
+  assert.ok(graph.length <= 24, String(graph.length));
   assert.equal(frames.length, 60 * 2 * 2 * 3);
   for (let i = 0; i < 60; i++) {
     const r = frames[i * 12]!;
     const want = reference[i]!.value * 255;
     assert.ok(
-      Math.abs(r - want) <= 12,
+      Math.abs(r - want) <= 6,
       `frame ${i}: red ${r}, curve ${want.toFixed(1)}`,
     );
   }
@@ -400,4 +409,155 @@ test("duplicate keys, undrawable channels and oversized curves fail before rende
     compilePlan(base, "0".repeat(64), fonts).plan.animationCompiler,
     undefined,
   );
+});
+
+test("the windowed sampler equals sampling the whole channel, frame by frame", () => {
+  // Random curves of every segment kind, extrapolated at both ends.
+  let seed = 7;
+  const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const kinds = ["step", "linear", "bezier"] as const;
+  for (let n = 0; n < 6; n++) {
+    const keys = Array.from({ length: 40 }, (_, i) =>
+      key(
+        `k${i}`,
+        (5 + i * 13 + Math.floor(rand() * 6)) * F,
+        rand(),
+        kinds[i % 3],
+        i % 3 === 2
+          ? {
+              rightHandle: {
+                dt: mediaTime({ ticks: 4 * F }),
+                dv: rand() - 0.5,
+              },
+              tangentMode: "broken" as const,
+            }
+          : {},
+      ),
+    );
+    const curve: Channel<number> = {
+      keys,
+      extrapolation: { before: "linear", after: "linear" },
+    };
+    const duration = 560 * F;
+    const windowed = perFrameSegments(curve, "opacity", 0, duration, FPS30);
+    for (const frame of windowed) {
+      const mid = frame.t0 + Math.floor((frame.t1 - frame.t0) / 2);
+      const whole = Math.min(
+        1,
+        Math.max(0, sampleAnimationPathAtLocalTime(curve, "opacity", mid, 1)),
+      );
+      assert.equal(frame.value, whole, `curve ${n} at ${mid}`);
+    }
+  }
+});
+
+test("a window shows the whole export's frames; version 1 stays selectable", () => {
+  const ramp = channel(key("a", 0, 0, "linear"), key("b", 90 * F, 1));
+  const whole = opacityFilterChain("i", "o", ramp, {
+    clipStartTicks: 10 * F,
+    rangeStartTicks: 10 * F,
+    rangeEndTicks: 100 * F,
+    fps: FPS23976,
+  });
+  // A window starting mid-frame of the clip: its values are the export's.
+  const window = opacityFilterChain("i", "o", ramp, {
+    clipStartTicks: 10 * F,
+    rangeStartTicks: 10 * F + 37 * F + 1234,
+    rangeEndTicks: 10 * F + 60 * F,
+    fps: FPS23976,
+  });
+  const values = (chain: string[]) =>
+    new Set(chain.map((x) => /aa=([0-9.]+)/.exec(x)?.[1]).filter(Boolean));
+  for (const v of values(window)) assert.ok(values(whole).has(v), String(v));
+  // Version 1 (per frame) is still compiled when selected, for rollback.
+  const v1 = opacityFilterChain("i", "o", ramp, {
+    clipStartTicks: 0,
+    rangeStartTicks: 0,
+    rangeEndTicks: 90 * F,
+    fps: FPS30,
+    compiler: ANIMATION_COMPILER_V1,
+  });
+  assert.equal(v1.length, 91);
+  process.env.YAMAKAN_ANIMATION_COMPILER = "1";
+  try {
+    assert.equal(
+      volumeFilterChain(ramp, 90 * F, FPS30, ANIMATION_COMPILER_V1).length,
+      90,
+    );
+  } finally {
+    delete process.env.YAMAKAN_ANIMATION_COMPILER;
+  }
+  // The version names its tolerances: changing them needs a new version.
+  assert.equal(ANIMATION_COMPILER, "yamakan.animation-compiler/2");
+  assert.equal(OPACITY_TOLERANCE, 1 / 255);
+  assert.equal(VOLUME_TOLERANCE, 1 / 200);
+});
+
+test("out-of-range keys, non-finite curves and plan budgets are refused", async () => {
+  const c = await workspace();
+  const red = path.join(c.root, "red.png");
+  ffmpeg(["-f", "lavfi", "-i", "color=c=red:s=64x36", "-frames:v", "1", red]);
+  await addClip(c, red, "red.png", "video", 60 * F, {});
+  const base = fromEditView(await c.store.load(c.projectId));
+  const fonts = await titleFonts();
+  const refused = (animation: object) => {
+    const p = structuredClone(base);
+    (p.clips[0] as { animation?: object }).animation = animation;
+    try {
+      compilePlan(p, "0".repeat(64), fonts);
+      return "ok";
+    } catch (e) {
+      return toCommandError(e).code;
+    }
+  };
+  for (const value of [1e22, 1.8e302, -0.5, 1.5])
+    assert.equal(
+      refused({ opacity: { keys: [key("a", 0, value, "step")] } }),
+      "VALIDATION",
+      String(value),
+    );
+  // Extreme handles overshoot; the curve is clamped to the range, not
+  // refused (a value that cannot be computed at all is refused).
+  assert.equal(
+    refused({
+      opacity: {
+        keys: [
+          key("a", 0, 0, "bezier", {
+            rightHandle: { dt: mediaTime({ ticks: 10 * F }), dv: 1.7e308 },
+            tangentMode: "broken",
+          }),
+          key("b", 30 * F, 1, "linear", {
+            leftHandle: { dt: mediaTime({ ticks: -10 * F }), dv: -1.7e308 },
+            tangentMode: "broken",
+          }),
+        ],
+      },
+    }),
+    "ok",
+  );
+  // Version 1 is selectable for new plans, and named in them.
+  process.env.YAMAKAN_ANIMATION_COMPILER = "1";
+  try {
+    const p = structuredClone(base);
+    (p.clips[0] as { animation?: object }).animation = {
+      opacity: { keys: [key("a", 0, 0.5, "step")] },
+    };
+    assert.equal(
+      compilePlan(p, "0".repeat(64), fonts).plan.animationCompiler,
+      ANIMATION_COMPILER_V1,
+    );
+  } finally {
+    delete process.env.YAMAKAN_ANIMATION_COMPILER;
+  }
+  const budget = (segments: number, samples: number) => {
+    try {
+      assertPlanAnimationBudget({ segments, samples }, ANIMATION_COMPILER);
+      return "ok";
+    } catch (e) {
+      return toCommandError(e).code;
+    }
+  };
+  assert.equal(budget(MAX_PLAN_SEGMENTS, MAX_PLAN_SAMPLES), "ok");
+  assert.equal(budget(MAX_PLAN_SEGMENTS + 1, 10), "LIMIT_EXCEEDED");
+  assert.equal(budget(10, MAX_PLAN_SAMPLES + 1), "LIMIT_EXCEEDED");
 });

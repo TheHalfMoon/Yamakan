@@ -22,8 +22,10 @@ import {
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 import {
-  ANIMATION_COMPILER,
   assertAnimationRenderable,
+  assertPlanAnimationBudget,
+  selectedAnimationCompiler,
+  type AnimationCompiler,
 } from "./animation-filters.ts";
 import {
   EFFECT_LIMITS,
@@ -112,7 +114,7 @@ export type RenderPlan = {
    * YU-022: the animation compiler, present only when a layer or sound is
    * animated (so a plan without animation, and its hash, is as before).
    */
-  animationCompiler?: typeof ANIMATION_COMPILER;
+  animationCompiler?: AnimationCompiler;
   /** Two-pass loudnorm; null when normalization is off for this export. */
   loudnorm: LoudnormSpec | null;
   planHash: string;
@@ -191,14 +193,6 @@ export function compilePlan(
     };
     const anim =
       ANIMATION_ENABLED && c.animation ? { animation: c.animation } : {};
-    // Refused before any render: an undrawable channel, keys at one time,
-    // or a curve that would compile past the segment cap (YU-022).
-    if (anim.animation)
-      assertAnimationRenderable(
-        anim.animation,
-        c.durationTicks,
-        project.output.fps,
-      );
     if (kindOf(c.trackId) === "audio" || a.kind === "audio")
       audio.push({
         ...timing,
@@ -223,9 +217,7 @@ export function compilePlan(
         // The fitted picture is at most the frame; scaled, it must stay
         // within the pixel budget.
         if (
-          project.output.width *
-            project.output.height *
-            (scale / 1000) ** 2 >
+          project.output.width * project.output.height * (scale / 1000) ** 2 >
           EFFECT_LIMITS.scaledPixels
         )
           throw new CommandError(
@@ -254,6 +246,37 @@ export function compilePlan(
       "VALIDATION",
       "Timeline has no active picture or title.",
     );
+  // Refused before any render (YU-022): an undrawable channel, keys at one
+  // time or out of range, a curve past its cap, or a plan past its budget.
+  // Each clip is checked for the channels it draws: opacity on a picture,
+  // volume on a sound.
+  const compiler = selectedAnimationCompiler();
+  const totals = { segments: 0, samples: 0 };
+  const opacityOnly = new Set(["opacity"]);
+  const volumeOnly = new Set(["volume"]);
+  for (const x of layers)
+    if (x.animation)
+      assertAnimationRenderable(
+        x.clipId,
+        x.animation,
+        x.durationTicks,
+        project.output.fps,
+        compiler,
+        opacityOnly,
+        totals,
+      );
+  for (const x of audio)
+    if (x.animation)
+      assertAnimationRenderable(
+        x.clipId,
+        x.animation,
+        x.durationTicks,
+        project.output.fps,
+        compiler,
+        volumeOnly,
+        totals,
+      );
+  assertPlanAnimationBudget(totals, compiler);
   const durationTicks = Math.max(
     ...active.map((c) => addTicks(c.startTicks, c.durationTicks)),
   );
@@ -290,10 +313,9 @@ export function compilePlan(
         : null,
     ...([...layers, ...audio].some(
       (x) =>
-        x.animation &&
-        Object.values(x.animation).some((ch) => ch?.keys.length),
+        x.animation && Object.values(x.animation).some((ch) => ch?.keys.length),
     )
-      ? { animationCompiler: ANIMATION_COMPILER }
+      ? { animationCompiler: compiler }
       : {}),
   };
   const planHash = createHash("sha256")
