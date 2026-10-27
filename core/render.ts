@@ -835,12 +835,20 @@ export async function renderRevision(
   signal: AbortSignal,
   onProgress: (value: number) => void,
   onCreated?: (pid: number) => void | Promise<void>,
-  options: { normalizeLoudness?: boolean } = {},
+  options: {
+    normalizeLoudness?: boolean;
+    // YU-025: an export variant's output size (the same contain fit).
+    output?: { width: number; height: number };
+  } = {},
 ) {
-  const { project, snapshotHash } = store.revisionCanonical(
-    projectId,
-    revision,
-  );
+  const stored = store.revisionCanonical(projectId, revision);
+  const { snapshotHash } = stored;
+  const project = options.output
+    ? {
+        ...stored.project,
+        output: { ...stored.project.output, ...options.output },
+      }
+    : stored.project;
   const { plan, ass } = compilePlan(project, snapshotHash, await titleFonts(), {
     normalizeLoudness: options.normalizeLoudness,
     captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),

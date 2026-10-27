@@ -449,6 +449,26 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - `YAMAKAN_EFFECTS_OFF=1` refuses new effect values, LUT effects included, and `YAMAKAN_AG_DOCS_OFF=1` refuses LUT imports. Stored LUTs stay and render.
   - Going back to an earlier build renders untagged BT.601 output again. It refuses projects with a LUT effect (an unknown effect kind) and revisions that reference `lut` documents (an unknown kind).
 
+## Verified relink and export variants (YU-025)
+
+- **Relink.**
+  - A project medium that is missing, damaged or to be swapped is replaced by another medium already imported into the same project. Imports are hashed and probed, and no client path is ever read.
+  - `yamakan.asset.relinkPropose` returns the clips that change, both media versions (hash, name, size, duration, sound), and how they differ: `bytes`, `name`, `size`, `aspect`, `duration` or `sound`. A file of the same name with other bytes is therefore shown as a different medium before approval.
+  - The proposal is bound to the revision and named by the SHA-256 of its canonical JSON. It is checked on a copy of the head.
+  - **Refused:** another kind; a replacement shorter than the source any clip reads (speed included); a replacement without sound when a clip plays the old one's sound; a medium no clip uses; a locked track.
+  - **Apply.** `yamakan.asset.relinkApply` recomputes the proposal at the head and applies only an identical one, so a stale, forged or partial proposal gets `REVISION_CONFLICT`. The new medium must be this project's ready object with its probe recorded. The apply is one undoable revision of the `asset.relink` operation: every clip and scene reference using the old medium is re-pointed, and times, in-points and settings are unchanged.
+  - **Provenance.** Recorded in the same transaction in `asset_replacements` (workspace schema 15): the revision, both media versions, the clip count, the principal and the time. `yamakan.asset.replacements` lists it.
+  - **Rollback.** The old medium stays in the project, so undo is a new revision with exactly the old source. Nothing is replaced silently: identical bytes need no relink, because the object is shared by hash.
+- **Export variants.**
+  - `yamakan.export.batch` queues MP4 exports of the current revision at up to 4 output sizes, such as 1280×720, 608×1080 (9:16 within the 1080-line cap) and 1080×1080. Sizes are even, at most 1920×1080, and each variant has its own name and size.
+  - Each export uses the same contain fit, and its plan and profile are frozen by the revision and the size, so a re-export compiles the same plan hash.
+  - The batch is admitted together or not at all (the active-job limit counts it whole), and a retry with the same key is the same batch.
+  - `yamakan.export.batchStatus` lists each output's job state, error, artifact, plan hash and size. The size is verified, because a render's output is checked against its plan's profile.
+  - The batch is `COMPLETED` only when every output is; one failure makes it `FAILED`.
+  - `yamakan.export.batchCancel` cancels unfinished outputs. Finished exports, the project and its sources are untouched.
+- **Resources.** Variants run through the existing render queue, one render at a time, within its active-job and disk limits. A failing output (for example `ENOSPC`) fails alone and leaves no artifact.
+- **Rollback.** The workspace database moves to schema 15, which adds one table; an earlier build refuses a version 15 workspace. Export jobs of a batch carry their variant in the job payload, which an earlier build cannot read either.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.

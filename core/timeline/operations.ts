@@ -170,6 +170,16 @@ export const OperationSchema = z.discriminatedUnion("type", [
     .strict(),
   z
     .object({
+      // YU-025: every clip (and scene reference) that uses one asset uses
+      // another of the same kind instead: an approved source replacement.
+      // Clip times, in-points and settings are unchanged.
+      type: z.literal("asset.relink"),
+      fromAssetId: Id,
+      toAssetId: Id,
+    })
+    .strict(),
+  z
+    .object({
       // YU-021: the dissolve from the previous clip into this one; null
       // makes the cut a plain cut again.
       type: z.literal("clip.setTransition"),
@@ -660,6 +670,23 @@ function apply(
       c.title = null;
       c.assetId = asset.id;
       c.sourceStartTicks = op.sourceStartTicks;
+      return;
+    }
+    case "asset.relink": {
+      const from = p.assets.find((a) => a.id === op.fromAssetId);
+      const to = p.assets.find((a) => a.id === op.toAssetId);
+      if (!from || !to) throw invalid("Both media must be in the project.");
+      if (from.id === to.id) throw invalid("A medium is relinked to another.");
+      if (from.kind !== to.kind)
+        throw invalid("A medium is relinked to one of the same kind.");
+      const using = p.clips.filter((c) => c.assetId === from.id);
+      if (!using.length) throw invalid("No clip uses this medium.");
+      for (const c of using) {
+        unlocked(p, c.trackId);
+        c.assetId = to.id;
+      }
+      for (const scene of p.scenes)
+        if (scene.referenceAssetId === from.id) scene.referenceAssetId = to.id;
       return;
     }
     case "clip.setTransition": {

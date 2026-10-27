@@ -175,7 +175,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 14;
+export const WORKSPACE_SCHEMA_VERSION = 15;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -426,6 +426,22 @@ CREATE TABLE director_requests(
 // Caption tracks (YU-024): the document tables accept any kind name the
 // application validates (DocumentKind), so a new kind needs no further
 // rebuild. Same columns and rows; foreign keys checked after.
+// YU-025: provenance of each approved source replacement (relink): the
+// revision it made and the two media versions it swapped.
+const SCHEMA_V15 = `
+CREATE TABLE asset_replacements(
+  project_id TEXT NOT NULL,
+  revision INTEGER NOT NULL CHECK(revision > 0),
+  from_asset_id TEXT NOT NULL CHECK(length(from_asset_id) = 36),
+  from_hash TEXT NOT NULL CHECK(length(from_hash) = 64),
+  to_asset_id TEXT NOT NULL CHECK(length(to_asset_id) = 36),
+  to_hash TEXT NOT NULL CHECK(length(to_hash) = 64),
+  clips INTEGER NOT NULL CHECK(clips > 0),
+  principal_id TEXT NOT NULL CHECK(length(principal_id) BETWEEN 1 AND 64),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(project_id, revision)
+) STRICT;
+`;
 const SCHEMA_V14 = `
 CREATE TABLE creative_documents_v14(
   hash TEXT PRIMARY KEY CHECK(length(hash) = 64),
@@ -789,6 +805,7 @@ export class ProjectStore {
         SCHEMA_V12,
         SCHEMA_V13,
         SCHEMA_V14,
+        SCHEMA_V15,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
@@ -3379,6 +3396,15 @@ export class ProjectStore {
       asset: a,
       frameRate: frameRateOf(p),
     };
+  }
+  /** YU-025: the project's approved source replacements, newest first. */
+  assetReplacements(projectId: string) {
+    Id.parse(projectId);
+    return this.#database
+      .prepare(
+        "SELECT revision, from_asset_id AS fromAssetId, from_hash AS fromHash, to_asset_id AS toAssetId, to_hash AS toHash, clips, principal_id AS principalId, created_at AS createdAt FROM asset_replacements WHERE project_id = ? ORDER BY revision DESC LIMIT 200",
+      )
+      .all(projectId);
   }
   async repairAsset(projectId: string, assetId: string) {
     Id.parse(projectId);

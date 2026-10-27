@@ -14,7 +14,7 @@ import {
 import { SNAPSHOT_FORMAT } from "../store.ts";
 import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
-import type { JobSupervisor } from "../jobs.ts";
+import { BATCH_LIMITS, ExportVariant, type JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
@@ -89,6 +89,11 @@ import {
   shotWithTake,
 } from "../takes.ts";
 import { fromEditView, type CanonicalProject } from "../canonical.ts";
+import {
+  RelinkProposalSchema,
+  proposeRelink,
+  relinkOperations,
+} from "../relink.ts";
 import {
   LUT_LIMITS,
   LutError,
@@ -511,6 +516,105 @@ export const commands = {
         },
       );
     },
+  }),
+  "yamakan.asset.relinkPropose": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Propose replacing one project medium (missing, damaged or to be swapped) by another already imported: the clips that change, whether the new one fits every use (kind, source length, sound) and how the two differ, bound to this revision and both media versions and named by its hash. Changes nothing; apply it with yamakan.asset.relinkApply.",
+    input: z.object({ projectId: Id, fromAssetId: Id, toAssetId: Id }).strict(),
+    run: async ({ store }, a) =>
+      proposeRelink(
+        fromEditView(await store.load(a.projectId)),
+        a.projectId,
+        a.fromAssetId,
+        a.toAssetId,
+      ),
+  }),
+  "yamakan.asset.relinkApply": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Apply a relink proposal as one undoable revision that re-points its clips and records the replacement's provenance. Refused unless the head and both media versions are exactly those it was made from and the new medium is ready with its probe recorded. The old medium stays in the project.",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        proposal: RelinkProposalSchema,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      const p = a.proposal;
+      if (p.projectId !== a.projectId || p.revision !== a.expectedRevision)
+        throw new CommandError(
+          "REVISION_CONFLICT",
+          "The proposal was made for another revision; propose it again.",
+        );
+      const head = await store.load(a.projectId);
+      if (head.revision === a.expectedRevision) {
+        const asset = head.assets.find((x) => x.id === p.to.assetId);
+        if (!asset)
+          throw new CommandError(
+            "VALIDATION",
+            "The replacement is not in this project.",
+          );
+        await store.readyObjectFile(a.projectId, asset);
+      }
+      return store.applyOperations(
+        a.projectId,
+        a.expectedRevision,
+        (canonical) => {
+          const again = proposeRelink(
+            canonical,
+            a.projectId,
+            p.from.assetId,
+            p.to.assetId,
+          );
+          if (canonicalJson(again) !== canonicalJson(p))
+            throw new CommandError(
+              "REVISION_CONFLICT",
+              "The proposal no longer matches the project; propose it again.",
+            );
+          return relinkOperations(again);
+        },
+        principal.id,
+        receipt,
+        (c) => {
+          const asset = c.project.assets.find((x) => x.id === p.to.assetId);
+          if (!asset)
+            throw new CommandError(
+              "VALIDATION",
+              "The replacement is not in this project.",
+            );
+          assertTakeMedia(c.db, a.projectId, asset);
+          // Provenance, in the commit's own transaction: the revision this
+          // commit makes is the one after the expected head.
+          c.db
+            .prepare(
+              "INSERT INTO asset_replacements(project_id, revision, from_asset_id, from_hash, to_asset_id, to_hash, clips, principal_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .run(
+              a.projectId,
+              a.expectedRevision + 1,
+              p.from.assetId,
+              p.from.hash,
+              p.to.assetId,
+              p.to.hash,
+              p.clipIds.length,
+              principal.id,
+              c.nowMs,
+            );
+        },
+      );
+    },
+  }),
+  "yamakan.asset.replacements": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "The project's approved source replacements (relinks): each revision, the two media versions it swapped, how many clips, and who approved it.",
+    input: z.object({ projectId: Id }).strict(),
+    run: ({ store }, a) => store.assetReplacements(a.projectId),
   }),
   "yamakan.take.list": define({
     scope: "project:read",
@@ -1404,6 +1508,44 @@ export const commands = {
       queue.submit(a.projectId, a.idempotencyKey, {
         normalizeLoudness: a.normalizeLoudness === true,
       }),
+  }),
+  "yamakan.export.batch": define({
+    scope: "render:execute",
+    mutation: true,
+    summary:
+      "Queue MP4 exports of the current revision at up to 4 output sizes (aspect variants such as 1280x720, 608x1080 and 1080x1080, each with the same contain fit), admitted together or not at all. The batch completes only when every output does; its status lists each output's job, error and verified size.",
+    input: z
+      .object({
+        projectId: Id,
+        idempotencyKey: z.string().min(1).max(60),
+        variants: z.array(ExportVariant).min(1).max(BATCH_LIMITS.variants),
+        normalizeLoudness: z.boolean().optional(),
+      })
+      .strict(),
+    run: ({ queue }, a) =>
+      queue.submitBatch(a.projectId, a.idempotencyKey, a.variants, {
+        normalizeLoudness: a.normalizeLoudness === true,
+      }),
+  }),
+  "yamakan.export.batchStatus": define({
+    scope: "job:read",
+    mutation: false,
+    summary:
+      "A batch's outputs: each variant's job state, error, artifact, plan hash and verified size; the batch state is COMPLETED only when every output is.",
+    input: z
+      .object({ projectId: Id, batchId: z.string().regex(/^[a-f0-9]{32}$/) })
+      .strict(),
+    run: ({ queue }, a) => queue.batchStatus(a.projectId, a.batchId),
+  }),
+  "yamakan.export.batchCancel": define({
+    scope: "render:execute",
+    mutation: true,
+    summary:
+      "Cancel a batch's unfinished outputs; finished exports and the project are untouched.",
+    input: z
+      .object({ projectId: Id, batchId: z.string().regex(/^[a-f0-9]{32}$/) })
+      .strict(),
+    run: ({ queue }, a) => queue.cancelBatch(a.projectId, a.batchId),
   }),
   "yamakan.job.status": define({
     scope: "job:read",

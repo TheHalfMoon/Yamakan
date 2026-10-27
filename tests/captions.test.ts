@@ -555,6 +555,7 @@ test("a version 13 workspace upgrades to 14 and stores caption tracks", async ()
     db.exec(`DROP TABLE ${table}`);
     db.exec(`ALTER TABLE ${table}_old RENAME TO ${table}`);
   }
+  db.exec("DROP TABLE IF EXISTS asset_replacements");
   db.exec("PRAGMA user_version = 13");
   db.exec("COMMIT");
   assert.throws(() =>
@@ -573,7 +574,7 @@ test("a version 13 workspace upgrades to 14 and stores caption tracks", async ()
     assert.equal(
       (check.prepare("PRAGMA user_version").get() as { user_version: number })
         .user_version,
-      14,
+      15,
     );
     assert.deepEqual(check.prepare("PRAGMA foreign_key_check").all(), []);
   } finally {
