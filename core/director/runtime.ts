@@ -154,6 +154,30 @@ function revalidated(db: DatabaseSync, row: ConsentRow, epoch: number) {
   );
 }
 
+/**
+ * Inside a caller's transaction: a consent that exists, matches its
+ * character and purpose, is unrevoked and unexpired, and belongs to (or was
+ * revalidated in) the current epoch (YU-031 reference packs). The consent
+ * ledger is separate from project revisions, so undo or restore never
+ * brings back a revoked consent.
+ */
+export function assertConsentUsable(
+  db: DatabaseSync,
+  consentId: string,
+  opts: { characterId: string; purpose: ConsentPurpose; nowMs: number },
+): ConsentRecord {
+  const row = consentRow(db, consentId);
+  if (!row)
+    throw new CommandError("VALIDATION", "Likeness consent was not found.");
+  const record = assertConsentForEncoding(consentRecord(row), opts);
+  if (!revalidated(db, row, epochOf(db)))
+    throw new CommandError(
+      "VALIDATION",
+      "Likeness consent must be revalidated after a restore or import.",
+    );
+  return record;
+}
+
 export async function grantConsent(
   store: ProjectStore,
   input: {

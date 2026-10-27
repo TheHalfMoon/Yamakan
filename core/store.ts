@@ -52,6 +52,7 @@ import {
   validateDocument,
 } from "./documents.ts";
 import type { DocumentRef } from "./documents.ts";
+import type { CommitContext as DocumentCommitContext } from "./story.ts";
 import { assertStudioImageLimits } from "./studio.ts";
 
 // A sealed staged upload as clients see it: never a host path.
@@ -168,7 +169,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 12;
+export const WORKSPACE_SCHEMA_VERSION = 13;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -410,6 +411,56 @@ CREATE TABLE director_requests(
   created_at INTEGER NOT NULL,
   PRIMARY KEY(principal_id, request_id)
 ) STRICT;
+`;
+// Story documents and reference packs (YU-031): the two document tables
+// accept the new kinds, and each story or pack version is recorded under
+// its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
+// rebuilt with the same columns and rows (foreign keys are checked after,
+// in the same transaction).
+const SCHEMA_V13 = `
+CREATE TABLE creative_documents_v13(
+  hash TEXT PRIMARY KEY CHECK(length(hash) = 64),
+  kind TEXT NOT NULL CHECK(kind IN ('studio', 'cinemaScene', 'story', 'referencePack')),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  asset_ids TEXT NOT NULL,
+  bytes BLOB NOT NULL,
+  byte_length INTEGER NOT NULL CHECK(byte_length = length(bytes)),
+  object_digests TEXT NOT NULL DEFAULT '[]'
+) STRICT;
+INSERT INTO creative_documents_v13(hash, kind, schema_version, asset_ids, bytes, byte_length, object_digests)
+  SELECT hash, kind, schema_version, asset_ids, bytes, byte_length, object_digests FROM creative_documents;
+DROP TABLE creative_documents;
+ALTER TABLE creative_documents_v13 RENAME TO creative_documents;
+CREATE TABLE document_uploads_v13(
+  id TEXT PRIMARY KEY CHECK(length(id) = 36),
+  project_id TEXT NOT NULL,
+  principal_id TEXT NOT NULL,
+  request_id TEXT NOT NULL CHECK(length(request_id) BETWEEN 1 AND 128),
+  request_digest TEXT NOT NULL CHECK(length(request_digest) = 64),
+  kind TEXT NOT NULL CHECK(kind IN ('studio', 'cinemaScene', 'story', 'referencePack')),
+  schema_version INTEGER NOT NULL CHECK(schema_version > 0),
+  declared_bytes INTEGER NOT NULL CHECK(declared_bytes > 0),
+  body_sha256 TEXT NOT NULL CHECK(length(body_sha256) = 64),
+  state TEXT NOT NULL CHECK(state IN ('receiving', 'sealed', 'consumed')),
+  content_hash TEXT CHECK(content_hash IS NULL OR length(content_hash) = 64),
+  asset_ids TEXT,
+  bytes BLOB,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  consumed_revision INTEGER,
+  object_digests TEXT,
+  UNIQUE(principal_id, project_id, request_id)
+) STRICT;
+INSERT INTO document_uploads_v13 SELECT id, project_id, principal_id, request_id, request_digest, kind, schema_version, declared_bytes, body_sha256, state, content_hash, asset_ids, bytes, created_at, expires_at, consumed_revision, object_digests FROM document_uploads;
+DROP TABLE document_uploads;
+ALTER TABLE document_uploads_v13 RENAME TO document_uploads;
+CREATE TABLE story_document_versions(
+  project_id TEXT NOT NULL,
+  document_id TEXT NOT NULL CHECK(length(document_id) = 36),
+  content_hash TEXT NOT NULL REFERENCES creative_documents(hash),
+  revision INTEGER NOT NULL CHECK(revision > 0),
+  PRIMARY KEY(project_id, document_id, content_hash)
+) STRICT, WITHOUT ROWID;
 `;
 const SCHEMA_V4 = `
 CREATE TABLE edit_history(
@@ -689,17 +740,49 @@ export class ProjectStore {
         SCHEMA_V10,
         SCHEMA_V11,
         SCHEMA_V12,
+        SCHEMA_V13,
       ];
+      // Steps that rebuild a table referenced by a foreign key run with
+      // enforcement off (it cannot change inside a transaction) and verify
+      // every reference before committing.
+      const rebuilds = new Set([12]);
       upgradedFrom = acceptable(db);
       for (let v = upgradedFrom; v < SCHEMA_VERSION; v++) {
+        const rebuild = rebuilds.has(v);
+        if (rebuild) db.exec("PRAGMA foreign_keys = OFF");
         db.exec("BEGIN IMMEDIATE");
         try {
+          // Another process may have upgraded while this one waited.
+          const { user_version: at } = db
+            .prepare("PRAGMA user_version")
+            .get() as { user_version: number };
+          if (at < v || at > SCHEMA_VERSION)
+            throw new CommandError(
+              "RECOVERY_REQUIRED",
+              "Workspace database version changed during its upgrade.",
+            );
+          if (at > v) {
+            db.exec("ROLLBACK");
+            v = at - 1;
+            continue;
+          }
           db.exec(steps[v]);
+          if (
+            rebuild &&
+            db.prepare("PRAGMA foreign_key_check(snapshot_document_refs)").all()
+              .length
+          )
+            throw new CommandError(
+              "RECOVERY_REQUIRED",
+              "Workspace upgrade would break a document reference; the database was left as it was. Diagnose it (npm run recovery -- diagnose).",
+            );
           db.exec(`PRAGMA user_version = ${v + 1}`);
           db.exec("COMMIT");
         } catch (e) {
           db.exec("ROLLBACK");
           throw e;
+        } finally {
+          if (rebuild) db.exec("PRAGMA foreign_keys = ON");
         }
       }
     } catch (e) {
@@ -1295,6 +1378,9 @@ export class ProjectStore {
         | { stagedUploadId: string; contentHash: string };
       // Who commits: a staged upload is consumable only by its uploader.
       principalId?: string;
+      // Kind-specific checks against the head, inside the commit's own
+      // transaction (YU-031 stories and reference packs).
+      verify?: (context: DocumentCommitContext) => void;
       // A legacy source this commit migrates (YU-012), recorded atomically.
       migration?: {
         sourceKind: "cinema-sidecar";
@@ -1308,6 +1394,16 @@ export class ProjectStore {
     Id.parse(input.projectId);
     Id.parse(input.documentId);
     const kind = DocumentKind.parse(input.kind);
+    // Stories and packs are checked against the project and the consent
+    // ledger on every commit; a caller that brings no check is refused.
+    if (
+      (kind === "story" || kind === "referencePack") &&
+      (!input.verify || !("bytes" in input.source))
+    )
+      throw new CommandError(
+        "VALIDATION",
+        "Stories and reference packs are saved with their own commands.",
+      );
     if (input.migration && !("bytes" in input.source))
       throw new CommandError(
         "VALIDATION",
@@ -1482,6 +1578,15 @@ export class ProjectStore {
                 validated.bytes,
                 validated.bytes.length,
               );
+              if (kind === "story" || kind === "referencePack")
+                db.prepare(
+                  "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+                ).run(
+                  input.projectId,
+                  input.documentId,
+                  validated.hash,
+                  revision,
+                );
               if (migration)
                 db.prepare(
                   "INSERT INTO legacy_migrations(source_kind, source_name, source_sha256, source_bytes, project_id, document_id, content_hash, revision, migrated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1498,8 +1603,36 @@ export class ProjectStore {
                 );
             }
           : undefined,
-      next: (current, revision) => ({ ...current(), revision }),
+      next: (current, revision) => {
+        const project = current();
+        input.verify?.({
+          db: this.#database,
+          project,
+          documents: this.listDocuments(input.projectId),
+          held: (documentId, hash, kind) =>
+            this.#held(input.projectId, documentId, hash, kind),
+          // Read under the write lock, so a consent cannot expire unseen.
+          nowMs: Date.now(),
+        });
+        return { ...project, revision };
+      },
     });
+  }
+  // Whether this project committed this version of this story or pack
+  // document (recorded with the commit; YU-031).
+  #held(
+    projectId: string,
+    documentId: string,
+    contentHash: string,
+    kind: DocumentKind,
+  ) {
+    return Boolean(
+      this.#database
+        .prepare(
+          "SELECT 1 FROM story_document_versions v JOIN creative_documents c ON c.hash = v.content_hash WHERE v.project_id = ? AND v.document_id = ? AND v.content_hash = ? AND c.kind = ?",
+        )
+        .get(projectId, documentId, contentHash, kind),
+    );
   }
   /**
    * Reserves a staged document upload before any byte is read (YU-010b).
@@ -1521,6 +1654,12 @@ export class ProjectStore {
   ): { reserved: string } | { receipt: StagedDocumentReceipt } {
     Id.parse(input.projectId);
     const kind = DocumentKind.parse(input.kind);
+    // Stories and packs are small and saved inline by their own commands.
+    if (kind === "story" || kind === "referencePack")
+      throw new CommandError(
+        "VALIDATION",
+        "Stories and reference packs are not staged; save them with their commands.",
+      );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,
     );
@@ -2577,9 +2716,14 @@ export class ProjectStore {
   async applyOperations(
     projectId: string,
     expectedRevision: number,
-    operations: Operation[],
+    // The operations, or (YU-031 story assembly) a builder that makes them
+    // from the head inside the commit, so a retry replays and the head the
+    // operations were made from is the head they apply to.
+    operations: Operation[] | ((head: CanonicalProject) => Operation[]),
     author: string,
     receipt?: RequestReceipt,
+    // Checks against the head inside the commit (YU-031 story assembly).
+    verify?: (context: DocumentCommitContext) => void,
   ) {
     Id.parse(projectId);
     return this.#commit({
@@ -2587,10 +2731,28 @@ export class ProjectStore {
       projectId,
       expectedRevision,
       receipt,
-      next: (current, revision) => ({
-        ...toEditView(applyBatch(fromEditView(current()), operations)),
-        revision,
-      }),
+      next: (current, revision) => {
+        const head = current();
+        verify?.({
+          db: this.#database,
+          project: head,
+          documents: this.listDocuments(projectId),
+          held: (documentId, hash, kind) =>
+            this.#held(projectId, documentId, hash, kind),
+          // Read under the write lock, so a consent cannot expire unseen.
+          nowMs: Date.now(),
+        });
+        const canonical = fromEditView(head);
+        const ops =
+          typeof operations === "function" ? operations(canonical) : operations;
+        // A batch holds at most 64 operations; a built assembly may hold
+        // more, applied in order within this one revision (it is bounded
+        // by the story's own limits).
+        let next = canonical;
+        for (let i = 0; i < ops.length || i === 0; i += 64)
+          next = applyBatch(next, ops.slice(i, i + 64));
+        return { ...toEditView(next), revision };
+      },
       effects: (db, revision) => {
         const at = this.#cursor(db, projectId);
         const cursor = at?.head_revision === expectedRevision ? at.cursor : 0;

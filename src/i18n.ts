@@ -149,6 +149,14 @@ const en = {
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
   "engine.list": "Generative operations",
+  "story.list": "Stories and reference packs",
+  "story.none": "This project has no story or reference pack yet.",
+  "story.refresh": "Read stories again",
+  "story.summary": "{title} — shots: {shots}; title cards: {cards}",
+  "story.pack":
+    "{name} — references: {entries}; linked likeness consents: {likeness}",
+  "story.unknown":
+    "The stories and reference packs could not be read right now.",
   "engine.unknown":
     "Whether generative operations can run here is not known right now.",
   "engine.reason.ENGINE_DISABLED":
@@ -382,6 +390,13 @@ const ar: Record<MessageKey, string> = {
   "director.title": "المخرج",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "engine.list": "عمليات التوليد",
+  "story.list": "القصص وحزم المراجع",
+  "story.none": "لا توجد في هذا المشروع قصة ولا حزمة مراجع بعد.",
+  "story.refresh": "اقرأ القصص من جديد",
+  "story.summary": "{title} — اللقطات: {shots}؛ بطاقات العناوين: {cards}",
+  "story.pack":
+    "{name} — المراجع: {entries}؛ موافقات الشبه المرتبطة: {likeness}",
+  "story.unknown": "تعذّرت قراءة القصص وحزم المراجع الآن.",
   "engine.unknown": "لا يُعرف الآن إن كانت عمليات التوليد ممكنة هنا.",
   "engine.reason.ENGINE_DISABLED":
     "محركات التوليد متوقفة في هذا الإصدار. التحرير والتصيير والتصدير تعمل بدونها.",

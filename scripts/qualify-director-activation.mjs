@@ -123,6 +123,87 @@ try {
     assert.match(op.text, /Generative engines are turned off in this build/);
   }
 
+  // YU-031: a story saved by another client shows in the panel after a
+  // refresh, and assembles onto the timeline (title cards: no media, no
+  // generator).
+  const call = (operation, parameters) =>
+    page.evaluate(
+      async ([operation, parameters]) => {
+        const stored = JSON.parse(
+          sessionStorage.getItem("yamakan.session") ?? "null",
+        );
+        const headers = { "Content-Type": "application/json" };
+        if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+        const res = await fetch("/api/v1/call", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ apiVersion: 1, operation, parameters }),
+        });
+        return res.json();
+      },
+      [operation, parameters],
+    );
+  const listed = await call("yamakan.project.list", {});
+  const projects = listed.result?.projects ?? listed.result ?? [];
+  const project = projects.find((p) => p.name === "Director act");
+  assert.ok(project, JSON.stringify(listed).slice(0, 400));
+  const opened = await call("yamakan.project.open", { projectId: project.id });
+  const head = opened.result?.project ?? opened.result;
+  const storyId = crypto.randomUUID();
+  const shot = (name) => ({
+    id: crypto.randomUUID(),
+    name,
+    durationTicks: 30 * 23_520_000,
+    notes: "",
+    referencePacks: [],
+    takes: [],
+    selectedTakeId: null,
+  });
+  const saved = await call("yamakan.story.save", {
+    projectId: project.id,
+    expectedRevision: head.revision,
+    documentId: storyId,
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 1,
+      title: "Night walk",
+      scenes: [
+        {
+          id: crypto.randomUUID(),
+          name: "Alley",
+          shots: [shot("Wide"), shot("Close")],
+        },
+      ],
+    },
+  });
+  assert.ok(saved.result?.document, JSON.stringify(saved).slice(0, 400));
+  await page.getByTestId("story-refresh").click();
+  const storyRow = page.locator(
+    '[data-testid="story-packs"] li[data-kind="story"]',
+  );
+  await storyRow.waitFor();
+  // The title is bidi-isolated (FSI…PDI) by the shared translate().
+  const shown = (await storyRow.innerText())
+    .replace(/[\u2066-\u2069]/g, "")
+    .trim();
+  assert.equal(shown, "Night walk — shots: 2; title cards: 2");
+  const assembled = await call("yamakan.story.assemble", {
+    projectId: project.id,
+    expectedRevision: saved.result.project.revision,
+    documentId: storyId,
+    trackId: head.tracks.find((t) => t.kind === "video").id,
+  });
+  assert.equal(
+    assembled.result?.clips?.length,
+    2,
+    JSON.stringify(assembled).slice(0, 400),
+  );
+  result.story = {
+    shown,
+    assembledClips: assembled.result.clips.length,
+  };
+
   await page.getByTestId("director-start").click();
   await page.waitForFunction(
     () =>

@@ -9,7 +9,10 @@ type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
 };
 
-type Translate = (key: MessageKey) => string;
+type Translate = (
+  key: MessageKey,
+  vars?: Record<string, string | number>,
+) => string;
 type EngineOperation = {
   operation: string;
   available: boolean;
@@ -85,8 +88,152 @@ function EngineOperations({ client, t }: { client: Client; t: Translate }) {
   );
 }
 
+type StoryItem =
+  | { kind: "story"; id: string; title: string; shots: number; cards: number }
+  | {
+      kind: "pack";
+      id: string;
+      name: string;
+      entries: number;
+      likeness: number;
+    };
+// A story or pack as read back (YU-031); anything malformed is skipped.
+function storyItem(value: unknown): StoryItem | null {
+  const v = value as Record<string, unknown> | null;
+  if (!v || typeof v.id !== "string") return null;
+  const content = v.content as Record<string, unknown> | null;
+  if (v.kind === "story" && content && Array.isArray(content.scenes)) {
+    const shots = content.scenes.flatMap((s: { shots?: unknown }) =>
+      Array.isArray(s?.shots)
+        ? (s.shots as { selectedTakeId?: unknown }[])
+        : [],
+    );
+    return {
+      kind: "story",
+      id: v.id,
+      title: String(content.title ?? ""),
+      shots: shots.length,
+      cards: shots.filter((s) => s?.selectedTakeId === null).length,
+    };
+  }
+  if (v.kind === "referencePack" && content && Array.isArray(content.entries)) {
+    const entries = content.entries as { consentId?: unknown }[];
+    return {
+      kind: "pack",
+      id: v.id,
+      name: String(content.name ?? ""),
+      entries: entries.length,
+      // Linked consents, whatever their state now (a save checks them).
+      likeness: entries.filter((e) => typeof e?.consentId === "string").length,
+    };
+  }
+  return null;
+}
+
+// The project's stories and reference packs, listed again at each revision
+// of the open project or when asked (another client may have saved one);
+// their content is read again only when a version changed.
+function StoryPacks({
+  projectId,
+  revision,
+  client,
+  t,
+}: {
+  projectId: string;
+  revision: number | null;
+  client: Client;
+  t: Translate;
+}) {
+  const [items, setItems] = useState<StoryItem[] | "unknown" | null>(null);
+  const [reads, setReads] = useState(0);
+  const caller = useRef(client);
+  const versions = useRef<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    (async () => {
+      const refs = (await caller.current.call("yamakan.document.list", {
+        projectId,
+      })) as { id?: unknown; kind?: unknown; contentHash?: unknown }[];
+      const wanted = (Array.isArray(refs) ? refs : []).filter(
+        (r) =>
+          typeof r?.id === "string" &&
+          (r.kind === "story" || r.kind === "referencePack"),
+      );
+      const key = wanted.map((r) => `${r.id}:${r.contentHash}`).join(",");
+      // Skipped only when these versions were already shown in full.
+      if (key === versions.current) return null;
+      // One unreadable document does not hide the others.
+      const read = await Promise.allSettled(
+        wanted.map((r) =>
+          caller.current.call("yamakan.document.get", {
+            projectId,
+            documentId: r.id,
+          }),
+        ),
+      );
+      const items = read
+        .map((r) => (r.status === "fulfilled" ? storyItem(r.value) : null))
+        .filter((x): x is StoryItem => x !== null);
+      const complete = read.every((r) => r.status === "fulfilled");
+      return { key: complete ? key : null, items };
+    })()
+      .then((read) => {
+        if (!current || !read) return;
+        versions.current = read.key;
+        setItems(read.items);
+      })
+      .catch(() => {
+        versions.current = null;
+        if (current) setItems("unknown");
+      });
+    return () => {
+      current = false;
+    };
+  }, [projectId, revision, reads]);
+  if (!items) return null;
+  return (
+    <section
+      data-testid="story-packs"
+      data-reads={reads}
+      aria-label={t("story.list")}
+    >
+      <button
+        type="button"
+        data-testid="story-refresh"
+        onClick={() => setReads((n) => n + 1)}
+      >
+        {t("story.refresh")}
+      </button>
+      {items === "unknown" ? (
+        <p>{t("story.unknown")}</p>
+      ) : items.length ? (
+        <ul>
+          {items.map((item) => (
+            <li key={item.id} data-kind={item.kind}>
+              {item.kind === "story"
+                ? t("story.summary", {
+                    title: item.title,
+                    shots: item.shots,
+                    cards: item.cards,
+                  })
+                : t("story.pack", {
+                    name: item.name,
+                    entries: item.entries,
+                    likeness: item.likeness,
+                  })}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>{t("story.none")}</p>
+      )}
+    </section>
+  );
+}
+
 type Props = {
   projectId: string | null;
+  revision?: number | null;
   client: Client;
   t: Translate;
 };
@@ -95,7 +242,12 @@ type Props = {
  * Manual Director controls. Human approval uses browser-principal scopes.
  * Model-dependent stages are listed as unsupported, not invoked.
  */
-export function DirectorPanel({ projectId, client, t }: Props) {
+export function DirectorPanel({
+  projectId,
+  revision = null,
+  client,
+  t,
+}: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
   const [detail, setDetail] = useState<string>("");
@@ -138,6 +290,15 @@ export function DirectorPanel({ projectId, client, t }: Props) {
         unsupported: {(directorCapability().unsupported ?? []).join(", ")}
       </p>
       <EngineOperations client={client} t={t} />
+      {projectId ? (
+        <StoryPacks
+          key={projectId}
+          projectId={projectId}
+          revision={revision}
+          client={client}
+          t={t}
+        />
+      ) : null}
       <p>
         <button
           type="button"

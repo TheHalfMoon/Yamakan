@@ -870,6 +870,7 @@ function App() {
       <DirectorPanel
         key={p?.id ?? "none"}
         projectId={p?.id ?? null}
+        revision={p?.revision ?? null}
         t={t}
         client={{
           call: (operation, parameters) =>
