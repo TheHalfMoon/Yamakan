@@ -16,7 +16,7 @@
 //   for a person to write. A proposal is reviewed, never saved by itself.
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, open, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
@@ -292,9 +292,10 @@ export async function extractPcm(
   signal?: AbortSignal,
 ): Promise<Pcm> {
   const { file, asset, frameRate } = await store.assetFile(projectId, assetId);
-  const durationTicks = assertTranscribable(asset, frameRate);
+  assertTranscribable(asset, frameRate);
   const root = await store.file(projectId, "cache", "transcription");
   await mkdir(root, { recursive: true });
+  await sweepStale(root);
   const dir = path.join(root, `${randomUUID()}.partial`);
   await mkdir(dir);
   try {
@@ -337,8 +338,7 @@ export async function extractPcm(
     );
     const out = path.join(dir, "pcm.wav");
     const { size } = await stat(out);
-    // A canonical 44-byte header, then the samples.
-    const samples = Math.max(0, Math.floor((size - 44) / 2));
+    const samples = await checkedSamples(out, size);
     const hash = createHash("sha256");
     for await (const chunk of createReadStream(out)) hash.update(chunk);
     return {
@@ -346,17 +346,63 @@ export async function extractPcm(
       file: out,
       samples,
       sha256: hash.digest("hex"),
-      durationTicks,
+      // The sound's own length (exact: 44100 ticks per sample at 16 kHz),
+      // which segments are bounded by.
+      durationTicks:
+        samples * (FLICKS_PER_SECOND / TRANSCRIPTION_LIMITS.sampleRate),
       asset,
     };
   } catch (e) {
-    await rm(dir, { recursive: true, force: true });
+    await remove(dir);
     throw e;
   }
 }
 
-export const releasePcm = (pcm: Pcm) =>
-  rm(pcm.dir, { recursive: true, force: true });
+// A worker just stopped may still hold the folder briefly (Windows).
+const remove = (dir: string) =>
+  rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+
+export const releasePcm = (pcm: Pcm) => remove(pcm.dir);
+
+// Folders left by a crash (older than any extraction can run) are removed.
+async function sweepStale(root: string) {
+  const cutoff = Date.now() - 2 * TRANSCRIPTION_LIMITS.wallSeconds * 1000;
+  for (const name of await readdir(root).catch(() => [])) {
+    if (!name.endsWith(".partial")) continue;
+    const at = path.join(root, name);
+    const info = await stat(at).catch(() => null);
+    if (info && info.mtimeMs < cutoff) await remove(at);
+  }
+}
+
+// The canonical 44-byte header FFmpeg writes with +bitexact (RIFF, WAVE,
+// fmt for 16 kHz mono 16-bit, then data): anything else is refused rather
+// than counted wrongly.
+async function checkedSamples(file: string, size: number) {
+  const handle = await open(file, "r");
+  const head = Buffer.alloc(44);
+  try {
+    await handle.read(head, 0, 44, 0);
+  } finally {
+    await handle.close();
+  }
+  const ok =
+    size >= 44 &&
+    head.toString("ascii", 0, 4) === "RIFF" &&
+    head.toString("ascii", 8, 16) === "WAVEfmt " &&
+    head.readUInt16LE(20) === 1 &&
+    head.readUInt16LE(22) === 1 &&
+    head.readUInt32LE(24) === TRANSCRIPTION_LIMITS.sampleRate &&
+    head.readUInt16LE(34) === 16 &&
+    head.toString("ascii", 36, 40) === "data" &&
+    head.readUInt32LE(40) === size - 44;
+  if (!ok)
+    throw new CommandError(
+      "MEDIA_INVALID",
+      "Sound extraction wrote PCM that is not 16 kHz mono 16-bit WAV.",
+    );
+  return (size - 44) / 2;
+}
 
 const toTicks = (seconds: number) => Math.round(seconds * 1000) * TICKS_PER_MS;
 
@@ -365,8 +411,11 @@ export function soundRegions(text: string, durationTicks: number) {
   const regions: { startTicks: number; endTicks: number }[] = [];
   let soundFrom = 0;
   for (const line of text.split(/\r?\n/)) {
-    const start = /^lavfi\.silence_start=(-?\d+(?:\.\d+)?)\s*$/.exec(line);
-    const end = /^lavfi\.silence_end=(\d+(?:\.\d+)?)\s*$/.exec(line);
+    const start =
+      /^lavfi\.silence_start=(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)\s*$/.exec(line);
+    const end = /^lavfi\.silence_end=(\d+(?:\.\d+)?(?:e[-+]?\d+)?)\s*$/.exec(
+      line,
+    );
     if (start) {
       const at = Math.min(
         durationTicks,
@@ -397,6 +446,8 @@ export async function standInTranscript(
   const printed = await inTurn(() =>
     ffmpeg(
       [
+        "-f",
+        "wav",
         "-i",
         "file:pcm.wav",
         "-af",
@@ -408,12 +459,6 @@ export async function standInTranscript(
       { cwd: pcm.dir, readable: [pcm.dir] },
       signal,
       "Sound analysis",
-    ),
-  );
-  const pcmTicks = Math.min(
-    pcm.durationTicks,
-    Math.floor(
-      (pcm.samples * FLICKS_PER_SECOND) / TRANSCRIPTION_LIMITS.sampleRate,
     ),
   );
   return TranscriptSchema.parse({
@@ -428,7 +473,7 @@ export async function standInTranscript(
     recognizer: { kind: "stand-in", version: STAND_IN_VERSION, model: null },
     language,
     recognition: "none",
-    segments: soundRegions(printed, pcmTicks).map((r) => ({
+    segments: soundRegions(printed, pcm.durationTicks).map((r) => ({
       ...r,
       text: "",
       words: [],
@@ -511,20 +556,48 @@ export function parseWhisperJson(
   if (out.transcription.length > TRANSCRIPTION_LIMITS.segments)
     throw new CommandError("LIMIT_EXCEEDED", "Too many transcript segments.");
   const ms = (n: number) => n * TICKS_PER_MS;
-  const segments = out.transcription.map((s) => ({
-    startTicks: ms(s.offsets.from),
-    endTicks: ms(s.offsets.to),
-    text: s.text.trim(),
-    words: (s.tokens ?? [])
-      .filter((t) => !CONTROL_TOKEN.test(t.text.trim()) && t.offsets)
-      .map((t) => ({
-        startTicks: ms(t.offsets!.from),
-        endTicks: ms(t.offsets!.to),
-        text: t.text.trim(),
-        probability: t.p === undefined ? null : Math.min(1, Math.max(0, t.p)),
-      }))
-      .filter((w) => w.text !== ""),
-  }));
+  if (
+    out.transcription.some((s) =>
+      (s.tokens ?? []).some((t) => t.p !== undefined && (t.p < 0 || t.p > 1)),
+    )
+  )
+    throw new CommandError(
+      "MEDIA_INVALID",
+      "The recognizer reported a token probability outside 0 to 1.",
+    );
+  // A zero-length segment (t0 = t1, which whisper.cpp can emit) holds no
+  // time and is dropped; a timed word may overrun its segment by a token's
+  // rounding, so it is clamped into it. Anything grosser is refused below.
+  const SLACK = 200 * TICKS_PER_MS;
+  const segments = out.transcription
+    .filter((s) => s.offsets.to !== s.offsets.from)
+    .map((s) => {
+      const startTicks = ms(s.offsets.from);
+      const endTicks = ms(s.offsets.to);
+      return {
+        startTicks,
+        endTicks,
+        text: s.text.trim(),
+        words: (s.tokens ?? [])
+          .filter((t) => !CONTROL_TOKEN.test(t.text.trim()) && t.offsets)
+          .map((t) => {
+            const from = ms(t.offsets!.from);
+            const to = ms(t.offsets!.to);
+            const near = from >= startTicks - SLACK && to <= endTicks + SLACK;
+            return {
+              startTicks: near
+                ? Math.max(startTicks, Math.min(from, endTicks))
+                : from,
+              endTicks: near
+                ? Math.min(endTicks, Math.max(to, startTicks))
+                : to,
+              text: t.text.trim(),
+              probability: t.p ?? null,
+            };
+          })
+          .filter((w) => w.text !== ""),
+      };
+    });
   const transcript = TranscriptSchema.safeParse({
     format: TRANSCRIPT_FORMAT,
     formatVersion: 1,
@@ -546,8 +619,9 @@ export function parseWhisperJson(
   return transcript.data;
 }
 
-// Placeholder for a cue whose words a person must write.
-export const PLACEHOLDER = "[speech]";
+// Placeholder for a cue whose words a person must write. Neutral: the
+// stand-in finds sound, which may be music or noise, not speech.
+export const PLACEHOLDER = "[sound]";
 
 /**
  * A reviewable caption track from a transcript: one cue per segment at
@@ -564,6 +638,9 @@ export function captionProposal(
     throw invalid("The transcript found no sound to caption.");
   const id = options.cueId ?? (() => randomUUID());
   let placeholders = 0;
+  // Segments that fall wholly inside an earlier cue at millisecond
+  // precision: their text is reported, never silently lost.
+  const dropped: { segment: number; text: string }[] = [];
   let previousEnd = 0;
   const cues: CaptionDocument["cues"] = [];
   for (const [i, s] of t.segments.entries()) {
@@ -572,7 +649,10 @@ export function captionProposal(
       Math.round(s.startTicks / TICKS_PER_MS) * TICKS_PER_MS,
     );
     const end = Math.round(s.endTicks / TICKS_PER_MS) * TICKS_PER_MS;
-    if (end <= start) continue;
+    if (end <= start) {
+      dropped.push({ segment: i + 1, text: s.text });
+      continue;
+    }
     let text = s.text.replace(/\s+/g, " ").trim();
     if (!text) {
       text = PLACEHOLDER;
@@ -592,6 +672,11 @@ export function captionProposal(
     });
     previousEnd = end;
   }
+  if (cues.length > CAPTION_LIMITS.cues)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      `A caption track holds at most ${CAPTION_LIMITS.cues} cues; this transcript has ${cues.length}.`,
+    );
   const document = CaptionDocumentSchema.parse({
     format: "yamakan.captions",
     formatVersion: 1,
@@ -604,10 +689,16 @@ export function captionProposal(
   return {
     document,
     placeholders,
+    dropped,
     recognition: t.recognition,
-    // Names exactly what is proposed, from which transcript.
+    // Names what is proposed (cue times and text, not the fresh cue ids)
+    // from which transcript, so the same transcript gives the same hash.
     proposalHash: sha256Hex(
-      canonicalJson({ transcript: sha256Hex(canonicalJson(t)), document }),
+      canonicalJson({
+        transcript: sha256Hex(canonicalJson(t)),
+        language: document.language,
+        cues: document.cues.map((c) => [c.startTicks, c.endTicks, c.text]),
+      }),
     ),
   };
 }

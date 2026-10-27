@@ -565,9 +565,13 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - Audio is read through miniaudio at 16 kHz (`examples/common-whisper.cpp`).
   - The 100 language codes come from `g_lang` in `src/whisper.cpp`.
 - **PCM.** One asset's sound is extracted to 16 kHz mono 16-bit WAV in a private cache folder. Its header is a canonical 44 bytes with no encoder tag, so the same sound gives the same bytes and SHA-256.
+  - The header is checked (RIFF, WAVE, 16 kHz mono 16-bit, `data` at byte 36 with the file's length) before samples are counted.
+  - The transcript's duration is the PCM's own length (44,100 ticks per sample), not the asset's frame count.
   - The worker is a bounded, owned FFmpeg worker, one at a time with 2 waiting (more is `BUSY`).
   - It can be cancelled, has a 600 s wall limit and the worker memory limit, and may read only the source and write only its folder.
-  - Sources longer than an hour, stills and silent footage are refused from the asset's own record, before anything is decoded. The folder is removed on release and on any failure.
+  - Sources longer than an hour, stills and silent footage are refused from the asset's own record, before anything is decoded.
+  - The folder is removed on release and on any failure, with retries. Folders left by a crash are swept on the next extraction.
+  - The only executable is the bundled FFmpeg (`mediaTools()`). No request names a program, path or arguments.
 - **Transcript (`yamakan.transcript` v1).** Segments and words are in ticks from the source's start, carrying:
   - the source asset and hash, its duration, and the PCM's SHA-256;
   - the recognizer kind, version and model (id and SHA-256);
@@ -589,20 +593,27 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - negative or backward times;
   - times beyond the source;
   - a language other than the one asked for;
-  - output over 8 MiB.
+  - output over 8 MiB;
+  - a token probability outside 0 to 1.
 
   Control tokens and untimed tokens are dropped from words, and an empty transcription is no speech.
+  - A zero-length segment is dropped.
+  - A word that overruns its segment by up to 200 ms (token rounding) is clamped into it; a larger overrun is refused.
+  - The language must be given: `-l auto` is not accepted.
 
 - **Stand-in.** FFmpeg's `silencedetect` (−35 dB, 0.4 s) runs on the same PCM, deterministically and with no model. It reports where there is sound, with no words (`recognition: "none"`).
 - **Caption proposal.** `captionProposal` turns a transcript into a caption document, one cue per segment at whole milliseconds, never overlapping.
-  - Text the stand-in could not recognize becomes the placeholder `[speech]`, and `placeholders` counts them.
+  - Text the stand-in could not recognize becomes the neutral placeholder `[sound]`, since a region may be music or noise, and `placeholders` counts them.
+  - A segment that falls wholly inside an earlier cue at millisecond precision is listed in `dropped`, not silently lost.
+  - More cues than a caption track holds (2000) is `LIMIT_EXCEEDED`.
+  - Word timestamps stay in the transcript; a caption cue carries a segment's time only.
   - Nothing is saved: a person reviews the proposal and applies it with the caption commands.
-  - The proposal is named by a hash of the transcript and the document.
+  - The proposal is named by a hash of the transcript and the cue times and text, not the fresh cue ids, so the same transcript gives the same hash.
   - A transcript with no sound has nothing to caption.
 - **Command.** `yamakan.audio.transcribe` (`render:execute`) checks the language, then the source, then refuses with the engine discovery's plain reason. That reason is `ENGINE_DISABLED` while engines are off, and `WEIGHTS_ABSENT` with no pinned model. Even a pinned model would not run, because the recognizer worker is not implemented.
 - **Not done:**
   - No whisper.cpp binary or model is pinned or bundled, and no real recognition is claimed or measured.
-  - Consent and retention for a voice transcript fall under YU-051's per-stage consent once a recognizer runs.
+  - Consent and retention are not enforced here. The transcribe command takes no consent, because nothing runs. A recognizer that runs must apply YU-051's per-stage consent (`voice-clone` for a speaker's voice) before submission.
   - Stand-in segments are sound regions, not utterances.
 
 ## Deterministic media analysis: scene cuts (YU-071)

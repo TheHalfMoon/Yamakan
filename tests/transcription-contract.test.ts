@@ -232,6 +232,12 @@ test("the stand-in locates sound, claims no words, and its proposal round-trips 
   assert.equal(p.recognition, "none");
   assert.equal(p.placeholders, 2);
   assert.ok(p.document.cues.every((cue) => cue.text === PLACEHOLDER));
+  assert.equal(PLACEHOLDER, "[sound]");
+  // The same transcript names the same proposal, whatever the cue ids.
+  assert.equal(
+    captionProposal(t, { name: "Draft" }).proposalHash,
+    p.proposalHash,
+  );
   // Proposed, then applied by a person with the caption commands: the
   // cue times survive SRT export, import and export again.
   const documentId = crypto.randomUUID();
@@ -384,7 +390,7 @@ test("malformed recognizer output is refused, never repaired", () => {
     [whisperJson(`{"text":"no offsets"}`), /missing required fields/],
     [whisperJson(segment(-10, 100, "negative")), /missing required fields/],
     [
-      whisperJson(segment(0, 100, "word", token(" w", 0, 200))),
+      whisperJson(segment(0, 100, "word", token(" w", 0, 900))),
       /malformed: A word lies inside its segment/,
     ],
     ["{}", /missing required fields/],
@@ -476,4 +482,58 @@ test("missing weights and unsupported languages are refused before any work", as
   } finally {
     await releasePcm(pcm);
   }
+});
+
+test("rounding-level overruns are clamped, empty segments dropped, and a swallowed segment reported", () => {
+  const t = parseWhisperJson(
+    whisperJson(
+      [
+        segment(
+          0,
+          1000,
+          " one",
+          [
+            // An untimed control token, as whisper.cpp writes most of them.
+            `{ "text": "[_BEG_]", "id": 50364, "p": 0.99, "t_dtw": -1 }`,
+            token(" one", 0, 1080),
+          ].join(","),
+        ),
+        segment(1000, 1000, " empty"),
+        segment(1200, 2000, " two"),
+      ].join(","),
+    ),
+    { source: sourceOf(2600), language: "ar", model: MODEL },
+  );
+  assert.deepEqual(
+    t.segments.map((s) => s.text),
+    ["one", "two"],
+  );
+  assert.deepEqual(
+    t.segments[0]!.words.map((w) => [w.text, w.startTicks, w.endTicks]),
+    [["one", 0, 1000 * MS]],
+  );
+  // A probability outside 0..1 is refused, not clamped.
+  assert.throws(
+    () =>
+      parseWhisperJson(
+        whisperJson(segment(0, 100, "x", token(" x", 0, 100, 1.5))),
+        {
+          source: sourceOf(2600),
+          language: "ar",
+          model: MODEL,
+        },
+      ),
+    /probability outside 0 to 1/,
+  );
+  // A segment inside an earlier one at millisecond precision is reported.
+  const inner = TranscriptSchema.parse({
+    ...t,
+    segments: [
+      { startTicks: 0, endTicks: 1000 * MS, text: "outer", words: [] },
+      { startTicks: 100 * MS, endTicks: 900 * MS, text: "inner", words: [] },
+    ],
+  });
+  const p = captionProposal(inner, { name: "Draft" });
+  assert.equal(p.document.cues.length, 1);
+  assert.deepEqual(p.dropped, [{ segment: 2, text: "inner" }]);
 });
