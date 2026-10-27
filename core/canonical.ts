@@ -197,8 +197,12 @@ const ProjectBody = z
       .array(CanonicalAsset)
       .max(RESOURCE_POLICY.enforced.assetsPerProject),
     scenes: z.array(CanonicalScene).max(100),
-    tracks: z.array(CanonicalTrack).max(16),
-    clips: z.array(CanonicalClip).max(200),
+    tracks: z
+      .array(CanonicalTrack)
+      .max(16, "A project holds at most 16 tracks."),
+    clips: z
+      .array(CanonicalClip)
+      .max(200, "A project holds at most 200 clips."),
     // v5: references to immutable creative documents (core/documents.ts).
     documents: z
       .array(DocumentRefSchema)

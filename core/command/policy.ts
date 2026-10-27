@@ -92,3 +92,44 @@ export const RESOURCE_POLICY = Object.freeze({
     diagnosticOutputBytes: 1 * MiB,
   }),
 });
+
+// YU-026: the named editor scale profiles. S is a typical project and M the
+// enforced maximum (200 clips, 16 tracks, ten minutes at 30 fps, 1080p
+// output); each is measured by scripts/qualify-editor-scale.mjs, whose
+// results are kept in docs/evidence/ultimate/editor-scale.json. L, H, A
+// and K are one past a limit each and must be refused, never clamped. A
+// limit is raised only by a new, reviewed policy version after measuring.
+export const SCALE_PROFILES = Object.freeze({
+  version: "yamakan.scale-profiles/v1",
+  supported: Object.freeze({
+    S: Object.freeze({
+      clips: 24,
+      tracks: 4,
+      timelineFrames: 3600,
+      width: 1280,
+      height: 720,
+    }),
+    M: Object.freeze({
+      clips: 200,
+      tracks: 16,
+      timelineFrames: 18000,
+      width: 1920,
+      height: 1080,
+    }),
+    // A full-length single-track timeline: measures export time against
+    // the render wall-clock limit (half M's clips, one video track).
+    T: Object.freeze({
+      clips: 100,
+      tracks: 2,
+      timelineFrames: 18000,
+      width: 1920,
+      height: 1080,
+    }),
+  }),
+  refused: Object.freeze({
+    L: Object.freeze({ clips: 201 }),
+    H: Object.freeze({ tracks: 17 }),
+    A: Object.freeze({ timelineFrames: 18001 }),
+    K: Object.freeze({ width: 3840, height: 2160 }),
+  }),
+});

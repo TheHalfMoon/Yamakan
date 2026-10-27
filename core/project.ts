@@ -159,8 +159,8 @@ const ProjectBody = z
       .refine((x) => x % 2 === 0),
     assets: z.array(AssetSchema).max(200),
     scenes: z.array(SceneSchema).max(100),
-    tracks: z.array(TrackSchema).max(16),
-    clips: z.array(ClipSchema).max(200),
+    tracks: z.array(TrackSchema).max(16, "A project holds at most 16 tracks."),
+    clips: z.array(ClipSchema).max(200, "A project holds at most 200 clips."),
   })
   .strict()
   .superRefine((p, ctx) => {
