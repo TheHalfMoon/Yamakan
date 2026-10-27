@@ -1,0 +1,82 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "fc49a67",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-032",
+  "objective": "Implement non-destructive take compare/replace",
+  "branch": "feat/yu-032-take-replace",
+  "mergedPr": 127,
+  "headCommit": "a970ee1",
+  "mergeCommit": "95906ac",
+  "flags": "Story writes (and so take lineage) follow the AG-DOCS switch (YAMAKAN_AG_DOCS_OFF=1); take commands read stories and apply timeline operations",
+  "deviations": [
+    "The interface is four commands (yamakan.take.list, .compare, .proposeReplace, .apply); no editor UI in this task",
+    "A replacement changes the timeline clip (new operation clip.replaceMedia), not the story's selectedTakeId, which stays the storyboard's choice for assembly",
+    "Take lineage is an optional field of a story take (label, outputHash, up to 8 pinned inputs); stories without it keep their bytes",
+    "Comparison previews are the indexed 90-pixel footage thumbnail (from the edit proxy when ready) or the still itself; the command decodes no original",
+    "clip.replaceMedia is also part of yamakan.project.applyBatch with the timeline's own checks only (like clip.add); probe, consent, lineage and story binding are guaranteed through yamakan.take.apply"
+  ],
+  "tests": {
+    "files": [
+      "tests/take-replace.test.ts",
+      "tests/story-packs.test.ts",
+      "tests/effect-parity.test.ts"
+    ],
+    "result": "8 take tests: replace one of three shots with every other part of the export deep-equal and list/compare/propose changing nothing; undo, redo, reopen and undo return the exact old take; still to footage with sound, title card to a take, footage back to a still; stale, forged-mapping and story-changed proposals refused (REVISION_CONFLICT); a take shorter than its clip, a missing object on disk, a missing probe and a wrong lineage hash refused; a revoked reference consent refuses and leaves the clip; scopes (read principal cannot apply), unknown take/shot, duplicate compare ids; locked track, retimed clip and unlinked sound (old or new media) refused; effects, animation and sound gain/fades preserved"
+  },
+  "reviews": [
+    {
+      "kind": "fresh-context correctness/parsimony/product review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 5,
+        "finalRound": "no must-fix, no should-fix (one doc nit applied)"
+      }
+    },
+    {
+      "kind": "independent security review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": 1,
+        "finalRound": "no must-fix, no should-fix"
+      }
+    },
+    {
+      "kind": "self-test before review",
+      "finding": "A forged proposal body carrying a genuine hash was applied as the genuine proposal; apply now requires the whole recomputed proposal to equal the submitted one"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; local model needs more free RAM)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only a billing notice (no review); nothing to address"
+  ],
+  "postMergeVerification": {
+    "main": "95906ac",
+    "ci": "PR exact head a970ee1: qualify, qualify-windows-r8, otio-oracle success; push run on 95906ac: success",
+    "windows": "detached 95906ac: typecheck, lint, format, provenance, brand, build pass; npm test 644/647 (0 fail, 3 POSIX-only skips); test:studio 1975/1975; Edge E2E pass (0 page errors, 0 external requests)"
+  },
+  "limitations": [
+    "No editor UI for take compare/replace yet",
+    "A title-card clip is matched to its story shot by id only; story shot ids should stay unique across a project's stories",
+    "After a take with no audio, the next take plays its own sound if it has any (an earlier 'off' choice is not remembered through it)",
+    "The editing view cannot hold unlinked sound yet, so that refusal is tested on canonical projects",
+    "Full OCR review blocked (see reviews)"
+  ]
+}
