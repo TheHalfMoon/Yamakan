@@ -1728,7 +1728,7 @@ export class ProjectStore {
     if (kind === "story" || kind === "referencePack" || kind === "captions")
       throw new CommandError(
         "VALIDATION",
-        "Stories and reference packs are not staged; save them with their commands.",
+        "Stories, reference packs and caption tracks are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,

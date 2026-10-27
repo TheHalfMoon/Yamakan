@@ -1029,6 +1029,8 @@ try {
           ?.hasAttribute("disabled"),
     );
     // The box shows the saved track, so it ticks once the save lands.
+    // A successful save reports nothing amiss.
+    assert.equal(await page.getByTestId("captions-error").count(), 0);
     await page.getByTestId("captions-burn-in").click();
     await page.waitForFunction(
       () =>
@@ -1038,6 +1040,7 @@ try {
           .querySelector('[data-testid="captions-burn-in"]')
           ?.hasAttribute("disabled"),
     );
+    assert.equal(await page.getByTestId("captions-error").count(), 0);
     const docs = await apiCall("yamakan.document.list", { projectId });
     const ref = docs.find((d) => d.kind === "captions");
     assert.ok(ref, "the caption track is a document of the project");

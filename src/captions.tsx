@@ -103,6 +103,8 @@ function CaptionsPanel(props: Props) {
   // A draft made from another version of the track (another writer) is
   // dropped, never saved over the newer cues.
   useEffect(() => {
+    // Our own commit moves the track too; it clears the draft itself.
+    if (busy) return;
     if (draft && track && draft.base !== track.contentHash) {
       setDraft(null);
       setError(t("captions.changed"));

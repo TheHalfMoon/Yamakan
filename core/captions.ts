@@ -109,7 +109,9 @@ export const CaptionDocumentSchema = z
         (n) =>
           // Control characters are refused on purpose.
           // oxlint-disable-next-line no-control-regex
-          !/[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(
+          // (Zero-width joiner and non-joiner are kept: Persian and
+          // Arabic words use them.)
+          !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(
             n,
           ),
         "A track name has no control characters.",
@@ -485,6 +487,7 @@ export function storedCaptions(
   // A few tracks (each up to 2 MiB), shared read-only.
   if (parsedTracks.size >= 16)
     parsedTracks.delete(parsedTracks.keys().next().value!);
+  for (const cue of doc.cues) Object.freeze(cue);
   Object.freeze(doc.cues);
   Object.freeze(doc);
   parsedTracks.set(contentHash, doc);
