@@ -1,5 +1,13 @@
-// P10-02: FFmpeg filter fragments for opacity/volume from clip.animation.
-// Transform channels are stored on the plan but not compiled here (residual).
+// P10-02 / YU-022: FFmpeg filter fragments for opacity/volume from
+// clip.animation. The curve is sampled once per output frame, as before (the
+// shared sampler, at each frame's middle), but consecutive frames whose
+// values agree within an explicit tolerance become one segment, so a
+// graph's size follows how much the value changes, not how many frames the
+// clip has. Holds and steps are one segment per key; a full 0..1 opacity
+// ramp is at most 256 segments however long it lasts. The per-frame
+// compiler (version 1) is kept as the reference the bounded one is checked
+// against. Transform channels are not rendered (yet): a plan that has them
+// is refused before rendering, never drawn without them.
 import { FLICKS_PER_SECOND, type Rational } from "../time.ts";
 import {
   sampleScalarChannelsAtTime,
@@ -10,8 +18,25 @@ import type { Channel } from "../animation/types.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 import { CommandError } from "../command/errors.ts";
 
-/** Hard cap on piecewise segments (10 min @ 30 fps). */
+/** The animation compiler a render plan names (YU-022). */
+export const ANIMATION_COMPILER = "yamakan.animation-compiler/2";
+
+/**
+ * Explicit tolerances. Opacity: one 8-bit alpha level (1/255), so the
+ * merged value is the frame's own value rounded to the nearest level the
+ * output can hold. Volume: 1/1000 of unity gain.
+ */
+export const OPACITY_TOLERANCE = 1 / 255;
+export const VOLUME_TOLERANCE = 1 / 1000;
+
+/** Hard cap on one channel's compiled segments (a larger graph is refused). */
+export const MAX_COMPILED_SEGMENTS = 1024;
+
+/** Hard cap on per-frame samples (10 min @ 30 fps; the timeline's limit). */
 export const MAX_ANIMATION_SEGMENTS = 18_000;
+
+/** Channels the renderer draws; any other channel with keys is refused. */
+const RENDERED = new Set(["opacity", "volume"]);
 
 /** Same decimal-seconds encoding as core/render.ts (avoids an import cycle). */
 function seconds(ticks: number): string {
@@ -60,41 +85,119 @@ export function sampleAnimationPathAtLocalTime(
   return sampled.find((s) => s.path === path)?.value ?? fallback;
 }
 
-type Segment = { t0: number; t1: number; value: number };
+export type Segment = { t0: number; t1: number; value: number };
 
-function piecewiseSegments(
+/**
+ * Version 1 (the reference): one segment per output frame over the local
+ * span [localStart, localEnd), each the value at the frame's middle.
+ */
+export function perFrameSegments(
   channel: Channel<number>,
   path: string,
-  durationTicks: number,
+  localStart: number,
+  localEnd: number,
   fps: Rational,
   fallback: number,
-  /** When true, times are timeline absolute; offset is clip start. */
-  timeMode: "local" | "timeline",
-  clipStartTicks: number,
 ): Segment[] {
+  const span = localEnd - localStart;
+  if (span <= 0) return [];
   const frame = frameTicksFor(fps);
-  const frames = Math.max(1, Math.ceil(durationTicks / frame));
+  const frames = Math.max(1, Math.ceil(span / frame));
   if (frames > MAX_ANIMATION_SEGMENTS)
-    throw new Error(
-      `Animation segment count ${frames} exceeds ${MAX_ANIMATION_SEGMENTS}.`,
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      `Animation spans more than ${MAX_ANIMATION_SEGMENTS} frames.`,
     );
   const segments: Segment[] = [];
   for (let i = 0; i < frames; i++) {
-    const local0 = i * frame;
-    const local1 = Math.min(durationTicks, (i + 1) * frame);
-    if (local1 <= local0) continue;
-    const mid = local0 + Math.floor((local1 - local0) / 2);
-    const value = sampleAnimationPathAtLocalTime(channel, path, mid, fallback);
-    if (timeMode === "local")
-      segments.push({ t0: local0, t1: local1, value });
-    else
-      segments.push({
-        t0: clipStartTicks + local0,
-        t1: clipStartTicks + local1,
-        value,
-      });
+    const t0 = localStart + i * frame;
+    const t1 = Math.min(localEnd, localStart + (i + 1) * frame);
+    if (t1 <= t0) continue;
+    const mid = t0 + Math.floor((t1 - t0) / 2);
+    segments.push({
+      t0,
+      t1,
+      value: sampleAnimationPathAtLocalTime(channel, path, mid, fallback),
+    });
   }
   return segments;
+}
+
+/**
+ * Version 2: the same per-frame values, each rounded to the tolerance, with
+ * consecutive equal values merged. Every frame's value is within half a
+ * tolerance of the reference's; the count is bounded by the curve's travel
+ * and refused above MAX_COMPILED_SEGMENTS.
+ */
+export function boundedSegments(
+  channel: Channel<number>,
+  path: string,
+  localStart: number,
+  localEnd: number,
+  fps: Rational,
+  fallback: number,
+  tolerance: number,
+): Segment[] {
+  const merged: Segment[] = [];
+  for (const s of perFrameSegments(
+    channel,
+    path,
+    localStart,
+    localEnd,
+    fps,
+    fallback,
+  )) {
+    const value = Math.round(s.value / tolerance) * tolerance;
+    const last = merged[merged.length - 1];
+    if (last && last.value === value && last.t1 === s.t0) last.t1 = s.t1;
+    else {
+      if (merged.length >= MAX_COMPILED_SEGMENTS)
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          `The ${path} animation changes too often to render (more than ${MAX_COMPILED_SEGMENTS} steps).`,
+        );
+      merged.push({ ...s, value });
+    }
+  }
+  return merged;
+}
+
+const toleranceOf = (path: string) =>
+  path === "opacity" ? OPACITY_TOLERANCE : VOLUME_TOLERANCE;
+
+/**
+ * Before any render (compilePlan): the clip's animation is drawable. Only
+ * opacity and volume are rendered; a channel's keys are at distinct times;
+ * and each compiles within MAX_COMPILED_SEGMENTS over the clip.
+ */
+export function assertAnimationRenderable(
+  animation: ClipAnimation,
+  durationTicks: number,
+  fps: Rational,
+) {
+  for (const [path, channel] of Object.entries(animation)) {
+    if (!channel?.keys.length) continue;
+    if (!RENDERED.has(path))
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        `Animating ${path} is not rendered yet; remove it to export.`,
+      );
+    const times = channel.keys.map((k) => k.time);
+    if (new Set(times).size !== times.length)
+      throw new CommandError(
+        "VALIDATION",
+        `The ${path} animation has two keys at one time.`,
+      );
+    boundedSegments(
+      channel as Channel<number>,
+      path,
+      0,
+      durationTicks,
+      fps,
+      1,
+      toleranceOf(path),
+    );
+  }
 }
 
 /**
@@ -117,26 +220,19 @@ export function opacityFilterChain(
     localStart,
     args.rangeEndTicks - args.clipStartTicks,
   );
-  const span = localEnd - localStart;
-  if (span <= 0) return [`[${inputLabel}]null[${outputLabel}]`];
-  const frame = frameTicksFor(args.fps);
-  const frames = Math.max(1, Math.ceil(span / frame));
-  if (frames > MAX_ANIMATION_SEGMENTS)
-    throw new Error(
-      `Animation segment count ${frames} exceeds ${MAX_ANIMATION_SEGMENTS}.`,
-    );
-  const segments: Segment[] = [];
-  for (let i = 0; i < frames; i++) {
-    const l0 = localStart + i * frame;
-    const l1 = Math.min(localEnd, localStart + (i + 1) * frame);
-    if (l1 <= l0) continue;
-    const mid = l0 + Math.floor((l1 - l0) / 2);
-    segments.push({
-      t0: args.clipStartTicks + l0,
-      t1: args.clipStartTicks + l1,
-      value: sampleAnimationPathAtLocalTime(channel, "opacity", mid, 1),
-    });
-  }
+  const segments = boundedSegments(
+    channel,
+    "opacity",
+    localStart,
+    localEnd,
+    args.fps,
+    1,
+    OPACITY_TOLERANCE,
+  ).map((s) => ({
+    ...s,
+    t0: args.clipStartTicks + s.t0,
+    t1: args.clipStartTicks + s.t1,
+  }));
   if (!segments.length) return [`[${inputLabel}]null[${outputLabel}]`];
   if (segments.length === 1) {
     const aa = scalarExpressionConstant(segments[0]!.value);
@@ -172,14 +268,14 @@ export function volumeFilterChain(
   durationTicks: number,
   fps: Rational,
 ): string[] {
-  const segments = piecewiseSegments(
+  const segments = boundedSegments(
     channel,
     "volume",
+    0,
     durationTicks,
     fps,
     1,
-    "local",
-    0,
+    VOLUME_TOLERANCE,
   );
   if (!segments.length) return [];
   if (segments.length === 1)

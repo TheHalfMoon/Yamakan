@@ -22,6 +22,10 @@ import {
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
 import {
+  ANIMATION_COMPILER,
+  assertAnimationRenderable,
+} from "./animation-filters.ts";
+import {
   EFFECT_LIMITS,
   clipTransform,
   type TransformEffect,
@@ -104,6 +108,11 @@ export type RenderPlan = {
     cues: TitleCue[];
   } | null;
   fonts: { name: string; sha256: string }[];
+  /**
+   * YU-022: the animation compiler, present only when a layer or sound is
+   * animated (so a plan without animation, and its hash, is as before).
+   */
+  animationCompiler?: typeof ANIMATION_COMPILER;
   /** Two-pass loudnorm; null when normalization is off for this export. */
   loudnorm: LoudnormSpec | null;
   planHash: string;
@@ -182,6 +191,14 @@ export function compilePlan(
     };
     const anim =
       ANIMATION_ENABLED && c.animation ? { animation: c.animation } : {};
+    // Refused before any render: an undrawable channel, keys at one time,
+    // or a curve that would compile past the segment cap (YU-022).
+    if (anim.animation)
+      assertAnimationRenderable(
+        anim.animation,
+        c.durationTicks,
+        project.output.fps,
+      );
     if (kindOf(c.trackId) === "audio" || a.kind === "audio")
       audio.push({
         ...timing,
@@ -271,6 +288,13 @@ export function compilePlan(
       LOUDNORM_ENABLED && options.normalizeLoudness
         ? { target: { ...DEFAULT_LOUDNORM_TARGET }, measured: null }
         : null,
+    ...([...layers, ...audio].some(
+      (x) =>
+        x.animation &&
+        Object.values(x.animation).some((ch) => ch?.keys.length),
+    )
+      ? { animationCompiler: ANIMATION_COMPILER }
+      : {}),
   };
   const planHash = createHash("sha256")
     .update(JSON.stringify(body))
@@ -301,6 +325,9 @@ export function withMeasuredLoudnorm(
     titles: plan.titles,
     fonts: plan.fonts,
     loudnorm: { ...plan.loudnorm, measured },
+    ...(plan.animationCompiler
+      ? { animationCompiler: plan.animationCompiler }
+      : {}),
   };
   const planHash = createHash("sha256")
     .update(JSON.stringify(body))
