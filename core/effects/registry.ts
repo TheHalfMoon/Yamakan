@@ -3,8 +3,9 @@
 // bounded integer, so a stored effect can never carry NaN, an unbounded
 // scale, a filter, a script or a path, and its compiled filter text is
 // built only from those integers. An effect kind or version this build
-// does not know fails validation (preflight), so an effect is never
-// silently dropped.
+// does not know fails validation (preflight), and a project with effects is
+// stored as canonical v6, which an older build refuses as a newer format;
+// no build reads it with its effects dropped.
 //
 // Semantics, the same in export and reference preview (both compile from
 // the render plan):
@@ -48,7 +49,14 @@ export const ClipEffectSchema = z.discriminatedUnion("type", [
 ]);
 export type ClipEffect = z.infer<typeof ClipEffectSchema>;
 
-export const EFFECT_LIMITS = Object.freeze({ effectsPerClip: 4 });
+export const EFFECT_LIMITS = Object.freeze({
+  effectsPerClip: 4,
+  // The largest picture a scaled layer may be, in pixels (a 1920x1080
+  // frame at 4x): bounds a render's memory however the output is sized.
+  scaledPixels: 1920 * 1080 * 16,
+  // A cropped source is at least this wide and tall.
+  cropSourcePixels: 20,
+});
 
 export const ClipEffectsSchema = z
   .array(ClipEffectSchema)
@@ -88,10 +96,16 @@ export function clipTransform(
   return t && !isIdentityTransform(t) ? t : null;
 }
 
+/** Whether a stack changes nothing (every effect an identity). */
+export const isIdentityStack = (effects: ClipEffects) =>
+  effects.every((e) => e.type === "transform" && isIdentityTransform(e));
+
 /**
  * Effect writes (YU-020): on, unless an operator turned them off with
- * YAMAKAN_EFFECTS_OFF=1 (rollback without a rebuild). Stored effects stay
- * readable and keep rendering; nothing is dropped.
+ * YAMAKAN_EFFECTS_OFF=1 (rollback without a rebuild). It refuses new
+ * effect values by command and by whole-project save; stored effects stay
+ * readable and keep rendering. Undo, redo and restore move between stored
+ * revisions and may bring effects back or take them away.
  */
 export const EFFECTS_OFF =
   "Changing clip effects is turned off on this service (YAMAKAN_EFFECTS_OFF); saved effects stay and still render.";

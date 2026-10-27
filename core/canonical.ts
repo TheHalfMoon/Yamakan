@@ -32,6 +32,24 @@ export const FORMAT = "yamakan.project";
 // unaffected (serializeCanonical).
 export const FORMAT_VERSION = 5;
 const DOCUMENTLESS_FORMAT_VERSION = 4;
+// v6 (YU-020) adds clip effects. Only a project with effects is written as
+// v6, so a build without effects refuses it as a newer format (recovery
+// guidance) instead of reading it with its effects dropped.
+export const EFFECTS_FORMAT_VERSION = 6;
+// The newest version this build reads.
+export const LATEST_FORMAT_VERSION = EFFECTS_FORMAT_VERSION;
+const hasEffects = (p: { clips: { effects?: unknown }[] }) =>
+  p.clips.some((c) => c.effects !== undefined);
+// The version a project is written as: the oldest that holds it.
+const versionFor = (p: {
+  clips: { effects?: unknown }[];
+  documents: unknown[];
+}) =>
+  hasEffects(p)
+    ? EFFECTS_FORMAT_VERSION
+    : p.documents.length
+      ? FORMAT_VERSION
+      : DOCUMENTLESS_FORMAT_VERSION;
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -143,6 +161,7 @@ const ProjectBody = z
     formatVersion: z.union([
       z.literal(DOCUMENTLESS_FORMAT_VERSION),
       z.literal(FORMAT_VERSION),
+      z.literal(EFFECTS_FORMAT_VERSION),
     ]),
     id: Id,
     name: z.string().min(1).max(120),
@@ -326,14 +345,13 @@ export const CanonicalProjectSchema = z.preprocess((value, ctx) => {
 }, ProjectBody.transform(normalizeVersion));
 // One parsed form: version 4 without documents, version 5 with them.
 function normalizeVersion<
-  T extends { formatVersion: 4 | 5; documents: unknown[] },
+  T extends {
+    formatVersion: 4 | 5 | 6;
+    documents: unknown[];
+    clips: { effects?: unknown }[];
+  },
 >(p: T): T {
-  return {
-    ...p,
-    formatVersion: p.documents.length
-      ? FORMAT_VERSION
-      : DOCUMENTLESS_FORMAT_VERSION,
-  };
+  return { ...p, formatVersion: versionFor(p) };
 }
 export type CanonicalProject = z.output<typeof ProjectBody>;
 
@@ -359,7 +377,7 @@ export function inspectFormat(value: unknown): {
       format === FORMAT &&
       formatVersion !== null &&
       formatVersion >= 1 &&
-      formatVersion <= FORMAT_VERSION,
+      formatVersion <= LATEST_FORMAT_VERSION,
   };
 }
 
@@ -455,7 +473,10 @@ function upgradeV2(value: Record<string, unknown>) {
 export function parseCanonical(value: unknown): CanonicalProject {
   const info = inspectFormat(value);
   if (!info.supported) {
-    if (info.format === FORMAT && (info.formatVersion ?? 0) > FORMAT_VERSION)
+    if (
+      info.format === FORMAT &&
+      (info.formatVersion ?? 0) > LATEST_FORMAT_VERSION
+    )
       throw new CommandError(
         "RECOVERY_REQUIRED",
         `Project format version ${info.formatVersion} is newer than this build supports; it can be inspected but not edited.`,
@@ -508,9 +529,7 @@ export function fromEditView(
   const { toTicks } = editRate(fps);
   return CanonicalProjectSchema.parse({
     format: FORMAT,
-    formatVersion: documents.length
-      ? FORMAT_VERSION
-      : DOCUMENTLESS_FORMAT_VERSION,
+    formatVersion: versionFor({ clips: p.clips, documents }),
     documents,
     id: p.id,
     name: p.name,
@@ -586,19 +605,13 @@ export function fromEditView(
 export function serializeCanonical(project: CanonicalProject): string {
   const p = CanonicalProjectSchema.parse(project);
   const { documents, ...rest } = p;
-  if (!documents.length)
-    return canonicalJson({
-      ...rest,
-      formatVersion: DOCUMENTLESS_FORMAT_VERSION,
-    });
+  const formatVersion = versionFor(p);
+  if (formatVersion === DOCUMENTLESS_FORMAT_VERSION)
+    return canonicalJson({ ...rest, formatVersion });
   const ordered = [...documents].sort((a, b) =>
     a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
   );
-  return canonicalJson({
-    ...rest,
-    formatVersion: FORMAT_VERSION,
-    documents: ordered,
-  });
+  return canonicalJson({ ...rest, formatVersion, documents: ordered });
 }
 
 // Canonical → editing shape. Refuses anything the editor cannot hold: a

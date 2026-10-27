@@ -13,7 +13,10 @@ import { CommandError } from "../command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./overlap.ts";
 import { resolveTimelineSnap } from "./snapping.ts";
 import type { SnapPoint } from "./snapping.ts";
-import { applySceneTracksToProject, projectToSceneTracks } from "./adapters.ts";
+import {
+  applySceneTracksToProject,
+  projectToSceneTracks,
+} from "./adapters.ts";
 import {
   applyRippleAdjustments,
   computeRippleAdjustments,
@@ -29,6 +32,7 @@ import {
   ClipEffectsSchema,
   EFFECTS_OFF,
   effectWritesEnabled,
+  isIdentityStack,
 } from "../effects/registry.ts";
 import { getSourceTimeAtClipTime } from "../retime/resolve.ts";
 import { relinkVideoSound, unlinkVideoSound } from "../audio/unlink.ts";
@@ -569,7 +573,8 @@ function apply(p: CanonicalProject, op: Operation): void {
         throw new CommandError("CAPABILITY_UNAVAILABLE", EFFECTS_OFF);
       const c = clip(p, op.clipId);
       unlocked(p, c.trackId);
-      if (op.effects) c.effects = op.effects;
+      // A stack that changes nothing is stored as none.
+      if (op.effects && !isIdentityStack(op.effects)) c.effects = op.effects;
       else delete c.effects;
       return;
     }

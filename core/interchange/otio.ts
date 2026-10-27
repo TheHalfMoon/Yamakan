@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { CanonicalProject } from "../canonical.ts";
 import { FLICKS_PER_SECOND } from "../time.ts";
 import { CommandError } from "../command/errors.ts";
+import { ClipEffectsSchema, type ClipEffects } from "../effects/registry.ts";
 
 export const OTIO_RATE = FLICKS_PER_SECOND;
 export const OTIO_LIMITS = Object.freeze({
@@ -76,6 +77,8 @@ export type OtioProposalClip = {
   assetId: string | null;
   /** True when target_url was present but never opened. */
   remoteUrlIgnored: boolean;
+  /** The clip's effects (YU-020), carried as Yamakan metadata. */
+  effects?: ClipEffects;
 };
 
 export type OtioProposal = {
@@ -133,6 +136,11 @@ export function toOtio(project: CanonicalProject): TimelineJson {
           metadata: {
             yamakan_clip_id: c.id,
             yamakan_timeline_start: String(c.startTicks),
+            // OTIO has no matching effect; Yamakan's own is carried as
+            // metadata so a round trip keeps it (YU-020).
+            ...(c.effects
+              ? { yamakan_effects: JSON.stringify(c.effects) }
+              : {}),
           },
         };
       });
@@ -297,6 +305,29 @@ export function fromOtio(
         }
       }
       if (!assetId) unresolved += 1;
+      // Effects come back only as Yamakan's own validated stack; anything
+      // else there is refused, never half-read.
+      const effectsText = (
+        clipChild.metadata as Record<string, unknown> | undefined
+      )?.yamakan_effects;
+      let effects: ClipEffects | undefined;
+      if (effectsText !== undefined) {
+        const parsedEffects =
+          typeof effectsText === "string"
+            ? ClipEffectsSchema.safeParse(
+                (() => {
+                  try {
+                    return JSON.parse(effectsText);
+                  } catch {
+                    return null;
+                  }
+                })(),
+              )
+            : null;
+        if (!parsedEffects?.success)
+          throw new CommandError("VALIDATION", "OTIO clip effects are invalid.");
+        effects = parsedEffects.data;
+      }
       clips.push({
         trackKind,
         trackName,
@@ -309,6 +340,7 @@ export function fromOtio(
         sourceStartTicks: sourceStart,
         assetId,
         remoteUrlIgnored,
+        ...(effects ? { effects } : {}),
       });
       timelineCursor = startTicks + duration;
     }

@@ -112,6 +112,8 @@ function clipOps(head: Canon, c: Clip): Operation[] {
       clipId: c.id,
       animation: c.animation,
     });
+  if (c.effects)
+    ops.push({ type: "clip.setEffects", clipId: c.id, effects: c.effects });
   return ops;
 }
 
@@ -234,6 +236,12 @@ function inPlaceOps(a: Clip, b: Clip): Operation[] | null {
       type: "clip.setAnimation",
       clipId: b.id,
       animation: b.animation ?? null,
+    });
+  if (!same(a.effects ?? null, b.effects ?? null))
+    ops.push({
+      type: "clip.setEffects",
+      clipId: b.id,
+      effects: b.effects ?? null,
     });
   return ops;
 }

@@ -17,7 +17,17 @@ import { renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import { compilePlan } from "../core/render/plan.ts";
 import { titleFonts } from "../core/render/fonts.ts";
-import { fromEditView, parseCanonical } from "../core/canonical.ts";
+import {
+  FORMAT,
+  fromEditView,
+  inspectFormat,
+  parseCanonical,
+  serializeCanonical,
+} from "../core/canonical.ts";
+import { fromOtio, otioJson } from "../core/interchange/otio.ts";
+import { previewParity } from "../core/render/parity.ts";
+import { operationsBetween } from "../src/edit-diff.ts";
+import { applyLocal, setClipTransform, splitClip } from "../src/edit-ops.ts";
 import {
   IDENTITY_TRANSFORM,
   type TransformEffect,
@@ -181,7 +191,7 @@ test("export and reference preview draw crop, scale and offset the same, at gold
   const cases: [string, TransformEffect, [number, number, string][]][] = [
     [
       // The right (blue) half only, fitted to the frame: 640x720 centred.
-      "crop left half",
+      "crop away the left half",
       T({ crop: { left: 500, top: 0, right: 0, bottom: 0 } }),
       [
         [640, 360, "blue"],
@@ -388,4 +398,221 @@ test("the off switch refuses effect writes and keeps stored effects rendering", 
   } finally {
     delete process.env.YAMAKAN_EFFECTS_OFF;
   }
+});
+
+test("footage scaled past the frame, moved left and faded keeps export/preview parity", async () => {
+  const c = await workspace();
+  // 2 s of footage: red left half, blue right half.
+  const clip = path.join(c.root, "halves.mp4");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=red:s=160x180:r=30:d=2",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=blue:s=160x180:r=30:d=2",
+    "-filter_complex",
+    "[0][1]hstack",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "ultrafast",
+    "-pix_fmt",
+    "yuv420p",
+    clip,
+  ]);
+  const { asset } = await c.store.importAsset(
+    c.projectId,
+    "halves.mp4",
+    await readFile(clip),
+  );
+  const h = await head(c);
+  // Replace the still with the footage.
+  const footageId = crypto.randomUUID();
+  await execute(c.browser, "yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: h.revision,
+    operations: [
+      { type: "clip.remove", clipId: c.clipId },
+      {
+        type: "clip.add",
+        clipId: footageId,
+        trackId: h.tracks.find((t) => t.kind === "video")!.id,
+        assetId: asset.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 30 * FRAME,
+        sourceStartTicks: 0,
+      },
+      {
+        type: "clip.setAnimation",
+        clipId: footageId,
+        animation: {
+          opacity: {
+            keys: [
+              {
+                id: "o",
+                time: 0,
+                value: 0.5,
+                segmentToNext: "step",
+                tangentMode: "flat",
+              },
+            ],
+          },
+        },
+      },
+    ],
+  });
+  // Twice the fit (2560x1440, centred), a quarter frame left: the
+  // red/blue edge moves from x=640 to x=320.
+  await execute(c.browser, "yamakan.clip.setEffects", {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    clipId: footageId,
+    effects: [T({ scale: 2000, offsetX: -250 })],
+  });
+  const half = (frame: Buffer, x: number, y: number) => {
+    const i = (y * W + x) * 3;
+    const [r, g, b] = [frame[i]!, frame[i + 1]!, frame[i + 2]!];
+    if (r > 90 && r < 170 && g < 60 && b < 60) return "dim red";
+    if (b > 90 && b < 170 && r < 60 && g < 60) return "dim blue";
+    return `rgb(${r},${g},${b})`;
+  };
+  const exported = await exportFrame(c);
+  const reference = await previewFrame(c);
+  for (const [x, y, want] of [
+    [150, 360, "dim red"],
+    [500, 360, "dim blue"],
+    [1200, 100, "dim blue"],
+  ] as const) {
+    assert.equal(half(exported.frame, x, y), want, `export ${x},${y}`);
+    assert.equal(half(reference, x, y), want, `preview ${x},${y}`);
+  }
+});
+
+test("a tiny source refuses a crop; an identity stack is stored as none", async () => {
+  const c = await workspace();
+  const tiny = path.join(c.root, "tiny.png");
+  ffmpeg(["-f", "lavfi", "-i", "color=c=red:s=12x12", "-frames:v", "1", tiny]);
+  const { asset } = await c.store.importAsset(
+    c.projectId,
+    "tiny.png",
+    await readFile(tiny),
+  );
+  const h = await head(c);
+  await execute(c.browser, "yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: h.revision,
+    operations: [
+      { type: "clip.remove", clipId: c.clipId },
+      {
+        type: "clip.add",
+        clipId: c.clipId,
+        trackId: h.tracks.find((t) => t.kind === "video")!.id,
+        assetId: asset.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 30 * FRAME,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  await setTransform(
+    c,
+    T({ crop: { left: 100, top: 0, right: 0, bottom: 0 } }),
+  );
+  const p = await head(c);
+  assert.equal(
+    await code(
+      renderRevision(
+        c.store,
+        c.projectId,
+        p.revision,
+        ["exports", "tiny"],
+        new AbortController().signal,
+        () => {},
+      ),
+    ),
+    "VALIDATION",
+  );
+  // Scaling the tiny still is fine; an identity stack is stored as none.
+  await setTransform(c, T({ scale: 2000 }));
+  assert.equal((await exportFrame(c)).plan.layers[0]?.transform?.scale, 2000);
+  assert.equal(
+    (await setTransform(c, IDENTITY_TRANSFORM)).clips[0]!.effects,
+    undefined,
+  );
+});
+
+test("effects are canonical v6, survive split and OTIO, and edit gestures commit as typed operations", async () => {
+  const c = await workspace();
+  const before = fromEditView(await head(c));
+  assert.equal(JSON.parse(serializeCanonical(before)).formatVersion, 4);
+  const t = T({ scale: 800, offsetY: 100 });
+  const set = await setTransform(c, t);
+  const canonical = fromEditView(set);
+  assert.equal(JSON.parse(serializeCanonical(canonical)).formatVersion, 6);
+  assert.equal(
+    inspectFormat({ format: FORMAT, formatVersion: 6 }).supported,
+    true,
+  );
+  // The editor's diff makes one typed effect operation of a panel change.
+  const draft = setClipTransform(set, c.clipId, T({ scale: 600 }));
+  assert.deepEqual(operationsBetween(set, draft), [
+    { type: "clip.setEffects", clipId: c.clipId, effects: [T({ scale: 600 })] },
+  ]);
+  // Splitting keeps the effect on both halves, and the diff reproduces it.
+  const split = splitClip(set, c.clipId, 0.5, crypto.randomUUID());
+  assert.equal(split.clips.length, 2);
+  for (const clip of split.clips) assert.deepEqual(clip.effects, [t]);
+  const ops = operationsBetween(set, split);
+  assert.ok(ops, "the split commits as typed operations");
+  assert.deepEqual(applyLocal(set, ops!).clips, split.clips);
+  // Moving an effect clip to an audio track is refused, not stripped.
+  const audio = set.tracks.find((tr) => tr.kind === "audio")!;
+  assert.equal(
+    await code(
+      execute(c.browser, "yamakan.project.applyBatch", {
+        projectId: c.projectId,
+        expectedRevision: set.revision,
+        operations: [
+          {
+            type: "timeline.groupMove",
+            anchorClipId: c.clipId,
+            clipIds: [c.clipId],
+            anchorStartTicks: 0,
+            targetTrackId: audio.id,
+          },
+        ],
+      }),
+    ),
+    "VALIDATION",
+  );
+  // OTIO keeps the stack as Yamakan metadata, and refuses a forged one.
+  const otio = otioJson(canonical);
+  const proposal = fromOtio(
+    otio,
+    canonical.assets.map((a) => ({ id: a.id, hash: a.hash })),
+  );
+  assert.deepEqual(proposal.clips[0]!.effects, [t]);
+  const forged = otio.replace(
+    /"yamakan_effects": "[^"]*(\\"[^"]*)*"/,
+    `"yamakan_effects": "[{\\"type\\":\\"transform\\",\\"version\\":1,\\"scale\\":\\"1:ass=x\\"}]"`,
+  );
+  assert.notEqual(forged, otio);
+  assert.throws(
+    () => fromOtio(forged, []),
+    (e: unknown) => toCommandError(e).code === "VALIDATION",
+  );
+  // A preview of a cropped clip says the canvas does not draw the crop.
+  const cropped = await setTransform(
+    c,
+    T({ crop: { left: 0, top: 0, right: 200, bottom: 0 } }),
+  );
+  assert.deepEqual(previewParity(cropped).approximations, [
+    { kind: "effectCrop", clipIds: [c.clipId] },
+  ]);
+  assert.equal(previewParity(set).exact, true);
 });

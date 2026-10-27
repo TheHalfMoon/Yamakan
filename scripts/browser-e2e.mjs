@@ -517,6 +517,7 @@ try {
   await page.getByTitle("reference.png · 00:00:00:00 → 00:00:01:00").click();
   await page.getByTestId("clip-transform-panel").waitFor({ timeout: 15000 });
   await page.getByTestId("transform-scale").fill("50");
+  await page.getByTestId("transform-scale").press("Enter");
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   assert.equal(await page.getByTestId("transform-scale").inputValue(), "100");
   await page.getByRole("button", { name: "Redo", exact: true }).click();

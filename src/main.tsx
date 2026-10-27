@@ -43,6 +43,7 @@ import {
 import type { Lang, MessageKey } from "./i18n.ts";
 import {
   IDENTITY_TRANSFORM,
+  isIdentityTransform,
   TransformEffectSchema,
   type TransformEffect,
 } from "../core/effects/registry.ts";
@@ -1122,20 +1123,35 @@ function App() {
             ) => (
               <label>
                 {t(key)}
+                {/* Typed freely; committed (clamped) on blur or Enter, so a
+                    half-typed value is never stored. A new stored value
+                    resets the field (its key). */}
                 <input
+                  key={`${testId}:${value}`}
                   type="number"
                   min={min / 10}
                   max={max / 10}
                   step={1}
                   disabled={busy}
-                  value={pct(value)}
+                  defaultValue={pct(value)}
                   data-testid={testId}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (!Number.isFinite(n)) return;
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  onBlur={(e) => {
+                    const text = e.currentTarget.value.trim();
+                    const n = Number(text);
+                    if (text === "" || !Number.isFinite(n)) {
+                      e.currentTarget.value = String(pct(value));
+                      return;
+                    }
                     const permille = Math.round(
                       Math.min(max, Math.max(min, n * 10)),
                     );
+                    if (permille === value) {
+                      e.currentTarget.value = String(pct(value));
+                      return;
+                    }
                     set(apply(permille));
                   }}
                 />
@@ -1172,7 +1188,7 @@ function App() {
                   "clip.transform.cropLeft",
                   crop.left,
                   0,
-                  900,
+                  900 - crop.right,
                   (v) => ({ crop: { ...crop, left: v } }),
                   "transform-crop-left",
                 )}
@@ -1180,7 +1196,7 @@ function App() {
                   "clip.transform.cropTop",
                   crop.top,
                   0,
-                  900,
+                  900 - crop.bottom,
                   (v) => ({ crop: { ...crop, top: v } }),
                   "transform-crop-top",
                 )}
@@ -1188,7 +1204,7 @@ function App() {
                   "clip.transform.cropRight",
                   crop.right,
                   0,
-                  900,
+                  900 - crop.left,
                   (v) => ({ crop: { ...crop, right: v } }),
                   "transform-crop-right",
                 )}
@@ -1196,13 +1212,13 @@ function App() {
                   "clip.transform.cropBottom",
                   crop.bottom,
                   0,
-                  900,
+                  900 - crop.top,
                   (v) => ({ crop: { ...crop, bottom: v } }),
                   "transform-crop-bottom",
                 )}
                 <button
                   type="button"
-                  disabled={busy || current === IDENTITY_TRANSFORM}
+                  disabled={busy || isIdentityTransform(current)}
                   data-testid="transform-reset"
                   onClick={() =>
                     edit((proj) =>

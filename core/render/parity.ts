@@ -6,12 +6,13 @@
 // instead of implying a match. Browser-safe: no Node imports.
 import type { Project } from "../project.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
+import { clipTransform } from "../effects/registry.ts";
 
 export const PREVIEW_PARITY_VERSION = "yamakan.preview-parity/v1";
 
 // Shown as the export shows them: cuts, trims, track order, picture fit,
-// constant retime, still images, embedded and separate sound, and clip
-// gain from -60 to 0 dB.
+// constant retime, still images, embedded and separate sound, clip gain
+// from -60 to 0 dB, and a transform's scale and position (YU-020).
 export const PREVIEW_PARITY_SUBSET = Object.freeze([
   "cut",
   "trim",
@@ -21,6 +22,7 @@ export const PREVIEW_PARITY_SUBSET = Object.freeze([
   "stillImage",
   "sound",
   "gainUpToUnity",
+  "transformScalePosition",
 ] as const);
 
 export type Approximation =
@@ -37,7 +39,9 @@ export type Approximation =
   // Gain above 0 dB cannot be played louder than the source.
   | "gainAboveUnity"
   // Clip animation (opacity, transform) is not drawn.
-  | "animation";
+  | "animation"
+  // A transform's crop is not drawn (scale and position are; YU-020).
+  | "effectCrop";
 
 export type PreviewParity = {
   version: typeof PREVIEW_PARITY_VERSION;
@@ -99,6 +103,15 @@ export function previewParity(p: Project): PreviewParity {
     if (sound && sound.gainDb > 0) add("gainAboveUnity", c.id);
     if (ANIMATION_ENABLED && c.animation && Object.keys(c.animation).length)
       add("animation", c.id);
+    const transform = track.kind === "video" ? clipTransform(c.effects) : null;
+    if (
+      transform &&
+      (transform.crop.left ||
+        transform.crop.top ||
+        transform.crop.right ||
+        transform.crop.bottom)
+    )
+      add("effectCrop", c.id);
   }
   const approximations = [...found].map(([kind, clipIds]) => ({
     kind,

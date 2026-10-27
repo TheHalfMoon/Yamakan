@@ -38,7 +38,7 @@ import { LocalContentAddressedStorage } from "./storage/storage.ts";
 import { CommandError } from "./command/errors.ts";
 import {
   FORMAT,
-  FORMAT_VERSION,
+  LATEST_FORMAT_VERSION,
   fromEditView,
   inspectFormat,
   parseCanonical,
@@ -956,7 +956,8 @@ export class ProjectStore {
         JSON.parse(Buffer.from(row.bytes).toString("utf8")),
       );
       return (
-        info.format === FORMAT && (info.formatVersion ?? 0) > FORMAT_VERSION
+        info.format === FORMAT &&
+        (info.formatVersion ?? 0) > LATEST_FORMAT_VERSION
       );
     } catch {
       return false;
