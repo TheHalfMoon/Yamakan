@@ -21,7 +21,7 @@ import {
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
-import { ClipEffectsSchema } from "./effects/registry.ts";
+import { ClipEffectsSchema, isIdentityStack } from "./effects/registry.ts";
 import { DOCUMENT_LIMITS, DocumentRefSchema } from "./document-ref.ts";
 import type { DocumentRef } from "./document-ref.ts";
 import { canonicalJson } from "./hash/canonical.ts";
@@ -594,7 +594,10 @@ export function fromEditView(
         sound,
         ...(c.speed ? { speed: c.speed } : {}),
         ...(c.animation ? { animation: c.animation } : {}),
-        ...(c.effects ? { effects: c.effects } : {}),
+        // A stack that changes nothing is stored as none, however it came.
+        ...(c.effects && !isIdentityStack(c.effects)
+          ? { effects: c.effects }
+          : {}),
       };
     }),
   });

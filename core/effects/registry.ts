@@ -53,6 +53,8 @@ export const EFFECT_LIMITS = Object.freeze({
   effectsPerClip: 4,
   // The largest picture a scaled layer may be, in pixels (a 1920x1080
   // frame at 4x): bounds a render's memory however the output is sized.
+  // Canonical output is capped at 1920x1080 today, so this only bites if
+  // that cap is raised; revisit it then.
   scaledPixels: 1920 * 1080 * 16,
   // A cropped source is at least this wide and tall.
   cropSourcePixels: 20,

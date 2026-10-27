@@ -313,7 +313,8 @@ export function fromOtio(
       let effects: ClipEffects | undefined;
       if (effectsText !== undefined) {
         const parsedEffects =
-          typeof effectsText === "string"
+          typeof effectsText === "string" &&
+          effectsText.length <= OTIO_LIMITS.maxString
             ? ClipEffectsSchema.safeParse(
                 (() => {
                   try {
