@@ -449,6 +449,49 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - `YAMAKAN_EFFECTS_OFF=1` refuses new effect values, LUT effects included, and `YAMAKAN_AG_DOCS_OFF=1` refuses LUT imports. Stored LUTs stay and render.
   - Going back to an earlier build renders untagged BT.601 output again. It refuses projects with a LUT effect (an unknown effect kind) and revisions that reference `lut` documents (an unknown kind).
 
+## Editor scale profiles (YU-026)
+
+- **Profiles (`SCALE_PROFILES`, `yamakan.scale-profiles/v1`).**
+  - **Supported:**
+    - S, a typical project: 24 clips, 4 tracks, 2 minutes, 1280×720.
+    - M, the enforced maximum: 200 clips, 16 tracks, ten minutes at 30 fps, 1920×1080.
+    - T, a full-length single-track timeline: 100 clips, 1 video and 1 audio track, ten minutes, 1080p.
+  - **Refused, one past a limit each:** L (201 clips), H (17 tracks), A (ten minutes plus one frame) and K (3840×2160 output).
+  - No limit was raised: a limit changes only by a new, reviewed policy version after measuring.
+- **Measurement.** `scripts/qualify-editor-scale.mjs` builds each supported profile through the command layer and measures it. The results, including the host, are in `docs/evidence/ultimate/editor-scale.json`. It measures:
+  - batched saves;
+  - the snapshot;
+  - one edit with undo and redo;
+  - reopening the workspace;
+  - the plan compile;
+  - one reference frame;
+  - the full export;
+  - backup and restore while edits continue.
+
+  `--probe clips:tracks:frames:WxH` measures an unnamed profile without changing the evidence.
+
+- **Results (Windows, 12 CPUs, Node 24).**
+  - **Editing is qualified at every supported profile, M included:**
+    - batched saves of 64 operations take at most 59 ms;
+    - an edit, undo or redo takes at most 56 ms;
+    - a reopen takes 42 ms or less;
+    - a plan compile takes 10 ms or less;
+    - one reference frame takes at most 1.1 s;
+    - M's snapshot is 60 KB, against the 2 MiB limit.
+  - **Backup and restore:** a backup made while edits continue restores exactly the acknowledged revision at every profile, in about 0.1 s each way.
+  - **Refusals:** L, H, A and K are each refused with their own message, and the project is unchanged (no clamp). The clip and track refusals now name the limit ("A project holds at most 200 clips.").
+  - **Peak service memory:** 155 MiB.
+- **Export is qualified only at S.**
+  - S exports in 68 s, about 19 ms per frame for 4 stacked 720p tracks.
+  - **M cannot be exported on Windows.** Each clip is its own FFmpeg input (whitelists, seek, an absolute path), so 200 clips pass the Windows 32,767-character command line and the worker launch fails ("command line too long").
+  - **T, and even 40 1080p stills on one track, cannot be exported either.** A still is fed with `-loop 1`, which decodes as fast as it is read, so later clips queue full frames until the overlay reaches them. 40 inputs run out of the worker's 2 GiB (`Cannot allocate memory`; exit 0xC00000FD). When memory lasts, the ten-minute render passes the 180 s wall-clock limit.
+- **Proposal (not applied; follow-up YU-026b).**
+  - Feed stills by a pull-based `loop` filter from one decoded frame, so frames are made only when needed.
+  - Reference inputs so the command line no longer grows by one full path per clip.
+  - Then re-measure M and T, and propose a render wall-clock limit that scales with the timeline's duration.
+  - Until then, the export limits are effectively far below the editing limits, and an export that cannot run fails with an explicit error rather than a partial file.
+- **Not measured.** The browser timeline's virtualization at M; this script runs no browser.
+
 ## Bounded animation compilation (YU-022)
 
 - **Compiler.** Opacity and volume animation compile with `yamakan.animation-compiler/2`, named in the render plan only when a clip is animated (other plans and their hashes are unchanged). Each output frame is sampled at its middle by the shared sampler, as before (from the two keys around it, which gives the same value as the whole channel); consecutive frames whose values agree within an explicit tolerance become one segment. Opacity's tolerance is one 8-bit alpha level (1/255), volume's 1/200 of unity gain (about 0.04 dB); every frame's value is within half a tolerance of the per-frame compiler (version 1). The tolerances belong to the version: changing them needs a new one.

@@ -1,0 +1,194 @@
+{
+  "format": "yamakan.editor-scale/v1",
+  "profiles": "yamakan.scale-profiles/v1",
+  "policy": "yamakan.resource-policy/v2",
+  "host": {
+    "os": "win32 10.0.26300",
+    "node": "v24.19.0",
+    "cpus": 12
+  },
+  "measured": [
+    {
+      "profile": "S",
+      "limits": {
+        "name": "S",
+        "clips": 24,
+        "tracks": 4,
+        "timelineFrames": 3600,
+        "width": 1280,
+        "height": 720
+      },
+      "batchSaveMs": {
+        "count": 1,
+        "max": 22,
+        "total": 22
+      },
+      "clips": 24,
+      "tracks": 4,
+      "snapshotBytes": 7924,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 15,
+        "undo": 8,
+        "redo": 8
+      },
+      "reopenMs": 11,
+      "planCompileMs": 3,
+      "planLayers": 24,
+      "referenceFrameMs": 652,
+      "export": {
+        "ok": true,
+        "ms": 68226,
+        "bytes": 750183,
+        "frames": 3600
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 117,
+        "restoreMs": 101,
+        "backupBytes": 407363,
+        "restoredRevision": 5,
+        "acknowledgedRevision": 5,
+        "laterRevision": 6,
+        "retained": true
+      },
+      "workspaceBytes": 1475934
+    },
+    {
+      "profile": "M",
+      "limits": {
+        "name": "M",
+        "clips": 200,
+        "tracks": 16,
+        "timelineFrames": 18000,
+        "width": 1920,
+        "height": 1080
+      },
+      "batchSaveMs": {
+        "count": 4,
+        "max": 59,
+        "total": 173
+      },
+      "clips": 200,
+      "tracks": 16,
+      "snapshotBytes": 60224,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 56,
+        "undo": 35,
+        "redo": 38
+      },
+      "reopenMs": 42,
+      "planCompileMs": 10,
+      "planLayers": 200,
+      "referenceFrameMs": 1052,
+      "export": {
+        "ok": false,
+        "ms": 363,
+        "code": "CAPABILITY_UNAVAILABLE",
+        "message": "Worker launch failed: command line too long",
+        "cause": ""
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 131,
+        "restoreMs": 141,
+        "backupBytes": 851878,
+        "restoredRevision": 9,
+        "acknowledgedRevision": 9,
+        "laterRevision": 10,
+        "retained": true
+      },
+      "workspaceBytes": 1540385
+    },
+    {
+      "profile": "T",
+      "limits": {
+        "name": "T",
+        "clips": 100,
+        "tracks": 2,
+        "timelineFrames": 18000,
+        "width": 1920,
+        "height": 1080
+      },
+      "batchSaveMs": {
+        "count": 2,
+        "max": 35,
+        "total": 51
+      },
+      "clips": 100,
+      "tracks": 2,
+      "snapshotBytes": 29544,
+      "snapshotLimitBytes": 2097152,
+      "historyMs": {
+        "edit": 48,
+        "undo": 30,
+        "redo": 40
+      },
+      "reopenMs": 39,
+      "planCompileMs": 7,
+      "planLayers": 100,
+      "referenceFrameMs": 505,
+      "export": {
+        "ok": false,
+        "ms": 2173,
+        "code": "INTERNAL",
+        "message": "FFmpeg failed to render the timeline (exit 3221225725).",
+        "cause": "[png @ 00000286ab413540] thread_get_buffer() failed | [png @ 00000286aac137c0] get_buffer() failed | [png @ 00000286aac137c0] thread_get_buffer() failed"
+      },
+      "renderWallLimitSeconds": 180,
+      "backup": {
+        "backupMs": 109,
+        "restoreMs": 108,
+        "backupBytes": 638886,
+        "restoredRevision": 7,
+        "acknowledgedRevision": 7,
+        "laterRevision": 8,
+        "retained": true
+      },
+      "workspaceBytes": 1261561
+    }
+  ],
+  "refusals": [
+    {
+      "profile": "H",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: A project holds at most 16 tracks."
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "A",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: Timeline exceeds ten minutes."
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "K",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "project.width: Too big: expected number to be <=1920; project.height: Too big: expected number to be <=1080"
+      },
+      "unchanged": true
+    },
+    {
+      "profile": "L",
+      "refused": true,
+      "refusal": {
+        "code": "VALIDATION",
+        "message": "The batch would leave an invalid project: A project holds at most 200 clips."
+      },
+      "unchanged": true
+    }
+  ],
+  "unmeasured": [
+    "Browser timeline virtualization at M (no browser in this script)"
+  ],
+  "peakRssMiB": 144
+}
