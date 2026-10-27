@@ -15,6 +15,7 @@ import {
   MAX_PLAN_SAMPLES,
   MAX_PLAN_SEGMENTS,
   assertPlanAnimationBudget,
+  renderableAnimationChannels,
   sampleAnimationPathAtLocalTime,
   OPACITY_TOLERANCE,
   VOLUME_TOLERANCE,
@@ -599,4 +600,14 @@ test("edge cases of the windowed sampler: one or two keys, keys on frame middles
       assert.equal(frame.value, whole, `${label} at ${at}`);
     }
   }
+});
+
+test("a channel without keys draws and compiles nothing", () => {
+  assert.deepEqual(
+    renderableAnimationChannels({
+      opacity: { keys: [] },
+      volume: { keys: [] },
+    }),
+    {},
+  );
 });

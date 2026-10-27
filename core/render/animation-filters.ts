@@ -83,8 +83,11 @@ export function renderableAnimationChannels(
 ): AnimationChannels {
   if (!animation) return {};
   const out: AnimationChannels = {};
-  if (animation.opacity) out.opacity = animation.opacity as Channel<number>;
-  if (animation.volume) out.volume = animation.volume as Channel<number>;
+  // A channel without keys draws nothing (and compiles nothing).
+  if (animation.opacity?.keys.length)
+    out.opacity = animation.opacity as Channel<number>;
+  if (animation.volume?.keys.length)
+    out.volume = animation.volume as Channel<number>;
   return out;
 }
 

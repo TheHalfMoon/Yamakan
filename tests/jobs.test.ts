@@ -99,7 +99,7 @@ function ffmpegWith(marker: string) {
       env: { ...process.env, MARKER: marker },
     },
   ).stdout;
-  return out.split(/s+/).filter(Boolean).map(Number);
+  return out.split(/\s+/).filter(Boolean).map(Number);
 }
 async function noFfmpeg(marker: string) {
   for (let t = 0; t < 5000; t += 250) {
