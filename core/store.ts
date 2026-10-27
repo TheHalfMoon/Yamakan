@@ -19,6 +19,7 @@ import {
   frameRateOf,
 } from "./project.ts";
 import type { Rational } from "./time.ts";
+import { EFFECTS_OFF, effectWritesEnabled } from "./effects/registry.ts";
 
 import type { Project, Asset } from "./project.ts";
 import { safePath, initializeRoot } from "./paths.ts";
@@ -2887,6 +2888,23 @@ export class ProjectStore {
             "VALIDATION",
             "A project's frame rate cannot change on save.",
           );
+        // With effect writes off (YU-020), a save keeps every clip's effects.
+        if (!effectWritesEnabled()) {
+          const before = new Map(
+            current().clips.map((c) => [
+              c.id,
+              canonicalJson(c.effects ?? null),
+            ]),
+          );
+          if (
+            proposed.clips.some(
+              (c) =>
+                (before.get(c.id) ?? canonicalJson(null)) !==
+                canonicalJson(c.effects ?? null),
+            )
+          )
+            throw new CommandError("CAPABILITY_UNAVAILABLE", EFFECTS_OFF);
+        }
         // Asset identities and immutable metadata come only from the validated import path.
         if (canonicalJson(proposed.assets) !== canonicalJson(current().assets))
           throw new CommandError(

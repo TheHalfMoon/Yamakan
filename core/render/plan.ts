@@ -21,6 +21,7 @@ import {
 } from "../audio/loudnorm.ts";
 import { ANIMATION_ENABLED } from "../animation/flags.ts";
 import type { ClipAnimation } from "../timeline/animation-schema.ts";
+import { clipTransform, type TransformEffect } from "../effects/registry.ts";
 
 const UNITY = rational(1, 1);
 function clipSpeed(c: CanonicalProject["clips"][number]): Rational {
@@ -59,6 +60,11 @@ export type VideoLayer = {
    * Render applies opacity; transform paths are residual.
    */
   animation?: ClipAnimation;
+  /**
+   * YU-020: present only when the clip has a non-identity transform, so a
+   * plan without effects (and its hash) is exactly as before.
+   */
+  transform?: TransformEffect;
 };
 
 export type AudioInstruction = {
@@ -181,10 +187,12 @@ export function compilePlan(
         ...anim,
       });
     else {
+      const transform = clipTransform(c.effects);
       layers.push({
         ...timing,
         kind: a.kind === "image" ? "image" : "video",
         ...anim,
+        ...(transform ? { transform } : {}),
       });
       if (a.kind === "video" && c.sound?.enabled)
         audio.push({

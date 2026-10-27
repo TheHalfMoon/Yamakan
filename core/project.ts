@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
+import { ClipEffectsSchema } from "./effects/registry.ts";
 import { FLICKS_PER_SECOND, framesToTicks, type Rational } from "./time.ts";
 const { timelineFrames, mediaDimension } = RESOURCE_POLICY.enforced;
 export const Id = z.uuid();
@@ -106,6 +107,8 @@ export const ClipSchema = z
       .optional(),
     // W16/M6: optional animation channel map (path → channel). Absent when unused.
     animation: ClipAnimationSchema.optional(),
+    // YU-020: versioned effect stack; absent when unused.
+    effects: ClipEffectsSchema.optional(),
   })
   .strict();
 const ShotSchema = z

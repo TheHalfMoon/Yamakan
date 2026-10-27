@@ -13,6 +13,10 @@ import { applyBatch, clampFades } from "../core/timeline/operations.ts";
 import type { Operation } from "../core/timeline/operations.ts";
 import type { ClipAnimation } from "../core/timeline/animation-schema.ts";
 import type { TimelineClip } from "./editor/types";
+import {
+  isIdentityTransform,
+  type TransformEffect,
+} from "../core/effects/registry.ts";
 
 // Flicks per frame of a 30 fps edit view (a fallback with no project open).
 export const FRAME_TICKS = 23_520_000;
@@ -47,6 +51,21 @@ export function splitClip(
       clipId,
       atTicks: frameTicksOf(p, at),
       newClipId,
+    },
+  ]);
+}
+
+// A clip's transform (YU-020); an identity transform removes the stack.
+export function setClipTransform(
+  p: Project,
+  clipId: string,
+  transform: TransformEffect,
+): Project {
+  return applyLocal(p, [
+    {
+      type: "clip.setEffects",
+      clipId,
+      effects: isIdentityTransform(transform) ? null : [transform],
     },
   ]);
 }

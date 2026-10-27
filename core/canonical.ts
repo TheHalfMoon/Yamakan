@@ -21,6 +21,7 @@ import {
 import { CommandError } from "./command/errors.ts";
 import { canPlaceTimeSpansOnTrack } from "./timeline/overlap.ts";
 import { ClipAnimationSchema } from "./timeline/animation-schema.ts";
+import { ClipEffectsSchema } from "./effects/registry.ts";
 import { DOCUMENT_LIMITS, DocumentRefSchema } from "./document-ref.ts";
 import type { DocumentRef } from "./document-ref.ts";
 import { canonicalJson } from "./hash/canonical.ts";
@@ -106,6 +107,9 @@ const CanonicalClip = z
     speed: RationalSchema.optional(),
     // W16/M6: OpenCut-shaped animation channel map (path → channel). Absent when unused.
     animation: ClipAnimationSchema.optional(),
+    // YU-020: versioned effect stack (transform/crop). Absent when unused,
+    // so projects without effects keep their bytes.
+    effects: ClipEffectsSchema.optional(),
   })
   .strict();
 // v2: a shot is an ordered group of a scene's clips.
@@ -208,6 +212,16 @@ const ProjectBody = z
       const audible = track?.kind === "audio";
       if (!audible && (c.gainDb !== 0 || c.fadeInTicks || c.fadeOutTicks))
         fail("Gain and fades apply to audio clips only.");
+      if (
+        c.effects &&
+        (c.title !== null ||
+          track?.kind !== "video" ||
+          !p.assets.some(
+            (a) =>
+              a.id === c.assetId && (a.kind === "video" || a.kind === "image"),
+          ))
+      )
+        fail("Effects apply to footage and stills on video tracks only.");
       const asset = p.assets.find((a) => a.id === c.assetId);
       const videoMedia =
         c.title === null && track?.kind === "video" && asset?.kind === "video";
@@ -561,6 +575,7 @@ export function fromEditView(
         sound,
         ...(c.speed ? { speed: c.speed } : {}),
         ...(c.animation ? { animation: c.animation } : {}),
+        ...(c.effects ? { effects: c.effects } : {}),
       };
     }),
   });
@@ -682,6 +697,7 @@ export function toEditView(project: CanonicalProject): Project {
         ? { speed: c.speed }
         : {}),
       ...(c.animation ? { animation: c.animation } : {}),
+      ...(c.effects ? { effects: c.effects } : {}),
     })),
   });
 }
