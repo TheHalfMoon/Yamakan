@@ -77,7 +77,15 @@ import {
 } from "../captions.ts";
 import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
+  CONTINUITY_STAGES,
+  resolveContinuity,
+  verifySelectedContinuity,
+  verifyStoryContinuity,
+} from "../continuity.ts";
+import {
+  ContinuityRefSchema,
   ReferencePackSchema,
+  STORY_LIMITS,
   StoryDocumentSchema,
   type StoryDocument,
   assembleOperations,
@@ -414,7 +422,12 @@ export const commands = {
           expectedContentHash: a.expectedContentHash,
           source: { bytes: Buffer.from(JSON.stringify(a.story), "utf8") },
           principalId: principal.id,
-          verify: (c) => verifyStory(a.story, c),
+          verify: (c) => {
+            verifyStory(a.story, c);
+            // Takes' continuity references stay traceable (no consent
+            // needed to keep history).
+            verifyStoryContinuity(a.story, c);
+          },
         },
         receipt,
       );
@@ -521,6 +534,9 @@ export const commands = {
             );
           story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
           verifyStory(story, c);
+          // Each selected take is attached: its references' consents must
+          // be usable now (YU-051).
+          verifySelectedContinuity(story, c);
         },
       );
     },
@@ -753,7 +769,13 @@ export const commands = {
             JSON.parse(read.bytes.toString("utf8")),
           );
           // The chosen take and the shot's reference pins, consents included.
-          verifyStory(shotWithTake(story, p.shotId, p.takeId), c);
+          const one = shotWithTake(story, p.shotId, p.takeId);
+          verifyStory(one, c);
+          // And the references the take was made with, consents usable now
+          // (YU-051): a check at attempt time is not an approval here.
+          const continuity =
+            one.scenes[0]!.shots[0]!.takes[0]!.lineage?.continuity;
+          if (continuity?.length) resolveContinuity(c, continuity, "attach");
           for (const m of p.mappings) {
             const asset = c.project.assets.find((x) => x.id === m.to.assetId);
             if (!asset)
@@ -764,6 +786,38 @@ export const commands = {
             assertTakeMedia(c.db, a.projectId, asset);
           }
         },
+      );
+    },
+  }),
+  "yamakan.continuity.check": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Check continuity references (one entry of one reference pack version this project holds, and an optional identity encoding by id and payload hash) for a stage (YU-051): record checks they are traceable; attempt and attach also check every consent they rely on is usable now. Advisory: it changes nothing and approves nothing; take.apply and story.assemble check again. Metadata validity is reported apart from the continuity score, which stays unmeasured.",
+    input: z
+      .object({
+        projectId: Id,
+        stage: z.enum(CONTINUITY_STAGES),
+        references: z
+          .array(ContinuityRefSchema)
+          .min(1)
+          .max(STORY_LIMITS.inputsPerTake),
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      const project = await store.load(a.projectId);
+      return store.read((db) =>
+        resolveContinuity(
+          {
+            db,
+            project,
+            held: (documentId, hash, kind) =>
+              store.holdsDocument(a.projectId, documentId, hash, kind),
+            nowMs: Date.now(),
+          },
+          a.references,
+          a.stage,
+        ),
       );
     },
   }),

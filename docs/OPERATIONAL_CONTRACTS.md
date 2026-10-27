@@ -456,6 +456,40 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Rollback.** The AG-DOCS switch (`YAMAKAN_AG_DOCS_OFF=1`) turns story and pack writes off; stored documents stay readable. The workspace database moves to version 13, which rebuilds the two document tables to accept the new kinds with the same rows (foreign keys checked in the same transaction) and adds the table of committed story and pack versions. Stored versions are never pruned; any future pruning must also remove their rows there. An earlier build refuses a version 13 workspace, so going back to one needs a verified backup from before the upgrade.
 - **UI.** The Director panel lists the project's stories and packs: shots and title cards, and how many references link a likeness consent (linked, not necessarily still usable). It lists them again at each revision of the open project or on request, and reads their content only when a version changed.
 
+## Continuity references and per-stage consent (YU-051)
+
+- **Immutable references.** A take's lineage can name the continuity references it was made with, at most 8.
+  - Each reference is one entry of one reference pack version, given by the pack's document id, content hash and entry id.
+  - It can also name the identity encoding the take used, by id and payload hash.
+  - A pack update makes a new version. The old take still names the version it used, which the project holds, so the take stays traceable. No code path deletes pack versions or the record that a project held them (`core/continuity.ts`).
+- **Voice references.** A `voice` entry is project audio. Like a `character` entry, it names its character and a consent, but its consent's purpose is `voice-clone`. A voice on a still, a character on audio, and a likeness consent on a voice are each refused.
+- **Checks by stage.** In story save, take apply and assemble, the checks run inside the commit's transaction, under the write lock.
+  - **record** (`yamakan.story.save`): the references are traceable.
+    - The pack version is held by this project under that document id, and its stored bytes match its hash.
+    - The entry is in that version.
+    - A named encoding is the recorded one for that entry's character.
+    - Neither consent nor the entry's media is needed. So a revocation or a removed medium never stops a story with old takes from being saved.
+  - **attempt** (before a generation is submitted) and **attach**: as record, and also:
+    - the entry's pinned media version is still in the project;
+    - every consent the references rely on is usable now, covering purpose, expiry, revocation and the restore epoch. A character reference uses its `likeness-generate` consent, a voice reference its `voice-clone` consent, and an encoding the consent it was recorded under, for that consent's purpose.
+  - **Attach paths:** `yamakan.take.apply` checks the take it puts on the timeline, and `yamakan.story.assemble` checks each shot's selected take.
+- **No carried approval.** `yamakan.continuity.check` (`project:read`) is advisory: it reads the head outside any commit, changes nothing and approves nothing. The attach checks again under the write lock, so a consent revoked or expired after an attempt-time check refuses the attach.
+  - An attach committed before a revocation stands.
+  - A revocation racing an attach either lands after the attach commits, or the attach is refused and the clip keeps its take. After the revocation, no further attach of that take succeeds.
+- **Refused references:**
+  - a pack version this project does not hold under that document id, including another project's, or the same bytes under another id;
+  - an entry not in that version;
+  - at attempt or attach, media that no longer matches the pinned version;
+  - an encoding that is unknown, has an altered payload hash, belongs to another character, or sits on a non-character entry;
+  - the same entry named twice.
+- **Metadata apart from the score.** The result reports `metadataValid`, `mediaPresent` and which consents were checked, separately from `continuity: { score: null, status: "unmeasured" }`. Matching hashes show which references a take named, not that it resembles them. No resemblance measurement exists yet.
+- **Not done:**
+  - No generation submits yet (engines are off), so the attempt stage runs only through the check command. It is the check a submission must call.
+  - Stored reference media is not deleted when consent is revoked. A revocation blocks new use and cannot be undone, but placing the medium directly with clip editing is not gated.
+  - Consents, characters and identity encodings are workspace-wide, not per project. An encoding is accepted only for the entry's character with its exact id and payload hash.
+  - The restore epoch is enforced by `assertConsentUsable`, which every attempt and attach check calls. There is no attach-after-restore test.
+  - No command removes an asset, because asset versions are immutable, so the media check at attempt and attach is defensive. It is tested on the resolver directly.
+
 ## Take compare and replace (YU-032)
 
 - **Takes and lineage.** A story shot keeps up to 8 alternative takes. A take may record its `lineage`: an optional label, the `outputHash` of its own media version, and up to 8 `inputs` (project media pinned by asset id and SHA-256) it was made from. Each is checked against the project's media when the story is saved. A story version is immutable, so its lineage is too, and the media a story names (inputs included) stays in every revision that holds it.

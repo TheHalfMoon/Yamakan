@@ -1727,6 +1727,15 @@ export class ProjectStore {
       },
     });
   }
+  /** Whether this project committed this document version (read-only checks). */
+  holdsDocument(
+    projectId: string,
+    documentId: string,
+    contentHash: string,
+    kind: DocumentKind,
+  ) {
+    return this.#held(projectId, documentId, contentHash, kind);
+  }
   // Whether this project committed this version of this story or pack
   // document (recorded with the commit; YU-031).
   #held(
