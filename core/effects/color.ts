@@ -66,6 +66,13 @@ const MATRICES: Readonly<Record<string, SourceMatrix>> = Object.freeze({
   smpte240m: "smpte240m",
 });
 const UNTAGGED = new Set(["unknown", "unspecified", "gbr"]);
+// A recorded tag is data: only the map's own keys are read (never an
+// inherited name such as "constructor"), and only its values come out.
+const matrixOf = (tag: string): SourceMatrix | null =>
+  Object.hasOwn(MATRICES, tag) ? MATRICES[tag]! : null;
+// A probed name in a message, when it has the shape of one.
+const named = (tag: string) =>
+  /^[a-z0-9._-]{1,40}$/.test(tag) ? tag : "an unrecognised";
 const HDR_TRANSFERS = new Set(["smpte2084", "arib-std-b67"]);
 const WIDE_GAMUT = new Set(["bt2020", "bt2020nc", "bt2020c"]);
 // Side data that marks HDR even without HDR tags (Dolby Vision profile 5,
@@ -128,11 +135,11 @@ export function unsupportedColor(
   if (WIDE_GAMUT.has(c.primaries) || WIDE_GAMUT.has(c.matrix))
     return "Wide-gamut BT.2020 video is not supported: Yamakan renders SDR Rec.709 only.";
   if (!SDR_PRIMARIES.has(c.primaries))
-    return `Video with ${c.primaries} primaries (a wide or other gamut) is not supported: Yamakan renders SDR Rec.709 only.`;
+    return `Video with ${named(c.primaries)} primaries (a wide or other gamut) is not supported: Yamakan renders SDR Rec.709 only.`;
   if (!SDR_TRANSFERS.has(c.transfer))
-    return `Video with the ${c.transfer} transfer is not supported: Yamakan renders SDR Rec.709 only.`;
-  if (!MATRICES[c.matrix] && !UNTAGGED.has(c.matrix))
-    return `Video with the ${c.matrix} matrix is not supported: Yamakan reads BT.709, BT.601 and SMPTE 240M.`;
+    return `Video with the ${named(c.transfer)} transfer is not supported: Yamakan renders SDR Rec.709 only.`;
+  if (!matrixOf(c.matrix) && !UNTAGGED.has(c.matrix))
+    return `Video with the ${named(c.matrix)} matrix is not supported: Yamakan reads BT.709, BT.601 and SMPTE 240M.`;
   return null;
 }
 
@@ -151,8 +158,9 @@ export function sourceColor(
   // JFIF is BT.601 whatever its size; other untagged YUV goes by height.
   let matrix: SourceMatrix = "bt601";
   if (!jpeg && fallback.height >= HD_LINES) matrix = "bt709";
-  const tagged = c !== null && c.matrix in MATRICES;
-  if (tagged) matrix = MATRICES[c.matrix]!;
+  const read = c === null ? null : matrixOf(c.matrix);
+  const tagged = read !== null;
+  if (read) matrix = read;
   let range: SourceRange = jpeg ? "pc" : "tv";
   const rangeTagged = c?.range === "tv" || c?.range === "pc";
   if (rangeTagged) range = c.range as SourceRange;

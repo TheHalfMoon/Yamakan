@@ -19,7 +19,14 @@ import { mediaTools } from "../core/process/workers.ts";
 import { renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import type { Project } from "../core/project.ts";
-import { cubeText, identityCube, parseCube } from "../core/effects/color.ts";
+import {
+  cubeText,
+  hasHdrSideData,
+  identityCube,
+  parseCube,
+  sourceColor,
+  unsupportedColor,
+} from "../core/effects/color.ts";
 import { previewParity } from "../core/render/parity.ts";
 import { setClipTransform } from "../src/edit-ops.ts";
 import { IDENTITY_TRANSFORM } from "../core/effects/registry.ts";
@@ -652,4 +659,46 @@ test("re-importing a LUT a clip uses is refused with a way forward", async () =>
     ),
     /another version of this LUT/,
   );
+});
+
+test("HDR side data is detected without HDR tags, and recorded tags only ever map to the policy's enums", () => {
+  for (const type of [
+    "DOVI configuration record",
+    "Mastering display metadata",
+    "Content light level metadata",
+    "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)",
+  ])
+    assert.equal(
+      hasHdrSideData({ side_data_list: [{ side_data_type: type }] }),
+      true,
+      type,
+    );
+  assert.equal(
+    hasHdrSideData({ side_data_list: [{ side_data_type: "Display Matrix" }] }),
+    false,
+  );
+  assert.equal(hasHdrSideData({}), false);
+  const sdr = {
+    pixelFormat: "yuv420p",
+    matrix: "bt709",
+    range: "tv",
+    transfer: "bt709",
+    primaries: "bt709",
+  };
+  assert.match(unsupportedColor(sdr, true) ?? "", /HDR video/);
+  // A tampered record naming an inherited property is refused, never read.
+  for (const matrix of ["constructor", "toString", "__proto__"]) {
+    assert.match(
+      unsupportedColor({ ...sdr, matrix }) ?? "",
+      /matrix is not supported/,
+    );
+    const read = sourceColor(
+      { ...sdr, matrix },
+      { height: 1080, extension: "mp4" },
+    );
+    assert.ok(
+      read && ["bt709", "bt601", "fcc", "smpte240m"].includes(read.matrix),
+    );
+    assert.equal(read!.assumed, true);
+  }
 });
