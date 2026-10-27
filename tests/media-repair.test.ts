@@ -66,14 +66,23 @@ async function workspace() {
 type Ctx = Awaited<ReturnType<typeof workspace>>;
 
 // Black, white and grey, one second each, at a given rate.
-async function scenes(c: Ctx, name: string, rate: string, audio = false) {
+async function scenes(
+  c: Ctx,
+  name: string,
+  rate: string,
+  audio = false,
+  options: { frames?: number[]; offset?: string } = {},
+) {
   const file = path.join(c.root, name);
+  const frames = options.frames;
   ffmpeg([
-    ...["black", "white", "gray"].flatMap((colour) => [
+    ...["black", "white", "gray"].flatMap((colour, i) => [
       "-f",
       "lavfi",
       "-i",
-      `color=${colour}:s=320x180:r=${rate}:d=1`,
+      frames
+        ? `color=${colour}:s=320x180:r=${rate},trim=end_frame=${frames[i]}`
+        : `color=${colour}:s=320x180:r=${rate}:d=1`,
     ]),
     ...(audio
       ? ["-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=3"]
@@ -89,6 +98,7 @@ async function scenes(c: Ctx, name: string, rate: string, audio = false) {
     "ultrafast",
     "-pix_fmt",
     "yuv420p",
+    ...(options.offset ? ["-output_ts_offset", options.offset] : []),
     file,
   ]);
   return (await c.store.importAsset(c.projectId, name, await readFile(file)))
@@ -153,6 +163,29 @@ test("a 24000/1001 source's cuts are at its own frame times, counted in the proj
   );
 });
 
+test("cut times are exact at uneven frames and count from the source's first frame", async () => {
+  const c = await workspace();
+  // 31, 29 and 30 frames: cuts at 31/30 s and 2 s, which do not print as
+  // short decimals.
+  const uneven = await scenes(c, "uneven.mp4", "30", false, {
+    frames: [31, 29, 30],
+  });
+  const found = await cuts(c, uneven.id);
+  assert.deepEqual(
+    found.cuts.map((x) => [x.frame, x.sourceTicks]),
+    [
+      [31, 31 * 23_520_000],
+      [60, 60 * 23_520_000],
+    ],
+  );
+  // A source whose video starts at 1.4 s: cuts count from its first frame.
+  const late = await scenes(c, "late.mp4", "30", false, { offset: "1.4" });
+  assert.deepEqual(
+    (await cuts(c, late.id)).cuts.map((x) => x.frame),
+    [30, 60],
+  );
+});
+
 test("stills, sound, bad thresholds, a truncated stream and a cancel are refused cleanly", async () => {
   const c = await workspace();
   const png = path.join(c.root, "still.png");
@@ -170,24 +203,57 @@ test("stills, sound, bad thresholds, a truncated stream and a cancel are refused
   const asset = await scenes(c, "scenes.mp4", "30");
   for (const threshold of [0, 101, 2.5])
     assert.match(await failure(cuts(c, asset.id, threshold)), /^VALIDATION/);
-  // The stored object is damaged after import (cut short): the analysis
-  // fails as unreadable media, with no host path in the message.
+  // The stored object is damaged after import (its size kept, its
+  // container overwritten): FFmpeg reads it and the analysis fails as
+  // unreadable media, with no host path in the message.
   const file = await c.store.readyObjectFile(c.projectId, asset);
   const bytes = await readFile(file);
-  await writeFile(file, bytes.subarray(0, Math.floor(bytes.length / 3)));
-  const truncated = await failure(cuts(c, asset.id));
-  assert.match(truncated, /^(MEDIA_INVALID|RECOVERY_REQUIRED)/);
-  assert.doesNotMatch(truncated, /[A-Z]:\\|\/tmp\//);
+  const garbage = Buffer.from(bytes);
+  garbage.fill(0x5a, 0, garbage.length);
+  await writeFile(file, garbage);
+  const damaged = await failure(cuts(c, asset.id));
+  assert.match(damaged, /^MEDIA_INVALID/);
+  assert.doesNotMatch(damaged, /[A-Z]:\\|\/tmp\//);
   await writeFile(file, bytes);
-  // A cancel stops the worker.
-  const controller = new AbortController();
-  controller.abort();
+  // A cancel before the call starts no worker; one during the analysis
+  // stops it.
+  const before = new AbortController();
+  before.abort();
   assert.match(
     await failure(
-      detectSceneCuts(c.store, c.projectId, asset.id, 10, controller.signal),
+      detectSceneCuts(c.store, c.projectId, asset.id, 10, before.signal),
     ),
     /^UNAVAILABLE: Cancelled/,
   );
+  const long = path.join(c.root, "long.mp4");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc2=size=1280x720:rate=30:duration=60",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "ultrafast",
+    "-pix_fmt",
+    "yuv420p",
+    long,
+  ]);
+  const longAsset = (
+    await c.store.importAsset(c.projectId, "long.mp4", await readFile(long))
+  ).asset;
+  const during = new AbortController();
+  const started = Date.now();
+  const running = detectSceneCuts(
+    c.store,
+    c.projectId,
+    longAsset.id,
+    10,
+    during.signal,
+  );
+  setTimeout(() => during.abort(), 300);
+  assert.match(await failure(running), /^UNAVAILABLE: Cancelled/);
+  assert.ok(Date.now() - started < 10_000, "the cancel stopped the scan");
   // The parser bounds what it reports.
   const many = Array.from(
     { length: 1002 },

@@ -522,23 +522,39 @@ A project has one frame rate. Every frame field of its editing view counts frame
 
 ## Deterministic media analysis: scene cuts (YU-071)
 
-- **Source inspection.** The bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) carries these analysis and repair filters:
-  - `scdet` (scene change),
-  - `blackdetect`, `freezedetect`,
-  - `deshake`,
-  - `hqdn3d`, `nlmeans`, `atadenoise` (denoisers).
+- **Source inspection.** On 2026-10-27, `ffmpeg -filters` on the bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) listed these analysis and repair filters:
+  - `scdet` (scene change)
+  - `blackdetect` and `freezedetect`
+  - `deshake`
+  - the denoisers `hqdn3d`, `nlmeans` and `atadenoise`
 
-  It does not carry vid.stab, so there is no two-pass stabilization. Linux CI's FFmpeg also has `scdet`.
+  vid.stab is not in the build, so there is no two-pass stabilization. Only `scdet` is relied on and tested.
 
 - **The first qualified operation: scene cuts.**
-  - `yamakan.analysis.sceneCuts` (scope `render:execute`) takes a project video asset and a threshold, a whole number 1–100 with a default of 10. It runs `scdet` (the mean absolute luma difference between frames; no model, no randomness) on the stored original in an owned worker. The worker may read only that file, and its time, memory and output are bounded.
-  - It returns `yamakan.scene-cuts/v1:scdet`, the asset's hash, the threshold, and each cut: the frame a new scene starts on, counted at the project's rate as the editor counts the asset's frames; its exact time in ticks from the source's start; and scdet's score. A cut's time comes from the frame's own timestamp, so a 24000/1001 source's cut sits exactly on its source frame.
-  - It writes no media and changes nothing, so the source, its timing and its sound are untouched by construction. There is no derivative to verify, and no restoration claim.
+  - **Command.** `yamakan.analysis.sceneCuts` (scope `render:execute`) takes a project video asset and a threshold: a whole number from 1 to 100, default 10.
+  - **Method.** It runs `scdet`, which measures the mean absolute luma difference between frames. There is no model and no randomness. It runs on the stored original, in an owned worker that may read only that file.
+  - **Result.** It returns `yamakan.scene-cuts/v1:scdet`, the asset's hash, the threshold, and each cut, which has:
+    - the frame a new scene starts on, counted at the project's rate, as the editor counts the asset's frames;
+    - its time in ticks from the source's first frame;
+    - scdet's score.
+  - **Timing.** The graph converts timestamps to ticks (`settb`) and then counts them from the first frame (`PTS-STARTPTS`). A cut's time is therefore its frame's own timestamp, to the nearest tick, whatever the source's frame rate or start offset.
+  - **No changes.** It writes no media and changes nothing, so the source, its timing and its sound are untouched by construction. There is no derivative to verify, and no restoration claim.
 - **Bounds and refusals.**
-  - At most 1,000 cuts and 1 MiB of analysis output; otherwise it is refused, with advice to raise the threshold.
-  - The wall clock is the conversion limit (900 s), and the worker memory is the media worker limit.
-  - Stills and audio are refused. A damaged or unreadable stream fails as `MEDIA_INVALID`, or `RECOVERY_REQUIRED` for a missing object, with no host path. A cancel stops the worker.
-- **Not qualified here.** Denoise, deshake, black detection and freeze detection; each needs its own qualification. Neither scene detection nor any other operation is shown in the editor yet.
+  - **Concurrency.** One analysis runs at a time, and at most 2 wait; beyond that the request is refused as `BUSY`.
+  - **Limits.** Each analysis is bounded:
+    - at most 300 s;
+    - the media worker's memory, reported as `LIMIT_EXCEEDED` when a worker is stopped at that limit;
+    - at most 1,000 cuts and 1 MiB of analysis output, otherwise it asks for a higher threshold.
+  - **Refused inputs.**
+    - Stills and audio are refused.
+    - A damaged stream fails as `MEDIA_INVALID`. A stream whose stored object does not match its size fails as `RECOVERY_REQUIRED`. Neither message contains a host path.
+    - A frame time the parser cannot use refuses the whole analysis rather than dropping a cut.
+  - **Cancellation.** A cancel before the analysis starts no worker, and one during it stops the worker. The command itself has no cancel signal yet: a client that disconnects leaves the analysis running to its bound.
+- **Not covered.**
+  - Denoise, deshake, black detection and freeze detection each need their own qualification.
+  - No test removes `scdet` or simulates running out of memory.
+  - A partial-output quarantine does not apply, because no output is written.
+  - The editor does not show scene cuts yet.
 
 ## Bounded animation compilation (YU-022)
 
