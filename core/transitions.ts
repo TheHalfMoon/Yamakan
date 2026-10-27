@@ -23,6 +23,9 @@ import { Ticks, ticksToFrames, type Rational } from "./time.ts";
 export const TRANSITION_POLICY = "centeredDissolve/v1";
 export const TRANSITION_LIMITS = Object.freeze({
   minFrames: 2,
+  // Two seconds at 30 fps, the fastest supported rate (a command's bound;
+  // the project's own rate may allow fewer).
+  maxFrames: 60,
   // At most two seconds of the project's frames.
   maxSeconds: 2,
 });
@@ -32,6 +35,9 @@ export const TransitionAudio = z.enum(["equalPower", "cut"]);
 export const TransitionSchema = z
   .object({
     kind: z.literal("dissolve"),
+    // The outgoing clip, which must end where this clip starts: a ripple,
+    // insert or move never silently joins another clip instead.
+    fromClipId: z.uuid(),
     durationTicks: Ticks.min(1),
     audio: TransitionAudio,
   })
@@ -41,7 +47,8 @@ export type Transition = z.infer<typeof TransitionSchema>;
 export const EditTransitionSchema = z
   .object({
     kind: z.literal("dissolve"),
-    durationFrames: z.number().int().min(1),
+    fromClipId: z.uuid(),
+    durationFrames: z.number().int().min(TRANSITION_LIMITS.minFrames),
     audio: TransitionAudio,
   })
   .strict();
@@ -116,13 +123,15 @@ export function transitionProblem(p: Project, clip: Clip): string | null {
   );
   if (frames < TRANSITION_LIMITS.minFrames || frames > maxFrames)
     return `A transition lasts ${TRANSITION_LIMITS.minFrames} to ${maxFrames} frames.`;
-  if (frames % 2 !== 0)
+  // Half of it must be a whole number of ticks too (at any rate a
+  // canonical project could carry, not only the editor's).
+  if (frames % 2 !== 0 || t.durationTicks % 2 !== 0)
     return "A transition lasts an even number of frames (it is centred on the cut).";
   if (p.tracks.find((x) => x.id === clip.trackId)?.kind !== "video")
     return "Transitions join clips on a video track.";
   const before = previousClip(p.clips, clip);
-  if (!before)
-    return "A transition needs its clip to start where the previous clip on its track ends; remove the transition first.";
+  if (!before || before.id !== t.fromClipId)
+    return "A transition needs its clip to start where its outgoing clip ends; remove the transition first.";
   const half = t.durationTicks / 2;
   for (const [c, side] of [
     [before, "outgoing"],
@@ -136,7 +145,7 @@ export function transitionProblem(p: Project, clip: Clip): string | null {
     if (retimed(c)) return "A transition joins clips at normal speed.";
     if (animated(c)) return "A transition joins clips without animation.";
     if (t.durationTicks > c.durationTicks)
-      return "A transition is no longer than either clip.";
+      return "The transition is longer than a clip it joins.";
     if (asset.kind === "video") {
       const enough =
         side === "outgoing"

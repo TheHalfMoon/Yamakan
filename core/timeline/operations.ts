@@ -500,7 +500,11 @@ function apply(p: CanonicalProject, op: Operation): void {
         sound: secondSound,
       };
       // The dissolve into the clip stays at its start; the new cut is a cut.
+      // A dissolve out of the clip now comes from its second part.
       delete second.transition;
+      for (const other of p.clips)
+        if (other.transition?.fromClipId === c.id)
+          other.transition.fromClipId = second.id;
       c.durationTicks = first;
       c.fadeOutTicks = 0;
       c.fadeInTicks = Math.min(c.fadeInTicks, first);
@@ -659,7 +663,12 @@ function apply(p: CanonicalProject, op: Operation): void {
         delete c.transition;
         return;
       }
-      if (!transitionWritesEnabled())
+      // With the switch off, only an unchanged transition is accepted (an
+      // editor save that recreates a clip keeps it).
+      if (
+        !transitionWritesEnabled() &&
+        JSON.stringify(c.transition ?? null) !== JSON.stringify(op.transition)
+      )
         throw new CommandError("CAPABILITY_UNAVAILABLE", TRANSITIONS_OFF);
       // Both clips change on screen, so the outgoing one must be editable.
       const before = previousClip(p.clips, c);

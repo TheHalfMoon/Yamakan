@@ -18,7 +18,7 @@ import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
-import { compilePlan } from "../core/render/plan.ts";
+import { compilePlan, withMeasuredLoudnorm } from "../core/render/plan.ts";
 import { titleFonts } from "../core/render/fonts.ts";
 import {
   fromEditView,
@@ -285,9 +285,12 @@ test("a ten-frame dissolve draws the same golden frames in export and reference 
   for (const n of [0, 24, 25, 26, 28, 30, 32, 34, 35, 36, 59]) {
     const got = centre(frameAt(output, n));
     const want = expected(n);
+    // The dissolve's first frame is exactly A and its last-plus-one
+    // exactly B; frames in between are within a few levels of k/D.
+    const tolerance = n <= 25 || n >= 35 ? 4 : 14;
     for (let ch = 0; ch < 3; ch += 2)
       assert.ok(
-        Math.abs(got[ch]! - want[ch]!) <= 14,
+        Math.abs(got[ch]! - want[ch]!) <= tolerance,
         `frame ${n}: ${got} vs ${want}`,
       );
     // The reference preview is drawn by the same compiler.
@@ -374,6 +377,7 @@ test("a transition persists, undoes, redoes and reopens; a project without one k
   const stored = fromEditView(set).clips.find((x) => x.id === c.b)!.transition;
   assert.deepEqual(stored, {
     kind: "dissolve",
+    fromClipId: c.a,
     durationTicks: 6 * FRAME,
     audio: "equalPower",
   });
@@ -393,6 +397,7 @@ test("a transition persists, undoes, redoes and reopens; a project without one k
   const redone = await run(c, "yamakan.project.redo", {});
   assert.deepEqual(redone.clips.find((x) => x.id === c.b)!.transition, {
     kind: "dissolve",
+    fromClipId: c.a,
     durationFrames: 6,
     audio: "equalPower",
   });
@@ -415,6 +420,7 @@ test("a transition persists, undoes, redoes and reopens; a project without one k
       clipId: c.b,
       transition: {
         kind: "dissolve",
+        fromClipId: c.a,
         durationTicks: 6 * FRAME,
         audio: "equalPower",
       },
@@ -436,7 +442,10 @@ test("missing handles, locked tracks, odd or too long durations, gaps, titles, r
   const set = (args: object) =>
     failure(run(c, "yamakan.transition.set", { clipId: c.b, ...args }));
   assert.match(await set({ durationFrames: 7 }), /even number of frames/);
-  assert.match(await set({ durationFrames: 62 }), /2 to 60 frames/);
+  assert.match(await set({ durationFrames: 62 }), /^VALIDATION/);
+  // Zero or negative durations never reach the timeline.
+  assert.match(await set({ durationFrames: 0 }), /^VALIDATION/);
+  assert.match(await set({ durationFrames: -4 }), /^VALIDATION/);
   // B starts its source at 1 s: a dissolve longer than 2 s of handle is
   // beyond the clip, and an in-point at 0 leaves no handle.
   await batch(c, [{ type: "clip.trim", clipId: c.b, startTicks: 30 * FRAME }]);
@@ -503,13 +512,16 @@ test("missing handles, locked tracks, odd or too long durations, gaps, titles, r
   ]);
   // Longer than a clip.
   await batch(c, [{ type: "clip.trim", clipId: c.b, endTicks: 38 * FRAME }]);
-  assert.match(await set({ durationFrames: 10 }), /no longer than either/);
+  assert.match(
+    await set({ durationFrames: 10 }),
+    /longer than a clip it joins/,
+  );
   await batch(c, [{ type: "clip.trim", clipId: c.b, endTicks: 60 * FRAME }]);
   // A gap before the clip: no adjacency.
   await batch(c, [{ type: "clip.trim", clipId: c.a, endTicks: 29 * FRAME }]);
   assert.match(
     await set({ durationFrames: 10 }),
-    /start where the previous clip/,
+    /start where (the previous|its outgoing) clip/,
   );
   await batch(c, [{ type: "clip.trim", clipId: c.a, endTicks: 30 * FRAME }]);
   // Retimed and animated clips.
@@ -578,13 +590,13 @@ test("edits that would break a transition are refused; a split keeps it on the f
     await failure(
       batch(c, [{ type: "clip.move", clipId: c.b, startTicks: 40 * FRAME }]),
     ),
-    /start where the previous clip/,
+    /start where (the previous|its outgoing) clip/,
   );
   assert.match(
     await failure(
       batch(c, [{ type: "clip.trim", clipId: c.a, endTicks: 28 * FRAME }]),
     ),
-    /start where the previous clip/,
+    /start where (the previous|its outgoing) clip/,
   );
   // Overlapping transitions on one clip.
   const third = id();
@@ -604,7 +616,7 @@ test("edits that would break a transition are refused; a split keeps it on the f
     await failure(
       run(c, "yamakan.transition.set", { clipId: third, durationFrames: 52 }),
     ),
-    /no longer than either|cannot overlap/,
+    /longer than a clip it joins|cannot overlap/,
   );
   assert.equal(
     await failure(
@@ -632,6 +644,7 @@ test("edits that would break a transition are refused; a split keeps it on the f
     const saved = structuredClone(p);
     saved.clips.find((x) => x.id === second)!.transition = {
       kind: "dissolve",
+      fromClipId: c.b,
       durationFrames: 4,
       audio: "cut",
     };
@@ -670,6 +683,7 @@ test("a dissolve at 24000/1001 counts in that rate's frames", async () => {
   for (const a of at24.assets) a.durationTicks = f(71);
   at24.clips[1]!.transition = {
     kind: "dissolve",
+    fromClipId: at24.clips[0]!.id,
     durationTicks: f(12),
     audio: "equalPower",
   };
@@ -681,4 +695,219 @@ test("a dissolve at 24000/1001 counts in that rate's frames", async () => {
   const long = structuredClone(at24);
   long.clips[1]!.transition!.durationTicks = f(50);
   assert.throws(() => parseCanonical(JSON.parse(serializeCanonical(long))));
+});
+
+test("a transition stays bound to its outgoing clip: ripple and insert never re-target it, and splitting the outgoing clip follows it", async () => {
+  const c = await workspace();
+  const third = id();
+  await batch(c, [
+    {
+      type: "clip.add",
+      clipId: third,
+      trackId: c.track,
+      assetId: c.media.red.id,
+      title: null,
+      startTicks: 60 * FRAME,
+      durationTicks: 30 * FRAME,
+      sourceStartTicks: 30 * FRAME,
+    },
+  ]);
+  await run(c, "yamakan.transition.set", { clipId: third, durationFrames: 10 });
+  // Ripple-deleting B would pull the third clip against A: refused.
+  assert.match(
+    await failure(batch(c, [{ type: "timeline.rippleDelete", clipId: c.b }])),
+    /outgoing clip ends/,
+  );
+  // Splitting B (the outgoing clip) moves the dissolve's source to B's
+  // second part, which now ends at the cut.
+  const tail = id();
+  const split = await batch(c, [
+    { type: "clip.split", clipId: c.b, atTicks: 45 * FRAME, newClipId: tail },
+  ]);
+  assert.equal(
+    split.clips.find((x) => x.id === third)!.transition?.fromClipId,
+    tail,
+  );
+  // With the switch off, a batch may restate an unchanged transition (an
+  // editor save that recreates a clip) but not change one.
+  const kept = fromEditView(split).clips.find(
+    (x) => x.id === third,
+  )!.transition!;
+  process.env.YAMAKAN_TRANSITIONS_OFF = "1";
+  try {
+    assert.equal(
+      await failure(
+        batch(c, [
+          { type: "clip.setTransition", clipId: third, transition: kept },
+        ]),
+      ),
+      "ok",
+    );
+    assert.match(
+      await failure(
+        batch(c, [
+          {
+            type: "clip.setTransition",
+            clipId: third,
+            transition: { ...kept, audio: "cut" },
+          },
+        ]),
+      ),
+      /^CAPABILITY_UNAVAILABLE/,
+    );
+  } finally {
+    delete process.env.YAMAKAN_TRANSITIONS_OFF;
+  }
+});
+
+test("a loudness-normalised plan keeps the transition policy", async () => {
+  const c = await workspace();
+  const p = await run(c, "yamakan.transition.set", {
+    clipId: c.b,
+    durationFrames: 10,
+  });
+  const { plan } = compilePlan(
+    fromEditView(p),
+    "0".repeat(64),
+    await titleFonts(),
+    {
+      normalizeLoudness: true,
+    },
+  );
+  assert.ok(plan.loudnorm);
+  const measured = withMeasuredLoudnorm(plan, {
+    inputI: -20,
+    inputTp: -3,
+    inputLra: 4,
+    inputThresh: -30,
+    targetOffset: 0,
+  } as never);
+  assert.equal(measured.transitionPolicy, "centeredDissolve/v1");
+  assert.notEqual(measured.planHash, plan.planHash);
+});
+
+test("at 24000/1001 a dissolve from footage into a still renders frame-exact with the sound's full length", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-transitions-24-"));
+  bases.push(root);
+  const store = new ProjectStore(root);
+  handles.push(store);
+  await store.initialize();
+  const queue = new JobSupervisor(store);
+  handles.push(queue);
+  const browser = {
+    store,
+    queue,
+    principal: {
+      id: "browser-ui" as const,
+      scopes: new Set(Scopes) as ReadonlySet<Scope>,
+    },
+  };
+  const project = (
+    await execute(browser, "yamakan.project.create", {
+      name: "Film rate",
+      frameRate: { num: 24000, den: 1001 },
+    })
+  ).result as Project;
+  const film = path.join(root, "red.mov");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=red:s=320x180:r=24000/1001:d=3",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=48000:duration=3",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "ultrafast",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "pcm_s16le",
+    "-shortest",
+    film,
+  ]);
+  const still = path.join(root, "blue.png");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=blue:s=320x180",
+    "-frames:v",
+    "1",
+    still,
+  ]);
+  const red = (
+    await store.importAsset(project.id, "red.mov", await readFile(film))
+  ).asset;
+  const blue = (
+    await store.importAsset(project.id, "blue.png", await readFile(still))
+  ).asset;
+  const F = 29_429_400; // flicks per 24000/1001 frame
+  const h = await store.load(project.id);
+  const track = h.tracks.find((t) => t.kind === "video")!.id;
+  const a = id(),
+    b = id();
+  await execute(browser, "yamakan.project.applyBatch", {
+    projectId: project.id,
+    expectedRevision: h.revision,
+    operations: [
+      {
+        type: "clip.add",
+        clipId: a,
+        trackId: track,
+        assetId: red.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 24 * F,
+        sourceStartTicks: 0,
+      },
+      {
+        type: "clip.add",
+        clipId: b,
+        trackId: track,
+        assetId: blue.id,
+        title: null,
+        startTicks: 24 * F,
+        durationTicks: 24 * F,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  const set = (
+    await execute(browser, "yamakan.transition.set", {
+      projectId: project.id,
+      expectedRevision: (await store.load(project.id)).revision,
+      clipId: b,
+      durationFrames: 12,
+    })
+  ).result as Project;
+  const out = await renderRevision(
+    store,
+    project.id,
+    set.revision,
+    ["exports", "film"],
+    new AbortController().signal,
+    () => {},
+  );
+  // The dissolve runs over frames 18–30: 18 is red, 24 halfway, 30 blue.
+  const [r18, , b18] = centre(frameAt(out.output, 18));
+  const [r24, , b24] = centre(frameAt(out.output, 24));
+  const [r30, , b30] = centre(frameAt(out.output, 30));
+  assert.ok(r18! > 245 && b18! < 10, `frame 18: ${r18},${b18}`);
+  assert.ok(
+    Math.abs(r24! - 128) < 20 && Math.abs(b24! - 128) < 20,
+    `frame 24: ${r24},${b24}`,
+  );
+  assert.ok(r30! < 10 && b30! > 245, `frame 30: ${r30},${b30}`);
+  // The still has no sound: A's sound plays on for half the dissolve and
+  // fades out there, so it lasts exactly 30 frames at 24000/1001.
+  const sound = samples(out.output);
+  const expected = Math.round((30 * 1001 * 48000) / 24000);
+  assert.ok(
+    Math.abs(sound.length - expected) <= 1024,
+    `${sound.length} vs ${expected}`,
+  );
 });

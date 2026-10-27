@@ -50,14 +50,11 @@ const hasTransitions = (p: { clips: { transition?: unknown }[] }) =>
 const versionFor = (p: {
   clips: { effects?: unknown; transition?: unknown }[];
   documents: unknown[];
-}) =>
-  hasTransitions(p)
-    ? TRANSITIONS_FORMAT_VERSION
-    : hasEffects(p)
-      ? EFFECTS_FORMAT_VERSION
-      : p.documents.length
-        ? FORMAT_VERSION
-        : DOCUMENTLESS_FORMAT_VERSION;
+}) => {
+  if (hasTransitions(p)) return TRANSITIONS_FORMAT_VERSION;
+  if (hasEffects(p)) return EFFECTS_FORMAT_VERSION;
+  return p.documents.length ? FORMAT_VERSION : DOCUMENTLESS_FORMAT_VERSION;
+};
 const { mediaDimension, timelineFrames } = RESOURCE_POLICY.enforced;
 // The timeline horizon stays the editor's ten minutes at 30 fps.
 const MAX_TIMELINE_TICKS = framesToTicks(timelineFrames, rational(30, 1));
@@ -618,6 +615,7 @@ export function fromEditView(
           ? {
               transition: {
                 kind: c.transition.kind,
+                fromClipId: c.transition.fromClipId,
                 durationTicks: toTicks(c.transition.durationFrames),
                 audio: c.transition.audio,
               },
@@ -743,6 +741,7 @@ export function toEditView(project: CanonicalProject): Project {
         ? {
             transition: {
               kind: c.transition.kind,
+              fromClipId: c.transition.fromClipId,
               durationFrames: toFrames(
                 c.transition.durationTicks,
                 "Transition duration",

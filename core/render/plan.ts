@@ -275,9 +275,18 @@ export function compilePlan(
         "A transition has no previous clip.",
       );
     const half = t.durationTicks / 2;
+    if (!Number.isSafeInteger(half))
+      throw new CommandError(
+        "VALIDATION",
+        "A transition is not on whole ticks.",
+      );
     const outgoing = layers.find((x) => x.clipId === before.id);
     const incoming = layers.find((x) => x.clipId === c.id);
-    if (!outgoing || !incoming) continue;
+    if (!outgoing || !incoming)
+      throw new CommandError(
+        "VALIDATION",
+        "A transition joins clips not drawn.",
+      );
     transitions++;
     outgoing.durationTicks += half;
     incoming.startTicks -= half;
@@ -420,6 +429,9 @@ export function withMeasuredLoudnorm(
     loudnorm: { ...plan.loudnorm, measured },
     ...(plan.animationCompiler
       ? { animationCompiler: plan.animationCompiler }
+      : {}),
+    ...(plan.transitionPolicy
+      ? { transitionPolicy: plan.transitionPolicy }
       : {}),
   };
   const planHash = createHash("sha256")
