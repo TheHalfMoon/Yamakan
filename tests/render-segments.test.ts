@@ -3,7 +3,9 @@
 // segments has exactly the single pass's frame count, the same pictures
 // (both are lossy encodes, so every frame is compared by PSNR) and
 // bit-identical decoded sound, because the sound is rendered once over the
-// whole timeline and only stream-copied into place.
+// whole timeline and only stream-copied into place. Not tested across a
+// boundary: a dissolve, a LUT or animation, two-pass loudness, and a
+// 24000/1001 export end to end (only its boundary arithmetic).
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

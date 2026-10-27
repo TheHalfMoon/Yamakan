@@ -274,8 +274,15 @@ export async function renderSegmented(
       segments: segments.length,
     };
   } finally {
-    await rm(path.join(dir, "seg"), { recursive: true, force: true });
-    await rm(path.join(dir, "sound"), { recursive: true, force: true });
+    // A file a scanner still holds is left for the job's own cleanup; it
+    // never replaces the export's own error.
+    for (const part of ["seg", "sound"])
+      await rm(path.join(dir, part), {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 100,
+      }).catch(() => {});
   }
 }
 
