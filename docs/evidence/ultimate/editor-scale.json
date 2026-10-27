@@ -20,43 +20,43 @@
       },
       "batchSaveMs": {
         "count": 1,
-        "max": 30,
-        "total": 30
+        "max": 16,
+        "total": 16
       },
       "clips": 24,
       "tracks": 4,
       "snapshotBytes": 7924,
       "snapshotLimitBytes": 2097152,
       "historyMs": {
-        "edit": 17,
-        "undo": 14,
-        "redo": 13
+        "edit": 8,
+        "undo": 6,
+        "redo": 5
       },
-      "reopenMs": 16,
-      "planCompileMs": 5,
+      "reopenMs": 8,
+      "planCompileMs": 2,
       "planLayers": 24,
-      "referenceFrameMs": 746,
+      "referenceFrameMs": 470,
       "export": {
         "ok": true,
-        "ms": 68364,
+        "ms": 48531,
         "bytes": 750183,
         "frames": 3600
       },
       "renderWallLimitSeconds": 180,
       "backup": {
-        "backupMs": 311,
-        "restoreMs": 115,
-        "backupBytes": 440131,
-        "editsDuringBackup": 11,
-        "editsTotal": 12,
+        "backupMs": 160,
+        "restoreMs": 69,
+        "backupBytes": 444227,
+        "editsDuringBackup": 8,
+        "editsTotal": 9,
         "acknowledgedBefore": 5,
-        "lastAcknowledgedDuring": 16,
-        "restoredRevision": 9,
+        "lastAcknowledgedDuring": 13,
+        "restoredRevision": 8,
         "restoredSnapshotIdentical": true,
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 2065094,
+      "workspaceBytes": 1916851,
       "editingQualified": true,
       "exportQualified": true
     },
@@ -72,44 +72,44 @@
       },
       "batchSaveMs": {
         "count": 4,
-        "max": 59,
-        "total": 165
+        "max": 30,
+        "total": 74
       },
       "clips": 200,
       "tracks": 16,
       "snapshotBytes": 60224,
       "snapshotLimitBytes": 2097152,
       "historyMs": {
-        "edit": 61,
-        "undo": 53,
-        "redo": 38
+        "edit": 23,
+        "undo": 19,
+        "redo": 23
       },
-      "reopenMs": 28,
-      "planCompileMs": 9,
+      "reopenMs": 25,
+      "planCompileMs": 20,
       "planLayers": 200,
-      "referenceFrameMs": 1246,
+      "referenceFrameMs": 596,
       "export": {
         "ok": false,
-        "ms": 516,
-        "code": "CAPABILITY_UNAVAILABLE",
-        "message": "Worker launch failed: command line too long",
-        "cause": ""
+        "ms": 139601,
+        "code": "INTERNAL",
+        "message": "FFmpeg failed to render the timeline (exit 4294967284).",
+        "cause": "[libx264 @ 00000292962b82c0] Weighted P-Frames: Y:0.0% UV:0.0% | [libx264 @ 00000292962b82c0] kb/s:98.00 | Conversion failed!"
       },
       "renderWallLimitSeconds": 180,
       "backup": {
-        "backupMs": 753,
-        "restoreMs": 153,
-        "backupBytes": 974759,
-        "editsDuringBackup": 10,
-        "editsTotal": 11,
+        "backupMs": 242,
+        "restoreMs": 93,
+        "backupBytes": 925607,
+        "editsDuringBackup": 5,
+        "editsTotal": 6,
         "acknowledgedBefore": 9,
-        "lastAcknowledgedDuring": 19,
-        "restoredRevision": 11,
+        "lastAcknowledgedDuring": 14,
+        "restoredRevision": 10,
         "restoredSnapshotIdentical": true,
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 2611585,
+      "workspaceBytes": 2089779,
       "editingQualified": true,
       "exportQualified": false
     },
@@ -125,44 +125,44 @@
       },
       "batchSaveMs": {
         "count": 2,
-        "max": 51,
-        "total": 71
+        "max": 31,
+        "total": 41
       },
       "clips": 100,
       "tracks": 2,
       "snapshotBytes": 29544,
       "snapshotLimitBytes": 2097152,
       "historyMs": {
-        "edit": 55,
-        "undo": 35,
-        "redo": 39
+        "edit": 33,
+        "undo": 22,
+        "redo": 23
       },
-      "reopenMs": 26,
-      "planCompileMs": 6,
+      "reopenMs": 17,
+      "planCompileMs": 5,
       "planLayers": 100,
-      "referenceFrameMs": 686,
+      "referenceFrameMs": 497,
       "export": {
         "ok": false,
-        "ms": 180249,
+        "ms": 180216,
         "code": "LIMIT_EXCEEDED",
         "message": "Render time limit exceeded.",
         "cause": ""
       },
       "renderWallLimitSeconds": 180,
       "backup": {
-        "backupMs": 950,
-        "restoreMs": 149,
-        "backupBytes": 700326,
-        "editsDuringBackup": 12,
-        "editsTotal": 13,
+        "backupMs": 2826,
+        "restoreMs": 406,
+        "backupBytes": 831399,
+        "editsDuringBackup": 21,
+        "editsTotal": 22,
         "acknowledgedBefore": 7,
-        "lastAcknowledgedDuring": 19,
-        "restoredRevision": 9,
+        "lastAcknowledgedDuring": 28,
+        "restoredRevision": 13,
         "restoredSnapshotIdentical": true,
         "editedAfterRestore": true,
         "retained": true
       },
-      "workspaceBytes": 2163841,
+      "workspaceBytes": 2856635,
       "editingQualified": true,
       "exportQualified": false
     }
@@ -217,12 +217,12 @@
       "name": "probe-40-stills-3min",
       "export": {
         "ok": false,
-        "ms": 1760,
-        "code": "INTERNAL",
-        "message": "FFmpeg failed to render the timeline (exit 69).",
-        "cause": "[out#0/mp4 @ 000001cb8bf55900] Nothing was written into output file, because at least one of its streams received no packets. | frame=    0 fps=0.0 q=0.0 Lsize=       0KiB time=N/A bitrate=N/A speed=N/A     | Conversion failed!"
+        "ms": 180130,
+        "code": "LIMIT_EXCEEDED",
+        "message": "Render time limit exceeded.",
+        "cause": ""
       }
     }
   ],
-  "peakRssMiB": 232
+  "peakRssMiB": 170
 }

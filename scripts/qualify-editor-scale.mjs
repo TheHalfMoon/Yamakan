@@ -542,9 +542,8 @@ for (const name of only)
     await measure({ name, ...SCALE_PROFILES.supported[name] }),
   );
 report.refusals = await refusals();
-// Recorded probe: 40 1080p stills on one track over three minutes, the
-// a small still-heavy export that fails
-// (export only; how it fails has varied between runs).
+// Recorded probe: 40 1080p stills on one video track over three minutes,
+// the still-heavy export that failed before YU-026b (export only).
 {
   const probeResult = await measure({
     name: "probe-40-stills-3min",
