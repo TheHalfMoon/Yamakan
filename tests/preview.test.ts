@@ -136,7 +136,9 @@ async function workspace(rate = "30") {
 }
 
 const BS = String.fromCharCode(92);
-// Frame `n` of a video (or the only frame of an image) as grayscale pixels.
+// Frame `n` of a video (or the only frame of an image) as its BT.709
+// full-range luma (YU-023): the export's Y plane, and the RGB preview's luma by
+// the same matrix, so both are weighed alike.
 const gray = (file: string, n?: number) =>
   spawnSync(
     mediaTools().ffmpeg,
@@ -146,7 +148,13 @@ const gray = (file: string, n?: number) =>
       "error",
       "-i",
       file,
-      ...(n === undefined ? [] : ["-vf", `select=eq(n${BS},${n})`]),
+      "-vf",
+      [
+        ...(n === undefined ? [] : [`select=eq(n${BS},${n})`]),
+        "scale=out_color_matrix=bt709:out_range=pc",
+        "format=yuv420p",
+        "extractplanes=y",
+      ].join(","),
       "-frames:v",
       "1",
       "-f",

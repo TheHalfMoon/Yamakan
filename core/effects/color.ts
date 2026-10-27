@@ -78,7 +78,7 @@ const WIDE_GAMUT = new Set(["bt2020", "bt2020nc", "bt2020c"]);
 // Side data that marks HDR even without HDR tags (Dolby Vision profile 5,
 // HDR10 mastering metadata, HDR10+).
 const HDR_SIDE_DATA =
-  /dovi|dolby vision|mastering display|content light level|hdr10+|dynamic hdr/i;
+  /dovi|dolby vision|mastering display|content light level|hdr10\+|dynamic hdr/i;
 const RGB_FORMATS =
   /^(rgb|bgr|argb|abgr|rgba|bgra|gbr|pal8|gray|ya|monob|monow|0rgb|rgb0|0bgr|bgr0)/;
 // An untagged YUV source this tall or taller is read as BT.709 (HD).
