@@ -277,16 +277,18 @@
       },
       "hoisted": {
         "runs": 4,
-        "completed": 2
+        "completed": 2,
+        "note": "plus the profiled run (profiledRun), which also stopped at the limit: 2 of 5 completed"
       }
     }
   },
   "conclusion": [
     "The dense probe is about 7x faster (median 66 s -> 9.2 s) with identical output and lower peak memory (421 -> about 353 MiB).",
-    "M (two alternated sets): the baseline stopped at its 480 s limit in all 3 runs, with at most 3 of its workers finished; the optimised build completed in 2 of 5 runs (424 s and 469 s, all 18000 frames) and stopped at the limit in 3, after 21 to 26 of its 29 workers: borderline, not qualified.",
+    "M (two interleaved sets): the baseline stopped at its 480 s limit in all 3 runs, with at most 3 of its workers finished; the optimised build completed in 2 of 5 runs (424 s and 469 s, all 18000 frames) and stopped at the limit in 3, after 21 to 26 of its 29 workers: borderline, not qualified.",
     "What remains is per-frame compositing of up to 32 clip chains per window (overlay of 1080p yuva420p layers) with the policy's 2 filter-graph and encoder threads, about 0.65 s per output second for M's windows.",
     "Under the existing policy M's export is not reliably qualifiable. The next levers each need a separately reviewed decision: more filter or encoder threads, or parallel segment workers (activeRenderWorkers 1).",
     "Occlusion culling (skipping layers hidden under a fully opaque full-frame layer) would remove most of M's cost without changing pixels, but proving opacity needs per-asset alpha knowledge the probe does not record, and it would qualify only workloads like M's opaque full-frame stills, not the worst case of visible translucent layers. Not implemented."
   ],
-  "identityRecipe": "Project at 1280x720, 30 fps; video track: testsrc2 640x360 PNG, frames 0-89, transform scale 1200 offset (80,-40) crop left 50 bottom 30; track 2: smptehdbars 800x450 PNG, frames 10-69, inverting 2^3 LUT; track 3: orange 320x180 PNG, frames 20-79, transform scale 400, opacity keys 0.2 at frame 0 and 1 at frame 50 (linear). renderRevision export, decoded to rgb24, sha256 of all frames. Run with the parent commit and with this branch."
+  "identityRecipe": "Project at 1280x720, 30 fps; video track: testsrc2 640x360 PNG, frames 0-89, transform scale 1200 offset (80,-40) crop left 50 bottom 30; track 2: smptehdbars 800x450 PNG, frames 10-69, inverting 2^3 LUT; track 3: orange 320x180 PNG, frames 20-79, transform scale 400, opacity keys 0.2 at frame 0 and 1 at frame 50 (linear). renderRevision export, decoded to rgb24, sha256 of all frames. Run with the parent commit and with this branch.",
+  "memoryBound": "A still whose transform scale is above 1x keeps its chain after the loop (review round 2), so a loop holds at most one output-sized frame."
 }
