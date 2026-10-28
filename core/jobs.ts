@@ -753,7 +753,8 @@ export class JobSupervisor {
         // the job is still running and no cancel was asked for.
         const job = db
           .prepare("SELECT state, cancel_requested FROM jobs WHERE job_id = ?")
-          .get(jobId) as { state: string; cancel_requested: number } | undefined;
+          .get(jobId) as
+          { state: string; cancel_requested: number } | undefined;
         if (!job || job.cancel_requested) throw new Error("Cancelled.");
         if (job.state !== "running")
           throw new Error("The export attempt is no longer running.");

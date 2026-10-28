@@ -341,7 +341,7 @@
       "YU-026c: a render window can draw one stream of a segmented export (streams video: the picture alone; audio: the mixed sound alone as M4A, whose length may end before the window); titles are staged only with the picture; the verification failure keeps the probe in its server-side cause; renderRevision renders a timeline one pass could not hold in segments (core/render/segments.ts) and gives every export the policy v3 length-scaled wall-clock limit.",
       "YU-026d: the two-pass loudness measure reads the sound's own filters, not the picture's graph, so a normalised export with a picture no longer fails (an unmapped [picture] output)."
     ],
-    "importedSha256": "544804b08fe5f27194cab3436ce36988c845e8fb383f02b193678239a64f5c6c",
+    "importedSha256": "04c9766ef452ecdc3568efe2eaeca3753288db926be83826f046bd5b70afa711",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
