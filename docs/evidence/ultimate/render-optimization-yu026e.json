@@ -1,0 +1,251 @@
+{
+  "format": "yamakan.render-optimization/v1",
+  "task": "YU-026e",
+  "policy": "yamakan.resource-policy/v3 (unchanged)",
+  "change": "A still's fixed picture chain (LUT grade, contain fit and colour conversion, transform) runs once on its one decoded frame, before the loop repeats it, instead of on every repeated frame and layer. RENDERER_VERSION 5 -> 6.",
+  "identity": "The same still-heavy timeline (three tracks: a transformed still, an inverting LUT still, a scaled still with an opacity animation; 90 frames at 1280x720) decodes to identical rgb24 frames before and after (sha256 473f7050...aa339 for both); every probe export below is the same size byte for byte before and after.",
+  "host": "Windows 11, 12 CPUs; other applications (ChatGPT, Codex, Desktop Commander) loaded the host intermittently, so baseline and optimised runs were alternated and the host CPU load before each run is recorded.",
+  "denseProbe": {
+    "probe": "16 clips, 16 tracks, 900 frames, 1920x1080 (15 stacked 1080p still layers, 30 s)",
+    "wallLimitSeconds": 210,
+    "runs": [
+      {
+        "round": 1,
+        "build": "baseline",
+        "hostCpuPercentBefore": 5,
+        "ok": true,
+        "ms": 91913,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 421
+      },
+      {
+        "round": 1,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 82,
+        "ok": true,
+        "ms": 11973,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 354
+      },
+      {
+        "round": 2,
+        "build": "baseline",
+        "hostCpuPercentBefore": 48,
+        "ok": true,
+        "ms": 66133,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 421
+      },
+      {
+        "round": 2,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 59,
+        "ok": true,
+        "ms": 9187,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 353
+      },
+      {
+        "round": 3,
+        "build": "baseline",
+        "hostCpuPercentBefore": 42,
+        "ok": true,
+        "ms": 57874,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 421
+      },
+      {
+        "round": 3,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 0,
+        "ok": true,
+        "ms": 9082,
+        "frames": 900,
+        "bytes": 361530,
+        "segments": 1,
+        "workers": 2,
+        "peakWorkerMiB": 351
+      }
+    ]
+  },
+  "profileM": {
+    "probe": "200 clips, 16 tracks, 18000 frames, 1920x1080 (the M profile)",
+    "wallLimitSeconds": 480,
+    "runs": [
+      {
+        "round": null,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 1,
+        "ok": true,
+        "ms": 423972,
+        "frames": 18000,
+        "bytes": 7064248,
+        "segments": 13,
+        "workers": 29,
+        "peakWorkerMiB": 426
+      },
+      {
+        "round": null,
+        "build": "baseline",
+        "hostCpuPercentBefore": 0,
+        "ok": false,
+        "ms": 479984,
+        "code": "LIMIT_EXCEEDED",
+        "workers": 3,
+        "peakWorkerMiB": 569
+      },
+      {
+        "round": null,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 2,
+        "ok": false,
+        "ms": 479129,
+        "code": "LIMIT_EXCEEDED",
+        "workers": 26,
+        "peakWorkerMiB": 426
+      },
+      {
+        "round": null,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 3,
+        "ok": true,
+        "ms": 468504,
+        "frames": 18000,
+        "bytes": 7064248,
+        "segments": 13,
+        "workers": 29,
+        "peakWorkerMiB": 421
+      }
+    ],
+    "profiledRun": {
+      "ok": false,
+      "ms": 479188,
+      "workers": 25,
+      "workerWallMs": [
+        {
+          "program": "ffmpeg",
+          "ms": 60305
+        },
+        {
+          "program": "ffprobe",
+          "ms": 199
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 31210
+        },
+        {
+          "program": "ffprobe",
+          "ms": 193
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 30351
+        },
+        {
+          "program": "ffprobe",
+          "ms": 203
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 29800
+        },
+        {
+          "program": "ffprobe",
+          "ms": 197
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 28350
+        },
+        {
+          "program": "ffprobe",
+          "ms": 192
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 28740
+        },
+        {
+          "program": "ffprobe",
+          "ms": 194
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 28526
+        },
+        {
+          "program": "ffprobe",
+          "ms": 201
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 57678
+        },
+        {
+          "program": "ffprobe",
+          "ms": 230
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 32300
+        },
+        {
+          "program": "ffprobe",
+          "ms": 232
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 31745
+        },
+        {
+          "program": "ffprobe",
+          "ms": 223
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 31635
+        },
+        {
+          "program": "ffprobe",
+          "ms": 263
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 30758
+        },
+        {
+          "program": "ffprobe",
+          "ms": 228
+        },
+        {
+          "program": "ffmpeg",
+          "ms": 55052
+        }
+      ],
+      "note": "M has no audio clips, so there is no sound pass: the first ffmpeg is the first window. Each window renders about 46 s of output in 28-32 s, three heavier windows in 55-60 s; the ffprobe after each is the window's verification (about 0.2 s)."
+    }
+  },
+  "conclusion": [
+    "The dense probe is about 7x faster (median 66 s -> 9.2 s) with identical output and lower peak memory (421 -> about 353 MiB).",
+    "M now completes in some runs (424 s and 469 s) and stops at its 480 s limit in others (2 of 4 optimised runs): borderline, not qualified.",
+    "What remains is per-frame compositing of up to 32 clip chains per window (overlay of 1080p yuva420p layers) with the policy's 2 filter-graph and encoder threads, about 0.65 s per output second for M's windows.",
+    "Under the existing policy M's export is not reliably qualifiable. The next levers each need a separately reviewed decision: more filter or encoder threads, or parallel segment workers (activeRenderWorkers 1).",
+    "Occlusion culling (skipping layers hidden under a fully opaque full-frame layer) would remove most of M's cost without changing pixels, but proving opacity needs per-asset alpha knowledge the probe does not record, and it would qualify only workloads like M's opaque full-frame stills, not the worst case of visible translucent layers. Not implemented."
+  ]
+}

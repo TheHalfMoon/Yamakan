@@ -159,6 +159,14 @@ for (const [label, frameRate, tick] of [
     );
     assert.equal(graph.match(/split=2/g)?.length, 1);
     assert.doesNotMatch(graph, /-loop/);
+    // YU-026e: each still's fit (and transform) runs once on its one frame,
+    // before the loop repeats it, never on every repeated copy.
+    const chains = graph.split(/;\s*/).filter((l) => /loop=loop=/.test(l));
+    assert.equal(chains.length, 2);
+    for (const chain of chains) {
+      const scale = chain.indexOf("scale=");
+      assert.ok(scale >= 0 && scale < chain.indexOf("loop=loop="), chain);
+    }
     // A reference frame inside a clip is the export's frame.
     const shown = await preview(store, project.id, p.revision, "frame", 12);
     assert.ok(red(shown.file) > 200, "reference frame 12");

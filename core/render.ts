@@ -172,7 +172,8 @@ export function ptsOffset(ticks: number) {
 // changes, so cached previews of unchanged plans are not reused (4:
 // YU-023 color conversion and tags; 5: YU-026b stills read once and
 // looped on demand).
-export const RENDERER_VERSION = 5;
+// 6 (YU-026e): a still's fixed picture chain runs once, before its loop.
+export const RENDERER_VERSION = 6;
 
 // A read margin of one frame: of the profile, and never less than 1/30 s
 // (so a 30 fps profile reads exactly as before; YU-019).
@@ -457,6 +458,7 @@ export async function renderPlan(
       // counts in 1/25 s; a rounded offset there could skip a frame).
       const flicks = `settb=1/${FLICKS_PER_SECOND}`;
       let timed: string;
+      let stillInput: string | null = null;
       if (layer.kind === "image") {
         // A still: its one frame repeated at the output rate for the
         // clip's part of the window plus one frame, each copy at its exact
@@ -465,7 +467,10 @@ export async function renderPlan(
         const branch = stillBranches.get(layer.clipId);
         if (!branch)
           throw new CommandError("VALIDATION", "A still layer has no input.");
-        timed = `[${branch}]loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
+        // YU-026e: the loop comes after the still's fixed picture chain
+        // (below), so that chain runs on its one frame, not on every copy.
+        timed = `loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
+        stillInput = branch;
       } else {
         // Every source frame keeps its own timeline time, clip start plus
         // its distance from the clip's source start, in export and in any
@@ -528,8 +533,14 @@ export async function renderPlan(
       const shaped = layer.transform
         ? transformFilters(layer.transform, fit)
         : null;
+      // A still's grading, fit and transform are the same for every copy of
+      // its one frame (the same input through the same filters), so they run
+      // once and the loop repeats the result: identical pixels, without a
+      // scale and colour conversion per output frame and layer.
       filters.push(
-        `${timed},fps=${rate},${graded}${shaped?.picture ?? fit}[${clip}]`,
+        stillInput
+          ? `[${stillInput}]${graded}${shaped?.picture ?? fit},${timed},fps=${rate}[${clip}]`
+          : `${timed},fps=${rate},${graded}${shaped?.picture ?? fit}[${clip}]`,
       );
       let picture = clip;
       if (ANIMATION_ENABLED && layer.animation) {

@@ -284,6 +284,11 @@ async function measure(profile) {
       unobserve();
       const measured = peaks.filter((p) => p.peakMemoryBytes !== null);
       out.export.workers = peaks.length;
+      // Where the time went: each worker's wall time, by program, in order.
+      out.export.workerWallMs = peaks.map((p) => ({
+        program: path.basename(p.executable).replace(/\.exe$/i, ""),
+        ms: p.wallMs,
+      }));
       out.export.peakWorkerMiB = measured.length
         ? Math.round(
             Math.max(...measured.map((p) => p.peakMemoryBytes)) / 2 ** 20,
