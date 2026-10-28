@@ -294,9 +294,9 @@ export function assertPlacementConsent(
       .map((k) => k.slice(0, k.indexOf("|"))),
   );
   if (!placed.size) return;
-  // Only story versions that name a placed medium's hash are read, so a
-  // commit placing ordinary media reads no story.
-  // One pass over the project's story versions for all placed hashes.
+  // One pass over the project's story versions for all placed hashes (at
+  // most 200, one per clip, well within SQLite's expression limits); only
+  // versions naming one are parsed.
   const hashes = [...placed];
   const versions = new Map<string, Uint8Array>();
   for (const row of c.db
