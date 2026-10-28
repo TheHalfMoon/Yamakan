@@ -59,6 +59,7 @@ import {
 } from "./documents.ts";
 import type { DocumentRef } from "./documents.ts";
 import type { CommitContext as DocumentCommitContext } from "./story.ts";
+import { assertPlacementConsent } from "./continuity.ts";
 import { assertStudioImageLimits } from "./studio.ts";
 
 // A sealed staged upload as clients see it: never a host path.
@@ -1154,6 +1155,31 @@ export class ProjectStore {
         ? c.documents(headDocuments)
         : headDocuments();
       const canonicalNext = fromEditView(view, language, documents);
+      // YU-051b: a newly presented take's references need usable consent
+      // now, for every timeline commit but creating a project (a restore
+      // brings media back as much as an edit does: a revoked consent can
+      // never be revalidated).
+      if (c.operation !== "project.create")
+        assertPlacementConsent(
+          {
+            db,
+            projectId: c.projectId,
+            project: view,
+            held: (documentId, contentHash, kind) =>
+              this.#held(c.projectId, documentId, contentHash, kind),
+            nowMs: Date.now(),
+          },
+          c.operation === "project.restore"
+            ? (() => {
+                try {
+                  return headCanonical();
+                } catch {
+                  return null;
+                }
+              })()
+            : headCanonical(),
+          canonicalNext,
+        );
       const bytes = Buffer.from(serializeCanonical(canonicalNext), "utf8");
       if (
         bytes.length >

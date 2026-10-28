@@ -25,7 +25,9 @@ import { assertConsentUsable } from "./director/runtime.ts";
 import type { ConsentPurpose } from "./identity.ts";
 import {
   ReferencePackSchema,
+  StoryDocumentSchema,
   consentPurposeOf,
+  type StoryDocument,
   type ContinuityRef,
   type ReferencePack,
 } from "./story.ts";
@@ -218,6 +220,113 @@ export function verifySelectedContinuity(
       if (take?.lineage?.continuity?.length)
         resolveContinuity(c, take.lineage.continuity, "attach");
     }
+}
+
+// The timeline as the placement check reads it (a canonical project).
+type Placed = {
+  assets: readonly { id: string; hash: string; kind: string }[];
+  tracks: readonly {
+    id: string;
+    kind: string;
+    muted: boolean;
+    solo: boolean;
+  }[];
+  clips: readonly {
+    trackId: string;
+    assetId: string | null;
+    sound: { enabled: boolean } | null;
+  }[];
+};
+
+// Each medium's channels a timeline presents: seen (a video-track clip of
+// a still or footage) and heard (an audio-track clip, or a video clip's
+// embedded sound), on tracks that are not muted. Keyed by content hash, so
+// the same bytes imported again as another asset are the same medium.
+function presented(p: Placed | null) {
+  const out = new Set<string>();
+  if (!p) return out;
+  const assets = new Map(p.assets.map((a) => [a.id, a]));
+  const tracks = new Map(p.tracks.map((t) => [t.id, t]));
+  // The render's own rule (core/render/plan.ts): mute removes a track, and
+  // solo on any track of a kind keeps only the soloed tracks of that kind.
+  const soloed = new Set(p.tracks.filter((t) => t.solo).map((t) => t.kind));
+  const plays = (t: Placed["tracks"][number]) =>
+    !t.muted && (!soloed.has(t.kind) || t.solo);
+  for (const clip of p.clips) {
+    const asset = clip.assetId ? assets.get(clip.assetId) : undefined;
+    const track = tracks.get(clip.trackId);
+    if (!asset || !track || !plays(track)) continue;
+    if (track.kind === "video" && asset.kind !== "audio")
+      out.add(`${asset.hash}|seen`);
+    if (track.kind === "audio" || clip.sound?.enabled === true)
+      out.add(`${asset.hash}|heard`);
+  }
+  return out;
+}
+
+const damagedStory = () =>
+  new CommandError(
+    "RECOVERY_REQUIRED",
+    "A story version is missing or damaged in the workspace; restore a verified backup.",
+  );
+
+/**
+ * YU-051b: a timeline commit that newly presents a medium (seen or heard
+ * where the previous head did not, keyed by content hash) that is the
+ * output of a take made with continuity references attaches that take,
+ * whatever made the commit: a batch edit, undo or redo, a restore, a
+ * relink, a take replacement or an assembly. The references' consents must
+ * be usable now. Takes are matched by their recorded output hash in every
+ * story version this project committed, so removing a take from the
+ * current story, or importing its file again as another asset, does not
+ * free it. Moving, trimming, splitting or copying a clip already presented
+ * the same way presents nothing new.
+ */
+export function assertPlacementConsent(
+  c: ContinuityContext & { projectId: string },
+  before: Placed | null,
+  after: Placed,
+) {
+  const shown = presented(before);
+  const placed = new Set(
+    [...presented(after)]
+      .filter((k) => !shown.has(k))
+      .map((k) => k.slice(0, k.indexOf("|"))),
+  );
+  if (!placed.size) return;
+  // One pass over the project's story versions for all placed hashes (at
+  // most 200, one per clip, well within SQLite's expression limits); only
+  // versions naming one are parsed.
+  const hashes = [...placed];
+  const versions = new Map<string, Uint8Array>();
+  for (const row of c.db
+    .prepare(
+      `SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND (${hashes.map(() => "instr(CAST(d.bytes AS TEXT), ?) > 0").join(" OR ")})`,
+    )
+    .all(c.projectId, ...hashes) as { hash: string; bytes: Uint8Array }[])
+    versions.set(row.hash, row.bytes);
+  const checked = new Set<string>();
+  for (const [hash, bytes] of versions) {
+    if (sha256Hex(Buffer.from(bytes)) !== hash) throw damagedStory();
+    let story: StoryDocument;
+    try {
+      story = StoryDocumentSchema.parse(
+        JSON.parse(Buffer.from(bytes).toString("utf8")),
+      );
+    } catch {
+      throw damagedStory();
+    }
+    for (const scene of story.scenes)
+      for (const shot of scene.shots)
+        for (const take of shot.takes) {
+          const refs = take.lineage?.continuity;
+          if (!refs?.length || !placed.has(take.lineage!.outputHash)) continue;
+          const key = JSON.stringify(refs);
+          if (checked.has(key)) continue;
+          resolveContinuity(c, refs, "attach");
+          checked.add(key);
+        }
+  }
 }
 
 /** Every take's continuity references in a story, checked as traceable. */
