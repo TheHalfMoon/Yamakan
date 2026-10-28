@@ -97,7 +97,8 @@ for (const [label, frameRate, tick] of [
     const video = head.tracks.find((t) => t.kind === "video")!.id;
     const upper = crypto.randomUUID();
     const a = crypto.randomUUID(),
-      b = crypto.randomUUID();
+      b = crypto.randomUUID(),
+      c = crypto.randomUUID();
     await execute(ctx, "yamakan.project.applyBatch", {
       projectId: project.id,
       expectedRevision: head.revision,
@@ -130,6 +131,23 @@ for (const [label, frameRate, tick] of [
           clipId: b,
           effects: [{ ...IDENTITY_TRANSFORM, scale: 500 }],
         },
+        // Frames 28–31 on the upper track, scaled up (YU-026e: its chain
+        // stays after the loop, so the loop never holds an enlarged frame).
+        {
+          type: "clip.add",
+          clipId: c,
+          trackId: upper,
+          assetId: asset.id,
+          title: null,
+          startTicks: 28 * tick,
+          durationTicks: 4 * tick,
+          sourceStartTicks: 0,
+        },
+        {
+          type: "clip.setEffects",
+          clipId: c,
+          effects: [{ ...IDENTITY_TRANSFORM, scale: 1500 }],
+        },
       ],
     });
     const p = await store.load(project.id);
@@ -150,6 +168,10 @@ for (const [label, frameRate, tick] of [
       [19, false],
       [20, true],
       [24, true],
+      [27, false],
+      [28, true],
+      [31, true],
+      [32, false],
     ] as const)
       assert.equal(red(out.output, n) > 200, want, `frame ${n}`);
     // The graph reads the still once and splits it to both clips.
@@ -157,11 +179,20 @@ for (const [label, frameRate, tick] of [
       path.join(await store.file(project.id, "exports", "stills"), "graph.txt"),
       "utf8",
     );
-    assert.equal(graph.match(/split=2/g)?.length, 1);
+    assert.equal(graph.match(/split=3/g)?.length, 1);
     assert.doesNotMatch(graph, /-loop/);
     // YU-026e: each still's fit (and transform) runs once on its one frame,
     // before the loop repeats it, never on every repeated copy.
-    const chains = graph.split(/;\s*/).filter((l) => /loop=loop=/.test(l));
+    const all = graph.split(/;\s*/).filter((l) => /loop=loop=/.test(l));
+    assert.equal(all.length, 3);
+    // The scaled-up still: its loop comes first, its fit and scale after.
+    const up = all.filter((l) => /^\[s\d+_\d+\]loop=loop=/.test(l));
+    assert.equal(up.length, 1, graph);
+    assert.match(
+      up[0]!,
+      /fps=\d+\/\d+,.*force_original_aspect_ratio=decrease.*,scale=w=/,
+    );
+    const chains = all.filter((l) => !up.includes(l));
     assert.equal(chains.length, 2);
     for (const chain of chains) {
       // From its split branch: fit (and the transform's crop/scale), then

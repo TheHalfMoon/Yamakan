@@ -422,7 +422,8 @@ export async function renderPlan(
     // neither queues frames nor needs one input per clip. Memory is the
     // decoded size of the window's distinct stills, each held once, plus
     // (YU-026e) one fitted frame per still clip in the window, held by its
-    // loop: about 3 MiB at 1080p, so bounded by the window's clip budget.
+    // loop: at most the output frame (about 3 MiB at 1080p), since a still
+    // whose transform scales it up keeps its chain after the loop.
     const stills = new Map<string, string[]>();
     for (const layer of pictureLayers) {
       if (layer.kind !== "image") continue;
@@ -472,7 +473,11 @@ export async function renderPlan(
         // YU-026e: the loop comes after the still's fixed picture chain
         // (below), so that chain runs on its one frame, not on every copy.
         timed = `loop=loop=${frames - 1}:size=1:start=0,${flicks},setpts=N*${FRAME}+${from}`;
-        stillInput = branch;
+        // Only when the result is no larger than the fitted frame: a 4x
+        // up-scale held by 32 loops would pass the render's memory limit.
+        if (!layer.transform || layer.transform.scale <= 1000)
+          stillInput = branch;
+        else timed = `[${branch}]${timed}`;
       } else {
         // Every source frame keeps its own timeline time, clip start plus
         // its distance from the clip's source start, in export and in any
