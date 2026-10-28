@@ -779,9 +779,11 @@ Within the existing `yamakan.resource-policy/v3`. No limit, worker count, thread
 - **Identical output.** A still-heavy timeline was decoded before and after the change: a transformed still, an inverting LUT still and an opacity-animated still, 90 frames at 1280x720. All its rgb24 frames hash the same (the full digest and the recipe are in the evidence file). The dense probe's exports are the same size before and after. M's baseline never finished, so it has no such comparison. `tests/render-stills.test.ts` asserts each still chain's full order (fit and transform, then the loop, its timing and the output rate).
 - **Measurements** (`docs/evidence/ultimate/render-optimization-yu026e.json`). Baseline and optimised runs were alternated, and the host's CPU load was recorded before each run, because other applications loaded it.
   - **Dense probe** (15 stacked 1080p still layers, 30 s): the baseline took 92, 66 and 58 s; the optimised build took 12.0, 9.2 and 9.1 s. That is a median of 66 s against 9.2 s, about 7× faster. Peak worker memory fell from 421 to about 353 MiB.
-  - **M** (200 clips, 16 tracks, 10 minutes, 1080p): the baseline stopped at its 480 s limit with 3 of its workers finished. Of 4 optimised runs, two completed (424 s and 469 s, all 18,000 frames, 13 segments) and two stopped at 479 s.
+  - **M** (200 clips, 16 tracks, 10 minutes, 1080p), two alternated sets of runs:
+    - The baseline stopped at its 480 s limit in all 3 runs, with at most 3 of its roughly 29 workers finished.
+    - The optimised build completed in 2 of 5 runs (424 s and 469 s, all 18,000 frames, 13 segments). In the other 3 it stopped at the limit after 21 to 26 of its 29 workers.
   - **Profile of one M run** (one profiled run, which itself stopped at the limit): most windows take 28 to 32 s and three heavier ones 55 to 60 s, for 13 windows over 600 s of output (about 46 s each on average). M has no sound, so there is no sound pass.
-- **Conclusion: M's export stays unqualified under the existing policy.** It is borderline at 88 to 100% of its limit.
+- **Conclusion: M's export stays unqualified under the existing policy.** It is borderline: 2 of 5 optimised runs fit, at 88% and 98% of the limit.
   - The remaining cost, from that one profiled run, is compositing each window's clip chains (the policy allows up to 32 per window), about 0.65 s per output second with the policy's 2 threads.
   - Each next lever needs a separately reviewed decision: more filter or encoder threads, or parallel segment workers.
   - **Occlusion culling, a hypothesis, not implemented:** skipping layers hidden under another layer would keep pixels identical. It is untested how much of M's cost it would remove.

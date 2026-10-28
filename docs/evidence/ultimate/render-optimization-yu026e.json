@@ -130,6 +130,36 @@
         "segments": 13,
         "workers": 29,
         "peakWorkerMiB": 421
+      },
+      {
+        "round": null,
+        "build": "baseline",
+        "hostCpuPercentBefore": 47,
+        "ok": false,
+        "ms": 479119,
+        "code": "LIMIT_EXCEEDED",
+        "workers": 1,
+        "peakWorkerMiB": 568
+      },
+      {
+        "round": null,
+        "build": "hoisted",
+        "hostCpuPercentBefore": 3,
+        "ok": false,
+        "ms": 479677,
+        "code": "LIMIT_EXCEEDED",
+        "workers": 21,
+        "peakWorkerMiB": 428
+      },
+      {
+        "round": null,
+        "build": "baseline",
+        "hostCpuPercentBefore": 11,
+        "ok": false,
+        "ms": 479192,
+        "code": "LIMIT_EXCEEDED",
+        "workers": 3,
+        "peakWorkerMiB": 569
       }
     ],
     "profiledRun": {
@@ -239,11 +269,21 @@
         }
       ],
       "note": "M has no audio clips, so there is no sound pass: the first ffmpeg is the first window. Each window renders about 46 s of output in 28-32 s, three heavier windows in 55-60 s; the ffprobe after each is the window's verification (about 0.2 s)."
+    },
+    "summary": {
+      "baseline": {
+        "runs": 3,
+        "completed": 0
+      },
+      "hoisted": {
+        "runs": 4,
+        "completed": 2
+      }
     }
   },
   "conclusion": [
     "The dense probe is about 7x faster (median 66 s -> 9.2 s) with identical output and lower peak memory (421 -> about 353 MiB).",
-    "M now completes in some runs (424 s and 469 s) and stops at its 480 s limit in others (2 of 4 optimised runs): borderline, not qualified.",
+    "M (two alternated sets): the baseline stopped at its 480 s limit in all 3 runs, with at most 3 of its workers finished; the optimised build completed in 2 of 5 runs (424 s and 469 s, all 18000 frames) and stopped at the limit in 3, after 21 to 26 of its 29 workers: borderline, not qualified.",
     "What remains is per-frame compositing of up to 32 clip chains per window (overlay of 1080p yuva420p layers) with the policy's 2 filter-graph and encoder threads, about 0.65 s per output second for M's windows.",
     "Under the existing policy M's export is not reliably qualifiable. The next levers each need a separately reviewed decision: more filter or encoder threads, or parallel segment workers (activeRenderWorkers 1).",
     "Occlusion culling (skipping layers hidden under a fully opaque full-frame layer) would remove most of M's cost without changing pixels, but proving opacity needs per-asset alpha knowledge the probe does not record, and it would qualify only workloads like M's opaque full-frame stills, not the worst case of visible translucent layers. Not implemented."
