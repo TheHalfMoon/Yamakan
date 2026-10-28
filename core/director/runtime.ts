@@ -648,6 +648,16 @@ export async function approveStage(
       const current = run.receipts.find((r) => r.stage === input.stage);
       if (!current)
         throw new CommandError("NOT_FOUND", "Stage receipt not found.");
+      // Approval completes a stage too: predecessors may have failed or
+      // their approvals expired since this output was submitted for review.
+      // Recheck under the same transaction as the approval and its receipt.
+      enforceStagePrerequisites(
+        builtinManifest(row.pipeline_name),
+        run,
+        input.stage,
+        "completed",
+        now,
+      );
       // Validates the hash binding and expiry (core/director/stages.ts).
       const approved = applyApproval(current, {
         outputHash: input.outputHash,

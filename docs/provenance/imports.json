@@ -1088,7 +1088,8 @@
     "imported": "core/director/stages.ts",
     "sha256": "2082cc353fa0c71f268f137e1018b3a467edc12318e2c922f6d4bbe42277eace",
     "modifications": [
-      "Translated prerequisite/approval/next-stage rules; checkpoints become StageReceipt with output-hash-bound approvals."
+      "Translated prerequisite/approval/next-stage rules; checkpoints become StageReceipt with output-hash-bound approvals.",
+      "SS-001: only awaiting-human or completed stages with an existing output may receive approval; retain matching-hash renewal."
     ],
     "tests": [
       "tests/director-stages.test.ts"
@@ -1096,7 +1097,7 @@
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder",
-    "importedSha256": "e1b8c4059b5ffedde38174e0ff4a6c04651636bea79bc39ec0db2f698700a89a"
+    "importedSha256": "8d5310fbb9126de374f024625d50027362940c9fbb730b188f8d8734f29356b6"
   },
   {
     "source": "calesthio/OpenMontage",
@@ -1121,11 +1122,12 @@
     "original": "lib/pipeline_loader.py",
     "imported": "core/director/runtime.ts",
     "sha256": "7e3eb9c266a9c49ab2b8501cf11b53e1758e672eaae011a30e20b74f5f11f7ef",
-    "importedSha256": "2fd6584226606c33d9d2ebb59c2dff68615cd1577f925a59eefbf39afe71bd3e",
+    "importedSha256": "fbe19d15319efa32f24e504621dfd7611371007932a922f704762ed8b045da25",
     "modifications": [
       "Yamakan workspace-backed director/consent runtime; builtin manifests replace file pipeline loader.",
       "YU-013: state moved from mutable JSON files to the workspace database (schema v12): CAS run versions, append-only attempts, immutable consents with append-only revocations and revalidations, derived encoding validity, replayable requests and an execution epoch; stage outputs verified against stored objects.",
-      "YU-031: assertConsentUsable checks a likeness consent (character, purpose, unrevoked, unexpired, current epoch) inside a caller's transaction, for reference packs."
+      "YU-031: assertConsentUsable checks a likeness consent (character, purpose, unrevoked, unexpired, current epoch) inside a caller's transaction, for reference packs.",
+      "SS-001: revalidate predecessor completion and approval expiry atomically when approving a stage."
     ],
     "tests": [
       "tests/director-stages.test.ts",

@@ -103,6 +103,112 @@ const consentInput = {
   principalId: "browser-ui",
 };
 
+test("approval rechecks predecessor expiry atomically and keeps a refused request retryable", async () => {
+  const { store, project, output } = await workspace();
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const brief = await output("approval-brief");
+  const script = await output("approval-script");
+  await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "awaiting_human",
+    outputHash: brief,
+    nowMs: 1000,
+  });
+  await approveStage(store, {
+    runId: run.id,
+    stage: "research",
+    outputHash: brief,
+    ttlMs: 1000,
+    nowMs: 1000,
+  });
+  const waiting = await advanceStage(store, {
+    runId: run.id,
+    stage: "script",
+    status: "awaiting_human",
+    outputHash: script,
+    nowMs: 1500,
+  });
+  const request = {
+    principalId: "browser-ui",
+    requestId: "approve-expired-predecessor",
+    digest: hash("approve-script"),
+  };
+  const input = {
+    runId: run.id,
+    stage: "script",
+    outputHash: script,
+    ttlMs: 1000,
+    nowMs: 2000,
+  };
+  await refused(
+    approveStage(store, input, request),
+    "VALIDATION",
+    /PREREQUISITE/,
+  );
+  assert.deepEqual(
+    await loadRun(store, run.id),
+    waiting,
+    "refusal writes no attempt or version",
+  );
+  await approveStage(store, {
+    runId: run.id,
+    stage: "research",
+    outputHash: brief,
+    ttlMs: 3000,
+    nowMs: 2000,
+  });
+  const approved = await approveStage(store, input, request);
+  assert.equal(
+    approved.receipts.find((r) => r.stage === "script")?.status,
+    "completed",
+  );
+  assert.deepEqual(
+    await approveStage(store, input, request),
+    approved,
+    "successful approval remains replayable",
+  );
+});
+
+test("approval cannot invent a stage output or approve a failed or unfinished attempt", async () => {
+  const { store, project, output } = await workspace();
+  const stored = await output("unreviewed-output");
+  for (const status of [
+    "pending",
+    "in_progress",
+    "failed",
+    "awaiting_human",
+  ] as const) {
+    const run = await startDirectorRun(store, {
+      projectId: project.id,
+      pipelineName: "framework-smoke",
+    });
+    const waiting = await advanceStage(store, {
+      runId: run.id,
+      stage: "research",
+      status,
+      outputHash: status === "awaiting_human" ? null : stored,
+    });
+    await refused(
+      approveStage(store, {
+        runId: run.id,
+        stage: "research",
+        outputHash: stored,
+        ttlMs: 60000,
+      }),
+      "VALIDATION",
+    );
+    assert.deepEqual(
+      await loadRun(store, run.id),
+      waiting,
+      `refused ${status} approval is atomic`,
+    );
+  }
+});
+
 test("two writers of one run version: one result is kept, the other conflicts", async () => {
   const { store, project, output } = await workspace();
   const run = await startDirectorRun(store, {

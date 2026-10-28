@@ -205,6 +205,14 @@ export function applyApproval(
     expiresAtMs: number;
   },
 ): StageReceipt {
+  if (
+    (receipt.status !== "awaiting_human" && receipt.status !== "completed") ||
+    !receipt.outputHash
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "Only a reviewable stage output can be approved; finish the attempt first.",
+    );
   if (!/^[a-f0-9]{64}$/.test(opts.outputHash))
     throw new CommandError("VALIDATION", "Approval output hash is invalid.");
   if (receipt.outputHash && receipt.outputHash !== opts.outputHash)
