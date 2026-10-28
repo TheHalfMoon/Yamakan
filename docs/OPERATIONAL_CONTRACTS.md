@@ -806,6 +806,26 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - Consent and retention are not enforced here. The transcribe command takes no consent, because nothing runs. A recognizer that runs must apply YU-051's per-stage consent (`voice-clone` for a speaker's voice) before submission.
   - Stand-in segments are sound regions, not utterances.
 
+## M-profile export performance (YU-026e)
+
+Within the existing `yamakan.resource-policy/v3`. No limit, worker count, thread count or sandbox setting changed.
+
+- **Change.** A still's fixed picture chain runs once on its one decoded frame, and then the loop repeats the result. The chain is the LUT grade, the contain fit with its colour conversion, and the transform. Before, the chain ran on every repeated frame of every layer. A still whose transform scales it up (above 1x) keeps the old order, so a loop never holds more than one output-sized frame: 32 loops of a 4x frame would pass the render's memory limit. `RENDERER_VERSION` goes from 5 to 6, so cached previews are rebuilt.
+- **Identical output.** A still-heavy timeline was decoded before and after the change: a transformed still, an inverting LUT still and an opacity-animated still, 90 frames at 1280x720. All its rgb24 frames hash the same (the full digest and the recipe are in the evidence file). The dense probe's exports are the same size before and after. M's baseline never finished, so it has no such comparison. That check covers this one recipe, not every colour setting or dissolve; the order change is identical by construction, because the same stateless filters run on the same frame. `tests/render-stills.test.ts` asserts each still chain's full order (fit and transform, then the loop, its timing and the output rate), and that an up-scaled still loops before its fit and scale.
+- **Measurements** (`docs/evidence/ultimate/render-optimization-yu026e.json`). Baseline and optimised runs were interleaved (not strictly alternated; the order is in the evidence file), and the host's CPU load was recorded before each run, because other applications loaded it.
+  - **Dense probe** (15 stacked 1080p still layers, 30 s): the baseline took 92, 66 and 58 s; the optimised build took 12.0, 9.2 and 9.1 s. That is a median of 66 s against 9.2 s, about 7× faster. Peak worker memory fell from 421 to about 353 MiB.
+  - **M** (200 clips, 16 tracks, 10 minutes, 1080p), two interleaved sets of runs:
+    - The baseline stopped at its 480 s limit in all 3 runs, with at most 3 of its roughly 29 workers finished.
+    - The optimised build completed in 2 of 5 runs (424 s and 469 s, all 18,000 frames, 13 segments). In the other 3 it stopped at the limit after 21 to 26 of its 29 workers.
+  - **Profile of one M run** (one profiled run, which itself stopped at the limit): most windows take 28 to 32 s and three heavier ones 55 to 60 s, for 13 windows over 600 s of output (about 46 s each on average). M has no sound, so there is no sound pass.
+- **Conclusion: M's export stays unqualified under the existing policy.** It is borderline: 2 of 5 optimised runs fit, at 88% and 98% of the limit.
+  - The remaining cost, from that one profiled run, is compositing each window's clip chains (the policy allows up to 32 per window), about 0.65 s per output second with the policy's 2 threads.
+  - Each next lever needs a separately reviewed decision: more filter or encoder threads, or parallel segment workers.
+  - **Occlusion culling, a hypothesis, not implemented:** skipping layers hidden under another layer would keep pixels identical. It is untested how much of M's cost it would remove.
+    - The covering layer must be opaque in every frame of the interval it covers: no alpha in its source, which the probe does not record; no opacity animation; and no dissolve.
+    - It must also fill the whole frame, with no contain letterbox and no transform smaller than the frame.
+    - It helps only workloads like M's opaque full-frame stills, not visible translucent layers.
+
 ## Deterministic media analysis: scene cuts (YU-071)
 
 - **Source inspection.** On 2026-10-27, `ffmpeg -filters` on the bundled FFmpeg 7.1.1 (`vendor/ffmpeg-win64-r8`) listed these analysis and repair filters:

@@ -97,7 +97,8 @@ for (const [label, frameRate, tick] of [
     const video = head.tracks.find((t) => t.kind === "video")!.id;
     const upper = crypto.randomUUID();
     const a = crypto.randomUUID(),
-      b = crypto.randomUUID();
+      b = crypto.randomUUID(),
+      c = crypto.randomUUID();
     await execute(ctx, "yamakan.project.applyBatch", {
       projectId: project.id,
       expectedRevision: head.revision,
@@ -130,6 +131,23 @@ for (const [label, frameRate, tick] of [
           clipId: b,
           effects: [{ ...IDENTITY_TRANSFORM, scale: 500 }],
         },
+        // Frames 28–31 on the upper track, scaled up (YU-026e: its chain
+        // stays after the loop, so the loop never holds an enlarged frame).
+        {
+          type: "clip.add",
+          clipId: c,
+          trackId: upper,
+          assetId: asset.id,
+          title: null,
+          startTicks: 28 * tick,
+          durationTicks: 4 * tick,
+          sourceStartTicks: 0,
+        },
+        {
+          type: "clip.setEffects",
+          clipId: c,
+          effects: [{ ...IDENTITY_TRANSFORM, scale: 1500 }],
+        },
       ],
     });
     const p = await store.load(project.id);
@@ -150,6 +168,10 @@ for (const [label, frameRate, tick] of [
       [19, false],
       [20, true],
       [24, true],
+      [27, false],
+      [28, true],
+      [31, true],
+      [32, false],
     ] as const)
       assert.equal(red(out.output, n) > 200, want, `frame ${n}`);
     // The graph reads the still once and splits it to both clips.
@@ -157,8 +179,43 @@ for (const [label, frameRate, tick] of [
       path.join(await store.file(project.id, "exports", "stills"), "graph.txt"),
       "utf8",
     );
-    assert.equal(graph.match(/split=2/g)?.length, 1);
+    assert.equal(graph.match(/split=3/g)?.length, 1);
     assert.doesNotMatch(graph, /-loop/);
+    // YU-026e: each still's fit (and transform) runs once on its one frame,
+    // before the loop repeats it, never on every repeated copy.
+    const all = graph.split(/;\s*/).filter((l) => /loop=loop=/.test(l));
+    assert.equal(all.length, 3);
+    // The scaled-up still: its loop comes first, its fit and scale after.
+    const up = all.filter((l) => /^\[s\d+_\d+\]loop=loop=/.test(l));
+    assert.equal(up.length, 1, graph);
+    assert.match(
+      up[0]!,
+      /fps=\d+\/\d+,.*force_original_aspect_ratio=decrease.*,scale=w=/,
+    );
+    const chains = all.filter((l) => !up.includes(l));
+    assert.equal(chains.length, 2);
+    for (const chain of chains) {
+      // From its split branch: fit (and the transform's crop/scale), then
+      // the loop, its exact timing, and the output rate, in that order.
+      const order = [
+        /^\[s\d+_\d+\]/,
+        /scale=\d+:\d+:force_original_aspect_ratio=decrease/,
+        /,loop=loop=\d+:size=1:start=0,/,
+        /settb=1\/705600000/,
+        /setpts=N\*\d+\+\d+/,
+        /fps=\d+\/\d+\[c\d+\]$/,
+      ].map((re) => chain.search(re));
+      assert.ok(
+        order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1]!)),
+        chain,
+      );
+    }
+    // Per-frame work (an opacity fade, a dissolve) never sits before a loop.
+    for (const chain of chains)
+      assert.doesNotMatch(
+        chain.slice(0, chain.indexOf("loop=")),
+        /fade=|geq=|colorchannelmixer/,
+      );
     // A reference frame inside a clip is the export's frame.
     const shown = await preview(store, project.id, p.revision, "frame", 12);
     assert.ok(red(shown.file) > 200, "reference frame 12");
