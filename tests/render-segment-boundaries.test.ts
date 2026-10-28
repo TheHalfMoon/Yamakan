@@ -585,6 +585,22 @@ test("a timeline of more than 32 clips exports through the job queue in segments
   assert.ok(packets(artifact, "a:0") > 0, "the normalised sound is there");
   // A cancel through the supervisor while it renders: the job ends
   // cancelled and its attempt's folder is removed.
+  // A long still on its own track keeps it rendering for a while, so the
+  // cancel lands mid-render rather than racing the end.
+  const long = crypto.randomUUID();
+  await w.batch([
+    { type: "track.add", trackId: long, name: "Long", kind: "video" },
+    {
+      type: "clip.add",
+      clipId: crypto.randomUUID(),
+      trackId: long,
+      assetId: still.id,
+      title: null,
+      startTicks: 0,
+      durationTicks: 3000 * F,
+      sourceStartTicks: 0,
+    },
+  ]);
   const second = await w.call<{ id: string; state: string }>(
     "yamakan.export.video",
     {
