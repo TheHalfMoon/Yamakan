@@ -341,7 +341,7 @@
       "YU-026c: a render window can draw one stream of a segmented export (streams video: the picture alone; audio: the mixed sound alone as M4A, whose length may end before the window); titles are staged only with the picture; the verification failure keeps the probe in its server-side cause; renderRevision renders a timeline one pass could not hold in segments (core/render/segments.ts) and gives every export the policy v3 length-scaled wall-clock limit.",
       "YU-026e: a still's fixed picture chain (grade, fit, transform) runs once before its loop instead of on every repeated frame; identical pixels; RENDERER_VERSION 6."
     ],
-    "importedSha256": "5b0a13b28564bb43c5ca8b9ccd61223b2266e864a45a0a8c9add1b42d9d88e62",
+    "importedSha256": "fc223f741fcedda69b485f506d81a9379e62a0cf25e7df90fcdea0bb228b895e",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

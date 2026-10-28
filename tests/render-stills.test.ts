@@ -164,9 +164,27 @@ for (const [label, frameRate, tick] of [
     const chains = graph.split(/;\s*/).filter((l) => /loop=loop=/.test(l));
     assert.equal(chains.length, 2);
     for (const chain of chains) {
-      const scale = chain.indexOf("scale=");
-      assert.ok(scale >= 0 && scale < chain.indexOf("loop=loop="), chain);
+      // From its split branch: fit (and the transform's crop/scale), then
+      // the loop, its exact timing, and the output rate, in that order.
+      const order = [
+        /^\[s\d+_\d+\]/,
+        /scale=\d+:\d+:force_original_aspect_ratio=decrease/,
+        /,loop=loop=\d+:size=1:start=0,/,
+        /settb=1\/705600000/,
+        /setpts=N\*\d+\+\d+/,
+        /fps=\d+\/\d+\[c\d+\]$/,
+      ].map((re) => chain.search(re));
+      assert.ok(
+        order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1]!)),
+        chain,
+      );
     }
+    // Per-frame work (an opacity fade, a dissolve) never sits before a loop.
+    for (const chain of chains)
+      assert.doesNotMatch(
+        chain.slice(0, chain.indexOf("loop=")),
+        /fade=|geq=|colorchannelmixer/,
+      );
     // A reference frame inside a clip is the export's frame.
     const shown = await preview(store, project.id, p.revision, "frame", 12);
     assert.ok(red(shown.file) > 200, "reference frame 12");

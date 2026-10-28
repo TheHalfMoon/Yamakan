@@ -3,7 +3,7 @@
   "task": "YU-026e",
   "policy": "yamakan.resource-policy/v3 (unchanged)",
   "change": "A still's fixed picture chain (LUT grade, contain fit and colour conversion, transform) runs once on its one decoded frame, before the loop repeats it, instead of on every repeated frame and layer. RENDERER_VERSION 5 -> 6.",
-  "identity": "The same still-heavy timeline (three tracks: a transformed still, an inverting LUT still, a scaled still with an opacity animation; 90 frames at 1280x720) decodes to identical rgb24 frames before and after (sha256 473f7050...aa339 for both); every probe export below is the same size byte for byte before and after.",
+  "identity": "The same still-heavy timeline (three tracks: a transformed still, an inverting LUT still, a scaled still with an opacity animation; 90 frames at 1280x720) decodes to identical rgb24 frames before and after (sha256 473f70509dd42d52f091c3d9d685d38d14ed5ee3d8cc40f418f5b399e94aa339 for both, from the timeline recipe in this file's identityRecipe); the dense probe's exports below are the same size before and after (M's baseline never finished, so it has no size to compare).",
   "host": "Windows 11, 12 CPUs; other applications (ChatGPT, Codex, Desktop Commander) loaded the host intermittently, so baseline and optimised runs were alternated and the host CPU load before each run is recorded.",
   "denseProbe": {
     "probe": "16 clips, 16 tracks, 900 frames, 1920x1080 (15 stacked 1080p still layers, 30 s)",
@@ -247,5 +247,6 @@
     "What remains is per-frame compositing of up to 32 clip chains per window (overlay of 1080p yuva420p layers) with the policy's 2 filter-graph and encoder threads, about 0.65 s per output second for M's windows.",
     "Under the existing policy M's export is not reliably qualifiable. The next levers each need a separately reviewed decision: more filter or encoder threads, or parallel segment workers (activeRenderWorkers 1).",
     "Occlusion culling (skipping layers hidden under a fully opaque full-frame layer) would remove most of M's cost without changing pixels, but proving opacity needs per-asset alpha knowledge the probe does not record, and it would qualify only workloads like M's opaque full-frame stills, not the worst case of visible translucent layers. Not implemented."
-  ]
+  ],
+  "identityRecipe": "Project at 1280x720, 30 fps; video track: testsrc2 640x360 PNG, frames 0-89, transform scale 1200 offset (80,-40) crop left 50 bottom 30; track 2: smptehdbars 800x450 PNG, frames 10-69, inverting 2^3 LUT; track 3: orange 320x180 PNG, frames 20-79, transform scale 400, opacity keys 0.2 at frame 0 and 1 at frame 50 (linear). renderRevision export, decoded to rgb24, sha256 of all frames. Run with the parent commit and with this branch."
 }

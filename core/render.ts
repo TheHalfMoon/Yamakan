@@ -420,7 +420,9 @@ export async function renderPlan(
     // frame). A clip repeats its frame with a pull-based loop, so frames
     // are made only as the timeline reaches them: a still-heavy timeline
     // neither queues frames nor needs one input per clip. Memory is the
-    // decoded size of the window's distinct stills, each held once.
+    // decoded size of the window's distinct stills, each held once, plus
+    // (YU-026e) one fitted frame per still clip in the window, held by its
+    // loop: about 3 MiB at 1080p, so bounded by the window's clip budget.
     const stills = new Map<string, string[]>();
     for (const layer of pictureLayers) {
       if (layer.kind !== "image") continue;

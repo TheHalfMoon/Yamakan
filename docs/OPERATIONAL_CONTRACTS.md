@@ -776,15 +776,18 @@ A project has one frame rate. Every frame field of its editing view counts frame
 Within the existing `yamakan.resource-policy/v3`. No limit, worker count, thread count or sandbox setting changed.
 
 - **Change.** A still's fixed picture chain runs once on its one decoded frame, and then the loop repeats the result. The chain is the LUT grade, the contain fit with its colour conversion, and the transform. Before, the chain ran on every repeated frame of every layer. `RENDERER_VERSION` goes from 5 to 6, so cached previews are rebuilt.
-- **Identical output.** A still-heavy timeline was decoded before and after the change: a transformed still, an inverting LUT still and an opacity-animated still, 90 frames at 1280x720. All its rgb24 frames hash the same. Every probe export is the same size before and after, and `tests/render-stills.test.ts` asserts that the scale precedes the loop.
+- **Identical output.** A still-heavy timeline was decoded before and after the change: a transformed still, an inverting LUT still and an opacity-animated still, 90 frames at 1280x720. All its rgb24 frames hash the same (the full digest and the recipe are in the evidence file). The dense probe's exports are the same size before and after. M's baseline never finished, so it has no such comparison. `tests/render-stills.test.ts` asserts each still chain's full order (fit and transform, then the loop, its timing and the output rate).
 - **Measurements** (`docs/evidence/ultimate/render-optimization-yu026e.json`). Baseline and optimised runs were alternated, and the host's CPU load was recorded before each run, because other applications loaded it.
   - **Dense probe** (15 stacked 1080p still layers, 30 s): the baseline took 92, 66 and 58 s; the optimised build took 12.0, 9.2 and 9.1 s. That is a median of 66 s against 9.2 s, about 7× faster. Peak worker memory fell from 421 to about 353 MiB.
   - **M** (200 clips, 16 tracks, 10 minutes, 1080p): the baseline stopped at its 480 s limit with 3 of its workers finished. Of 4 optimised runs, two completed (424 s and 469 s, all 18,000 frames, 13 segments) and two stopped at 479 s.
-  - **Profile of one M run:** each window renders about 46 s of output in 28 to 32 s, and three heavier windows take 55 to 60 s. M has no sound, so there is no sound pass.
+  - **Profile of one M run** (one profiled run, which itself stopped at the limit): most windows take 28 to 32 s and three heavier ones 55 to 60 s, for 13 windows over 600 s of output (about 46 s each on average). M has no sound, so there is no sound pass.
 - **Conclusion: M's export stays unqualified under the existing policy.** It is borderline at 88 to 100% of its limit.
-  - The remaining cost is compositing up to 32 clip chains per window, about 0.65 s per output second with the policy's 2 threads.
+  - The remaining cost, from that one profiled run, is compositing each window's clip chains (the policy allows up to 32 per window), about 0.65 s per output second with the policy's 2 threads.
   - Each next lever needs a separately reviewed decision: more filter or encoder threads, or parallel segment workers.
-  - Occlusion culling (skipping layers hidden under an opaque full-frame layer) would keep pixels identical. It needs per-asset alpha knowledge that the probe does not record, and it helps only opaque full-frame workloads like M's, not visible translucent layers. It is not implemented.
+  - **Occlusion culling, a hypothesis, not implemented:** skipping layers hidden under another layer would keep pixels identical. It is untested how much of M's cost it would remove.
+    - The covering layer must be opaque in every frame of the interval it covers: no alpha in its source, which the probe does not record; no opacity animation; and no dissolve.
+    - It must also fill the whole frame, with no contain letterbox and no transform smaller than the frame.
+    - It helps only workloads like M's opaque full-frame stills, not visible translucent layers.
 
 ## Deterministic media analysis: scene cuts (YU-071)
 
