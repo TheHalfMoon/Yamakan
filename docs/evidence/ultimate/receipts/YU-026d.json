@@ -1,0 +1,68 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "9f2c401",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-026d",
+  "objective": "Segmented export correctness across boundaries, cancellation and the job queue",
+  "parts": [
+    {
+      "part": "YU-026d segment-boundary render tests and two export fixes",
+      "branch": "test/yu-026d-segment-boundaries",
+      "mergedPr": 150,
+      "headCommit": "9c8f622",
+      "mergeCommit": "68f74b6"
+    }
+  ],
+  "flags": "none",
+  "deviations": [
+    "Tests: a dissolve and an opacity ramp split by segment boundaries, an inverting LUT and two-pass loudness, at 30 and 24000/1001 fps: same frame count and times, every frame >= 38 dB PSNR, no boundary frame shifted, the effects really drawn, bit-identical sound with the same start",
+    "Cancels as the sound, a window and the join workers start leave no parts and a retry succeeds; the job queue exports a segmented timeline with loudness, and a cancel through the supervisor removes its attempt",
+    "Fixed: loudness normalisation failed for every export with a picture (single pass too); the measure pass now reads the sound's own filters",
+    "Fixed: every segmented export through the job queue failed 'Cancelled.'; a later worker of the same attempt starts only while the job runs, no cancel was asked for, and the attempt is still live",
+    "The YU-026c S and T measurements ran outside the queue; T would have failed through it before this fix"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Segment boundaries and the job path)",
+  "tests": {
+    "files": ["tests/render-segment-boundaries.test.ts"],
+    "result": "4/4; with render-segments, provenance and jobs 26/26 on the final head"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only judge (PStack ps-review light panel) with Alibaba OCR local rules",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix; the racy queue-cancel test fixed"
+      }
+    },
+    {
+      "kind": "d1-local advisory",
+      "result": "medium risk, needs review (advisory only, not a gate)"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used); local rules via `ocr delegate rule` applied by the judges"
+    }
+  ],
+  "ciNotes": ["The Qodo bot posted only billing notices (no review)"],
+  "postMergeVerification": {
+    "main": "68f74b6",
+    "ci": "PR exact head 9c8f622 green; push run 40666240220 on 68f74b6: success",
+    "windows": "detached 68f74b6 (YU-051b and YU-026d together): typecheck, lint, format, provenance, brand, build pass; npm test 710/722 with 9 failures under host load (other applications held the CPU near 80%; each ran several times its usual time) that each pass alone (captions 9.8 s, engine-worker-profile 10.6 s, export-golden 83 s, http preview 10.6 s, interruption conversion 78 s, jobs export 11.1 s and corrupt payload 10.3 s, parity 27 s, preview boundaries 27 s), 3 POSIX-only skips; test:studio 1975/1975; Edge E2E failed once on a non-waiting UI assertion ('the shell shows the unsaved edit') and passes alone twice"
+  },
+  "limitations": [
+    "Not tested: a retry after a queue cancel, the startup sweep of a segmented attempt, queue-overhead timing at T"
+  ]
+}
