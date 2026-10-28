@@ -637,6 +637,8 @@ export async function renderPlan(
         activePlan.loudnorm &&
         !activePlan.loudnorm.measured
       ) {
+        // The picture's inputs stay on the command line (indexes are kept)
+        // and are demuxed, bounded by -t, but never decoded.
         const measureFilters = [
           ...soundFilters,
           `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${measurePassFilter(activePlan.loudnorm.target)}[audio]`,

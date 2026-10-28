@@ -168,6 +168,30 @@ const psnrs = (a: string, b: string) =>
     .map((l) => /psnr_avg:(\S+)/.exec(l)![1]!)
     .map((v) => (v === "inf" ? Infinity : Number(v)));
 
+// Frame n of a file as 320x180 RGB, and two frames' mean squared error.
+const rgbFrame = (file: string, n: number) =>
+  ffmpeg([
+    "-i",
+    file,
+    "-vf",
+    `select=eq(n\\,${n}),scale=320:180`,
+    "-frames:v",
+    "1",
+    "-f",
+    "rawvideo",
+    "-pix_fmt",
+    "rgb24",
+    "pipe:1",
+  ]);
+const mse = (a: Buffer, b: Buffer) => {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += (a[i]! - b[i]!) ** 2;
+  return sum / a.length;
+};
+const at = (frame: Buffer, x: number, y: number) => [
+  ...frame.subarray((y * 320 + x) * 3, (y * 320 + x) * 3 + 3),
+];
+
 // The shared timeline, 120 frames at the project's rate.
 async function boundaryTimeline(w: Awaited<ReturnType<typeof workspace>>) {
   const fps = (await w.head()).frameRate ?? { num: 30, den: 1 };
@@ -373,6 +397,50 @@ for (const [label, frameRate] of [
     // Each boundary's neighbours in particular.
     for (const f of [39, 40, 59, 60])
       assert.ok(frames[f]! >= 38, `frame ${f} at ${frames[f]} dB`);
+    // No boundary frame is shifted: each joined frame is closer to the
+    // single pass's same frame than to either neighbour.
+    for (const n of [39, 40, 59, 60]) {
+      const j = rgbFrame(joined.output, n);
+      const same = mse(j, rgbFrame(single.output, n));
+      for (const other of [n - 1, n + 1])
+        assert.ok(
+          same < mse(j, rgbFrame(single.output, other)),
+          `frame ${n} matches frame ${other} better`,
+        );
+    }
+    // The effects are really drawn, not only alike in both renders.
+    const source = path.join(w.root, "a.mp4");
+    const near = (got: number[], want: number[], tol: number, what: string) =>
+      got.forEach((v, i) =>
+        assert.ok(Math.abs(v - want[i]!) <= tol, `${what}: ${got} vs ${want}`),
+      );
+    // The LUT inverts the first shot (a corner, away from the still).
+    const ten = Math.round(10 * (30 / (frameRate ? 24000 / 1001 : 30)));
+    near(
+      at(rgbFrame(joined.output, 10), 8, 8),
+      at(rgbFrame(source, ten), 8, 8).map((v) => 255 - v),
+      40,
+      "inverted first shot",
+    );
+    // The dissolve leaves the first shot for the second: before it the
+    // corner is the inverted first shot, after it the second shot.
+    const corner = (n: number) => at(rgbFrame(joined.output, n), 8, 8);
+    near(
+      corner(70),
+      at(
+        rgbFrame(
+          path.join(w.root, "b.mp4"),
+          Math.round((70 - 60 + 10) * (30 / (frameRate ? 24000 / 1001 : 30))),
+        ),
+        8,
+        8,
+      ),
+      40,
+      "second shot after the dissolve",
+    );
+    // The still fades in: its red rises across the ramp at the centre.
+    const red = (n: number) => at(rgbFrame(joined.output, n), 160, 90)[0]!;
+    assert.ok(red(78) - red(22) > 60, `red ${red(22)} → ${red(78)}`);
     // The sound: the same samples, starting at the same time, as long.
     assert.equal(sound(joined.output), sound(single.output));
     assert.equal(startOf(joined.output, "a:0"), startOf(single.output, "a:0"));
@@ -388,14 +456,17 @@ test("cancels at each stage stop a segmented export, leave no parts, and a retry
     { startTicks: 0, durationTicks: 60 * F },
     { startTicks: 60 * F, durationTicks: 60 * F },
   ];
-  // During the sound pass, during the second window, and after the last.
-  for (const [stage, at] of [
-    ["sound", 0],
-    ["window", 0.5],
-    ["join", 0.95],
+  // Each worker the export starts is announced while still suspended:
+  // the sound (1st), the windows (2nd, 3rd) and the join (4th). A cancel
+  // as each starts stops that very worker.
+  for (const [stage, worker] of [
+    ["sound", 1],
+    ["window", 3],
+    ["join", 4],
   ] as const) {
     const controller = new AbortController();
     const staging = ["exports", `cancel-${stage}`];
+    let started = 0;
     const result = await renderSegmented(
       w.store,
       plan,
@@ -403,8 +474,9 @@ test("cancels at each stage stop a segmented export, leave no parts, and a retry
       staging,
       segments,
       controller.signal,
-      (p) => {
-        if (p >= at && !controller.signal.aborted) controller.abort();
+      () => {},
+      () => {
+        if (++started === worker) controller.abort();
       },
     ).then(
       () => "ok",
@@ -413,7 +485,9 @@ test("cancels at each stage stop a segmented export, leave no parts, and a retry
     assert.equal(result, "Cancelled.", stage);
     const dir = await w.store.file(w.project.id, ...staging);
     assert.deepEqual(
-      (await readdir(dir)).filter((n) => ["seg", "sound"].includes(n)),
+      (await readdir(dir)).filter((n) =>
+        ["seg", "sound", "worker", "segments.txt", "render.mp4"].includes(n),
+      ),
       [],
       stage,
     );
@@ -443,7 +517,26 @@ test("a timeline of more than 32 clips exports through the job queue in segments
   ]);
   const h = await w.head();
   const video = h.tracks.find((t) => t.kind === "video")!.id;
-  const F = 23_520_000;
+  const F = framesToTicks(1, { num: 30, den: 1 });
+  const tone = await w.make("t.wav", [
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=300:duration=4",
+  ]);
+  const audio = h.tracks.find((t) => t.kind === "audio")!.id;
+  await w.batch([
+    {
+      type: "clip.add",
+      clipId: crypto.randomUUID(),
+      trackId: audio,
+      assetId: tone.id,
+      title: null,
+      startTicks: 0,
+      durationTicks: 102 * F,
+      sourceStartTicks: 0,
+    },
+  ]);
   await w.batch(
     Array.from({ length: 34 }, (_, i) => ({
       type: "clip.add",
@@ -466,6 +559,7 @@ test("a timeline of more than 32 clips exports through the job queue in segments
     {
       projectId: w.project.id,
       idempotencyKey: "segmented",
+      normalizeLoudness: true,
     },
   );
   let status = job as {
@@ -488,4 +582,42 @@ test("a timeline of more than 32 clips exports through the job queue in segments
     ? status.artifact!
     : await w.store.file(w.project.id, status.artifact!);
   assert.equal(packets(artifact, "v:0"), 102);
+  assert.ok(packets(artifact, "a:0") > 0, "the normalised sound is there");
+  // A cancel through the supervisor while it renders: the job ends
+  // cancelled and its attempt's folder is removed.
+  const second = await w.call<{ id: string; state: string }>(
+    "yamakan.export.video",
+    {
+      projectId: w.project.id,
+      idempotencyKey: "segmented-cancel",
+    },
+  );
+  let s2 = second as { id: string; state: string };
+  for (
+    let i = 0;
+    i < 600 &&
+    s2.state !== "RUNNING" &&
+    !["COMPLETED", "FAILED", "CANCELLED"].includes(s2.state);
+    i++
+  ) {
+    await new Promise((r) => setTimeout(r, 20));
+    s2 = await w.call("yamakan.job.status", { jobId: second.id });
+  }
+  await w.call("yamakan.job.cancel", { jobId: second.id });
+  for (
+    let i = 0;
+    i < 1800 && !["COMPLETED", "FAILED", "CANCELLED"].includes(s2.state);
+    i++
+  ) {
+    await new Promise((r) => setTimeout(r, 100));
+    s2 = await w.call("yamakan.job.status", { jobId: second.id });
+  }
+  assert.equal(s2.state, "CANCELLED");
+  const attempts = await w.store.file(w.project.id, "exports", second.id);
+  assert.deepEqual(
+    (await readdir(attempts).catch(() => [])).filter((n) =>
+      n.startsWith("attempt-"),
+    ),
+    [],
+  );
 });

@@ -657,7 +657,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - a ten-minute timeline with sound to its very end exports in segments with exactly 18,000 frames;
     - a picture-only join works;
     - a cancel during the second window stops the export and leaves no parts.
-  - **Not tested:** a dissolve, a LUT or animation across a boundary, and two-pass loudness in segmented mode. These use the same per-window filter text as the single pass.
+  - **Across boundaries:** dissolves, LUTs, animation, two-pass loudness and 24000/1001 export are tested in YU-026d, below.
   - **Recorded run** (policy v3, idle host, one run per profile). The worker peaks come from each run's Job Objects:
 
     | Profile                | Export                   | Segments      | Peak worker memory                     |
@@ -668,6 +668,11 @@ A project has one frame rate. Every frame field of its editing view counts frame
     | M                      | stops at the 480 s limit | 9 workers ran | 28%; no ENOMEM in the windows that ran |
 
     A two-minute probe at M's density (40 clips, 16 tracks) also stops at its 240 s limit. M renders at over 2 s per output second, so ten minutes would need well over 1,200 s, more than the reviewed 900 s cap.
+
+  - **So export is qualified at S and T; M stays editing-qualified only.** Qualifying M needs a reviewed policy change, not done here:
+    - more filter threads per pass, since memory now has headroom;
+    - or segments rendered in parallel, which `activeRenderWorkers: 1` forbids.
+  - A video-heavy project still adds one input per clip in its window, so a window's command line grows with the clips it shows.
 
 - **Segment boundaries and the job path (YU-026d).** `tests/render-segment-boundaries.test.ts` renders one timeline whole and in segments, at 30 and 24000/1001 fps. The timeline holds:
   - a dissolve split by a boundary;
@@ -687,10 +692,6 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - **Every segmented export through the job queue failed as "Cancelled."** The supervisor's `#markRunning` accepted only one worker per attempt. A later worker of the same attempt now starts only while the job is running and no cancel was asked for, and the attempt records the worker running now.
 
   The recorded S, T and probe exports above ran through `renderRevision` directly (`scripts/qualify-editor-scale.mjs`), not the job queue. Until this fix, T's export would have failed through the queue.
-  - **So export is qualified at S and T; M stays editing-qualified only.** Qualifying M needs a reviewed policy change, not done here:
-    - more filter threads per pass, since memory now has headroom;
-    - or segments rendered in parallel, which `activeRenderWorkers: 1` forbids.
-  - A video-heavy project still adds one input per clip in its window, so a window's command line grows with the clips it shows.
 
 - **Not measured.**
   - Browser timeline virtualization at M.

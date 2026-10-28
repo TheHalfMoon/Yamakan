@@ -276,7 +276,7 @@ export async function renderSegmented(
   } finally {
     // A file a scanner still holds is left for the job's own cleanup; it
     // never replaces the export's own error.
-    for (const part of ["seg", "sound"])
+    for (const part of ["seg", "sound", "worker", "segments.txt"])
       await rm(path.join(dir, part), {
         recursive: true,
         force: true,

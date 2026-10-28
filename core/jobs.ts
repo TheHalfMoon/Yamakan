@@ -751,17 +751,22 @@ export class JobSupervisor {
         // YU-026d: a later worker of the same attempt (a segmented export
         // starts one per window, the sound and the join) starts only while
         // the job is still running and no cancel was asked for.
-        const running = db
-          .prepare(
-            "SELECT 1 FROM jobs WHERE job_id = ? AND state = 'running' AND cancel_requested = 0",
-          )
-          .get(jobId);
-        if (!running) throw new Error("Cancelled.");
+        const job = db
+          .prepare("SELECT state, cancel_requested FROM jobs WHERE job_id = ?")
+          .get(jobId) as { state: string; cancel_requested: number } | undefined;
+        if (!job || job.cancel_requested) throw new Error("Cancelled.");
+        if (job.state !== "running")
+          throw new Error("The export attempt is no longer running.");
       }
-      // The attempt records the worker running now.
-      db.prepare(
-        "UPDATE attempts SET state = 'running', pid = ? WHERE job_id = ? AND attempt_no = ?",
-      ).run(pid, jobId, attempt);
+      // The attempt records the worker running now; an attempt that already
+      // ended (a late worker of an earlier attempt) starts nothing.
+      const recorded = db
+        .prepare(
+          "UPDATE attempts SET state = 'running', pid = ? WHERE job_id = ? AND attempt_no = ? AND state IN ('preparing', 'running')",
+        )
+        .run(pid, jobId, attempt);
+      if (recorded.changes !== 1)
+        throw new Error("The export attempt is no longer running.");
     });
   }
   #markValidating(jobId: string, attempt: number) {
