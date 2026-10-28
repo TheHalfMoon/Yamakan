@@ -745,8 +745,20 @@ export class JobSupervisor {
           "UPDATE jobs SET state = 'running' WHERE job_id = ? AND state = 'preparing' AND cancel_requested = 0",
         )
         .run(jobId);
-      if (moved.changes !== 1) throw new Error("Cancelled.");
-      transitionYamakanJob(jobId, "preparing", "running");
+      if (moved.changes === 1)
+        transitionYamakanJob(jobId, "preparing", "running");
+      else {
+        // YU-026d: a later worker of the same attempt (a segmented export
+        // starts one per window, the sound and the join) starts only while
+        // the job is still running and no cancel was asked for.
+        const running = db
+          .prepare(
+            "SELECT 1 FROM jobs WHERE job_id = ? AND state = 'running' AND cancel_requested = 0",
+          )
+          .get(jobId);
+        if (!running) throw new Error("Cancelled.");
+      }
+      // The attempt records the worker running now.
       db.prepare(
         "UPDATE attempts SET state = 'running', pid = ? WHERE job_id = ? AND attempt_no = ?",
       ).run(pid, jobId, attempt);

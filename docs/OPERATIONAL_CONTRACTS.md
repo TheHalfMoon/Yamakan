@@ -669,6 +669,24 @@ A project has one frame rate. Every frame field of its editing view counts frame
 
     A two-minute probe at M's density (40 clips, 16 tracks) also stops at its 240 s limit. M renders at over 2 s per output second, so ten minutes would need well over 1,200 s, more than the reviewed 900 s cap.
 
+- **Segment boundaries and the job path (YU-026d).** `tests/render-segment-boundaries.test.ts` renders one timeline whole and in segments, at 30 and 24000/1001 fps. The timeline holds:
+  - a dissolve split by a boundary;
+  - an inverting LUT;
+  - a scaled still whose opacity ramps across another boundary;
+  - a tone with two-pass loudness.
+
+  The two renders must match exactly:
+  - the same frame count and frame times;
+  - every frame at least 38 dB PSNR, the boundary neighbours included;
+  - the same decoded sound with the same start and packet count.
+
+  Cancels during the sound pass, a window and the last window each stop the export and leave no parts, and a retry then succeeds. A 34-clip timeline exports through the job queue in segments and publishes exactly its 102 frames.
+
+  The tests found two defects, now fixed:
+  - **Loudness normalisation failed for any export with a picture.** The measure pass reused the whole graph, leaving `[picture]` unmapped, and FFmpeg refused it. The single-pass export had the same fault. The measure pass now reads the sound's own filters.
+  - **Every segmented export through the job queue failed as "Cancelled."** The supervisor's `#markRunning` accepted only one worker per attempt. A later worker of the same attempt now starts only while the job is running and no cancel was asked for, and the attempt records the worker running now.
+
+  The recorded S, T and probe exports above ran through `renderRevision` directly (`scripts/qualify-editor-scale.mjs`), not the job queue. Until this fix, T's export would have failed through the queue.
   - **So export is qualified at S and T; M stays editing-qualified only.** Qualifying M needs a reviewed policy change, not done here:
     - more filter threads per pass, since memory now has headroom;
     - or segments rendered in parallel, which `activeRenderWorkers: 1` forbids.

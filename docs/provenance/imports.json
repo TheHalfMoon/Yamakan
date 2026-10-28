@@ -338,9 +338,10 @@
       "YU-023: every picture is converted once to the frozen SDR policy (scale in_color_matrix/in_range to bt709 limited range, yuva420p), the base and the output are tagged BT.709 limited range, and a clip's LUT is written from its stored document as canonical .cube text in the render folder for lut3d on gbrap (alpha kept); the renderer version is 4.",
       "YU-025: renderRevision takes an export variant's output size, rendering the same revision with that profile (the same contain fit).",
       "YU-026b: each still in the window is one input split to its clips, and each clip repeats its frame with a pull-based loop filter at the output rate (no -loop 1 input per clip); renderer version 5.",
-      "YU-026c: a render window can draw one stream of a segmented export (streams video: the picture alone; audio: the mixed sound alone as M4A, whose length may end before the window); titles are staged only with the picture; the verification failure keeps the probe in its server-side cause; renderRevision renders a timeline one pass could not hold in segments (core/render/segments.ts) and gives every export the policy v3 length-scaled wall-clock limit."
+      "YU-026c: a render window can draw one stream of a segmented export (streams video: the picture alone; audio: the mixed sound alone as M4A, whose length may end before the window); titles are staged only with the picture; the verification failure keeps the probe in its server-side cause; renderRevision renders a timeline one pass could not hold in segments (core/render/segments.ts) and gives every export the policy v3 length-scaled wall-clock limit.",
+      "YU-026d: the two-pass loudness measure reads the sound's own filters, not the picture's graph, so a normalised export with a picture no longer fails (an unmapped [picture] output)."
     ],
-    "importedSha256": "b81544ff1798cdd824be95bc7149091982838b98ee7fd0f20d8cbf95cc998650",
+    "importedSha256": "544804b08fe5f27194cab3436ce36988c845e8fb383f02b193678239a64f5c6c",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

@@ -563,6 +563,10 @@ export async function renderPlan(
       visual = next;
     }
     const audio: string[] = [];
+    // YU-026d: the sound's own filters, so the loudness measure pass reads
+    // the mix alone (a graph with the picture's [picture] left unmapped is
+    // refused by FFmpeg: "output 0 (picture) unconnected").
+    const audioFrom = filters.length;
     if (withAudio)
       for (const a of plan.audio) {
         const from = Math.max(a.startTicks, wStart);
@@ -619,6 +623,7 @@ export async function renderPlan(
         );
         audio.push(label);
       }
+    const soundFilters = filters.slice(audioFrom);
     if (plan.titles && withVideo) {
       filters.push(`[${visual}]ass=titles.ass:fontsdir=fonts[titled]`);
       visual = "titled";
@@ -633,7 +638,7 @@ export async function renderPlan(
         !activePlan.loudnorm.measured
       ) {
         const measureFilters = [
-          ...filters,
+          ...soundFilters,
           `${audio.map((a) => `[${a}]`).join("")}amix=inputs=${audio.length}:normalize=0,atrim=duration=${total},${measurePassFilter(activePlan.loudnorm.target)}[audio]`,
         ];
         // The graph goes in a file the worker may read, not on the
