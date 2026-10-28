@@ -1,0 +1,80 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "1fe8bc9",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-026c",
+  "objective": "Qualify the maximum workload's export: review the timeline-scaled render timeout and stacked-layer limit, then implement",
+  "parts": [
+    {
+      "part": "YU-026c segmented export and resource policy v3",
+      "branch": "feat/yu-026c-segmented-export",
+      "mergedPr": 147,
+      "headCommit": "a56a3ca",
+      "mergeCommit": "4d3cc2d"
+    }
+  ],
+  "flags": "M (200 clips, 16 tracks, ten minutes, 1080p) remains export-unqualified; no limit was raised beyond the reviewed policy",
+  "deviations": [
+    "Design review before code: M's export failed from memory (one FFmpeg pass holds every clip's chain), not time; a stacked-layer cap adds nothing beyond the 16-track limit",
+    "Policy v3: exportWallSeconds = min(900, 180 + 30 per started output minute); exportSegmentChains 32; all other values unchanged",
+    "Segmented export: frame-aligned windows (down to one frame, at most 48), the picture alone per window, the sound once over the timeline, a stream-copy concat join checked against the exact frame count",
+    "Recorded (idle host, one run per profile): S 27 s; T 102 s in 4 segments (now export-qualified); 40-still probe 31 s; worker peaks 12-28% of their limits",
+    "M stops at its 480 s limit: no ENOMEM in the windows that ran, but over 2 s per output second, so ten minutes would exceed the reviewed 900 s cap"
+  ],
+  "evidence": "docs/evidence/ultimate/editor-scale.json; docs/AGENT_DECISION_RECORD.md (2026-10-28 resource policy v3)",
+  "tests": {
+    "files": [
+      "tests/render-segments.test.ts",
+      "tests/command.test.ts",
+      "tests/resource-policy.test.ts"
+    ],
+    "result": "render-segments 6/6: wall formula and cap; frame-aligned contiguous segments at 30 and 24000/1001 fps and the 48 cap; segmented versus single pass with exactly 120 frames, identical frame times, every frame at least 38 dB PSNR and bit-identical sound, with a title across boundaries; ten minutes with sound to its end (18000 frames); a picture-only join; a cancel that leaves no parts"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only design review of the proposal, before implementation",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 1,
+      "findings": {
+        "recommendation": "segmented export with one sound pass and a capped length-scaled limit, instead of a stacked-layer cap"
+      }
+    },
+    {
+      "kind": "independent read-only code review",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 2,
+      "findings": {
+        "mustFix": 0,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix; lock-safe part cleanup applied in a56a3ca"
+      }
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used)"
+    }
+  ],
+  "ciNotes": [
+    "The Qodo bot posted only billing notices (no review); d1 was not used as a gate"
+  ],
+  "postMergeVerification": {
+    "main": "4d3cc2d",
+    "ci": "PR exact head a56a3ca green; push run 40649949801 on 4d3cc2d: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 4d3cc2d: typecheck, lint, format, provenance, brand, build pass; npm test 710/713 (0 fail, 3 POSIX-only skips); test:studio 5/5 and 1975/1975; Edge E2E pass (0 page errors)"
+  },
+  "limitations": [
+    "M is editing-qualified only; qualifying its export needs a further reviewed policy change (more filter threads per pass, or parallel segment workers, which activeRenderWorkers 1 forbids)",
+    "Not tested across a segment boundary: a dissolve, a LUT or animation, two-pass loudness, and a 24000/1001 export end to end",
+    "Timings are one run per profile on one host"
+  ]
+}
