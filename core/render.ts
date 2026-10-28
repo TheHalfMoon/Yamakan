@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { ProjectStore } from "./store.ts";
 import { MEDIA_FORMATS, probe } from "./media.ts";
-import { RESOURCE_POLICY } from "./command/policy.ts";
+import { RESOURCE_POLICY, exportWallSeconds } from "./command/policy.ts";
+import { planSegments, renderSegmented } from "./render/segments.ts";
 import { CommandError } from "./command/errors.ts";
 import { FLICKS_PER_SECOND, framesToTicks } from "./time.ts";
 import { mediaTools, workers } from "./process/workers.ts";
@@ -215,8 +216,12 @@ export type RenderWindow = {
   startTicks: number;
   durationTicks: number;
   output: "mp4" | "png";
-  // Wall-clock limit; exports use renderWallSeconds.
+  // Wall-clock limit; exports pass exportWallSeconds (policy v3).
   wallSeconds?: number;
+  // YU-026c: one stream of a segmented export. "video" renders the
+  // picture alone (MP4); "audio" the mixed sound alone (M4A), over the
+  // whole timeline so loudness and fades are measured once. Default both.
+  streams?: "both" | "video" | "audio";
 };
 
 export async function renderPlan(
@@ -251,6 +256,9 @@ export async function renderPlan(
       "The render window is outside the timeline.",
     );
   const total = seconds(window.durationTicks);
+  const streams = window.output === "png" ? "both" : (window.streams ?? "both");
+  const withVideo = streams !== "audio";
+  const withAudio = window.output === "mp4" && streams !== "video";
   const dir = await store.file(plan.projectId, ...staging);
   // The worker may write only its own subfolder (it could change that
   // folder's permissions); the service keeps its copy one level up, in a
@@ -258,11 +266,19 @@ export async function renderPlan(
   const work = path.join(dir, "worker");
   const written = path.join(
     work,
-    window.output === "png" ? "frame.partial.png" : "render.partial.mp4",
+    window.output === "png"
+      ? "frame.partial.png"
+      : withVideo
+        ? "render.partial.mp4"
+        : "render.partial.m4a",
   );
   const output = path.join(
     dir,
-    window.output === "png" ? "frame.png" : "render.mp4",
+    window.output === "png"
+      ? "frame.png"
+      : withVideo
+        ? "render.mp4"
+        : "render.m4a",
   );
   // One limit covers the capability probe, the fit check and the render.
   const controller = new AbortController();
@@ -283,7 +299,7 @@ export async function renderPlan(
     await mkdir(work, { recursive: true });
     let libassApi: number | null = null;
     let titleFontconfig: Record<string, string> | undefined;
-    if (plan.titles) {
+    if (plan.titles && withVideo) {
       if (
         ass === null ||
         createHash("sha256").update(ass).digest("hex") !== plan.titles.sha256
@@ -389,9 +405,13 @@ export async function renderPlan(
     // Timestamps stay absolute (timeline time) through the graph, so the
     // plan's title script times titles in any window; the output is reset
     // to start at zero at the end.
-    const filters = [
-      `color=c=black:s=${profile.width}x${profile.height}:r=${rate}:d=${total},setpts=PTS+${ptsOffset(wStart)},format=yuv420p,setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv[base]`,
-    ];
+    const filters = withVideo
+      ? [
+          `color=c=black:s=${profile.width}x${profile.height}:r=${rate}:d=${total},setpts=PTS+${ptsOffset(wStart)},format=yuv420p,setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv[base]`,
+        ]
+      : [];
+    // The picture's layers, none for a sound-only render.
+    const pictureLayers = withVideo ? plan.layers : [];
     let visual = "base";
     let n = 0;
     // YU-026b: each still in the window is read once, as one input, and
@@ -401,7 +421,7 @@ export async function renderPlan(
     // neither queues frames nor needs one input per clip. Memory is the
     // decoded size of the window's distinct stills, each held once.
     const stills = new Map<string, string[]>();
-    for (const layer of plan.layers) {
+    for (const layer of pictureLayers) {
       if (layer.kind !== "image") continue;
       const from = Math.max(layer.startTicks, wStart);
       const to = Math.min(layer.startTicks + layer.durationTicks, wEnd);
@@ -412,7 +432,7 @@ export async function renderPlan(
     const stillBranches = new Map<string, string>();
     let s = 0;
     for (const [key, clipIds] of stills) {
-      const layer = plan.layers.find((x) => x.assetSha256 === key)!;
+      const layer = pictureLayers.find((x) => x.assetSha256 === key)!;
       const index = await input(layer, []);
       const labels = clipIds.map((_, k) => `s${s}_${k}`);
       filters.push(
@@ -423,7 +443,7 @@ export async function renderPlan(
       clipIds.forEach((clipId, k) => stillBranches.set(clipId, labels[k]!));
       s++;
     }
-    for (const layer of plan.layers) {
+    for (const layer of pictureLayers) {
       // The part of the clip inside the window.
       const from = Math.max(layer.startTicks, wStart);
       const to = Math.min(layer.startTicks + layer.durationTicks, wEnd);
@@ -543,7 +563,7 @@ export async function renderPlan(
       visual = next;
     }
     const audio: string[] = [];
-    if (window.output === "mp4")
+    if (withAudio)
       for (const a of plan.audio) {
         const from = Math.max(a.startTicks, wStart);
         const to = Math.min(a.startTicks + a.durationTicks, wEnd);
@@ -599,11 +619,11 @@ export async function renderPlan(
         );
         audio.push(label);
       }
-    if (plan.titles) {
+    if (plan.titles && withVideo) {
       filters.push(`[${visual}]ass=titles.ass:fontsdir=fonts[titled]`);
       visual = "titled";
     }
-    filters.push(`[${visual}]setpts=PTS-STARTPTS[picture]`);
+    if (withVideo) filters.push(`[${visual}]setpts=PTS-STARTPTS[picture]`);
     if (audio.length) {
       // W18: optional two-pass loudnorm on the mixed bus before the limiter.
       let loudTail = "alimiter=limit=0.95";
@@ -640,14 +660,15 @@ export async function renderPlan(
           args: measureArgs,
           cwd: dir,
           writable: [work],
-          readable: activePlan.titles
-            ? [
-                ...readable,
-                path.join(dir, "titles.ass"),
-                path.join(dir, "fonts"),
-                path.join(dir, "fonts.conf"),
-              ]
-            : readable,
+          readable:
+            activePlan.titles && withVideo
+              ? [
+                  ...readable,
+                  path.join(dir, "titles.ass"),
+                  path.join(dir, "fonts"),
+                  path.join(dir, "fonts.conf"),
+                ]
+              : readable,
           workerEnv: titleFontconfig,
           memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
           signal: controller.signal,
@@ -675,12 +696,8 @@ export async function renderPlan(
       flag: "wx",
     });
     readable.push(path.join(dir, "graph.txt"));
-    args.push(
-      "-filter_complex_script",
-      path.join(dir, "graph.txt"),
-      "-map",
-      "[picture]",
-    );
+    args.push("-filter_complex_script", path.join(dir, "graph.txt"));
+    if (withVideo) args.push("-map", "[picture]");
     if (window.output === "png")
       args.push(
         "-frames:v",
@@ -707,35 +724,38 @@ export async function renderPlan(
           "-ar",
           String(profile.sampleRate),
         );
+      if (withVideo)
+        args.push(
+          "-c:v",
+          "libx264",
+          "-threads",
+          String(RESOURCE_POLICY.enforced.renderThreads),
+          "-preset",
+          "veryfast",
+          "-crf",
+          "20",
+          "-pix_fmt",
+          profile.pixelFormat,
+          // YU-023: tagged as the policy's SDR Rec.709 limited range.
+          "-color_primaries",
+          "bt709",
+          "-color_trc",
+          "bt709",
+          "-colorspace",
+          "bt709",
+          "-color_range",
+          "tv",
+          "-r",
+          rate,
+        );
       args.push(
-        "-c:v",
-        "libx264",
-        "-threads",
-        String(RESOURCE_POLICY.enforced.renderThreads),
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        "-pix_fmt",
-        profile.pixelFormat,
-        // YU-023: tagged as the policy's SDR Rec.709 limited range.
-        "-color_primaries",
-        "bt709",
-        "-color_trc",
-        "bt709",
-        "-colorspace",
-        "bt709",
-        "-color_range",
-        "tv",
-        "-r",
-        rate,
         "-t",
         total,
         "-movflags",
         "+faststart",
         "-progress",
         "pipe:1",
-        "worker/render.partial.mp4",
+        withVideo ? "worker/render.partial.mp4" : "worker/render.partial.m4a",
       );
     }
     const duration = Number(total);
@@ -748,14 +768,15 @@ export async function renderPlan(
       // The render's own folder is the only place it may write.
       writable: [work],
       // The title files exist exactly when the plan has titles.
-      readable: activePlan.titles
-        ? [
-            ...readable,
-            path.join(dir, "titles.ass"),
-            path.join(dir, "fonts"),
-            path.join(dir, "fonts.conf"),
-          ]
-        : readable,
+      readable:
+        activePlan.titles && withVideo
+          ? [
+              ...readable,
+              path.join(dir, "titles.ass"),
+              path.join(dir, "fonts"),
+              path.join(dir, "fonts.conf"),
+            ]
+          : readable,
       workerEnv: titleFontconfig,
       memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
       signal: controller.signal,
@@ -789,14 +810,25 @@ export async function renderPlan(
     // The probe counts thirtieths of a second, at any profile rate.
     const expectedFrames = Math.round(duration * 30);
     if (
-      !probed.hasVideo ||
-      probed.width !== profile.width ||
-      probed.height !== profile.height ||
+      (withVideo &&
+        (!probed.hasVideo ||
+          probed.width !== profile.width ||
+          probed.height !== profile.height)) ||
+      // Sound alone ends where the last sound does (in a single pass the
+      // picture sets the file's length), never after the window.
+      (!withVideo &&
+        (probed.hasVideo ||
+          !probed.hasAudio ||
+          probed.durationFrames > expectedFrames + 2)) ||
       (window.output === "mp4" &&
+        withVideo &&
         (Math.abs(probed.durationFrames - expectedFrames) > 2 ||
           (audio.length > 0 && !probed.hasAudio)))
     )
-      throw new Error("Rendered output failed verification.");
+      // The probe goes in the server-side cause, never the public message.
+      throw new Error("Rendered output failed verification.", {
+        cause: { streams, expectedFrames, probed },
+      });
     onProgress(1);
     return {
       output,
@@ -887,6 +919,20 @@ export async function renderRevision(
     captions: burnedInCaptions(project, (ref) => store.documentBytes(ref)),
     colors: recordedColors(store),
   });
+  // YU-026c (policy v3): a timeline one pass could not hold is rendered
+  // in segments; either way the wall-clock limit grows with its length.
+  const segments = planSegments(plan);
+  if (segments.length > 1)
+    return renderSegmented(
+      store,
+      plan,
+      ass,
+      staging,
+      segments,
+      signal,
+      onProgress,
+      onCreated,
+    );
   const rendered = await renderPlan(
     store,
     plan,
@@ -895,6 +941,12 @@ export async function renderRevision(
     signal,
     onProgress,
     onCreated,
+    {
+      startTicks: 0,
+      durationTicks: plan.durationTicks,
+      output: "mp4",
+      wallSeconds: exportWallSeconds(plan.durationTicks),
+    },
   );
-  return { ...rendered, plan: rendered.plan };
+  return { ...rendered, plan: rendered.plan, segments: 1 };
 }

@@ -2,6 +2,25 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-10-28: resource policy v3, segmented export (YU-026c)
+
+- **Authority:** the founder's autonomous-execution directive for the ultimate master plan ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution)). The user's instruction was to "review the proposed timeline-scaled render timeout and stacked-layer limit before implementation".
+- **Review first:** an independent read-only design review ran before any code (a Sonnet subagent, same vendor, not a human).
+  - It found that M's export failed from memory (ENOMEM inside one FFmpeg pass holding every clip's chain), not time.
+  - It recommended a length-scaled limit capped at 900 s, and time-segmented export with one audio pass and a stream-copy join, instead of a stacked-layer cap.
+- **Decision:** `RESOURCE_POLICY` becomes `yamakan.resource-policy/v3`, adding:
+  - `exportWallPerMinuteSeconds`: 30;
+  - `exportWallMaxSeconds`: 900;
+  - `exportSegmentChains`: 32.
+  - Every other value is unchanged, including the 180 s base, the 2 GiB render memory and one render worker.
+- **Evidence** (`docs/evidence/ultimate/editor-scale.json`):
+  - S exports in 27 s and T in 102 s (4 segments), and the 40-still probe exports.
+  - Worker peaks are 12% to 28% of the limit.
+  - M exceeds 480 s, at over 2 s per output second. The windows that ran stayed within memory, but the later windows never ran.
+  - These figures come from one run per profile on an idle host.
+- **Not decided:** raising filter threads or allowing parallel segment workers to qualify M. Each needs its own measurement and review.
+- **To change:** a new policy version, measured with `scripts/qualify-editor-scale.mjs`.
+
 ## 2026-10-13: resource policy v2 frozen
 
 - **Authority:** the founder's continuation directive of 2026-10-13 ("Choose and freeze a measurable resource policy"; [founder decision record](FOUNDER_DECISION_RECORD.md#2026-10-13-continuation-to-verified-completion)).

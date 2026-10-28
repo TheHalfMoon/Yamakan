@@ -99,7 +99,7 @@ test(
 
 test("the frozen qualification rule sits inside the enforced limits", () => {
   const { enforced, qualification } = RESOURCE_POLICY;
-  assert.equal(RESOURCE_POLICY.policy, "yamakan.resource-policy/v2");
+  assert.equal(RESOURCE_POLICY.policy, "yamakan.resource-policy/v3");
   assert.ok(Object.isFrozen(qualification));
   assert.ok(
     qualification.workerPeakShareOfLimit > 0 &&

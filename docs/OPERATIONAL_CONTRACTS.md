@@ -609,7 +609,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - It also runs a backup while edits keep committing, then restores the backup and edits the restored workspace.
   - A full run writes `docs/evidence/ultimate/editor-scale.json`, including the host details and one recorded export probe.
   - `--probe clips:tracks:frames:WxH` measures one unnamed profile without changing the evidence.
-- **Results (Windows, 12 CPUs, Node 24; one run, recorded with other work loading the host).**
+- **Results of the YU-026 run (Windows, 12 CPUs, Node 24; one run, recorded with other work loading the host).** The evidence file now holds the later YU-026c run on an idle host, which is faster: edits at most 21 ms, a plan compile 3 ms, backup 0.17 s, and 139 MiB peak resident.
   - **Editing is qualified at S, M and T.**
     - A batched save of 64 operations takes at most 31 ms.
     - An edit, undo or redo takes at most 33 ms.
@@ -638,10 +638,42 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - T and the 40-still probe reach the 180 s limit.
     - M (15 video tracks of 1080p stills) fails in FFmpeg after 140 s with exit −12 (ENOMEM), most likely the worker's 2 GiB; the cause is inferred.
   - **So export is qualified only at S.** T fits the limit on an idle host, but with no margin under load.
-- **Proposal (measured, not applied; a new policy version needs review).**
-  - Make the render wall-clock limit scale with the timeline's duration, for example 180 s plus 30 s per output minute at 1080p.
-  - Bound the layers composited at once, so that M's 15 stacked 1080p video tracks fit the worker's memory. Today they do not, so M stays edit-qualified and export-unqualified.
-  - A video-heavy project (many distinct video clips) still adds one input per clip, so its command line grows with the clip count.
+- **Segmented export (YU-026c, `yamakan.resource-policy/v3`).** An independent design review of the proposal found:
+  - M's failure was memory, not time. One FFmpeg pass holds a live chain with decoded frames for every clip (200 for M), and it exited with ENOMEM at 140 s, before the 180 s limit.
+  - So a longer limit alone could not help, and a bound on stacked layers adds nothing beyond the 16-track limit.
+
+  What changed:
+  - **Wall-clock limit.** An export's limit is `exportWallSeconds`: 180 s plus 30 s per started output minute, at most 900 s (the conversion limit). That is 480 s at ten minutes. Preview keeps 30 s.
+  - **Segments.** When one pass would composite more than `exportSegmentChains` (32) clip chains, `core/render/segments.ts` halves the timeline on frame boundaries until each window stays within the budget. It halves down to a single frame if it must; one instant holds at most a layer per track.
+    - At most 48 windows are allowed, because the join worker reads each one by name and a worker may read at most 64 paths. A timeline needing more is refused with `LIMIT_EXCEEDED` rather than failing at the join. Each window renders the picture alone, opening only the clips it shows, with absolute timestamps, so it draws what the single pass would.
+  - **Sound and join.** The sound is rendered once over the whole timeline, as M4A, so its fades, crossfades and two-pass loudness are measured once and there are no AAC seams. The concat demuxer then joins the pictures and muxes the sound by stream copy, with no second encode. The parts are removed after the join, and all passes share the export's one limit.
+  - **Checks.** The joined file is checked against the timeline's exact frame count (`ffprobe -count_packets`), not within a tolerance. A cancel is honoured between passes and before the join, and the parts are removed on every exit.
+  - **Tests** (`tests/render-segments.test.ts`):
+    - segments are contiguous, frame-aligned and cover the timeline exactly, at 30 and 24000/1001 fps;
+    - a multi-track timeline with footage, a still and sound, exported in forced segments, has exactly the single pass's 120 frames;
+    - every frame is at least 38 dB PSNR against the single pass (both are lossy and encoded in different GOPs);
+    - the decoded sound is bit-identical, and every frame's time matches the single pass;
+    - a title spans the segment boundaries;
+    - a ten-minute timeline with sound to its very end exports in segments with exactly 18,000 frames;
+    - a picture-only join works;
+    - a cancel during the second window stops the export and leaves no parts.
+  - **Not tested:** a dissolve, a LUT or animation across a boundary, and two-pass loudness in segmented mode. These use the same per-window filter text as the single pass.
+  - **Recorded run** (policy v3, idle host, one run per profile). The worker peaks come from each run's Job Objects:
+
+    | Profile                | Export                   | Segments      | Peak worker memory                     |
+    | ---------------------- | ------------------------ | ------------- | -------------------------------------- |
+    | S                      | 27 s                     | 1             | 12% of the limit                       |
+    | T (ten minutes, 1080p) | 102 s, 18,000 frames     | 4             | 26%                                    |
+    | 40-still probe         | 31 s                     | 2             | 23%                                    |
+    | M                      | stops at the 480 s limit | 9 workers ran | 28%; no ENOMEM in the windows that ran |
+
+    A two-minute probe at M's density (40 clips, 16 tracks) also stops at its 240 s limit. M renders at over 2 s per output second, so ten minutes would need well over 1,200 s, more than the reviewed 900 s cap.
+
+  - **So export is qualified at S and T; M stays editing-qualified only.** Qualifying M needs a reviewed policy change, not done here:
+    - more filter threads per pass, since memory now has headroom;
+    - or segments rendered in parallel, which `activeRenderWorkers: 1` forbids.
+  - A video-heavy project still adds one input per clip in its window, so a window's command line grows with the clips it shows.
+
 - **Not measured.**
   - Browser timeline virtualization at M.
   - History depth and growth.

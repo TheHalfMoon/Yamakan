@@ -24,13 +24,17 @@ import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
-import { mediaTools } from "../core/process/workers.ts";
+import { mediaTools, workers } from "../core/process/workers.ts";
 import { renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import { compilePlan } from "../core/render/plan.ts";
 import { titleFonts } from "../core/render/fonts.ts";
 import { fromEditView } from "../core/canonical.ts";
-import { RESOURCE_POLICY, SCALE_PROFILES } from "../core/command/policy.ts";
+import {
+  RESOURCE_POLICY,
+  SCALE_PROFILES,
+  exportWallSeconds,
+} from "../core/command/policy.ts";
 
 const args = process.argv.slice(2);
 const ALL = Object.keys(SCALE_PROFILES.supported);
@@ -240,6 +244,10 @@ async function measure(profile) {
     );
     out.referenceFrameMs = frame.ms;
     if (withExport) {
+      // YU-026c: every worker the export starts (segments, sound, join)
+      // reports its peak committed memory against its limit.
+      const peaks = [];
+      const unobserve = workers().observe((r) => peaks.push(r));
       const t0 = performance.now();
       try {
         const r = await renderRevision(
@@ -255,6 +263,7 @@ async function measure(profile) {
           ms: ms(t0),
           bytes: (await stat(r.output)).size,
           frames: r.receipt.durationFrames,
+          segments: r.segments,
         };
       } catch (e) {
         const err = toCommandError(e);
@@ -272,7 +281,24 @@ async function measure(profile) {
             .slice(0, 400),
         };
       }
-      out.renderWallLimitSeconds = RESOURCE_POLICY.enforced.renderWallSeconds;
+      unobserve();
+      const measured = peaks.filter((p) => p.peakMemoryBytes !== null);
+      out.export.workers = peaks.length;
+      out.export.peakWorkerMiB = measured.length
+        ? Math.round(
+            Math.max(...measured.map((p) => p.peakMemoryBytes)) / 2 ** 20,
+          )
+        : null;
+      out.export.peakShareOfLimit = measured.length
+        ? Math.max(
+            ...measured
+              .filter((p) => p.memoryLimitBytes > 0)
+              .map((p) => p.peakMemoryBytes / p.memoryLimitBytes),
+          )
+        : null;
+      out.renderWallLimitSeconds = exportWallSeconds(
+        profile.timelineFrames * FRAME,
+      );
     }
     // Backup under stress: edits keep committing while the backup runs.
     // The restored workspace holds one revision between the last one
