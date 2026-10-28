@@ -25,7 +25,9 @@ import { assertConsentUsable } from "./director/runtime.ts";
 import type { ConsentPurpose } from "./identity.ts";
 import {
   ReferencePackSchema,
+  StoryDocumentSchema,
   consentPurposeOf,
+  type StoryDocument,
   type ContinuityRef,
   type ReferencePack,
 } from "./story.ts";
@@ -218,6 +220,70 @@ export function verifySelectedContinuity(
       if (take?.lineage?.continuity?.length)
         resolveContinuity(c, take.lineage.continuity, "attach");
     }
+}
+
+/**
+ * YU-051b: a timeline commit that newly places a medium (one no clip of
+ * the previous head showed) that is a take made with continuity
+ * references attaches that take, whatever command made the commit: a
+ * batch edit, undo or redo, a relink, a take replacement or an assembly.
+ * Its references' consents must be usable now. Takes are read from every
+ * story version this project committed, so removing a take from the
+ * current story does not free its medium. Moving, trimming or splitting a
+ * clip already on the timeline places nothing new.
+ */
+export function assertPlacementConsent(
+  c: ContinuityContext & { projectId: string },
+  before: readonly { assetId: string | null }[],
+  after: readonly { assetId: string | null }[],
+) {
+  const shown = new Set(before.map((x) => x.assetId).filter(Boolean));
+  const placed = new Set(
+    after
+      .map((x) => x.assetId)
+      .filter((id): id is string => id !== null && !shown.has(id)),
+  );
+  if (!placed.size) return;
+  const versions = c.db
+    .prepare(
+      // Only versions that name continuity at all are read and parsed.
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND instr(CAST(d.bytes AS TEXT), 'continuity') > 0",
+    )
+    .all(c.projectId) as { hash: string }[];
+  const checked = new Set<string>();
+  for (const { hash } of versions) {
+    const row = c.db
+      .prepare("SELECT bytes FROM creative_documents WHERE hash = ?")
+      .get(hash) as { bytes: Uint8Array } | undefined;
+    // A damaged story version is reported where stories are read; here it
+    // can name no take, so it cannot free one either.
+    if (!row || sha256Hex(Buffer.from(row.bytes)) !== hash)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "A story version is missing or damaged in the workspace; restore a verified backup.",
+      );
+    let story: StoryDocument;
+    try {
+      story = StoryDocumentSchema.parse(
+        JSON.parse(Buffer.from(row.bytes).toString("utf8")),
+      );
+    } catch {
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "A story version is missing or damaged in the workspace; restore a verified backup.",
+      );
+    }
+    for (const scene of story.scenes)
+      for (const shot of scene.shots)
+        for (const take of shot.takes) {
+          const refs = take.lineage?.continuity;
+          if (!refs?.length || !placed.has(take.assetId)) continue;
+          const key = JSON.stringify(refs);
+          if (checked.has(key)) continue;
+          resolveContinuity(c, refs, "attach");
+          checked.add(key);
+        }
+  }
 }
 
 /** Every take's continuity references in a story, checked as traceable. */
