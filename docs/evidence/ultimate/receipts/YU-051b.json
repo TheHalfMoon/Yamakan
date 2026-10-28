@@ -1,0 +1,73 @@
+{
+  "format": "yamakan.ultimate-task-receipt/v1",
+  "planReference": {
+    "pr": 86,
+    "head": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d"
+  },
+  "authorization": "docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution",
+  "baseMain": "809d3c3",
+  "environment": {
+    "os": "Windows 11 Home 10.0.26300",
+    "node": "v24.19.0",
+    "browser": "Microsoft Edge (installed), headless"
+  },
+  "state": "VERIFIED",
+  "task": "YU-051b",
+  "objective": "Consent cannot be bypassed by editing the timeline directly",
+  "parts": [
+    {
+      "part": "YU-051b placement consent at the store's commit point",
+      "branch": "fix/yu-051b-placement-consent",
+      "mergedPr": 149,
+      "headCommit": "2a2e7b3",
+      "mergeCommit": "9f2c401"
+    }
+  ],
+  "flags": "none",
+  "deviations": [
+    "Audit: applyBatch committed with no consent check; clip.add, replaceMedia, setSound, undo, redo, restore, a re-import of the same file, unmuting or ending a solo could present a revoked take again",
+    "One guard at ProjectStore.#commit for every commit but project creation: a medium newly presented (seen or heard on a track that plays by the render's mute and solo rule, keyed by content hash) that is the recorded output of a take with continuity references needs every consent usable now",
+    "Restore is checked (a revoked consent can never be revalidated); a recovery restore over an undecodable head treats nothing as presented",
+    "A commit presenting nothing new reads no story; one that does scans story versions once for all new hashes"
+  ],
+  "evidence": "docs/OPERATIONAL_CONTRACTS.md (Continuity references and per-stage consent, Every timeline commit)",
+  "tests": {
+    "files": ["tests/continuity-consent.test.ts"],
+    "result": "15/15; the direct-edit tests fail without the guard and the restore and voice tests fail against the round-1 guard (the bypass returned ok)"
+  },
+  "reviews": [
+    {
+      "kind": "independent read-only security judge (PStack ps-review security bar) with Alibaba OCR local rules",
+      "judge": "Sonnet subagent (same vendor; not a human)",
+      "rounds": 3,
+      "findings": {
+        "mustFix": 5,
+        "shouldFixApplied": "all",
+        "finalRound": "no must-fix"
+      }
+    },
+    {
+      "kind": "Graft 0.21.1 local call graph (no LLM) plus a search of revision writers",
+      "result": "every revision path goes through #commit except the legacy migration import, which may not contain documents"
+    },
+    {
+      "kind": "d1-local advisory",
+      "result": "low risk, needs review (advisory only, not a gate)"
+    },
+    {
+      "kind": "Alibaba OCR 1.13.3 full LLM review",
+      "fullReview": "OCR_FULL_REVIEW_BLOCKED (cloud provider configured; never used); local rules via `ocr delegate rule` applied by the judges"
+    }
+  ],
+  "ciNotes": ["The Qodo bot posted only billing notices (no review)"],
+  "postMergeVerification": {
+    "main": "68f74b6",
+    "ci": "PR exact head 2a2e7b3 green; push run 40666240220 on 68f74b6: qualify, qualify-windows-r8 and otio-oracle success",
+    "windows": "detached 68f74b6 (YU-051b and YU-026d together): typecheck, lint, format, provenance, brand, build pass; npm test 710/722 with 9 failures under host load (other applications held the CPU near 80%; each ran several times its usual time) that each pass alone (captions 9.8 s, engine-worker-profile 10.6 s, export-golden 83 s, http preview 10.6 s, interruption conversion 78 s, jobs export 11.1 s and corrupt payload 10.3 s, parity 27 s, preview boundaries 27 s), 3 POSIX-only skips; test:studio 1975/1975; Edge E2E failed once on a non-waiting UI assertion ('the shell shows the unsaved edit') and passes alone twice"
+  },
+  "limitations": [
+    "Not gated: a scene's referenceAssetId, Studio bitmaps, a reference entry's own source media; clips already shown and earlier exports stay",
+    "Engines are off: the attempt-stage check is what a generation submission must call",
+    "These reviews do not replace a human security or release approval"
+  ]
+}
