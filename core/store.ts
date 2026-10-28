@@ -1155,10 +1155,11 @@ export class ProjectStore {
         ? c.documents(headDocuments)
         : headDocuments();
       const canonicalNext = fromEditView(view, language, documents);
-      // YU-051b: a newly placed take's references need usable consent now,
-      // for every timeline commit but creating a project and restoring a
-      // verified backup (restored consents are revalidated per epoch).
-      if (c.operation !== "project.create" && c.operation !== "project.restore")
+      // YU-051b: a newly presented take's references need usable consent
+      // now, for every timeline commit but creating a project (a restore
+      // brings media back as much as an edit does: a revoked consent can
+      // never be revalidated).
+      if (c.operation !== "project.create")
         assertPlacementConsent(
           {
             db,
@@ -1168,8 +1169,8 @@ export class ProjectStore {
               this.#held(c.projectId, documentId, contentHash, kind),
             nowMs: Date.now(),
           },
-          headCanonical()?.clips ?? [],
-          canonicalNext.clips,
+          headCanonical(),
+          canonicalNext,
         );
       const bytes = Buffer.from(serializeCanonical(canonicalNext), "utf8");
       if (

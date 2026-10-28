@@ -809,3 +809,190 @@ test("removing a take from the current story does not free its media", async () 
     /^VALIDATION: .*revoked/,
   );
 });
+
+test("restore, redo and a re-import of the same file cannot bring a revoked take back", async () => {
+  const c = await workspace();
+  const video = (await c.head()).tracks.find((t) => t.kind === "video")!.id;
+  const FRAME = 23_520_000;
+  const batch = async (operations: object[]) =>
+    c.run("yamakan.project.applyBatch", {
+      expectedRevision: (await c.head()).revision,
+      operations,
+    });
+  const clipOf = (assetId: string, start: number) => ({
+    type: "clip.add",
+    clipId: crypto.randomUUID(),
+    trackId: video,
+    assetId,
+    title: null,
+    startTicks: start * FRAME,
+    durationTicks: 15 * FRAME,
+    sourceStartTicks: 0,
+  });
+  const placed = clipOf(c.asset.b.id, 60);
+  await batch([placed]);
+  const shownAt = (await c.head()).revision;
+  await batch([{ type: "clip.remove", clipId: placed.clipId }]);
+  // Undo then redo of the removal: redo removes again, fine; undo puts it back.
+  await c.run("yamakan.project.undo", {
+    expectedRevision: (await c.head()).revision,
+  });
+  await c.run("yamakan.project.redo", {
+    expectedRevision: (await c.head()).revision,
+  });
+  await c.call("yamakan.consent.revoke", { consentId: c.consents.likeness });
+  // Restoring the revision that showed it is a new placement.
+  const history = await c.run<{ headFingerprint: string }>(
+    "yamakan.project.history",
+    { limit: 20 },
+  );
+  const revision = (await c.head()).revision;
+  assert.match(
+    await failure(
+      c.run("yamakan.project.restore", {
+        revision: shownAt,
+        expectedHeadFingerprint: history.headFingerprint,
+      }),
+    ),
+    /^VALIDATION: .*revoked/,
+  );
+  assert.equal((await c.head()).revision, revision);
+  // The same bytes imported again are the same medium.
+  const again = (
+    await c.store.importAsset(
+      c.projectId,
+      "copy.mp4",
+      await readFile(path.join(c.root, "b.mp4")),
+    )
+  ).asset;
+  assert.equal(again.hash, c.asset.b.hash);
+  assert.notEqual(again.id, c.asset.b.id, "another asset of the same bytes");
+  assert.match(
+    await failure(batch([clipOf(again.id, 100)])),
+    /^VALIDATION: .*revoked/,
+  );
+});
+
+test("a revoked voice cannot be made audible again", async () => {
+  const c = await workspace();
+  const h = await c.head();
+  const video = h.tracks.find((t) => t.kind === "video")!.id;
+  const audio = h.tracks.find((t) => t.kind === "audio")!.id;
+  const FRAME = 23_520_000;
+  // A take with sound, made with the voice reference.
+  const voiced = path.join(c.root, "voiced.mp4");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc=size=160x90:rate=30:duration=2",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=500:duration=2",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-shortest",
+      voiced,
+    ],
+    { windowsHide: true },
+  );
+  const take = (
+    await c.store.importAsset(c.projectId, "voiced.mp4", await readFile(voiced))
+  ).asset;
+  const takeId = crypto.randomUUID();
+  await c.run("yamakan.story.save", {
+    expectedRevision: (await c.head()).revision,
+    documentId: crypto.randomUUID(),
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 1,
+      title: "Voiced",
+      scenes: [
+        {
+          id: crypto.randomUUID(),
+          name: "One",
+          shots: [
+            {
+              id: crypto.randomUUID(),
+              name: "Talk",
+              durationTicks: 30 * FRAME,
+              notes: "",
+              referencePacks: [],
+              takes: [
+                {
+                  id: takeId,
+                  assetId: take.id,
+                  sourceStartTicks: 0,
+                  lineage: {
+                    outputHash: take.hash,
+                    inputs: [],
+                    continuity: [c.refs()[1]!],
+                  },
+                },
+              ],
+              selectedTakeId: takeId,
+            },
+          ],
+        },
+      ],
+    },
+  });
+  const batch = async (operations: object[]) =>
+    c.run("yamakan.project.applyBatch", {
+      expectedRevision: (await c.head()).revision,
+      operations,
+    });
+  // Shown with its sound off, while consent stands.
+  const clipId = crypto.randomUUID();
+  await batch([
+    {
+      type: "clip.add",
+      clipId,
+      trackId: video,
+      assetId: take.id,
+      title: null,
+      startTicks: 60 * FRAME,
+      durationTicks: 30 * FRAME,
+      sourceStartTicks: 0,
+    },
+  ]);
+  await batch([{ type: "clip.setSound", clipId, enabled: false }]);
+  await c.call("yamakan.consent.revoke", {
+    consentId: c.consents.voiceConsent,
+  });
+  // The picture stays and may move; making the voice heard is a new effect.
+  await batch([{ type: "clip.move", clipId, startTicks: 70 * FRAME }]);
+  assert.match(
+    await failure(batch([{ type: "clip.setSound", clipId, enabled: true }])),
+    /^VALIDATION: .*revoked/,
+  );
+  // Unlinking onto an audio track needs the embedded sound on, which is
+  // the refused step above: the voice has no other way to be heard.
+  assert.match(
+    await failure(
+      batch([
+        {
+          type: "clip.unlinkSound",
+          clipId,
+          audioTrackId: audio,
+          audioClipId: crypto.randomUUID(),
+        },
+      ]),
+    ),
+    /^VALIDATION: /,
+  );
+});

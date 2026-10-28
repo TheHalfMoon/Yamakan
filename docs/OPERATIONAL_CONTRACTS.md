@@ -473,11 +473,14 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - the entry's pinned media version is still in the project;
     - every consent the references rely on is usable now, covering purpose, expiry, revocation and the restore epoch. A character reference uses its `likeness-generate` consent, a voice reference its `voice-clone` consent, and an encoding the consent it was recorded under, for that consent's purpose.
   - **Attach paths:** `yamakan.take.apply` checks the take it puts on the timeline, and `yamakan.story.assemble` checks each shot's selected take.
-  - **Every timeline commit (YU-051b).** The store's one commit point checks every newly placed medium. A newly placed medium is one no clip of the previous head showed, placed by a batch edit, undo, redo, a relink, a take replacement or an assembly.
-    - If that medium is a take made with continuity references, the take is attached, and its references' consents must be usable now.
-    - Takes are read from every story version the project committed, so removing a take from the current story does not free its medium.
-    - Moving, trimming or splitting a clip already on the timeline places nothing new, so history keeps playing.
-    - Creating a project and restoring a verified backup are exempt, because restored consents are revalidated per restore epoch.
+  - **Every timeline commit (YU-051b).** The store's one commit point checks every newly presented medium, for every commit except creating a project. That covers batch edits, undo, redo, a restore, a relink, a take replacement and an assembly.
+    - **Presented** means seen (a video-track clip of a still or footage) or heard (an audio-track clip, or a video clip's embedded sound, on a track that is not muted). It is keyed by content hash.
+    - **New** means a medium seen or heard where the previous head did not present it that way. So the same bytes imported again as another asset are the same medium, and unmuting a revoked voice's sound is a new effect.
+    - **Check:** if the medium is the recorded output of a take made with continuity references, the take is attached, and its references' consents must be usable now.
+    - **Restore is checked too:** a revoked consent can never be revalidated, so restoring an earlier revision brings its media back like an edit does.
+    - **Which takes count:** takes are matched by their recorded output hash in every story version the project committed. Removing a take from the current story therefore does not free its medium.
+    - **What stays allowed:** moving, trimming, splitting or copying a clip already presented the same way presents nothing new, so history keeps playing. Undo of a clip deletion is refused once the consent is revoked or expired.
+    - **Cost:** only story versions that name a placed medium's hash are read, so ordinary edits read no story. A damaged story version blocks only the media it names.
 - **No carried approval.** `yamakan.continuity.check` (`project:read`) is advisory: it reads the head outside any commit, changes nothing and approves nothing. The attach checks again under the write lock, so a consent revoked or expired after an attempt-time check refuses the attach.
   - An attach committed before a revocation stands.
   - A revocation racing an attach either lands after the attach commits, or the attach is refused and the clip keeps its take. After the revocation, no further attach of that take succeeds.
@@ -492,6 +495,10 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - No generation submits yet (engines are off), so the attempt stage runs only through the check command. It is the check a submission must call.
   - Stored reference media is not deleted when consent is revoked. A revocation blocks new use and cannot be undone. A reference entry's own source media (for example the person's imported photo) is not gated on the timeline; only a take made with continuity references is.
   - Clips already on the timeline when consent is revoked stay, and so do earlier exports. Revocation stops new placements and generations, and does not erase history.
+  - **Not gated:**
+    - a scene's `referenceAssetId`, and Studio canvas bitmaps;
+    - a reference entry's own source media.
+  - **Self-griefing:** a writer can save a take whose lineage names an unrelated asset with a revoked consent. That asset then cannot be placed again in the project. It can only block, never unblock, and only within the writer's own project.
   - **Generation boundary:** no generation submits yet, because engines are off. A submission must call the attempt-stage check (`resolveContinuity(..., "attempt")`), and its output, once recorded as a take with continuity references, is gated by the commit check above.
   - Consents, characters and identity encodings are workspace-wide, not per project. An encoding is accepted only for the entry's character with its exact id and payload hash.
   - The restore epoch is enforced by `assertConsentUsable`, which every attempt and attach check calls. There is no attach-after-restore test.
