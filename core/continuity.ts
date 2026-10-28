@@ -225,7 +225,12 @@ export function verifySelectedContinuity(
 // The timeline as the placement check reads it (a canonical project).
 type Placed = {
   assets: readonly { id: string; hash: string; kind: string }[];
-  tracks: readonly { id: string; kind: string; muted: boolean }[];
+  tracks: readonly {
+    id: string;
+    kind: string;
+    muted: boolean;
+    solo: boolean;
+  }[];
   clips: readonly {
     trackId: string;
     assetId: string | null;
@@ -242,16 +247,18 @@ function presented(p: Placed | null) {
   if (!p) return out;
   const assets = new Map(p.assets.map((a) => [a.id, a]));
   const tracks = new Map(p.tracks.map((t) => [t.id, t]));
+  // The render's own rule (core/render/plan.ts): mute removes a track, and
+  // solo on any track of a kind keeps only the soloed tracks of that kind.
+  const soloed = new Set(p.tracks.filter((t) => t.solo).map((t) => t.kind));
+  const plays = (t: Placed["tracks"][number]) =>
+    !t.muted && (!soloed.has(t.kind) || t.solo);
   for (const clip of p.clips) {
     const asset = clip.assetId ? assets.get(clip.assetId) : undefined;
     const track = tracks.get(clip.trackId);
-    if (!asset || !track) continue;
+    if (!asset || !track || !plays(track)) continue;
     if (track.kind === "video" && asset.kind !== "audio")
       out.add(`${asset.hash}|seen`);
-    if (
-      !track.muted &&
-      (track.kind === "audio" || clip.sound?.enabled === true)
-    )
+    if (track.kind === "audio" || clip.sound?.enabled === true)
       out.add(`${asset.hash}|heard`);
   }
   return out;
@@ -289,16 +296,15 @@ export function assertPlacementConsent(
   if (!placed.size) return;
   // Only story versions that name a placed medium's hash are read, so a
   // commit placing ordinary media reads no story.
+  // One pass over the project's story versions for all placed hashes.
+  const hashes = [...placed];
   const versions = new Map<string, Uint8Array>();
-  const find = c.db.prepare(
-    "SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND instr(CAST(d.bytes AS TEXT), ?) > 0",
-  );
-  for (const hash of placed)
-    for (const row of find.all(c.projectId, hash) as {
-      hash: string;
-      bytes: Uint8Array;
-    }[])
-      versions.set(row.hash, row.bytes);
+  for (const row of c.db
+    .prepare(
+      `SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND (${hashes.map(() => "instr(CAST(d.bytes AS TEXT), ?) > 0").join(" OR ")})`,
+    )
+    .all(c.projectId, ...hashes) as { hash: string; bytes: Uint8Array }[])
+    versions.set(row.hash, row.bytes);
   const checked = new Set<string>();
   for (const [hash, bytes] of versions) {
     if (sha256Hex(Buffer.from(bytes)) !== hash) throw damagedStory();

@@ -1169,7 +1169,15 @@ export class ProjectStore {
               this.#held(c.projectId, documentId, contentHash, kind),
             nowMs: Date.now(),
           },
-          headCanonical(),
+          c.operation === "project.restore"
+            ? (() => {
+                try {
+                  return headCanonical();
+                } catch {
+                  return null;
+                }
+              })()
+            : headCanonical(),
           canonicalNext,
         );
       const bytes = Buffer.from(serializeCanonical(canonicalNext), "utf8");

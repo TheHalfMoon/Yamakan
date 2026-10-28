@@ -996,3 +996,52 @@ test("a revoked voice cannot be made audible again", async () => {
     /^VALIDATION: /,
   );
 });
+
+test("unmuting or unsoloing a track that holds a revoked take is a new placement", async () => {
+  const c = await workspace();
+  const FRAME = 23_520_000;
+  const batch = async (operations: object[]) =>
+    c.run("yamakan.project.applyBatch", {
+      expectedRevision: (await c.head()).revision,
+      operations,
+    });
+  const hidden = crypto.randomUUID();
+  const quiet = crypto.randomUUID();
+  const other = crypto.randomUUID();
+  const place = (trackId: string) => ({
+    type: "clip.add",
+    clipId: crypto.randomUUID(),
+    trackId,
+    assetId: c.asset.b.id,
+    title: null,
+    startTicks: 60 * FRAME,
+    durationTicks: 15 * FRAME,
+    sourceStartTicks: 0,
+  });
+  // Take b on a muted video track, while consent stands.
+  await batch([
+    { type: "track.add", trackId: hidden, name: "Hidden", kind: "video" },
+    { type: "track.add", trackId: quiet, name: "Quiet", kind: "video" },
+    { type: "track.add", trackId: other, name: "Other", kind: "video" },
+    { type: "track.update", trackId: hidden, muted: true },
+  ]);
+  await batch([place(hidden)]);
+  await c.call("yamakan.consent.revoke", { consentId: c.consents.likeness });
+  // Unmuting brings b back into the picture: refused.
+  assert.match(
+    await failure(
+      batch([{ type: "track.update", trackId: hidden, muted: false }]),
+    ),
+    /^VALIDATION: .*revoked/,
+  );
+  // With another video track soloed, b may sit on a silenced track (it
+  // presents nothing), but ending the solo would show it: refused.
+  await batch([{ type: "track.update", trackId: other, solo: true }]);
+  await batch([place(quiet)]);
+  assert.match(
+    await failure(
+      batch([{ type: "track.update", trackId: other, solo: false }]),
+    ),
+    /^VALIDATION: .*revoked/,
+  );
+});
