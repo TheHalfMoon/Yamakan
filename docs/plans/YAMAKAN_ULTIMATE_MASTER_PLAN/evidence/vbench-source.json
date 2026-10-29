@@ -1,0 +1,56 @@
+{
+  "schema": "yamakan.vbench-source/v1",
+  "scope": "Scoped evaluation source inspection only; no evaluator dependencies/weights/runtime loaded",
+  "captures": [
+    {
+      "repo": "https://github.com/Vchitect/VBench",
+      "pin": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/Vchitect/VBench/fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490/LICENSE",
+      "status": 200,
+      "accessedAt": "2026-10-23T19:41:05.037Z",
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "repo": "https://github.com/Vchitect/VBench",
+      "pin": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "path": "vbench/__init__.py",
+      "url": "https://raw.githubusercontent.com/Vchitect/VBench/fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490/vbench/__init__.py",
+      "status": 200,
+      "accessedAt": "2026-10-23T19:41:05.332Z",
+      "bytes": 10379,
+      "sha256": "ed75ffe21eda639114cae10a0c81565f6f4b290b844895f4d4574fded2fc8cda"
+    },
+    {
+      "repo": "https://github.com/Vchitect/VBench",
+      "pin": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "path": "vbench/utils.py",
+      "url": "https://raw.githubusercontent.com/Vchitect/VBench/fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490/vbench/utils.py",
+      "status": 200,
+      "accessedAt": "2026-10-23T19:41:05.609Z",
+      "bytes": 19374,
+      "sha256": "1bbccddfa5108bd4bf630f9b5176342c407511dea8bfe2bffa8141cb0957d064"
+    },
+    {
+      "repo": "https://github.com/Vchitect/VBench",
+      "pin": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "path": "vbench/subject_consistency.py",
+      "url": "https://raw.githubusercontent.com/Vchitect/VBench/fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490/vbench/subject_consistency.py",
+      "status": 200,
+      "accessedAt": "2026-10-23T19:41:05.872Z",
+      "bytes": 3145,
+      "sha256": "55f5c9a3e5be543380a709b94712903fa67a76340c3c0cb2414ac090dbd1b78d"
+    },
+    {
+      "repo": "https://github.com/Vchitect/VBench",
+      "pin": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "path": "vbench/temporal_flickering.py",
+      "url": "https://raw.githubusercontent.com/Vchitect/VBench/fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490/vbench/temporal_flickering.py",
+      "status": 200,
+      "accessedAt": "2026-10-23T19:41:06.133Z",
+      "bytes": 2208,
+      "sha256": "c2c892034d1652c9390f213308c18b77ae20a87bd52fc50a125294ce83af4e83"
+    }
+  ]
+}

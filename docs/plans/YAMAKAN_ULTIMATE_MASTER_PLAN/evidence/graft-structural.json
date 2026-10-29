@@ -1,0 +1,17 @@
+{
+  "schema": "yamakan.structural-review/v1",
+  "date": "2026-10-23",
+  "baseline": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "tool": "Graft free structural build; no --deep, no API key or paid model pass",
+  "command": "graft --dir <scratch>/graft-structure build work/Yamakan --only-dir core --only-dir server --only-dir cli --only-dir mcp --only-dir sdk --no-gitignore --no-ignore",
+  "exitCode": 0,
+  "files": 103,
+  "nodes": 1034,
+  "edges": 2642,
+  "cards": 103,
+  "queries": [
+    {"symbol": "saveStudioDocument", "path": "core/studio.ts", "range": "145-171", "caller": "core/command/registry.ts"},
+    {"symbol": "persistCinemaScene", "path": "core/cinema-store.ts", "range": "35-53", "caller": "core/command/registry.ts"}
+  ],
+  "limitations": "Static graph/caller corroboration only; no correctness, security, media, model, Windows or release approval. Raw generated graph stays outside Git."
+}

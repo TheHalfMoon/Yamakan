@@ -1,0 +1,76 @@
+{
+  "schema": "yamakan.planning-delta-review/v1",
+  "reviewer": "session-model subagent /root/plan_correctness",
+  "initialReviewedHead": "3e15bab459cf2ba904926cf9e4d79fd62d729e7b",
+  "reviewedRepairHead": "135a7979f253b0d9324536db42aade6afc0f3abf",
+  "scope": "Scoped delta review of PC-01 through PC-04 against the immutable repair commit; not a replacement whole-plan review",
+  "verdict": "PC-01 through PC-04 resolved in the planning specification; no remaining must-fix found in this delta scope",
+  "overallReadiness": "PLAN PARTIALLY READY — EXPLICIT RESOURCE OR RESEARCH BLOCKERS",
+  "releaseApproval": false,
+  "inspection": {
+    "diffsRead": [
+      "10_FINAL_TARGET_ARCHITECTURE.md",
+      "11_PRODUCT_UX_MASTER_PLAN.md",
+      "19_TASK_DEPENDENCY_GRAPH.md",
+      "20_TEST_REVIEW_AND_ACCEPTANCE_MATRIX.md",
+      "22_CURSOR_IMPLEMENTATION_PROMPT.md",
+      "validate-plan.mjs"
+    ],
+    "targetedDiffAndFrozenContext": [
+      "TASK_REGISTRY.json: staging, AG-DOCS, YU-010 through YU-015, YU-022 and related restore acceptance changes",
+      "18_ATOMIC_IMPLEMENTATION_TASKS.md: corresponding rendered staging, activation and narrowed animation task changes",
+      "DEPENDENCY_GRAPH.json at repair head: build-edge consistency"
+    ],
+    "scopeLimits": [
+      "Large task-rendering diff sampled around affected contracts; no full rereview of all 44 task bodies",
+      "Restore execution-epoch/hold language inspected as context for creative recovery; independent security delta remains a separate reviewer responsibility",
+      "No product/native/media/runtime/model/competitor execution or source-donor recertification"
+    ]
+  },
+  "checksActuallyRun": [
+    {
+      "check": "Read-only Python JSON/graphlib inspection using git show at reviewedRepairHead",
+      "result": "PASS",
+      "observations": {
+        "tasks": 44,
+        "buildEdges": 95,
+        "acyclicBuildDag": true,
+        "declaredDagMatchesRegistry": true,
+        "allTasksImplementationUnauthorized": true,
+        "activationGroup": "AG-DOCS",
+        "activationInitiallyEnabled": false,
+        "activationRequires": ["YU-010", "YU-011", "YU-012", "YU-013", "YU-014", "YU-015"]
+      }
+    }
+  ],
+  "dispositions": [
+    {
+      "findingId": "PC-01",
+      "originalClassification": "must-fix",
+      "status": "RESOLVED_IN_PLAN",
+      "evidence": "Document staging now has a separate authenticated project/principal-scoped streamed route with whole-document raw and canonical UTF8 byte ceilings, nested complexity limits, reservations, expiry, sealed handle/hash and cleanup/publication exclusion. Small commits retain existing general 2 MiB command/snapshot/MCP limits. YU-010 names server/SDK/CLI targets; tests include actual transport paths, 2–8 MiB documents and Unicode/escape expansion.",
+      "remainingImplementationGate": "Implement and independently verify the staged-upload receipt/replay, cleanup, resource and cross-client cases before enabling persistence; specification repair is not runtime evidence."
+    },
+    {
+      "findingId": "PC-02",
+      "originalClassification": "must-fix",
+      "status": "RESOLVED_IN_PLAN",
+      "evidence": "AG-DOCS is initially false and requires YU-010 through YU-015 together before writable-v5/default migration/user persistence promotion. Individual VERIFIED task receipts are explicitly flag-off scope. Contracts and task tests require lossless legacy/full-save/edit-view/import/undo behavior or explicit refusal, plus complete recovery and actual client/UI evidence. The activation group is separated from build dependencies without adding a cycle.",
+      "remainingImplementationGate": "A reviewed group activation receipt must demonstrate exact document/media closure, legacy mutation safety and real recovery/UI behavior. Restore execution identity/hold remains separately subject to security review."
+    },
+    {
+      "findingId": "PC-03",
+      "originalClassification": "worth-considering",
+      "status": "RESOLVED_IN_PLAN",
+      "evidence": "YU-022 now limits work to existing opacity/volume compilation; transform animation is deferred to a separately scoped follow-up after YU-020 and YU-022 qualification. Existing build dependencies therefore match the executable task scope."
+    },
+    {
+      "findingId": "PC-04",
+      "originalClassification": "worth-considering",
+      "status": "RESOLVED_IN_PLAN",
+      "evidence": "Documents 11 and 19 add one frozen bilingual finishing brief and a formative creator/founder walkthrough after the integrity group, before scope expansion, with observed failures allowed to reorder or defer later work and no comparative-study claim."
+    }
+  ],
+  "newFindings": [],
+  "limitations": "This review closes planning-contract findings only. Earlier explicit source-depth, runtime, resource, competitor-execution, human-review and release blockers remain. No production test pass, engine activation or release approval is asserted."
+}

@@ -1,0 +1,517 @@
+{
+  "schema": "yamakan.competitor-research-evidence/v1",
+  "researchDate": "2026-10-23",
+  "localTimezone": "Asia/Riyadh",
+  "scope": "Read-only public HTTP and free web discovery; no authenticated UI, account actions, paid generation, inference, installations or benchmark execution.",
+  "executionVerified": false,
+  "sourceCount": 16,
+  "sources": [
+    {
+      "id": "registry-npmjs-org-d5dfadd04e",
+      "url": "https://registry.npmjs.org/@cuty-ai/cli/latest",
+      "finalUrl": "https://registry.npmjs.org/@cuty-ai/cli/latest",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:52.253Z",
+      "sha256": "ca71a916547f522a993671d7e37fa276a0683d360baf6281e5e6730550f3b265",
+      "bytes": 1992,
+      "rawFile": "registry-npmjs-org-d5dfadd04e.raw",
+      "textFile": "registry-npmjs-org-d5dfadd04e.txt",
+      "excerpts": [
+        {
+          "match": "UNLICENSED",
+          "text": "ifacts/cuty-ai-cli-0.2.1.tgz\",\"engines\":{\"node\":\">=22.12\"},\"license\":\"UNLICENSED\",\"scripts\":{\"test\":\"npm run build && node --test test/*.test.mjs\",\"build\":\"tsc\",\"prepack\":\"npm run build\",\"typecheck\":\"tsc --noEmit\",\"check:contract\":\"node scripts/generate-contract.mjs --check\",\"generate:contract\":\"node scripts/generate-contract.mjs\"},\"_npmUser\":{\"name\":\"cuty_ai\",\"email\":\"aitools202506@gmail.com\"},\"homepage\":\"https://www.cuty.ai/cli\",\"_resolved\":\"/Users/kevin/projects/cuty-cli/artifacts/cuty-ai-cli-0.2.1.tgz\",\"_integrity\":\"sha512-BATVQY1wmprJbCCoqNHzY1hg/k+cv3uOO/fA/xWYCWw3Dea+X9nbtpaZjs+Cimw+TG0Ihl1tM9Lh2GzIQXcgMw==\",\"_npmVersion\":\"11.12.1\",\"description\":\"Cuty image and video generation for coding agents\",\"directories\":{},\"maintainers\":[{\"name\":\"cuty_ai\",\"email\":\"aitools202506@gmail.com\"}],\"_nodeVersion\":\"24.15.0\",\"dependencies\":{\"ajv\":\"8.20.0\",\"commander\":\"15.0.0\",\"proper-lockfile\":\"4.1.2\"},\"publishConfig\":{\"access\":\"public\",\"registry\":\"https://registry.npm"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/registry-npmjs-org-d5dfadd04e.raw"
+    },
+    {
+      "id": "www-cuty-ai-0884a4717c",
+      "url": "https://www.cuty.ai/pricing",
+      "finalUrl": "https://www.cuty.ai/pricing",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.190Z",
+      "sha256": "30fd14aa57a32999b883c6abb134375c69e2740d3eb0ef9d73bf7031e7861664",
+      "bytes": 292624,
+      "title": "Pricing - Cuty AI",
+      "rawFile": "www-cuty-ai-0884a4717c.raw",
+      "textFile": "www-cuty-ai-0884a4717c.txt",
+      "excerpts": [
+        {
+          "match": "Upgrade your plan",
+          "text": "0 Minutes 00 Seconds 0 0 Days : 0 0 Hours : 0 0 Minutes : 0 0 Seconds Upgrade your plan to get better results Grab the limited-time offer! Upgrade Plans Top-up Credits Monthly Yearly SAVE 76% Lite 51% OFF For first-time AI content creators 300 credits/month Fixed amount of 300 credits/month $9.9 $4.9 /mo Billed for 12 months Subscribe Save ~ $60 compared to monthly EXCLUSIVE OFFER Seedance 2.5 NO ACCESS Seedance 2.0 Ultra access Minimax H3 Ultra access MiniMax H3 Max Ultra access Gemini Omni Flash Ultra access GPT Image 2 Ultra access Seedream 5.0 Pro Ultra access Nano Banana 2 & Pro Ultra access 300 credits/month Access to selected video models Access to all image models Access to all AI visual tools Access to AI Music Access to AI Avatar 1 concurrent task Commercial license Early access to advanced AI features Pro 64% OFF For growing creators 1000 credits/month Fixed amount of 1000 credits/month $24.9 $8.9 /mo Billed for 12 months Subscribe Save ~ $192 c"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-0884a4717c.raw"
+    },
+    {
+      "id": "www-cuty-ai-1c2ee10677",
+      "url": "https://www.cuty.ai/studio/ai-tools/lip-sync",
+      "finalUrl": "https://www.cuty.ai/studio/ai-tools/lip-sync",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.321Z",
+      "sha256": "b0383c9fef57cff6efcc10b7602eaec35474ccaea6e31bcfc97cfb7aa275b4d4",
+      "bytes": 208592,
+      "title": "AI Lip Sync: Realistic Video Lip Sync Generator | Cuty.ai",
+      "rawFile": "www-cuty-ai-1c2ee10677.raw",
+      "textFile": "www-cuty-ai-1c2ee10677.txt",
+      "excerpts": [
+        {
+          "match": "Video File",
+          "text": "ة Français Português Русский Deutsch 日本語 한국어 Sign In Sign Up AI Tools Video File Click or drag video here Must be no longer than 30 seconds. Audio Source Audio File Click or drag audio here Must be no longer than 30 seconds. or Voice Select voice Create Loading... AI Lip Sync: Make Any Video Speak Realistically with Your Audio Instantly create accurate, lifelike lip sync animations with Cuty.ai. Upload your audio, and our AI will make your video's subject speak with perfectly timed mouth movements. Lip Sync Video Key Features Discover what makes Lip Sync exceptional Create Ultra-Realistic, Lifelike Lip Syncs Forget robotic animations. Our AI creates perfectly aligned and timed mouth movements that look natural. It intelligently adapts to dynamic head movements, beards, and complex angles for a flawless, believable result. Animate from Any Audio Track You have complete control. Simply upload your pre-recorded audio track—whether it's your own voice, a profe"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-1c2ee10677.raw"
+    },
+    {
+      "id": "www-cuty-ai-2fb48f2b78",
+      "url": "https://www.cuty.ai/studio/character-swap",
+      "finalUrl": "https://www.cuty.ai/studio/character-swap",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.245Z",
+      "sha256": "69d870b6c80a40204893271b4abf3f79ed99672ec05515f185ea8d5d2ea586b2",
+      "bytes": 183831,
+      "title": "Try Character Swap free | Cuty AI",
+      "rawFile": "www-cuty-ai-2fb48f2b78.raw",
+      "textFile": "www-cuty-ai-2fb48f2b78.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-2fb48f2b78.raw"
+    },
+    {
+      "id": "www-cuty-ai-3b94964375",
+      "url": "https://www.cuty.ai/",
+      "finalUrl": "https://www.cuty.ai/",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.157Z",
+      "sha256": "d4ab41599530319df5782f2947a344eee769c0ed60e57eb0df374b17291a5b09",
+      "bytes": 222520,
+      "title": "Cuty AI - Visual Content Generation Platform",
+      "rawFile": "www-cuty-ai-3b94964375.raw",
+      "textFile": "www-cuty-ai-3b94964375.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-3b94964375.raw"
+    },
+    {
+      "id": "www-cuty-ai-4c5172f02f",
+      "url": "https://www.cuty.ai/skills",
+      "finalUrl": "https://www.cuty.ai/skills",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.175Z",
+      "sha256": "38c2826926397b12b7ba37a8bb234c4cdd530c3f6294556199f9d796da46757f",
+      "bytes": 6133,
+      "rawFile": "www-cuty-ai-4c5172f02f.raw",
+      "textFile": "www-cuty-ai-4c5172f02f.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-4c5172f02f.raw"
+    },
+    {
+      "id": "www-cuty-ai-551a2e6b77",
+      "url": "https://www.cuty.ai/studio/motion-control",
+      "finalUrl": "https://www.cuty.ai/studio/motion-control",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.719Z",
+      "sha256": "c3789440877a4555f2b2a0509d4d37a8527557b8ed26374ad560d7e962a4e074",
+      "bytes": 183831,
+      "title": "Try Motion Control free | Cuty AI",
+      "rawFile": "www-cuty-ai-551a2e6b77.raw",
+      "textFile": "www-cuty-ai-551a2e6b77.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-551a2e6b77.raw"
+    },
+    {
+      "id": "www-cuty-ai-580726cac9",
+      "url": "https://www.cuty.ai/studio/avatar",
+      "finalUrl": "https://www.cuty.ai/studio/avatar",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.538Z",
+      "sha256": "f5e57e25974589daf254937cf34c02a1a67aea4ca64f3232b33d7cd7a465b15e",
+      "bytes": 227724,
+      "title": "Try AI Avatar Video free | Cuty AI",
+      "rawFile": "www-cuty-ai-580726cac9.raw",
+      "textFile": "www-cuty-ai-580726cac9.txt",
+      "excerpts": [
+        {
+          "match": "Avatar \\*",
+          "text": "ol العربية Français Português Русский Deutsch 日本語 한국어 Sign In Sign Up Avatar * Select Avatar Speech * Type your script here, or Upload Audio or Record Audio 0 / 10000 Mode Standard Pro Prompt Credit required 6 credits/s Create Loading... AI Avatar Video Generator — Talking Avatars in Seconds Bring an avatar to life with realistic lip-sync, natural head motion, and your choice of voice. Pick a ready-made character or upload your own photo, then drive the performance with text-to-speech, an uploaded audio file, or a fresh recording — all in your browser on Cuty.ai. Try it free! Try AI Avatar Video Key Features Discover what makes Avatar exceptional Turn Any Avatar Into a Talking Video Pick an avatar, type a script, and Cuty.ai produces a polished video where your character speaks the line with naturally synchronized lip-sync, blinking, and subtle head motion. No green screen, no editing software — just one image and one prompt. 16 Curated AI Avatars, Each Wi"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-580726cac9.raw"
+    },
+    {
+      "id": "www-cuty-ai-5d3e854d9a",
+      "url": "https://www.cuty.ai/studio/ai-tools/video-enhancer",
+      "finalUrl": "https://www.cuty.ai/studio/ai-tools/video-enhancer",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.638Z",
+      "sha256": "f2cb5f00e4dd8de9ffa5189b7f5d0c5a8027918bd95ba9e943ea73a6128974fe",
+      "bytes": 207090,
+      "title": "AI Video Enhancer – Enhance Video Quality Online | Cuty.ai",
+      "rawFile": "www-cuty-ai-5d3e854d9a.raw",
+      "textFile": "www-cuty-ai-5d3e854d9a.txt",
+      "excerpts": [
+        {
+          "match": "Video File",
+          "text": "ة Français Português Русский Deutsch 日本語 한국어 Sign In Sign Up AI Tools Video File Click or drag video here Must be no longer than 30 seconds. Create Loading... AI Video Enhancer: Instantly Enhance Video Quality Online Use Cuty.ai's powerful AI video enhancer to automatically improve video quality. Instantly fix blur, enhance colors, and brighten dark, low-light footage with a single click. Enhance Video Key Features Discover what makes Video Enhancer exceptional Transform Blurry Footage into Crystal-Clear Video Stop struggling with blurry, out-of-focus, or grainy videos. Our AI video enhancement tool uses advanced sharpening technology to unblur video, increase clarity, and make every detail sharp. Turn your low-quality footage into a professional, clear video effortlessly. Brighten Dark Videos & Auto-Correct Color Don't let poor lighting hide your best content. Cuty.ai's video enhancer automatically brightens dark, low-light videos, adjusting highlights an"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-5d3e854d9a.raw"
+    },
+    {
+      "id": "www-cuty-ai-7382a2ff06",
+      "url": "https://www.cuty.ai/studio/ai-tools/motion-control",
+      "finalUrl": "https://www.cuty.ai/studio/ai-tools/motion-control",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.485Z",
+      "sha256": "133927d4f9fc687df8daf26eae34490d834b140640d48089e92b0dffc2c653b0",
+      "bytes": 218091,
+      "title": "Try Ai Tools free | Cuty AI",
+      "rawFile": "www-cuty-ai-7382a2ff06.raw",
+      "textFile": "www-cuty-ai-7382a2ff06.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-7382a2ff06.raw"
+    },
+    {
+      "id": "www-cuty-ai-8c15614a33",
+      "url": "https://www.cuty.ai/studio/ai-tools/character-swap",
+      "finalUrl": "https://www.cuty.ai/studio/ai-tools/character-swap",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.632Z",
+      "sha256": "89d2fa7535775ea9804f8bf8042db25bd0a479d1c84da49dfbf2c4805e877456",
+      "bytes": 218091,
+      "title": "Try Ai Tools free | Cuty AI",
+      "rawFile": "www-cuty-ai-8c15614a33.raw",
+      "textFile": "www-cuty-ai-8c15614a33.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-8c15614a33.raw"
+    },
+    {
+      "id": "www-cuty-ai-937320babc",
+      "url": "https://www.cuty.ai/studio/ai-tools/video-upscaler",
+      "finalUrl": "https://www.cuty.ai/studio/ai-tools/video-upscaler",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.435Z",
+      "sha256": "5763341b4e0e78737205d9b12c42a1d555c88895bae4aaf091f2bd8782f1629e",
+      "bytes": 207882,
+      "title": "AI Video Upscaler – Enhance Footage to 4K | Cuty.ai",
+      "rawFile": "www-cuty-ai-937320babc.raw",
+      "textFile": "www-cuty-ai-937320babc.txt",
+      "excerpts": [
+        {
+          "match": "Video File",
+          "text": "ة Français Português Русский Deutsch 日本語 한국어 Sign In Sign Up AI Tools Video File Click or drag video here Must be no longer than 30 seconds. Upscale Factor 1x Create Loading... AI Video Upscaler: Enhance Your Footage to Stunning 4K Clarity Use Cuty.ai's powerful AI video upscaling to enhance video quality instantly. Transform blurry, low-res footage into sharp 1080p and 4K masterpieces, all from your browser. Upscale Video Key Features Discover what makes Video Upscaler exceptional Transform Low-Res Footage into 4K Masterpieces Don't let grainy or blurry footage ruin your project. Our AI video upscaling technology intelligently enhances your videos, turning standard definition clips into crystal-clear 1080p or 4K quality. Impress your audience with professional-grade clarity. Enhance Video Quality Online, No Software Needed Forget complex software and long render times. Cuty.ai's video upscaler is entirely browser-based. Simply upload your video, select yo"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-937320babc.raw"
+    },
+    {
+      "id": "www-cuty-ai-9600a4e6e1",
+      "url": "https://www.cuty.ai/studio/music",
+      "finalUrl": "https://www.cuty.ai/studio/music",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.548Z",
+      "sha256": "474a2746038d383308bb6cceb31db95d0a962cb52cd19f6b8addfb209ff8f406",
+      "bytes": 235356,
+      "title": "Try AI Music Generator free | Cuty AI",
+      "rawFile": "www-cuty-ai-9600a4e6e1.raw",
+      "textFile": "www-cuty-ai-9600a4e6e1.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-9600a4e6e1.raw"
+    },
+    {
+      "id": "www-cuty-ai-a5f0fbc22a",
+      "url": "https://www.cuty.ai/product/runway-ai",
+      "finalUrl": "https://www.cuty.ai/product/runway-ai",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.462Z",
+      "sha256": "96a16ea3ffa0a08078a6b6cdfe2010188670003cdfe72dc6c7748b51e3dddfc4",
+      "bytes": 210022,
+      "title": "Try Runway AI for free",
+      "rawFile": "www-cuty-ai-a5f0fbc22a.raw",
+      "textFile": "www-cuty-ai-a5f0fbc22a.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-a5f0fbc22a.raw"
+    },
+    {
+      "id": "www-cuty-ai-c77604d378",
+      "url": "https://www.cuty.ai/studio/video",
+      "finalUrl": "https://www.cuty.ai/studio/video",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.399Z",
+      "sha256": "c8c2e4a096c88ae25c0014520b4da4536ae9876891fb57674280cb2e69f0d248",
+      "bytes": 191957,
+      "title": "Try AI Video Generator free | Cuty AI",
+      "rawFile": "www-cuty-ai-c77604d378.raw",
+      "textFile": "www-cuty-ai-c77604d378.txt",
+      "excerpts": [
+        {
+          "match": "Optional Start Frame",
+          "text": "ol العربية Français Português Русский Deutsch 日本語 한국어 Sign In Sign Up Optional Start Frame Optional End Frame Model Seedance 1.5 Pro 16:9 480p 4s On Create Start creating with Cuty AI Video Studio Describe a scene or motion — see it come alive"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-c77604d378.raw"
+    },
+    {
+      "id": "www-cuty-ai-c81e163a99",
+      "url": "https://www.cuty.ai/cli",
+      "finalUrl": "https://www.cuty.ai/cli",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.573Z",
+      "sha256": "f7de731ad4bb76d89af0f3c325151132614ec1f00f4363c78a8f623b88e9396a",
+      "bytes": 351675,
+      "title": "Create with Cuty CLI",
+      "rawFile": "www-cuty-ai-c81e163a99.raw",
+      "textFile": "www-cuty-ai-c81e163a99.txt",
+      "excerpts": [
+        {
+          "match": "Resume the same request",
+          "text": "efits. This does not create an OpenAPI account or a separate balance. Resume the same request A successful create command means the task was accepted. If a request times out, keep its task ID and idempotency key. Use tasks get or requests resume to recover the original operation. Starting a new request can incur a new charge. Where are my credentials and requests stored? The CLI stores credentials and request receipts in a private local directory. Receipts may contain your prompts; use requests forget to remove a local receipt when it is no longer needed. Server tasks and billing records remain unchanged. Your Cuty account. A new way to create. Give your agent the setup instructions. Bring your next idea to life with Cuty. Install Cuty CLI CUTY.AI Powerful AI tools for creators and professionals. Generate images, videos, and content with cutting-edge artificial intelligence technology. English Video Models Seedance 2.5 Seedance 2.0 Mini MiniMax H3 Max Mini"
+        },
+        {
+          "match": "A few things to know",
+          "text": "py prompt Copy prompt Copy prompt Copy prompt Copy prompt Copy prompt A few things to know What do I need to get started? Requires Node.js 22.12 or later and a Cuty account. Install the official @cuty-ai/cli npm package, authorize in your browser, and add the companion skill from the Cuty website. Ask your agent to check the live model catalog for available image and video models. Can I use my Cuty account and credits? Generations use this Cuty account’s existing credits and eligible benefits. This does not create an OpenAPI account or a separate balance. Resume the same request A successful create command means the task was accepted. If a request times out, keep its task ID and idempotency key. Use tasks get or requests resume to recover the original operation. Starting a new request can incur a new charge. Where are my credentials and requests stored? The CLI stores credentials and request receipts in a private local directory. Receipts may contain your "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-c81e163a99.raw"
+    }
+  ],
+  "sourceTrees": [],
+  "packageInspection": {
+    "url": "https://registry.npmjs.org/@cuty-ai/cli/-/cli-0.2.1.tgz",
+    "status": 200,
+    "fetchedAt": "2026-10-23T19:06:21.334Z",
+    "version": "0.2.1",
+    "sha256": "11a3487440b2824dd61d78c6dc6d339e11bb04adeecfc1d92381195459a96eb5",
+    "sha512": "BATVQY1wmprJbCCoqNHzY1hg/k+cv3uOO/fA/xWYCWw3Dea+X9nbtpaZjs+Cimw+TG0Ihl1tM9Lh2GzIQXcgMw==",
+    "executed": false,
+    "installed": false,
+    "license": "UNLICENSED",
+    "files": [
+      {
+        "path": "package/dist/auth.js",
+        "bytes": 7536,
+        "sha256": "d4a4abdcf7a1dc151645fac7d3e59e971afc75cfd46e8a0878633dfbe1ab0a5c"
+      },
+      {
+        "path": "package/dist/cli.js",
+        "bytes": 14247,
+        "sha256": "1041bf75af839f5028a562ef87d8c703c080fcdac1f796736aa373729521dc0f"
+      },
+      {
+        "path": "package/dist/client.js",
+        "bytes": 9373,
+        "sha256": "3a1edcc6fd156eb901f7316f988cfaf69283a8a6310b8eec45a051ec08e40a08"
+      },
+      {
+        "path": "package/dist/config.js",
+        "bytes": 2221,
+        "sha256": "abcf12e880db3576ab548e70d1c580cf9ac33a13602bb4644b54c55dc19b9111"
+      },
+      {
+        "path": "package/dist/errors.js",
+        "bytes": 1948,
+        "sha256": "79eed174d5a4023fbe0ce29b0291b361e87c197b67b4ab4197a09acade978f42"
+      },
+      {
+        "path": "package/dist/api/generated.js",
+        "bytes": 48,
+        "sha256": "27b00e4c90af72bf392c69b20038cf7336d951d5f7b25287fee2e7cc1c72eb3c"
+      },
+      {
+        "path": "package/dist/generation.js",
+        "bytes": 13308,
+        "sha256": "0467d2d2b5fa1b7ecf5223397009be62f5f19d46e1bb883a371adef08dff9959"
+      },
+      {
+        "path": "package/dist/i18n.js",
+        "bytes": 1926,
+        "sha256": "1175c7ca73c3b6701f8da5d1f279c3684fe7af94db9676733290b2079aede196"
+      },
+      {
+        "path": "package/dist/media.js",
+        "bytes": 11742,
+        "sha256": "b5e797212665eb52f868240268ac9ea4caa18731a6962da1f471c800e2c6d7b0"
+      },
+      {
+        "path": "package/dist/store.js",
+        "bytes": 8404,
+        "sha256": "4fc6edbdbd618137e46ee400d277df68d9dec51279e94a80681fca786de55417"
+      },
+      {
+        "path": "package/dist/tasks.js",
+        "bytes": 2576,
+        "sha256": "b6d47e4128d3feb2aea7ea5137fd933b672aaf18c8d268c394ee60c7a60086b0"
+      },
+      {
+        "path": "package/dist/types.js",
+        "bytes": 44,
+        "sha256": "01ae2a5b120382f9a648ced7ee8507493a134f216d100fc61600c6c9738235d2"
+      },
+      {
+        "path": "package/package.json",
+        "bytes": 940,
+        "sha256": "ddde29db809b092332f4689bf0ec0ccd586a47e6feefa1faad79f0b62c0de70e"
+      },
+      {
+        "path": "package/dist/auth.js.map",
+        "bytes": 8332,
+        "sha256": "d04439946990da871056c2000c340098acb8afd4c2f6d301eac2e610e8884a30"
+      },
+      {
+        "path": "package/dist/cli.js.map",
+        "bytes": 14848,
+        "sha256": "bed3ffb102a7e07bee55e6798ae9e475f3fae8805353e98bd69e4f6fb40dd95b"
+      },
+      {
+        "path": "package/dist/client.js.map",
+        "bytes": 9537,
+        "sha256": "31bb34cc79cb0ef3a74f2f701b0ed9bb1015aac511556a4277fe923289325000"
+      },
+      {
+        "path": "package/dist/config.js.map",
+        "bytes": 2605,
+        "sha256": "313facc5adeac00a369587e39431bfbc3ae70ba8bbf0d4d873371ef8a8dde704"
+      },
+      {
+        "path": "package/dist/errors.js.map",
+        "bytes": 1884,
+        "sha256": "5fd67380a029c40410fedb1426444a2afb78e7038e09105afaed696e6879ea3d"
+      },
+      {
+        "path": "package/dist/api/generated.js.map",
+        "bytes": 117,
+        "sha256": "a79fbf15a981b18ae7c77b29e288f760b2ecf001824de0204edeaaeaeffb443c"
+      },
+      {
+        "path": "package/dist/generation.js.map",
+        "bytes": 15315,
+        "sha256": "9c4a3f61000a556423d60fda24c454d16884cdd7deb45fe962f571ced07a474c"
+      },
+      {
+        "path": "package/dist/i18n.js.map",
+        "bytes": 986,
+        "sha256": "f95297f7d2caca63235ff7897b96b102a24ffacb36323b9817d86e78b80c06aa"
+      },
+      {
+        "path": "package/dist/media.js.map",
+        "bytes": 12973,
+        "sha256": "f38e36b266fd3eb9235dc4955820d5f4c1b56202ebaccb107f54391817d3b000"
+      },
+      {
+        "path": "package/dist/store.js.map",
+        "bytes": 7789,
+        "sha256": "39247bdc1aec0b00efd7987ab1d8135cbf2a9234b367026ad46b839967558d68"
+      },
+      {
+        "path": "package/dist/tasks.js.map",
+        "bytes": 2973,
+        "sha256": "260c75491c8f5914e59c255d97ee30b04f38dc4368aaacf5d1c2273d1d702a6b"
+      },
+      {
+        "path": "package/dist/types.js.map",
+        "bytes": 102,
+        "sha256": "a7de897b48fe57bf54d6f84169135ff2e89e2fc95ea0a0a815761cc29a41efee"
+      },
+      {
+        "path": "package/README.md",
+        "bytes": 1195,
+        "sha256": "6fceca5d0f1faf811288890c9e4b713039028a5286a96f980cb00fa0cd757fc0"
+      },
+      {
+        "path": "package/dist/auth.d.ts",
+        "bytes": 487,
+        "sha256": "73b3a7d97dfdd4424ad513657a6ad87c31f630df5c82e5a7f425d7c53afd55d7"
+      },
+      {
+        "path": "package/dist/cli.d.ts",
+        "bytes": 31,
+        "sha256": "43e818adf60173644896298637f47b01d5819b17eda46eaa32d0c7d64724d012"
+      },
+      {
+        "path": "package/dist/client.d.ts",
+        "bytes": 950,
+        "sha256": "f667d8f9bbd08d9d43ad0516806f4a256df768ad2a63ca25287e7ee0cce2556e"
+      },
+      {
+        "path": "package/dist/config.d.ts",
+        "bytes": 523,
+        "sha256": "354862452ea1c93ff8482c6478276a6e3d10b8df88fbd2923044ba53055db845"
+      },
+      {
+        "path": "package/dist/errors.d.ts",
+        "bytes": 703,
+        "sha256": "ed40bf5a7a37d55189a26f6502e79365f0b69cec3cf7e9bf3cb0fd4fa8b25e74"
+      },
+      {
+        "path": "package/dist/api/generated.d.ts",
+        "bytes": 3024,
+        "sha256": "c710cb6e58126592f280737a213425219da3e5e3933ecd82bf3174495c08aa5b"
+      },
+      {
+        "path": "package/dist/generation.d.ts",
+        "bytes": 1124,
+        "sha256": "d5e24958d200b625ec90f32ddbd14dd1faa0e11021928e28dcaf38648d74aa9f"
+      },
+      {
+        "path": "package/dist/i18n.d.ts",
+        "bytes": 2240,
+        "sha256": "19692c39fac4b997a62de9d91f1a657fc9f13d61ee4b5138511387b3cb605d3b"
+      },
+      {
+        "path": "package/dist/media.d.ts",
+        "bytes": 525,
+        "sha256": "5584d2bf0988c5969f275dd51d39f8ca3787d4a6a350018b2512deb3d2ff5474"
+      },
+      {
+        "path": "package/dist/store.d.ts",
+        "bytes": 521,
+        "sha256": "c6a337b38df8e3be9879b07385d1455060edb9edd7a5d3df187f90fede6291a8"
+      },
+      {
+        "path": "package/dist/tasks.d.ts",
+        "bytes": 189,
+        "sha256": "106e4ef03b07308bea15dd48ed1a0c271bf6eee50b74a743f7a4c204884c0c98"
+      },
+      {
+        "path": "package/dist/types.d.ts",
+        "bytes": 1743,
+        "sha256": "bb0302eeba0971fda7041d5246f8bbd29490a7d67351cf21ce6d57459a58e856"
+      }
+    ],
+    "registryIntegrityMatches": true
+  },
+  "webExtraction": [
+    {
+      "file": "workspace work/web/competitor-search-1.json",
+      "sha256": "5900401f5a66f587935ab25165fffe0bf3ab25a82becf1cdd4458099aee809e1",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    },
+    {
+      "file": "workspace work/web/competitor-search-2.json",
+      "sha256": "58e726425dcb9e238aa432855594eaf2d64dd0ef17e89893475851a2b9b1b95d",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    },
+    {
+      "file": "workspace work/web/competitor-open-3.json",
+      "sha256": "ced4ad2d0986bd52e08ccb242edd0cce131f9a608d38a3331c02c2ba6c94749b",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    }
+  ]
+}

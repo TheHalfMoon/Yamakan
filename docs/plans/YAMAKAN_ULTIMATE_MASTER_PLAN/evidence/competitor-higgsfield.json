@@ -1,0 +1,1933 @@
+{
+  "schema": "yamakan.competitor-research-evidence/v1",
+  "researchDate": "2026-10-23",
+  "localTimezone": "Asia/Riyadh",
+  "scope": "Read-only public HTTP and free web discovery; no authenticated UI, account actions, paid generation, inference, installations or benchmark execution.",
+  "executionVerified": false,
+  "sourceCount": 56,
+  "sources": [
+    {
+      "id": "api-github-com-4e0811777f",
+      "url": "https://api.github.com/repos/higgsfield-ai/higgsfield-js",
+      "finalUrl": "https://api.github.com/repos/higgsfield-ai/higgsfield-js",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.930Z",
+      "sha256": "7eaaba7364d0e4652a91ec54512eac315cbc7f95c9d221a6c90fbaa2796f41c8",
+      "bytes": 6562,
+      "rawFile": "api-github-com-4e0811777f.raw",
+      "textFile": "api-github-com-4e0811777f.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-4e0811777f.raw"
+    },
+    {
+      "id": "api-github-com-66199012ed",
+      "url": "https://api.github.com/repos/higgsfield-ai/higgsfield-js/git/trees/662b962fc3810b7c3adf0f7317420a543dee4f87?recursive=1",
+      "finalUrl": "https://api.github.com/repos/higgsfield-ai/higgsfield-js/git/trees/662b962fc3810b7c3adf0f7317420a543dee4f87?recursive=1",
+      "status": 403,
+      "fetchedAt": "2026-10-23T19:14:48.223Z",
+      "sha256": "74bbf1b9dbc0e982eac38156565ef306fc28d1e4f37d78cc37417aa727215e20",
+      "bytes": 279,
+      "rawFile": "api-github-com-66199012ed.raw",
+      "textFile": "api-github-com-66199012ed.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/api-github-com-66199012ed.raw"
+    },
+    {
+      "id": "api-github-com-69ea4892c2",
+      "url": "https://api.github.com/repos/higgsfield-ai/skills",
+      "finalUrl": "https://api.github.com/repos/higgsfield-ai/skills",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.692Z",
+      "sha256": "7458646c81124e3887e60a68e1768fe580e4d22023e62069be07539de878b382",
+      "bytes": 6332,
+      "rawFile": "api-github-com-69ea4892c2.raw",
+      "textFile": "api-github-com-69ea4892c2.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-69ea4892c2.raw"
+    },
+    {
+      "id": "api-github-com-a733a2acb1",
+      "url": "https://api.github.com/repos/higgsfield-ai/cli",
+      "finalUrl": "https://api.github.com/repos/higgsfield-ai/cli",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.688Z",
+      "sha256": "eb295df91bde4fb59e3cda9e750c1872a5eb3527c9ca0599cf94e3cfb463008a",
+      "bytes": 6208,
+      "rawFile": "api-github-com-a733a2acb1.raw",
+      "textFile": "api-github-com-a733a2acb1.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-a733a2acb1.raw"
+    },
+    {
+      "id": "api-github-com-e15d46133d",
+      "url": "https://api.github.com/repos/higgsfield-ai/higgsfield-client",
+      "finalUrl": "https://api.github.com/repos/higgsfield-ai/higgsfield-client",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.690Z",
+      "sha256": "c720e92db16841ff3d17815705da3f2e29ee1ee1715f5b474769cbb283241c7d",
+      "bytes": 6863,
+      "rawFile": "api-github-com-e15d46133d.raw",
+      "textFile": "api-github-com-e15d46133d.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-e15d46133d.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-039c43e297",
+      "url": "https://docs.higgsfield.ai/docs/models/soul-id/create-character.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/soul-id/create-character.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.553Z",
+      "sha256": "db57ba32ae29e4386366c9b2b05c9c91b5c0a4275234fdd5a72c8a93b2bcbd72",
+      "bytes": 5380,
+      "rawFile": "docs-higgsfield-ai-039c43e297.raw",
+      "textFile": "docs-higgsfield-ai-039c43e297.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "/api.higgsfield.ai/v1/custom-references` **Catalog ID:** `soul-id` ## Usage notes * Soul ID trains a reusable character reference. This is not an image-generation endpoint; do not POST to /soul-id. * Use POST /v1/custom-references with application/json. name has a maximum length of 100; input\\_images must contain 1–100 \\{\"type\":\"image\\_url\",\"image\\_url\":\"...\"} objects. * model\\_version accepts v1, v2, cinema; its default is v1. Choose the matching generation family. * The creation response returns id and status. Poll GET /v1/custom-references/\\{id}; statuses are not\\_ready, queued, in\\_progress, completed, and failed. * After completion, pass the returned id as custom\\_reference\\_id to the matching Soul generation endpoint. References are scoped to the account that created them. * When the account already has the maximum number of references in training, creation returns 429 Too Many Requests with a Retry-After header. Retry after that delay; no credits ar"
+        },
+        {
+          "match": "Input schema",
+          "text": "image_url\": \"https://example.com/portrait-outdoors.jpg\" } ] }' ``` ## Input schema **name** `string` *required* Name of the character reference. Maximum characters: `100`. **model\\_version** `string` (default: v1) SOUL family that will use this character reference. Allowed values: `\"v1\"`, `\"v2\"`, `\"cinema\"`. **input\\_images** `array` *required* Training images supplied as public URL objects. Minimum items: `1`. Maximum items: `100`. **Nested fields** **input\\_images\\[].type** `string` *required* Must be `\"image_url\"`. **input\\_images\\[].image\\_url** `string` *required* Public URL of the input image. Minimum characters: `1`. Maximum characters: `2083`. Format: `uri`. > **Complete JSON schema** > > ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} > { > \"$defs\": { > \"ImageUrlInputImageSchema\": { > \"properties\": { > \"type\": { > \"const\": \"image_url\", > \"title\": \"Type\", > \"type\": \"string\" > }, > \"image_url\": { > \"format\": \"uri\", > \"maxLength"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-039c43e297.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-118b11ca99",
+      "url": "https://docs.higgsfield.ai/docs/how-to/sdk.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/how-to/sdk.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.665Z",
+      "sha256": "c0e3750040d7630e2fc873b983a14964f92a7096e801c23587fb2f14e23c364d",
+      "bytes": 3845,
+      "rawFile": "docs-higgsfield-ai-118b11ca99.raw",
+      "textFile": "docs-higgsfield-ai-118b11ca99.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-118b11ca99.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-2245e6b24e",
+      "url": "https://docs.higgsfield.ai/docs/concepts/errors.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/concepts/errors.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.507Z",
+      "sha256": "901997d8a57eade8c39a36a4048539e36e627c524efdd2ff92f0c948450c9775",
+      "bytes": 2862,
+      "rawFile": "docs-higgsfield-ai-2245e6b24e.raw",
+      "textFile": "docs-higgsfield-ai-2245e6b24e.txt",
+      "excerpts": [
+        {
+          "match": "Idempotency-Key",
+          "text": "itter. * Set maximum attempts and a total retry deadline. * Send an [`Idempotency-Key`](https://docs.higgsfield.ai/docs/concepts/idempotency) with every generation submission. * After an ambiguous timeout, network failure, or `5xx`, repeat the same generation request with the same idempotency key. Every API response includes an `X-Correlation-ID` header. Record it with the `request_id` and include both when contacting support. ## Related topics - [Support](https://docs.higgsfield.ai/docs/help/support.md) - [Idempotent requests](https://docs.higgsfield.ai/docs/concepts/idempotency.md) - [Polling](https://docs.higgsfield.ai/docs/concepts/polling.md) - [Webhooks](https://docs.higgsfield.ai/docs/how-to/webhooks.md) - [Soul ID — Create character API](https://docs.higgsfield.ai/docs/models/soul-id/create-character.md) This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform."
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-2245e6b24e.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-32b2d32bcd",
+      "url": "https://docs.higgsfield.ai/docs/models/cinema-studio-4/generate.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/cinema-studio-4/generate.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.523Z",
+      "sha256": "f30c51a0624568cfad94a7dc1f6a4b327c48764d9cdcaf1c6ec4a6efcde78990",
+      "bytes": 13069,
+      "rawFile": "docs-higgsfield-ai-32b2d32bcd.raw",
+      "textFile": "docs-higgsfield-ai-32b2d32bcd.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": ".higgsfield.ai/models/higgsfield%2Fcinema-studio%2F4.0/playground) ## Usage notes * This is the public Cinema Studio 4.0 workflow. It uses text-to-video when references are absent and reference-to-video when any media array is nonempty. * Omit creative-control fields to let the director choose them automatically; the literal value \"auto\" is not accepted for these enum fields. * Optional prompt references use one-based tokens such as \\ >>, \\ >> and \\ >>. Each token must refer to an attached item of the same media type. * This endpoint produces a new video. Editing and extension use the separate Seedance 2.5 endpoints. * Reference media are limited to 30 images, 10 videos and 10 audio files, with at most 50 items total. Video and audio may be normalized to separate 30-second total budgets. ## Quick start ```bash cURL theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/higgsfield/cinema-studio/4."
+        },
+        {
+          "match": "Input schema",
+          "text": "lt.status === \"completed\") { console.log(result.video?.url); } ``` ## Input schema **era** `string` Allowed values: `\"1960s\"`, `\"1980s\"`, `\"1990s\"`, `\"2000s\"`, `\"2020s\"`. **genre** `string` Allowed values: `\"epic\"`, `\"drama\"`, `\"noir\"`, `\"comedy\"`, `\"horror\"`, `\"action\"`. **light** `string` Allowed values: `\"silhouette\"`, `\"practicals\"`, `\"window\"`, `\"overhead-fall\"`, `\"contre-jour\"`, `\"soft-cross\"`. **pacing** `string` Allowed values: `\"chaotic\"`, `\"dynamic\"`, `\"calm\"`, `\"single-shot\"`. **prompt** `string` *required* Text instructions for the generation or edit. Minimum characters: `1`. Pattern: `\\S`. **duration** `integer` (default: 5) Requested output duration in seconds. Minimum: `4`. Maximum: `30`. **audio\\_urls** `array` Ordered public audio reference URLs. Maximum items: `10`. Each item: string. Format: `uri`. **image\\_urls** `array` Ordered public image reference URLs. Maximum items: `30`. Each item: string. Format: `uri`. **resolution** `string` ("
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"prompt\": \"A cinematic wide shot of ocean waves at sunset, with gentle camera movement.\" }' ``` ```python Python theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import higgsfield_client arguments = ( {'prompt': 'A cinematic wide shot of ocean waves at sunset, with gentle camera ' 'movement.'} ) result = higgsfield_client.subscribe( \"higgsfield/cinema-studio/4.0\", arguments=arguments, ) print(result[\"video\"][\"url\"]) ``` ```typescript TypeScript theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import { config, higgsfield } from \"@higgsfield/client/v2\"; config({ credentials: process.env.HF_CREDENTIALS }); const result = await higgsfield.subscribe(\"higgsfield/cinema-studio/4.0\", { input: { \"prompt\": \"A cinematic wide shot of ocean waves at sunset, with gentle camera movement.\" }, withPolling: true, }); if (result.sta"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-32b2d32bcd.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-636cadb822",
+      "url": "https://docs.higgsfield.ai/",
+      "finalUrl": "https://docs.higgsfield.ai/docs",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:41.058Z",
+      "sha256": "1b5dbdbedb03508724a9740e8f5cf3030bfce14ae09a7d01662534e16bcc967d",
+      "bytes": 204713,
+      "title": "Higgsfield API - Higgsfield API Docs",
+      "rawFile": "docs-higgsfield-ai-636cadb822.raw",
+      "textFile": "docs-higgsfield-ai-636cadb822.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-636cadb822.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-63e59629e9",
+      "url": "https://docs.higgsfield.ai/docs/models/genjutsu/object-swap.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/genjutsu/object-swap.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.533Z",
+      "sha256": "1300eb34fecef1d772923fe204630374cabe4c8f758715e03f61be04aa8c09c0",
+      "bytes": 5854,
+      "rawFile": "docs-higgsfield-ai-63e59629e9.raw",
+      "textFile": "docs-higgsfield-ai-63e59629e9.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "d.ai/models/higgsfield%2Fgenjutsu%2Fobject-swap%2Fv1.0/playground) ## Usage notes * Use higgsfield/genjutsu/object-swap/v1.0 for new integrations. The legacy endpoint higgsfiled/genjutsu/object-swap/v1.0 remains callable for existing clients but is hidden from model discovery. * The source video must be at least 4 seconds. Videos longer than 30 seconds are trimmed to 30 seconds; output duration follows the prepared source video. * Provide 1–8 image references. The prompt is optional and defaults to an empty string. * The source video must contain at least 409,600 pixels per frame (width × height). ## Quick start Replace the example media URLs with publicly accessible URLs for your own files before submitting. ```bash cURL theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/higgsfield/genjutsu/object-swap/v1.0 \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Con"
+        },
+        {
+          "match": "Input schema",
+          "text": "lt.status === \"completed\") { console.log(result.video?.url); } ``` ## Input schema **prompt** `string` Text instructions for the generation or edit. Maximum characters: `10000`. **video\\_url** `string` *required* Public URL of the source video. Minimum characters: `1`. Maximum characters: `2083`. Format: `uri`. **image\\_urls** `array` *required* Ordered public image reference URLs. Minimum items: `1`. Maximum items: `8`. Each item: string. Minimum characters: `1`. Maximum characters: `2083`. Format: `uri`. **resolution** `string` (default: 720p) Output resolution tier. Allowed values: `\"720p\"`, `\"480p\"`, `\"1080p\"`. > **Complete JSON schema** > > ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} > { > \"type\": \"object\", > \"title\": \"ObjectSwapParams\", > \"required\": [ > \"video_url\", > \"image_urls\" > ], > \"properties\": { > \"prompt\": { > \"type\": \"string\", > \"title\": \"Prompt\", > \"default\": \"\", > \"maxLength\": 10000 > }, > \"video_url\": { > \"type"
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"video_url\": \"https://example.com/input.mp4\", \"image_urls\": [ \"https://example.com/input.jpg\" ] }' ``` ```python Python theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import higgsfield_client arguments = ( {'video_url': 'https://example.com/input.mp4', 'image_urls': ['https://example.com/input.jpg']} ) result = higgsfield_client.subscribe( \"higgsfield/genjutsu/object-swap/v1.0\", arguments=arguments, ) print(result[\"video\"][\"url\"]) ``` ```typescript TypeScript theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import { config, higgsfield } from \"@higgsfield/client/v2\"; config({ credentials: process.env.HF_CREDENTIALS }); const result = await higgsfield.subscribe(\"higgsfield/genjutsu/object-swap/v1.0\", { input: { \"video_url\": \"https://example.com/input.mp4\", \"image_urls\": [ \"https://example.com/input.jpg\" ] }, withP"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-63e59629e9.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-676d38d44b",
+      "url": "https://docs.higgsfield.ai/docs/models/cinema-studio-4.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/cinema-studio-4.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.968Z",
+      "sha256": "de22fbdfe10315edb8c519eda4fcb5e053991e5b3c7607caf2e026abf808cc7a",
+      "bytes": 1179,
+      "rawFile": "docs-higgsfield-ai-676d38d44b.raw",
+      "textFile": "docs-higgsfield-ai-676d38d44b.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-676d38d44b.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-7b200e105f",
+      "url": "https://docs.higgsfield.ai/docs/models/genjutsu/restyle.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/genjutsu/restyle.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:48.194Z",
+      "sha256": "f0f323ee2fd23ab12d1c4d0a77be4d6723b5977c77f5f1a1a3953830be5722d0",
+      "bytes": 13516,
+      "rawFile": "docs-higgsfield-ai-7b200e105f.raw",
+      "textFile": "docs-higgsfield-ai-7b200e105f.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "field.ai/models/higgsfield%2Fgenjutsu%2Frestyle%2Fv1.0/playground) ## Usage notes * Restyle changes the visual style of a source video while retaining its motion, shot composition, and source audio. Each request produces one video. * Select a current style from GET /models/higgsfield/genjutsu/restyle/v1.0/presets and send its UUID as preset\\_id. The example UUID below is illustrative of a published preset; fetch the current catalog before submitting. * The source must be at least 4 seconds and no larger than 200 MiB. Videos longer than 30 seconds are trimmed to their first 30 seconds, including audio. * Character references are optional: omit image\\_urls or send \\[] to restyle the existing source subjects. Supply up to 5 character images to guide their appearance. * Defaults apply to omitted optional fields. Use \\[] or an empty string where appropriate; null is not accepted. * Output framing is derived from the source and animation cadence can depend on th"
+        },
+        {
+          "match": "Input schema",
+          "text": "lt.status === \"completed\") { console.log(result.video?.url); } ``` ## Input schema **prompt** `string` Optional additional guidance for the final video alongside the preset, source motion, and character references. Describe subject roles or details to retain, for example: “Keep the referenced character’s pink hair consistent across shots.” An empty string uses the visual inputs without additional instructions. This supplements preset\\_id; it does not create a custom style or set duration, resolution, FPS, or audio behavior. Instructions guide a generative result and do not guarantee exact preservation. Maximum characters: `10000`. **preset\\_id** `string` *required* Required UUID from items\\[].id in the [available styles](#available-styles) response. Selects one visual style for the subjects and scene. Send the ID, not the style name, preview URL, or list index. A prompt or character image does not replace this field. Hidden or unavailable presets fail inpu"
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"video_url\": \"https://example.com/input.mp4\", \"preset_id\": \"c2143317-f28d-4c3c-a0b8-39bd547e08a7\", \"image_urls\": [], \"prompt\": \"Preserve the original movement and camera composition.\", \"resolution\": \"720p\" }' ``` ```python Python theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import higgsfield_client arguments = ( {'video_url': 'https://example.com/input.mp4', 'preset_id': 'c2143317-f28d-4c3c-a0b8-39bd547e08a7', 'image_urls': [], 'prompt': 'Preserve the original movement and camera composition.', 'resolution': '720p'} ) result = higgsfield_client.subscribe( \"higgsfield/genjutsu/restyle/v1.0\", arguments=arguments, ) print(result[\"video\"][\"url\"]) ``` ```typescript TypeScript theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import { config, higgsfield } from \"@higgsfield/client/v2\"; config({ credentials: process.en"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-7b200e105f.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-8a71cb905e",
+      "url": "https://docs.higgsfield.ai/docs/concepts/requests.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/concepts/requests.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.387Z",
+      "sha256": "efd3b61c84d5a2aadcbb5a17fb3f16ad1464ef088f40379362f10c14e36ed7d0",
+      "bytes": 3800,
+      "rawFile": "docs-higgsfield-ai-8a71cb905e.raw",
+      "textFile": "docs-higgsfield-ai-8a71cb905e.txt",
+      "excerpts": [
+        {
+          "match": "Idempotency-Key",
+          "text": "cellation, webhook deduplication, and support. > [!TIP] > > Send an [`Idempotency-Key`](https://docs.higgsfield.ai/docs/concepts/idempotency) with generation submissions so an ambiguous timeout can be retried without creating a duplicate request. ## Initial response ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} { \"status\": \"queued\", \"request_id\": \"d7e6c0f3-6699-4f6c-bb45-2ad7fd9158ff\", \"status_url\": \"https://api.higgsfield.ai/requests/d7e6c0f3-6699-4f6c-bb45-2ad7fd9158ff/status\", \"cancel_url\": \"https://api.higgsfield.ai/requests/d7e6c0f3-6699-4f6c-bb45-2ad7fd9158ff/cancel\" } ``` Use the URLs from the response instead of constructing them manually. ## Completed output The output field depends on the model's output type. ```json Image theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} { \"status\": \"completed\", \"request_id\": \"d7e6c0f3-6699-4f6c-bb45-2ad7fd9158ff\", \"images\": [ { \"url\": \"https://cdn.example.com/image-1.jpg\" }, "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-8a71cb905e.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-a414a6a56b",
+      "url": "https://docs.higgsfield.ai/docs/models/genjutsu/motion-transfer.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/genjutsu/motion-transfer.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.348Z",
+      "sha256": "9157437a523dfcc39af2d0d79a8941d9e97a9d65be381f0bf470b222610064e4",
+      "bytes": 5827,
+      "rawFile": "docs-higgsfield-ai-a414a6a56b.raw",
+      "textFile": "docs-higgsfield-ai-a414a6a56b.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "/models/higgsfield%2Fgenjutsu%2Fmotion-transfer%2Fv1.0/playground) ## Usage notes * Use higgsfield/genjutsu/motion-transfer/v1.0 for new integrations. The legacy endpoint higgsfiled/genjutsu/motion-transfer/v1.0 remains callable for existing clients but is hidden from model discovery. * The source video must be at least 4 seconds. Videos longer than 30 seconds are trimmed to 30 seconds; output duration follows the prepared source video. * Provide 1–8 image references. The prompt is optional and defaults to an empty string. ## Quick start Replace the example media URLs with publicly accessible URLs for your own files before submitting. ```bash cURL theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/higgsfield/genjutsu/motion-transfer/v1.0 \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_"
+        },
+        {
+          "match": "Input schema",
+          "text": "lt.status === \"completed\") { console.log(result.video?.url); } ``` ## Input schema **prompt** `string` Text instructions for the generation or edit. Maximum characters: `10000`. **video\\_url** `string` *required* Public URL of the source video. Minimum characters: `1`. Maximum characters: `2083`. Format: `uri`. **image\\_urls** `array` *required* Ordered public image reference URLs. Minimum items: `1`. Maximum items: `8`. Each item: string. Minimum characters: `1`. Maximum characters: `2083`. Format: `uri`. **resolution** `string` (default: 720p) Output resolution tier. Allowed values: `\"720p\"`, `\"480p\"`, `\"1080p\"`. > **Complete JSON schema** > > ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} > { > \"type\": \"object\", > \"title\": \"MotionTransferParams\", > \"required\": [ > \"video_url\", > \"image_urls\" > ], > \"properties\": { > \"prompt\": { > \"type\": \"string\", > \"title\": \"Prompt\", > \"default\": \"\", > \"maxLength\": 10000 > }, > \"video_url\": { > \""
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"video_url\": \"https://example.com/input.mp4\", \"image_urls\": [ \"https://example.com/input.jpg\" ] }' ``` ```python Python theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import higgsfield_client arguments = ( {'video_url': 'https://example.com/input.mp4', 'image_urls': ['https://example.com/input.jpg']} ) result = higgsfield_client.subscribe( \"higgsfield/genjutsu/motion-transfer/v1.0\", arguments=arguments, ) print(result[\"video\"][\"url\"]) ``` ```typescript TypeScript theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import { config, higgsfield } from \"@higgsfield/client/v2\"; config({ credentials: process.env.HF_CREDENTIALS }); const result = await higgsfield.subscribe(\"higgsfield/genjutsu/motion-transfer/v1.0\", { input: { \"video_url\": \"https://example.com/input.mp4\", \"image_urls\": [ \"https://example.com/input.jpg\" ] "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-a414a6a56b.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-ae104f5afb",
+      "url": "https://docs.higgsfield.ai/docs/llms.txt",
+      "finalUrl": "https://docs.higgsfield.ai/docs/llms.txt",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:52.191Z",
+      "sha256": "b08ca857d7578103250f687cb1760c49c0be32cfb6c7765b33affdc0fe138265",
+      "bytes": 3418,
+      "rawFile": "docs-higgsfield-ai-ae104f5afb.raw",
+      "textFile": "docs-higgsfield-ai-ae104f5afb.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-ae104f5afb.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-e8801c02bb",
+      "url": "https://docs.higgsfield.ai/docs/concepts/idempotency.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/concepts/idempotency.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.796Z",
+      "sha256": "042dcd8b71122a41fc3f70a1bfa6cea44533f20c983e1910c2d5e301c5aebeb0",
+      "bytes": 3823,
+      "rawFile": "docs-higgsfield-ai-e8801c02bb.raw",
+      "textFile": "docs-higgsfield-ai-e8801c02bb.txt",
+      "excerpts": [
+        {
+          "match": "Idempotency-Key",
+          "text": "eating duplicate requests. Generation submissions accept an optional `Idempotency-Key` header. Use it when a network failure or timeout leaves you unsure whether a request was accepted. Generate one unique key for each intended generation and keep it until you receive the initial response: ```bash theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} export IDEMPOTENCY_KEY=$(uuidgen | tr '[:upper:]' '[:lower:]') curl --request POST \\ --url https://api.higgsfield.ai/higgsfield-ai/soul/v2/standard \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"prompt\": \"A quiet alpine lake at sunrise, editorial photography\" }' ``` If the response is lost, repeat the same request with the same key. Higgsfield returns the original `request_id` without creating or charging for another generation. ## Key rules * Keys must contain 1–255 visible "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-e8801c02bb.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-ec06a4fd81",
+      "url": "https://docs.higgsfield.ai/docs/models/genjutsu/motion-transfer",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/genjutsu/motion-transfer",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.275Z",
+      "sha256": "b7757324ed28d1bd8923608e4d829a4f4d275141639848f66a76ee1c193845f9",
+      "bytes": 296038,
+      "title": "Genjutsu — Motion transfer API - Higgsfield API Docs",
+      "rawFile": "docs-higgsfield-ai-ec06a4fd81.raw",
+      "textFile": "docs-higgsfield-ai-ec06a4fd81.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "POST Cancel a queued request Resources FAQ Support close On this page Usage notes Quick start Input schema Response Genjutsu Genjutsu — Motion transfer API Copy page Copy page Motion transfer with Genjutsu: request parameters, examples and response handling. Copy page Copy page ← Genjutsu Endpoint: POST https://api.higgsfield.ai/higgsfield/genjutsu/motion-transfer/v1.0 Endpoint ID: higgsfield/genjutsu/motion-transfer/v1.0 ▶ Open API Playground Genjutsu · Motion transfer ↗ ​ Usage notes Use higgsfield/genjutsu/motion-transfer/v1.0 for new integrations. The legacy endpoint higgsfiled/genjutsu/motion-transfer/v1.0 remains callable for existing clients but is hidden from model discovery. The source video must be at least 4 seconds. Videos longer than 30 seconds are trimmed to 30 seconds; output duration follows the prepared source video. Provide 1–8 image references. The prompt is optional and defaults to an empty string. ​ Quick start Replace the example medi"
+        },
+        {
+          "match": "Input schema",
+          "text": "uest Resources FAQ Support close On this page Usage notes Quick start Input schema Response Genjutsu Genjutsu — Motion transfer API Copy page Copy page Motion transfer with Genjutsu: request parameters, examples and response handling. Copy page Copy page ← Genjutsu Endpoint: POST https://api.higgsfield.ai/higgsfield/genjutsu/motion-transfer/v1.0 Endpoint ID: higgsfield/genjutsu/motion-transfer/v1.0 ▶ Open API Playground Genjutsu · Motion transfer ↗ ​ Usage notes Use higgsfield/genjutsu/motion-transfer/v1.0 for new integrations. The legacy endpoint higgsfiled/genjutsu/motion-transfer/v1.0 remains callable for existing clients but is hidden from model discovery. The source video must be at least 4 seconds. Videos longer than 30 seconds are trimmed to 30 seconds; output duration follows the prepared source video. Provide 1–8 image references. The prompt is optional and defaults to an empty string. ​ Quick start Replace the example media URLs with publicly acc"
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "KEY_SECRET }\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${ IDEMPOTENCY_KEY }\" \\ --data '{ \"video_url\": \"https://example.com/input.mp4\", \"image_urls\": [ \"https://example.com/input.jpg\" ] }' import higgsfield_client arguments = ( { 'video_url' : 'https://example.com/input.mp4' , 'image_urls' : [ 'https://example.com/input.jpg' ]} ) result = higgsfield_client.subscribe( \"higgsfield/genjutsu/motion-transfer/v1.0\" , arguments = arguments, ) print (result[ \"video\" ][ \"url\" ]) import { config, higgsfield } from \"@higgsfield/client/v2\" ; config ({ credentials: process.env. HF_CREDENTIALS }); const result = await higgsfield. subscribe ( \"higgsfield/genjutsu/motion-transfer/v1.0\" , { input: { \"video_url\" : \"https://example.com/input.mp4\" , \"image_urls\" : [ \"https://example.com/input.jpg\" ] }, withPolling: true , }); if (result.status === \"completed\" ) { console. log (result.video?.url); } ​ Input schema ​ prompt string default: \"\" Text"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-ec06a4fd81.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-edcdb8f64f",
+      "url": "https://docs.higgsfield.ai/docs/concepts/billing-and-retention.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/concepts/billing-and-retention.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.708Z",
+      "sha256": "1857553c516109fdc314f0cb6f630cdd3691a2c3d3b53808b74066983f055fc2",
+      "bytes": 2326,
+      "rawFile": "docs-higgsfield-ai-edcdb8f64f.raw",
+      "textFile": "docs-higgsfield-ai-edcdb8f64f.txt",
+      "excerpts": [
+        {
+          "match": "Credits expire",
+          "text": "st depends on the selected model and parameters. ## Credit expiration Credits expire one year after they are added to your account balance. Plan purchases and usage with this expiration period in mind. ## Estimate a request Use the estimate endpoint with the same model parameters before submitting generation: ```bash theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/estimate/higgsfield-ai/soul/v2/standard \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --data '{ \"prompt\": \"Editorial portrait in soft daylight\" }' ``` ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} { \"credits\": \"1.500\", \"usd\": \"0.094\" } ``` > [!NOTE] > > The values above illustrate the response format. Use the estimate returned for your authenticated account as the authoritative amount. ## Failed and moderated requests Requests ending as "
+        },
+        {
+          "match": "Output retention",
+          "text": "essing starts. A successfully canceled queued request is refunded. ## Output retention Generated output is accessible for at least seven days after creation and may be removed after that period. Download completed files to your own storage for long-term retention. ## Related topics - [FAQ](https://docs.higgsfield.ai/docs/help/faq.md) - [Higgsfield API](https://docs.higgsfield.ai/docs/index.md) - [How the API works](https://docs.higgsfield.ai/docs/how-to/introduction.md) - [Support](https://docs.higgsfield.ai/docs/help/support.md) - [Kling 3.0 — Standard · Text to video API](https://docs.higgsfield.ai/docs/models/kling-3/standard-text-to-video.md) This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform."
+        },
+        {
+          "match": "Estimate a request",
+          "text": "nce. Plan purchases and usage with this expiration period in mind. ## Estimate a request Use the estimate endpoint with the same model parameters before submitting generation: ```bash theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/estimate/higgsfield-ai/soul/v2/standard \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --data '{ \"prompt\": \"Editorial portrait in soft daylight\" }' ``` ```json theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} { \"credits\": \"1.500\", \"usd\": \"0.094\" } ``` > [!NOTE] > > The values above illustrate the response format. Use the estimate returned for your authenticated account as the authoritative amount. ## Failed and moderated requests Requests ending as `failed` or `nsfw` are not charged. If credits were reserved when the request was accepted, they are refunded automatically. ## Cancele"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-edcdb8f64f.raw"
+    },
+    {
+      "id": "docs-higgsfield-ai-ee8a614dd2",
+      "url": "https://docs.higgsfield.ai/docs/models/soul-cinema/generate.md",
+      "finalUrl": "https://docs.higgsfield.ai/docs/models/soul-cinema/generate.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:22.609Z",
+      "sha256": "576b374dfcd39558755a96f421394abc069cd75c83ec7986eafa16de8d06ac20",
+      "bytes": 7280,
+      "rawFile": "docs-higgsfield-ai-ee8a614dd2.raw",
+      "textFile": "docs-higgsfield-ai-ee8a614dd2.txt",
+      "excerpts": [
+        {
+          "match": "Usage notes",
+          "text": "ole.higgsfield.ai/models/higgsfield-ai%2Fsoul%2Fcinema/playground) ## Usage notes * batch\\_size is 1 or 4 only. A custom\\_reference\\_id must belong to the calling account and have completed training. * aspect\\_ratio defaults to 1:1 and enhance\\_prompt defaults to false. seed defaults to a random integer from 1 to 1000000; explicit null is invalid. * Providing a custom\\_reference\\_id enables prompt enhancement for the character reference, even if enhance\\_prompt is false. * Cinema uses a fixed style; client-supplied style\\_id is ignored. * This model may be absent from model discovery; authorized requests can use the endpoint ID directly. ## Quick start ```bash cURL theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} curl --request POST \\ --url https://api.higgsfield.ai/higgsfield-ai/soul/cinema \\ --header \"Authorization: Key ${HF_API_KEY_ID}:${HF_API_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTEN"
+        },
+        {
+          "match": "Input schema",
+          "text": "tus === \"completed\") { console.log(result.images?.[0]?.url); } ``` ## Input schema **prompt** `string` *required* Text instructions for the generation or edit. **aspect\\_ratio** `string` (default: 1:1) Output width-to-height ratio. Allowed values: `\"9:16\"`, `\"16:9\"`, `\"4:3\"`, `\"3:4\"`, `\"1:1\"`, `\"2:3\"`, `\"3:2\"`. **enhance\\_prompt** `boolean` (default: false) Enable prompt enhancement. Providing custom\\_reference\\_id enables enhancement even when this field is false. **resolution** `string` (default: 720p) Output resolution tier. Allowed values: `\"720p\"`, `\"1080p\"`. **custom\\_reference\\_id** `string | null` Identifier of a completed character reference owned by your account. Format: `uuid`. Omit this field to use the server default; `null` is accepted only when included in the field type. **custom\\_reference\\_strength** `number` (default: 1.0) Strength of the character reference. Minimum: `0`. Maximum: `1`. **seed** `integer` Seed used to control generation "
+        },
+        {
+          "match": "Idempotency-Key",
+          "text": "_KEY_SECRET}\" \\ --header \"Content-Type: application/json\" \\ --header \"Idempotency-Key: ${IDEMPOTENCY_KEY}\" \\ --data '{ \"prompt\": \"A ceramic vase on a wooden table beside a sunlit window, soft natural shadows, editorial photograph.\", \"resolution\": \"720p\", \"aspect_ratio\": \"1:1\", \"enhance_prompt\": true, \"batch_size\": 1 }' ``` ```python Python theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import higgsfield_client arguments = ( {'prompt': 'A ceramic vase on a wooden table beside a sunlit window, soft ' 'natural shadows, editorial photograph.', 'resolution': '720p', 'aspect_ratio': '1:1', 'enhance_prompt': True, 'batch_size': 1} ) result = higgsfield_client.subscribe( \"higgsfield-ai/soul/cinema\", arguments=arguments, ) print(result[\"images\"][0][\"url\"]) ``` ```typescript TypeScript theme={\"theme\":{\"light\":\"github-light\",\"dark\":\"github-dark\"}} import { config, higgsfield } from \"@higgsfield/client/v2\"; config({ credentials: process.env.HF_CREDENTIA"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-higgsfield-ai-ee8a614dd2.raw"
+    },
+    {
+      "id": "higgsfield-ai-02dc636d35",
+      "url": "https://higgsfield.ai/creator-hub/help-center/tools/how-do-i-use-cinema-studio",
+      "finalUrl": "https://higgsfield.ai/creator-hub/help-center/tools/how-do-i-use-cinema-studio",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:57.928Z",
+      "sha256": "45dc81a576080824650a59d24790b46865e762f51ee19aa652057ec5b3396afc",
+      "bytes": 249649,
+      "title": "How to Use Higgsfield Cinema Studio",
+      "rawFile": "higgsfield-ai-02dc636d35.raw",
+      "textFile": "higgsfield-ai-02dc636d35.txt",
+      "excerpts": [
+        {
+          "match": "Cinema Studio 4\\.0 runs",
+          "text": "Studio 4.0? Open higgsfield.ai → Cinema Studio → select version 4.0 . Cinema Studio 4.0 runs on Seedance 2.5 and adds the Director's Panel for cinematography control, generations with up to 50 references, and clips up to 30 seconds. Director's Panel. A single control surface for the look of the film. Film Setup sets the genre (General, Action, Epic, Drama, Comedy, Horror, Noir), the era (from the 60s to the 2020s), and the tempo: the editing style and cut speed, from Single Shot to Chaotic. Camera selects the camera (including 35mm Film, 8mm Film, and DV Camcorder), the lens (from clean sharp to anamorphic and vintage options), and the aperture, with camera moves including POV, Robot Arm, and Helicopter Shot. Color Palette applies one of 50+ color grading templates. Lighting offers 6 presets, or a custom setup with control over color, brightness, diffusion, and angle. References and length. A generation takes up to 50 references: your own uploaded images, "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-02dc636d35.raw"
+    },
+    {
+      "id": "higgsfield-ai-0b558b23d8",
+      "url": "https://higgsfield.ai/marketing-studio",
+      "finalUrl": "https://higgsfield.ai/marketing-studio",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.691Z",
+      "sha256": "09a489bd93410309e720a20a2c829fb0f1b1bc8d0314bb9b4edcfc7ae8c1eede",
+      "bytes": 344675,
+      "title": "Marketing Studio • Higgsfield",
+      "rawFile": "higgsfield-ai-0b558b23d8.raw",
+      "textFile": "higgsfield-ai-0b558b23d8.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-0b558b23d8.raw"
+    },
+    {
+      "id": "higgsfield-ai-3359580c69",
+      "url": "https://higgsfield.ai/supercomputer",
+      "finalUrl": "https://higgsfield.ai/supercomputer",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.199Z",
+      "sha256": "c8688aa789f4b8c134214c498563da4dfd0d02c9be365ea8133ee1334890223c",
+      "bytes": 243545,
+      "title": "Supercomputer | Higgsfield",
+      "rawFile": "higgsfield-ai-3359580c69.raw",
+      "textFile": "higgsfield-ai-3359580c69.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-3359580c69.raw"
+    },
+    {
+      "id": "higgsfield-ai-3cc53c4971",
+      "url": "https://higgsfield.ai/genjutsu",
+      "finalUrl": "https://higgsfield.ai/genjutsu",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.525Z",
+      "sha256": "99607dc61b59a177f8948252432394e9996a369b97c3b24de2217a713ed9d4ae",
+      "bytes": 917904,
+      "title": "Higgsfield Genjutsu — Reality Manipulation for Video",
+      "rawFile": "higgsfield-ai-3cc53c4971.raw",
+      "textFile": "higgsfield-ai-3cc53c4971.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-3cc53c4971.raw"
+    },
+    {
+      "id": "higgsfield-ai-6029ccb448",
+      "url": "https://higgsfield.ai/canvas",
+      "finalUrl": "https://higgsfield.ai/canvas",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.319Z",
+      "sha256": "5ad9291031cbc56ab7b07e5273fea94d8008907a67a243eb42814c62af6c8794",
+      "bytes": 83796,
+      "title": "Higgsfield",
+      "rawFile": "higgsfield-ai-6029ccb448.raw",
+      "textFile": "higgsfield-ai-6029ccb448.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-6029ccb448.raw"
+    },
+    {
+      "id": "higgsfield-ai-60cf217d42",
+      "url": "https://higgsfield.ai/cinema-studio",
+      "finalUrl": "https://higgsfield.ai/generate",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.353Z",
+      "sha256": "ca2eecf971ad73dcae4c424d8143afdfee99e45017fb19542e6e629a475e41d9",
+      "bytes": 103484,
+      "title": "Cinema Studio 4.0 — Direct Every Detail | Higgsfield",
+      "rawFile": "higgsfield-ai-60cf217d42.raw",
+      "textFile": "higgsfield-ai-60cf217d42.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-60cf217d42.raw"
+    },
+    {
+      "id": "higgsfield-ai-7d64ffe5ab",
+      "url": "https://higgsfield.ai/creator-hub/help-center/getting-started/what-is-higgsfield",
+      "finalUrl": "https://higgsfield.ai/creator-hub/help-center/getting-started/what-is-higgsfield",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:57.919Z",
+      "sha256": "d4887138b21c661917441ba445f3addba36f93a3bffd0ea526c8f7c29412aac3",
+      "bytes": 221831,
+      "title": "What is Higgsfield?",
+      "rawFile": "higgsfield-ai-7d64ffe5ab.raw",
+      "textFile": "higgsfield-ai-7d64ffe5ab.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-7d64ffe5ab.raw"
+    },
+    {
+      "id": "higgsfield-ai-9769374de1",
+      "url": "https://higgsfield.ai/ai-influencer-studio",
+      "finalUrl": "https://higgsfield.ai/ai-influencer-studio",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.657Z",
+      "sha256": "15cf3818e139b72762b31433b04fddcfebe4b9dc28e54308913ba21384af61d9",
+      "bytes": 72018,
+      "title": "AI Influencer | Higgsfield",
+      "rawFile": "higgsfield-ai-9769374de1.raw",
+      "textFile": "higgsfield-ai-9769374de1.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-9769374de1.raw"
+    },
+    {
+      "id": "higgsfield-ai-9bc37e2626",
+      "url": "https://higgsfield.ai/",
+      "finalUrl": "https://higgsfield.ai/",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.330Z",
+      "sha256": "05bf9445ae8b0170a1da2bb7453abf9af679831a52a2f61bb2fe289e7f571c9b",
+      "bytes": 519796,
+      "title": "Higgsfield AI — AI-native creative suite",
+      "rawFile": "higgsfield-ai-9bc37e2626.raw",
+      "textFile": "higgsfield-ai-9bc37e2626.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-9bc37e2626.raw"
+    },
+    {
+      "id": "higgsfield-ai-b5768ff981",
+      "url": "https://higgsfield.ai/creator-hub/help-center/tools/which-higgsfield-tool-should-i-use",
+      "finalUrl": "https://higgsfield.ai/creator-hub/help-center/tools/which-higgsfield-tool-should-i-use",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:58.336Z",
+      "sha256": "19489af22ef39a988446b1b3b5c6dbac4240cc4f48eae9a5da413853dcc631ee",
+      "bytes": 248899,
+      "title": "Which Higgsfield Tool Should You Use",
+      "rawFile": "higgsfield-ai-b5768ff981.raw",
+      "textFile": "higgsfield-ai-b5768ff981.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-b5768ff981.raw"
+    },
+    {
+      "id": "higgsfield-ai-ba6feeb2bd",
+      "url": "https://higgsfield.ai/pricing",
+      "finalUrl": "https://higgsfield.ai/pricing",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.090Z",
+      "sha256": "363c2d58d0a04bf6555f87802663abaf072884edbe2b2296261e5bf532a0ce89",
+      "bytes": 87645,
+      "title": "Pricing plans — Higgsfield AI Video &amp; Image Generator",
+      "rawFile": "higgsfield-ai-ba6feeb2bd.raw",
+      "textFile": "higgsfield-ai-ba6feeb2bd.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-ba6feeb2bd.raw"
+    },
+    {
+      "id": "higgsfield-ai-f0ca25629f",
+      "url": "https://higgsfield.ai/CLI",
+      "finalUrl": "https://higgsfield.ai/CLI",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.271Z",
+      "sha256": "aa856d77da6b5e4853408baf9821ae3f2ea954cb2bc1a8dcf36095dcd9210834",
+      "bytes": 287329,
+      "title": "Higgsfield CLI | AI Image &amp; Video Generation for Any Agent",
+      "rawFile": "higgsfield-ai-f0ca25629f.raw",
+      "textFile": "higgsfield-ai-f0ca25629f.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/higgsfield-ai-f0ca25629f.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-04dbfaf630",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/__init__.py",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/__init__.py",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.148Z",
+      "sha256": "3ac19e2e7b5087f229adc8a63046790c8257f3a18e8919ec1a658340aea15d5c",
+      "bytes": 2167,
+      "rawFile": "raw-githubusercontent-com-04dbfaf630.raw",
+      "textFile": "raw-githubusercontent-com-04dbfaf630.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-04dbfaf630.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-0eb18e44e7",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/config.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/config.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:11.639Z",
+      "sha256": "48a8dd70525ba0553e2c9bbe4c969fdef1ebbbfcb9b39180c901ee573734c901",
+      "bytes": 1419,
+      "rawFile": "raw-githubusercontent-com-0eb18e44e7.raw",
+      "textFile": "raw-githubusercontent-com-0eb18e44e7.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-0eb18e44e7.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-19fffc7e57",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/package.json",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/package.json",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:14:48.447Z",
+      "sha256": "ed99aecb449360e1b0b5c0f92c07cb94d80d535f515025679b9c30bb4700eacb",
+      "bytes": 2044,
+      "rawFile": "raw-githubusercontent-com-19fffc7e57.raw",
+      "textFile": "raw-githubusercontent-com-19fffc7e57.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-19fffc7e57.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-1c29cc82fc",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/mixins/upload.py",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/mixins/upload.py",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.121Z",
+      "sha256": "c295d9c5921268303a3c2e133b3b86e7472b521824a145483550f3af5a4160f1",
+      "bytes": 772,
+      "rawFile": "raw-githubusercontent-com-1c29cc82fc.raw",
+      "textFile": "raw-githubusercontent-com-1c29cc82fc.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-1c29cc82fc.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-2545808760",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/auth.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/auth.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:11.663Z",
+      "sha256": "c03cc4caf943275c25d8bf67c9d8ccd34b091f53791b472507930dd3040cb528",
+      "bytes": 759,
+      "rawFile": "raw-githubusercontent-com-2545808760.raw",
+      "textFile": "raw-githubusercontent-com-2545808760.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-2545808760.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-281756caee",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/MODELS.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/MODELS.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.907Z",
+      "sha256": "a8bc9b7d62f6e2b23ac0001c92dafd7126fb8fa583cb37213f6d17cef8796f92",
+      "bytes": 38326,
+      "rawFile": "raw-githubusercontent-com-281756caee.raw",
+      "textFile": "raw-githubusercontent-com-281756caee.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-281756caee.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-35582e53a8",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/install.sh",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/install.sh",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.183Z",
+      "sha256": "19e1be64213b9982e2fd97bfbd4d9c22a7c3fe2fd56f2c5b5bea5933a9009c81",
+      "bytes": 4181,
+      "rawFile": "raw-githubusercontent-com-35582e53a8.raw",
+      "textFile": "raw-githubusercontent-com-35582e53a8.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-35582e53a8.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-39800d767e",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/README.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/README.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.096Z",
+      "sha256": "4d390d1f8bcd7a7a3457e3edb7ecdd0094329f46a2aeb805f131d21e933f4630",
+      "bytes": 21246,
+      "rawFile": "raw-githubusercontent-com-39800d767e.raw",
+      "textFile": "raw-githubusercontent-com-39800d767e.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-39800d767e.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-3db1edba04",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/http/retry.py",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/http/retry.py",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.141Z",
+      "sha256": "2803c2d1bd5df66122b81284e19ada77e0096e095bbc33c6135540705336a7cd",
+      "bytes": 5640,
+      "rawFile": "raw-githubusercontent-com-3db1edba04.raw",
+      "textFile": "raw-githubusercontent-com-3db1edba04.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-3db1edba04.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-4191a03472",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/index.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/index.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:00.266Z",
+      "sha256": "93e14e181c10afecf7a71490d2b9dcad36544c1d56e80a279cd1b94ffd2978de",
+      "bytes": 944,
+      "rawFile": "raw-githubusercontent-com-4191a03472.raw",
+      "textFile": "raw-githubusercontent-com-4191a03472.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-4191a03472.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-50e1e1f731",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/types.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/types.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:00.280Z",
+      "sha256": "7a904a6442202c79a59ba4d119d670242950b6bf08daceb1ca7d2b7157bdeb63",
+      "bytes": 2038,
+      "rawFile": "raw-githubusercontent-com-50e1e1f731.raw",
+      "textFile": "raw-githubusercontent-com-50e1e1f731.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-50e1e1f731.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-78d69342ea",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/LICENSE",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/LICENSE",
+      "status": 404,
+      "fetchedAt": "2026-10-23T19:14:48.425Z",
+      "sha256": "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+      "bytes": 14,
+      "rawFile": "raw-githubusercontent-com-78d69342ea.raw",
+      "textFile": "raw-githubusercontent-com-78d69342ea.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-78d69342ea.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-81d018bb88",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield-soul-id/SKILL.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield-soul-id/SKILL.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:57.917Z",
+      "sha256": "c0a99f4f36f45846800238e3d3c84bb87ee0683db14dcce21fb3e1da54a7c0b0",
+      "bytes": 3621,
+      "rawFile": "raw-githubusercontent-com-81d018bb88.raw",
+      "textFile": "raw-githubusercontent-com-81d018bb88.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-81d018bb88.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-9c87f92908",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/LICENSE",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/cli/fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2/LICENSE",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.116Z",
+      "sha256": "9da656d6226936542be59478dbf775057dfdeade2629d35e0832108c2b7aecc0",
+      "bytes": 1070,
+      "rawFile": "raw-githubusercontent-com-9c87f92908.raw",
+      "textFile": "raw-githubusercontent-com-9c87f92908.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-9c87f92908.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-9d81ff2895",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/test-v2.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/test-v2.ts",
+      "status": 404,
+      "fetchedAt": "2026-10-23T19:15:11.622Z",
+      "sha256": "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+      "bytes": 14,
+      "rawFile": "raw-githubusercontent-com-9d81ff2895.raw",
+      "textFile": "raw-githubusercontent-com-9d81ff2895.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-9d81ff2895.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-a0ae6d9a56",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/pyproject.toml",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/pyproject.toml",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.141Z",
+      "sha256": "943f24022898b36d428bdab52ac3062f69c98a296625ac969e9e5988fb9e1472",
+      "bytes": 827,
+      "rawFile": "raw-githubusercontent-com-a0ae6d9a56.raw",
+      "textFile": "raw-githubusercontent-com-a0ae6d9a56.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-a0ae6d9a56.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-bc6eb019c0",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/http/client.py",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/src/higgsfield_client/http/client.py",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.130Z",
+      "sha256": "8f1a2f2513c3e4fecc024192e42d40eab9c90416e91b01b6b1c1e014699b660e",
+      "bytes": 19880,
+      "rawFile": "raw-githubusercontent-com-bc6eb019c0.raw",
+      "textFile": "raw-githubusercontent-com-bc6eb019c0.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-bc6eb019c0.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-c1d7101854",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield-generate/SKILL.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield-generate/SKILL.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:57.896Z",
+      "sha256": "68bed3a080231a41ade692a0c20b637f93317713ff6ba2ff35c5302282437cef",
+      "bytes": 24837,
+      "rawFile": "raw-githubusercontent-com-c1d7101854.raw",
+      "textFile": "raw-githubusercontent-com-c1d7101854.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-c1d7101854.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-c924dfc00f",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/utils/retry.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/utils/retry.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:11.648Z",
+      "sha256": "f8b78de663e84852cb8d60b4439e4c61175fe8010d838219ca70f29013ced318",
+      "bytes": 1161,
+      "rawFile": "raw-githubusercontent-com-c924dfc00f.raw",
+      "textFile": "raw-githubusercontent-com-c924dfc00f.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-c924dfc00f.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-cad037759c",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/LICENSE",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/LICENSE",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:05:57.916Z",
+      "sha256": "9da656d6226936542be59478dbf775057dfdeade2629d35e0832108c2b7aecc0",
+      "bytes": 1070,
+      "rawFile": "raw-githubusercontent-com-cad037759c.raw",
+      "textFile": "raw-githubusercontent-com-cad037759c.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-cad037759c.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-d9a3bf85e7",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/LICENSE",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-client/aefd1ca677929762b9f69a7a7ea530a4a695d6a8/LICENSE",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.159Z",
+      "sha256": "f25ce6e8b377463aefae664eda334696c430950f0eea1189de93f54488e69fb1",
+      "bytes": 11345,
+      "rawFile": "raw-githubusercontent-com-d9a3bf85e7.raw",
+      "textFile": "raw-githubusercontent-com-d9a3bf85e7.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-d9a3bf85e7.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-e5380bd790",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/README.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/README.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:14:48.449Z",
+      "sha256": "0c532567e95fb30f987d5ccf9821dc6c3dc912f552e0a3a740317e6b52477998",
+      "bytes": 17823,
+      "rawFile": "raw-githubusercontent-com-e5380bd790.raw",
+      "textFile": "raw-githubusercontent-com-e5380bd790.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-e5380bd790.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-f1b363f9f9",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/client.ts",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/higgsfield-js/662b962fc3810b7c3adf0f7317420a543dee4f87/src/v2/client.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:15:00.270Z",
+      "sha256": "8f3bc17eec25d9b066eebbafd578e6aeec9ca15497eeffeb2dbd959e02716287",
+      "bytes": 9521,
+      "rawFile": "raw-githubusercontent-com-f1b363f9f9.raw",
+      "textFile": "raw-githubusercontent-com-f1b363f9f9.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-f1b363f9f9.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-f8378eb1ec",
+      "url": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield/SKILL.md",
+      "finalUrl": "https://raw.githubusercontent.com/higgsfield-ai/skills/f83af0bc1d937c8119099a11f8ebbf5e6fb99819/higgsfield/SKILL.md",
+      "status": 404,
+      "fetchedAt": "2026-10-23T19:05:22.168Z",
+      "sha256": "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+      "bytes": 14,
+      "rawFile": "raw-githubusercontent-com-f8378eb1ec.raw",
+      "textFile": "raw-githubusercontent-com-f8378eb1ec.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-f8378eb1ec.raw"
+    }
+  ],
+  "sourceTrees": [
+    {
+      "repo": "higgsfield-ai/cli",
+      "sha": "fd21e7cb550b5835cc00c6b4abfea0c02fe77ff2",
+      "commitDate": "2026-10-16T20:28:54Z",
+      "sha256": "2559cc6a804ee22fbbcba03546e42d0575e157dc62ee33e74f9c74d0e0ed1a6b",
+      "paths": [
+        {
+          "path": "LICENSE",
+          "gitBlobSha": "54beb798b4f27237d27c03ba8c85d41d1ff15890",
+          "bytes": 1070
+        },
+        {
+          "path": "MODELS.md",
+          "gitBlobSha": "b10adfe3907388960ca018341136bb9c7854d746",
+          "bytes": 38326
+        },
+        {
+          "path": "README.md",
+          "gitBlobSha": "d824a25e23674954a98fa2036bc7eca922f24779",
+          "bytes": 21246
+        },
+        {
+          "path": "THIRD-PARTY-NOTICES.txt",
+          "gitBlobSha": "ee30390eeb410f044ef4c2300025b0ee6a6877ca",
+          "bytes": 42777
+        },
+        {
+          "path": "demo.png",
+          "gitBlobSha": "5c4bd4271957d5c91484b35fa42f4e05b5925886",
+          "bytes": 205909
+        },
+        {
+          "path": "install.sh",
+          "gitBlobSha": "05d732fb2f1da56576ad793b714425be474f2cff",
+          "bytes": 4181
+        }
+      ],
+      "failure": null
+    },
+    {
+      "repo": "higgsfield-ai/higgsfield-client",
+      "sha": "aefd1ca677929762b9f69a7a7ea530a4a695d6a8",
+      "commitDate": "2026-09-17T17:01:19Z",
+      "sha256": "66d104be29c4b75f412aa6520d158298561e1354ba323315d37e25614346e39e",
+      "paths": [
+        {
+          "path": ".gitignore",
+          "gitBlobSha": "0ac29fc3dda94b0b548fa98a6e811aaf507a8a7d",
+          "bytes": 69
+        },
+        {
+          "path": "LICENSE",
+          "gitBlobSha": "c99a9e469beaba1886fa8939e670b0cc8b759476",
+          "bytes": 11345
+        },
+        {
+          "path": "README.md",
+          "gitBlobSha": "9adf953244f6fe018cde9cbfa26d757e6e865cb3",
+          "bytes": 11204
+        },
+        {
+          "path": "THIRD-PARTY-NOTICES.txt",
+          "gitBlobSha": "ac71b5bef290f7f552784cac8040cc5f93be0869",
+          "bytes": 25665
+        },
+        {
+          "path": "examples",
+          "gitBlobSha": "552798ba4bb961abd4eee5bf80889125b89e3670"
+        },
+        {
+          "path": "examples/agent_session.py",
+          "gitBlobSha": "ebf723749162d874863da737794810fa8c8a44df",
+          "bytes": 1558
+        },
+        {
+          "path": "pyproject.toml",
+          "gitBlobSha": "56db4aa1f5264f7160fe1165ffc98bbd3653b9d1",
+          "bytes": 827
+        },
+        {
+          "path": "src",
+          "gitBlobSha": "c4aa3d7905e3fbc06ca58e9ed8ec954e46dcee54"
+        },
+        {
+          "path": "src/higgsfield_client",
+          "gitBlobSha": "578ca6f7320e8c53463bfa52283d25f3212ac58d"
+        },
+        {
+          "path": "src/higgsfield_client/__init__.py",
+          "gitBlobSha": "1884aafd3fb0b69d10ba91f74e2d9ab7066bf777",
+          "bytes": 2167
+        },
+        {
+          "path": "src/higgsfield_client/agents",
+          "gitBlobSha": "e12d74d3a3e1b035bb9a64c7939cb60cef222412"
+        },
+        {
+          "path": "src/higgsfield_client/agents/__init__.py",
+          "gitBlobSha": "5ffd06dfc706241eb420a4937ff94ac824b5e1db",
+          "bytes": 766
+        },
+        {
+          "path": "src/higgsfield_client/agents/errors.py",
+          "gitBlobSha": "635d8779bd807cc4486100d5be805b12b9e80e99",
+          "bytes": 1835
+        },
+        {
+          "path": "src/higgsfield_client/agents/resources.py",
+          "gitBlobSha": "a033b04026325aac6587d35d81b5aaee4bbe3260",
+          "bytes": 10157
+        },
+        {
+          "path": "src/higgsfield_client/agents/types.py",
+          "gitBlobSha": "5df2b14701223c4c3f437ba1a80c1026fe9c05f5",
+          "bytes": 3435
+        },
+        {
+          "path": "src/higgsfield_client/auth.py",
+          "gitBlobSha": "e48a155c966ecf07fed13905dcbf339d3a95e2a0",
+          "bytes": 496
+        },
+        {
+          "path": "src/higgsfield_client/exceptions.py",
+          "gitBlobSha": "071b1fc9d16ddf2af8b3307dc9636845440cbdc1",
+          "bytes": 101
+        },
+        {
+          "path": "src/higgsfield_client/http",
+          "gitBlobSha": "174532255b0485882e62b058ee698f5bfc47c476"
+        },
+        {
+          "path": "src/higgsfield_client/http/__init__.py",
+          "gitBlobSha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "bytes": 0
+        },
+        {
+          "path": "src/higgsfield_client/http/client.py",
+          "gitBlobSha": "a4c71def3170ce8e7b63bfb82088b6c5f7e2972a",
+          "bytes": 19880
+        },
+        {
+          "path": "src/higgsfield_client/http/error.py",
+          "gitBlobSha": "98f901d41b9327820556eeae51559b1e8ecb3b5f",
+          "bytes": 710
+        },
+        {
+          "path": "src/higgsfield_client/http/retry.py",
+          "gitBlobSha": "b5fd632260357be94cf46642391163f8a53d9243",
+          "bytes": 5640
+        },
+        {
+          "path": "src/higgsfield_client/http/transport.py",
+          "gitBlobSha": "a8eb878ec9ac32f0583ee95676f067fe6066e3ea",
+          "bytes": 2690
+        },
+        {
+          "path": "src/higgsfield_client/mixins",
+          "gitBlobSha": "6a8f10fa1c55252345b196a6f6fa06bfe1eba32b"
+        },
+        {
+          "path": "src/higgsfield_client/mixins/__init__.py",
+          "gitBlobSha": "f2b0a8c4bc92b3dbd88122e842d0cf8b89bd6513",
+          "bytes": 59
+        },
+        {
+          "path": "src/higgsfield_client/mixins/upload.py",
+          "gitBlobSha": "5e0cd9a6c2a9ccc345534721967f1a0aab2fea7c",
+          "bytes": 772
+        },
+        {
+          "path": "src/higgsfield_client/types_.py",
+          "gitBlobSha": "42b93a7d37fd7c275d8027e59d6b40d2613092a5",
+          "bytes": 1571
+        },
+        {
+          "path": "src/higgsfield_client/utils.py",
+          "gitBlobSha": "08c22f83f1023acf1bbcf14351dad3c96b8aa506",
+          "bytes": 929
+        },
+        {
+          "path": "tests",
+          "gitBlobSha": "9fc4f3ce30196ca7d0cecb711feb514f4dcfa3de"
+        },
+        {
+          "path": "tests/__init__.py",
+          "gitBlobSha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "bytes": 0
+        },
+        {
+          "path": "tests/test_agent_client.py",
+          "gitBlobSha": "79f9bce8f478b6b05f54de187f089f30238d1ddd",
+          "bytes": 8088
+        },
+        {
+          "path": "tests/test_agents.py",
+          "gitBlobSha": "6ccb257d0d08cc6ad113300f952795bbd69c2851",
+          "bytes": 5347
+        },
+        {
+          "path": "tests/test_upload.py",
+          "gitBlobSha": "6ea98fd39c31678d9233e91fbc327b1368023bbd",
+          "bytes": 3354
+        }
+      ],
+      "failure": null
+    },
+    {
+      "repo": "higgsfield-ai/higgsfield-js",
+      "sha": null,
+      "commitDate": null,
+      "sha256": "f32c16b8c57019c61fd9f9fead176272fceec2d045325c111f3a16cf14a3a15f",
+      "paths": [],
+      "failure": "API rate limit exceeded for 176.44.204.11. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)"
+    },
+    {
+      "repo": "higgsfield-ai/skills",
+      "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+      "commitDate": "2026-09-26T16:43:57Z",
+      "sha256": "f8325ec1e9b3f988551c2aa5e486ca1175a2fe209fa6e64f7698358a21220402",
+      "paths": [
+        {
+          "path": ".claude-plugin",
+          "gitBlobSha": "83377304180c7cfffb1fcf70375a5933bcebd816"
+        },
+        {
+          "path": ".claude-plugin/marketplace.json",
+          "gitBlobSha": "33c7521e16186f90ccf25b53acd28664c4876cb2",
+          "bytes": 766
+        },
+        {
+          "path": ".claude-plugin/plugin.json",
+          "gitBlobSha": "485bbdbe8007b64383afaa18f3eb564fea8efba5",
+          "bytes": 792
+        },
+        {
+          "path": ".codex-plugin",
+          "gitBlobSha": "a76f4a06e4092664fe588b9ec6c1f7504f200e32"
+        },
+        {
+          "path": ".codex-plugin/plugin.json",
+          "gitBlobSha": "7f2cc44e3aac713ad09b94b93e8025f327054e5f",
+          "bytes": 2186
+        },
+        {
+          "path": ".cursor-plugin",
+          "gitBlobSha": "dab289229d27d18c2147473a15d97353365a5ba8"
+        },
+        {
+          "path": ".cursor-plugin/plugin.json",
+          "gitBlobSha": "66c129624982cccb1bdc69beb3c89374fd057239",
+          "bytes": 902
+        },
+        {
+          "path": ".github",
+          "gitBlobSha": "3c255aba53478b73a2e2afeeb92729edff6ad921"
+        },
+        {
+          "path": ".github/CODEOWNERS",
+          "gitBlobSha": "686089cb35943990b4bc1017e039f8323f64e4f4",
+          "bytes": 1276
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE",
+          "gitBlobSha": "98ab1fb2af6e6bbc5b52ec10cbc9fadb0b155dd4"
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+          "gitBlobSha": "1bca80f16bf03055c13eb3cd527f013ce624f5f4",
+          "bytes": 798
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE/config.yml",
+          "gitBlobSha": "2f38f711532bb4bd91132984de14fef28e844664",
+          "bytes": 431
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+          "gitBlobSha": "6cd1290fd711a4b7e9c679ed76eb54b040674000",
+          "bytes": 702
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE/new_skill_request.md",
+          "gitBlobSha": "179dc6a20f37c11e42751058b43498fcfb2bd489",
+          "bytes": 1180
+        },
+        {
+          "path": ".github/pull_request_template.md",
+          "gitBlobSha": "7425c1ebbc622bb44888d0840ed61fd2b6dd3e4f",
+          "bytes": 1287
+        },
+        {
+          "path": ".github/workflows",
+          "gitBlobSha": "0660b92a435130c5a73f62fb6a6868b2769fd3b2"
+        },
+        {
+          "path": ".github/workflows/validate-skills.yml",
+          "gitBlobSha": "c7abb38d01b0473c96ca91faa8874995622cfafd",
+          "bytes": 6832
+        },
+        {
+          "path": ".gitignore",
+          "gitBlobSha": "482e34b165185b4eeee8a28ed0254ed85e90df91",
+          "bytes": 22
+        },
+        {
+          "path": "CLAUDE.md",
+          "gitBlobSha": "04731bcbfcd35f93e9c64522a8544640d90f4388",
+          "bytes": 11030
+        },
+        {
+          "path": "CONTRIBUTING.md",
+          "gitBlobSha": "0b805d82e4bf021e681d283cec047361dd3bd1e0",
+          "bytes": 6288
+        },
+        {
+          "path": "COOKBOOK.md",
+          "gitBlobSha": "ae6ab8a395ec9e49e68db35ba34e5e67648976ef",
+          "bytes": 10839
+        },
+        {
+          "path": "INSTALL.md",
+          "gitBlobSha": "04eb77e29e12603e241f04c78ab94faeccfd3186",
+          "bytes": 4182
+        },
+        {
+          "path": "INSTALL_FOR_AGENTS.md",
+          "gitBlobSha": "84ece725c6a896bfa9c8f5d4588913d1d2318a29",
+          "bytes": 2385
+        },
+        {
+          "path": "LICENSE",
+          "gitBlobSha": "54beb798b4f27237d27c03ba8c85d41d1ff15890",
+          "bytes": 1070
+        },
+        {
+          "path": "README.md",
+          "gitBlobSha": "682610d4189c0c6fbfb68b3753fcc86ccd43e247",
+          "bytes": 8263
+        },
+        {
+          "path": "VERSION",
+          "gitBlobSha": "54d1a4f2a4a7f6afc19897c88a7b73c17ccc54fb",
+          "bytes": 7
+        },
+        {
+          "path": "assets",
+          "gitBlobSha": "b638405b64091b5d4c95512197223cca012014a3"
+        },
+        {
+          "path": "assets/README.md",
+          "gitBlobSha": "628886806cd888898406e12555630aff26471b42",
+          "bytes": 1413
+        },
+        {
+          "path": "assets/icon.svg",
+          "gitBlobSha": "d78a91803bcab850ade83e6833daeb3eaff8710e",
+          "bytes": 1673
+        },
+        {
+          "path": "assets/logo.png",
+          "gitBlobSha": "265ec883164a4a84198d0c66a0784d2bfa8124cb",
+          "bytes": 83753
+        },
+        {
+          "path": "evals",
+          "gitBlobSha": "2365f253b4de3f896a18a5eb94e4e59467b0f459"
+        },
+        {
+          "path": "evals/README.md",
+          "gitBlobSha": "bcc6affb33026d9e344c2af17d7482db8f895f7c",
+          "bytes": 1904
+        },
+        {
+          "path": "evals/scenarios.md",
+          "gitBlobSha": "d704b57c9d387452cd37d187ad916f13af94ad32",
+          "bytes": 11621
+        },
+        {
+          "path": "higgsfield-brandkit",
+          "gitBlobSha": "6b8210a422abc915a92b529eb46bdb4aa02c54a1"
+        },
+        {
+          "path": "higgsfield-brandkit/SKILL.md",
+          "gitBlobSha": "489c80420126656d773cffa99786a14f75d48683",
+          "bytes": 12693
+        },
+        {
+          "path": "higgsfield-brandkit/agents",
+          "gitBlobSha": "cd90a764ab272d075f6551fdf0d9b3b2246dab84"
+        },
+        {
+          "path": "higgsfield-brandkit/agents/openai.yaml",
+          "gitBlobSha": "4e91e1cd9a20be93881062c4fa94a6e9b48ba63f",
+          "bytes": 231
+        },
+        {
+          "path": "higgsfield-brandkit/references",
+          "gitBlobSha": "d1365280331fa45c175730e4e47d06c55bb0b505"
+        },
+        {
+          "path": "higgsfield-brandkit/references/asset-analysis.md",
+          "gitBlobSha": "572f284029a4e5d0867ae37dacbf1c3fe736e043",
+          "bytes": 7656
+        },
+        {
+          "path": "higgsfield-brandkit/references/brand-lock.md",
+          "gitBlobSha": "c803359f06145b43e24eab8b60814e2a5d17b9bb",
+          "bytes": 6245
+        },
+        {
+          "path": "higgsfield-brandkit/references/brandbook.md",
+          "gitBlobSha": "c96ceed16740e837fc57adaf07598068b3582b3b",
+          "bytes": 4942
+        },
+        {
+          "path": "higgsfield-brandkit/references/brandkit-design-brain.md",
+          "gitBlobSha": "836a5ec0ba0f496d95a303254861ebd43c3cca56",
+          "bytes": 8236
+        },
+        {
+          "path": "higgsfield-brandkit/references/concept-boards.md",
+          "gitBlobSha": "dd9bd410d71fdbd25662dd383ebe135cef739c6f",
+          "bytes": 7255
+        },
+        {
+          "path": "higgsfield-brandkit/references/handoff.md",
+          "gitBlobSha": "fccf8e07a7027028032c249992ceeae258b46396",
+          "bytes": 3839
+        },
+        {
+          "path": "higgsfield-brandkit/references/inline-widgets.md",
+          "gitBlobSha": "3d9002c2010d7ef8851161618499b36d379ea5af",
+          "bytes": 2723
+        },
+        {
+          "path": "higgsfield-brandkit/references/intake.md",
+          "gitBlobSha": "2473382f405f3d61315ddafd76a268a5b14cd68f",
+          "bytes": 3375
+        },
+        {
+          "path": "higgsfield-brandkit/references/logo-export-payloads.md",
+          "gitBlobSha": "cdb391c5d5543f02e4b830b654653cbe428dab78",
+          "bytes": 709
+        },
+        {
+          "path": "higgsfield-brandkit/references/logo-prompt-enhancer.md",
+          "gitBlobSha": "13a95840bd3f195c74286f7e5cb89adab268544d",
+          "bytes": 9773
+        },
+        {
+          "path": "higgsfield-brandkit/references/logo.md",
+          "gitBlobSha": "74a43883258cf04126f43a76f464a93fcbce1903",
+          "bytes": 10386
+        },
+        {
+          "path": "higgsfield-brandkit/references/merchandise.md",
+          "gitBlobSha": "c41af1ff4d0e41536f243f40372e7bc21e28bf18",
+          "bytes": 1060
+        },
+        {
+          "path": "higgsfield-brandkit/references/mockups.md",
+          "gitBlobSha": "d26a131896bc4d03f4fb15e29ec57944970617dd",
+          "bytes": 11120
+        },
+        {
+          "path": "higgsfield-brandkit/references/packaging.md",
+          "gitBlobSha": "c37c3fe8f167103909fca2bfafb1d62e7184f17b",
+          "bytes": 1311
+        },
+        {
+          "path": "higgsfield-brandkit/references/palette.md",
+          "gitBlobSha": "51e7962ca01840c2c2286d2bb929f42bfcf2512f",
+          "bytes": 1051
+        },
+        {
+          "path": "higgsfield-brandkit/references/posters-banners.md",
+          "gitBlobSha": "e489b19713ef30605eb74327e849765a20993cf1",
+          "bytes": 1093
+        },
+        {
+          "path": "higgsfield-brandkit/references/prerequisites.md",
+          "gitBlobSha": "a3699099abeaf3f12ae7e683aa6d331bd4d3797d",
+          "bytes": 2940
+        },
+        {
+          "path": "higgsfield-brandkit/references/presentation-deck.md",
+          "gitBlobSha": "cb284035071a94f2a9671a81b1400a6bb60d4818",
+          "bytes": 1601
+        },
+        {
+          "path": "higgsfield-brandkit/references/preview-payloads.md",
+          "gitBlobSha": "79b441daf6e32048e775f96b05e272ccef780943",
+          "bytes": 2927
+        },
+        {
+          "path": "higgsfield-brandkit/references/qa-and-iteration.md",
+          "gitBlobSha": "81db4163f4ed16dc20ba84ddae707e98e1c2310f",
+          "bytes": 6921
+        },
+        {
+          "path": "higgsfield-brandkit/references/signage.md",
+          "gitBlobSha": "4e541907126d6f14043ba89e62d13584035c4f84",
+          "bytes": 1001
+        },
+        {
+          "path": "higgsfield-brandkit/references/social-templates.md",
+          "gitBlobSha": "669d1e3058c4cd04af88b29ed7b7b7e1649f9750",
+          "bytes": 4415
+        },
+        {
+          "path": "higgsfield-brandkit/references/state-payloads.md",
+          "gitBlobSha": "aef980fba253248f3cba0ec039e4312ae7ce2cd9",
+          "bytes": 3130
+        },
+        {
+          "path": "higgsfield-brandkit/references/typography.md",
+          "gitBlobSha": "48d7f718a2d9217744f41db001907bde1ba682d0",
+          "bytes": 4398
+        },
+        {
+          "path": "higgsfield-brandkit/scripts",
+          "gitBlobSha": "35f451ee9fc3feca3fa51e41fbb3b6359b366375"
+        },
+        {
+          "path": "higgsfield-brandkit/scripts/brandkit.py",
+          "gitBlobSha": "d0f5c9a0f2386d0b2593d1e04e53574289e367a5",
+          "bytes": 56116
+        },
+        {
+          "path": "higgsfield-brandkit/scripts/build_brandbook.py",
+          "gitBlobSha": "bcef68db6f3125c7a5ee40b0b12275b0da74a955",
+          "bytes": 37748
+        },
+        {
+          "path": "higgsfield-brandkit/scripts/render_brandbook_pdf.py",
+          "gitBlobSha": "de83cca10ae9d733cda45a4ed693804e36f3630e",
+          "bytes": 5313
+        },
+        {
+          "path": "higgsfield-generate",
+          "gitBlobSha": "b35838df5df0b71add23b5985ad86d253474698a"
+        },
+        {
+          "path": "higgsfield-generate/SKILL.md",
+          "gitBlobSha": "67189d84a99432c6429ecfa8b9c02b8571a90624",
+          "bytes": 24837
+        },
+        {
+          "path": "higgsfield-generate/references",
+          "gitBlobSha": "6eaf2db1716a04f1fd5dc055787637c841918236"
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-ad-references.md",
+          "gitBlobSha": "c935839b4c5bd97897c0c3282f04ec09e55fe54a",
+          "bytes": 4314
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-avatars.md",
+          "gitBlobSha": "1b5f2a4e1cb8cdfddd5858fe3ec41f63a183ef39",
+          "bytes": 1395
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-brand-kits.md",
+          "gitBlobSha": "f15206acfc988a9a846fc993c7c52a73fd4f7c77",
+          "bytes": 2574
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-dtc-ads.md",
+          "gitBlobSha": "683fcd0da4fbabfe2eb43b0a82b4f3f3a2dc4d38",
+          "bytes": 4698
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-modes.md",
+          "gitBlobSha": "0779ace978fa5a760e76a3559b8469182d4fd362",
+          "bytes": 3330
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-products.md",
+          "gitBlobSha": "2ef1624bfad5e48fe3ec6a76807a41752e778732",
+          "bytes": 1505
+        },
+        {
+          "path": "higgsfield-generate/references/marketing-setup-items.md",
+          "gitBlobSha": "dee2c0fed982e008495f562a23109677c4b05952",
+          "bytes": 2640
+        },
+        {
+          "path": "higgsfield-generate/references/media-inputs.md",
+          "gitBlobSha": "72be4b72cb809ee5d8294a56f599709de11dde23",
+          "bytes": 7607
+        },
+        {
+          "path": "higgsfield-generate/references/model-catalog.md",
+          "gitBlobSha": "741da49d44b04d155297b0b818b0a2fdbbb8a59c",
+          "bytes": 21672
+        },
+        {
+          "path": "higgsfield-generate/references/prompt-engineering.md",
+          "gitBlobSha": "0948c67bf35cae8f98c26f693bb02e7362796a09",
+          "bytes": 1554
+        },
+        {
+          "path": "higgsfield-generate/references/troubleshooting.md",
+          "gitBlobSha": "f65b007977eafc15876eabdc89948a55ed46d94e",
+          "bytes": 1593
+        },
+        {
+          "path": "higgsfield-generate/references/workflows.md",
+          "gitBlobSha": "a09d2b644f1376930b2eb3b3f79f0c615f4982f3",
+          "bytes": 3059
+        },
+        {
+          "path": "higgsfield-marketplace-cards",
+          "gitBlobSha": "afadf8e315ed8ffa4f8f955002d3e853cc2982fb"
+        },
+        {
+          "path": "higgsfield-marketplace-cards/SKILL.md",
+          "gitBlobSha": "e0e44beaa984cb7350f4bde4b706573cd1653e4c",
+          "bytes": 3754
+        },
+        {
+          "path": "higgsfield-product-photoshoot",
+          "gitBlobSha": "80f784106cf0f65f06c82b19931770fa898ec4bc"
+        },
+        {
+          "path": "higgsfield-product-photoshoot/SKILL.md",
+          "gitBlobSha": "95d2f3f8456078a338399b81eaa792fb5c0bc653",
+          "bytes": 9438
+        },
+        {
+          "path": "higgsfield-soul-id",
+          "gitBlobSha": "0f85f4287bddaf59054bfed9be9c139dc1002ce0"
+        },
+        {
+          "path": "higgsfield-soul-id/SKILL.md",
+          "gitBlobSha": "34d5604c5e17dfc1200211b13ec4424023b80340",
+          "bytes": 3621
+        },
+        {
+          "path": "higgsfield-soul-id/references",
+          "gitBlobSha": "b29098ed0f17657b57e8885aa6ff0fe11d1f522d"
+        },
+        {
+          "path": "higgsfield-soul-id/references/photo-guide.md",
+          "gitBlobSha": "90ce6ef523e233e9c0b90cac3fbe825e7f81da69",
+          "bytes": 720
+        },
+        {
+          "path": "higgsfield-soul-id/references/troubleshooting.md",
+          "gitBlobSha": "2b54433f04801869195d69a8beb468f0102d8797",
+          "bytes": 538
+        },
+        {
+          "path": "higgsfield-video-explainer",
+          "gitBlobSha": "5644c0955628d76a7c4bd8e76e2b0f7e6fc79ebd"
+        },
+        {
+          "path": "higgsfield-video-explainer/SKILL.md",
+          "gitBlobSha": "8f50a15dda4a9c8a448d4ccbd1cdc1267ed65b2b",
+          "bytes": 12533
+        },
+        {
+          "path": "higgsfield-video-explainer/references",
+          "gitBlobSha": "61a206598f1a87f88dd9e0fb8eae8d217d64d9b1"
+        },
+        {
+          "path": "higgsfield-video-explainer/references/prompts.md",
+          "gitBlobSha": "3b6704c8fe33ab0d704e3e83d537a4ef8b369931",
+          "bytes": 4812
+        },
+        {
+          "path": "higgsfield-websites",
+          "gitBlobSha": "e29119fdaaa117b342a49e23c598263eb96e3e00"
+        },
+        {
+          "path": "higgsfield-websites/SKILL.md",
+          "gitBlobSha": "e464679d62ee130bfe79c67dc39fd6287bc41f2c",
+          "bytes": 14951
+        },
+        {
+          "path": "higgsfield-websites/references",
+          "gitBlobSha": "9b61ef6669595cf318e0fc9c55c1170ea837ac1e"
+        },
+        {
+          "path": "higgsfield-websites/references/app-cover.md",
+          "gitBlobSha": "f604de5073dba257c73a146e78887f5208c09228",
+          "bytes": 32154
+        },
+        {
+          "path": "higgsfield-websites/references/app-flow.md",
+          "gitBlobSha": "eed873ad5a44106fed9ab2d8d6f9285865534b78",
+          "bytes": 25601
+        },
+        {
+          "path": "higgsfield-websites/references/app-layouts.md",
+          "gitBlobSha": "50eb45a4e8bb1bd3c57d9e743a8939fb485bb9f7",
+          "bytes": 12179
+        },
+        {
+          "path": "higgsfield-websites/references/app-quickstart.md",
+          "gitBlobSha": "a50088147848d479365f0681c96fcdd2254586ed",
+          "bytes": 11804
+        },
+        {
+          "path": "higgsfield-websites/references/asset-system.md",
+          "gitBlobSha": "f0af3bf858a90c279a2b3a2e45d3ed5d7bd3e873",
+          "bytes": 13569
+        },
+        {
+          "path": "higgsfield-websites/references/auth.md",
+          "gitBlobSha": "ecf612d544dcd20b969672e8ff46b0697fccf055",
+          "bytes": 14558
+        },
+        {
+          "path": "higgsfield-websites/references/containers.md",
+          "gitBlobSha": "5a6a5d69731f9f782c17da882be226a95d8f8b05",
+          "bytes": 16166
+        },
+        {
+          "path": "higgsfield-websites/references/contest.md",
+          "gitBlobSha": "c5475a602e60341ec6d20d96d4fa2a98891ef21a",
+          "bytes": 4634
+        },
+        {
+          "path": "higgsfield-websites/references/cover-animator.md",
+          "gitBlobSha": "4ac317c1b8de68af93cb7517a42552370e0ce93f",
+          "bytes": 4748
+        },
+        {
+          "path": "higgsfield-websites/references/design-recipe.md",
+          "gitBlobSha": "09d79f6d17a3e0e7e9b2ef44df4731281320dba1",
+          "bytes": 10872
+        },
+        {
+          "path": "higgsfield-websites/references/design-taste-frontend.md",
+          "gitBlobSha": "2bda89e264282c52f1ed1979929294c91e616185",
+          "bytes": 87674
+        },
+        {
+          "path": "higgsfield-websites/references/fnf-react.md",
+          "gitBlobSha": "71a5ff83e05f1773ef55a559229d9a72591769e6",
+          "bytes": 13026
+        },
+        {
+          "path": "higgsfield-websites/references/fnf-sdk.md",
+          "gitBlobSha": "6a54d7f98cffaf1f8939fcc4553c10e14a7cd056",
+          "bytes": 36027
+        },
+        {
+          "path": "higgsfield-websites/references/game-2d-animation.md",
+          "gitBlobSha": "0db710586e1b40cfe7c926c1bf333cbc901c4d04",
+          "bytes": 18028
+        },
+        {
+          "path": "higgsfield-websites/references/game-3d-animation.md",
+          "gitBlobSha": "bdd933d86d9f9e1c8e1ea43c0c8fed81393f52bb",
+          "bytes": 13920
+        },
+        {
+          "path": "higgsfield-websites/references/game-audio.md",
+          "gitBlobSha": "fb66a98302a4da6f50cd7de287bfafcdaceb4fc6",
+          "bytes": 3351
+        },
+        {
+          "path": "higgsfield-websites/references/game-design-system.md",
+          "gitBlobSha": "0df3e04f80d786767b7a93470f6199e054ca2b30",
+          "bytes": 16204
+        },
+        {
+          "path": "higgsfield-websites/references/game-flow.md",
+          "gitBlobSha": "3eaab0bd8f2eda66c1d5e8308ce0beaef49ebdfd",
+          "bytes": 5069
+        },
+        {
+          "path": "higgsfield-websites/references/game-meshy-api.md",
+          "gitBlobSha": "60e6c147b57ad218144543de2c2b0959493cafc0",
+          "bytes": 8069
+        },
+        {
+          "path": "higgsfield-websites/references/game-meshy-input-rules.md",
+          "gitBlobSha": "1b5ad773917b47d59c09c86c0b9fd239b5610fb1",
+          "bytes": 4643
+        },
+        {
+          "path": "higgsfield-websites/references/game-procedural-animation.md",
+          "gitBlobSha": "172a296a60a0c7f3432a6b8610aed1dada6f118a",
+          "bytes": 6159
+        },
+        {
+          "path": "higgsfield-websites/references/game-stylization.md",
+          "gitBlobSha": "58a787c61db64496cbe1484f4940a92ab84c3813",
+          "bytes": 12658
+        },
+        {
+          "path": "higgsfield-websites/references/game-textures.md",
+          "gitBlobSha": "7554bd4947b03e4189be29af6f5270098f064581",
+          "bytes": 12299
+        },
+        {
+          "path": "higgsfield-websites/references/image-to-code.md",
+          "gitBlobSha": "57ca46cc517f9244c21a71992370dac821d76006",
+          "bytes": 6546
+        },
+        {
+          "path": "higgsfield-websites/references/quanta-design.md",
+          "gitBlobSha": "3636e5b1f8d3a7d99124864c885ee26506b333f6",
+          "bytes": 34794
+        },
+        {
+          "path": "higgsfield-websites/references/reference-boards.md",
+          "gitBlobSha": "24da1cd6007eee328d45575a534525101d1080f7",
+          "bytes": 6684
+        },
+        {
+          "path": "higgsfield-websites/references/review-rubric.md",
+          "gitBlobSha": "cbfe475d7879f39a02c8cffa13116ae8d0073e18",
+          "bytes": 8731
+        },
+        {
+          "path": "higgsfield-websites/references/runtime-and-infra.md",
+          "gitBlobSha": "4e0f3d2cb09a4f23d4f803b234800fb9bd382748",
+          "bytes": 10683
+        },
+        {
+          "path": "higgsfield-websites/references/scroll-scrub-asset-css.md",
+          "gitBlobSha": "adda64f4533af143aa35871b1c16173ff5253bc6",
+          "bytes": 5703
+        },
+        {
+          "path": "higgsfield-websites/references/scroll-scrub-asset-react.md",
+          "gitBlobSha": "622d71b26b22d4c1ed408feee43f55a928afa6b5",
+          "bytes": 20848
+        },
+        {
+          "path": "higgsfield-websites/references/scroll-scrub-asset-video.md",
+          "gitBlobSha": "b0f26b36c971bd9fea5058109aa49ec469f19de1",
+          "bytes": 2025
+        },
+        {
+          "path": "higgsfield-websites/references/scroll-scrub.md",
+          "gitBlobSha": "8fdfc5bd0aa86d54d91fc1e9370cfa22da7a6be4",
+          "bytes": 20339
+        },
+        {
+          "path": "higgsfield-websites/references/security.md",
+          "gitBlobSha": "ebee091263ad1a04ef765707f7ada488fa1807ad",
+          "bytes": 38314
+        },
+        {
+          "path": "higgsfield-websites/references/seo.md",
+          "gitBlobSha": "26737d22a95849e2c4031de476eaa381fe3839eb",
+          "bytes": 36672
+        },
+        {
+          "path": "higgsfield-websites/references/website-flow.md",
+          "gitBlobSha": "ea8ae48fab9ea11b474c2dea9465a40d35e0e3bc",
+          "bytes": 30856
+        },
+        {
+          "path": "higgsfield-websites/references/wow-catalog.md",
+          "gitBlobSha": "8e443d1ffa3971e6b45e3eb7f662951e5e0ff861",
+          "bytes": 7826
+        },
+        {
+          "path": "higgsfield-websites/references/wow-maker.md",
+          "gitBlobSha": "7ecf7a1d7557eefc0aad0077aa223e7eae377d26",
+          "bytes": 22207
+        },
+        {
+          "path": "higgsfield-websites/scripts",
+          "gitBlobSha": "fbad2d14211dd661b4b2872ccbbebd68ecdd7bfc"
+        },
+        {
+          "path": "higgsfield-websites/scripts/fbx2glb.py",
+          "gitBlobSha": "6ab4467100ecbc36b4f86f576155f52e01ba6985",
+          "bytes": 6108
+        },
+        {
+          "path": "higgsfield-websites/scripts/glb_inspect.py",
+          "gitBlobSha": "f332d3d50e46afa28a27ac040d383de8c5637599",
+          "bytes": 4765
+        },
+        {
+          "path": "higgsfield-websites/scripts/glb_merge_anims.py",
+          "gitBlobSha": "abb4e8034537782b0fd473739ae7a634fef557bd",
+          "bytes": 8221
+        },
+        {
+          "path": "higgsfield-websites/scripts/glb_patch.py",
+          "gitBlobSha": "34d1d34f2e7fdbadb41a1c17ca552c88621fd17a",
+          "bytes": 2727
+        },
+        {
+          "path": "higgsfield-websites/scripts/merge_anim_glbs.py",
+          "gitBlobSha": "93709e4ba8854a84396b03551f6077706d3399f0",
+          "bytes": 6058
+        },
+        {
+          "path": "higgsfield-websites/scripts/pipeline.py",
+          "gitBlobSha": "dc673100e5c691ee3a7ca39d785fe3c89c22a80c",
+          "bytes": 11911
+        },
+        {
+          "path": "higgsfield-websites/scripts/proc_anim_dragon.py",
+          "gitBlobSha": "6c7bb9cc0c9bd2c1a85721b11dba3f2ef8973fff",
+          "bytes": 6679
+        },
+        {
+          "path": "higgsfield-websites/scripts/proc_rig_dragon.py",
+          "gitBlobSha": "fe429f10c3bd3630f8e76399fec33809c1298fe8",
+          "bytes": 4882
+        },
+        {
+          "path": "higgsfield-websites/scripts/proc_weights.py",
+          "gitBlobSha": "610238fcb8f61525f60413ab62dbafbdb6b4f2ef",
+          "bytes": 2730
+        },
+        {
+          "path": "higgsfield-websites/scripts/rig_transfer.py",
+          "gitBlobSha": "3390d7a78360f24ca6b9c879077833242bb2b71e",
+          "bytes": 8326
+        },
+        {
+          "path": "higgsfield-websites/scripts/seamless.py",
+          "gitBlobSha": "5e1ab746aaeb2423d9dd324eae475d67c8f6b906",
+          "bytes": 2520
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail",
+          "gitBlobSha": "0d80160217529b5c91f2f6517591d7e43662bd62"
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/SKILL.md",
+          "gitBlobSha": "fca52c8eee762fdd2fa53d9708480a2098c91670",
+          "bytes": 12011
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/agents",
+          "gitBlobSha": "7ec49dc5055f50810d8aa9981b6cc09a3190d8ca"
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/agents/openai.yaml",
+          "gitBlobSha": "bb40f59ae8e14acc98a706c773940f2d54d6c296",
+          "bytes": 230
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/references",
+          "gitBlobSha": "20553626221c72cc28b43e74abb1a84fbcb823d4"
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/references/text-overlay-bake.md",
+          "gitBlobSha": "0401e565ae54e25e1e6f3e886d2ce6dbec1d3c0f",
+          "bytes": 11356
+        },
+        {
+          "path": "higgsfield-youtube-thumbnail/references/thumbnail-frameworks.md",
+          "gitBlobSha": "06170df5e607a70d5bc7733c1e005df7d65b6d7b",
+          "bytes": 4063
+        },
+        {
+          "path": "scripts",
+          "gitBlobSha": "aaa80c50b8fe2ca80b16bbf1c229f38094c5d10f"
+        },
+        {
+          "path": "scripts/update-check.sh",
+          "gitBlobSha": "1e6f2496e3fce4217ea2d7dd5c67e5af77d6ac4b",
+          "bytes": 4474
+        },
+        {
+          "path": "setup",
+          "gitBlobSha": "0ea020222950253db5c3ab7b2528568af9a51b63",
+          "bytes": 6648
+        }
+      ],
+      "failure": null
+    }
+  ],
+  "gitHeadFallback": {
+    "repo": "https://github.com/higgsfield-ai/higgsfield-js.git",
+    "command": "rtk git ls-remote https://github.com/higgsfield-ai/higgsfield-js.git HEAD",
+    "sha": "662b962fc3810b7c3adf0f7317420a543dee4f87",
+    "date": "2026-10-23",
+    "note": "Read-only git remote resolved immutable HEAD after unauthenticated API rate limit. Direct raw files captured under this pin; full tree unresolved."
+  },
+  "webExtraction": [
+    {
+      "file": "workspace work/web/competitor-search-1.json",
+      "sha256": "5900401f5a66f587935ab25165fffe0bf3ab25a82becf1cdd4458099aee809e1",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    },
+    {
+      "file": "workspace work/web/competitor-search-2.json",
+      "sha256": "58e726425dcb9e238aa432855594eaf2d64dd0ef17e89893475851a2b9b1b95d",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    },
+    {
+      "file": "workspace work/web/competitor-open-3.json",
+      "sha256": "ced4ad2d0986bd52e08ccb242edd0cce131f9a608d38a3331c02c2ba6c94749b",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Discovery corroborates direct HTTP captures; direct capture wins if cached snippets differ."
+    }
+  ]
+}

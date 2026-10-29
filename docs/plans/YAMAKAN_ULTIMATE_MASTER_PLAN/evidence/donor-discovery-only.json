@@ -1,0 +1,120 @@
+{
+  "schema": "yamakan.donor-discovery/v1",
+  "rows": [
+    {
+      "donor": "olive",
+      "repo": "olive-editor/olive",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:08.234294+00:00",
+      "sha": "7e0e94abf6610026aebb9ddce8564c39522fac6e",
+      "commitDate": "2024-12-05T10:34:16Z",
+      "licenseUrl": "https://raw.githubusercontent.com/olive-editor/olive/7e0e94abf6610026aebb9ddce8564c39522fac6e/LICENSE",
+      "licenseSha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "blender",
+      "repo": "blender/blender",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:08.235071+00:00",
+      "sha": "ac44e43ae514c07f153b9694e25268a34ba10727",
+      "commitDate": "2026-10-23T16:02:43Z",
+      "licenseUrl": "https://raw.githubusercontent.com/blender/blender/ac44e43ae514c07f153b9694e25268a34ba10727/COPYING",
+      "licenseSha256": "19e6f4b541772f9d7b98a52bdbca3ebd5ef9e404956a9a6de68bfc3c1a178387",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "gstreamer",
+      "repo": "GStreamer/gstreamer",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:08.236313+00:00",
+      "sha": "fd790f768d330483f977572b1c34b81ae2a6963a",
+      "commitDate": "2026-10-23T16:12:08Z",
+      "licenseUrl": "https://raw.githubusercontent.com/GStreamer/gstreamer/fd790f768d330483f977572b1c34b81ae2a6963a/LICENSE",
+      "licenseSha256": "ad2eec519ebd4b5df86ea84dff24ae3bfa2edea846a703b58902dd221ae375db",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "remotion",
+      "repo": "remotion-dev/remotion",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:08.285503+00:00",
+      "sha": "1c7c484efbbbe96d9ecd0abb4440af54222d4874",
+      "commitDate": "2026-10-23T18:51:31Z",
+      "licenseUrl": "https://raw.githubusercontent.com/remotion-dev/remotion/1c7c484efbbbe96d9ecd0abb4440af54222d4874/LICENSE.md",
+      "licenseSha256": "bd65083b940f61904f6ef298aade918a7cad72a3e35bc406e36fab365844b673",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "wan",
+      "repo": "Wan-Video/Wan2.2",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.197688+00:00",
+      "sha": "1ea34ff48f87168174e12956e200b1d908b1c5ff",
+      "commitDate": "2026-09-21T06:16:22Z",
+      "licenseUrl": "https://raw.githubusercontent.com/Wan-Video/Wan2.2/1ea34ff48f87168174e12956e200b1d908b1c5ff/LICENSE.txt",
+      "licenseSha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "ltxvideo",
+      "repo": "Lightricks/LTX-Video",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.221733+00:00",
+      "sha": "4b2d053057623ddd4d0a1d3e9cd28890e9ef487f",
+      "commitDate": "2026-01-05T22:37:06Z",
+      "licenseUrl": "https://raw.githubusercontent.com/Lightricks/LTX-Video/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/LICENSE",
+      "licenseSha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "cogvideo",
+      "repo": "zai-org/CogVideo",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.248174+00:00",
+      "sha": "7a1af7154511e0ce4e4be8d62faa8c5e5a3532d2",
+      "pinMethod": "git ls-remote HEAD",
+      "apiAttemptError": "HTTP Error 403: rate limit exceeded",
+      "licenseUrl": "https://raw.githubusercontent.com/zai-org/CogVideo/7a1af7154511e0ce4e4be8d62faa8c5e5a3532d2/LICENSE",
+      "licenseSha256": "4c3f6aeb71e12415a59117dfd35cfc177514424f0356c81798fde1a239d0b6a8",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "hunyuan",
+      "repo": "Tencent-Hunyuan/HunyuanVideo",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.257759+00:00",
+      "sha": "4eda9cb44c3be82a6b9c4261897cb6bd3cfb084e",
+      "pinMethod": "git ls-remote HEAD",
+      "apiAttemptError": "HTTP Error 403: rate limit exceeded",
+      "licenseUrl": "https://raw.githubusercontent.com/Tencent-Hunyuan/HunyuanVideo/4eda9cb44c3be82a6b9c4261897cb6bd3cfb084e/LICENSE.txt",
+      "licenseSha256": "860d4bf5d8a95634e1c6c0476378a3f8af70850554ee1e3e02b1e5527e2c4ada",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "rife-ncnn",
+      "repo": "nihui/rife-ncnn-vulkan",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.340644+00:00",
+      "sha": "a7532fc3f9f8f008cd6eecd6f2ffe2a9698e0cf7",
+      "pinMethod": "git ls-remote HEAD",
+      "apiAttemptError": "HTTP Error 403: rate limit exceeded",
+      "licenseUrl": "https://raw.githubusercontent.com/nihui/rife-ncnn-vulkan/a7532fc3f9f8f008cd6eecd6f2ffe2a9698e0cf7/LICENSE",
+      "licenseSha256": "a73beab18143600af0b10c6050a953ec233775ce31c2bf3373a794db535329fd",
+      "sourceImplementationReviewed": false
+    },
+    {
+      "donor": "realesrgan-ncnn",
+      "repo": "xinntao/Real-ESRGAN-ncnn-vulkan",
+      "inspection": "metadata-and-license-only",
+      "retrievedUtc": "2026-10-23T19:05:09.372604+00:00",
+      "sha": "37026f49824c5cf84062e7c6a5dd71445dcf610f",
+      "pinMethod": "git ls-remote HEAD",
+      "apiAttemptError": "HTTP Error 403: rate limit exceeded",
+      "licenseUrl": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN-ncnn-vulkan/37026f49824c5cf84062e7c6a5dd71445dcf610f/LICENSE",
+      "licenseSha256": "5abb941454de437b0e90d78dcb72e3688f74e14bcd4e24393273cb5cd0e9c937",
+      "sourceImplementationReviewed": false
+    }
+  ],
+  "warning": "Metadata and license text only; implementation and transitive closure not source reviewed."
+}
