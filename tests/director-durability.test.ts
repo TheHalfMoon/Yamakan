@@ -103,6 +103,329 @@ const consentInput = {
   principalId: "browser-ui",
 };
 
+async function finishStage(
+  store: ProjectStore,
+  runId: string,
+  stage: string,
+  outputHash: string,
+) {
+  await advanceStage(store, {
+    runId,
+    stage,
+    status: "awaiting_human",
+    outputHash,
+  });
+  return approveStage(store, { runId, stage, outputHash, ttlMs: 60_000 });
+}
+
+test("replacing an ancestor invalidates completed descendants across restart without rewriting audit or other runs", async () => {
+  const { root, store, project, output } = await workspace();
+  const old = await output("old-base");
+  const changed = await output("new-base");
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  const other = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  for (const id of [run.id, other.id])
+    for (const stage of ["research", "script", "timeline"])
+      await finishStage(store, id, stage, old);
+  const approvalInput = {
+    runId: run.id,
+    stage: "script",
+    outputHash: old,
+    ttlMs: 60_000,
+  };
+  const approvalRequest = {
+    principalId: "browser-ui",
+    requestId: "script-before-invalidation",
+    digest: hash("script-before-invalidation"),
+  };
+  const historicalResponse = await approveStage(
+    store,
+    approvalInput,
+    approvalRequest,
+  );
+  const unaffected = await loadRun(store, other.id);
+  const audit = store.read((db) =>
+    db
+      .prepare("SELECT * FROM director_attempts WHERE run_id = ? ORDER BY seq")
+      .all(run.id),
+  );
+  assert.equal((await directorNext(store, run.id)).kind, "done");
+  await finishStage(store, run.id, "research", changed);
+  const invalidated = await loadRun(store, run.id);
+  for (const stage of ["script", "timeline"]) {
+    const receipt = invalidated.receipts.find((r) => r.stage === stage)!;
+    assert.equal(receipt.status, "pending");
+    assert.equal(receipt.outputHash, null);
+    assert.equal(receipt.humanApproved, false);
+  }
+  assert.deepEqual(await directorNext(store, run.id), {
+    kind: "stage",
+    stage: "script",
+  });
+  const currentAudit = () =>
+    store.read((db) =>
+      db
+        .prepare(
+          "SELECT * FROM director_attempts WHERE run_id = ? ORDER BY seq",
+        )
+        .all(run.id),
+    );
+  const auditBeforeReplay = currentAudit();
+  assert.deepEqual(
+    await approveStage(store, approvalInput, approvalRequest),
+    historicalResponse,
+  );
+  assert.deepEqual(await loadRun(store, run.id), invalidated);
+  assert.deepEqual(await directorNext(store, run.id), {
+    kind: "stage",
+    stage: "script",
+  });
+  assert.deepEqual(currentAudit(), auditBeforeReplay);
+  assert.deepEqual(await loadRun(store, other.id), unaffected);
+  assert.deepEqual(
+    store.read((db) =>
+      db
+        .prepare(
+          "SELECT * FROM director_attempts WHERE run_id = ? AND seq <= ? ORDER BY seq",
+        )
+        .all(run.id, audit.length),
+    ),
+    audit,
+  );
+  store.close();
+  const reopened = await open(root);
+  assert.deepEqual(await loadRun(reopened, run.id), invalidated);
+  await finishStage(reopened, run.id, "script", old);
+  assert.deepEqual(await directorNext(reopened, run.id), {
+    kind: "stage",
+    stage: "timeline",
+  });
+  await finishStage(reopened, run.id, "timeline", old);
+  assert.equal((await directorNext(reopened, run.id)).kind, "done");
+});
+
+test("waiting descendants cannot be approved after an ancestor changes, including old persisted approvals", async () => {
+  const { store, project, output } = await workspace();
+  const old = await output("waiting-old");
+  const changed = await output("waiting-new");
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  await finishStage(store, run.id, "research", old);
+  await advanceStage(store, {
+    runId: run.id,
+    stage: "script",
+    status: "awaiting_human",
+    outputHash: old,
+  });
+  await finishStage(store, run.id, "research", changed);
+  const before = await loadRun(store, run.id);
+  await refused(
+    approveStage(store, {
+      runId: run.id,
+      stage: "script",
+      outputHash: old,
+      ttlMs: 60_000,
+    }),
+    "VALIDATION",
+  );
+  assert.deepEqual(await loadRun(store, run.id), before);
+  // A pre-fix database can already contain a stale approval after the
+  // ancestor replacement. Reading that historical row must not revive it.
+  store.transaction((db) => {
+    db.prepare(
+      "INSERT INTO director_attempts(run_id, seq, stage, kind, status, output_hash, approval_expires_at, epoch, principal_id, recorded_at) VALUES (?, ?, 'script', 'approve', 'completed', ?, ?, (SELECT value FROM director_epoch WHERE singleton = 1), 'browser-ui', ?)",
+    ).run(run.id, before.version, old, Date.now() + 60_000, Date.now());
+    db.prepare(
+      "UPDATE director_runs SET version = version + 1 WHERE id = ?",
+    ).run(run.id);
+  });
+  const historical = await loadRun(store, run.id);
+  assert.equal(
+    historical.receipts.find((r) => r.stage === "script")?.status,
+    "pending",
+  );
+  await refused(
+    approveStage(store, {
+      runId: run.id,
+      stage: "script",
+      outputHash: old,
+      ttlMs: 60_000,
+    }),
+    "VALIDATION",
+  );
+});
+
+test("starting an upstream attempt invalidates descendants before it produces an output", async () => {
+  const { store, project, output } = await workspace();
+  const out = await output("start-base");
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  // Starting downstream work early is allowed, but completing it still
+  // requires the predecessor. The first upstream advance invalidates it.
+  await advanceStage(store, {
+    runId: run.id,
+    stage: "script",
+    status: "in_progress",
+    outputHash: null,
+  });
+  await finishStage(store, run.id, "research", out);
+  assert.equal(
+    (await loadRun(store, run.id)).receipts.find((r) => r.stage === "script")
+      ?.status,
+    "pending",
+  );
+  await finishStage(store, run.id, "script", out);
+  await advanceStage(store, {
+    runId: run.id,
+    stage: "research",
+    status: "in_progress",
+    outputHash: null,
+  });
+  assert.equal(
+    (await loadRun(store, run.id)).receipts.find((r) => r.stage === "script")
+      ?.status,
+    "pending",
+  );
+  await refused(
+    advanceStage(store, {
+      runId: run.id,
+      stage: "script",
+      status: "awaiting_human",
+      outputHash: out,
+    }),
+    "VALIDATION",
+    /PREREQUISITE/,
+  );
+  await finishStage(store, run.id, "research", out);
+  // Returning to identical upstream bytes still needs a fresh descendant
+  // submission after the intervening attempt; old approvals do not revive.
+  await refused(
+    approveStage(store, {
+      runId: run.id,
+      stage: "script",
+      outputHash: out,
+      ttlMs: 60_000,
+    }),
+    "VALIDATION",
+  );
+});
+
+test("same-output approval renewal and replay preserve completed descendants", async () => {
+  const { store, project, output } = await workspace();
+  const out = await output("renew-base");
+  const run = await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: "framework-smoke",
+  });
+  for (const stage of ["research", "script", "timeline"])
+    await finishStage(store, run.id, stage, out);
+  const before = await loadRun(store, run.id);
+  const request = {
+    principalId: "browser-ui",
+    requestId: "renew-research",
+    digest: hash("renew-research"),
+  };
+  const input = {
+    runId: run.id,
+    stage: "research",
+    outputHash: out,
+    ttlMs: 120_000,
+  };
+  const renewed = await approveStage(store, input, request);
+  assert.deepEqual(
+    renewed.receipts.filter((r) => r.stage !== "research"),
+    before.receipts.filter((r) => r.stage !== "research"),
+  );
+  assert.deepEqual(await approveStage(store, input, request), renewed);
+  assert.equal((await directorNext(store, run.id)).kind, "done");
+});
+
+test("unordered legacy receipt snapshots retain outputs for reapproval then obey live invalidation", async () => {
+  const { root, store, project, output } = await workspace();
+  const out = await output("legacy-base");
+  const changed = await output("legacy-new");
+  const id = randomUUID();
+  const dir = path.join(root, "director");
+  await mkdir(dir);
+  await writeFile(
+    path.join(dir, `run-${id}.json`),
+    JSON.stringify({
+      format: "yamakan.director-run",
+      formatVersion: 1,
+      id,
+      projectId: project.id,
+      pipelineName: "framework-smoke",
+      receipts: ["timeline", "script", "research"].map((stage) => ({
+        format: "yamakan.stage-receipt",
+        formatVersion: 1,
+        projectId: project.id,
+        pipelineName: "framework-smoke",
+        stage,
+        status: stage === "script" ? "awaiting_human" : "completed",
+        outputHash: out,
+        humanApproved: stage !== "script",
+        approvedOutputHash: stage === "script" ? null : out,
+        approvalExpiresAtMs: stage === "script" ? null : Date.now() + 60_000,
+      })),
+    }),
+  );
+  assert.equal((await importLegacyDirector(store)).attempts, 3);
+  const imported = await loadRun(store, id);
+  assert.ok(
+    imported.receipts.every(
+      (r) =>
+        r.status === "awaiting_human" &&
+        r.outputHash === out &&
+        !r.humanApproved,
+    ),
+  );
+  for (const stage of ["research", "script", "timeline"])
+    await approveStage(store, {
+      runId: id,
+      stage,
+      outputHash: out,
+      ttlMs: 60_000,
+    });
+  assert.equal((await directorNext(store, id)).kind, "done");
+  await finishStage(store, id, "research", changed);
+  assert.deepEqual(await directorNext(store, id), {
+    kind: "stage",
+    stage: "script",
+  });
+  assert.equal((await importLegacyDirector(store)).attempts, 0);
+});
+
+test("legacy runs with unknown pipelines remain readable but cannot execute", async () => {
+  const { root, store, project } = await workspace();
+  const id = randomUUID();
+  const dir = path.join(root, "director");
+  await mkdir(dir);
+  await writeFile(
+    path.join(dir, `run-${id}.json`),
+    JSON.stringify({
+      format: "yamakan.director-run",
+      formatVersion: 1,
+      id,
+      projectId: project.id,
+      pipelineName: "historical-pipeline",
+      receipts: [],
+    }),
+  );
+  assert.equal((await importLegacyDirector(store)).runs, 1);
+  assert.equal((await loadRun(store, id)).pipelineName, "historical-pipeline");
+  await refused(directorNext(store, id), "NOT_FOUND", /Unknown pipeline/);
+});
+
 test("approval rechecks predecessor expiry atomically and keeps a refused request retryable", async () => {
   const { store, project, output } = await workspace();
   const run = await startDirectorRun(store, {
