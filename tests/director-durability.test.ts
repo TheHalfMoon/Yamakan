@@ -133,6 +133,22 @@ test("replacing an ancestor invalidates completed descendants across restart wit
   for (const id of [run.id, other.id])
     for (const stage of ["research", "script", "timeline"])
       await finishStage(store, id, stage, old);
+  const approvalInput = {
+    runId: run.id,
+    stage: "script",
+    outputHash: old,
+    ttlMs: 60_000,
+  };
+  const approvalRequest = {
+    principalId: "browser-ui",
+    requestId: "script-before-invalidation",
+    digest: hash("script-before-invalidation"),
+  };
+  const historicalResponse = await approveStage(
+    store,
+    approvalInput,
+    approvalRequest,
+  );
   const unaffected = await loadRun(store, other.id);
   const audit = store.read((db) =>
     db
@@ -152,6 +168,25 @@ test("replacing an ancestor invalidates completed descendants across restart wit
     kind: "stage",
     stage: "script",
   });
+  const currentAudit = () =>
+    store.read((db) =>
+      db
+        .prepare(
+          "SELECT * FROM director_attempts WHERE run_id = ? ORDER BY seq",
+        )
+        .all(run.id),
+    );
+  const auditBeforeReplay = currentAudit();
+  assert.deepEqual(
+    await approveStage(store, approvalInput, approvalRequest),
+    historicalResponse,
+  );
+  assert.deepEqual(await loadRun(store, run.id), invalidated);
+  assert.deepEqual(await directorNext(store, run.id), {
+    kind: "stage",
+    stage: "script",
+  });
+  assert.deepEqual(currentAudit(), auditBeforeReplay);
   assert.deepEqual(await loadRun(store, other.id), unaffected);
   assert.deepEqual(
     store.read((db) =>
