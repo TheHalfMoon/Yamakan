@@ -4,7 +4,7 @@ Updated 2026-10-29, Asia/Riyadh. This ledger combines requested deliverables 12 
 
 ## Verified frontier
 
-Latest observed main: `495f76df8251d079627238d8716d45882bfa04a6`. Its 32 focused preflight tests passed locally; post-merge CI run 40904770522 is pending. Previous main `79fc86fe1cc215cf091135c114822ea3e35c9e72` completed [post-merge CI 40860328200](https://github.com/TheHalfMoon/Yamakan/actions/runs/40860328200) SUCCESS. Public release remains **NO-GO**, models/providers remain gated, issue #77 external gates remain open. Research drafts #85 and #86 were not modified.
+Latest verified main: `495f76df8251d079627238d8716d45882bfa04a6`. Its 32 focused preflight tests passed locally; [post-merge CI 40904770522](https://github.com/TheHalfMoon/Yamakan/actions/runs/40904770522) completed SUCCESS. Previous main `79fc86fe1cc215cf091135c114822ea3e35c9e72` completed [post-merge CI 40860328200](https://github.com/TheHalfMoon/Yamakan/actions/runs/40860328200) SUCCESS. Public release remains **NO-GO**, models/providers remain gated, issue #77 external gates remain open. Research drafts #85 and #86 were not modified.
 
 | Work | Exact code and disposition | Verification |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Latest observed main: `495f76df8251d079627238d8716d45882bfa04a6`. Its 32 focused
 
 ## Tool execution, limitations and local receipts
 
-RTK, PStack workflows, fresh independent review agents, Git/GitHub CLI, Node tests, real Microsoft Edge, TesterArmy, deterministic Graft and a local D1 advisory were used. GitHub plugin calls failed with missing link_id; authenticated CLI supplied the verified frontier. Graft parsed 690 files; no generative graph pass. D1 answered one advisory after an earlier request-format failure; never a gate. Alibaba OCR preview ran, but full cloud-configured review did not run. No paid inference, model execution, weight download or public release.
+RTK, PStack workflows, fresh independent review agents, Git/GitHub CLI, Node tests, real Microsoft Edge, TesterArmy, deterministic Graft and a local D1 advisory were used. GitHub plugin calls failed with missing link_id; authenticated CLI supplied the verified frontier. Graft parsed 690 files; no generative graph pass. D1 answered one advisory after an earlier request-format failure; never a gate. Alibaba OCR preview ran, but full cloud-configured review did not run. No paid inference, product/generative model execution, weight download or public release.
 
 Local log paths are relative to the isolated engineering checkout and not committed raw captures. SHA-256 binds the saved results:
 
