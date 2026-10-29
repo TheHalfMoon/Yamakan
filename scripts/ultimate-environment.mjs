@@ -122,6 +122,13 @@ export function evaluateEnvironment(input) {
       detail: `node ${input.node.version} does not satisfy ${input.node.engine}`,
     });
   }
+  if (input.mediaRuntime?.checked && input.mediaRuntime.valid !== true) {
+    blockers.push({
+      code: "MEDIA_RUNTIME_INVALID",
+      status: "BLOCKED",
+      detail: "selected media runtime failed its pinned file preflight",
+    });
+  }
   // procd stages every worker executable in this per-user cache and grants
   // only it to the worker sandbox; a link there redirects that grant and
   // makes every sandboxed launch fail.
@@ -172,6 +179,7 @@ export function evaluateEnvironment(input) {
     helper: input.helper || null,
     ffmpeg: input.ffmpeg || null,
     ffprobe: input.ffprobe || null,
+    mediaRuntime: input.mediaRuntime || null,
     disk: input.disk || null,
     workerTools: input.workerTools || null,
   };
