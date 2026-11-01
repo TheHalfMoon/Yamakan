@@ -50,6 +50,8 @@ Observed 2026-10-28 through 2026-10-29. Pins below refer to code actually retrie
 
 The authenticated account is TheHalfMoon. Its accessible repository listing returned 51 repositories spanning public and private projects; private source, credentials and business data are not reproduced here. Flind was reachable as private with an unclassified license (`NOASSERTION`), so no transplant is qualified. Wepld returned no match in the scoped account search; this is not proof of global nonexistence or inaccessible-account availability.
 
+On 2026-11-02 a bounded private license/checkpoint-source sample was inspected locally. Directory-specific third-party licensing and a large unrelated dependency closure ruled out transplantation for that opportunity. No raw private source or private implementation details are included in this public research. The recursive tree response was truncated, so private inventory and deep REA remain incomplete; repository-level license metadata alone is not adequate.
+
 Additional metadata/tree inventories (not deep REA): Gomrey `5f299a7a6174ad3a1180f827778db5f4400a4d71` (Apache-2.0), Skilit `157ace7fc57aae9e135a368b7bbe1829ae7111ae` (Apache-2.0), Mediabunny `3a8807f9b88e11bca376447727717bbc36148b3a` (MPL-2.0), OpenCut `e668010778568641babef2cc40be4703ae6916d6` (MIT). Revalidate repository contents and package/version-specific licenses before selecting any; metadata is not qualification.
 
 ## Two additional source traces (2026-10-29)
