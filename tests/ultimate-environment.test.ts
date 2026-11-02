@@ -204,6 +204,27 @@ const ready = {
 const all = (exitCode = 0) =>
   REQUIRED_SCRIPTS.map((name: string) => ({ name, exitCode }));
 
+test("invalid selected media runtime blocks despite passing probes and scripts", () => {
+  const mediaRuntime = {
+    checked: true,
+    valid: false,
+    issues: [{ code: "LFS_POINTER", file: "libtest.dll" }],
+  };
+  const result = evaluateEnvironment({
+    ...ready,
+    mediaRuntime,
+    scripts: all(),
+  });
+  assert.equal(result.status, "BLOCKED");
+  assert.equal(result.pass, false);
+  assert.ok(
+    result.blockers.some(
+      (b: { code: string }) => b.code === "MEDIA_RUNTIME_INVALID",
+    ),
+  );
+  assert.deepEqual(result.mediaRuntime, mediaRuntime);
+});
+
 test("all required scripts passing is the only PASS", () => {
   const result = evaluateEnvironment({ ...ready, scripts: all() });
   assert.equal(result.status, "RECORDED");

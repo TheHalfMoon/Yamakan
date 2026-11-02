@@ -25,6 +25,7 @@ import {
   scriptOutcome,
 } from "./ultimate-environment.mjs";
 import { hashFile, nativeHashes, redactSecrets } from "./ultimate-baseline.mjs";
+import { mediaPreflight } from "./media-runtime-preflight.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const work = path.join(repo, "work", "ultimate");
@@ -36,20 +37,6 @@ function git(...args) {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
 }
 
-function which(command) {
-  const probe = spawnSync("where.exe", [command], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  if (probe.status !== 0) return null;
-  return (
-    probe.stdout
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .find(Boolean) || null
-  );
-}
-
 function toolRecord(exe) {
   if (!exe || !existsSync(exe)) return { present: false, path: exe || null };
   let version = null;
@@ -57,6 +44,7 @@ function toolRecord(exe) {
     version = execFileSync(exe, ["-hide_banner", "-version"], {
       encoding: "utf8",
       windowsHide: true,
+      timeout: 10_000,
     })
       .split("\n")[0]
       .trim();
@@ -175,8 +163,9 @@ const dependency = {
   drift: lockfile.drift,
 };
 
-const ffmpeg = toolRecord(process.env.YAMAKAN_FFMPEG || which("ffmpeg"));
-const ffprobe = toolRecord(process.env.YAMAKAN_FFPROBE || which("ffprobe"));
+const { ffmpeg, ffprobe, mediaRuntime } = mediaPreflight({
+  recordTool: toolRecord,
+});
 
 // The per-user cache procd stages worker executables in (container.rs).
 function workerToolsState() {
@@ -219,6 +208,7 @@ const precheck = evaluateEnvironment({
   helper,
   ffmpeg,
   ffprobe,
+  mediaRuntime,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
   workerTools,
   scripts: [],
@@ -247,6 +237,7 @@ const evaluation = evaluateEnvironment({
   helper,
   ffmpeg,
   ffprobe,
+  mediaRuntime,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
   workerTools,
   scripts,
