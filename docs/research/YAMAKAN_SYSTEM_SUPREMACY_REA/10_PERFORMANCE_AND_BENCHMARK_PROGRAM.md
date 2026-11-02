@@ -4,7 +4,7 @@ No threshold is changed by this plan. Read the live frozen [qualification policy
 
 ## Policies and retained observations
 
-The qualification policy v1 specifies p95 cold launch ≤5000 ms (5 runs), reopen ≤2000 ms (5), warm reference still ≤1000 ms (10), cold still ≤3000 ms (10), cold 2-second reference segment ≤6000 ms (5), and 720p playback ≥24 fps. These apply only to their exact fixtures/hardware; this table is not a new qualification result.
+The qualification policy v1 specifies p95 cold launch ≤5000 ms (5 runs), reopen ≤2000 ms (5), warm reference still ≤1000 ms (10), cold still ≤3000 ms (10), cold 2-second reference segment ≤6000 ms (5), and 720 p playback ≥24 fps. These apply only to their exact fixtures/hardware; this table is not a new qualification result.
 
 The M export fixture is **200 clips, 16 tracks, ten minutes, 1080p**, under resource policy v3 with a 480-second time limit. Retained baseline completed 0/3; optimized completed 2/5. **M remains unqualified.** The older “M-gate passed” historical narrative is a different receipt and does not override this current export result.
 
@@ -12,17 +12,17 @@ PR #152 retained dense-probe median 66.133 → 9.187 seconds over three pairs, 1
 
 ## Required workload matrix
 
-| Family | Inputs / seams | Measurements and decision |
-| --- | --- | --- |
-| Baseline S/M/T | Existing frozen recipes, no easier substitute | Completion/failure rate, total and phase time, process-tree peak memory, CPU, temporary disk |
-| Composition | Opaque/translucent still/video, transformed/cropped/LUT/animated layers, empty gaps | Decoded frame/alpha/color fidelity; optimization eligibility and fallback |
-| Timing | 30, 24000/1001 and other supported rates, VFR mapping, B frames, segment seams | Exact counts/rational timestamps; no missing/duplicate frame or join drift |
-| Audio | Delayed starts, silence, fades, mute/solo, loudness, segment joins | Sample/onset timing, peak/clipping, loudness and decoded continuity |
-| Captions | Cue edges, overlapping text, mixed Arabic/Latin, font fallback | Frame-boundary/ROI checks plus native Arabic gate |
-| Preview | Cold/warm scrubbing, reverse/random seeks, proxies, cache pressure | Latency distributions, playback clock/drift, reference/export parity |
-| Long session | Repeated edits/seeks/reopens, large projects, asset/revision changes | Memory/cache plateau, stale-frame rejection, responsiveness |
-| Failure | Cancel, worker/service kill, disk-full seam, lost response, restore | No leaked work, no partial publication, bounded retry and correct history |
-| Selective revision | Full three-shot run versus changing one shot | Reused work, changed/unaffected hashes/frames, elapsed/resource cost and user actions |
+| Family             | Inputs / seams                                                                      | Measurements and decision                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Baseline S/M/T     | Existing frozen recipes, no easier substitute                                       | Completion/failure rate, total and phase time, process-tree peak memory, CPU, temporary disk |
+| Composition        | Opaque/translucent still/video, transformed/cropped/LUT/animated layers, empty gaps | Decoded frame/alpha/color fidelity; optimization eligibility and fallback                    |
+| Timing             | 30, 24000/1001 and other supported rates, VFR mapping, B frames, segment seams      | Exact counts/rational timestamps; no missing/duplicate frame or join drift                   |
+| Audio              | Delayed starts, silence, fades, mute/solo, loudness, segment joins                  | Sample/onset timing, peak/clipping, loudness and decoded continuity                          |
+| Captions           | Cue edges, overlapping text, mixed Arabic/Latin, font fallback                      | Frame-boundary/ROI checks plus native Arabic gate                                            |
+| Preview            | Cold/warm scrubbing, reverse/random seeks, proxies, cache pressure                  | Latency distributions, playback clock/drift, reference/export parity                         |
+| Long session       | Repeated edits/seeks/reopens, large projects, asset/revision changes                | Memory/cache plateau, stale-frame rejection, responsiveness                                  |
+| Failure            | Cancel, worker/service kill, disk-full seam, lost response, restore                 | No leaked work, no partial publication, bounded retry and correct history                    |
+| Selective revision | Full three-shot run versus changing one shot                                        | Reused work, changed/unaffected hashes/frames, elapsed/resource cost and user actions        |
 
 ## Protocol
 

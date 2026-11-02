@@ -43,14 +43,14 @@ For a defect, record the genuine failing case before the fix when feasible. Test
 
 ## Local tool roles and limits
 
-| Tool | Required use when relevant | Gate meaning |
-| --- | --- | --- |
-| PStack | Resume/spec/build/review/close procedures available in this environment | Fresh-context review is required; routine authorization is already granted |
-| Graft | Deterministic graph/call-site and dependency impact analysis | Structural evidence, not runtime correctness |
-| D1 local | Typed bounded prioritization/triage, confidence retained | Advisory only; never independent security/release approval |
-| Alibaba OCR | Local diff/rule/coverage preview; full review only with verified authorized local backend | Preview is not full AI review; no unapproved cloud transfer |
-| Edge/Playwright | Actual offline editor, permissions, recovery and interaction journeys | Keep network/process evidence and failed attempts |
-| TesterArmy | Additional real-browser Studio/recovery journey | Complements existing deterministic tests |
+| Tool            | Required use when relevant                                                                | Gate meaning                                                               |
+| --------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| PStack          | Resume/spec/build/review/close procedures available in this environment                   | Fresh-context review is required; routine authorization is already granted |
+| Graft           | Deterministic graph/call-site and dependency impact analysis                              | Structural evidence, not runtime correctness                               |
+| D1 local        | Typed bounded prioritization/triage, confidence retained                                  | Advisory only; never independent security/release approval                 |
+| Alibaba OCR     | Local diff/rule/coverage preview; full review only with verified authorized local backend | Preview is not full AI review; no unapproved cloud transfer                |
+| Edge/Playwright | Actual offline editor, permissions, recovery and interaction journeys                     | Keep network/process evidence and failed attempts                          |
+| TesterArmy      | Additional real-browser Studio/recovery journey                                           | Complements existing deterministic tests                                   |
 
 Discover installed binaries/skills and local endpoints before invoking them. Do not invent command-line switches or report a tool “run” merely because installed. Current receipts in [12](12_EXECUTION_AND_CONTINUATION_LEDGER.md) distinguish actual use and blocked features.
 

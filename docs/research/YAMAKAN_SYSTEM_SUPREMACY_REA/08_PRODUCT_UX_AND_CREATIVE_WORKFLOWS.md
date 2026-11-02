@@ -4,18 +4,18 @@ The product should feel like one application with one project selection, history
 
 ## Model-free acceptance journey
 
-| Step | Creator action | Required visible result and evidence |
-| --- | --- | --- |
-| 1 | Open/create a project and enter a brief | Project identity and saved brief survive navigation/reopen |
-| 2 | Import real video, still and audio assets | Reliable progress, thumbnails/proxies, timing/availability and actionable errors |
-| 3 | Build/review storyboard and organize scenes/characters/references/takes | Versioned story documents; approve/revise without losing selected assets |
-| 4 | Assemble three shots | Frame-accurate multitrack editing and consistent preview; keyboard access |
-| 5 | Add a crossfade, captions, sound and a supported effect | Actual decoded export matches boundaries, timing and supported preview |
-| 6 | Review an agent proposal | Clear affected shots and before/after; approve/reject/revise are human actions |
-| 7 | Export, then change only the middle shot | New output; unaffected shots/audio/captions and history remain intact |
-| 8 | Undo/redo, save and interrupt the owned process | Durable committed edits survive; unfinished work is clearly recoverable |
-| 9 | Reopen/reconcile and export again | Current project/attempt history is correct; no duplicate mutation or leaked worker |
-| 10 | Navigate Story/Edit/Cinema/Studio/Finish | Same selected project, meaningful context, no disconnected save state |
+| Step | Creator action                                                          | Required visible result and evidence                                               |
+| ---- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1    | Open/create a project and enter a brief                                 | Project identity and saved brief survive navigation/reopen                         |
+| 2    | Import real video, still and audio assets                               | Reliable progress, thumbnails/proxies, timing/availability and actionable errors   |
+| 3    | Build/review storyboard and organize scenes/characters/references/takes | Versioned story documents; approve/revise without losing selected assets           |
+| 4    | Assemble three shots                                                    | Frame-accurate multitrack editing and consistent preview; keyboard access          |
+| 5    | Add a crossfade, captions, sound and a supported effect                 | Actual decoded export matches boundaries, timing and supported preview             |
+| 6    | Review an agent proposal                                                | Clear affected shots and before/after; approve/reject/revise are human actions     |
+| 7    | Export, then change only the middle shot                                | New output; unaffected shots/audio/captions and history remain intact              |
+| 8    | Undo/redo, save and interrupt the owned process                         | Durable committed edits survive; unfinished work is clearly recoverable            |
+| 9    | Reopen/reconcile and export again                                       | Current project/attempt history is correct; no duplicate mutation or leaked worker |
+| 10   | Navigate Story/Edit/Cinema/Studio/Finish                                | Same selected project, meaningful context, no disconnected save state              |
 
 SS-004a supplies part of the command evidence. SS-004b is the required integrated browser, crossfade and forced-interruption receipt. Separate older crash tests do not by themselves prove this whole sequence.
 

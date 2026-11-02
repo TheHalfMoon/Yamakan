@@ -1,0 +1,59 @@
+{
+  "schema": "yamakan.final-planning-gates/v1",
+  "updated": "2026-11-03",
+  "status": "NOT_READY",
+  "implementationHold": true,
+  "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
+  "planningPr": "https://github.com/TheHalfMoon/Yamakan/pull/155",
+  "authorResearch": "COMPLETE_AT_DOCUMENTED_BOUNDED_SCOPE_PENDING_INDEPENDENT_REVIEW",
+  "researchTasks": {
+    "R-01": "REVIEW_PENDING",
+    "R-02": "REVIEW_PENDING",
+    "R-03": "REVIEW_PENDING",
+    "R-04": "REVIEW_PENDING",
+    "R-05": "REVIEW_PENDING"
+  },
+  "architectureReview": {
+    "status": "BLOCKED",
+    "reviewedHead": null,
+    "mustFix": null,
+    "reason": "Fresh reviewer dispatched on research head84564b6 returned account usage limit without a verdict."
+  },
+  "correctnessReview": {
+    "status": "PENDING",
+    "reviewedHead": null,
+    "mustFix": null,
+    "reason": "Prior structural review at 2b7a776 does not cover final research/contracts/handoff expansion."
+  },
+  "securityReview": {
+    "status": "PENDING",
+    "reviewedHead": null,
+    "mustFix": null,
+    "reason": "Fresh independent final-plan security/privacy/authority review required; D1 is advisory only."
+  },
+  "validation": {
+    "status": "PASS",
+    "receipt": "21_PLANNING_VALIDATION_RECEIPT.md",
+    "scope": "Structural/consistency checks only; independent review and final readiness remain pending."
+  },
+  "exactHeadCi": {
+    "status": "PENDING",
+    "head": null,
+    "runUrl": null
+  },
+  "merge": {
+    "status": "PENDING",
+    "mainSha": null
+  },
+  "postMainVerification": {
+    "status": "PENDING",
+    "mainSha": null,
+    "receipt": null
+  },
+  "founderHandoff": "NOT_YET_RECORDED",
+  "externalProductBlockers": [
+    "M export remains unqualified under frozen policy.",
+    "Native Arabic H1 and issue77 administrator/profile/account/disk/signing/CSP/presence/founder release gates.",
+    "Model/provider/weight/compute/cost/resource authority remains separate; no activation."
+  ]
+}

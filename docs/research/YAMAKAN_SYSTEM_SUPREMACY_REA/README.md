@@ -1,48 +1,55 @@
-# Yamakan full system improvement plan
+# Yamakan final research and implementation plan
 
-> **Current authority: planning only.** The founder's final-planning directive supersedes the earlier autonomous implementation instruction until the final Opus handoff. Astro owns R-01–R-05, source decisions, all task contracts and planning validation. Claude Opus will own implementation after the founder hands off the completed plan. The earlier structural-completeness statement below is not Deep REA completion. Do not start the 31-task engineering program or merge PR #157 as part of this planning work.
+Updated 2026-11-03, Asia/Riyadh. **Planning only — final qualification pending.** Astro owns research and planning. Claude Opus owns implementation after founder handoff. No new engineering task, model/provider, resource expansion, installer or release is authorized by this draft. [PR #155](https://github.com/TheHalfMoon/Yamakan/pull/155) stays separate from implementation PR #157; historical PRs #85/#86 remain intact.
 
-Planning baseline: 2026-11-02, Asia/Riyadh. Repository: [TheHalfMoon/Yamakan](https://github.com/TheHalfMoon/Yamakan). Verified implementation main: `c129a50c9e6bf9657f404c919c3cf6dbb8273697`.
+Verified implementation baseline: **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**. The authored package now includes the competitive/source research, 16 subsystem decisions, all 31 detailed task contracts, 44-task reconciliation and single Opus handoff. Required independent architecture/correctness/security review and final merge qualification remain incomplete. This is not a declaration that the final plan is ready.
 
-This is the complete execution plan for the founder's system engineering directive. It specifies research coverage, implementation contracts, dependencies, tests, rollback, ownership and external gates. **Plan coverage is complete; the research and engineering program is not complete.** New plan changes still require independent review before merge. Product release remains **NO-GO**.
+## Start here
 
-The founder's latest instruction, “i need the full plan ready in repo. go ahead”, authorizes this consolidated planning deliverable. The earlier directive continues to authorize bounded non-model, non-release engineering. Neither instruction activates models, expands resource limits, purchases services, approves irreversible migrations or permits release.
+| Document                                                                                                 | Purpose                                                                                                  |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Opus handoff](OPUS_IMPLEMENTATION_HANDOFF.md)                                                           | Single implementation entry point, architecture, first five tasks, commands, ownership and restrictions  |
+| [Current planning checkpoint](20_FINAL_PLANNING_CHECKPOINT.md)                                           | Exact continuation and blockers for Astro                                                                |
+| [Readiness gates](PLANNING_GATES.json)                                                                   | Machine-readable final-gate state                                                                        |
+| [Task registry](TASK_REGISTRY.json) / [complete readable contracts](09_ATOMIC_IMPLEMENTATION_PROGRAM.md) | All 31 objectives, prerequisites, interfaces, steps, tests, performance, compatibility, rollback and DoD |
+| [Final architecture assessment](19_FINAL_ARCHITECTURE_ASSESSMENT.md)                                     | A–D comparison and resolved authority/media/workflow boundaries, awaiting independent verdict            |
+| [16 subsystem decisions](18_FINAL_SUBSYSTEM_DECISIONS.md) / [machine records](SUBSYSTEM_DECISIONS.json)  | COPY/ADAPT/WRAP/COMBINE/BUILD/DEFER/REJECT selections with concrete closures                             |
+| [Professional editor REA](14_PROFESSIONAL_EDITOR_REA.md)                                                 | 15 professional products; primary evidence and explicit runtime limits                                   |
+| [Generative and agent systems](15_GENERATIVE_AND_AGENT_SYSTEM_REA.md)                                    | 16 generative groups,11 agent-native systems and20 dimensions                                            |
+| [Media source qualification](16_MEDIA_SOURCE_QUALIFICATION.md)                                           | Actual source functions, dependency/license boundaries and selected media decisions                      |
+| [Harness/source discovery](17_HARNESS_AND_ACCESSIBLE_SOURCE_REA.md)                                      | 58 accessible repositories screened; promising source inspection and safe private decisions              |
+| [Public retrieval manifest](SOURCE_RETRIEVAL_MANIFEST.json)                                              | Pinned retrieved source hashes; retrieval is not full-file verification                                  |
+| [Legacy reconciliation](LEGACY_RECONCILIATION.json)                                                      | All 44 prior YU records mapped to preserved scope or remaining work                                      |
 
-## Read in this order
+## Retained supporting contracts
 
-| Document | Purpose / requested deliverable |
-| --- | --- |
-| [00 Strategy](00_EXECUTIVE_SYSTEM_STRATEGY.md) | Evidence-supported product direction (00) |
-| [01 Findings](01_COMPETITOR_AND_SOURCE_REA.md) | Existing competitor observations, source pins and transplant decisions (01–03) |
-| [02 Research coverage](02_RESEARCH_EXECUTION_PLAN.md) | Complete competitor/source discovery schedule and evidence standard (01–02) |
-| [03 Source qualification](03_SOURCE_QUALIFICATION.md) | Required donor contracts and decision gates (03) |
-| [04 Architecture](04_CURRENT_ARCHITECTURE_CHALLENGE.md) | Options A–D and retained architecture (04) |
-| [05 Media](05_MEDIA_ENGINE_IMPROVEMENT_PLAN.md) | Rendering, preview, audio, cache and professional media work (05) |
-| [06 Agent harness](06_AGENT_HARNESS_ARCHITECTURE.md) | Durable tools, proposals, progress, handoff and recovery (06) |
-| [07 Development](07_DEVELOPER_ENVIRONMENT_AND_TEST_HARNESS.md) | Setup, tests, local tools, concurrency and integration gates (07) |
-| [08 Product workflows](08_PRODUCT_UX_AND_CREATIVE_WORKFLOWS.md) | Complete filmmaker journey and interaction acceptance (08) |
-| [09 Task contracts](09_ATOMIC_IMPLEMENTATION_PROGRAM.md) | Dependency-ordered work and inherited implementation contracts (09) |
-| [Task registry](TASK_REGISTRY.json) | Machine-readable tasks, states, dependencies and acceptance |
-| [10 Benchmarks](10_PERFORMANCE_AND_BENCHMARK_PROGRAM.md) | Frozen policies, workload matrix and performance decisions (10) |
-| [11 Security](11_SECURITY_AND_SOURCE_PROVENANCE.md) | Threats, source obligations, risks and external gates (11) |
-| [12 Execution ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md) | Actual merged work, receipts and continuation (12) |
-| [13 Readiness and report](13_PLAN_READINESS_AND_ENGINEERING_REPORT.md) | Directive traceability, current results and unfinished gates (13) |
+| Document                                                           | Scope                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [00 Strategy](00_EXECUTIVE_SYSTEM_STRATEGY.md)                     | Product direction and retained benchmark limits                     |
+| [01 Earlier findings](01_COMPETITOR_AND_SOURCE_REA.md)             | Prior pin/function evidence; older coverage gaps superseded by14–17 |
+| [02 Coverage standard](02_RESEARCH_EXECUTION_PLAN.md)              | Required cohorts and evidence standard                              |
+| [03 Source contract](03_SOURCE_QUALIFICATION.md)                   | Mandatory qualification/provenance rules                            |
+| [04 Historical challenge](04_CURRENT_ARCHITECTURE_CHALLENGE.md)    | Earlier reasoning; current decisions in 19                          |
+| [05 Media](05_MEDIA_ENGINE_IMPROVEMENT_PLAN.md)                    | Media acceptance and frozen-policy boundaries                       |
+| [06 Harness](06_AGENT_HARNESS_ARCHITECTURE.md)                     | Existing proposals, progress, handoff and recovery                  |
+| [07 Development](07_DEVELOPER_ENVIRONMENT_AND_TEST_HARNESS.md)     | Owned setup, local tools, tests and review/merge controls           |
+| [08 Product workflows](08_PRODUCT_UX_AND_CREATIVE_WORKFLOWS.md)    | Complete model-free creative journey                                |
+| [10 Benchmarks](10_PERFORMANCE_AND_BENCHMARK_PROGRAM.md)           | Frozen workloads, thresholds and experiment rules                   |
+| [11 Security](11_SECURITY_AND_SOURCE_PROVENANCE.md)                | Threats, source obligations and external gates                      |
+| [12 Ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md)               | Actual merged work and historical receipts                          |
+| [13 Readiness report](13_PLAN_READINESS_AND_ENGINEERING_REPORT.md) | Current research/review/engineering boundary                        |
 
-## Sequence and dependency rules
+## Authority and completion
 
-1. **Preserve and verify:** SS-001/002/003 are verified. Recheck live main and ownership; retain delivered YU work. Finish independent review of SS-004a in PR #157 when available.
-2. **Research and measure:** R-01/02/03/04 establish complete source coverage; SS-005a profiles M without altering policy. These can progress independently, subject to one media test slot.
-3. **Integrity and harness:** SS-006 scopes reviewable proposals; SS-007 adds transport-consistent progress and handoff; SS-008 proves cancellation/restart semantics. SS-004b completes the integrated browser/forced-interruption journey after proposals are available.
-4. **Media and professional workflows:** SS-005b follows a defensible profile; SS-009/010 qualify preview/long sessions; SS-011 exposes take comparison; SS-012/013/014 improve audio, captions and precise editing only where current behavior is insufficient.
-5. **Portability and differentiation:** SS-015 qualifies archives/interchange; SS-016 measures selective revision; SS-017 closes developer reproducibility gaps.
-6. **Consolidate:** R-05 revisits architecture with measured evidence; SS-018 refreshes affected Windows qualification; SS-019 assembles the final engineering/release evidence without shipping. X-01/02/03 remain externally gated.
+The latest founder final-planning directive takes precedence over earlier autonomous engineering language in this repository. Specific merged receipts take precedence over stale broad PLANNED ranges in prior plans. SS-001/002/003 are retained verified work. R-01–R-05 remain REVIEW_PENDING until independently qualified; a written checklist or green structural validator cannot mark them VERIFIED.
 
-Task-specific dependencies in the registry take precedence over this wave summary. A research prerequisite must reach VERIFIED for its bounded scope before its dependent implementation begins. EXTERNAL_BLOCKED is not eligible. QUALIFICATION_READY means inspect existing tests/source and implement within the stated contract; it is not permission to skip REA. No elapsed-time estimate substitutes for a gate.
+After all final planning gates and founder handoff, Opus follows the registry dependency graph and first-five ranking in the handoff. Research prerequisites apply globally to all new implementation cards, including cards whose local dependency list contains only an already merged task. SS-005a profiling is future engineering; R-05 uses retained measurements and makes no new performance promise. M remains unqualified; release remains **NO-GO**.
 
-## Authority and reconciliation
+Validate the package from repository root:
 
-This plan is the current system-improvement entry point. [CURRENT](../../../specs/CURRENT.md), [operational contracts](../../OPERATIONAL_CONTRACTS.md), [release proposal](../../RELEASE_PROPOSAL.md), existing resource policies and [security policy](../../SECURITY.md) retain their authority. The frozen T1–T10/W1–W18 and P10 plans remain historical baselines.
+```powershell
+rtk proxy node docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/tools/validate-plan.mjs
+rtk proxy node docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/tools/validate-plan.mjs --require-ready
+```
 
-The [YU execution ledger](../../evidence/ultimate/EXECUTION_LEDGER.md) and individual receipts establish delivered capabilities. Its broad trailing PLANNED range is stale where a specific verified receipt exists; do not reopen those tasks. [PR #86](https://github.com/TheHalfMoon/Yamakan/pull/86) was reconciled read-only at `caec7d9c225d430e1a42f8af8fd8eebc17c5317d`; PRs #85/#86 remain untouched.
-
-A task owner claims a bounded scope in its PR before editing. The implementing agent owns code and evidence; a fresh reviewer owns correctness/security review; the founder or qualified human owns explicit external gates. Owners are roles until a live agent claims work; no fictitious assignment or unattended background execution is implied.
+The first command checks structure, references and consistency. The second must fail while independent review, exact-head qualification, merge or post-main evidence is missing. Neither command independently verifies research claims or grants execution authority.

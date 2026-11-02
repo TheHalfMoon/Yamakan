@@ -11,18 +11,13 @@
       "disposition": "PRESERVE",
       "repository": "https://github.com/TheHalfMoon/Yamakan",
       "sha": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
-      "modules": [
-        "core/store.ts",
-        "core/canonical.ts"
-      ],
+      "modules": ["core/store.ts", "core/canonical.ts"],
       "functions": "ProjectStore.applyOperations / transaction / revisionCanonical",
       "dependencies": "Node SQLite, zod, canonical snapshots, request receipts and outbox",
       "integration": "SQLite remains the sole project authority. No donor store or delta migration.",
       "rationale": "R-04 rejects alternate stores; existing CAS/receipt invariants already have merged tests.",
       "acceptance": "Concurrent writers, stale revision, duplicate request, restore epoch, read old snapshots.",
-      "taskIds": [
-        "SS-006"
-      ],
+      "taskIds": ["SS-006"],
       "rollback": "Revert adapter only; never drop revisions or reopen an authorization bypass.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -54,9 +49,7 @@
       "integration": "Qualify keyboard/pointer snapping, trim and crossfade through the existing operation boundary.",
       "rationale": "OpenCut current tree is scaffold; Classic helpers are already imported with identity/time adaptations.",
       "acceptance": "Locked track, exact frame, zero length, overlaps, VFR, concurrent edit and undo.",
-      "taskIds": [
-        "SS-014"
-      ],
+      "taskIds": ["SS-014"],
       "rollback": "Revert interaction delta; retain canonical operations and old project reads.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -88,10 +81,7 @@
       "integration": "Keep FFmpeg reference output; profile redundant decode/scale work before one bounded graph experiment.",
       "rationale": "No alternative has measured parity/speed/resource evidence on M; new runtimes add distribution and recovery cost.",
       "acceptance": "Matched M pairs, alpha/transforms/LUT/animation, A/V seams, cancel and process-tree limits.",
-      "taskIds": [
-        "SS-005a",
-        "SS-005b"
-      ],
+      "taskIds": ["SS-005a", "SS-005b"],
       "rollback": "Revert graph/version together; keep reference output and failed measurements.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -123,10 +113,7 @@
       "integration": "Qualify cache identity, stale response suppression, frame disposal and A/V playback with reference fallback.",
       "rationale": "Mediabunny/MLT/libass expose ownership lessons; no decoder upgrade qualified.",
       "acceptance": "Cold/warm policy; font/LUT/asset/revision invalidation, project switch, unsupported codec, cancellation.",
-      "taskIds": [
-        "SS-009",
-        "SS-010"
-      ],
+      "taskIds": ["SS-009", "SS-010"],
       "rollback": "Disable new cache/UI path; reference preview and original media remain.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -158,9 +145,7 @@
       "integration": "Qualify loudness measurements and audio-state presentation; no new DSP or bus engine.",
       "rationale": "Rubber Band adds unqualified delay/native closure; current audio implementation exists.",
       "acceptance": "Measured LUFS/true peak using existing qualifier, silence/nonfinite stats refusal, onset/sync/fades/undo.",
-      "taskIds": [
-        "SS-012"
-      ],
+      "taskIds": ["SS-012"],
       "rollback": "Revert UI/measurement delta; preserve original audio and stored parameters.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -193,9 +178,7 @@
       "integration": "Keep current supported effect set; qualify boundary controls and explicit unsupported fallback.",
       "rationale": "FFmpeg frame synchronization/alpha semantics constrain optimization; no general GPU rewrite justified.",
       "acceptance": "Partial coverage/alpha/animated opacity/crossfade and preview-export parity.",
-      "taskIds": [
-        "SS-014"
-      ],
+      "taskIds": ["SS-014"],
       "rollback": "Revert bounded controls/graph change, maintain renderer/cache version consistency.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -217,20 +200,13 @@
       "disposition": "PRESERVE",
       "repository": "https://github.com/TheHalfMoon/Yamakan",
       "sha": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
-      "modules": [
-        "core/takes.ts",
-        "core/relink.ts",
-        "core/recovery.ts"
-      ],
+      "modules": ["core/takes.ts", "core/relink.ts", "core/recovery.ts"],
       "functions": "listTakes / compareTakes / proposeReplace / assertTakeMedia / creativeClosure",
       "dependencies": "Project-owned immutable objects, story/reference documents, consent and metadata",
       "integration": "Expose safe comparison/replacement and retain every referenced source in backup closure.",
       "rationale": "Higgsfield/LTX/Flow motivate navigation; current take schemas already bind revision/story hash.",
       "acceptance": "Wrong-project/revoked/missing asset, unchanged shots, stale proposal, split-shot refusal.",
-      "taskIds": [
-        "SS-011",
-        "SS-015"
-      ],
+      "taskIds": ["SS-011", "SS-015"],
       "rollback": "Remove new UI entry; do not remove takes or rewrite originals.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -264,9 +240,7 @@
       "integration": "Typed progress/handoff reads committed state; no external workflow runtime.",
       "rationale": "Orcel planner separation, Temporal cancellation and OpenEdit uncertainty fit as boundary/test concepts.",
       "acceptance": "Transport-equivalent errors/IDs, wrong-project subscriptions, lost response, oversized frame.",
-      "taskIds": [
-        "SS-007"
-      ],
+      "taskIds": ["SS-007"],
       "rollback": "Revert adapter changes; preserve old clients and durable receipts.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -299,9 +273,7 @@
       "integration": "Extend forced-interruption evidence; no second queue or automatic uncertain-effect replay.",
       "rationale": "Skilit PostgreSQL and Vercel realm recovery do not replace lease/epoch fencing.",
       "acceptance": "Cancel/finish race, lease loss, restored root, kill at publication, no orphan or duplicate action.",
-      "taskIds": [
-        "SS-008"
-      ],
+      "taskIds": ["SS-008"],
       "rollback": "Revert narrow runtime delta with guard retained; use existing recovery into separate root.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -323,19 +295,13 @@
       "disposition": "PRESERVE",
       "repository": "https://github.com/TheHalfMoon/Yamakan",
       "sha": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
-      "modules": [
-        "core/director",
-        "core/story.ts",
-        "core/command/registry.ts"
-      ],
+      "modules": ["core/director", "core/story.ts", "core/command/registry.ts"],
       "functions": "existing story/reference documents and Director run reads",
       "dependencies": "Current bounded project documents and hashes; no vector database or Mem0 service",
       "integration": "Use a small versioned handoff document referencing existing brief/revision/assets/evidence; it grants no authority.",
       "rationale": "Gomrey service memory and Orcel extra checkpoint DB duplicate existing durable creative documents.",
       "acceptance": "Oversized context, foreign refs, missing assets, stale revision, secret redaction and restart.",
-      "taskIds": [
-        "SS-007"
-      ],
+      "taskIds": ["SS-007"],
       "rollback": "Ignore unsupported handoff version; retain source documents and old readers.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -367,9 +333,7 @@
       "integration": "Preserve human-only Director approval and existing scoped project:write take.apply semantics. New review UI cannot grant capabilities.",
       "rationale": "SS-001/003 merged; take.apply already recomputes exact proposal under CAS. No blanket new approval system.",
       "acceptance": "Agent Director self-approval, stale predecessor, changed proposal, revoked consent, old replay.",
-      "taskIds": [
-        "SS-006"
-      ],
+      "taskIds": ["SS-006"],
       "rollback": "Disable affected entry point before any security rollback; retain equivalent shared guard.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -401,9 +365,7 @@
       "integration": "Document and verify owned checkout setup, missing-runtime diagnostics and exact-head evidence.",
       "rationale": "Current preflight is merged; SpecGrain/Diffcipline concepts need no additional runtime.",
       "acceptance": "Missing DLL/LFS pointer, shared target, disk shortage, unavailable reviewer never becomes PASS.",
-      "taskIds": [
-        "SS-017"
-      ],
+      "taskIds": ["SS-017"],
       "rollback": "Revert wrappers/docs only; never clean shared dependencies or caches.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -436,10 +398,7 @@
       "integration": "Reuse matched fixtures and exact receipts; independent reviewers remain mandatory.",
       "rationale": "Ascout/SafeEvidence distinguish recorded/verified/unknown; D1 is advisory only.",
       "acceptance": "Wrong head, missing run, timeout/skip, failed first attempt and fixture mismatch retained.",
-      "taskIds": [
-        "SS-016",
-        "SS-018"
-      ],
+      "taskIds": ["SS-016", "SS-018"],
       "rollback": "Withdraw invalid claim, preserve raw failures and previous qualified receipts.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -472,12 +431,7 @@
       "integration": "Review existing take proposal, keyboard edit/cue workflow, visible stale/cancel/recovery states.",
       "rationale": "R-01/02 support explicit source/proxy, impact and history visibility; no competitor runtime transplant.",
       "acceptance": "Keyboard/pointer parity, focus, RTL/long strings, project switch, cancel, three-shot journey.",
-      "taskIds": [
-        "SS-004b",
-        "SS-011",
-        "SS-013",
-        "SS-014"
-      ],
+      "taskIds": ["SS-004b", "SS-011", "SS-013", "SS-014"],
       "rollback": "Revert new controls only; preserve old navigation/data and accessible fallback.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -509,9 +463,7 @@
       "integration": "Add explicit interchange loss report and qualify existing portable backup closure. No new archive extractor.",
       "rationale": "OTIO interchange is not whole-project backup; FCP/Kdenlive docs reinforce dependency closure.",
       "acceptance": "Titles/effects/overlap loss, unsupported rate/schema, traversal/reparse/case collision, missing/corrupt asset.",
-      "taskIds": [
-        "SS-015"
-      ],
+      "taskIds": ["SS-015"],
       "rollback": "Disable new write option; restore to new root; never overwrite source project.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",
@@ -533,19 +485,13 @@
       "disposition": "DEFER",
       "repository": "https://github.com/TheHalfMoon/Yamakan",
       "sha": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
-      "modules": [
-        "core/engines",
-        "core/director",
-        "docs/RELEASE_PROPOSAL.md"
-      ],
+      "modules": ["core/engines", "core/director", "docs/RELEASE_PROPOSAL.md"],
       "functions": "existing engine manifests and disabled adapters",
       "dependencies": "Existing stand-ins only; weights/provider/native runtime outside this plan",
       "integration": "Keep model execution disabled until separate rights, compute/cost/resource and founder authorization.",
       "rationale": "Model APIs/marketing do not establish output quality or editor reliability. Existing adapters need no provider activation.",
       "acceptance": "Stand-in capability/refusal tests only now; real model protocol appended after authority.",
-      "taskIds": [
-        "X-03"
-      ],
+      "taskIds": ["X-03"],
       "rollback": "Keep unqualified engines disabled; no weights downloaded or jobs scheduled.",
       "license": "First-party GPL-3.0-or-later plus retained per-file donor notices and grants in docs/provenance/imports.json; no new source import.",
       "provenance": "Preserve exact original/imported hashes and modifications; new copy requires separate dependency/license qualification.",

@@ -1,6 +1,6 @@
 # Source qualification and transplant contract
 
-[01](01_COMPETITOR_AND_SOURCE_REA.md) is the retained pin/function evidence. This document defines how new opportunities become implementation-ready. A registry task listing a donor is a research direction until its qualification record is complete.
+[01](01_COMPETITOR_AND_SOURCE_REA.md) is the retained pin/function evidence. This document defines how new opportunities become implementation-ready. Final selections and bounded rejections are in 16–18 and SUBSYSTEM_DECISIONS.json. The historical opportunity table below is superseded by those specific decisions; no new donor runtime is selected.
 
 ## Mandatory record for each serious candidate
 
@@ -16,18 +16,18 @@ Performance evidence may initially be UNKNOWN for research; implementation readi
 
 ## Present decisions and future boundaries
 
-| Opportunity | Current defensible choice | Work still required before new import |
-| --- | --- | --- |
-| Approval prerequisite checks | ADAPT existing OpenMontage translation; SS-001 shipped | Preserve existing provenance; no new Python checkpoint store |
-| Downstream stale approval | ADAPT Kinewright exact-base principle; SS-003 shipped | New proposal/take work must map identity to Yamakan CAS and epochs |
-| Per-writer undo | DEFER OpenFilm transplant | Compare touched-field inverse semantics to current canonical undo; reject index-based identity assumptions |
-| Submission/recovery | ADAPT OpenEdit negative cases; REJECT second ledger | Trace existing jobs/external-request reconciliation; no paid submission experiment |
-| Progress/cancellation | DEFER Remocn code; ADAPT Temporal test concepts | Inspect complete effect/store closure; bounded cleanup deadlines belong to Yamakan policy |
-| Proxy/decoder work | Compare Kdenlive, MLT/Shotcut, Mediabunny and current FFmpeg | Kdenlive selected proxy source is inspected; full import closure is not qualified |
-| Interchange/archive | WRAP existing OTIO adapter, compare pinned OTIO | Explicit loss map; hostile archive gates before adding parser/publication surface |
-| Fast trim | DEFER LosslessCut smart-cut until workload justifies it | Rational/VFR/B-frame/audio seams, license closure, fallback to reference export |
-| Native grants | DEFER Orcel policy reuse | Protected state/native dependencies and second-account qualification |
-| Developer/agent reuse | R-04 first | Gomrey/Skilit metadata and private samples do not establish transplant rights |
+| Opportunity                  | Current defensible choice                                    | Work still required before new import                                                                      |
+| ---------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Approval prerequisite checks | ADAPT existing OpenMontage translation; SS-001 shipped       | Preserve existing provenance; no new Python checkpoint store                                               |
+| Downstream stale approval    | ADAPT Kinewright exact-base principle; SS-003 shipped        | New proposal/take work must map identity to Yamakan CAS and epochs                                         |
+| Per-writer undo              | DEFER OpenFilm transplant                                    | Compare touched-field inverse semantics to current canonical undo; reject index-based identity assumptions |
+| Submission/recovery          | ADAPT OpenEdit negative cases; REJECT second ledger          | Trace existing jobs/external-request reconciliation; no paid submission experiment                         |
+| Progress/cancellation        | DEFER Remocn code; ADAPT Temporal test concepts              | Inspect complete effect/store closure; bounded cleanup deadlines belong to Yamakan policy                  |
+| Proxy/decoder work           | Compare Kdenlive, MLT/Shotcut, Mediabunny and current FFmpeg | Kdenlive selected proxy source is inspected; full import closure is not qualified                          |
+| Interchange/archive          | WRAP existing OTIO adapter, compare pinned OTIO              | Explicit loss map; hostile archive gates before adding parser/publication surface                          |
+| Fast trim                    | DEFER LosslessCut smart-cut until workload justifies it      | Rational/VFR/B-frame/audio seams, license closure, fallback to reference export                            |
+| Native grants                | DEFER Orcel policy reuse                                     | Protected state/native dependencies and second-account qualification                                       |
+| Developer/agent reuse        | R-04 first                                                   | Gomrey/Skilit metadata and private samples do not establish transplant rights                              |
 
 Do not relabel conceptual adaptation as copied implementation. BUILD requires a written comparison showing why existing code/donors are unsuitable, too costly, incompatible or less reliable.
 
