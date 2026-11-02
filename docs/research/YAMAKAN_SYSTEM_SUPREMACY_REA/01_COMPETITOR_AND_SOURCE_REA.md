@@ -42,7 +42,7 @@ Observed 2026-10-28 through 2026-10-29. Pins below refer to code actually retrie
 
 **Performance:** adds a bounded manifest/predecessor scan (builtin pipeline has three stages, schema permits 32); no media decode or subprocess. No measured speedup claimed.
 
-**Security/provenance:** existing donor notices remain; imported file hashes and modification notes updated. Fresh independent correctness and security reviewers found no must-fix issue. Output dependency invalidation after upstream replacement remains an explicit separate gap.
+**Security/provenance:** existing donor notices remain; imported file hashes and modification notes updated. Fresh independent correctness and security reviewers found no must-fix issue. Output dependency invalidation was identified as a separate gap during SS-001; SS-003 subsequently closed the observed case in PR #156 (see [ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md)). Broader proposal/base binding remains SS-006.
 
 **Acceptance / rollback / maintenance:** regression must fail before fix and pass after; refusal changes neither version nor attempts/receipt; later corrected retry works; both Director suites and broader gates pass. Rollback is an ordinary code revert, without data migration, but restores the known approval gap. Maintain the guard in the shared approval boundary rather than each client.
 

@@ -16,6 +16,8 @@ Each registry card specifies objective, priority, state, dependencies, existing 
 
 Research cards require source/coverage validation and independent review, not unnecessary production media suites. Externally blocked cards permit preparing concrete evidence, not the gated action.
 
+Security-fix rollback must not reopen a known bypass. Before reverting SS-001/003 or any other security fix, disable the affected operation or retain an independently reviewed equivalent guard; verify denial cases again. A code-only revert is subject to this rule.
+
 ## State, ownership and sizing
 
 VERIFIED requires acceptance, review, exact-head merge and post-main evidence. RESEARCH_READY and QUALIFICATION_READY can start within scope. WAITING_DEPENDENCIES needs prerequisite receipts. REVIEW_PENDING cannot merge. EXTERNAL_BLOCKED needs named authority/capability. AGGREGATE is not a PR.

@@ -19,6 +19,8 @@ Downloaded media/source/document content is untrusted data. Do not execute repos
 
 For data/schema changes, keep backups and read compatibility. Rollback is not “downgrade and hope”: disable the new write path, preserve evidence and restore into a new validated root if format rollback is unsafe. No destructive in-place migration is authorized here.
 
+Reverting a security fix requires disabling the affected operation or retaining an independently reviewed equivalent guard, with the original denial cases rechecked. Do not restore a known approval bypass merely to return to older code.
+
 ## Explicit external gate matrix
 
 | Gate | Owner / required evidence | Work permitted meanwhile |
