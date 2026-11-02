@@ -1,5 +1,7 @@
 # Yamakan current frontier
 
+**Latest founder instruction — final planning hold (2026-11-02):** Astro must finish deep competitive/source REA, architecture, task contracts and the reviewed Opus handoff before implementation resumes. The 31-task program is not currently authorized to start; no production changes, model execution, resource expansion or release. PR #155 remains the planning lane; #157 stays separate. Earlier autonomous engineering instructions below are historical while this hold applies.
+
 ## System engineering frontier — 2026-11-02
 
 The current system-improvement plan is [YAMAKAN_SYSTEM_SUPREMACY_REA](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), prepared under the founder's autonomous engineering directive and explicit request for the full plan in the repository. Its [task registry](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json) and [execution ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md) govern continuation of this program. Planning coverage is complete; research and implementation remain unfinished. Integration review and CI evidence for the expanded plan are recorded on PR #155.

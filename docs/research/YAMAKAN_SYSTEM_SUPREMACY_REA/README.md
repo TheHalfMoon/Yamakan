@@ -1,5 +1,7 @@
 # Yamakan full system improvement plan
 
+> **Current authority: planning only.** The founder's final-planning directive supersedes the earlier autonomous implementation instruction until the final Opus handoff. Astro owns R-01–R-05, source decisions, all task contracts and planning validation. Claude Opus will own implementation after the founder hands off the completed plan. The earlier structural-completeness statement below is not Deep REA completion. Do not start the 31-task engineering program or merge PR #157 as part of this planning work.
+
 Planning baseline: 2026-11-02, Asia/Riyadh. Repository: [TheHalfMoon/Yamakan](https://github.com/TheHalfMoon/Yamakan). Verified implementation main: `c129a50c9e6bf9657f404c919c3cf6dbb8273697`.
 
 This is the complete execution plan for the founder's system engineering directive. It specifies research coverage, implementation contracts, dependencies, tests, rollback, ownership and external gates. **Plan coverage is complete; the research and engineering program is not complete.** New plan changes still require independent review before merge. Product release remains **NO-GO**.
