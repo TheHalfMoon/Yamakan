@@ -116,7 +116,7 @@
     {
       "id": "SS-004a",
       "priority": "P2",
-      "state": "REVIEW_BLOCKED",
+      "state": "REVIEW_PENDING",
       "dependsOn": [
         "SS-003"
       ],
@@ -135,7 +135,7 @@
       "legacy": [
         "YU-061"
       ],
-      "evidence": "PR #157 head 5388eed9033af9185919367440e385e93290cf83; exact-head CI 41355216482 SUCCESS; independent review blocked.",
+      "evidence": "PR #157 head 5388eed9033af9185919367440e385e93290cf83; exact-head CI 41355216482 SUCCESS; independent review pending; earlier account limit retained in ledger.",
       "owner": "Unassigned; claim in task PR before implementation",
       "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
     },

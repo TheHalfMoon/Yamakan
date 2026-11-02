@@ -10,7 +10,7 @@ PR #152 was independently reviewed for correctness and security/resources, check
 
 SS-001 approval revalidation is merged as PR #153 at main `79fc86fe1cc215cf091135c114822ea3e35c9e72`. Its Windows suite, Edge and TesterArmy journeys passed. The continuation ledger distinguishes exact-head results from post-merge verification and records later main movement.
 
-SS-002 media preflight (#154) and SS-003 downstream approval invalidation (#156) are also merged. Current main `c129a50c9e6bf9657f404c919c3cf6dbb8273697` passed post-merge CI and 56 combined regression tests. SS-004a's new command journey passes locally in draft #157; fresh review remains unavailable because of account usage limits. The broader UI/interruption and competitive-research program remains open.
+SS-002 media preflight (#154) and SS-003 downstream approval invalidation (#156) are also merged. Current main `c129a50c9e6bf9657f404c919c3cf6dbb8273697` passed post-merge CI and 56 combined regression tests. SS-004a's new command journey passes locally in draft #157; its independent review remains pending. Earlier account limits interrupted reviews; fresh review of this plan has now resumed. The broader UI/interruption and competitive-research program remains open.
 
 ## Product strategy supported by inspected code
 

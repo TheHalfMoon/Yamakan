@@ -45,7 +45,7 @@ The expanded plan needs fresh independent review and exact-head CI before merge.
 13. **Tests:** actual Windows unit/media/Edge/TesterArmy evidence in 12. SS-004a passed after fixing its incorrect ROI assertion; exact-head CI 41355216482 SUCCESS; no hard-crash/UI claim.
 14. **Tools used:** RTK, applicable PStack workflows, earlier fresh reviewers, deterministic Graft, local D1 advisory, Alibaba OCR preview, Git/GitHub CLI, Node, FFmpeg, Edge and TesterArmy. Full cloud OCR did not run.
 15. **Security:** approval/downstream-authority gaps fixed; no private source/credentials published. Remaining boundary tests/gates in 11.
-16. **Technical blockers:** M variability, incomplete research/qualification and account-limited fresh review. Unreviewed changes remain draft.
+16. **Technical blockers:** M variability, incomplete research/qualification and pending independent reviews. Earlier account limits interrupted review; fresh plan review has resumed. Unreviewed changes remain draft.
 17. **External blockers:** issue #77 human/profile/signing/CSP/presence, model/provider/resource authority and release. Public release remains NO-GO.
 18. **Next executable:** R-01–04 and SS-017; SS-005a with an idle media slot. Review SS-004a and this plan when reviewers are available, then follow dependencies.
 

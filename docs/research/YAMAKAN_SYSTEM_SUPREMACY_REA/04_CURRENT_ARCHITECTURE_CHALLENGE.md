@@ -29,7 +29,9 @@ Models remain OFF; release remains NO-GO. This review ran no tests, donor applic
 
 ## Two objections that must survive the recommendation
 
-**Director approval lineage: follow-up required.**
+**Director approval lineage: historical finding, closed for the observed case by SS-003.**
+
+Update 2026-11-02: PR #156 implemented and verified downstream invalidation at main `c129a50`; see the [execution ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md). The analysis below records the earlier finding. Broader proposal/base binding remains SS-006; do not reopen the fixed stale-downstream case.
 [S] SS001 adds predecessor revalidation inside `approveStage`'s transaction (`runtime.ts:651`) and rejects approval of a nonreviewable output (`stages.ts:213`).
 [I] This closes the observed approval-time prerequisite gap; it does not establish which predecessor outputs produced a downstream artifact.
 [S] `appendAttempt` stores stage, output hash, epoch and status, but no consumed predecessor attempt IDs, input digest, project snapshot hash or manifest digest.
@@ -114,4 +116,3 @@ License labels above describe inspected/indexed sources, not a legal conclusion 
 [U] None of these gates was executed in this read-only review; the host qualification suite is separate evidence. No test result has been inferred from a test filename.
 [P] Acceptance artifacts should state exact head, fixture/media hashes, profile, policy, runtime/compiler versions, observed distributions and failures. Independent review must inspect the immutable change, not trust an advisory local classifier or lineage label.
 [I] The defensible advantage is dependable shared project state plus explicit proof of what agents and stages observed. Preserving that while fixing stale dependencies is a stronger next investment than acquiring a second application core.
-

@@ -2,7 +2,7 @@
 
 ## System engineering frontier — 2026-11-02
 
-The current system-improvement plan is [YAMAKAN_SYSTEM_SUPREMACY_REA](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), prepared under the founder's autonomous engineering directive and explicit request for the full plan in the repository. Its [task registry](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json) and [execution ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md) govern continuation of this program. Planning coverage is complete; research/implementation and independent review of the expanded plan remain unfinished.
+The current system-improvement plan is [YAMAKAN_SYSTEM_SUPREMACY_REA](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), prepared under the founder's autonomous engineering directive and explicit request for the full plan in the repository. Its [task registry](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json) and [execution ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md) govern continuation of this program. Planning coverage is complete; research and implementation remain unfinished. Integration review and CI evidence for the expanded plan are recorded on PR #155.
 
 Latest verified implementation main: `c129a50c9e6bf9657f404c919c3cf6dbb8273697` (PR #156; post-main CI 40952139280 SUCCESS; combined Director/preflight 56/56). PRs #152/#153/#154/#156 are merged; SS-004a is draft #157 with exact-head CI SUCCESS and independent review pending. **Current M export remains unqualified** under the 200-clip/16-track/10-minute/1080p, 480-second policy. Historical M-gate wording below does not override this result.
 

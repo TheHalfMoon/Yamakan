@@ -18,7 +18,7 @@ Research cards require source/coverage validation and independent review, not un
 
 ## State, ownership and sizing
 
-VERIFIED requires acceptance, review, exact-head merge and post-main evidence. RESEARCH_READY and QUALIFICATION_READY can start within scope. WAITING_DEPENDENCIES needs prerequisite receipts. REVIEW_BLOCKED cannot merge. EXTERNAL_BLOCKED needs named authority/capability. AGGREGATE is not a PR.
+VERIFIED requires acceptance, review, exact-head merge and post-main evidence. RESEARCH_READY and QUALIFICATION_READY can start within scope. WAITING_DEPENDENCIES needs prerequisite receipts. REVIEW_PENDING cannot merge. EXTERNAL_BLOCKED needs named authority/capability. AGGREGATE is not a PR.
 
 An experiment may end REJECTED or DEFERRED with evidence. That satisfies an investigation dependency only if the dependent task handles that outcome; it never satisfies a required product PASS. SS-005 may close investigation with M still unqualified; SS-018/019 must report that blocker.
 
@@ -32,7 +32,7 @@ One builder claims each task in its PR; fresh reviewers own review. Disjoint res
 | SS-002 | P5 | VERIFIED | — | Verify the production-selected media runtime before probes |
 | SS-003 | P0 | VERIFIED | SS-001 | Invalidate stale downstream approvals |
 | SS-004 | P2 | AGGREGATE | SS-004a, SS-004b | Qualify the complete model-free creative journey |
-| SS-004a | P2 | REVIEW_BLOCKED | SS-003 | Land the real-media command journey |
+| SS-004a | P2 | REVIEW_PENDING | SS-003 | Land the real-media command journey |
 | SS-004b | P2 | WAITING_DEPENDENCIES | SS-004a, SS-006, SS-008 | Complete browser review, crossfade and forced recovery journey |
 | SS-005 | P1 | AGGREGATE | SS-005a, SS-005b | Resolve M export under frozen resource policy |
 | SS-005a | P1 | QUALIFICATION_READY | SS-002 | Profile and compare M algorithm candidates |
