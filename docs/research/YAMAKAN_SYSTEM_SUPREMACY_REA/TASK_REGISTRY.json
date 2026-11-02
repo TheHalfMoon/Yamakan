@@ -1,0 +1,888 @@
+{
+  "schema": "yamakan.system-improvement-plan/v1",
+  "planningDate": "2026-11-02",
+  "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
+  "scope": "Complete planning coverage; research/implementation unfinished; release NO-GO",
+  "commonContract": "09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
+  "tasks": [
+    {
+      "id": "SS-001",
+      "priority": "P0",
+      "state": "VERIFIED",
+      "dependsOn": [],
+      "title": "Revalidate Director approval atomically",
+      "targets": [
+        "core/director/runtime.ts",
+        "core/director/stages.ts"
+      ],
+      "sourceDecision": "ADAPT existing pinned OpenMontage prerequisite translation; retained source record 01.",
+      "acceptance": [
+        "Approval checks prerequisites and reviewable output inside its transaction; renewal/replay controls pass."
+      ],
+      "negativeTests": [
+        "Expired predecessor, unfinished attempt and missing output refuse without mutation."
+      ],
+      "rollback": "Code-only revert preserving history.",
+      "legacy": [
+        "YU-013"
+      ],
+      "evidence": "PR #153; exact head b87f3720781ba691e16b5cba23733a91599e9c9e; main 79fc86f; ledger 12.",
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-002",
+      "priority": "P5",
+      "state": "VERIFIED",
+      "dependsOn": [],
+      "title": "Verify the production-selected media runtime before probes",
+      "targets": [
+        "scripts/media-runtime-preflight.mjs",
+        "scripts/qualify-ultimate-environment.mjs"
+      ],
+      "sourceDecision": "WRAP production resolver and repository trust manifests.",
+      "acceptance": [
+        "Selected EXEs and companion DLLs verified; installed layout/renamed EXEs supported; bounded probes."
+      ],
+      "negativeTests": [
+        "Missing/corrupt DLL or LFS pointer blocks before execution."
+      ],
+      "rollback": "Revert diagnostic scripts; no runtime/resource changes.",
+      "legacy": [
+        "YU-001"
+      ],
+      "evidence": "PR #154; head f4e70f5143726bbf3bf5d29e59e5bb8975623ac7; main 495f76d; SS-002 evidence.",
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-003",
+      "priority": "P0",
+      "state": "VERIFIED",
+      "dependsOn": [
+        "SS-001"
+      ],
+      "title": "Invalidate stale downstream approvals",
+      "targets": [
+        "core/director/runtime.ts",
+        "tests/director-durability.test.ts"
+      ],
+      "sourceDecision": "ADAPT Kinewright exact-base principle; keep append-only Yamakan attempts.",
+      "acceptance": [
+        "Replacing upstream output invalidates dependent results; unrelated runs and same-output renewal preserved."
+      ],
+      "negativeTests": [
+        "Replay cannot revive invalidated work; unknown legacy pipelines stay readable."
+      ],
+      "rollback": "Code-only revert with retained audit and regression fixture.",
+      "legacy": [
+        "YU-013",
+        "YU-051"
+      ],
+      "evidence": "PR #156; head bd667cb1525782903a534639c1a849dcbf9c8728; main c129a50; SS-003 evidence.",
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-004",
+      "priority": "P2",
+      "state": "AGGREGATE",
+      "dependsOn": [
+        "SS-004a",
+        "SS-004b"
+      ],
+      "title": "Qualify the complete model-free creative journey",
+      "targets": [
+        "core/director",
+        "src/director",
+        "e2e/testerarmy"
+      ],
+      "sourceDecision": "COMBINE canonical commands and real UI; acceptance is union of children.",
+      "acceptance": [
+        "Both child receipts verified; brief-to-three-shot-export-to-selective-revision-to-forced-recovery complete."
+      ],
+      "negativeTests": [
+        "No model execution, graceful-close-only or transform-only substitute for required crossfade/crash."
+      ],
+      "rollback": "Revert journey-specific changes; preserve previous receipts.",
+      "legacy": [
+        "YU-061",
+        "YU-081"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-004a",
+      "priority": "P2",
+      "state": "REVIEW_BLOCKED",
+      "dependsOn": [
+        "SS-003"
+      ],
+      "title": "Land the real-media command journey",
+      "targets": [
+        "tests"
+      ],
+      "sourceDecision": "COMBINE existing commands; tests-only PR #157 already implemented.",
+      "acceptance": [
+        "Real H.264/AAC three-shot exports; 12 sampled frames, captions/audio/transform, one-shot change, undo/redo, graceful reopen/replay."
+      ],
+      "negativeTests": [
+        "Stale CAS and agent approval denied; unaffected frames preserved; retain first failed ROI assertion."
+      ],
+      "rollback": "Revert new test/evidence only.",
+      "legacy": [
+        "YU-061"
+      ],
+      "evidence": "PR #157 head 5388eed9033af9185919367440e385e93290cf83; exact-head CI 41355216482 SUCCESS; independent review blocked.",
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-004b",
+      "priority": "P2",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-004a",
+        "SS-006",
+        "SS-008"
+      ],
+      "title": "Complete browser review, crossfade and forced recovery journey",
+      "targets": [
+        "e2e/testerarmy",
+        "scripts/browser-e2e.mjs",
+        "src/director"
+      ],
+      "sourceDecision": "COMBINE existing crossfade, story/take and recovery contracts; no new renderer.",
+      "acceptance": [
+        "Execute all ten steps of 08 with actual UI approval/revise; export before/after middle-shot change; force owned-service interruption; reopen current state/history and export."
+      ],
+      "negativeTests": [
+        "Two writers, revoked input, old request replay, cancel-before-publication, wrong-project selection; no orphan worker or duplicate mutation."
+      ],
+      "rollback": "Revert bounded UI/test delta; preserve canonical data and earlier command receipt.",
+      "legacy": [
+        "YU-061",
+        "YU-091"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-005",
+      "priority": "P1",
+      "state": "AGGREGATE",
+      "dependsOn": [
+        "SS-005a",
+        "SS-005b"
+      ],
+      "title": "Resolve M export under frozen resource policy",
+      "targets": [
+        "core/render.ts",
+        "core/render"
+      ],
+      "sourceDecision": "Profiling and a single qualified optimization; children define closure.",
+      "acceptance": [
+        "Candidate either consistently qualifies M or records a defensible unresolved blocker; never label rejected experiment as M PASS."
+      ],
+      "negativeTests": [
+        "No raised time/memory/concurrency ceiling or easier fixture."
+      ],
+      "rollback": "Restore reference renderer; retain failure evidence.",
+      "legacy": [
+        "YU-026"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-005a",
+      "priority": "P1",
+      "state": "QUALIFICATION_READY",
+      "dependsOn": [
+        "SS-002"
+      ],
+      "title": "Profile and compare M algorithm candidates",
+      "targets": [
+        "core/render.ts",
+        "core/render/plan.ts",
+        "core/render/segments.ts",
+        "scripts/benchmark-ultimate.ts"
+      ],
+      "sourceDecision": "Compare current FFmpeg graph and R-03 candidate concepts; BUILD only measurement instrumentation if existing harness insufficient.",
+      "acceptance": [
+        "Pin policy/fixture/host; attribute decode/scale/overlay/encode and process-tree resources; retain at least three matched pairs for a candidate experiment; choose one bounded change or reject all."
+      ],
+      "negativeTests": [
+        "Alpha/transform/LUT/animation/segment seam controls; retain timeout, load and failed-run data."
+      ],
+      "rollback": "Remove diagnostic instrumentation; never modify production limits.",
+      "legacy": [
+        "YU-026",
+        "YU-090"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-005b",
+      "priority": "P1",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-005a",
+        "R-03"
+      ],
+      "title": "Implement one measured renderer improvement",
+      "targets": [
+        "core/render.ts",
+        "core/render/plan.ts",
+        "core/render/segments.ts",
+        "tests"
+      ],
+      "sourceDecision": "Choose COPY/ADAPT/WRAP/COMBINE/BUILD only from SS-005a and qualified R-03 record; no preselected speculative algorithm.",
+      "acceptance": [
+        "Decoded output and audio equivalence across 10 matrix; all required M candidate runs within 480 s and existing ceilings to claim qualification; otherwise record no-go."
+      ],
+      "negativeTests": [
+        "Translucency, partial coverage, animated transforms, rational/VFR timing, cancellation and resource pressure."
+      ],
+      "rollback": "Revert algorithm/version together; preserve reference path/cache-version separation.",
+      "legacy": [
+        "YU-026"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "R-01",
+      "priority": "P3",
+      "state": "RESEARCH_READY",
+      "dependsOn": [],
+      "title": "Complete professional editor capability coverage",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA"
+      ],
+      "sourceDecision": "Inspect primary sources for every professional system in 02; compare current Yamakan before proposing additions.",
+      "acceptance": [
+        "Each named product has dated evidence across required professional dimensions; map worthwhile gaps to donors, target paths, tests and keep/defer/reject decisions."
+      ],
+      "negativeTests": [
+        "Unsupported, inaccessible and non-tested claims stay UNKNOWN/BLOCKED; no paid access or private upload."
+      ],
+      "rollback": "Withdraw unsupported conclusions with correction history; no product mutation.",
+      "legacy": [],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "R-02",
+      "priority": "P2",
+      "state": "RESEARCH_READY",
+      "dependsOn": [],
+      "title": "Complete generative and agent-native workflow coverage",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA"
+      ],
+      "sourceDecision": "Document platform mechanics separately from model quality; inspect public agent code where available.",
+      "acceptance": [
+        "Every named generative and agent-native product in 02 has coverage; twenty workflow dimensions addressed; proposals, revision and recovery opportunities compared."
+      ],
+      "negativeTests": [
+        "No closed-backend donor claims, fabricated pricing, competitor execution or generated output."
+      ],
+      "rollback": "Correct evidence rows and retain limitations; no model/provider enablement.",
+      "legacy": [],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "R-03",
+      "priority": "P1",
+      "state": "RESEARCH_READY",
+      "dependsOn": [],
+      "title": "Qualify media, editor and interchange source candidates",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA",
+        "docs/provenance"
+      ],
+      "sourceDecision": "Compare all media/professional source targets in 02; inspect chosen functions and full relevant dependency/license closure.",
+      "acceptance": [
+        "For each selected opportunity complete all 20 source fields and 12 REA conditions from 03; exact pins, call graph, tests, platform/resource costs and maintenance decision."
+      ],
+      "negativeTests": [
+        "README-only or metadata-only candidate cannot be implementation-qualified; incompatible/unknown rights block import."
+      ],
+      "rollback": "No code imported by research; replace rejected candidate records without deleting evidence.",
+      "legacy": [],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "R-04",
+      "priority": "P2",
+      "state": "RESEARCH_READY",
+      "dependsOn": [],
+      "title": "Qualify accessible harness and developer sources",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA"
+      ],
+      "sourceDecision": "Inspect Orcel/Wepld/Skilit/Flind/Gomrey, Temporal/Vercel and additional accessible candidates narrowly; reject duplicate stores/schedulers absent measured need.",
+      "acceptance": [
+        "Paginated inventory scope and failures recorded; chosen functions/dependencies/license/authority/recovery mapped to current commands/jobs; safe public summaries only."
+      ],
+      "negativeTests": [
+        "Truncated tree is not exhaustive; private license ambiguity and unapproved source transfer block copying."
+      ],
+      "rollback": "Keep private captures local; remove unsupported public conclusions without altering donor repos.",
+      "legacy": [],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "R-05",
+      "priority": "P0",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-01",
+        "R-02",
+        "R-03",
+        "R-04",
+        "SS-005a"
+      ],
+      "title": "Reassess architecture against completed research and measurements",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/04_CURRENT_ARCHITECTURE_CHALLENGE.md"
+      ],
+      "sourceDecision": "Compare A preserve, B narrow replacements, C bounded workers, D evidence-discovered alternative.",
+      "acceptance": [
+        "Score correctness/performance/recovery/reuse/maintenance/cohesion/agents/Windows/offline/security/complexity/cost/migration; fresh independent architecture review; ADR only for actual changed decision."
+      ],
+      "negativeTests": [
+        "No unsupported superiority, whole-app transplant or irreversible migration without separate authority."
+      ],
+      "rollback": "Retain existing architecture if no alternative wins on measured criteria.",
+      "legacy": [],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-006",
+      "priority": "P2",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-003",
+        "R-04"
+      ],
+      "title": "Qualify revision-bound reviewable creative proposals",
+      "targets": [
+        "core/director",
+        "core/command",
+        "core/agents/lineage.ts",
+        "src/director"
+      ],
+      "sourceDecision": "ADAPT inspected Kinewright/OpenFilm identity/reversal ideas only after mapping to existing proposal/CAS surfaces; no second store.",
+      "acceptance": [
+        "Inspect existing YU-060 surfaces; propose/apply/reject/revise binds project revision, affected IDs, inputs and consent; one atomic command path; human-visible diff and exact proposal approval."
+      ],
+      "negativeTests": [
+        "Stale base, missing asset, revoked consent, agent self-approval, changed payload, wrong project and interrupted apply; successful unchanged control."
+      ],
+      "rollback": "Disable new proposal writes/UI; keep existing commands/history readable; add migration rollback only if a schema change proves necessary.",
+      "legacy": [
+        "YU-060"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-007",
+      "priority": "P2",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-006"
+      ],
+      "title": "Unify request, progress and handoff semantics",
+      "targets": [
+        "core/director",
+        "core/jobs",
+        "sdk",
+        "cli",
+        "mcp",
+        "src/director"
+      ],
+      "sourceDecision": "ADAPT qualified Remocn/OpenEdit lifecycle concepts to existing attempts; typed transport adapters only.",
+      "acceptance": [
+        "SDK/CLI/MCP/browser agree on stable request IDs/errors/progress; reconnect resumes committed state; handoff references brief/revision/evidence without granting authority."
+      ],
+      "negativeTests": [
+        "Lost response, duplicate/out-of-order event, old replay, cross-project subscription, oversized MCP frame, secret/path logging."
+      ],
+      "rollback": "Revert presentation/adapter delta; leave durable receipts intact and old clients compatible.",
+      "legacy": [
+        "YU-062"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-008",
+      "priority": "P0",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-007"
+      ],
+      "title": "Prove cancellation and recovery across creative attempts",
+      "targets": [
+        "core/director",
+        "core/jobs",
+        "core/process",
+        "tests"
+      ],
+      "sourceDecision": "ADAPT Temporal cancellation and OpenEdit uncertain-result test concepts; preserve existing leases, epochs and restore hold.",
+      "acceptance": [
+        "Cancel before/during/after worker completion; kill owned service at commit seams; restart/reconcile; no partial artifact or orphan; stale worker cannot commit; bounded cleanup."
+      ],
+      "negativeTests": [
+        "Cancel/complete race, lease expiry, restore, lost response and uncertain side effect; no automatic repeat of irreversible action."
+      ],
+      "rollback": "Revert narrow runtime changes, preserve failure receipts; use existing recovery flow for affected roots.",
+      "legacy": [
+        "YU-061",
+        "YU-062"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-009",
+      "priority": "P1",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-03",
+        "SS-002"
+      ],
+      "title": "Qualify preview cache and audio-clock behavior",
+      "targets": [
+        "core/render/preview.ts",
+        "src/preview",
+        "src/reference.tsx",
+        "src/proxies.ts"
+      ],
+      "sourceDecision": "Compare existing FFmpeg reference/proxy path with qualified Mediabunny/WebCodecs/native patterns; choose one measured bottleneck.",
+      "acceptance": [
+        "Cold/warm seek policy, rational-frame parity, A/V clock and cache invalidation across asset/revision/font/LUT/profile changes; bounded frame/buffer lifetime."
+      ],
+      "negativeTests": [
+        "Out-of-order response, reverse/random seek, cache pressure, missing proxy, closed frame and unsupported browser fallback."
+      ],
+      "rollback": "Keep reference preview available; invalidate new cache version without deleting sources.",
+      "legacy": [
+        "YU-017",
+        "YU-018"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-010",
+      "priority": "P1",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-009"
+      ],
+      "title": "Qualify long-session and large-timeline stability",
+      "targets": [
+        "src/editor",
+        "src/preview",
+        "core/render/preview.ts",
+        "tests"
+      ],
+      "sourceDecision": "COMBINE existing S/M/T and repeatable browser workloads; optimize only an observed leak/algorithmic cost.",
+      "acceptance": [
+        "Record long-session seek/edit/reopen distributions and memory/cache plateau at frozen sizes; same project remains responsive and correct after pressure."
+      ],
+      "negativeTests": [
+        "Project switching, removed/relinked media, background job completion and stale buffers; all failures retained."
+      ],
+      "rollback": "Revert specific buffer/cache/view change; retain soak fixture and original data.",
+      "legacy": [
+        "YU-018",
+        "YU-026",
+        "YU-091"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-011",
+      "priority": "P4",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-01",
+        "SS-006"
+      ],
+      "title": "Expose safe take comparison and replacement in the editor",
+      "targets": [
+        "core/takes.ts",
+        "src/editor",
+        "src/workspaces/ProjectShell.tsx"
+      ],
+      "sourceDecision": "WRAP verified YU-032 take commands; borrow interaction principles only after product study.",
+      "acceptance": [
+        "Compare takes, review affected region, replace/revert with keyboard and pointer, preserve unrelated clips and selected project across views."
+      ],
+      "negativeTests": [
+        "Stale selection, incompatible timing, locked track, revoked take and two writers; no silent ripple."
+      ],
+      "rollback": "Remove new UI entry; canonical takes and old commands remain readable.",
+      "legacy": [
+        "YU-032",
+        "YU-030"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-012",
+      "priority": "P3",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-01",
+        "R-03"
+      ],
+      "title": "Close one evidenced audio workflow gap",
+      "targets": [
+        "core/audio",
+        "src/audio",
+        "core/render.ts",
+        "src/editor"
+      ],
+      "sourceDecision": "WRAP existing waveform/gain/fade/unlink/loudnorm first; new DSP only after qualified source comparison.",
+      "acceptance": [
+        "Select a concrete gap after audit; coherent controls plus decoded onset/sync, mute/solo/fade/loudness and segment-join checks; original assets unchanged."
+      ],
+      "negativeTests": [
+        "Clipping, silence, delayed audio, cancelled export, repeated normalize and undo/reopen; reject unsupported bus/DSP claims."
+      ],
+      "rollback": "Revert chosen UI/operation delta; keep original sound refs and stored values compatible.",
+      "legacy": [
+        "YU-016",
+        "YU-026d"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-013",
+      "priority": "P3",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-01"
+      ],
+      "title": "Close caption editing and bilingual interaction gaps",
+      "targets": [
+        "core/captions.ts",
+        "src/captions.tsx",
+        "core/render/ass.ts",
+        "src/i18n.ts"
+      ],
+      "sourceDecision": "WRAP current imported caption contract; compare documented professional cue-edit workflows.",
+      "acceptance": [
+        "Precise cue timing and keyboard editing, readable mixed-script controls, export boundaries/undo/reopen; prepare exact H1 evidence."
+      ],
+      "negativeTests": [
+        "Malformed imported cue, overlap, ASS injection, long text, bidi/focus issues and rational fps edge."
+      ],
+      "rollback": "Revert new controls/conversion delta; preserve original caption document and reference rendering.",
+      "legacy": [
+        "YU-024",
+        "YU-093"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-014",
+      "priority": "P3",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-01",
+        "R-03"
+      ],
+      "title": "Close one precise timeline/effect interaction gap",
+      "targets": [
+        "core/timeline",
+        "core/transitions.ts",
+        "core/effects",
+        "core/animation",
+        "src/editor"
+      ],
+      "sourceDecision": "ADAPT qualified narrow OpenCut/MLT/editor ideas behind existing canonical time and operations.",
+      "acceptance": [
+        "Choose one trim/snap/crossfade/keyframe control gap; exact rational time, supported preview/export parity, keyboard/drag equivalence, undo and recovery."
+      ],
+      "negativeTests": [
+        "Locked tracks, overlaps, VFR, zero-length spans, crossfade boundary, unsupported effect and concurrent edit."
+      ],
+      "rollback": "Revert bounded operation/UI; retain compatible reads and previous renderer.",
+      "legacy": [
+        "YU-019",
+        "YU-020",
+        "YU-021",
+        "YU-022"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-015",
+      "priority": "P0",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "R-03"
+      ],
+      "title": "Qualify portable project and honest interchange loss",
+      "targets": [
+        "core/interchange/otio.ts",
+        "core/recovery.ts",
+        "core/relink.ts",
+        "core/storage"
+      ],
+      "sourceDecision": "WRAP existing OTIO mapping and creative backup closure; qualify archive library before any new extraction surface.",
+      "acceptance": [
+        "Supported roundtrip preserves rational timing/refs; explicit unsupported-effect loss report before conversion; portable media manifest hashes; interrupted import leaves original intact."
+      ],
+      "negativeTests": [
+        "Traversal, absolute/UNC paths, symlink/junction, bomb/size limits, duplicate/case-colliding names, corrupt/missing assets and unsupported versions."
+      ],
+      "rollback": "Disable new archive/interchange write path; restore into new root, never destructive downgrade.",
+      "legacy": [
+        "YU-080"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-016",
+      "priority": "P6",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-004b",
+        "SS-011"
+      ],
+      "title": "Measure selective revision as a product advantage",
+      "targets": [
+        "scripts/benchmark-ultimate.ts",
+        "docs/evidence/ultimate",
+        "e2e/testerarmy"
+      ],
+      "sourceDecision": "COMBINE existing benchmark recorder and complete creative journey; no generative or paid competitor execution.",
+      "acceptance": [
+        "Matched full rebuild versus selected-shot revision: work reused, unaffected hashes, elapsed/resources, user actions and failures; useful benefit or explicit no-benefit result."
+      ],
+      "negativeTests": [
+        "Changed timing/reference/consent must invalidate real dependents; no cache-hit-only or single-best-run comparison."
+      ],
+      "rollback": "Retain measurements; withdraw unsupported advantage claim; no runtime rollback needed unless a bounded defect fix is added separately.",
+      "legacy": [
+        "YU-081",
+        "YU-090"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-017",
+      "priority": "P5",
+      "state": "QUALIFICATION_READY",
+      "dependsOn": [
+        "SS-002"
+      ],
+      "title": "Make setup, impact checks and evidence reproducible",
+      "targets": [
+        "scripts/ultimate-environment.mjs",
+        "scripts/qualify-ultimate-environment.mjs",
+        "docs",
+        "e2e/testerarmy"
+      ],
+      "sourceDecision": "Reuse current lockfiles/preflight/Graft/testing tools; new infrastructure only for observed setup/test friction.",
+      "acceptance": [
+        "New owned checkout follows 07; diagnose missing dependencies/native runtime without downloads; preserve graph/test selection rationale, bounded logs and exact-head evidence."
+      ],
+      "negativeTests": [
+        "Shared node_modules/native target, insufficient disk, stale manifest and unavailable reviewer/backend do not yield ready/PASS."
+      ],
+      "rollback": "Revert diagnostics/docs/tool wrappers; do not clean shared paths or remove historical evidence.",
+      "legacy": [
+        "YU-001",
+        "YU-090"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-018",
+      "priority": "P0",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-004b",
+        "SS-005",
+        "SS-010",
+        "SS-011",
+        "SS-012",
+        "SS-013",
+        "SS-014",
+        "SS-015",
+        "SS-017"
+      ],
+      "title": "Consolidate affected Windows qualification",
+      "targets": [
+        "scripts/qualify-release.ts",
+        "scripts/qualify-release-evidence.ts",
+        "docs/evidence/ultimate"
+      ],
+      "sourceDecision": "COMBINE existing deterministic, media, browser and recovery gates; scoped evidence refresh rather than rewriting qualification.",
+      "acceptance": [
+        "Artifact-bound current flags/recipes/runtime; affected unit/integration/browser/security/resource/backup/restore checks; explicit unresolved M/host/external limits; fresh reviews and post-main verification."
+      ],
+      "negativeTests": [
+        "Stale/wrong-head receipt, platform skip, transient rerun or failed external gate cannot become blanket PASS."
+      ],
+      "rollback": "Leave previous qualified behavior and receipts intact; regressions block promotion.",
+      "legacy": [
+        "YU-091"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "SS-019",
+      "priority": "P0",
+      "state": "WAITING_DEPENDENCIES",
+      "dependsOn": [
+        "SS-018",
+        "SS-016",
+        "R-05"
+      ],
+      "title": "Publish the final engineering frontier and release evidence packet",
+      "targets": [
+        "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA",
+        "docs/RELEASE_PROPOSAL.md",
+        "specs/CURRENT.md"
+      ],
+      "sourceDecision": "COMBINE exact receipts, source decisions and gate matrix; documents only, no release action.",
+      "acceptance": [
+        "All eighteen final-report dimensions addressed; each task VERIFIED/REJECTED/DEFERRED/BLOCKED with evidence; current main and product limits explicit; human gate packet concrete."
+      ],
+      "negativeTests": [
+        "No false exhaustive REA, competitor superiority, signed build, model qualification or release approval."
+      ],
+      "rollback": "Correct documentation with retained audit; no packaging/publishing side effects.",
+      "legacy": [
+        "YU-100"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md"
+    },
+    {
+      "id": "X-01",
+      "priority": "P4",
+      "state": "EXTERNAL_BLOCKED",
+      "dependsOn": [],
+      "title": "Complete native Arabic and human usability qualification",
+      "targets": [
+        "docs/evidence/qualification",
+        "src/i18n.ts"
+      ],
+      "sourceDecision": "Qualified native human review of exact candidate; automated RTL checks are supporting evidence.",
+      "acceptance": [
+        "H1 and YU-093 reviewer identity/artifact/task results; confirmed defects become bounded engineering cards."
+      ],
+      "negativeTests": [
+        "Screenshot-only or automated layout pass cannot stand in for native language judgment."
+      ],
+      "rollback": "Keep unqualified typography/feature activation gated.",
+      "legacy": [
+        "YU-093"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Separate external authorization and exact-artifact evidence"
+    },
+    {
+      "id": "X-02",
+      "priority": "P0",
+      "state": "EXTERNAL_BLOCKED",
+      "dependsOn": [],
+      "title": "Complete external release/profile/signing decisions",
+      "targets": [
+        "docs/RELEASE_PROPOSAL.md",
+        "docs/evidence/qualification"
+      ],
+      "sourceDecision": "Issue #77 owners; H2/H3/H4 administrator, H5 founder, separate signing/CSP/native-presence review.",
+      "acceptance": [
+        "Exact candidate, clean offline Profile A, second-account isolation, controlled disk-full, applicable signing/CSP/presence and explicit ship decision before any release."
+      ],
+      "negativeTests": [
+        "Dev profile, unsigned artifact or plan readiness never closes these gates."
+      ],
+      "rollback": "Keep public release NO-GO; revert activation if a qualified gate later regresses.",
+      "legacy": [
+        "YU-101"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Separate external authorization and exact-artifact evidence"
+    },
+    {
+      "id": "X-03",
+      "priority": "P6",
+      "state": "EXTERNAL_BLOCKED",
+      "dependsOn": [],
+      "title": "Qualify real models and comparative A/V quality only after authorization",
+      "targets": [
+        "core/engines",
+        "docs/evidence/ultimate"
+      ],
+      "sourceDecision": "Existing adapters/manifests/stand-ins retained; weights/license/compute/provider and cost authority remain separate.",
+      "acceptance": [
+        "Explicit authorization precedes download/execution; then append model-specific pinned task/quality/resource protocol and independent review."
+      ],
+      "negativeTests": [
+        "Source license or no-model stand-in is not weight/runtime quality approval; no paid inference/GPU."
+      ],
+      "rollback": "All unqualified engines/providers remain disabled; no model run scheduled now.",
+      "legacy": [
+        "YU-072",
+        "YU-092"
+      ],
+      "evidence": null,
+      "owner": "Unassigned; claim in task PR before implementation",
+      "gate": "Separate external authorization and exact-artifact evidence"
+    }
+  ]
+}

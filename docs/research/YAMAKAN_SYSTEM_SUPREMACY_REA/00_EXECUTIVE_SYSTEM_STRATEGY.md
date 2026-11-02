@@ -1,6 +1,6 @@
-# Yamakan system engineering REA — first execution checkpoint
+# Yamakan system engineering strategy
 
-Date: 2026-11-02 (Asia/Riyadh). This is a focused, incomplete investigation, not a claim that the founder's full competitor program is finished. Public release remains **NO-GO**; generation providers and product model execution remain gated.
+Date: 2026-11-02 (Asia/Riyadh). The [full execution plan](README.md) is prepared with research coverage, task contracts, dependencies and gates. The investigation and engineering program remain incomplete; planning completeness is not completed REA or product qualification. Public release remains **NO-GO**; generation providers and product model execution remain gated.
 
 ## Verified starting frontier
 
@@ -28,9 +28,6 @@ This pass inspected five agent/video source systems, Orcel policy source, Lossle
 
 ## Document map
 
-- `01_COMPETITOR_AND_SOURCE_REA.md`: combines competitor matrix, source discovery, transplant decisions and provenance/security boundaries (requested deliverables 01–03 and 11).
-- `04_CURRENT_ARCHITECTURE_CHALLENGE.md`: independent alternatives review (04).
-- `09_ATOMIC_IMPLEMENTATION_PROGRAM.md`: media, harness, developer setup, UX and benchmark work with acceptance/rollback criteria (05–10).
-- `12_EXECUTION_AND_CONTINUATION_LEDGER.md`: current evidence, blockers, continuation and checkpoint report (12–13).
+Use the [full plan entry point](README.md) for all fourteen deliverable topics and the dependency sequence. [01](01_COMPETITOR_AND_SOURCE_REA.md) retains observed source findings; [02](02_RESEARCH_EXECUTION_PLAN.md) schedules the remaining coverage; [03](03_SOURCE_QUALIFICATION.md) defines transplant qualification. Documents 04–11 specify architecture, media, harness, development, UX, tasks, benchmarks and security. [12](12_EXECUTION_AND_CONTINUATION_LEDGER.md) records actual work; [13](13_PLAN_READINESS_AND_ENGINEERING_REPORT.md) records readiness and directive traceability.
 
-Research stays separate from implementation PRs. Existing research drafts #85/#86 are unchanged.
+Research stays separate from implementation PRs. Existing drafts #85/#86 remain unchanged.
