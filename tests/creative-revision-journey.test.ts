@@ -241,6 +241,8 @@ test(
           (s: { codec_type: string }) => s.codec_type === "video",
         );
         assert.equal(video.codec_name, "h264");
+        assert.equal(video.width, W);
+        assert.equal(video.height, H);
         assert.equal(video.avg_frame_rate, "30/1");
         assert.equal(Number(video.nb_frames), 90);
         assert.equal(
@@ -359,6 +361,7 @@ test(
         execute(agent(), "yamakan.take.apply", request),
         denied("REVISION_CONFLICT"),
       );
+      assert.equal(agent().principal.scopes.has("director:approve"), false);
       await assert.rejects(
         execute(agent(), "yamakan.director.approve", {
           runId: randomUUID(),
@@ -367,7 +370,9 @@ test(
           ttlMs: 60_000,
           expectedVersion: 1,
         }),
-        denied("SCOPE_DENIED"),
+        (error: unknown) =>
+          denied("SCOPE_DENIED")(error) &&
+          /requires the browser session/.test(toCommandError(error).message),
       );
       assert.deepEqual(await head(), revised);
       assert.deepEqual(await store.history(projectId), historyAfter);
@@ -377,11 +382,17 @@ test(
       // Negative control: an old export cannot satisfy the revised intent.
       assert.throws(() => colour(baseline.frames.get(45)!, "blue"));
       assert.notEqual(final.hash, baseline.hash);
-      for (const n of [0, 29, 60, 75, 89])
-        assert.ok(
-          ssim(baseline.frames.get(n)!, final.frames.get(n)!) > 0.99,
-          `unrelated frame ${n}`,
-        );
+      // Whole-frame SSIM dilutes small text, so captions and titles are also
+      // compared in their own band.
+      const textBand = { x: 50, y: 250, w: 540, h: 100 };
+      for (const n of [0, 5, 6, 23, 24, 29, 60, 75, 89]) {
+        const before = baseline.frames.get(n)!;
+        const after = final.frames.get(n)!;
+        assert.ok(ssim(before, after) > 0.99, `unrelated frame ${n}`);
+        assert.ok(ssim(before, after, textBand) > 0.99, `text band ${n}`);
+      }
+      // Positive control: the same measure does see the revised shot.
+      assert.ok(ssim(baseline.frames.get(45)!, final.frames.get(45)!) < 0.99);
       const revisedPreview = await preview(
         store,
         projectId,
