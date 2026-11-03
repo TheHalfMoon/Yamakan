@@ -94,7 +94,7 @@ YU-013 moved this state from mutable JSON files into the workspace database (sch
   - `yamakan.director.approve` requires it, so a human approves the version they reviewed and never a run that moved since;
   - a stale version is a `REVISION_CONFLICT`.
 
-  Every advance and approval appends to the run's attempt log, which is never rewritten. A stage's receipt is its latest attempt.
+  Every advance and approval appends to the run's attempt log, which is never rewritten. Receipts derive from that ordered history. Every new advance (including pending, in-progress or failed work) invalidates existing downstream receipts: they become pending with no current output or approval. They require a fresh advance and approval, even if the upstream output later returns to the same bytes. Approval-only renewal for the same output preserves downstream work. Historical approvals after an invalidation cannot revive stale work. This derived state survives reopen without rewriting the audit.
 
 - **Outputs.** A stage output must be a stored, ready object of the run's project. This is checked when the output is written, and again every time the run is read. An output that has since been lost or quarantined (for example by a restore that could not verify it) leaves its stage `failed`, so the stage must be produced again.
 - **Approvals.** An approval binds that output with an expiry and is human-only (agents are refused).
@@ -111,6 +111,7 @@ YU-013 moved this state from mutable JSON files into the workspace database (sch
   - Revoked consents arrive revoked.
   - An encoding must match its consent's character.
   - Imported state belongs to no live epoch: its approvals must be given again, and its consents revalidated. Live state is untouched.
+  - Epoch-zero imported receipts are an unordered snapshot, not an execution history. Their outputs remain available for reapproval in pipeline order. Subsequent live advances invalidate downstream work under the normal rule.
 - **Not yet covered (YU-013b).** The Director has no workers, provider calls, publications or billing reservations today, so nothing can resume or act on its own after a restore. The job side of restore fencing is follow-up work, together with YU-014, before any such effect is added:
   - a durable `restoreHold` before the job supervisor starts;
   - fencing of copied queued, running or cancel-pending jobs and leases;

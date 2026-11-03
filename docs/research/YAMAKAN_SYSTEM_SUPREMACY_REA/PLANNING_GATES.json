@@ -1,0 +1,68 @@
+{
+  "schema": "yamakan.final-planning-gates/v1",
+  "updated": "2026-11-03",
+  "status": "READY",
+  "implementationHold": true,
+  "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
+  "planningPr": "https://github.com/TheHalfMoon/Yamakan/pull/155",
+  "authorResearch": "QUALIFIED_AT_DOCUMENTED_BOUNDED_EVIDENCE_STANDARD",
+  "researchTasks": {
+    "R-01": "VERIFIED",
+    "R-02": "VERIFIED",
+    "R-03": "VERIFIED",
+    "R-04": "VERIFIED",
+    "R-05": "VERIFIED"
+  },
+  "architectureReview": {
+    "status": "PASS",
+    "reviewedHead": "8dee470711856c45e75a9ef6ae8bbb10e5f15b58",
+    "mustFix": 0,
+    "receipt": "23_FINAL_POST_MERGE_VERIFICATION.md",
+    "reviewer": "Codex fresh-context architecture_closure"
+  },
+  "correctnessReview": {
+    "status": "PASS",
+    "reviewedHead": "8dee470711856c45e75a9ef6ae8bbb10e5f15b58",
+    "mustFix": 0,
+    "receipt": "23_FINAL_POST_MERGE_VERIFICATION.md",
+    "reviewer": "Independent GLM-5.3-Flash Free complete-head plus clean final delta"
+  },
+  "securityReview": {
+    "status": "PASS",
+    "reviewedHead": "8dee470711856c45e75a9ef6ae8bbb10e5f15b58",
+    "mustFix": 0,
+    "receipt": "23_FINAL_POST_MERGE_VERIFICATION.md",
+    "reviewer": "Independent GLM-5.3-Flash Free complete-head plus clean final delta"
+  },
+  "validation": {
+    "status": "PASS",
+    "receipt": "23_FINAL_POST_MERGE_VERIFICATION.md",
+    "scope": "Structural validation checked on the actual merge; final readiness fields additionally bind independent review, exact-head CI and post-main evidence. This script is not an independent reviewer."
+  },
+  "exactHeadCi": {
+    "status": "PASS",
+    "head": "8dee470711856c45e75a9ef6ae8bbb10e5f15b58",
+    "runUrl": "https://github.com/TheHalfMoon/Yamakan/actions/runs/41633965895",
+    "checks": ["qualify", "qualify-windows-r8", "otio-oracle"]
+  },
+  "merge": {
+    "status": "MERGED",
+    "mainSha": "4835cdfe19da9272956629b797d0d989eb9e251f",
+    "pr": "https://github.com/TheHalfMoon/Yamakan/pull/155",
+    "mergedAt": "2026-11-03T12:39:33Z"
+  },
+  "postMainVerification": {
+    "status": "PASS",
+    "mainSha": "4835cdfe19da9272956629b797d0d989eb9e251f",
+    "runUrl": "https://github.com/TheHalfMoon/Yamakan/actions/runs/41637577370",
+    "receipt": "23_FINAL_POST_MERGE_VERIFICATION.md"
+  },
+  "founderHandoff": "NOT_YET_RECORDED",
+  "externalProductBlockers": [
+    "M export remains unqualified under frozen policy.",
+    "Native Arabic H1 and issue77 administrator/profile/account/disk/signing/CSP/presence/founder release gates.",
+    "Model/provider/weight/compute/cost/resource authority remains separate; no activation."
+  ],
+  "evidenceScope": "This follow-up records already-existing qualified head8dee470 and merged main4835cdf. It does not attest its own future receipt-publication commit.",
+  "qualifiedPlanningHead": "8dee470711856c45e75a9ef6ae8bbb10e5f15b58"
+}

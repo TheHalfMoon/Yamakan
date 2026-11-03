@@ -1,5 +1,7 @@
 # Yamakan master implementation plan — final proposal
 
+**Current system-improvement entry point (2026-11-03):** [Qualified full plan](research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), [actual merge/review/CI receipt](research/YAMAKAN_SYSTEM_SUPREMACY_REA/23_FINAL_POST_MERGE_VERIFICATION.md), and [single Opus handoff](research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Astro's planning qualification is complete. Opus implements only after founder handoff; no engineering, model activation, resource expansion or release is currently authorized. Historical plan/authorization wording below does not override that hold.
+
 ## Canonical entry point (frozen 2026-10-18)
 
 This file is the canonical entry point to the Yamakan plan. **Implementation of the frozen plan has not started.** It begins only on the founder's start authorization.

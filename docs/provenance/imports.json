@@ -1122,12 +1122,13 @@
     "original": "lib/pipeline_loader.py",
     "imported": "core/director/runtime.ts",
     "sha256": "7e3eb9c266a9c49ab2b8501cf11b53e1758e672eaae011a30e20b74f5f11f7ef",
-    "importedSha256": "fbe19d15319efa32f24e504621dfd7611371007932a922f704762ed8b045da25",
+    "importedSha256": "0bf7825aec6da49a23ba2d5c2cc66dd30e71e7e0da7d4ab088ebc69a248b658b",
     "modifications": [
       "Yamakan workspace-backed director/consent runtime; builtin manifests replace file pipeline loader.",
       "YU-013: state moved from mutable JSON files to the workspace database (schema v12): CAS run versions, append-only attempts, immutable consents with append-only revocations and revalidations, derived encoding validity, replayable requests and an execution epoch; stage outputs verified against stored objects.",
       "YU-031: assertConsentUsable checks a likeness consent (character, purpose, unrevoked, unexpired, current epoch) inside a caller's transaction, for reference packs.",
-      "SS-001: revalidate predecessor completion and approval expiry atomically when approving a stage."
+      "SS-001: revalidate predecessor completion and approval expiry atomically when approving a stage.",
+      "SS-003: derive downstream invalidation from ordered live advance attempts, preserving approval-only renewal and epoch-zero legacy snapshots; stale historical approvals cannot revive invalidated work."
     ],
     "tests": [
       "tests/director-stages.test.ts",

@@ -1,5 +1,13 @@
 # Yamakan current frontier
 
+## Final planning qualified — execution held (2026-11-03)
+
+PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged at `4835cdfe19da9272956629b797d0d989eb9e251f`; independent architecture/correctness/security reviews and exact-head/post-main CI passed. [Final verification](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/23_FINAL_POST_MERGE_VERIFICATION.md) records all20 gates and actual SHAs. The31-task/16-decision plan and44-task reconciliation are qualified.
+
+**Next action: founder handoff to Claude Opus. No engineering is currently authorized.** Read the [single handoff](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Preserve verified implementation baseline c129a50c9e6bf9657f404c919c3cf6dbb8273697 and SS001–003; PR157 remains separate,85/86 intact. M export remains unqualified. No models/providers, expanded limits, installer or release. External H1/profile/account/disk/signing/CSP/presence/founder gates remain open. Earlier autonomous implementation instructions below are historical during this hold.
+
+## Historical frontier — retained as evidence, not current task status
+
 Updated: 2026-10-25. Canonical repository: `TheHalfMoon/Yamakan` (default branch `main`).
 
 **Ultimate master plan execution (2026-10-25):** founder-authorized YU task program from Draft PR #86 ([decision](../docs/FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution)). Task state, tool status and continuation: [`docs/evidence/ultimate/EXECUTION_LEDGER.md`](../docs/evidence/ultimate/EXECUTION_LEDGER.md); artifact-bound baseline: [`baseline.json`](../docs/evidence/ultimate/baseline.json). Historical heads below are preserved narrative, not a current-head PASS.

@@ -1,0 +1,767 @@
+{
+  "schema": "yamakan.public-source-retrieval/v1",
+  "retrievedDate": "2026-11-02",
+  "scope": "Public source bytes retrieved for selective review. Retrieval is not full-file inspection, test execution, transplant authorization or vulnerability clearance. Inspected functions/ranges are described in 14–17. Private records omitted.",
+  "files": [
+    {
+      "repo": "wepld/wepld",
+      "private": false,
+      "sha": "993b2fb55af038091f365ad29d0740bdb1bd6c9e",
+      "file": "docs/adr/ADR-0020-typed-memory-memory-judge.md",
+      "bytes": 3745,
+      "sha256": "5fcbfd8600a0b6e63477342df25abc66609fbae7c1e1a9fbe7fa8c5d02da90fe"
+    },
+    {
+      "repo": "wepld/wepld",
+      "private": false,
+      "sha": "993b2fb55af038091f365ad29d0740bdb1bd6c9e",
+      "file": "docs/adr/ADR-0021-bounded-subagents-structured-handoffs.md",
+      "bytes": 3143,
+      "sha256": "06efb4cc6bacc121724b4dd9b5b17bef0300406bb37ac4a0af39d39b2d63440f"
+    },
+    {
+      "repo": "TheHalfMoon/Zain",
+      "private": false,
+      "sha": "0a843a2c0913236d9c93b31abb0d54bbdb023f23",
+      "file": "Cargo.toml",
+      "bytes": 178,
+      "sha256": "6688d45616ad298c0e89d0a792d0fe9e2b1e86165089956ce1c273c58b6d73a9"
+    },
+    {
+      "repo": "wepld/wepld",
+      "private": false,
+      "sha": "993b2fb55af038091f365ad29d0740bdb1bd6c9e",
+      "file": "docs/34_Harness_Evaluation_Protocol.md",
+      "bytes": 27922,
+      "sha256": "c89c1f90021bf3fd2fe9d602d5eb069423d4a3a236208ac1f9865a559b7e85e5"
+    },
+    {
+      "repo": "wepld/wepld",
+      "private": false,
+      "sha": "993b2fb55af038091f365ad29d0740bdb1bd6c9e",
+      "file": "LICENSE",
+      "bytes": 1834,
+      "sha256": "65b785019defca6a4b792204a0616e99ea6d7286f01346b22e5fd9e5bf64eb83"
+    },
+    {
+      "repo": "TheHalfMoon/Zain",
+      "private": false,
+      "sha": "0a843a2c0913236d9c93b31abb0d54bbdb023f23",
+      "file": "crates/core/Cargo.toml",
+      "bytes": 179,
+      "sha256": "cab9a243bb53cae96c7408c1aa7af05e944eaef3c38955e66d6be1025493483c"
+    },
+    {
+      "repo": "TheHalfMoon/Zain",
+      "private": false,
+      "sha": "0a843a2c0913236d9c93b31abb0d54bbdb023f23",
+      "file": "crates/core/src/identity.rs",
+      "bytes": 22095,
+      "sha256": "33f7799cf03f7bca42c34462c0ea7d01064848974ff2d9ced9d89a1d657cead8"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "LICENSE",
+      "bytes": 11365,
+      "sha256": "9fdb06342f883e2d037db2e9ebbc08a64ea1de2df7674f105e60d7bd561c5e1c"
+    },
+    {
+      "repo": "TheHalfMoon/Zain",
+      "private": false,
+      "sha": "0a843a2c0913236d9c93b31abb0d54bbdb023f23",
+      "file": "crates/core/tests/identity_store_v1.rs",
+      "bytes": 125289,
+      "sha256": "dbf0d0c3b71c82686c64f21192844c82bd9e3c3fc826c0627c523b97d722ae40"
+    },
+    {
+      "repo": "TheHalfMoon/Zain",
+      "private": false,
+      "sha": "0a843a2c0913236d9c93b31abb0d54bbdb023f23",
+      "file": "crates/core/src/evidence_store.rs",
+      "bytes": 74275,
+      "sha256": "54b63d3637fa5d54b1d71d8517e64f055f7056cd3ddaad33df104a3e5b3007d8"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "packages/db/package.json",
+      "bytes": 414,
+      "sha256": "2dc1a25fc31f6ec12121e78bf3db7fc2e14f064f3ab202ebfad2d4943625c948"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "packages/db/tests/replay.test.mjs",
+      "bytes": 10016,
+      "sha256": "d8a10d23bd61742b9fa30f9839a8ec44843503c015fdd5a3613396d2dad8168a"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "packages/db/src/jobs.ts",
+      "bytes": 11941,
+      "sha256": "d3558026f1f0031131cf9baf90df5c4419eb9057147dc220ef6a0f93b80f657f"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "packages/db/tests/jobs.test.mjs",
+      "bytes": 10279,
+      "sha256": "404789f86199ad814f4b134b2c8954ee9574fab7fd5f4991e09e130bd76a5d93"
+    },
+    {
+      "repo": "TheHalfMoon/Skilit",
+      "private": false,
+      "sha": "157ace7fc57aae9e135a368b7bbe1829ae7111ae",
+      "file": "packages/db/src/replay.ts",
+      "bytes": 12468,
+      "sha256": "0a4ed2ee068f45b480498a1cf533f6bf013363c4df8719d697002f9f2d3a652d"
+    },
+    {
+      "repo": "TheHalfMoon/Orcel",
+      "private": false,
+      "sha": "44a3c286eed323ec229ae73e528200592ce21693",
+      "file": "crates/orcel-policy/Cargo.toml",
+      "bytes": 910,
+      "sha256": "f879fe308d7071a8cb01e239a55b50e2ef3e03ee9e9d4628c97a92794ab0e527"
+    },
+    {
+      "repo": "TheHalfMoon/Gomrey",
+      "private": false,
+      "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
+      "file": "LICENSE",
+      "bytes": 11340,
+      "sha256": "23d6fd64bfcbd46b331098ed89454717fd1719faccbf632f8234b962aa43ed1a"
+    },
+    {
+      "repo": "TheHalfMoon/Gomrey",
+      "private": false,
+      "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
+      "file": "servers/fastapi/services/chat/chat_memory_store.py",
+      "bytes": 12204,
+      "sha256": "ebe327fd1a2a52e2cbf60723ef137420a66761af28893ad0212ef40a7c458d90"
+    },
+    {
+      "repo": "TheHalfMoon/Gomrey",
+      "private": false,
+      "sha": "5f299a7a6174ad3a1180f827778db5f4400a4d71",
+      "file": "servers/fastapi/tests/test_chat_memory_store.py",
+      "bytes": 8868,
+      "sha256": "05fbab749c876f4daa9af75f88e4a89859df3dce76969d4b4e39a9edc8a6071f"
+    },
+    {
+      "repo": "TheHalfMoon/Orcel",
+      "private": false,
+      "sha": "44a3c286eed323ec229ae73e528200592ce21693",
+      "file": "LICENSE",
+      "bytes": 10758,
+      "sha256": "f4c1d7ba32ef5bcf5cf03e2eefec5825ebafedf50fa330a36700a49c605c1ef4"
+    },
+    {
+      "repo": "TheHalfMoon/Orcel",
+      "private": false,
+      "sha": "44a3c286eed323ec229ae73e528200592ce21693",
+      "file": "apps/orcel-agent/orcel_agent/checkpoint.py",
+      "bytes": 7101,
+      "sha256": "6438de5e367735060ee3d97b9064e455ea570a6d5fd492145ce04646971d01aa"
+    },
+    {
+      "repo": "TheHalfMoon/Orcel",
+      "private": false,
+      "sha": "44a3c286eed323ec229ae73e528200592ce21693",
+      "file": "crates/orcel-policy/src/full_control_store.rs",
+      "bytes": 21462,
+      "sha256": "3206865b6711b959ec85a2dc8f9d4a560d057f2f425da5cf39d401bbd540a0e6"
+    },
+    {
+      "repo": "TheHalfMoon/Orcel",
+      "private": false,
+      "sha": "44a3c286eed323ec229ae73e528200592ce21693",
+      "file": "apps/orcel-agent/tests/test_checkpoint.py",
+      "bytes": 19417,
+      "sha256": "61d043e5bea560c8ef5302abdad4006eb01688854f11c476b4b4cf9b8b9504d9"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "LICENSE",
+      "bytes": 10282,
+      "sha256": "7a5e2f805c86e2e3e86fe0163a322e7e6b6f00bc5d220e8db1189f785bc216d3"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "package.json",
+      "bytes": 686,
+      "sha256": "e0043e5fed509c499bc6d78996967d2f69cce52533c2a28e87b76ae1253b42ca"
+    },
+    {
+      "repo": "TheHalfMoon/SafeEvidence",
+      "private": false,
+      "sha": "1a10bc59e452c6486aced95227fa1e8be53bad20",
+      "file": "tools/governance/p01_candidate_byte_verify.py",
+      "bytes": 4469,
+      "sha256": "c440e36762794ef28f330e53173cfe7cc97abba27ba0f962627ba2fb478e19c8"
+    },
+    {
+      "repo": "TheHalfMoon/SafeEvidence",
+      "private": false,
+      "sha": "1a10bc59e452c6486aced95227fa1e8be53bad20",
+      "file": "LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "src/receipt/build.ts",
+      "bytes": 8356,
+      "sha256": "cc21bc2c4e9e33b5cd6dfb52bf69ecf2fd1f7fe2aab54c54af92a2484db0f33b"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "src/receipt/model.ts",
+      "bytes": 57929,
+      "sha256": "0997eadae065ae5b3916b95709964cff37251d27a114537b58f2226277621935"
+    },
+    {
+      "repo": "TheHalfMoon/SafeEvidence",
+      "private": false,
+      "sha": "1a10bc59e452c6486aced95227fa1e8be53bad20",
+      "file": "tools/governance/tests/test_p01_candidate_byte_verify.py",
+      "bytes": 6681,
+      "sha256": "2efb64579c6fefd8924a1f0cdf70def233eefa3db5ea08e2a8a4c2fddbcc4d87"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "LICENSE",
+      "bytes": 1081,
+      "sha256": "f9bd6621fa5134890f74d185dc23c77d2bf0c22e11c2b4fb87441859ca3bb551"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "src/assurance/workflow/durable-harness.ts",
+      "bytes": 10481,
+      "sha256": "caa306f3383533625328eb0571d83612189a7f64d927e5628cc28bb93013ebd6"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "src/assurance/workflow/durable-harness-store.ts",
+      "bytes": 7478,
+      "sha256": "074393a2ff910fe10318227695b81ad76cfc57c15dedb32a984c6b67ea51f918"
+    },
+    {
+      "repo": "TheHalfMoon/Ascout",
+      "private": false,
+      "sha": "ecada2bc53a5ff4dd34f777b91c0ac0a3f0b8430",
+      "file": "tests/assurance-durable-harness.test.ts",
+      "bytes": 12467,
+      "sha256": "c7b92270bc35169a0242adf4045202ae38383a0ad0620815aaf09c34a154e3e9"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "pyproject.toml",
+      "bytes": 1172,
+      "sha256": "833d44d392f1ce1f85d2aa498528b829107de759f47f4eb0479bed8b4aa4bafb"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "src/specgrain/dependency.py",
+      "bytes": 9404,
+      "sha256": "b588cbd7bcac7b89566091281d61d20920d90fe71d9b222ba5ce22ac23d423b0"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "src/specgrain/readiness.py",
+      "bytes": 15756,
+      "sha256": "18f51630aa9990407d2ef6106c5e1158ee8b31bf9b9c7b4b4522fceaa3e1bbe2"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "tests/test_dependency.py",
+      "bytes": 8715,
+      "sha256": "4cb87ef15b82972d0baff9253cf186d199cfb2f0e1f6a9f7dfc67aaf6568e799"
+    },
+    {
+      "repo": "TheHalfMoon/SpecGrain",
+      "private": false,
+      "sha": "5de7d6499bb0a9e3a191fc0934399cf099d1980a",
+      "file": "tests/test_readiness.py",
+      "bytes": 14075,
+      "sha256": "0218dfe160c73a6732daa1b9d7f510135e240d6ba07c1cb85c8413a1f14ae812"
+    },
+    {
+      "repo": "TheHalfMoon/Diffcipline",
+      "private": false,
+      "sha": "1e6d14f77b95bb132b42276f10d67f1018ab5bb6",
+      "file": "crates/diffcipline-cli/Cargo.toml",
+      "bytes": 270,
+      "sha256": "83b93e230a5fc00b6a43095b5765de7c9dc6968f22590fbdc537e35391ee385d"
+    },
+    {
+      "repo": "TheHalfMoon/Diffcipline",
+      "private": false,
+      "sha": "1e6d14f77b95bb132b42276f10d67f1018ab5bb6",
+      "file": "Cargo.toml",
+      "bytes": 64,
+      "sha256": "5668fae9412c20e68e467dec405d9d3ab9112b4840bc2cfd20072536030e2303"
+    },
+    {
+      "repo": "TheHalfMoon/Diffcipline",
+      "private": false,
+      "sha": "1e6d14f77b95bb132b42276f10d67f1018ab5bb6",
+      "file": "LICENSE",
+      "bytes": 1068,
+      "sha256": "682eb5820498195487a145c81e4c2e94478d6b4d430c4962c86fe9a5c1731d1e"
+    },
+    {
+      "repo": "OpenCut-app/OpenCut",
+      "private": false,
+      "sha": "e668010778568641babef2cc40be4703ae6916d6",
+      "file": "apps/api/src/index.ts",
+      "bytes": 476,
+      "sha256": "1f2f2139b61f284bd6b779371f02fde1bc1008f0771ea424c91f8912a349daa8"
+    },
+    {
+      "repo": "OpenCut-app/OpenCut",
+      "private": false,
+      "sha": "e668010778568641babef2cc40be4703ae6916d6",
+      "file": "apps/web/package.json",
+      "bytes": 2029,
+      "sha256": "fa0267776e850317041686c04ab456d28d734cbdea13c5aa384342b1d324b56c"
+    },
+    {
+      "repo": "OpenCut-app/OpenCut",
+      "private": false,
+      "sha": "e668010778568641babef2cc40be4703ae6916d6",
+      "file": "LICENSE",
+      "bytes": 1060,
+      "sha256": "05ab02fd3151198e3c0a698a3b7abfa6149c7bec26230f47c80c4dc5b6dc263f"
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "private": false,
+      "sha": "aa5923124db643ff865c756a1558c2d1d37ae9bd",
+      "file": "LICENSE",
+      "bytes": 16726,
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "private": false,
+      "sha": "aa5923124db643ff865c756a1558c2d1d37ae9bd",
+      "file": "package.json",
+      "bytes": 4679,
+      "sha256": "a84c2afd5925a364ba093b8ebba7fb411f8f69c09c2d32be50af2ecf3d51c0e5"
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "private": false,
+      "sha": "aa5923124db643ff865c756a1558c2d1d37ae9bd",
+      "file": "test/browser/media-sinks.test.ts",
+      "bytes": 8384,
+      "sha256": "4a3c8e364b2d6126d5564404ec7a58ca97d0967937b8d1d52f600e82ebb3ae3c"
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "private": false,
+      "sha": "aa5923124db643ff865c756a1558c2d1d37ae9bd",
+      "file": "src/sample.ts",
+      "bytes": 117029,
+      "sha256": "0379cb0775df1ddba3620482da04c313f99991ab73741aafa545040ee82a76b1"
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "private": false,
+      "sha": "aa5923124db643ff865c756a1558c2d1d37ae9bd",
+      "file": "src/media-sink.ts",
+      "bytes": 95485,
+      "sha256": "cfd5fbd388f09b8883a0dbd73284367b3b645ba24c5e1a7850bc14223bce54da"
+    },
+    {
+      "repo": "mltframework/mlt",
+      "private": false,
+      "sha": "7a3319fc6dbfa2fbf8fe90b5b94344a210ce4f8c",
+      "file": "src/tests/test_multitrack/test_multitrack.cpp",
+      "bytes": 3526,
+      "sha256": "850dc71b81b828449560e1b308d1971f7b07c744344477c829e9b9655783075e"
+    },
+    {
+      "repo": "mltframework/mlt",
+      "private": false,
+      "sha": "7a3319fc6dbfa2fbf8fe90b5b94344a210ce4f8c",
+      "file": "src/framework/mlt_cache.c",
+      "bytes": 20876,
+      "sha256": "ff8c700656ccee6455593e57e33aec7683c232d28a0a5393def5bd40848ac4b4"
+    },
+    {
+      "repo": "mltframework/mlt",
+      "private": false,
+      "sha": "7a3319fc6dbfa2fbf8fe90b5b94344a210ce4f8c",
+      "file": "src/framework/mlt_tractor.c",
+      "bytes": 22961,
+      "sha256": "ef47dc622a5d096d9baccd75c73c52d7193a3a04a491ff60204cd52378bd9b44"
+    },
+    {
+      "repo": "mltframework/mlt",
+      "private": false,
+      "sha": "7a3319fc6dbfa2fbf8fe90b5b94344a210ce4f8c",
+      "file": "COPYING",
+      "bytes": 26521,
+      "sha256": "592987e8510228d546540b84a22444bde98e48d03078d3b2eefcd889bec5ce8c"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "src/opentime/timeRange.cpp",
+      "bytes": 128,
+      "sha256": "b142e2080bb33498f6b8d7703efedcff18ee350a9d26b03e022781e3c17b38f2"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "src/opentimelineio/clip.cpp",
+      "bytes": 6085,
+      "sha256": "46bc7e2cc91c4a4197c269706c815922c4711b9add93e40f93b8a8cf27b908f9"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "src/opentime/rationalTime.cpp",
+      "bytes": 18247,
+      "sha256": "1f77e3add7b9fe15624813c33a033bc29d483c0bc3c2750cd42fa02a045c7d0d"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "LICENSE.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "repo": "FFmpeg/FFmpeg",
+      "private": false,
+      "sha": "5d5a38a7e46be296eab75982c0986054f731e19e",
+      "file": "LICENSE.md",
+      "bytes": 4352,
+      "sha256": "e6dc72d5665a1ebd6dcc841de59278dad4ca77ecc47b03f1064a55c3e9ea8bb8"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "tests/test_clip.cpp",
+      "bytes": 11113,
+      "sha256": "cf72e5b06df220c17eede5d061b699de1552a0b686e3700b3292253bb78f7634"
+    },
+    {
+      "repo": "FFmpeg/FFmpeg",
+      "private": false,
+      "sha": "5d5a38a7e46be296eab75982c0986054f731e19e",
+      "file": "libavfilter/vf_overlay.c",
+      "bytes": 52296,
+      "sha256": "f6fa1bd7a1834d40244b25f07dcef94bdd22fe7c4b970045354dec5ec97ec035"
+    },
+    {
+      "repo": "FFmpeg/FFmpeg",
+      "private": false,
+      "sha": "5d5a38a7e46be296eab75982c0986054f731e19e",
+      "file": "libavfilter/af_loudnorm.c",
+      "bytes": 33908,
+      "sha256": "b754ec59c513206fa8cc9930150c0ad2b833bf8ccdd03be63bf0860ac298e93a"
+    },
+    {
+      "repo": "ffmpegwasm/ffmpeg.wasm",
+      "private": false,
+      "sha": "f876f907c7e9b9bf51d4ed0b913a855a63ae63fc",
+      "file": "LICENSE",
+      "bytes": 1066,
+      "sha256": "3e123e29517d76504ffce77b3f8e2ccffd4712493f27694b0aba3e376676459f"
+    },
+    {
+      "repo": "GStreamer/gstreamer",
+      "private": false,
+      "sha": "e8f6aec41b2a0337bcc1cca69814d72f33e88d5f",
+      "file": "LICENSE",
+      "bytes": 26431,
+      "sha256": "ad2eec519ebd4b5df86ea84dff24ae3bfa2edea846a703b58902dd221ae375db"
+    },
+    {
+      "repo": "GStreamer/gstreamer",
+      "private": false,
+      "sha": "e8f6aec41b2a0337bcc1cca69814d72f33e88d5f",
+      "file": "subprojects/gstreamer/plugins/elements/gstqueue.c",
+      "bytes": 66846,
+      "sha256": "45230eeb54bd56f4f6b1158935bb2960a0f60ab1f03276219b74f08bf6a20ca7"
+    },
+    {
+      "repo": "FFmpeg/FFmpeg",
+      "private": false,
+      "sha": "5d5a38a7e46be296eab75982c0986054f731e19e",
+      "file": "tests/fate/filter-audio.mak",
+      "bytes": 32147,
+      "sha256": "ffb135a02e16b108668f00d5eff0a32d9a0fc95af6dd582c7dd8cf02b508d698"
+    },
+    {
+      "repo": "ffmpegwasm/ffmpeg.wasm",
+      "private": false,
+      "sha": "f876f907c7e9b9bf51d4ed0b913a855a63ae63fc",
+      "file": "packages/ffmpeg/package.json",
+      "bytes": 1655,
+      "sha256": "d5d7e4f7446b9c7ddd07d886f1c73a0d297be98eee428151c7dc194ef3901b7f"
+    },
+    {
+      "repo": "ffmpegwasm/ffmpeg.wasm",
+      "private": false,
+      "sha": "f876f907c7e9b9bf51d4ed0b913a855a63ae63fc",
+      "file": "packages/ffmpeg/src/worker.ts",
+      "bytes": 6128,
+      "sha256": "902f816be058637efb39fb0cfbdada734db4bf5d3d45d50b775ce94b02bf831a"
+    },
+    {
+      "repo": "remotion-dev/remotion",
+      "private": false,
+      "sha": "ff3466638fe79b88490458b839ba07713a28db88",
+      "file": "LICENSE.md",
+      "bytes": 2823,
+      "sha256": "bd65083b940f61904f6ef298aade918a7cad72a3e35bc406e36fab365844b673"
+    },
+    {
+      "repo": "ffmpegwasm/ffmpeg.wasm",
+      "private": false,
+      "sha": "f876f907c7e9b9bf51d4ed0b913a855a63ae63fc",
+      "file": "packages/ffmpeg/src/classes.ts",
+      "bytes": 11848,
+      "sha256": "440ff39f251e372304c2491967f764eb039324de799be0810aff9e131991ab70"
+    },
+    {
+      "repo": "remotion-dev/remotion",
+      "private": false,
+      "sha": "ff3466638fe79b88490458b839ba07713a28db88",
+      "file": "packages/renderer/package.json",
+      "bytes": 2883,
+      "sha256": "957690701fc1dd85c0113e2b7f78aa258b2f5531b8ff0c60791d94139558546c"
+    },
+    {
+      "repo": "vercel/workflow",
+      "private": false,
+      "sha": "b8e1f1b9112a180ee1982867c056617580a7e65a",
+      "file": "packages/world-local/package.json",
+      "bytes": 1438,
+      "sha256": "8297a350ef823571bbc43e020e8eb4b8fee0643f939bd181075cec94dcbf2f58"
+    },
+    {
+      "repo": "remotion-dev/remotion",
+      "private": false,
+      "sha": "ff3466638fe79b88490458b839ba07713a28db88",
+      "file": "packages/renderer/src/render-frames.ts",
+      "bytes": 23609,
+      "sha256": "e8e4b35b7d7b74127cac675fc20c44502ee731f97ad21a6a14aa90ffb880641a"
+    },
+    {
+      "repo": "vercel/workflow",
+      "private": false,
+      "sha": "b8e1f1b9112a180ee1982867c056617580a7e65a",
+      "file": "LICENSE.md",
+      "bytes": 11343,
+      "sha256": "1478317a3aa0506e6d2ed3b23b2c8b3f8d08af491c6f666325a1a4e2f9d59163"
+    },
+    {
+      "repo": "vercel/workflow",
+      "private": false,
+      "sha": "b8e1f1b9112a180ee1982867c056617580a7e65a",
+      "file": "packages/world-local/src/orphaned-steps.test.ts",
+      "bytes": 12417,
+      "sha256": "faf089c5fe1895b18ff743e6832918bb6f3a7cc229ab6be4a26f7c299a964033"
+    },
+    {
+      "repo": "vercel/workflow",
+      "private": false,
+      "sha": "b8e1f1b9112a180ee1982867c056617580a7e65a",
+      "file": "packages/world-local/src/queue.ts",
+      "bytes": 26670,
+      "sha256": "a4aaa5d545fe78d2ad68afbdddff023f9bf436d65e3ce9854602c9eccb4324f7"
+    },
+    {
+      "repo": "TheHalfMoon/Diffcipline",
+      "private": false,
+      "sha": "1e6d14f77b95bb132b42276f10d67f1018ab5bb6",
+      "file": "crates/diffcipline-cli/src/main.rs",
+      "bytes": 34458,
+      "sha256": "ddae77f2e69e4075c3cc3f1f6a0b7feb4618a90c05b426180cd7b1496c228bc5"
+    },
+    {
+      "repo": "libass/libass",
+      "private": false,
+      "sha": "00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3",
+      "file": "test/test.c",
+      "bytes": 8377,
+      "sha256": "3babcee23a5d8fa8a796f4e2ae49e68faa2b1ba892f20b6637d386b680401fbf"
+    },
+    {
+      "repo": "libass/libass",
+      "private": false,
+      "sha": "00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3",
+      "file": "libass/ass_cache.c",
+      "bytes": 15390,
+      "sha256": "a9cb10ec2a4cec63ac3c2140f48e06fc5d2f0d4e1ccf0362c6483d2171c84c7f"
+    },
+    {
+      "repo": "breakfastquay/rubberband",
+      "private": false,
+      "sha": "e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "file": "COPYING",
+      "bytes": 30260,
+      "sha256": "cedd4c1885d75991bf1077cc6e33359103cf04fbc996f20d30ab043d5fc5fcc5"
+    },
+    {
+      "repo": "libass/libass",
+      "private": false,
+      "sha": "00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3",
+      "file": "COPYING",
+      "bytes": 755,
+      "sha256": "f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c"
+    },
+    {
+      "repo": "breakfastquay/rubberband",
+      "private": false,
+      "sha": "e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "file": "src/RubberBandStretcher.cpp",
+      "bytes": 13329,
+      "sha256": "1579a21a2e7287b332c6551c6dc80bc1ec6fcd67c5bb8bc1799fe3453adea4e0"
+    },
+    {
+      "repo": "sdroege/gstreamer-rs",
+      "private": false,
+      "sha": "3f0a5fc9643b44727cf4ed913196cb3368f3c851",
+      "file": "LICENSE-APACHE",
+      "bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "repo": "breakfastquay/rubberband",
+      "private": false,
+      "sha": "e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "file": "src/test/TestStretcher.cpp",
+      "bytes": 49559,
+      "sha256": "2db6a67192681ae6f246025b8e55440fd0c1bf388a223e6518cbec7c4032b91c"
+    },
+    {
+      "repo": "breakfastquay/rubberband",
+      "private": false,
+      "sha": "e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "file": "rubberband/RubberBandStretcher.h",
+      "bytes": 48566,
+      "sha256": "deaf2147bd57a72aeec876f8dd76a6e282282d8dd1f52d8aa01f93fa70b5ed44"
+    },
+    {
+      "repo": "sdroege/gstreamer-rs",
+      "private": false,
+      "sha": "3f0a5fc9643b44727cf4ed913196cb3368f3c851",
+      "file": "examples/src/bin/appsink.rs",
+      "bytes": 6076,
+      "sha256": "bd2b5e357372ee474a6d3192b299f0a5fff7491ae9da8e744fded6e18727133e"
+    },
+    {
+      "repo": "sdroege/gstreamer-rs",
+      "private": false,
+      "sha": "3f0a5fc9643b44727cf4ed913196cb3368f3c851",
+      "file": "LICENSE-MIT",
+      "bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "repo": "libav/libav",
+      "private": false,
+      "sha": "c4642788e83b0858bca449f9b6e71ddb015dfa5d",
+      "file": "LICENSE",
+      "bytes": 2724,
+      "sha256": "0838871ebbef739891f03eb4feaab54a33abc1f1f6c1c1a475c5dfdf755ea074"
+    },
+    {
+      "repo": "libav/libav",
+      "private": false,
+      "sha": "c4642788e83b0858bca449f9b6e71ddb015dfa5d",
+      "file": "libavcodec/decode.c",
+      "bytes": 44388,
+      "sha256": "a33da523a211e387620af2d05e4ab1ac056f89c6941c720a27e67e84945d6df0"
+    },
+    {
+      "repo": "mltframework/shotcut",
+      "private": false,
+      "sha": "27e0c04dfb89a7d2f6d5ea147de6221ff17ed8c1",
+      "file": "src/dataqueue.h",
+      "bytes": 4268,
+      "sha256": "bdabdcb0c5ab71ae3f9b4fe311dcd11831197da4653262484062822b7ccd95c4"
+    },
+    {
+      "repo": "mltframework/shotcut",
+      "private": false,
+      "sha": "27e0c04dfb89a7d2f6d5ea147de6221ff17ed8c1",
+      "file": "tests/test_dataqueue.cpp",
+      "bytes": 2852,
+      "sha256": "339abe8d6072efa4466676dd5aec3965412b7b1481a33961708f3d61c5c3dc49"
+    },
+    {
+      "repo": "vercel/workflow",
+      "private": false,
+      "sha": "b8e1f1b9112a180ee1982867c056617580a7e65a",
+      "file": "packages/world-local/src/orphaned-steps.ts",
+      "bytes": 9382,
+      "sha256": "6abfc468ef4bc6b7a231ff152ba43e1814da53ccbb3211faaad745679c6d2196"
+    },
+    {
+      "repo": "mltframework/shotcut",
+      "private": false,
+      "sha": "27e0c04dfb89a7d2f6d5ea147de6221ff17ed8c1",
+      "file": "COPYING",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "src/opentime/timeRange.h",
+      "bytes": 17635,
+      "sha256": "89b300b4483e91b424152ffcb491bbaca80d65091c5421f33e996ed682158099"
+    },
+    {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "private": false,
+      "sha": "80c5ff30938e4adffe9c94f419b1055856cee9f5",
+      "file": "src/opentime/rationalTime.h",
+      "bytes": 14854,
+      "sha256": "1ee199836bd25acc56ec8c3fabe0a8dc76920d86e3bd76f3258bfec591e2249d"
+    }
+  ]
+}

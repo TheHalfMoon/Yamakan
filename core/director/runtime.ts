@@ -391,8 +391,10 @@ type AttemptRow = {
   epoch: number;
 };
 
-// A run's receipts: each stage's latest attempt. An approval counts only in
-// the epoch it was given in.
+// A run's receipts derive from its ordered attempts. A new advance makes
+// downstream work stale; approval renewal alone preserves that work. This
+// adapts Kinewright's exact-base principle to the existing SQLite audit
+// (SS-003 evidence), without a second store or persisted validity flag.
 function runFrom(
   db: DatabaseSync,
   row: {
@@ -409,11 +411,48 @@ function runFrom(
     )
     .all(row.id) as AttemptRow[];
   const latest = new Map<string, AttemptRow>();
-  for (const a of attempts) latest.set(a.stage, a);
+  const invalidated = new Set<string>();
+  let order: string[] = [];
+  try {
+    order = builtinManifest(row.pipeline_name).stages.map((s) => s.name);
+  } catch (error) {
+    // Legacy snapshots can name unavailable pipelines. Keep them readable;
+    // their dependencies are unknown and execution still refuses them.
+    if (!(error instanceof CommandError) || error.code !== "NOT_FOUND")
+      throw error;
+  }
+  for (const a of attempts) {
+    if (a.kind === "advance" && a.epoch !== 0) {
+      // Epoch zero is the legacy import's unordered receipt snapshot,
+      // not an execution history. Its rows seed the baseline unchanged.
+      const index = order.indexOf(a.stage);
+      if (index >= 0)
+        for (const downstream of order.slice(index + 1))
+          if (latest.has(downstream)) invalidated.add(downstream);
+    }
+    // Pre-fix histories may contain an approval of an already stale
+    // output. Only a fresh advance can establish downstream work again.
+    if (a.kind === "approve" && invalidated.has(a.stage)) continue;
+    latest.set(a.stage, a);
+    invalidated.delete(a.stage);
+  }
   const held = db.prepare(
     "SELECT 1 FROM asset_objects WHERE project_id = ? AND digest = ? AND state = 'ready'",
   );
   const receipts: StageReceipt[] = [...latest.values()].map((a) => {
+    if (invalidated.has(a.stage))
+      return StageReceiptSchema.parse({
+        format: "yamakan.stage-receipt",
+        formatVersion: 1,
+        projectId: row.project_id,
+        pipelineName: row.pipeline_name,
+        stage: a.stage,
+        status: "pending",
+        outputHash: null,
+        humanApproved: false,
+        approvalExpiresAtMs: null,
+        approvedOutputHash: null,
+      });
     // An output that is no longer a ready object of the project (lost,
     // quarantined by a restore, or never stored) completes nothing.
     if (a.output_hash && !held.get(row.project_id, a.output_hash))
