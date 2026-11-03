@@ -1,6 +1,6 @@
 # Performance and benchmark program
 
-No threshold is changed by this plan. Read the live frozen [qualification policy](../../../core/qualification-policy.ts), [resource policy](../../../core/command/policy.ts) and existing S/M/T fixture definitions in [benchmark-ultimate](../../../scripts/benchmark-ultimate.ts) before every run. Record their hashes. SS-005a measures before SS-005b changes algorithms.
+No threshold is changed by this plan. Read the live frozen [qualification policy](../../../core/qualification-policy.ts), [resource policy](../../../core/command/policy.ts) and existing S/M/T fixture definitions in [benchmark-ultimate](../../../scripts/benchmark-ultimate.ts) before every run. Record their hashes. SS-005a profiles at least three unchanged baseline attempts and selects or rejects a bounded hypothesis before SS-005b changes algorithms. SS-005b owns candidate construction and at least three interleaved baseline/candidate pairs; if SS-005a rejects all hypotheses, SS-005b closes with a documented REJECTED/M NO-GO result without constructing a candidate. Neither task runs during the planning hold.
 
 ## Policies and retained observations
 

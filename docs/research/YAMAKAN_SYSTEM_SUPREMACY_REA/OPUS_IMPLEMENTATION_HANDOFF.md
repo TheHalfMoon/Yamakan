@@ -1,6 +1,6 @@
 # Opus implementation handoff — execution held
 
-Updated 2026-11-03, Asia/Riyadh. **Claude Opus is the implementation lead after founder handoff. Astro owns research and planning.** The authored research and task package is prepared, but Astro's final planning qualification is **not complete**: independent review is unavailable, and this expanded head has not yet passed all merge gates. Do not begin the engineering program from this draft.
+Updated 2026-11-03, Asia/Riyadh. **Claude Opus is the implementation lead after founder handoff. Astro owns research and planning.** The authored research and task package is prepared, but Astro's final planning qualification is **not complete**: initial independent review reports have returned, but coverage closure, delta review, final CI and merge/post-main gates remain pending. Do not begin the engineering program from this draft.
 
 Authoritative plan: [README](README.md), [31 complete contracts](TASK_REGISTRY.json), [16 subsystem decisions](SUBSYSTEM_DECISIONS.json), [architecture](19_FINAL_ARCHITECTURE_ASSESSMENT.md), [readiness gates](PLANNING_GATES.json), [continuation](20_FINAL_PLANNING_CHECKPOINT.md). Task IDs are stable; SS-004/005 are aggregates, not separate implementation PRs.
 
@@ -27,6 +27,8 @@ No task below is executable during the current hold. After R-01–R-05 are VERIF
 | 3    | SS-017 — reproducible development/evidence setup    | SS-002 merged; no media result dependency                                | Verify owned checkout/dependency/native/temp roots and execute documented environment diagnostics.                                                                             |
 | 4    | SS-006 — existing take-proposal review              | SS-003 merged; R-02/R-04 resolved before handoff                         | Trace existing proposeReplace/apply and render its exact impact/hash in Director review without changing global scope semantics.                                               |
 | 5    | SS-009 — preview/cache/lifetime qualification       | SS-002 merged; R-03 resolved before handoff                              | Exercise cache identity, shared-waiter cancellation, stale project-switch response and browser disposal against reference preview.                                             |
+
+Read-only inspection of PR #157 may occur during the hold, but its engineering changes and landing remain reserved for Opus after founder handoff and separate qualification. It is not part of PR #155.
 
 Then follow registry dependencies: SS-007 → SS-008 → SS-004b; SS-009 → SS-010; SS-006 → SS-011; SS-004b+011 → SS-016. SS-012/013/014/015 are independent qualification cards once global research gates pass, but share media/UI ownership. SS-005b requires measured SS-005a output. SS-018 consolidates affected gates; SS-019 publishes engineering evidence without shipping. X-01/02/03 remain external.
 

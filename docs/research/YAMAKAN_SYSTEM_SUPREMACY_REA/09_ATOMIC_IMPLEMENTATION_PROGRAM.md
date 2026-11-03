@@ -39,7 +39,7 @@ Every non-research implementation card also requires all five global research ga
 | SS-004a | P2       | REVIEW_PENDING       | SS-003                                                                  | Land the real-media command journey                                                          |
 | SS-004b | P2       | WAITING_DEPENDENCIES | SS-004a, SS-006, SS-008                                                 | Complete browser review, crossfade and forced recovery journey                               |
 | SS-005  | P1       | AGGREGATE            | SS-005a, SS-005b                                                        | Resolve M export under frozen resource policy                                                |
-| SS-005a | P1       | QUALIFICATION_READY  | SS-002, R-03                                                            | Profile and compare M algorithm candidates                                                   |
+| SS-005a | P1       | QUALIFICATION_READY  | SS-002, R-03                                                            | Profile M and select a bounded hypothesis                                                    |
 | SS-005b | P1       | WAITING_DEPENDENCIES | SS-005a, R-03                                                           | Implement one measured renderer improvement                                                  |
 | R-01    | P3       | REVIEW_PENDING       | —                                                                       | Complete professional editor capability coverage                                             |
 | R-02    | P2       | REVIEW_PENDING       | —                                                                       | Complete generative and agent-native workflow coverage                                       |
@@ -294,9 +294,9 @@ External requirements: None beyond global planning/implementation authority and 
 
 Execution gate: Global planning gates and founder handoff must pass before Opus executes; dependencies must have acceptable exact receipts.
 
-### SS-005a — Profile and compare M algorithm candidates
+### SS-005a — Profile M and select a bounded hypothesis
 
-Objective: Profile and compare M algorithm candidates
+Objective: Profile M and select a bounded hypothesis
 
 Targets: `core/render.ts`, `core/render/plan.ts`, `core/render/segments.ts`, `scripts/benchmark-ultimate.ts`. Owner: Claude Opus after founder handoff; one named builder per task PR.
 
@@ -309,10 +309,10 @@ Sequence:
 1. Verify trusted runtime and reserve the single media slot.
 2. Reproduce frozen M baseline and retain failures/timeouts with host load context.
 3. Instrument current compile/decode/scale/overlay/encode/segment boundaries without changing behavior.
-4. Measure at least three matched baseline/candidate pairs for the bounded redundant-decode/scale experiment in 16.
+4. Measure at least three unchanged baseline attempts, retaining failures/timeouts and instrumentation overhead; use these profiles to assess the bounded redundant-decode/scale hypothesis in 16 without implementing it.
 5. Emit one exact graph-change hypothesis with costs and guards, or reject the experiment if no safe win is supported.
 
-Acceptance: Pin policy/fixture/host; attribute decode/scale/overlay/encode and process-tree resources; retain at least three matched pairs for a candidate experiment; choose one bounded change or reject all.
+Acceptance: Pin policy/fixture/host; retain at least three baseline attempts including failures/timeouts; attribute decode/scale/overlay/encode and process-tree resources; select one bounded hypothesis or reject all. Candidate implementation and paired comparison belong to SS-005b.
 
 Negative/security: Alpha/transform/LUT/animation/segment seam controls; retain timeout, load and failed-run data.
 
@@ -322,7 +322,7 @@ Compatibility: Preserve canonical project format, original media, old receipts a
 
 Rollback: Remove diagnostic instrumentation; never modify production limits.
 
-Definition of Done: Pin policy/fixture/host; attribute decode/scale/overlay/encode and process-tree resources; retain at least three matched pairs for a candidate experiment; choose one bounded change or reject all. All relevant negative tests have real results; failures/skips/unknowns retained. Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold.
+Definition of Done: Pin policy/fixture/host; retain at least three baseline attempts including failures/timeouts; attribute decode/scale/overlay/encode and process-tree resources; select one bounded hypothesis or reject all. Candidate implementation and paired comparison belong to SS-005b. All relevant negative tests have real results; failures/skips/unknowns retained. Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold.
 
 External requirements: None beyond global planning/implementation authority and task dependency receipts.
 
@@ -340,10 +340,10 @@ Interfaces: Same RenderPlan input and validated artifact output; renderer/cache 
 
 Sequence:
 
-1. Require SS005a measured hypothesis and reference fixtures.
+1. Require SS005a baseline profiles and reference fixtures; if it rejects all hypotheses, record REJECTED with M NO-GO and close this investigation without implementing a candidate.
 2. Implement only the supported graph change; retain reference path and conservative fallback.
 3. Refuse optimization for uncertain alpha, transform, animation, transition or segment/loudness semantics.
-4. Run decoded visual/audio equivalence and policy-matched repeated M measurements.
+4. Run decoded visual/audio equivalence and at least three interleaved baseline/candidate pairs under identical policy/fixture/host; retain every failed attempt. Complete the qualification policy repetitions separately before claiming M PASS.
 5. Land only a demonstrated bounded improvement; otherwise revert candidate and publish REJECTED with M NO-GO.
 
 Acceptance: Decoded output and audio equivalence across 10 matrix; all required M candidate runs within 480 s and existing ceilings to claim qualification; otherwise record no-go.
@@ -536,19 +536,19 @@ Targets: `core/takes.ts`, `core/command/registry.ts`, `core/director`, `src/dire
 
 Source: WRAP existing TakeProposalSchema/proposeReplace/take.apply CAS; ADAPT exact-base/conflict tests; preserve scoped agent project:write and human-only Director approval.
 
-Interfaces: Reuse TakeProposalSchema v1: projectId, revision, documentId/storyHash, shotId/takeId, exact mapping and proposalHash. Director review artifact references exact proposal hash and output; existing take.apply project:write authorization remains unchanged.
+Interfaces: Reuse TakeProposalSchema v1: projectId, revision, documentId/storyHash, shotId/takeId, exact mapping and proposalHash. The review artifact is a derived UI view of the exact TakeProposalSchema payload, not a Director stage output or approval token. Keep proposalHash separate from managed media outputHash; existing take.apply project:write authorization and human-only Director media approval remain unchanged.
 
 Sequence:
 
 1. Read existing proposeReplace/take.apply CAS and tests; preserve single-clip-shot limitation.
 2. Present affected clip, old/new media, timing and observed revision through current Director UI.
-3. Bind Director review display/output to immutable existing proposal; do not create another generic proposal store.
+3. Bind the review panel and apply action to the exact existing proposal payload; refresh on project/story/input change. Do not persist a proposal approval, pass proposalHash to advanceStage/approveStage, widen assertManagedOutput, or create another proposal store.
 4. Recompute/read current proposal before apply; on stale input show refusal and require fresh review.
 5. Test successful unchanged apply, changed payload/revision/story/consent, interleaved writer undo and agent Director approval refusal.
 
-Acceptance: Show exact affected clip/media/timing and proposalHash; Director review binds that artifact; apply uses existing recomputation/CAS/media/continuity checks. Unchanged proposal succeeds, stale proposal requires fresh review, unrelated writer changes survive undo; no second proposal store or blanket human-only mutation rule.
+Acceptance: Show exact affected clip/media/timing and proposalHash in a derived Director review panel; submit that unchanged TakeProposalSchema payload to existing take.apply with recomputation/CAS/media/continuity checks. The panel creates no durable approval or stage output. Unchanged proposal succeeds, stale proposal requires fresh review, unrelated writer changes survive undo; no second proposal store or blanket human-only mutation rule.
 
-Negative/security: Stale base, missing asset, revoked consent, agent self-approval, changed payload, wrong project and interrupted apply; successful unchanged control.
+Negative/security: Stale base, missing asset, revoked consent, agent self-approval, changed payload, wrong project and interrupted apply; successful unchanged control. A proposalHash supplied as stage output stays rejected; viewing a proposal confers no approval or new scope.
 
 Performance: Bounded metadata/thumbnail work only; compareTakes cap8; no original-media decode in review UI.
 
@@ -556,7 +556,7 @@ Compatibility: Preserve canonical project format, original media, old receipts a
 
 Rollback: Disable new proposal writes/UI; keep existing commands/history readable; add migration rollback only if a schema change proves necessary.
 
-Definition of Done: Show exact affected clip/media/timing and proposalHash; Director review binds that artifact; apply uses existing recomputation/CAS/media/continuity checks. All relevant negative tests have real results; failures/skips/unknowns retained. Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold.
+Definition of Done: Show exact affected clip/media/timing and proposalHash in a derived Director review panel; submit that unchanged TakeProposalSchema payload to existing take.apply with recomputation/CAS/media/continuity checks. The panel creates no durable approval or stage output. All relevant negative tests have real results; failures/skips/unknowns retained. Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold.
 
 External requirements: None beyond global planning/implementation authority and task dependency receipts.
 

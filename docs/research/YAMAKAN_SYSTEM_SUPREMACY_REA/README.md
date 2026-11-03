@@ -1,5 +1,7 @@
 # Yamakan final research and implementation plan
 
+**Latest qualification update (2026-11-03):** [Independent review receipt and20-gate evidence map](22_FINAL_PLANNING_REVIEW_RECEIPT.md) supersede earlier reviewer-unavailability status below. Three fresh free-endpoint reports returned; coverage/correction delta reviews and final CI/merge/post-main checks remain pending. Implementation stays held.
+
 Updated 2026-11-03, Asia/Riyadh. **Planning only — final qualification pending.** Astro owns research and planning. Claude Opus owns implementation after founder handoff. No new engineering task, model/provider, resource expansion, installer or release is authorized by this draft. [PR #155](https://github.com/TheHalfMoon/Yamakan/pull/155) stays separate from implementation PR #157; historical PRs #85/#86 remain intact.
 
 Verified implementation baseline: **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**. The authored package now includes the competitive/source research, 16 subsystem decisions, all 31 detailed task contracts, 44-task reconciliation and single Opus handoff. Required independent architecture/correctness/security review and final merge qualification remain incomplete. This is not a declaration that the final plan is ready.

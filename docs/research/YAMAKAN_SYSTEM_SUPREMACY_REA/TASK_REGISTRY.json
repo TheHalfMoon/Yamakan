@@ -431,7 +431,7 @@
       "priority": "P1",
       "state": "QUALIFICATION_READY",
       "dependsOn": ["SS-002", "R-03"],
-      "title": "Profile and compare M algorithm candidates",
+      "title": "Profile M and select a bounded hypothesis",
       "targets": [
         "core/render.ts",
         "core/render/plan.ts",
@@ -440,7 +440,7 @@
       ],
       "sourceDecision": "Compare current FFmpeg graph and R-03 candidate concepts; BUILD only measurement instrumentation if existing harness insufficient.",
       "acceptance": [
-        "Pin policy/fixture/host; attribute decode/scale/overlay/encode and process-tree resources; retain at least three matched pairs for a candidate experiment; choose one bounded change or reject all."
+        "Pin policy/fixture/host; retain at least three baseline attempts including failures/timeouts; attribute decode/scale/overlay/encode and process-tree resources; select one bounded hypothesis or reject all. Candidate implementation and paired comparison belong to SS-005b."
       ],
       "negativeTests": [
         "Alpha/transform/LUT/animation/segment seam controls; retain timeout, load and failed-run data."
@@ -450,7 +450,7 @@
       "evidence": null,
       "owner": "Claude Opus after founder handoff; one named builder per task PR",
       "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
-      "objective": "Profile and compare M algorithm candidates",
+      "objective": "Profile M and select a bounded hypothesis",
       "interfaces": [
         "Benchmark records: source/head, runtime hash, fixture hash, policy, stage timings, wall time, process-tree peak and outcome."
       ],
@@ -458,7 +458,7 @@
         "Verify trusted runtime and reserve the single media slot.",
         "Reproduce frozen M baseline and retain failures/timeouts with host load context.",
         "Instrument current compile/decode/scale/overlay/encode/segment boundaries without changing behavior.",
-        "Measure at least three matched baseline/candidate pairs for the bounded redundant-decode/scale experiment in 16.",
+        "Measure at least three unchanged baseline attempts, retaining failures/timeouts and instrumentation overhead; use these profiles to assess the bounded redundant-decode/scale hypothesis in 16 without implementing it.",
         "Emit one exact graph-change hypothesis with costs and guards, or reject the experiment if no safe win is supported."
       ],
       "performanceCriteria": [
@@ -480,7 +480,7 @@
         "Use exact pinned donor/runtime dependencies; add no import without provenance/license closure."
       ],
       "definitionOfDone": [
-        "Pin policy/fixture/host; attribute decode/scale/overlay/encode and process-tree resources; retain at least three matched pairs for a candidate experiment; choose one bounded change or reject all.",
+        "Pin policy/fixture/host; retain at least three baseline attempts including failures/timeouts; attribute decode/scale/overlay/encode and process-tree resources; select one bounded hypothesis or reject all. Candidate implementation and paired comparison belong to SS-005b.",
         "All relevant negative tests have real results; failures/skips/unknowns retained.",
         "Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold."
       ],
@@ -521,10 +521,10 @@
         "Same RenderPlan input and validated artifact output; renderer/cache version changes together if pixels or recipe identity change."
       ],
       "implementationSequence": [
-        "Require SS005a measured hypothesis and reference fixtures.",
+        "Require SS005a baseline profiles and reference fixtures; if it rejects all hypotheses, record REJECTED with M NO-GO and close this investigation without implementing a candidate.",
         "Implement only the supported graph change; retain reference path and conservative fallback.",
         "Refuse optimization for uncertain alpha, transform, animation, transition or segment/loudness semantics.",
-        "Run decoded visual/audio equivalence and policy-matched repeated M measurements.",
+        "Run decoded visual/audio equivalence and at least three interleaved baseline/candidate pairs under identical policy/fixture/host; retain every failed attempt. Complete the qualification policy repetitions separately before claiming M PASS.",
         "Land only a demonstrated bounded improvement; otherwise revert candidate and publish REJECTED with M NO-GO."
       ],
       "performanceCriteria": [
@@ -860,11 +860,11 @@
       ],
       "sourceDecision": "WRAP existing TakeProposalSchema/proposeReplace/take.apply CAS; ADAPT exact-base/conflict tests; preserve scoped agent project:write and human-only Director approval.",
       "acceptance": [
-        "Show exact affected clip/media/timing and proposalHash; Director review binds that artifact; apply uses existing recomputation/CAS/media/continuity checks.",
+        "Show exact affected clip/media/timing and proposalHash in a derived Director review panel; submit that unchanged TakeProposalSchema payload to existing take.apply with recomputation/CAS/media/continuity checks. The panel creates no durable approval or stage output.",
         "Unchanged proposal succeeds, stale proposal requires fresh review, unrelated writer changes survive undo; no second proposal store or blanket human-only mutation rule."
       ],
       "negativeTests": [
-        "Stale base, missing asset, revoked consent, agent self-approval, changed payload, wrong project and interrupted apply; successful unchanged control."
+        "Stale base, missing asset, revoked consent, agent self-approval, changed payload, wrong project and interrupted apply; successful unchanged control. A proposalHash supplied as stage output stays rejected; viewing a proposal confers no approval or new scope."
       ],
       "rollback": "Disable new proposal writes/UI; keep existing commands/history readable; add migration rollback only if a schema change proves necessary.",
       "legacy": ["YU-060"],
@@ -874,12 +874,12 @@
       "objective": "Expose and qualify existing revision-bound take proposals in Director review",
       "interfaces": [
         "Reuse TakeProposalSchema v1: projectId, revision, documentId/storyHash, shotId/takeId, exact mapping and proposalHash.",
-        "Director review artifact references exact proposal hash and output; existing take.apply project:write authorization remains unchanged."
+        "The review artifact is a derived UI view of the exact TakeProposalSchema payload, not a Director stage output or approval token. Keep proposalHash separate from managed media outputHash; existing take.apply project:write authorization and human-only Director media approval remain unchanged."
       ],
       "implementationSequence": [
         "Read existing proposeReplace/take.apply CAS and tests; preserve single-clip-shot limitation.",
         "Present affected clip, old/new media, timing and observed revision through current Director UI.",
-        "Bind Director review display/output to immutable existing proposal; do not create another generic proposal store.",
+        "Bind the review panel and apply action to the exact existing proposal payload; refresh on project/story/input change. Do not persist a proposal approval, pass proposalHash to advanceStage/approveStage, widen assertManagedOutput, or create another proposal store.",
         "Recompute/read current proposal before apply; on stale input show refusal and require fresh review.",
         "Test successful unchanged apply, changed payload/revision/story/consent, interleaved writer undo and agent Director approval refusal."
       ],
@@ -902,7 +902,7 @@
         "Use exact pinned donor/runtime dependencies; add no import without provenance/license closure."
       ],
       "definitionOfDone": [
-        "Show exact affected clip/media/timing and proposalHash; Director review binds that artifact; apply uses existing recomputation/CAS/media/continuity checks.",
+        "Show exact affected clip/media/timing and proposalHash in a derived Director review panel; submit that unchanged TakeProposalSchema payload to existing take.apply with recomputation/CAS/media/continuity checks. The panel creates no durable approval or stage output.",
         "All relevant negative tests have real results; failures/skips/unknowns retained.",
         "Exact source/runtime/fixture/policy receipt, fresh independent required review, exact-head CI and post-main verification; no implementation during planning hold."
       ],
