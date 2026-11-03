@@ -1,6 +1,6 @@
 # Execution checkpoint and continuation
 
-**Current qualification (2026-11-03):** Planning qualified at merge `4835cdfe19da9272956629b797d0d989eb9e251f`; [post-merge verification](23_FINAL_POST_MERGE_VERIFICATION.md) supersedes earlier pending snapshots. Opus execution remains held until founder handoff.
+**Current qualification (2026-11-03):** Planning qualified at merge `4835cdfe19da9272956629b797d0d989eb9e251f`; [post-merge verification](23_FINAL_POST_MERGE_VERIFICATION.md) supersedes earlier pending snapshots. Founder handoff to Opus recorded 2026-11-04; see the latest section at the end of this file.
 
 Updated 2026-11-02, Asia/Riyadh. The [complete execution plan](README.md) is prepared under the founder's request to put the full plan in the repository. Its 31-item registry covers research, engineering, qualification and external gates; [13](13_PLAN_READINESS_AND_ENGINEERING_REPORT.md) supplies the expanded report. The whole competitive/system program remains incomplete. Continue authorized engineering; this is not a new approval request.
 
@@ -55,3 +55,10 @@ Final-planning tool use: PStack spec/review procedures; deterministic Graft grap
 Research wave commit84564b6 contains 14–19 and the16-decision registry. A fresh independent architecture reviewer was dispatched on that immutable head and failed before returning a verdict because the service reported an account usage limit. Earlier R01/R02/R03 reviewer attempts also failed for account limits. Prior structural-plan reviews at 2b7a776 do not approve this expansion. D1, Graft, OCR preview and CI do not replace required independent reviews.
 
 PR155 stays draft until all final gates pass. PR157 remains separate/unmerged. No SS005a, SS017 or other engineering is eligible during this founder hold. No reset-time hint is treated as guaranteed availability; retry required independent review on resume, without purchasing capacity or changing providers to bypass the limit.
+
+## Opus implementation continuation
+
+Updated 2026-11-04. Latest verified main: `928100281440bc32e522595dadd2504ac986c543`.
+
+- **SS-004a VERIFIED:** [PR #157](https://github.com/TheHalfMoon/Yamakan/pull/157) merged normally at qualified head `a4f2a8815424bdec7727524aa8ee55e95b00fd73`. Fresh correctness and security reviews, two delta reviews (the first required evidence corrections), exact-head CI run 41740171246, and a local Windows run on main passed. See [evidence](../../evidence/ultimate/SS-004-creative-journey.md).
+- **Next eligible:** SS-005a, SS-017, SS-006, SS-009, in that order.

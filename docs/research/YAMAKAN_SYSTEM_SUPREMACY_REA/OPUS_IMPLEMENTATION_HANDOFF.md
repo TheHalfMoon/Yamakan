@@ -1,6 +1,6 @@
-# Opus implementation handoff — execution held
+# Opus implementation handoff
 
-Updated 2026-11-03, Asia/Riyadh. **Astro's planning qualification is complete. Claude Opus is the implementation lead after founder handoff.** Independent architecture/correctness/security reviews, exact-head CI, normal merge and post-main verification passed. [Actual evidence](23_FINAL_POST_MERGE_VERIFICATION.md). The founder has not yet handed over execution authority; do not begin the engineering program.
+Updated 2026-11-03, Asia/Riyadh. **Astro's planning qualification is complete. Claude Opus is the implementation lead after founder handoff.** Independent architecture/correctness/security reviews, exact-head CI, normal merge and post-main verification passed. [Actual evidence](23_FINAL_POST_MERGE_VERIFICATION.md). The [founder handed over execution authority on 2026-11-04](../../FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus); references below to a hold describe the state before it.
 
 Authoritative plan: [README](README.md), [31 complete contracts](TASK_REGISTRY.json), [16 subsystem decisions](SUBSYSTEM_DECISIONS.json), [architecture](19_FINAL_ARCHITECTURE_ASSESSMENT.md), [readiness gates](PLANNING_GATES.json), [continuation](20_FINAL_PLANNING_CHECKPOINT.md). Task IDs are stable; SS-004/005 are aggregates, not separate implementation PRs.
 

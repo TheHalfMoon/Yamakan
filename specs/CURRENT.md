@@ -1,10 +1,14 @@
 # Yamakan current frontier
 
-## Final planning qualified — execution held (2026-11-03)
+## Implementation under founder handoff (2026-11-04)
+
+The founder [handed implementation to Claude Opus](../docs/FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus). The hold described below is lifted for the 31-task program; progress is in the [continuation ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md). SS-004a merged at `928100281440bc32e522595dadd2504ac986c543`. Models and providers disabled, Plume deferred, resource limits frozen, spending zero, public release NO-GO, M export unqualified.
+
+## Final planning qualified — held until the handoff above (2026-11-03)
 
 PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged at `4835cdfe19da9272956629b797d0d989eb9e251f`; independent architecture/correctness/security reviews and exact-head/post-main CI passed. [Final verification](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/23_FINAL_POST_MERGE_VERIFICATION.md) records all20 gates and actual SHAs. The31-task/16-decision plan and44-task reconciliation are qualified.
 
-**Next action: founder handoff to Claude Opus. No engineering is currently authorized.** Read the [single handoff](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Preserve verified implementation baseline c129a50c9e6bf9657f404c919c3cf6dbb8273697 and SS001–003; PR157 remains separate,85/86 intact. M export remains unqualified. No models/providers, expanded limits, installer or release. External H1/profile/account/disk/signing/CSP/presence/founder gates remain open. Earlier autonomous implementation instructions below are historical during this hold.
+**At that date, the next action was founder handoff to Claude Opus, and no engineering was authorized.** Read the [single handoff](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Preserve verified implementation baseline c129a50c9e6bf9657f404c919c3cf6dbb8273697 and SS001–003; PR157 remains separate,85/86 intact. M export remains unqualified. No models/providers, expanded limits, installer or release. External H1/profile/account/disk/signing/CSP/presence/founder gates remain open. Earlier autonomous implementation instructions below are historical during this hold.
 
 ## Historical frontier — retained as evidence, not current task status
 

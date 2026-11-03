@@ -255,8 +255,8 @@ check(
   "stable31 task identities",
 );
 check(
-  registry.executionHold === true && gates.implementationHold === true,
-  "founder implementation hold must remain until explicit handoff",
+  registry.executionHold === false && gates.implementationHold === false,
+  "the founder handoff recorded on 2026-11-04 lifted the implementation hold",
 );
 check(
   JSON.stringify(registry.globalImplementationPrerequisites) ===
@@ -326,8 +326,8 @@ for (const task of registry.tasks) {
     );
   if (task.state === "VERIFIED" && !task.id.startsWith("R-"))
     check(
-      ["SS-001", "SS-002", "SS-003"].includes(task.id) && !!task.evidence,
-      "unexpected new verified implementation " + task.id,
+      !!task.evidence,
+      "verified implementation without evidence " + task.id,
     );
 }
 check(decisions.decisions.length === 16, "expected16 subsystem decisions");
@@ -447,7 +447,6 @@ console.log(
       publicSourceFiles: sources.files.length,
       localLinks: links,
       dependencyGraph: "acyclic if structuralStatus PASS",
-      currentlyExecutableImplementationTasks: 0,
       firstFiveAfterPlanning: firstFive,
       finalReadiness: readiness.length ? "NOT_READY" : "READY",
       missingReadinessGates: readiness,
