@@ -46,7 +46,7 @@ Local log paths are relative to the isolated engineering checkout and not commit
 
 The separate post-main stage test command passed 6/6. Historical failed environment capture is `work/environment-failed-before-lfs-repair.json`; raw logs may contain local paths and stay local. C: filled during initial setup; task metadata and temporary files moved to owned D: paths. No unrelated user files were deleted. A shared native target was used only for unchanged source; do not rebuild it concurrently.
 
-## Current final-planning continuation
+## Final-planning continuation (historical)
 
 Updated 2026-11-03. Follow [20 checkpoint](20_FINAL_PLANNING_CHECKPOINT.md). Author research14–17,16 subsystem decisions and all 31 detailed task contracts are prepared; no production code changed. The earlier51-entry inventory is superseded by58 accessible repositories. WePLD and Zain were located and selectively inspected. The earlier tool/runtime receipts above remain historical, not new executions.
 
@@ -54,7 +54,7 @@ Final-planning tool use: PStack spec/review procedures; deterministic Graft grap
 
 Research wave commit84564b6 contains 14–19 and the16-decision registry. A fresh independent architecture reviewer was dispatched on that immutable head and failed before returning a verdict because the service reported an account usage limit. Earlier R01/R02/R03 reviewer attempts also failed for account limits. Prior structural-plan reviews at 2b7a776 do not approve this expansion. D1, Graft, OCR preview and CI do not replace required independent reviews.
 
-PR155 stays draft until all final gates pass. PR157 remains separate/unmerged. No SS005a, SS017 or other engineering is eligible during this founder hold. No reset-time hint is treated as guaranteed availability; retry required independent review on resume, without purchasing capacity or changing providers to bypass the limit.
+PR155 stays draft until all final gates pass. PR157 remains separate/unmerged. At that date, no SS005a, SS017 or other engineering was eligible; the founder hold ended on 2026-11-04. No reset-time hint is treated as guaranteed availability; retry required independent review on resume, without purchasing capacity or changing providers to bypass the limit.
 
 ## Opus implementation continuation
 

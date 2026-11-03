@@ -269,6 +269,17 @@ check(
 );
 errors.push(...graphIssues(registry.tasks));
 const byId = new Map(registry.tasks.map((t) => [t.id, t]));
+const INVESTIGATIONS = new Set(["SS-005", "SS-005b"]);
+const TASK_STATES = new Set([
+  "VERIFIED",
+  "AGGREGATE",
+  "REVIEW_PENDING",
+  "WAITING_DEPENDENCIES",
+  "QUALIFICATION_READY",
+  "EXTERNAL_BLOCKED",
+  "REJECTED",
+  "DEFERRED",
+]);
 const researchOnly = registry.tasks.find((t) => t.id === "R-05").dependsOn;
 check(
   JSON.stringify(researchOnly) === JSON.stringify(researchIds.slice(0, 4)),
@@ -328,6 +339,10 @@ for (const task of registry.tasks) {
       task.state === gates.researchTasks[task.id],
       task.id + " differs from readiness gates",
     );
+  check(
+    TASK_STATES.has(task.state),
+    task.id + " has unknown state " + task.state,
+  );
   // External gates are decided outside this program; nothing here closes them.
   if (task.id.startsWith("X-"))
     check(
@@ -337,14 +352,23 @@ for (const task of registry.tasks) {
   if (task.state === "VERIFIED" && !task.id.startsWith("R-")) {
     check(
       typeof task.evidence === "string" &&
-        /\b[0-9a-f]{7,40}\b/.test(task.evidence),
+        /\b(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/.test(task.evidence),
       "verified implementation needs evidence naming a commit " + task.id,
     );
-    for (const dep of task.dependsOn)
+    for (const dep of task.dependsOn) {
+      const parent = byId.get(dep);
+      // An experiment may end REJECTED or DEFERRED with evidence (09); that
+      // closes its investigation and never a required product PASS.
+      const closed =
+        INVESTIGATIONS.has(dep) &&
+        ["REJECTED", "DEFERRED"].includes(parent?.state) &&
+        typeof parent?.evidence === "string" &&
+        parent.evidence.trim() !== "";
       check(
-        byId.get(dep)?.state === "VERIFIED",
+        parent?.state === "VERIFIED" || closed,
         task.id + " is verified before its dependency " + dep,
       );
+    }
   }
 }
 check(decisions.decisions.length === 16, "expected16 subsystem decisions");
