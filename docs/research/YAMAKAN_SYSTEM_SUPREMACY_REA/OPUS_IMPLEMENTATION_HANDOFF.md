@@ -1,12 +1,12 @@
 # Opus implementation handoff — execution held
 
-Updated 2026-11-03, Asia/Riyadh. **Claude Opus is the implementation lead after founder handoff. Astro owns research and planning.** The authored research and task package is prepared, but Astro's final planning qualification is **not complete**: initial independent review reports have returned, but coverage closure, delta review, final CI and merge/post-main gates remain pending. Do not begin the engineering program from this draft.
+Updated 2026-11-03, Asia/Riyadh. **Astro's planning qualification is complete. Claude Opus is the implementation lead after founder handoff.** Independent architecture/correctness/security reviews, exact-head CI, normal merge and post-main verification passed. [Actual evidence](23_FINAL_POST_MERGE_VERIFICATION.md). The founder has not yet handed over execution authority; do not begin the engineering program.
 
 Authoritative plan: [README](README.md), [31 complete contracts](TASK_REGISTRY.json), [16 subsystem decisions](SUBSYSTEM_DECISIONS.json), [architecture](19_FINAL_ARCHITECTURE_ASSESSMENT.md), [readiness gates](PLANNING_GATES.json), [continuation](20_FINAL_PLANNING_CHECKPOINT.md). Task IDs are stable; SS-004/005 are aggregates, not separate implementation PRs.
 
 ## Exact starting point and authority
 
-Verified implementation main is **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**. Planning PR is [#155](https://github.com/TheHalfMoon/Yamakan/pull/155). Its final merged main SHA is **PENDING**, not the baseline above. Before handing this plan to Opus, Astro must replace that pending value with the actual normal merge SHA, verify post-merge CI/affected checks and record independent review receipts. Opus starts from that final planning merge (or a reviewed descendant after checking intervening changes), never from a stale research worktree.
+Verified implementation baseline is **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**. Final planning PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged normally at **`4835cdfe19da9272956629b797d0d989eb9e251f`**; its post-main CI passed in [run41637577370](https://github.com/TheHalfMoon/Yamakan/actions/runs/41637577370). Opus starts from that final planning merge, or a separately reviewed and CI-verified descendant after checking intervening changes. The follow-up receipt describes this existing merge; it does not claim to verify its own future publication.
 
 Founder precedence: the final-planning directive overrides earlier autonomous engineering language until handoff. PRs [#85](https://github.com/TheHalfMoon/Yamakan/pull/85) and [#86](https://github.com/TheHalfMoon/Yamakan/pull/86) remain historical research. Their old PLANNED flags do not reopen verified YU work. The [44-task reconciliation](LEGACY_RECONCILIATION.json) and merged receipts govern preservation. Existing operational/resource/release restrictions still apply. No directive here authorizes models, spending, expanded limits, packaging or release.
 
@@ -30,7 +30,7 @@ No task below is executable during the current hold. After R-01–R-05 are VERIF
 
 Read-only inspection of PR #157 may occur during the hold, but its engineering changes and landing remain reserved for Opus after founder handoff and separate qualification. It is not part of PR #155.
 
-Then follow registry dependencies: SS-007 → SS-008 → SS-004b; SS-009 → SS-010; SS-006 → SS-011; SS-004b+011 → SS-016. SS-012/013/014/015 are independent qualification cards once global research gates pass, but share media/UI ownership. SS-005b requires measured SS-005a output. SS-018 consolidates affected gates; SS-019 publishes engineering evidence without shipping. X-01/02/03 remain external.
+Then follow registry dependencies: SS-007 → SS-008 → SS-004b; SS-009 → SS-010; SS-006 → SS-011; SS-004b+011 → SS-016. SS-012/013/014/015 are independent qualification cards once global research gates pass, but share media/UI ownership. SS-005b requires SS-005a baseline profiles and its hypothesis-or-REJECTED decision. SS-018 consolidates affected gates; SS-019 publishes engineering evidence without shipping. X-01/02/03 remain external.
 
 ## Source selections and rights
 
@@ -98,4 +98,4 @@ Resource policy v3 and qualification policy v1 are frozen. M remains unqualified
 
 ## Durable continuation
 
-Update [12](12_EXECUTION_AND_CONTINUATION_LEDGER.md) and each task receipt after a substantial wave. Record completed work, immutable head, exact checks/reviews, failed attempts, remaining blockers and the next eligible card. If an execution limit occurs, checkpoint and stop truthfully; no background activity claim without a running process. At this draft, use [20](20_FINAL_PLANNING_CHECKPOINT.md) to resume Astro's final planning gates before Opus starts.
+Update [12](12_EXECUTION_AND_CONTINUATION_LEDGER.md) and each task receipt after a substantial wave. Record completed work, immutable head, exact checks/reviews, failed attempts, remaining blockers and the next eligible card. If an execution limit occurs, checkpoint and stop truthfully; no background activity claim without a running process. Planning is qualified; use [20](20_FINAL_PLANNING_CHECKPOINT.md) for the held founder-to-Opus transition. No further research cycle is required.

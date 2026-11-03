@@ -1,5 +1,7 @@
 # Final planning qualification review receipt
 
+**Current qualification (2026-11-03):** Planning qualified at merge `4835cdfe19da9272956629b797d0d989eb9e251f`; [post-merge verification](23_FINAL_POST_MERGE_VERIFICATION.md) supersedes earlier pending snapshots. Opus execution remains held until founder handoff.
+
 Recorded 2026-11-03. **REVIEW_PENDING_DELTA; implementation remains held.** This receipt describes completed observations against immutable PR #155 head `0cef72368d87862ef1ba541239facd24bbfb8071`, baseline `c129a50c9e6bf9657f404c919c3cf6dbb8273697`. It does not claim review or CI for the future commit publishing this receipt.
 
 ## Independent review method and actual outcomes
