@@ -1,20 +1,18 @@
 # Yamakan final research and implementation plan
 
-**Latest qualification update (2026-11-03):** [Independent review receipt and20-gate evidence map](22_FINAL_PLANNING_REVIEW_RECEIPT.md) supersede earlier reviewer-unavailability status below. Three fresh free-endpoint reports returned; coverage/correction delta reviews and final CI/merge/post-main checks remain pending. Implementation stays held.
+Updated 2026-11-03, Asia/Riyadh. **Final plan qualified; Opus execution held until founder handoff.** PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged at `4835cdfe19da9272956629b797d0d989eb9e251f` with independent reviews and post-main CI PASS. [Verification receipt](23_FINAL_POST_MERGE_VERIFICATION.md). No engineering, model/provider activation, resource expansion, installer or release is authorized by this qualification.
 
-Updated 2026-11-03, Asia/Riyadh. **Planning only — final qualification pending.** Astro owns research and planning. Claude Opus owns implementation after founder handoff. No new engineering task, model/provider, resource expansion, installer or release is authorized by this draft. [PR #155](https://github.com/TheHalfMoon/Yamakan/pull/155) stays separate from implementation PR #157; historical PRs #85/#86 remain intact.
-
-Verified implementation baseline: **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**. The authored package now includes the competitive/source research, 16 subsystem decisions, all 31 detailed task contracts, 44-task reconciliation and single Opus handoff. Required independent architecture/correctness/security review and final merge qualification remain incomplete. This is not a declaration that the final plan is ready.
+The package preserves31 complete task contracts,16 subsystem decisions,95 public retrieval records with bounded qualification,44 prior-task mappings and one Opus handoff. R-01–R-05 are VERIFIED for planning at their documented evidence standard; inaccessible runtime behavior and unmeasured performance remain explicitly unverified.
 
 ## Start here
 
 | Document                                                                                                 | Purpose                                                                                                  |
 | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [Opus handoff](OPUS_IMPLEMENTATION_HANDOFF.md)                                                           | Single implementation entry point, architecture, first five tasks, commands, ownership and restrictions  |
-| [Current planning checkpoint](20_FINAL_PLANNING_CHECKPOINT.md)                                           | Exact continuation and blockers for Astro                                                                |
+| [Current planning checkpoint](20_FINAL_PLANNING_CHECKPOINT.md)                                           | Qualified-plan checkpoint and held founder handoff                                                       |
 | [Readiness gates](PLANNING_GATES.json)                                                                   | Machine-readable final-gate state                                                                        |
 | [Task registry](TASK_REGISTRY.json) / [complete readable contracts](09_ATOMIC_IMPLEMENTATION_PROGRAM.md) | All 31 objectives, prerequisites, interfaces, steps, tests, performance, compatibility, rollback and DoD |
-| [Final architecture assessment](19_FINAL_ARCHITECTURE_ASSESSMENT.md)                                     | A–D comparison and resolved authority/media/workflow boundaries, awaiting independent verdict            |
+| [Final architecture assessment](19_FINAL_ARCHITECTURE_ASSESSMENT.md)                                     | A–D comparison and resolved authority/media/workflow boundaries, independently qualified                 |
 | [16 subsystem decisions](18_FINAL_SUBSYSTEM_DECISIONS.md) / [machine records](SUBSYSTEM_DECISIONS.json)  | COPY/ADAPT/WRAP/COMBINE/BUILD/DEFER/REJECT selections with concrete closures                             |
 | [Professional editor REA](14_PROFESSIONAL_EDITOR_REA.md)                                                 | 15 professional products; primary evidence and explicit runtime limits                                   |
 | [Generative and agent systems](15_GENERATIVE_AND_AGENT_SYSTEM_REA.md)                                    | 16 generative groups,11 agent-native systems and20 dimensions                                            |
@@ -43,7 +41,7 @@ Verified implementation baseline: **`c129a50c9e6bf9657f404c919c3cf6dbb8273697`**
 
 ## Authority and completion
 
-The latest founder final-planning directive takes precedence over earlier autonomous engineering language in this repository. Specific merged receipts take precedence over stale broad PLANNED ranges in prior plans. SS-001/002/003 are retained verified work. R-01–R-05 remain REVIEW_PENDING until independently qualified; a written checklist or green structural validator cannot mark them VERIFIED.
+The latest founder final-planning directive takes precedence over earlier autonomous engineering language in this repository. Specific merged receipts take precedence over stale broad PLANNED ranges in prior plans. SS-001/002/003 are retained verified work. R-01–R-05 are independently qualified for planning; their exact evidence is in23. A written checklist or green structural validator alone cannot establish this status.
 
 After all final planning gates and founder handoff, Opus follows the registry dependency graph and first-five ranking in the handoff. Research prerequisites apply globally to all new implementation cards, including cards whose local dependency list contains only an already merged task. SS-005a profiling is future engineering; R-05 uses retained measurements and makes no new performance promise. M remains unqualified; release remains **NO-GO**.
 

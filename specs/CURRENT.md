@@ -1,14 +1,10 @@
 # Yamakan current frontier
 
-**Latest founder instruction — final planning hold (2026-11-02):** Astro must finish deep competitive/source REA, architecture, task contracts and the reviewed Opus handoff before implementation resumes. The 31-task program is not currently authorized to start; no production changes, model execution, resource expansion or release. PR #155 remains the planning lane; #157 stays separate. Earlier autonomous engineering instructions below are historical while this hold applies.
+## Final planning qualified — execution held (2026-11-03)
 
-## System engineering frontier — 2026-11-02
+PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged at `4835cdfe19da9272956629b797d0d989eb9e251f`; independent architecture/correctness/security reviews and exact-head/post-main CI passed. [Final verification](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/23_FINAL_POST_MERGE_VERIFICATION.md) records all20 gates and actual SHAs. The31-task/16-decision plan and44-task reconciliation are qualified.
 
-The current system-improvement plan is [YAMAKAN_SYSTEM_SUPREMACY_REA](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), prepared under the founder's autonomous engineering directive and explicit request for the full plan in the repository. Its [task registry](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json) and [execution ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md) govern continuation of this program. Author research and detailed contracts are prepared; independent final review and merge qualification remain incomplete. The Opus handoff is held in the plan directory.
-
-Latest verified implementation main: `c129a50c9e6bf9657f404c919c3cf6dbb8273697` (PR #156; post-main CI 40952139280 SUCCESS; combined Director/preflight 56/56). PRs #152/#153/#154/#156 are merged; SS-004a is draft #157 with exact-head CI SUCCESS and independent review pending. **Current M export remains unqualified** under the 200-clip/16-track/10-minute/1080p, 480-second policy. Historical M-gate wording below does not override this result.
-
-Next eligible: final planning validation, independent architecture/correctness/security review, exact-head CI and normal planning merge if qualified. No implementation task is eligible until founder handoff. Preserve delivered YU receipts. Public release remains **NO-GO**. Human/profile/signing/CSP/native-presence gates and model/provider activation remain unchanged. PRs #85/#86 remain untouched.
+**Next action: founder handoff to Claude Opus. No engineering is currently authorized.** Read the [single handoff](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Preserve verified implementation baseline c129a50c9e6bf9657f404c919c3cf6dbb8273697 and SS001–003; PR157 remains separate,85/86 intact. M export remains unqualified. No models/providers, expanded limits, installer or release. External H1/profile/account/disk/signing/CSP/presence/founder gates remain open. Earlier autonomous implementation instructions below are historical during this hold.
 
 ## Historical frontier — retained as evidence, not current task status
 

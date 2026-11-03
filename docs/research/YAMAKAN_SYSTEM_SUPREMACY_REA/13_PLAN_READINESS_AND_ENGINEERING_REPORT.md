@@ -1,8 +1,6 @@
 # Final planning readiness and retained engineering frontier
 
-**Latest qualification update (2026-11-03):** [Independent review receipt and20-gate evidence map](22_FINAL_PLANNING_REVIEW_RECEIPT.md) supersede earlier reviewer-unavailability status below. Three fresh free-endpoint reports returned; coverage/correction delta reviews and final CI/merge/post-main checks remain pending. Implementation stays held.
-
-Updated 2026-11-03. **NOT READY FOR OPUS EXECUTION.** The author research/task/handoff package is prepared; required independent reviews, final exact-head qualification and normal merge remain incomplete. Do not label Deep REA VERIFIED from these documents alone.
+Updated 2026-11-03. **FINAL PLAN QUALIFIED; OPUS EXECUTION HELD.** All20 founder planning gates are evidenced in [23](23_FINAL_POST_MERGE_VERIFICATION.md), subject merge `4835cdfe19da9272956629b797d0d989eb9e251f`. Research verification means the defined bounded planning standard, not unavailable runtime verification.
 
 ## Completed author work
 
@@ -14,13 +12,13 @@ Updated 2026-11-03. **NOT READY FOR OPUS EXECUTION.** The author research/task/h
 - All 31 cards include objectives, baseline prerequisites, dependencies, source decisions, targets, interfaces, sequence, acceptance, negative tests, performance, compatibility, rollback, DoD and external requirements.
 - Single Opus handoff and44-task machine-readable reconciliation prepared.
 
-## Required final gates
+## Qualified final gates
 
-[PLANNING_GATES.json](PLANNING_GATES.json) and [checkpoint](20_FINAL_PLANNING_CHECKPOINT.md) record current blockers. Fresh architecture review failed on account usage limit; final correctness/security reviews have no verdict for this expansion. Old CI/reviews at 2b7a776 apply only to the structural plan. Planning validation and fresh CI are recorded against their actual heads, never inferred from older green runs. No final planning merge SHA exists yet.
+[PLANNING_GATES.json](PLANNING_GATES.json), [post-main receipt](23_FINAL_POST_MERGE_VERIFICATION.md), and [checkpoint](20_FINAL_PLANNING_CHECKPOINT.md) bind all three final-head independent PASS verdicts, exact-head CI, normal merge and actual post-main CI. Earlier blocked attempts remain disclosed in22; they were not substituted for successful reviews.
 
 ## Retained implementation facts
 
-Main remains `c129a50c9e6bf9657f404c919c3cf6dbb8273697`. SS001/002/003 and PR152 are merged; PR157 command journey is separate and still needs independent review. M remains unqualified (baseline0/3, candidate2/5 under 480 s); dense-probe median66.133→9.187s is historical and not rerun. No new production code, model/provider, resource expansion, installer or release occurred in this planning pass. H1/native Arabic and issue77/profile/account/disk/signing/CSP/presence/founder release gates remain external.
+Implementation baseline remains `c129a50c9e6bf9657f404c919c3cf6dbb8273697`; the verified planning merge is `4835cdfe19da9272956629b797d0d989eb9e251f`. SS001/002/003 and PR152 are merged; PR157 command journey is separate and still needs independent review. M remains unqualified (baseline0/3, candidate2/5 under 480 s); dense-probe median66.133→9.187s is historical and not rerun. No new production code, model/provider, resource expansion, installer or release occurred in this planning pass. H1/native Arabic and issue77/profile/account/disk/signing/CSP/presence/founder release gates remain external.
 
 ## Prior-plan reconciliation
 

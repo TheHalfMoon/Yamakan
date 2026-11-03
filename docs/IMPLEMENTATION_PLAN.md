@@ -1,6 +1,6 @@
 # Yamakan master implementation plan — final proposal
 
-**Current system-improvement entry point (2026-11-02):** [Full execution plan](research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), [task contracts](research/YAMAKAN_SYSTEM_SUPREMACY_REA/09_ATOMIC_IMPLEMENTATION_PROGRAM.md), and [current frontier](../specs/CURRENT.md). The founder now requires planning only: Astro finishes final research/review and [Opus handoff](research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md); Opus implements after founder handoff. The frozen plan and authorization wording below are historical. Existing operational/release contracts remain binding; the new plan preserves verified work and does not enable models or release.
+**Current system-improvement entry point (2026-11-03):** [Qualified full plan](research/YAMAKAN_SYSTEM_SUPREMACY_REA/README.md), [actual merge/review/CI receipt](research/YAMAKAN_SYSTEM_SUPREMACY_REA/23_FINAL_POST_MERGE_VERIFICATION.md), and [single Opus handoff](research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md). Astro's planning qualification is complete. Opus implements only after founder handoff; no engineering, model activation, resource expansion or release is currently authorized. Historical plan/authorization wording below does not override that hold.
 
 ## Canonical entry point (frozen 2026-10-18)
 
