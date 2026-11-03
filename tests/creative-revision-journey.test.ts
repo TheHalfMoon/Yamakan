@@ -260,7 +260,7 @@ test(
         const indices = [0, 5, 6, 23, 24, 29, 30, 45, 59, 60, 75, 89];
         const frames = decodeFrames(file, indices, W, H);
         assert.equal(frames.size, indices.length);
-        for (const n of [0, 29]) colour(frames.get(n)!, "red");
+        for (const n of [0, 5, 6, 23, 24, 29]) colour(frames.get(n)!, "red");
         for (const n of [60, 75, 89]) colour(frames.get(n)!, "black");
         for (const n of [30, 45, 59]) colour(frames.get(n)!, "black", true);
         // Text must appear on the actual pixels, on exact cue boundaries.
