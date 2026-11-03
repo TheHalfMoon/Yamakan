@@ -1,0 +1,64 @@
+{
+  "schema": "yamakan.final-planning-gates/v1",
+  "updated": "2026-11-03",
+  "status": "REVIEW_PENDING_DELTA",
+  "implementationHold": true,
+  "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
+  "planningPr": "https://github.com/TheHalfMoon/Yamakan/pull/155",
+  "authorResearch": "COMPLETE_AT_DOCUMENTED_BOUNDED_SCOPE_PENDING_INDEPENDENT_REVIEW",
+  "researchTasks": {
+    "R-01": "REVIEW_PENDING",
+    "R-02": "REVIEW_PENDING",
+    "R-03": "REVIEW_PENDING",
+    "R-04": "REVIEW_PENDING",
+    "R-05": "REVIEW_PENDING"
+  },
+  "architectureReview": {
+    "status": "PENDING",
+    "reviewedHead": "0cef72368d87862ef1ba541239facd24bbfb8071",
+    "mustFix": 0,
+    "receipt": "22_FINAL_PLANNING_REVIEW_RECEIPT.md",
+    "reason": "Initial PASS report; manifest91-767 coverage and contract-correction delta still required."
+  },
+  "correctnessReview": {
+    "status": "PASS",
+    "reviewedHead": "0cef72368d87862ef1ba541239facd24bbfb8071",
+    "mustFix": 0,
+    "receipt": "22_FINAL_PLANNING_REVIEW_RECEIPT.md",
+    "reason": "Initial complete-head PASS; does not cover later corrections until delta review."
+  },
+  "securityReview": {
+    "status": "PENDING",
+    "reviewedHead": "0cef72368d87862ef1ba541239facd24bbfb8071",
+    "mustFix": 0,
+    "receipt": "22_FINAL_PLANNING_REVIEW_RECEIPT.md",
+    "reason": "Initial PASS report after recovered transport error; CLI exit1 retained. Require clean correction delta confirmation."
+  },
+  "validation": {
+    "status": "PASS",
+    "receipt": "21_PLANNING_VALIDATION_RECEIPT.md",
+    "scope": "Structural/consistency checks only; independent review and final readiness remain pending."
+  },
+  "exactHeadCi": {
+    "status": "PASS",
+    "head": "0cef72368d87862ef1ba541239facd24bbfb8071",
+    "runUrl": "https://github.com/TheHalfMoon/Yamakan/actions/runs/41537058220",
+    "checks": ["qualify", "qualify-windows-r8", "otio-oracle"]
+  },
+  "merge": {
+    "status": "PENDING",
+    "mainSha": null
+  },
+  "postMainVerification": {
+    "status": "PENDING",
+    "mainSha": null,
+    "receipt": null
+  },
+  "founderHandoff": "NOT_YET_RECORDED",
+  "externalProductBlockers": [
+    "M export remains unqualified under frozen policy.",
+    "Native Arabic H1 and issue77 administrator/profile/account/disk/signing/CSP/presence/founder release gates.",
+    "Model/provider/weight/compute/cost/resource authority remains separate; no activation."
+  ],
+  "evidenceScope": "Historical observations at immutable0cef723; subsequent correction publication requires fresh delta review and CI. No future-commit verification claim."
+}

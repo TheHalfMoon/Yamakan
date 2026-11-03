@@ -1,0 +1,362 @@
+{
+  "schema": "yamakan.legacy-reconciliation/v1",
+  "sourceRepository": "TheHalfMoon/Yamakan",
+  "sourceSha": "caec7d9c225d430e1a42f8af8fd8eebc17c5317d",
+  "sourcePath": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/TASK_REGISTRY.json",
+  "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
+  "rule": "Specific merged receipts override stale broad PLANNED ranges; PR85/86 unchanged. Latest founder planning-only instruction overrides historical execution/policy-expansion language.",
+  "tasks": [
+    {
+      "id": "YU-000",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-000.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-001",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-002", "SS-017"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-001.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-002",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-002.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-003",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-003.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-010",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-011",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-011.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-012",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-012.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-013",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-001", "SS-003"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-013a.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-014",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-014.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-015",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-015.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-016",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-012"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-016.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-017",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-009"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-017.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-018",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-009", "SS-010"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-018.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-019",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-014"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-019.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-020",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-014"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-020.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-021",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-014"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-021.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-022",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-014"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-022.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-023",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-023.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-024",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-013"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-024.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-025",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-025.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-026",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_WITH_M_UNQUALIFIED",
+      "successors": ["SS-005", "SS-005a", "SS-005b", "SS-010"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-026.json"],
+      "limits": "Editing S/M/T and export S/T retained; M unqualified, no policy expansion authorized."
+    },
+    {
+      "id": "YU-030",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-011"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-030.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-031",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-031.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-032",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-011"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-032.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-040",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-040.json"],
+      "limits": "No-model contracts/stand-ins/manifests only; no provider/weight activation."
+    },
+    {
+      "id": "YU-041",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-041.json"],
+      "limits": "No-model contracts/stand-ins/manifests only; no provider/weight activation."
+    },
+    {
+      "id": "YU-042",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-042.json"],
+      "limits": "No-model contracts/stand-ins/manifests only; no provider/weight activation."
+    },
+    {
+      "id": "YU-043",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-043.json"],
+      "limits": "No-model contracts/stand-ins/manifests only; no provider/weight activation."
+    },
+    {
+      "id": "YU-050",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-050.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-051",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-003"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-051.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-060",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-006"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-061",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-004", "SS-008"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-062",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-007"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-070",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_STANDIN_ONLY",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-070.json"],
+      "limits": "Contract/stand-in only; no speech recognition executed."
+    },
+    {
+      "id": "YU-071",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": [],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-071.json"],
+      "limits": "Deterministic scdet only; denoise/stabilize/UI not included."
+    },
+    {
+      "id": "YU-072",
+      "priorState": "BLOCKED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["X-03"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-080",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-015"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-081",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-016"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-090",
+      "priorState": "PLANNED",
+      "disposition": "PRESERVE_VERIFIED_SCOPE",
+      "successors": ["SS-005a", "SS-016", "SS-017"],
+      "evidence": ["docs/evidence/ultimate/receipts/YU-090.json"],
+      "limits": "Preserve exact receipt scope, flags, skips and limitations; do not reimplement."
+    },
+    {
+      "id": "YU-091",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-018"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-092",
+      "priorState": "BLOCKED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["X-03"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-093",
+      "priorState": "BLOCKED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["X-01", "SS-013"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-100",
+      "priorState": "PLANNED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["SS-019"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    },
+    {
+      "id": "YU-101",
+      "priorState": "BLOCKED",
+      "disposition": "REMAINING_SCOPED_WORK",
+      "successors": ["X-02"],
+      "evidence": ["docs/evidence/ultimate/EXECUTION_LEDGER.md"],
+      "limits": "Follow successor contract after global planning/handoff gates; external cards remain blocked."
+    }
+  ]
+}
