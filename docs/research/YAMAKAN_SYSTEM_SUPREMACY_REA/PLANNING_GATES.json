@@ -1,6 +1,6 @@
 {
   "schema": "yamakan.final-planning-gates/v1",
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "status": "READY",
   "implementationHold": false,
   "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",

@@ -29,7 +29,7 @@ The revised middle shot becomes blue while project fields stay equal and nine un
 
 ## Remaining qualification
 
-Founder handoff to Claude Opus was given 2026-11-04. Fresh independent correctness and security reviews of `5388eed` returned APPROVE with no must-fix findings. Their should-fix items are applied here: precise human-only denial, wider unrelated-frame and text-band comparison, and corrected evidence wording. Exact-head CI run 41355216482 passed on `5388eed`, but that base predates current main, so the final head needs its own delta review and CI. A delta review of `c69a588` required this evidence wording to be corrected and found the test changes correct. Windows CI does not run this test, so the Windows result below is the only Windows evidence for it.
+Founder handoff to Claude Opus was given 2026-11-04. Fresh independent correctness and security reviews of `5388eed` returned APPROVE with no must-fix findings. Their should-fix items are applied here: precise human-only denial, wider unrelated-frame and text-band comparison, and corrected evidence wording. Exact-head CI run 41355216482 passed on `5388eed`, but that base predates current main, so the final head needed its own delta review and CI. A delta review of `c69a588` required this evidence wording to be corrected and found the test changes correct. A final delta review approved `a4f2a88`; exact-head CI run 41740171246 and post-main CI run 41741292931 passed. Windows CI does not run this test, so the Windows result below is the only Windows evidence for it.
 
 Requalification on current main, Windows, Opus as builder:
 

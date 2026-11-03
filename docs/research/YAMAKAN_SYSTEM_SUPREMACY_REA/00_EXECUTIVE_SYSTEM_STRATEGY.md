@@ -1,5 +1,7 @@
 # Yamakan system engineering strategy
 
+**Founder handoff recorded 2026-11-04:** the [hold below is lifted](../../FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus) for this program; X-01, X-02 and X-03 remain external. Current state: [continuation ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md).
+
 **Current authority (2026-11-03): planning only.** Astro owns final research/qualification; Opus implements after founder handoff. See [handoff](OPUS_IMPLEMENTATION_HANDOFF.md) and [checkpoint](20_FINAL_PLANNING_CHECKPOINT.md). The source reports 14–17 and decisions 18–19 supersede older coverage gaps below. Independent final reviews remain blocked by reviewer-service account limits.
 
 Date: 2026-11-02 (Asia/Riyadh). The [full execution plan](README.md) is prepared with research coverage, task contracts, dependencies and gates. The investigation and engineering program remain incomplete; planning completeness is not completed REA or product qualification. Public release remains **NO-GO**; generation providers and product model execution remain gated.

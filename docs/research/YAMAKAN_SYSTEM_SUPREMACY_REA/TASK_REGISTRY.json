@@ -2,7 +2,7 @@
   "schema": "yamakan.system-improvement-plan/v2",
   "planningDate": "2026-11-03",
   "baselineMain": "c129a50c9e6bf9657f404c919c3cf6dbb8273697",
-  "scope": "Final planning qualified at bounded evidence standard; Opus implements only after founder handoff. Execution hold remains true. Release NO-GO.",
+  "scope": "Final planning qualified at bounded evidence standard; Founder handoff to Opus recorded 2026-11-04, lifting the execution hold. X-01, X-02 and X-03 remain external. Release NO-GO.",
   "commonContract": "09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
   "tasks": [
     {
@@ -263,7 +263,7 @@
       ],
       "rollback": "Revert new test/evidence only.",
       "legacy": ["YU-061"],
-      "evidence": "PR #157 merged at 928100281440bc32e522595dadd2504ac986c543 from qualified head a4f2a8815424bdec7727524aa8ee55e95b00fd73; exact-head CI 41740171246 SUCCESS; fresh correctness, security and delta reviews in docs/evidence/ultimate/SS-004-creative-journey.md.",
+      "evidence": "PR #157 merged at 928100281440bc32e522595dadd2504ac986c543 from qualified head a4f2a8815424bdec7727524aa8ee55e95b00fd73; exact-head CI 41740171246 and post-main CI 41741292931 SUCCESS; correctness and security reviews approved 5388eed, delta review required corrections at c69a588, final delta review approved a4f2a88; receipt docs/evidence/ultimate/SS-004-creative-journey.md and the continuation ledger.",
       "owner": "Claude Opus after founder handoff; one named builder per task PR",
       "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
       "objective": "Land the real-media command journey",

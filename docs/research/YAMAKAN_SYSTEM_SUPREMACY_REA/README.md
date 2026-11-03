@@ -1,5 +1,7 @@
 # Yamakan final research and implementation plan
 
+**Founder handoff recorded 2026-11-04:** the [hold below is lifted](../../FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus) for this program; X-01, X-02 and X-03 remain external. Current state: [continuation ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md).
+
 Updated 2026-11-03, Asia/Riyadh. **Final plan qualified; Opus execution held until founder handoff.** PR [#155](https://github.com/TheHalfMoon/Yamakan/pull/155) merged at `4835cdfe19da9272956629b797d0d989eb9e251f` with independent reviews and post-main CI PASS. [Verification receipt](23_FINAL_POST_MERGE_VERIFICATION.md). No engineering, model/provider activation, resource expansion, installer or release is authorized by this qualification.
 
 The package preserves31 complete task contracts,16 subsystem decisions,95 public retrieval records with bounded qualification,44 prior-task mappings and one Opus handoff. R-01–R-05 are VERIFIED for planning at their documented evidence standard; inaccessible runtime behavior and unmeasured performance remain explicitly unverified.

@@ -1,5 +1,7 @@
 # Competitor systems and source decisions
 
+**Founder handoff recorded 2026-11-04:** the [hold below is lifted](../../FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus) for this program; X-01, X-02 and X-03 remain external. Current state: [continuation ledger](12_EXECUTION_AND_CONTINUATION_LEDGER.md).
+
 **Current authority (2026-11-03): planning only.** Astro owns final research/qualification; Opus implements after founder handoff. See [handoff](OPUS_IMPLEMENTATION_HANDOFF.md) and [checkpoint](20_FINAL_PLANNING_CHECKPOINT.md). The source reports 14–17 and decisions 18–19 supersede older coverage gaps below. Independent final reviews remain blocked by reviewer-service account limits.
 
 Observed 2026-10-28 through 2026-10-29. Pins below refer to code actually retrieved, not floating default branches. No competitor application was executed. No new donor source has been imported by this research PR.

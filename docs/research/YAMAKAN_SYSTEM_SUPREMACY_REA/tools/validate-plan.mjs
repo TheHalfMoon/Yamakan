@@ -259,6 +259,10 @@ check(
   "the founder handoff recorded on 2026-11-04 lifted the implementation hold",
 );
 check(
+  /^RECORDED_\d{4}-\d{2}-\d{2}$/.test(gates.founderHandoff),
+  "a lifted hold needs a recorded founder handoff",
+);
+check(
   JSON.stringify(registry.globalImplementationPrerequisites) ===
     JSON.stringify(researchIds),
   "all implementation requires five research gates",
@@ -324,11 +328,24 @@ for (const task of registry.tasks) {
       task.state === gates.researchTasks[task.id],
       task.id + " differs from readiness gates",
     );
-  if (task.state === "VERIFIED" && !task.id.startsWith("R-"))
+  // External gates are decided outside this program; nothing here closes them.
+  if (task.id.startsWith("X-"))
     check(
-      !!task.evidence,
-      "verified implementation without evidence " + task.id,
+      task.state === "EXTERNAL_BLOCKED",
+      task.id + " is an external gate and must stay EXTERNAL_BLOCKED",
     );
+  if (task.state === "VERIFIED" && !task.id.startsWith("R-")) {
+    check(
+      typeof task.evidence === "string" &&
+        /\b[0-9a-f]{7,40}\b/.test(task.evidence),
+      "verified implementation needs evidence naming a commit " + task.id,
+    );
+    for (const dep of task.dependsOn)
+      check(
+        byId.get(dep)?.state === "VERIFIED",
+        task.id + " is verified before its dependency " + dep,
+      );
+  }
 }
 check(decisions.decisions.length === 16, "expected16 subsystem decisions");
 check(
