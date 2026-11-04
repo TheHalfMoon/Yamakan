@@ -5,8 +5,12 @@
 // behaviour, limit or evidence file, and a replay is outside the process owner
 // (no Job Object), so its times attribute cost and are not export results.
 //
-// Usage: node scripts/profile-m-export.mjs [--window N] [--runs N]
+// Run it from a work folder: it writes m-window-graph.txt to the current folder.
+// --compare-only runs just the owner/direct comparison.
+//
+// Usage: node scripts/profile-m-export.mjs [--window N] [--runs N] [--compare-only]
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -18,7 +22,7 @@ import { renderPlan } from "../core/render.ts";
 import { compilePlan } from "../core/render/plan.ts";
 import { planSegments } from "../core/render/segments.ts";
 import { titleFonts } from "../core/render/fonts.ts";
-import { SCALE_PROFILES } from "../core/command/policy.ts";
+import { RESOURCE_POLICY, SCALE_PROFILES } from "../core/command/policy.ts";
 
 const option = (name, fallback) => {
   const at = process.argv.indexOf(name);
@@ -28,6 +32,9 @@ const windowIndex = option("--window", 6);
 const runs = option("--runs", 3);
 const compareOnly = process.argv.includes("--compare-only");
 const profile = SCALE_PROFILES.supported.M;
+// The two chains of the last track shown in the profiled window.
+const KEPT = 2;
+const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const FRAME = 23_520_000; // flicks per 30 fps frame
 
 const root = await mkdtemp(path.join(tmpdir(), "yamakan-profile-m-"));
@@ -44,18 +51,18 @@ const run = async (op, args) => (await execute(ctx, op, args)).result;
 const ffmpeg = mediaTools().ffmpeg;
 
 // Sampled host load, recorded beside each replay.
-const hostLoad = () =>
-  Number(
-    spawnSync(
-      "powershell",
-      [
-        "-NoProfile",
-        "-Command",
-        "(Get-CimInstance Win32_Processor).LoadPercentage",
-      ],
-      { encoding: "utf8", windowsHide: true },
-    ).stdout.trim(),
-  );
+const hostLoad = () => {
+  const text = spawnSync(
+    "powershell",
+    [
+      "-NoProfile",
+      "-Command",
+      "(Get-CimInstance Win32_Processor).LoadPercentage",
+    ],
+    { encoding: "utf8", windowsHide: true },
+  ).stdout.trim();
+  return /^\d+$/.test(text) ? Number(text) : null;
+};
 
 try {
   // The same timeline as scripts/qualify-editor-scale.mjs: one still on every
@@ -84,10 +91,11 @@ try {
     ],
     { windowsHide: true },
   );
+  const stillBytes = await readFile(still);
   const { asset } = await store.importAsset(
     project.id,
     "still.png",
-    await readFile(still),
+    stillBytes,
   );
   let head = await store.load(project.id);
   const tracks = head.tracks.filter((t) => t.kind === "video").map((t) => t.id);
@@ -178,11 +186,17 @@ try {
   const overlayLines = clipLines.filter((l) => l.includes("overlay="));
   if (!/scale=1920:1080/.test(graph))
     throw new Error("The captured window is not at the M profile's size.");
+  // The rewrites below understand only plain chains of one split still.
+  if (
+    /\bass=/.test(graph) ||
+    overlayLines.some((l) => !/^\[[^\]]+\]\[c\d+\]overlay=/.test(l))
+  )
+    throw new Error("This window has layers the profile cannot rewrite.");
 
   // Keeps the last `keep` chains, renumbered. In this fixture every layer is
-  // opaque and fills the frame, so the top track alone is visible; that is true
-  // of this fixture and not of timelines in general, which is why the identity
-  // of the result is checked below.
+  // opaque and fills the frame, so only they can show; that is true of this
+  // fixture and not of timelines in general, so the identity of the result is
+  // measured below and a mismatch fails the run.
   const lastChains = (keep) => {
     const first = overlayLines.length - keep;
     const out = [
@@ -206,154 +220,211 @@ try {
     out.push(`[v${keep - 1}]setpts=PTS-STARTPTS[picture]`);
     return out.join(";\n");
   };
-  const nullOutput = [
-    "-t",
-    encodeArgs[encodeArgs.indexOf("-t") + 1],
-    "-f",
-    "null",
-    "-",
-  ];
-  const fileOutput = () => [
-    ...encodeArgs,
-    path.join(dir, "worker", "profile.mp4"),
-  ];
-  const keepTop = Number(process.env.PROFILE_KEEP_TOP ?? 2);
+  const duration = encodeArgs[encodeArgs.indexOf("-t") + 1];
+  const nullOutput = ["-t", duration, "-f", "null", "-"];
+  const fileOutput = [...encodeArgs, path.join(dir, "worker", "profile.mp4")];
+  const variantFile = path.join(dir, "graph-variant.txt");
+  const argsFor = async (text) => {
+    await writeFile(variantFile, text);
+    return inputArgs.map((a) => (a === graphFile ? variantFile : a));
+  };
+  // Every chain still pulled and synchronized, with nothing drawn.
+  const noBlending = graph.replace(/enable='[^']*'/g, "enable='0'");
   const variants = {
-    "full: production graph, encode": { graph, output: fileOutput() },
-    "full graph, no encode": { graph, output: nullOutput },
-    "top track only, encode": {
-      graph: lastChains(keepTop),
-      output: fileOutput(),
+    "production graph, encode": { graph, output: fileOutput },
+    "production graph, no encode": { graph, output: nullOutput },
+    "chains pulled, nothing drawn, no encode": {
+      graph: noBlending,
+      output: nullOutput,
     },
-    "top track only, no encode": {
-      graph: lastChains(keepTop),
+    "first frame only, no encode": {
+      graph,
+      output: ["-frames:v", "1", "-f", "null", "-"],
+    },
+    "last two chains, encode": { graph: lastChains(KEPT), output: fileOutput },
+    "last two chains, no encode": {
+      graph: lastChains(KEPT),
       output: nullOutput,
     },
   };
+  const measure = async (text, output, benchmark = true) => {
+    const args = await argsFor(text);
+    const hostCpuPercentBefore = hostLoad();
+    const started = performance.now();
+    const done = spawnSync(
+      ffmpeg,
+      [...(benchmark ? ["-benchmark"] : []), ...args, ...output],
+      { cwd: dir, encoding: "utf8", windowsHide: true, maxBuffer: 2 ** 26 },
+    );
+    const bench = /utime=([\d.]+)s stime=([\d.]+)s rtime=([\d.]+)s/.exec(
+      done.stderr,
+    );
+    const rss = /maxrss=(\d+)KiB/.exec(done.stderr);
+    return {
+      exit: done.status,
+      hostCpuPercentBefore,
+      wallMs: Math.round(performance.now() - started),
+      cpuUserS: bench ? Number(bench[1]) : null,
+      cpuSystemS: bench ? Number(bench[2]) : null,
+      maxRssMiB: rss ? Math.round(Number(rss[1]) / 1024) : null,
+    };
+  };
 
   const results = [];
-  for (const [name, variant] of compareOnly ? [] : Object.entries(variants)) {
-    const variantGraph = path.join(dir, "graph-variant.txt");
-    await writeFile(variantGraph, variant.graph);
-    const args = inputArgs.map((a) => (a === graphFile ? variantGraph : a));
+  for (const [name, variant] of compareOnly ? [] : Object.entries(variants))
     for (let attempt = 1; attempt <= runs; attempt++) {
-      const hostCpuPercentBefore = hostLoad();
-      const started = performance.now();
-      const done = spawnSync(
-        ffmpeg,
-        [
-          "-benchmark",
-          ...args.filter((a) => a !== "pipe:1"),
-          ...variant.output,
-        ],
-        { cwd: dir, encoding: "utf8", windowsHide: true, maxBuffer: 2 ** 26 },
-      );
-      const bench = /utime=([\d.]+)s stime=([\d.]+)s rtime=([\d.]+)s/.exec(
-        done.stderr,
-      );
-      const rss = /maxrss=(\d+)KiB/.exec(done.stderr);
       results.push({
         variant: name,
         attempt,
-        exit: done.status,
-        hostCpuPercentBefore,
-        wallMs: Math.round(performance.now() - started),
-        cpuUserS: bench ? Number(bench[1]) : null,
-        cpuSystemS: bench ? Number(bench[2]) : null,
-        maxRssMiB: rss ? Math.round(Number(rss[1]) / 1024) : null,
+        ...(await measure(variant.graph, variant.output)),
       });
       console.error(JSON.stringify(results.at(-1)));
     }
+
+  // What -benchmark itself adds: paired, the order swapped on each pair.
+  const benchmarkOverhead = [];
+  for (let attempt = 1; !compareOnly && attempt <= runs; attempt++) {
+    const first = attempt % 2 === 1;
+    const a = await measure(graph, nullOutput, first);
+    const b = await measure(graph, nullOutput, !first);
+    benchmarkOverhead.push({
+      attempt,
+      withBenchmarkMs: first ? a.wallMs : b.wallMs,
+      withoutBenchmarkMs: first ? b.wallMs : a.wallMs,
+    });
+    console.error(JSON.stringify(benchmarkOverhead.at(-1)));
   }
-  // Decoded identity of the two graphs over the whole window.
+
+  // The filter output of a graph over the whole window. A failed run is an
+  // error here, so that two failures can never read as two equal pictures.
   const digest = async (text) => {
-    const file = path.join(dir, "graph-variant.txt");
-    await writeFile(file, text);
     const done = spawnSync(
       ffmpeg,
-      [
-        ...inputArgs
-          .map((a) => (a === graphFile ? file : a))
-          .filter((a) => a !== "pipe:1"),
-        "-t",
-        encodeArgs[encodeArgs.indexOf("-t") + 1],
-        "-f",
-        "md5",
-        "-",
-      ],
+      [...(await argsFor(text)), "-t", duration, "-f", "md5", "-"],
       { cwd: dir, encoding: "utf8", windowsHide: true, maxBuffer: 2 ** 26 },
     );
-    return /MD5=([0-9a-f]+)/.exec(done.stdout)?.[1] ?? null;
+    const md5 = /MD5=([0-9a-f]+)/.exec(done.stdout)?.[1];
+    if (done.status !== 0 || !md5)
+      throw new Error(`A digest failed: ${done.stderr.slice(-400)}`);
+    return md5;
   };
-  const fullMd5 = compareOnly ? null : await digest(graph);
-  const topMd5 = compareOnly ? null : await digest(lastChains(keepTop));
-
-  // Negative controls: when the top layer has alpha or does not cover the
-  // frame, removing the layers beneath it must change the picture. Equal
-  // digests here would mean the identity above proves nothing.
-  const firstKept = overlayLines.length - keepTop;
+  const firstKept = overlayLines.length - KEPT;
   const onChain = (text, n, change) =>
     text
       .split(/;\r?\n/)
       .map((line) => (line.endsWith(`[c${n}]`) ? change(line, n) : line))
       .join(";\n");
-  const controls = {
-    "alpha top layer": (line, n) =>
-      line.replace(`[c${n}]`, `,colorchannelmixer=aa=0.5[c${n}]`),
-    "non-covering top layer": (line) =>
-      line.replace("scale=1920:1080:", "scale=960:540:"),
-  };
+  const windowStart = segment.startTicks / 705_600_000;
+  // Removing what lies beneath the changed layer must change the picture when
+  // that layer lets it show, and must not when the layer stays opaque.
+  const controls = [
+    {
+      control: "alpha top layer",
+      expectDiffers: true,
+      change: (line, n) =>
+        line.replace(`[c${n}]`, `,colorchannelmixer=aa=0.5[c${n}]`),
+    },
+    {
+      control: "non-covering top layer (transform)",
+      expectDiffers: true,
+      change: (line) => line.replace("scale=1920:1080:", "scale=960:540:"),
+    },
+    {
+      control: "fading top layer (animation)",
+      expectDiffers: true,
+      change: (line, n) =>
+        line.replace(
+          `[c${n}]`,
+          `,fade=t=in:st=${windowStart}:d=2:alpha=1[c${n}]`,
+        ),
+    },
+    {
+      control: "graded top layer, still opaque (LUT stand-in)",
+      expectDiffers: false,
+      change: (line, n) =>
+        line.replace(`[c${n}]`, `,lutrgb=r=negval:g=negval:b=negval[c${n}]`),
+    },
+  ];
+  const identity = compareOnly
+    ? null
+    : await (async () => {
+        const fullMd5 = await digest(graph);
+        const keptMd5 = await digest(lastChains(KEPT));
+        return { fullMd5, keptMd5, equal: fullMd5 === keptMd5, kept: KEPT };
+      })();
   const negativeControls = [];
-  for (const [control, change] of compareOnly ? [] : Object.entries(controls)) {
+  for (const { control, expectDiffers, change } of compareOnly
+    ? []
+    : controls) {
     const withAll = await digest(onChain(graph, firstKept, change));
-    const culled = await digest(onChain(lastChains(keepTop), 0, change));
+    const culled = await digest(onChain(lastChains(KEPT), 0, change));
     negativeControls.push({
       control,
       withAll,
       culled,
-      differs: withAll !== culled,
+      expectDiffers,
+      asExpected: (withAll !== culled) === expectDiffers,
     });
   }
 
-  // The same command, alternately through the process owner (as production
-  // runs it) and directly, on this host at this moment.
+  // The same command, through the process owner (as production runs it) and
+  // directly, on this host at this moment, the order swapped on each pair.
   const ownerComparison = [];
-  for (let attempt = 1; attempt <= runs; attempt++) {
-    const started = performance.now();
+  // Its own output: a file it leaves behind is not one the owner's restricted
+  // worker may replace.
+  const directArgs = captured.args.map((a) =>
+    a === "worker/render.partial.mp4" ? path.join(dir, "direct.mp4") : a,
+  );
+  const viaOwner = async () => {
     await rm(path.join(dir, "worker", "render.partial.mp4"), { force: true });
-    const viaOwner = await owner.run({
+    const started = performance.now();
+    const done = await owner.run({
       ...captured,
       signal: new AbortController().signal,
     });
-    const ownerWallMs = Math.round(performance.now() - started);
-    const directStarted = performance.now();
-    // Its own output: a file it leaves behind is not one the owner's restricted
-    // worker may replace.
-    const directArgs = captured.args.map((a) =>
-      a === "worker/render.partial.mp4" ? path.join(dir, "direct.mp4") : a,
-    );
-    const direct = spawnSync(ffmpeg, directArgs, {
+    return { exit: done.code, wallMs: Math.round(performance.now() - started) };
+  };
+  const viaDirect = () => {
+    const started = performance.now();
+    const done = spawnSync(ffmpeg, directArgs, {
       cwd: dir,
       encoding: "utf8",
       windowsHide: true,
       maxBuffer: 2 ** 26,
     });
+    return {
+      exit: done.status,
+      wallMs: Math.round(performance.now() - started),
+    };
+  };
+  for (let attempt = 1; attempt <= runs; attempt++) {
+    const ownerFirst = attempt % 2 === 1;
+    const first = ownerFirst ? await viaOwner() : viaDirect();
+    const second = ownerFirst ? viaDirect() : await viaOwner();
     ownerComparison.push({
       attempt,
-      ownerExit: viaOwner.code,
-      ownerWallMs,
-      directExit: direct.status,
-      directWallMs: Math.round(performance.now() - directStarted),
+      ownerFirst,
+      owner: ownerFirst ? first : second,
+      direct: ownerFirst ? second : first,
     });
     console.error(JSON.stringify(ownerComparison.at(-1)));
   }
+  if (identity?.equal === false || negativeControls.some((c) => !c.asExpected))
+    process.exitCode = 1;
   console.log(
     JSON.stringify(
       {
-        identity: { fullMd5, topMd5, equal: fullMd5 === topMd5, keepTop },
+        format: "yamakan.m-window-profile/v2",
+        hashes: {
+          stillSha256: sha256(stillBytes),
+          snapshotHash: stored.snapshotHash,
+          graphSha256: sha256(graph),
+          resourcePolicySha256: sha256(JSON.stringify(RESOURCE_POLICY)),
+        },
+        identity,
         negativeControls,
+        benchmarkOverhead,
         ownerComparison,
-        format: "yamakan.m-window-profile/v1",
         window: windowIndex,
         windows: segments.length,
         windowSeconds: seconds,
