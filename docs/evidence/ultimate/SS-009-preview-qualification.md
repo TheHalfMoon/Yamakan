@@ -1,27 +1,32 @@
 # SS-009: preview cache, sharing and frame lifetime
 
-Checked 2026-11-04 (Asia/Riyadh). Builder Claude Opus. Measured at `5503a9b8c9af8e1b548bd45bdc5af428dfd23eb2`, base main `6bbb68f323ef51cdf38d89291245c45d9d4af171`. Test and journey only: **no defect was found in cache identity, sharing or frame lifetime, and no production code changed.**
+Checked 2026-11-04 (Asia/Riyadh). Builder Claude Opus. Base main `6bbb68f323ef51cdf38d89291245c45d9d4af171`. Tests and journey at `0cf2fc5957a3605e2052961b9ffb52b3e3ecca9a`; policy measurements at `5503a9b8c9af8e1b548bd45bdc5af428dfd23eb2`, which has the same preview code except the segment fix below. **No defect was found in cache identity, sharing or the reference preview's object URL lifetime. One defect was found and fixed: a refused segment left a dead player.**
 
 **This card stays open.** The frozen 720p playback gate of at least 24 fps was not met on this host, in conditions that do not allow a conclusion either way. See below.
 
 ## Results
 
-| Item                                                                                                                      | Result                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Cache identity: plan hash changes with media version, LUT version, font, snapshot, size, title, gain, source offset, mute | Pass, `tests/render-plan.test.ts`; media, LUT and font cases are new                         |
-| Renderer version and engine identity in the cache key                                                                     | Read from `core/render/preview.ts`; not varied in a test, because both are fixed for a build |
-| Seeks in reverse and random order give each frame the same bytes as a forward pass                                        | Pass, new, `tests/preview-order.test.ts`                                                     |
-| A waiter leaving does not stop a render another still waits for                                                           | Pass, new                                                                                    |
-| When the last waiter leaves, the render stops, and asking again starts afresh                                             | Pass, new                                                                                    |
-| An already cancelled request does not render                                                                              | Pass, new                                                                                    |
-| Bounded queue, abandoned requests, eviction under pressure                                                                | Existing tests in `tests/preview.test.ts`, pass in the full suite                            |
+| Item                                                                                                                                   | Result                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Cache identity: plan hash changes with media version, between two LUT versions, font, snapshot, size, title, gain, source offset, mute | Pass, `tests/render-plan.test.ts`; media, LUT and font cases are new. Frame rate is not varied |
+| Renderer version and engine identity in the cache key                                                                                  | Read from `core/render/preview.ts`; not varied in a test, because both are fixed for a build   |
+| Seeks in reverse and random order give each frame the same bytes as a forward pass                                                     | Pass, new, `tests/preview-order.test.ts`                                                       |
+| With a render running, a waiter leaving does not stop it for another still waiting                                                     | Pass, new                                                                                      |
+| With a render running, when the last waiter leaves it stops and leaves no frame, and asking again renders afresh                       | Pass, new                                                                                      |
+| An already cancelled request is not counted as waiting, and the next request renders                                                   | Pass, new                                                                                      |
+| Bounded queue, abandoned requests, eviction under pressure, and reference frames at 30, 25 and 24000/1001 fps                          | Existing tests in `tests/preview.test.ts`, passing with the above: 19 of 19                    |
 
-Browser journey, `npm run qualify:preview-lifetime`, real service, Edge, one run, passed:
+The first versions of two sharing tests aborted before any render began, so they could not fail; independent review proved this by mutation, and they now wait for a running render. The review's mutants were not rerun against the final tests.
 
-- Nine random and reverse seeks made 9 decoded frames, and exactly one object URL was alive after each.
-- A frame of the first project was held back while the second opened. The second's colour stayed on screen after the late answer was released, measured from the frame's pixels.
+Browser journey, `npm run qualify:preview-lifetime`, real service, Edge, at `0cf2fc5`, passed:
+
+- Nine random and reverse seeks made 9 decoded frames, and exactly one object URL was alive at rest after each. This counts object URLs at rest, not decoded memory, and every seek waited for its frame.
+- A frame of the first project was held back while the second opened. The fetch is aborted when the project changes, so this exercises the abort rather than a delivered late answer. The second's colour stayed on screen, read from the frame's pixels, and the check can only tell red from not red.
+- A refused segment shows its failure and the frame stays up. Before the fix, the player stayed over the frame and hid the failure. This is a small change to `src/reference.tsx`; a segment also now closes when the playhead rests on another frame.
 - A refused frame shows its reason and no stale picture.
 - No page errors.
+
+The interactive preview has no `VideoFrame` handling in this code, so the card's closed-frame case does not apply to this path. "Frame lifetime" here means the reference preview's object URLs.
 
 ## Policy measurements
 
@@ -37,21 +42,33 @@ Qualification policy v1 thresholds, unchanged. The tracked receipts were not ove
 
 ## Playback: not a conclusion
 
-Both playback runs failed, each with its required negative control. The retained receipt, measured 2026-10-26 at `aba1c6f`, was 27.3 fps. These runs do **not** establish a regression, and they do not clear one:
+Both playback runs failed. The retained receipt, measured 2026-10-26 and added in `a463247`, passed at 27.3 fps sustained. These runs do **not** establish a regression, and they do not clear one:
+
+| Run           | Sustained | Seek | Under export | Mean drift | p95 drift | Max drift |
+| ------------- | --------- | ---- | ------------ | ---------- | --------- | --------- |
+| First         | 10.9      | 8.2  | 12.3         | 97.6 ms    | 323 ms    | 748.8 ms  |
+| Second        | 8.1       | 13.1 | 22.9         | 180.3 ms   | 239.7 ms  | 329.4 ms  |
+| Prior receipt | 27.3      | 25   | 27           | 94.2 ms    | 124 ms    | 144.7 ms  |
+
+Their negative control carries no information here, because the unthrottled runs were already below 24 fps. In the second run playback under an export beat sustained playback, and animation frames ran at about 17 to 22 Hz against 39 Hz before; both point to host contention. Edge also moved from 156.0.4314.42 to 156.0.4314.58 between the receipts.
 
 - The first overlapped the builder's typecheck, with host CPU at 91% before it started.
-- The second overlapped no builder work, with host CPU at 75% before it started.
-- Measured right after: the laptop was **on battery** at 81%, the CPU at 1468 MHz and 70% of nominal performance, 1.2 of 15.7 GiB memory free, with `rustc` and `python` processes that were not the builder's using CPU. Earlier in the program the same host reported AC power.
+- The second overlapped no heavy builder work by the builder's account, with host CPU at 75% before it started.
+- Measured right after, in a console check with no bound receipt: the laptop was **on battery** at 81%, the CPU at 1468 MHz and 70% of nominal performance, 1.2 of 15.7 GiB memory free, with `rustc` and `python` processes that were not the builder's using CPU. Earlier in the program the same host reported AC power.
 
-The frozen policy names a hardware profile but not these conditions. No other work was stopped to obtain a number, since it was not the builder's. **Required to close this card:** rerun `npm run qualify:playback` on AC power with the host quiet. If it still falls below 24 fps, treat it as a regression and bisect from `aba1c6f`.
+The frozen policy names a hardware profile but not these conditions. No other work was stopped to obtain a number, since it was not the builder's. **Required to close this card:** rerun `npm run qualify:playback` on AC power with the host quiet. If it still falls below 24 fps, treat it as a regression and investigate from `a463247`, the commit that added the passing receipt; its recorded `aba1c6f` is not in the repository, and the browser version changed too.
 
 ## Not run
 
-- Missing-proxy and unsupported-codec fallback through the interactive preview: `src/proxies.ts` was read, and it plays the original until a proxy is ready, but no new test exercised this.
-- Audio-clock behaviour was only reported by the playback runs above, under the same conditions: mean drift 97.6 and 180.3 ms.
+- Missing-proxy, unsupported-codec and unsupported-browser fallback through the interactive preview: `src/proxies.ts` was read, and it plays the original until a proxy is ready, but no new test exercised this.
+- A frame answer that arrives after a seek, in the same project, through `src/reference.tsx`: the journey waits for each frame.
+- The object URL release on unmount.
+- Frame rate as a cache identity input.
 - Cold and warm preview ran with host CPU at 77% before start, so those figures are not a best case.
 
-Rollback: remove the two tests' additions, the journey and this file.
+Found by reading and not fixed, because it is not demonstrated: `evictPreviews` could delete a file just returned as a cache hit if a listing goes stale once the cache is over its bound. A request would then fail once.
+
+Rollback: remove the test additions, the journey, this file and the small change in `src/reference.tsx`.
 
 ## Receipts
 
@@ -59,8 +76,8 @@ Raw logs stay local; SHA-256 binds them.
 
 | File                               | SHA-256                                                            |
 | ---------------------------------- | ------------------------------------------------------------------ |
-| `ss009-focused.log`                | `5b75539f7f9e60067fee1fbe0dc4bdb1cc9652482ac123faf0c82992eb2661de` |
-| `ss009-lifetime.json`              | `bb900143c3612a350516dbac87928e15e8dfd0f42c1228cd9c73e9bab6e62aca` |
+| `ss009-v2-focused.log`             | `d93f2a3ce160216e7041acda08e90a4e3f4af4f2e43bdc82c59c473bafd1914b` |
+| `ss009-v2-lifetime.json`           | `b243284a4e979cacbc79d20c09d3da33f2b31ed08ffc15019acdc36208061339` |
 | `ss009-t8-preview.json`            | `ec6b949575fbc8773cc54a36fcf29ebc18d0efcb6415a44548dc59d757bb1d03` |
 | `ss009-av-sync.json`               | `029b6297b3c43325bb9a0f5ed39831b4122cb165893a37fdf2a5743a109c003b` |
 | `ss009-playback.json`, first run   | `28bfc1e14434c6a0a0986b7c27df8a48b9e1e49c40e5320c60da2cce1ecbd86b` |
