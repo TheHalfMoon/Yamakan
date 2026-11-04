@@ -96,5 +96,5 @@ YU-010…YU-020, YU-021, YU-022, YU-023, YU-025, YU-026, YU-024, YU-030, YU-031,
 ## Continuation instructions
 
 1. Re-verify live main, open PRs and this ledger; never redo a VERIFIED task.
-2. Worktrees: `C:\Users\Shehr\Yamakan-yu*` (one per task). Install with `npm ci --ignore-scripts --no-audit --no-fund`, or junction to a drift-free install — but never run `npm ci` through a junction (npm replaces it and empties the shared target).
+2. Worktrees: `C:\Users\Shehr\Yamakan-yu*` (one per task). Install with `npm ci --ignore-scripts --no-audit --no-fund`. A junctioned install is no longer accepted by the qualifier (`SHARED_NODE_MODULES`); never run `npm ci` through a junction (npm replaces it and empties the shared target).
 3. Before trusting a failing sandbox test run, run `npm run qualify:ultimate-environment` (BLOCKED codes explain environment faults).
