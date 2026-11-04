@@ -345,6 +345,28 @@ test("a late read keeps what fits, marks what does not, and stays bounded", () =
   assert.equal(late.runsTruncated, true);
   assert.equal(late.jobs.length, PROGRESS_LIMITS.jobs);
   assert.equal(late.jobsTruncated, true);
+  // Each cause sets its flag alone: only the union overflowed...
+  const overflow = mergeProgress(
+    { ...first, runs: runIds("g", "f", "e"), jobs: jobIds(21, 30) },
+    { ...first, runs: runIds("c", "b", "a"), jobs: jobIds(6, 20) },
+  )!;
+  assert.equal(overflow.runsTruncated, true);
+  assert.equal(overflow.jobsTruncated, true);
+  // ...or only the held view was cut.
+  const heldCut = mergeProgress(
+    { ...first, runsTruncated: true, jobsTruncated: true },
+    first,
+  )!;
+  assert.equal(heldCut.runsTruncated, true);
+  assert.equal(heldCut.jobsTruncated, true);
+  // A reader with no jobs has no job truncation to report.
+  assert.equal(
+    mergeProgress(
+      { ...first, jobsTruncated: true },
+      { ...first, jobsVisible: false, jobs: [], jobsTruncated: true },
+    )!.jobsTruncated,
+    false,
+  );
   // Nothing was dropped and neither read was cut: no flag.
   const whole = mergeProgress(first, first)!;
   assert.equal(whole.runsTruncated, false);

@@ -93,7 +93,7 @@ Each built its content from the head before the replay check, so a retry after a
 
 A retry of a committed request now rebuilds from what it first saw: the captions commands read the track by `expectedContentHash` rather than the head, and `scene.migrate` continues to its commit, where the digest check returns the original or refuses. Other input under the same id gets `IDEMPOTENCY_MISMATCH`. A request not yet committed takes the old path unchanged. Tests are in `tests/captions.test.ts` and `tests/cinema-migration.test.ts`. The old behaviour was reproduced by the slice B review, not by a red run of these tests.
 
-A retry returns the document of its own revision, not the head's. A rebuild that fails, for example on a hash that names nothing or another project's track, gets `IDEMPOTENCY_MISMATCH` whatever the cause, so it says nothing about that track; a track that is really damaged is reported the same way on this path.
+A retry returns the document of its own revision, not the head's. A rebuild that fails, for example on a hash that names nothing or another project's track, gets `IDEMPOTENCY_MISMATCH`, so it says nothing about that track. `BUSY` and `CAPABILITY_UNAVAILABLE` pass through, because the service cannot answer then. **So a genuine retry can still get a false mismatch** if its track is really damaged, or if a font change has removed a glyph it needs. `story.save`, `pack.save` and `lut.import` also return the document of their own revision now, in the same way; only `lut.import` was seen to have the defect, and no new test covers these three.
 
 **Limits:** the read by hash does not check that the track belongs to this project, as document content is addressed by hash. If a migrated sidecar file later changes, the retry gets `IDEMPOTENCY_MISMATCH`, and if it is deleted, `NOT_FOUND`, not the original result. Other receipt commands were checked by reading only, not each by a retry.
 
@@ -111,7 +111,7 @@ A retry returns the document of its own revision, not the head's. A rebuild that
 
 Tests: `tests/progress-view.test.ts`, 10 tests with planted rows rather than real renders, and `tests/mcp.test.ts`, where MCP, SDK and CLI return a deep-equal view. No live render was watched through the view. Real attempts were not exercised.
 
-**The save replay limit stays:** making the retry work past 15 minutes would change the commit digest and break old receipts. It remains a documented limit: the retry is refused and applies nothing, and a caller reads the head to see what committed. Rollback: revert this PR's merge, which also removes slices B2 and C; no stored data changes.
+**The save replay limit stays:** making the retry work past 15 minutes would change the commit digest and break old receipts. It remains a documented limit: the retry is refused and applies nothing, and a caller reads the head to see what committed. Rollback: revert this PR's merge, which also removes slices B2 and D; no stored data changes.
 
 ## Slice D: a bounded handoff that grants nothing
 
@@ -128,4 +128,4 @@ Tests: `tests/handoff.test.ts`, 8 tests; its document cases plant the document l
 
 ### Independent reviews of B2, C and D
 
-Two reviews ran. The first found the false departure reason, the legacy run failing a handoff, and `mergeProgress` losing runs; the second found a caption retry returning the head's document, `mergeProgress` still dropping entries without saying so, and the rebuild's messages revealing a little of a foreign track. All are fixed or disclosed above. Neither found a bypass, a double commit or a security defect. Their test mutations left gaps that the last tests target, and those last tests have not had their own mutation run.
+Three reviews ran. The first found the false departure reason, the legacy run failing a handoff, and `mergeProgress` losing runs. The second found a caption retry returning the head's document, `mergeProgress` still dropping entries without saying so, and the rebuild's error messages revealing a little of a track whose hash the caller already knew. The third found a font failure reported as a false mismatch, and truncation tests that hid each other's terms. All are fixed or disclosed above. None found a bypass or a double commit. **Not tested:** the pass-through of `CAPABILITY_UNAVAILABLE`, and the mapping of `ZodError`.

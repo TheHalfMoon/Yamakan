@@ -445,8 +445,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -489,8 +490,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -874,8 +876,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -2411,6 +2414,12 @@ async function editedCaptions(
     return doc;
   } catch (e) {
     if (!(e instanceof CommandError || e instanceof z.ZodError)) throw e;
+    // The service cannot answer right now; that says nothing about the request.
+    if (
+      e instanceof CommandError &&
+      (e.code === "BUSY" || e.code === "CAPABILITY_UNAVAILABLE")
+    )
+      throw e;
     throw new CommandError(
       "IDEMPOTENCY_MISMATCH",
       "Request ID was already used for a different request.",

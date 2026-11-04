@@ -954,8 +954,8 @@ test("a retried caption edit replays after a lost reply, even after later edits"
     split.result,
   );
 
-  // An id already used here, with a hash that names nothing or another
-  // project's track, gets one answer and learns nothing about that track.
+  // An id already used here, with a hash that names nothing or a track this
+  // request did not edit, gets one answer and learns nothing about that track.
   for (const expectedContentHash of [
     "f".repeat(64),
     imported.document.contentHash,
