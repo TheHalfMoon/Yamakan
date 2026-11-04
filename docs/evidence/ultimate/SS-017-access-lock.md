@@ -31,7 +31,7 @@ The name is per session, so owners of another session do not share it; objects s
 
 Seven of the ten earlier rounds used a build with diagnostic code at the launch error. Pre-fix, 1500 launches at concurrency 1, 8 and 24 from a single owner: 0 failures.
 
-`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error, and requires most probes to succeed. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on the next two, including this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
+`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error and a probe stopped at its wall limit, which reports the same message as a lost entry, and requires most probes to succeed without either. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on the next two, including this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
 
 Full `npm test` on Windows:
 

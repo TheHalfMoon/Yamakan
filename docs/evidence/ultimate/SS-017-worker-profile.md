@@ -2,7 +2,7 @@
 
 Found 2026-11-04 (Asia/Riyadh) by Claude Opus under SS-017, the launch error left open in `SS-017-access-lock.md`. Base main `6bbb68f323ef51cdf38d89291245c45d9d4af171`. Windows, pinned runtime. One bounded change in `native/procd/src/container.rs`, and a precision fix in one test.
 
-**Result:** the change is strongly associated with this error stopping, in an interleaved comparison. The mechanism inside Windows is **not established**.
+**Result:** an interleaved comparison supports the change, and is suggestive rather than conclusive. The mechanism inside Windows is **not established**.
 
 ## What was observed
 
@@ -27,9 +27,9 @@ Interleaved comparison, `ab/results.jsonl`, 12 owners at once on one file, 600 l
 | A, without the lock | `68fa746742b95c60ed9e4aa1f471c20ce68a7662946ed448f5dac8257049728c` | 7200     | **43**         | 17, 0, 0, 0, 0, 0, 0, 0, 0, 21, 5, 0 |
 | B, with the lock    | `5f780eebfe9f42234cba828f69e2b7feb58bf970d90b6153e597527788eb250c` | 7200     | **0**          | all 0                                |
 
-**The profile was caught missing once.** Right after round 10 of binary A, which had 21 errors, the state read before the next round showed the mapping and the folder both gone, on a host where nothing else deletes it as far as is known. That next round, also A, had 5 errors, and the following state was present again. No round after binary B was preceded by a missing profile. This is one observation, and it was a read between rounds rather than during a create.
+**The profile was caught missing once.** Right after round 10 of binary A, which had 21 errors, the state read before the next round showed the mapping and the folder both gone, and the builder ran no deletion during the comparison, by the builder's account. The folder's creation time, about 17:50:01, also hints at a second loss inside that next round, which is an estimate. That next round, also A, had 5 errors, and the following state was present again. No round after binary B was preceded by a missing profile. This is one observation, and it was a read between rounds rather than during a create.
 
-The errors come in bursts, so launches are not independent and the fair unit is rounds: 3 of 12 against 0 of 12. On its own that is suggestive, not conclusive. Also, an earlier 12 rounds of 240 launches with this lock had none, and the two earlier stress logs on the unlocked code had errors in 6 of 16 rounds, including one run of seven clean rounds. Taken together this supports the change, without proving a cause.
+The errors come in bursts, so launches are not independent and the fair unit is rounds: 3 of 12 against 0 of 12. On its own that is suggestive, not conclusive: one-sided Fisher p is about 0.11, and two of the three rounds were adjacent, so they may be one burst. Also, an earlier 12 rounds of 240 launches with this lock had none, and five earlier stress logs on code without it had error 2 in 5 of 16 rounds of 600, including one run of seven clean rounds. Taken together this supports the change, without proving a cause.
 
 An earlier, uncaptured console run with no receipt also gave 6 errors in 720 launches with the profile present, 0 in 960 with the profile deleted before each round, and 0 in 60 with one owner at a time. Those are weak: rounds were small, and the deleted case still has owners creating over a profile another owner just made.
 
@@ -37,6 +37,7 @@ An earlier, uncaptured console run with no receipt also gave 6 errors in 720 lau
 
 - **A profile already stuck does not repair itself**, and a machine in that state keeps failing. Recovery is to stop all owners and delete that one profile with `DeleteAppContainerProfile`. Automatic repair is not added here, because deleting a profile while other workers run needs its own design and review.
 - Owners built without this lock still race with those built with it.
+- While another process holds the mutex, each launch waits up to 10 s on that owner's command loop, which delays its other commands, including cancels. It needs a process of the same user, and the access list lock already behaves this way.
 - A launch in one owner overlapping a create in another is not covered, and any create failure still falls through when deriving the identifier works, which hides the result.
 - The message "file not found" does not tell a person what is wrong.
 - Other Windows builds were not tested, and the name is per session.

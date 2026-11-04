@@ -19,19 +19,21 @@ const SLOW_MS = 8_000;
 // separate owners update that file's access list at the same moment. A lost
 // entry leaves a worker unable to read its input.
 const child = (file: string) =>
-  new Promise<string[]>((resolve, reject) => {
+  new Promise<{ failures: string[]; slow: number }>((resolve, reject) => {
     const code = `
       const { probe } = await import(${JSON.stringify(media)});
       const failures = [];
+      let slow = 0;
       for (let i = 0; i < ${PROBES}; i++) {
         const started = performance.now();
         await probe(${JSON.stringify(file)}).catch((e) => {
-          // A probe stopped at its wall limit reports the same message; a lost
-          // entry fails at once.
+          // A probe stopped at its wall limit reports the same message as a
+          // lost entry, which fails at once. Slow ones are counted below.
           if (performance.now() - started < ${SLOW_MS}) failures.push(e.message);
+          else slow++;
         });
       }
-      console.log(JSON.stringify(failures));
+      console.log(JSON.stringify({ failures, slow }));
       process.exit(0);`;
     const run = spawn(process.execPath, ["--input-type=module", "-e", code], {
       stdio: ["ignore", "pipe", "inherit"],
@@ -74,12 +76,15 @@ test(
         { windowsHide: true },
       );
       const failures: string[] = [];
+      let slow = 0;
       let started = 0;
       await Promise.all(
         Array.from({ length: PARALLEL }, async () => {
           while (started < CHILDREN) {
             started++;
-            failures.push(...(await child(file)));
+            const answer = await child(file);
+            failures.push(...answer.failures);
+            slow += answer.slow;
           }
         }),
       );
@@ -93,10 +98,11 @@ test(
         ),
         [],
       );
-      // So that this cannot pass with nothing having worked.
+      // So that this cannot pass with nothing having worked, including every
+      // probe stalling until its wall limit.
       assert.ok(
-        failures.length < (CHILDREN * PROBES) / 2,
-        `${failures.length} of ${CHILDREN * PROBES} probes failed`,
+        failures.length + slow < (CHILDREN * PROBES) / 2,
+        `${failures.length} failed and ${slow} stalled of ${CHILDREN * PROBES} probes`,
       );
     } finally {
       await rm(root, { recursive: true, force: true });
