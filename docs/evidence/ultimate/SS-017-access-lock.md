@@ -10,7 +10,11 @@ A single service has one process owner, so this needs two owners at once: `npm t
 
 ## Change
 
-`set_access` also holds a named mutex, `Local\Yamakan.WorkerAccessList`, around the read and write of the list. It is taken after the object is opened, because a worker holding an oplock on its input can stall that open; holding the lock across the open would let one worker stop every process owner in the session, as a review measured. Waiting is bounded at 30 s per acquisition, and not acquiring it refuses the update, so a worker is not started without its grant. An abandoned mutex counts as acquired, because the next holder rereads the list. No limit, schema, scope or dependency changes. The name is per session, so owners of another session do not share it; per-user objects across sessions are not covered. Other access-list writers do not take this lock: `grant_owner_full` and `reset_access` in `native/procd/src/main.rs`, and the `yamakan-acl` helper. Label references are also per process owner, so one owner's tree reset can strip another's grants. Those predate this change and remain open.
+`set_access` now holds a named mutex around each update, named by the object's file identity: `Local\Yamakan.WorkerAccessList.<volume>.<index>`. It replaces the in-process lock and covers threads and process owners alike. Waiting is bounded at 30 s per acquisition, and not acquiring it refuses the update, so a worker is not started without its grant. An abandoned mutex counts as acquired, because the next holder rereads the list. An update that would change nothing no longer writes, so launches stop rewriting the shared tools folder. No limit, schema, scope or dependency changes.
+
+The lock is per object because of a measured denial of service. A worker holding an oplock on an object it can read can stall access-list work on it: a review measured the open blocking on an exclusive oplock and, once that open was moved outside the lock, `SetKernelObjectSecurity` blocking on a read-handle oplock until the holder closed. With a single lock, one worker could stop every owner in the session; two earlier versions of this change had that defect. Now a stall holds up only updates of that same object. **This is not fully eliminated:** updates of an object being stalled wait up to 30 s and are then refused, the write itself still has no timeout for the owner already in it, and this owner's command loop can wait on it. The worker's own wall limit bounds that where it applies. No end-to-end test with a real oplock from inside the container was run: the native test holds the lock directly, and the review's oplock measurements were made outside the container.
+
+The name is per session, so owners of another session do not share it; objects shared across sessions are not covered. Other access-list writers do not take this lock: `grant_owner_full` and `reset_access` in `native/procd/src/main.rs`, and the `yamakan-acl` helper. Label references are also per process owner, so one owner's tree reset can strip another's grants. Those predate this change and remain open.
 
 ## Results
 
@@ -18,11 +22,12 @@ A single service has one process owner, so this needs two owners at once: `npm t
 | ------------------------------------------------------ | -------- | --------------- | -------------- |
 | Pre-fix, one owner at a time                           | 600      | 0               | 0              |
 | Pre-fix, 12 owners at once, 2 rounds                   | 1200     | 26              | 6              |
-| Lock held across the open, 12 owners, 10 rounds        | 6000     | **0**           | 29             |
+| Earlier single-lock versions, 12 owners, 10 rounds     | 6000     | **0**           | 29             |
+| This version, 12 owners, 4 rounds                      | 2400     | **0**           | 8              |
 
-Seven of the ten lock rounds used a build with diagnostic code at the launch error; the lock was the same. These stress rounds predate the move of the lock after the open. Pre-fix, 1500 launches at concurrency 1, 8 and 24 from a single owner: 0 failures.
+Seven of the ten earlier rounds used a build with diagnostic code at the launch error. Pre-fix, 1500 launches at concurrency 1, 8 and 24 from a single owner: 0 failures.
 
-`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error, and requires most probes to succeed. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
+`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error, and requires most probes to succeed. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on the next two, including this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
 
 Full `npm test` on Windows:
 
@@ -30,13 +35,16 @@ Full `npm test` on Windows:
 | ----------------------------------------------------------------------- | ---- | -------------------- | -------------------------------------------------------------------------------- |
 | Pre-fix, heads `f4b3808` and `0162825`, no native differences from main | 4    | 0, 10, 1, 3          | Launch error 2 and `MEDIA_INVALID`. The 10 was read from a log later overwritten |
 | Lock held across the open, uncommitted tree                             | 2    | 0, 0                 | 748 tests, without the new test                                                  |
-| This version, head `abbfc03`                                            | 2    | 0, 0                 | 749 tests, 746 passed, 3 skipped, including the new test                         |
+| Lock taken after the open, head `abbfc03`                               | 2    | 0, 0                 | 749 tests, 746 passed, 3 skipped                                                 |
+| This version, head `50a76c7`                                            | 2    | 0, 0                 | 749 tests, 746 passed, 3 skipped, including the new test                         |
 
 Clean runs are encouraging and do not prove the suite is stable.
 
 ## Still open: launch error 2
 
-`Worker launch failed: CreateProcess failed (Windows error 2)` is **not explained or fixed**. With the lock it occurred 29 times in 6000 stress launches, 28 of them in one round. It never appeared in single-owner stress or with owners run one at a time, though those samples are smaller. Ruled out: a dangling AppContainer SID (the pointer is `&'static`), and, weakly, a freshly rebuilt binary (0 in 1800 launches right after a rebuild, though the failures are bursty, with 28 of 29 in one round). A diagnostic that reports whether the executable and working folder exist at the failure was built, but that session produced no failures, so it reported nothing. No retry was added, because that would hide the cause. Its test deliberately ignores this code, so this test staying green says nothing about error 2.
+`Worker launch failed: CreateProcess failed (Windows error 2)` is **not explained or fixed**. It occurred 29 times in 6000 stress launches on the earlier versions, 28 of them in one round, and 8 times in 2400 on this one. The access list changes did not reduce it. It never appeared in single-owner stress or with owners run one at a time, though those samples are smaller. Ruled out: a dangling AppContainer SID (the pointer is `&'static`), and, weakly, a freshly rebuilt binary (0 in 1800 launches right after a rebuild, though the failures are bursty, with 28 of 29 in one round). A diagnostic that reports whether the executable and working folder exist at the failure was built, but that session produced no failures, so it reported nothing. No retry was added, because that would hide the cause. Its test deliberately ignores this code, so this test staying green says nothing about error 2.
+
+Native unit tests, `cargo test --release`, 2 of 2: a held lock on one object does not delay an update of another; an unchanged grant does not write, and a real revoke does.
 
 Rollback: revert this change and its test. The race returns; there is no stored data or format change.
 
@@ -63,3 +71,10 @@ Raw logs stay local; SHA-256 binds them.
 | `ss017a-v2-green2.log`          | `3f0ca30f58b84e0ffb7f5bbe76ff5c82a02b1c1aad5e4b93e8b0505abaf5c526` |
 | `ss017a-v2-test1.log`           | `cd6a69e53c4f4d87f1196e33796aa29022efffc599f57687dbd6723a49ba74e1` |
 | `ss017a-v2-test2.log`           | `4b09233e155f9307f45711d27094513af2a8f589a45891894a34520df1a81ec8` |
+| `ss017a-v3-red1.log`            | `1b13d26b19df1682f7a8375d111472483c9a370fb0560d350ffe57dcfd7337ff` |
+| `ss017a-v3-red2.log`            | `5cd741968e6966b656b232c9c5362bd7d756a868264284155cc7b0a59f0fba07` |
+| `ss017a-v3-green1.log`          | `83982de3aec8a5b91abc26730c0df3198768dab44318532f99daac0eb35b5252` |
+| `ss017a-v3-green2.log`          | `ac4cd452af15f794b083c9ea05d1d3b3c49f29c270cdecec329909be317c17ea` |
+| `ss017a-v3-stress.log`          | `8b3b82b2ab03432bfe66bfc0542104a60930ad909c827d378c36ee16ced84902` |
+| `ss017a-v3-test1.log`           | `c1ce6b545487824abe268e4a2e43dc5668bc58dbe2a59d3a67720ddf8c575914` |
+| `ss017a-v3-test2.log`           | `6cbce4f382c52b665e9d7c9a5f8de3bad64575edc842ed7bef5b7114309f9398` |
