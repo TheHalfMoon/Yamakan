@@ -34,8 +34,6 @@ const runs = option("--runs", 3);
 const compareOnly = process.argv.includes("--compare-only");
 const controlsOnly = process.argv.includes("--controls-only");
 const profile = SCALE_PROFILES.supported.M;
-// The two chains of the last track shown in the profiled window.
-const KEPT = 2;
 const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const FRAME = 23_520_000; // flicks per 30 fps frame
 
@@ -195,6 +193,17 @@ try {
   )
     throw new Error("This window has layers the profile cannot rewrite.");
 
+  // The last track's chains: going back from the last chain, each starts
+  // earlier than the one after it, until the previous track's last clip.
+  const startOf = (line) => Number(/gte\(t,([\d.]+)\)/.exec(line)[1]);
+  let KEPT = 1;
+  while (
+    KEPT < overlayLines.length &&
+    startOf(overlayLines[overlayLines.length - KEPT - 1]) <
+      startOf(overlayLines[overlayLines.length - KEPT])
+  )
+    KEPT++;
+
   // Keeps the last `keep` chains, renumbered. In this fixture every layer is
   // opaque and fills the frame, so only they can show; that is true of this
   // fixture and not of timelines in general, so the identity of the result is
@@ -243,8 +252,8 @@ try {
       graph,
       output: ["-frames:v", "1", "-f", "null", "-"],
     },
-    "last two chains, encode": { graph: lastChains(KEPT), output: fileOutput },
-    "last two chains, no encode": {
+    "last track only, encode": { graph: lastChains(KEPT), output: fileOutput },
+    "last track only, no encode": {
       graph: lastChains(KEPT),
       output: nullOutput,
     },

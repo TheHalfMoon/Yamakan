@@ -510,7 +510,7 @@
       ],
       "negativeTests": [
         "Translucency, partial coverage, animated transforms, rational/VFR timing, cancellation and resource pressure.",
-        "The segment-seam control retained as a skip from SS-005a; identity fixtures use different content per layer and production LUTs."
+        "Run a segment-seam control across real culled windows; identity fixtures use different content per layer and production LUTs."
       ],
       "rollback": "Revert algorithm/version together; preserve reference path/cache-version separation.",
       "legacy": ["YU-026"],
