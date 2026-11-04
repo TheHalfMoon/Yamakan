@@ -49,7 +49,11 @@ Rollback: revert this change. The errors would be expected to return; no stored 
 
 Raw logs stay local; SHA-256 binds them. The stress scripts are local too and are not in the repository.
 
-| File                | SHA-256                                                            |
-| ------------------- | ------------------------------------------------------------------ |
-| `ab/results.jsonl`  | `879606c7e5d9a35e59238c3c78b89768d3dc502b5421d0e8238a5cce656f3fcf` |
-| `ss017b-stress.log` | `691a4ead5217fede8d6be456483607756137fb281d9f3f5957af381b6ee89210` |
+| File                                                 | SHA-256                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------ |
+| `ab/results.jsonl`                                   | `879606c7e5d9a35e59238c3c78b89768d3dc502b5421d0e8238a5cce656f3fcf` |
+| `ss017b-stress.log`                                  | `691a4ead5217fede8d6be456483607756137fb281d9f3f5957af381b6ee89210` |
+| `ss017b-red1.log`, shared-access test at this head   | `98beaa07fe8686843169729a96e128e2b702cf0a94819bcc9218747d7d40dd5d` |
+| `ss017b-red2.log`, shared-access test at this head   | `97087977e740e13b583efcfc4c46784f33fc47e89d3d708e26f6e1ec147e0026` |
+| `ss017b-green1.log`, shared-access test at this head | `8ef786fc7f6c4acb37a1db40235ff7bf4ce44988f921e3e340eb573c79882462` |
+| `ss017b-green2.log`, shared-access test at this head | `26ea7f9b450679a1203b184368d40445855aff00951f3bae21f680cc734321c6` |
