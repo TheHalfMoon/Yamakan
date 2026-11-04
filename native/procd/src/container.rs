@@ -143,6 +143,9 @@ unsafe impl Sync for Sid {}
 pub fn container_sid() -> Result<&'static Sid, String> {
     static SID: OnceLock<Result<Sid, String>> = OnceLock::new();
     SID.get_or_init(|| unsafe {
+        // One procd at a time: concurrent creation of an existing profile has
+        // been seen to make launches fail with "file not found".
+        let _held = AccessLock::named("Local\\Yamakan.WorkerProfile")?;
         let name = wide(CONTAINER_NAME);
         let display = wide("Yamakan media worker");
         let mut sid: *mut c_void = null_mut();
@@ -365,19 +368,25 @@ struct FileIdentity {
 struct AccessLock(Handle);
 impl AccessLock {
     fn acquire(object: Handle) -> Result<AccessLock, String> {
-        const WAIT_OBJECT_0: u32 = 0;
-        const WAIT_ABANDONED: u32 = 0x80;
-        const WAIT_TIMEOUT: u32 = 258;
-        const WAIT_MS: u32 = 30_000;
         unsafe {
             let mut id = FileIdentity::default();
             if GetFileInformationByHandle(object, &mut id) == 0 {
                 return Err(last_error("access list object identity"));
             }
-            let name = wide(&format!(
+            AccessLock::named(&format!(
                 "Local\\Yamakan.WorkerAccessList.{:x}.{:x}.{:x}",
                 id.volume_serial, id.index_high, id.index_low
-            ));
+            ))
+        }
+    }
+
+    fn named(name: &str) -> Result<AccessLock, String> {
+        const WAIT_OBJECT_0: u32 = 0;
+        const WAIT_ABANDONED: u32 = 0x80;
+        const WAIT_TIMEOUT: u32 = 258;
+        const WAIT_MS: u32 = 30_000;
+        unsafe {
+            let name = wide(name);
             let handle = CreateMutexW(null_mut(), 0, name.as_ptr());
             if handle.is_null() {
                 return Err(last_error("access list lock"));
