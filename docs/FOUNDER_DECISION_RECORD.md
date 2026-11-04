@@ -113,3 +113,12 @@ Approval line in the packet's format:
 - **Still not authorized:** merging or discarding planning PRs #85/#86 without a deliberate reconciliation decision; AG-DOCS activation without its group receipt; generative model/provider activation; model-weight downloads; Plume training; any spending (budget $0) including paid inference, review, GPU, browser or storage services; signing certificates; public release, deployment or package publication; closing issue #77 without its criteria; bypassing branch protection or force-pushing.
 - **Tool policy:** use PStack, TesterArmy e2e, Graft, local Liquid AI d1 and Alibaba Open Code Review where technically applicable; record genuine outcomes and blocked runs; advisory tools never satisfy a security gate.
 - **Effect:** ultimate-plan engineering may proceed task by task. Engines, providers and JASSUB stay disabled. Release remains **NO-GO**.
+
+## 2026-11-04: System Supremacy implementation handoff to Claude Opus
+
+- **Source and form:** written founder directive titled "YAMAKAN — FOUNDER IMPLEMENTATION HANDOFF", delivered in chat to Claude Opus in Claude Code on 2026-11-04. Chat instruction only. There is no separate signed approval and no founder GitHub review; none is claimed.
+- **Planning reference:** verified starting main `9cad22b5b49af5ff56c22e9598c340cf00313981`; authoritative handoff `docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/OPUS_IMPLEMENTATION_HANDOFF.md`.
+- **Authorized scope:** implement the qualified 31-task registry in dependency order, beginning with SS-004a, SS-005a, SS-017, SS-006 and SS-009: inspect source, implement, test, independently review, obtain exact-head CI, merge qualified PRs, verify main, record evidence and continue to the next eligible task without asking again.
+- **Still not authorized:** X-01, X-02 and X-03 remain external gates, not implementation tasks: native Arabic and human usability approval, administrator, profile, signing and release decisions, and real-model qualification. Models and providers stay disabled; Plume stays deferred; resource limits stay frozen; spending stays at zero; public release stays NO-GO. Security and licensing requirements are preserved.
+- **Tool policy:** use PStack, Graft, TesterArmy E2E, local D1 and authorized local Alibaba OCR where applicable; advisory tools never satisfy a review or security gate.
+- **Effect:** the execution hold from final planning is lifted for this program only. Respect session limits and leave durable continuation checkpoints.

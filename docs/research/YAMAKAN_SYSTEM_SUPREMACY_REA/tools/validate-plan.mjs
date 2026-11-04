@@ -255,8 +255,12 @@ check(
   "stable31 task identities",
 );
 check(
-  registry.executionHold === true && gates.implementationHold === true,
-  "founder implementation hold must remain until explicit handoff",
+  registry.executionHold === false && gates.implementationHold === false,
+  "the founder handoff recorded on 2026-11-04 lifted the implementation hold",
+);
+check(
+  /^RECORDED_\d{4}-\d{2}-\d{2}$/.test(gates.founderHandoff),
+  "a lifted hold needs a recorded founder handoff",
 );
 check(
   JSON.stringify(registry.globalImplementationPrerequisites) ===
@@ -265,6 +269,17 @@ check(
 );
 errors.push(...graphIssues(registry.tasks));
 const byId = new Map(registry.tasks.map((t) => [t.id, t]));
+const INVESTIGATIONS = new Set(["SS-005", "SS-005b"]);
+const TASK_STATES = new Set([
+  "VERIFIED",
+  "AGGREGATE",
+  "REVIEW_PENDING",
+  "WAITING_DEPENDENCIES",
+  "QUALIFICATION_READY",
+  "EXTERNAL_BLOCKED",
+  "REJECTED",
+  "DEFERRED",
+]);
 const researchOnly = registry.tasks.find((t) => t.id === "R-05").dependsOn;
 check(
   JSON.stringify(researchOnly) === JSON.stringify(researchIds.slice(0, 4)),
@@ -324,11 +339,37 @@ for (const task of registry.tasks) {
       task.state === gates.researchTasks[task.id],
       task.id + " differs from readiness gates",
     );
-  if (task.state === "VERIFIED" && !task.id.startsWith("R-"))
+  check(
+    TASK_STATES.has(task.state),
+    task.id + " has unknown state " + task.state,
+  );
+  // External gates are decided outside this program; nothing here closes them.
+  if (task.id.startsWith("X-"))
     check(
-      ["SS-001", "SS-002", "SS-003"].includes(task.id) && !!task.evidence,
-      "unexpected new verified implementation " + task.id,
+      task.state === "EXTERNAL_BLOCKED",
+      task.id + " is an external gate and must stay EXTERNAL_BLOCKED",
     );
+  if (task.state === "VERIFIED" && !task.id.startsWith("R-")) {
+    check(
+      typeof task.evidence === "string" &&
+        /\b(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/.test(task.evidence),
+      "verified implementation needs evidence naming a commit " + task.id,
+    );
+    for (const dep of task.dependsOn) {
+      const parent = byId.get(dep);
+      // An experiment may end REJECTED or DEFERRED with evidence (09); that
+      // closes its investigation and never a required product PASS.
+      const closed =
+        INVESTIGATIONS.has(dep) &&
+        ["REJECTED", "DEFERRED"].includes(parent?.state) &&
+        typeof parent?.evidence === "string" &&
+        parent.evidence.trim() !== "";
+      check(
+        parent?.state === "VERIFIED" || closed,
+        task.id + " is verified before its dependency " + dep,
+      );
+    }
+  }
 }
 check(decisions.decisions.length === 16, "expected16 subsystem decisions");
 check(
@@ -447,7 +488,6 @@ console.log(
       publicSourceFiles: sources.files.length,
       localLinks: links,
       dependencyGraph: "acyclic if structuralStatus PASS",
-      currentlyExecutableImplementationTasks: 0,
       firstFiveAfterPlanning: firstFive,
       finalReadiness: readiness.length ? "NOT_READY" : "READY",
       missingReadinessGates: readiness,

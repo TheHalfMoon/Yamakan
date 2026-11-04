@@ -1,6 +1,6 @@
 # Execution checkpoint and continuation
 
-**Current qualification (2026-11-03):** Planning qualified at merge `4835cdfe19da9272956629b797d0d989eb9e251f`; [post-merge verification](23_FINAL_POST_MERGE_VERIFICATION.md) supersedes earlier pending snapshots. Opus execution remains held until founder handoff.
+**Current qualification (2026-11-03):** Planning qualified at merge `4835cdfe19da9272956629b797d0d989eb9e251f`; [post-merge verification](23_FINAL_POST_MERGE_VERIFICATION.md) supersedes earlier pending snapshots. Founder handoff to Opus recorded 2026-11-04; see the latest section at the end of this file.
 
 Updated 2026-11-02, Asia/Riyadh. The [complete execution plan](README.md) is prepared under the founder's request to put the full plan in the repository. Its 31-item registry covers research, engineering, qualification and external gates; [13](13_PLAN_READINESS_AND_ENGINEERING_REPORT.md) supplies the expanded report. The whole competitive/system program remains incomplete. Continue authorized engineering; this is not a new approval request.
 
@@ -14,7 +14,7 @@ Latest verified main: `c129a50c9e6bf9657f404c919c3cf6dbb8273697`, rechecked live
 | SS-001 atomic approval revalidation       | [PR #153](https://github.com/TheHalfMoon/Yamakan/pull/153), head `b87f3720781ba691e16b5cba23733a91599e9c9e`, merged main `79fc86f`                                  | Two regression cases RED before fix. 18 Director tests GREEN. Windows full suite 724 total: 721 pass, 0 fail, 3 skip. Typecheck, lint, formatting, provenance 404 records, brand, build, real Edge and TesterArmy journeys passed. Fresh combined and security reviews: no must-fix. Exact-head CI 40766733323 SUCCESS. Post-main Director durability 12/12 and stages 6/6; post-main CI SUCCESS.                                                                                                             |
 | SS-002 selected media runtime preflight   | [PR #154](https://github.com/TheHalfMoon/Yamakan/pull/154), head `f4e70f5143726bbf3bf5d29e59e5bb8975623ac7`, merged main `495f76d`                                  | Focused 32/32; typecheck, lint, provenance, brand and changed formatting pass. Fresh combined/security reviews: no must-fix; optional symlink fixture suggested. Real pointer checkout blocked without probes; hydrated selection verified 24 files without executing binaries. Exact-head CI 40860733850 SUCCESS including browser journey; post-main 32/32 and CI SUCCESS. No full environment qualification claim.                                                                                         |
 | SS-003 downstream approval lineage        | [PR #156](https://github.com/TheHalfMoon/Yamakan/pull/156), final head `bd667cb1525782903a534639c1a849dcbf9c8728`, merged main `c129a50`                            | Initial 4 regression failures plus renewal control pass; Director/identity/story regression 39/39, including unknown-legacy compatibility. Typecheck, lint, provenance, formatting pass. Fresh combined/security reviews: no must-fix. Security-suggested replay-after-invalidation check added, durability 18/18 and independent delta review passed. Local Edge passed at identical production code `d09987f`; final exact-head CI 40905625368 SUCCESS. Post-main 56/56 combined regression and CI SUCCESS. |
-| SS-004a creative revision command journey | [Draft PR #157](https://github.com/TheHalfMoon/Yamakan/pull/157), head `5388eed9033af9185919367440e385e93290cf83`                                                   | First run failed from incorrect title-check coordinates; corrected test passed 1/1, zero skips. Real H.264/AAC export, 12 sampled frames, captions/audio/transform, scoped take replacement, stale denial, undo/redo, graceful restart and replay checked. Typecheck, lint, formatting, provenance and brand passed. No production defect or hard-crash/UI journey claimed. Exact-head CI run 41355216482 SUCCESS; fresh independent review pending; review pending after earlier account usage limits.       |
+| SS-004a creative revision command journey | Historical snapshot; merged, see the end of this file. [PR #157](https://github.com/TheHalfMoon/Yamakan/pull/157), head `5388eed9033af9185919367440e385e93290cf83`  | First run failed from incorrect title-check coordinates; corrected test passed 1/1, zero skips. Real H.264/AAC export, 12 sampled frames, captions/audio/transform, scoped take replacement, stale denial, undo/redo, graceful restart and replay checked. Typecheck, lint, formatting, provenance and brand passed. No production defect or hard-crash/UI journey claimed. Exact-head CI run 41355216482 SUCCESS; fresh independent review pending; review pending after earlier account usage limits.       |
 
 ## What changed and what has not been demonstrated
 
@@ -46,7 +46,7 @@ Local log paths are relative to the isolated engineering checkout and not commit
 
 The separate post-main stage test command passed 6/6. Historical failed environment capture is `work/environment-failed-before-lfs-repair.json`; raw logs may contain local paths and stay local. C: filled during initial setup; task metadata and temporary files moved to owned D: paths. No unrelated user files were deleted. A shared native target was used only for unchanged source; do not rebuild it concurrently.
 
-## Current final-planning continuation
+## Final-planning continuation (historical)
 
 Updated 2026-11-03. Follow [20 checkpoint](20_FINAL_PLANNING_CHECKPOINT.md). Author research14–17,16 subsystem decisions and all 31 detailed task contracts are prepared; no production code changed. The earlier51-entry inventory is superseded by58 accessible repositories. WePLD and Zain were located and selectively inspected. The earlier tool/runtime receipts above remain historical, not new executions.
 
@@ -54,4 +54,11 @@ Final-planning tool use: PStack spec/review procedures; deterministic Graft grap
 
 Research wave commit84564b6 contains 14–19 and the16-decision registry. A fresh independent architecture reviewer was dispatched on that immutable head and failed before returning a verdict because the service reported an account usage limit. Earlier R01/R02/R03 reviewer attempts also failed for account limits. Prior structural-plan reviews at 2b7a776 do not approve this expansion. D1, Graft, OCR preview and CI do not replace required independent reviews.
 
-PR155 stays draft until all final gates pass. PR157 remains separate/unmerged. No SS005a, SS017 or other engineering is eligible during this founder hold. No reset-time hint is treated as guaranteed availability; retry required independent review on resume, without purchasing capacity or changing providers to bypass the limit.
+PR155 stays draft until all final gates pass. PR157 remains separate/unmerged. At that date, no SS005a, SS017 or other engineering was eligible; the founder hold ended on 2026-11-04. No reset-time hint is treated as guaranteed availability; retry required independent review on resume, without purchasing capacity or changing providers to bypass the limit.
+
+## Opus implementation continuation
+
+Updated 2026-11-04. Latest verified main: `928100281440bc32e522595dadd2504ac986c543`.
+
+- **SS-004a VERIFIED:** [PR #157](https://github.com/TheHalfMoon/Yamakan/pull/157) merged normally at qualified head `a4f2a8815424bdec7727524aa8ee55e95b00fd73`. Fresh correctness and security reviews approved `5388eed`. A delta review of `c69a588` required evidence corrections, and a final delta review approved `a4f2a88`. Exact-head CI run 41740171246, post-main CI run 41741292931 and a local Windows run on the merged tree all passed. See [evidence](../../evidence/ultimate/SS-004-creative-journey.md).
+- **Next eligible:** SS-005a, SS-017, SS-006, SS-009, in that order.
