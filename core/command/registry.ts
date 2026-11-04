@@ -224,7 +224,7 @@ type Definition<S extends z.ZodType, R> = {
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
 
 const NO_REPLAY =
-  "This operation cannot replay a request ID. Send it without one, and read the current state before retrying.";
+  "This operation cannot replay a request ID. Send it without one.";
 const RETRY_WITH_KEY =
   "This operation cannot replay a request ID. Send it without one: at the same project revision, the same idempotencyKey returns the same export.";
 
