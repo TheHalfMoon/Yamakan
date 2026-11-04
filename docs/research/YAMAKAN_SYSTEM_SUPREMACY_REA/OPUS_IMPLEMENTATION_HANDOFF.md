@@ -59,7 +59,6 @@ rtk proxy git fetch origin main
 rtk proxy git worktree list
 rtk proxy node --version
 rtk proxy npm ci --ignore-scripts
-rtk proxy npm run build:native
 rtk proxy npm run qualify:ultimate-environment
 rtk proxy node docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/tools/validate-plan.mjs
 rtk proxy npm run provenance:check

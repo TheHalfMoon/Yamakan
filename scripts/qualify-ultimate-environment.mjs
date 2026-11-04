@@ -20,6 +20,7 @@ import {
   REQUIRED_SCRIPTS,
   checkoutOwnership,
   evaluateEnvironment,
+  helpersBuiltElsewhere,
   lockfileDrift,
   redactLocalPaths,
   satisfiesNodeEngine,
@@ -114,18 +115,36 @@ const freeBytes = diskFree(repo);
 // are this checkout's, never a stale binary left from an earlier build.
 const nativeBuild = { attempted: false, exitCode: null, logPath: null };
 const ownership = checkoutOwnership(repo);
-if (freeBytes >= DISK_RESERVE_BYTES && !ownership.targetRedirected) {
+if (
+  freeBytes >= DISK_RESERVE_BYTES &&
+  !ownership.targetRedirected &&
+  !ownership.nativeTargetLinked
+) {
   nativeBuild.attempted = true;
   mkdirSync(logDir, { recursive: true });
   const logPath = path.join(logDir, "build-native.log");
-  const built = spawnSync("npm", ["run", "-s", "build:native"], {
-    cwd: repo,
-    encoding: "utf8",
-    shell: true,
-    windowsHide: true,
-    env: { ...process.env, TEMP: work, TMP: work },
-    maxBuffer: 16 * 1024 * 1024,
-  });
+  const built = spawnSync(
+    "npm",
+    ["run", "-s", "build:native", "--", "--message-format=json"],
+    {
+      cwd: repo,
+      encoding: "utf8",
+      shell: true,
+      windowsHide: true,
+      env: { ...process.env, TEMP: work, TMP: work },
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+  // However the build was redirected, the recorded hashes must be its output.
+  if (
+    built.status === 0 &&
+    helpersBuiltElsewhere(
+      built.stdout,
+      repo,
+      nativeHashes(repo).map((h) => h.path),
+    ).length
+  )
+    ownership.targetRedirected = true;
   writeFileSync(
     logPath,
     `exit ${built.status}\n${built.stdout || ""}\n${built.stderr || ""}`,

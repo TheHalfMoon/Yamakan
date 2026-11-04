@@ -2,7 +2,7 @@
  * YU-001 — Isolated dependency/native/browser environment evaluation.
  * Missing helper, FFmpeg or dependency is BLOCKED, never PASS.
  */
-import { lstatSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
 
 export const ENVIRONMENT_FORMAT = "yamakan.ultimate-environment/v1";
@@ -219,25 +219,56 @@ export function evaluateEnvironment(input) {
   };
 }
 
+const samePath = (a, b) =>
+  process.platform === "win32"
+    ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase()
+    : path.resolve(a) === path.resolve(b);
+
+// The helpers a build did not write where they are hashed and read, from
+// cargo's own report (`--message-format=json`), so that a target or platform
+// set by any route (environment, .cargo/config.toml) is noticed.
+export function helpersBuiltElsewhere(buildOutput, repoRoot, helpers) {
+  const built = [];
+  for (const line of String(buildOutput).split(/\r?\n/)) {
+    if (!line.startsWith("{")) continue;
+    try {
+      const message = JSON.parse(line);
+      if (message.executable) built.push(message.executable);
+    } catch {
+      // Not one of cargo's messages.
+    }
+  }
+  return helpers.filter(
+    (rel) => !built.some((file) => samePath(file, path.join(repoRoot, rel))),
+  );
+}
+
 // Whether the writable paths a capture depends on are this checkout's own.
 // The recorded helper hashes describe native/procd/target; a build sent
 // elsewhere, or a helper named by the environment, would leave them describing
 // something other than what the tests ran.
 export function checkoutOwnership(repoRoot, env = process.env) {
+  const root = realpathSync.native(repoRoot);
+  // A link anywhere on the way counts: the deepest part that exists must
+  // resolve to where this checkout says it is.
   const linked = (rel) => {
-    try {
-      return lstatSync(path.join(repoRoot, rel)).isSymbolicLink();
-    } catch {
-      return false;
+    let at = path.join(repoRoot, rel);
+    let within = rel;
+    while (!existsSync(at)) {
+      at = path.dirname(at);
+      within = path.dirname(within);
     }
+    return !samePath(realpathSync.native(at), path.join(root, within));
   };
   const target = path.join(repoRoot, "native", "procd", "target");
   return {
     nodeModulesLinked: linked("node_modules"),
-    nativeTargetLinked: linked(path.join("native", "procd", "target")),
+    nativeTargetLinked: linked(
+      path.join("native", "procd", "target", "release"),
+    ),
     targetRedirected:
       Boolean(env.CARGO_TARGET_DIR) &&
-      path.resolve(repoRoot, env.CARGO_TARGET_DIR) !== path.resolve(target),
+      !samePath(path.resolve(repoRoot, env.CARGO_TARGET_DIR), target),
     helperOverrides: ["YAMAKAN_PROCD", "YAMAKAN_ACL"].filter((n) => env[n]),
   };
 }
