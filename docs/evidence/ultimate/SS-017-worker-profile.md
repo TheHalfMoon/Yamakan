@@ -12,7 +12,7 @@ In that state, the registry mapping for the worker's AppContainer, `yamakan.medi
 
 The builder then deleted Yamakan's worker profile with `DeleteAppContainerProfile` on the founder's development machine, without separately asking, because all media work was blocked; it did this about five more times during the experiments below. The next owner recreated it, and launches passed 10 of 10 at once. Yamakan puts no state in that profile by design, but its contents were not inspected before deletion, and engine worker behaviour was not reviewed. These observations came from console commands and have no bound receipt.
 
-So a missing mapping goes with this error. **How the mapping was lost in the stuck case was not observed**, and no mapping was caught changing during a concurrent create.
+So a missing mapping goes with this error. How the mapping alone was lost in that stuck case was not observed. A related loss was caught in the comparison below.
 
 ## Change
 
@@ -20,12 +20,14 @@ Each process owner creates the profile on its first launch, with nothing seriali
 
 ## Evidence
 
-Interleaved comparison, `ab/results.jsonl`, 12 owners at once on one file, 600 launches per round, 12 rounds of each binary, order swapped each round, same host session, on AC power. The binaries differ by this change. The profile existed and its mapping was present before every round.
+Interleaved comparison, `ab/results.jsonl`, 12 owners at once on one file, 600 launches per round, 12 rounds of each binary, order swapped each round, same host session, on AC power. The binaries differ by this change. Each round's starting profile state and host state are recorded; host CPU before a round ranged from 4% to 85%.
 
 | Binary              | SHA-256                                                            | Launches | Launch error 2 | Per round                            |
 | ------------------- | ------------------------------------------------------------------ | -------- | -------------- | ------------------------------------ |
 | A, without the lock | `68fa746742b95c60ed9e4aa1f471c20ce68a7662946ed448f5dac8257049728c` | 7200     | **43**         | 17, 0, 0, 0, 0, 0, 0, 0, 0, 21, 5, 0 |
 | B, with the lock    | `5f780eebfe9f42234cba828f69e2b7feb58bf970d90b6153e597527788eb250c` | 7200     | **0**          | all 0                                |
+
+**The profile was caught missing once.** Right after round 10 of binary A, which had 21 errors, the state read before the next round showed the mapping and the folder both gone, on a host where nothing else deletes it as far as is known. That next round, also A, had 5 errors, and the following state was present again. No round after binary B was preceded by a missing profile. This is one observation, and it was a read between rounds rather than during a create.
 
 The errors come in bursts, so launches are not independent and the fair unit is rounds: 3 of 12 against 0 of 12. On its own that is suggestive, not conclusive. Also, an earlier 12 rounds of 240 launches with this lock had none, and the two earlier stress logs on the unlocked code had errors in 6 of 16 rounds, including one run of seven clean rounds. Taken together this supports the change, without proving a cause.
 
