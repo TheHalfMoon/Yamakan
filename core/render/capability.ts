@@ -42,7 +42,29 @@ const unavailable = (cause?: unknown) =>
     { cause },
   );
 
-// Any failure, including a temp-folder error that would name a host path,
+// What a finished probe means. A probe cut short says nothing about FFmpeg, so
+// it is not reported as the wrong FFmpeg: on a busy machine that sends a person
+// looking for a problem they do not have. It still refuses titles.
+export function probeRefusal(
+  code: number,
+  api: number,
+  timedOut: boolean,
+  log: string,
+): CommandError | null {
+  if (code === 0 && titlesSupported(api)) return null;
+  const cause = new Error(
+    `libass probe code=${code} api=0x${api.toString(16)} log=${log.slice(-1500)}`,
+  );
+  return timedOut || titlesSupported(api)
+    ? new CommandError(
+        "UNAVAILABLE",
+        "The check for title support did not finish. Try again when the machine is less busy.",
+        { cause },
+      )
+    : unavailable(cause);
+}
+
+// Any other failure, including a temp-folder error that would name a host path,
 // is reported as the one fixed capability message (cause kept server-side).
 async function probeTitles(): Promise<TitleCapability> {
   let dir: string | null = null;
@@ -53,6 +75,9 @@ async function probeTitles(): Promise<TitleCapability> {
       "[Script Info]\nScriptType: v4.00+\nPlayResX: 16\nPlayResY: 16\n\n[Events]\nFormat: Layer, Start, End, Style, Text\n",
     );
     let log = "";
+    const wall = AbortSignal.timeout(
+      Math.max(RESOURCE_POLICY.enforced.probeWallSeconds, 60) * 1000,
+    );
     const result = await workers().run({
       executable: mediaTools().ffmpeg,
       args: [
@@ -77,9 +102,7 @@ async function probeTitles(): Promise<TitleCapability> {
       memoryBytes: RESOURCE_POLICY.enforced.workerMemoryBytes,
       // Cold R8 staging copies companion DLLs into worker-tools; allow headroom
       // above the short media-probe wall without holding exports forever.
-      signal: AbortSignal.timeout(
-        Math.max(RESOURCE_POLICY.enforced.probeWallSeconds, 60) * 1000,
-      ),
+      signal: wall,
       stderrLimit: 64_000,
       onStderr: (chunk: Buffer) => {
         if (log.length < 64_000) log += chunk.toString("utf8");
@@ -87,13 +110,8 @@ async function probeTitles(): Promise<TitleCapability> {
     });
     const combined = log || result.stderr;
     const api = libassApi(combined);
-    if (result.code !== 0 || !titlesSupported(api)) {
-      throw unavailable(
-        new Error(
-          `libass probe code=${result.code} api=0x${api.toString(16)} log=${combined.slice(-1500)}`,
-        ),
-      );
-    }
+    const refusal = probeRefusal(result.code, api, wall.aborted, combined);
+    if (refusal) throw refusal;
     return { libassApi: api };
   } catch (e) {
     throw e instanceof CommandError ? e : unavailable(e);

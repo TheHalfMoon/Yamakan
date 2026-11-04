@@ -17,6 +17,7 @@ import {
 import { CommandError } from "../core/command/errors.ts";
 import {
   libassApi,
+  probeRefusal,
   titleCapability,
   titlesSupported,
 } from "../core/render/capability.ts";
@@ -518,4 +519,36 @@ test("Q3: without confinement, a host-only font name can substitute", async () =
   assert.match(log, /Using font provider fontconfig/i);
   assert.match(log, /fontselect:.*\(Arial, 400, 0\) ->/);
   assert.doesNotMatch(log, /fontselect:.*IBMPlexSansArabic/);
+});
+
+test("a probe cut short is not reported as the wrong FFmpeg", () => {
+  const good = 0x01703000;
+  const old = 0x01500000;
+  assert.equal(probeRefusal(0, good, false, ""), null);
+  // Too old, or not libass at all: the fixed capability message.
+  for (const [code, api] of [
+    [0, old],
+    [0, 0],
+    [1, old],
+    [1, 0],
+  ] as const) {
+    const refused = probeRefusal(code, api, false, "");
+    assert.equal(refused?.code, "CAPABILITY_UNAVAILABLE");
+    assert.match(refused!.message, /libass 0\.17/);
+  }
+  // Cut short, whether or not it got as far as reporting a version: retryable,
+  // and it does not blame the FFmpeg.
+  for (const [code, api, timedOut] of [
+    [1, good, true],
+    [1, 0, true],
+    [1, good, false],
+  ] as const) {
+    const refused = probeRefusal(code, api, timedOut, "");
+    assert.equal(refused?.code, "UNAVAILABLE");
+    assert.equal(refused?.retryable, true);
+    assert.doesNotMatch(refused!.message, /libass/);
+  }
+  // The log stays server-side.
+  const logged = probeRefusal(1, 0, true, "C:\\Users\\someone");
+  assert.doesNotMatch(logged!.message, /someone/);
 });
