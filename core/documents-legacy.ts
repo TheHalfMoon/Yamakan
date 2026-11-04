@@ -248,9 +248,11 @@ export async function inventoryCinemaSidecars(
  * Migrates one sidecar into the project the caller names, as its document
  * `sceneId`, compare-and-swap on the project revision. The caller names the
  * bytes it inventoried (`sourceSha256`), so a file changed since then is
- * refused. A scene file is migrated once: into one project, never another;
- * a retry returns that recorded migration whatever happened to the file or
- * the project's scene since (later changes are made to the document).
+ * refused. A scene file is migrated once: into one project, never another.
+ * A new request for it returns that recorded migration whatever happened to
+ * the file or the project's scene since (later changes are made to the
+ * document). A retry of the request that migrated it replays its result, and
+ * needs the file unchanged.
  */
 export async function migrateCinemaSidecar(
   store: ProjectStore,

@@ -69,21 +69,20 @@ function union<T>(
   limit: number,
 ) {
   const seen = new Set(read.map(key));
-  return [...read, ...held.filter((item) => !seen.has(key(item)))].slice(
-    0,
-    limit,
-  );
+  const all = [...read, ...held.filter((item) => !seen.has(key(item)))];
+  return { items: all.slice(0, limit), dropped: all.length > limit };
 }
 
 /**
  * Combines two reads of one project that may arrive twice or out of order, and
  * stays within the view's limits. Attempts are append-only, so they join by run
- * and sequence. A run or job only the held view knows stays, an older revision
- * never replaces a newer one, and a settled job stays settled. Jobs and runs
- * carry no version, so between unsettled states, or for a run's `version`, a
- * late answer at the same revision can show an older value until the next read.
- * Joined attempts can have a gap between windows, which `truncated` marks. After
- * a restore to a lower revision, drop the held view: this function cannot tell.
+ * and sequence. An older revision never replaces a newer one, and a settled job
+ * stays settled. A run or job only the held view knows stays while it fits; what
+ * does not fit is dropped, and the truncation flags say so.
+ *
+ * Jobs and runs carry no version, so at the same revision a late answer can show
+ * an older job state or run version, and put older entries first, until the next
+ * read. After a restore, drop the held view: this function cannot tell.
  */
 export function mergeProgress(
   held: ProgressView | null,
@@ -121,12 +120,18 @@ export function mergeProgress(
     const before = heldJobs.get(job.jobId);
     return before && SETTLED.has(before.state) ? before : job;
   });
+  const runs = union(readRuns, held.runs, (r) => r.runId, PROGRESS_LIMITS.runs);
+  // A reader that lost job:read keeps seeing none.
+  const jobs = read.jobsVisible
+    ? union(readJobs, held.jobs, (j) => j.jobId, PROGRESS_LIMITS.jobs)
+    : { items: [], dropped: false };
   return {
     ...read,
-    runs: union(readRuns, held.runs, (r) => r.runId, PROGRESS_LIMITS.runs),
-    // A reader that lost job:read keeps seeing none.
-    jobs: read.jobsVisible
-      ? union(readJobs, held.jobs, (j) => j.jobId, PROGRESS_LIMITS.jobs)
-      : [],
+    runs: runs.items,
+    runsTruncated: read.runsTruncated || held.runsTruncated || runs.dropped,
+    jobs: jobs.items,
+    jobsTruncated:
+      read.jobsVisible &&
+      (read.jobsTruncated || held.jobsTruncated || jobs.dropped),
   };
 }

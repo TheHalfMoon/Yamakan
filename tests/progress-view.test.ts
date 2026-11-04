@@ -303,7 +303,7 @@ test("attempts and job order are read from committed rows", async (t) => {
   assert.equal(moved.revision, withRun.revision);
 });
 
-test("a late read at the same revision loses nothing and stays bounded", () => {
+test("a late read keeps what fits, marks what does not, and stays bounded", () => {
   const first = snapshot(2, [1], "running");
   const newRun = {
     ...first.runs[0]!,
@@ -319,6 +319,54 @@ test("a late read at the same revision loses nothing and stays bounded", () => {
   const merged = mergeProgress(fuller, first)!;
   assert.deepEqual(merged.runs.map((r) => r.runId).sort(), ["newer", "r"]);
   assert.deepEqual(merged.jobs.map((j) => j.jobId).sort(), ["j", "k"]);
+  // A full late window drops the newest entries and says so.
+  const runIds = (...names: string[]) =>
+    names.map((runId) => ({ ...first.runs[0]!, runId }));
+  const jobIds = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({
+      ...job("running"),
+      jobId: `j${to - i}`,
+    }));
+  const late = mergeProgress(
+    {
+      ...first,
+      runs: runIds("g", "f", "e", "d", "c"),
+      runsTruncated: true,
+      jobs: jobIds(11, 30),
+      jobsTruncated: true,
+    },
+    {
+      ...first,
+      runs: runIds("e", "d", "c", "b", "a"),
+      jobs: jobIds(1, 20),
+    },
+  )!;
+  assert.equal(late.runs.length, PROGRESS_LIMITS.runs);
+  assert.equal(late.runsTruncated, true);
+  assert.equal(late.jobs.length, PROGRESS_LIMITS.jobs);
+  assert.equal(late.jobsTruncated, true);
+  // Nothing was dropped and neither read was cut: no flag.
+  const whole = mergeProgress(first, first)!;
+  assert.equal(whole.runsTruncated, false);
+  assert.equal(whole.jobsTruncated, false);
+  // A reader that lost job:read keeps seeing none.
+  const noJobs = mergeProgress(first, {
+    ...first,
+    jobsVisible: false,
+    jobs: [],
+  })!;
+  assert.deepEqual(noJobs.jobs, []);
+  // A truncated window stays marked after a join.
+  assert.equal(
+    mergeProgress(
+      {
+        ...first,
+        runs: [{ ...first.runs[0]!, truncated: true }],
+      },
+      first,
+    )!.runs[0]!.truncated,
+    true,
+  );
   // Reads with new attempts each time never grow past the limit.
   let held: ProgressView | null = null;
   for (let i = 1; i <= 10; i++) {
