@@ -77,6 +77,13 @@ export function parseLoudnormJson(stderr: string): MeasuredLoudnorm {
     );
   }
   const o = raw as Record<string, unknown>;
+  // FFmpeg reports -inf for silence, for sound below its gate, and for any
+  // sound shorter than one 400 ms measuring block, however loud.
+  if (!Number.isFinite(Number(o.input_i)) && String(o.input_i).includes("inf"))
+    throw new CommandError(
+      "VALIDATION",
+      "This sound is too quiet or too short to measure, so it cannot be normalized. Export without normalizing loudness.",
+    );
   const num = (key: string) => {
     const v = Number(o[key]);
     if (!Number.isFinite(v))

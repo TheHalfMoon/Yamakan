@@ -170,6 +170,20 @@ test("loudnorm JSON parser extracts measured fields", () => {
   assert.equal(m.target_offset, 0.1);
 });
 
+test("loudnorm JSON parser refuses silence plainly and other bad stats by name", () => {
+  const stats = (inputI: string, offset = "0.1") =>
+    `{"input_i":"${inputI}","input_tp":"-1","input_lra":"1","input_thresh":"-30","target_offset":"${offset}"}`;
+  assert.throws(
+    () => parseLoudnormJson(stats("-inf")),
+    /too quiet or too short to measure/,
+  );
+  assert.throws(() => parseLoudnormJson(stats("nan")), /missing input_i/);
+  assert.throws(
+    () => parseLoudnormJson(stats("-20", "inf")),
+    /missing target_offset/,
+  );
+});
+
 test("setSound cannot re-enable while an unlinked audio clip exists", () => {
   const base = projectWithVideoSound();
   const unlinked = applyBatch(base, [

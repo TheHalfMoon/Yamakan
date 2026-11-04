@@ -245,7 +245,36 @@ export class JobSupervisor {
       error: row.error,
       artifact: row.artifact,
       planHash: row.plan_hash ?? null,
+      loudness: this.#loudness(row),
     };
+  }
+  // What an export's loudness request came to. A job finished before this was
+  // recorded is unknown, never assumed either way.
+  #loudness(row: Row): RenderJob["loudness"] {
+    const payload = ExportPayload.safeParse(safeJson(row.payload));
+    if (row.kind !== "export" || !payload.success) return null;
+    if (!payload.data.normalizeLoudness) return { state: "off" };
+    if (row.state === "succeeded") {
+      const done = this.store.read((db) =>
+        db
+          .prepare(
+            "SELECT receipt FROM attempts WHERE job_id = ? AND state = 'succeeded' ORDER BY attempt_no DESC",
+          )
+          .get(row.job_id),
+      ) as { receipt: string | null } | undefined;
+      const receipt = done?.receipt
+        ? (safeJson(done.receipt) as { loudness?: unknown })
+        : null;
+      const measured = receipt?.loudness;
+      if (measured === null) return { state: "unmeasured" };
+      const { inputI, targetI } = (measured ?? {}) as Record<string, unknown>;
+      return typeof inputI === "number" && typeof targetI === "number"
+        ? { state: "measured", inputI, targetI }
+        : { state: "unknown" };
+    }
+    return ["failed", "cancelled", "reconciliationRequired"].includes(row.state)
+      ? { state: "unmeasured" }
+      : { state: "pending" };
   }
   #row(db: DatabaseSync, jobId: string) {
     return db.prepare("SELECT * FROM jobs WHERE job_id = ?").get(jobId) as
