@@ -424,6 +424,14 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     const option = cli("yamakan.project.create", input, "--verbose");
     assert.notEqual(option.status, 0);
     assert.match(option.stderr, /cannot start with '-'/);
+    for (const args of [
+      ["yamakan.project.create", input, "-v"],
+      ["stage-document", "p", "studio", "1", "unread-file", "-v"],
+    ]) {
+      const short = cli(...args);
+      assert.notEqual(short.status, 0);
+      assert.match(short.stderr, /cannot start with '-'/);
+    }
     const refusedByCli = cli(
       "yamakan.project.create",
       JSON.stringify({ name: "From the CLI", shell: "whoami" }),
