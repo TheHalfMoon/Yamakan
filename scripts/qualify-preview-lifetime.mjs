@@ -1,7 +1,8 @@
 /**
  * SS-009: the reference preview's frame lifetime in a real browser against the
  * real service. Random and reverse seeks keep at most one decoded frame alive,
- * a late answer for another project is never shown, and leaving releases it.
+ * a frame asked for in another project is never shown, and a refused segment
+ * says so and leaves the frame visible.
  *
  * Usage: node scripts/qualify-preview-lifetime.mjs [receipt.json]
  */
@@ -269,7 +270,29 @@ try {
   assert.equal(await shownColour(), "blue", "a late answer replaced the frame");
   assert.equal((await frames()).live, 1);
   await page.unrouteAll({ behavior: "ignoreErrors" });
-  step("a late answer for another project is never shown");
+  step("a frame still pending from another project is never shown");
+
+  // A refused segment does not leave a dead player over the frame.
+  await page.route(/\/preview\?.*kind=segment/, (route) =>
+    route.fulfill({
+      status: 501,
+      contentType: "application/json",
+      body: JSON.stringify({
+        apiVersion: 1,
+        error: {
+          code: "CAPABILITY_UNAVAILABLE",
+          message: "Refused for this check.",
+          retryable: false,
+        },
+      }),
+    }),
+  );
+  await page.locator(".reference button").last().click();
+  await page.getByTestId("segment-failed").waitFor();
+  assert.equal(await page.locator(".reference video").count(), 0);
+  await page.locator(".reference img").waitFor();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  step("a refused segment says so and the frame stays up");
 
   // A refused frame shows no stale picture and keeps nothing extra alive.
   await page.route(/\/preview\?.*kind=frame/, (route) =>

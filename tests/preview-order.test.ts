@@ -2,11 +2,11 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../core/store.ts";
-import { preview } from "../core/render/preview.ts";
+import { preview, previewsWaiting } from "../core/render/preview.ts";
 import { mediaTools } from "../core/process/workers.ts";
 
 const bases: string[] = [];
@@ -95,22 +95,34 @@ test("seeking in any order gives each frame its own identical picture", async ()
   }
 });
 
+// Waits until a render is really running: its staging folder exists.
+async function rendering(w: Awaited<ReturnType<typeof workspace>>) {
+  const cache = await w.store.file(w.project.id, "cache", "preview");
+  for (let t = 0; t < 30_000; t += 5) {
+    const names = await readdir(cache).catch(() => [] as string[]);
+    if (names.some((n) => n.startsWith("render-"))) return cache;
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  throw new Error("No render started.");
+}
+const frameFiles = async (cache: string) =>
+  (await readdir(cache)).filter((n) => n.endsWith(".png"));
+
 test("a waiter that leaves does not stop a render another still waits for", async () => {
   const w = await workspace();
   const leaving = new AbortController();
-  const first = frame(w, 30, leaving.signal).then(
-    () => "finished",
-    () => "left",
-  );
+  const first = frame(w, 30, leaving.signal);
   const second = frame(w, 30);
+  await rendering(w);
   leaving.abort();
-  assert.equal(await first, "left");
   const shown = await second;
   assert.equal(shown.cached, false);
   assert.ok((await stat(shown.file)).isFile());
+  // The render it joined finished, so the one who left learns that too.
+  assert.equal((await first).file, shown.file);
 });
 
-test("when the last waiter leaves the render stops, and asking again starts afresh", async () => {
+test("when the last waiter leaves a running render stops, and asking again starts afresh", async () => {
   const w = await workspace();
   const a = new AbortController();
   const b = new AbortController();
@@ -123,11 +135,17 @@ test("when the last waiter leaves the render stops, and asking again starts afre
     outcome(frame(w, 40, a.signal)),
     outcome(frame(w, 40, b.signal)),
   ];
+  const cache = await rendering(w);
   a.abort();
   b.abort();
   assert.deepEqual(await Promise.all(both), ["left", "left"]);
+  assert.deepEqual(
+    await frameFiles(cache),
+    [],
+    "a stopped render left a frame",
+  );
   const again = await frame(w, 40);
-  assert.equal(again.startFrame, 40);
+  assert.equal(again.cached, false);
   assert.ok((await stat(again.file)).isFile());
   assert.equal((await frame(w, 40)).cached, true);
 });
@@ -137,6 +155,8 @@ test("an already cancelled request neither renders nor stays counted", async () 
   const gone = new AbortController();
   gone.abort();
   await assert.rejects(frame(w, 50, gone.signal));
+  assert.equal(previewsWaiting(), 0);
+  // Its place in the queue would have run by the time the next one does.
   const shown = await frame(w, 50);
   assert.equal(shown.cached, false);
 });

@@ -74,6 +74,7 @@ export function ReferencePreview(props: Props) {
   const [failure, setFailure] = useState<Failure | null>(null);
   const shownUrl = useRef<string | null>(null);
   const [segment, setSegment] = useState<string | null>(null);
+  const [segmentFailed, setSegmentFailed] = useState(false);
   // Each frame is fetched, and a superseded one is abandoned at once (the
   // service then stops a render nobody waits for). While the next frame of
   // the same revision renders, the last one stays up, marked as rendering.
@@ -139,7 +140,11 @@ export function ReferencePreview(props: Props) {
     const timer = setTimeout(() => setTries({ view, n: attempt + 1 }), 1500);
     return () => clearTimeout(timer);
   }, [failed, failure, attempt, view]);
-  useEffect(() => setSegment(null), [projectId, revision]);
+  // A segment belongs to the frame it was asked at.
+  useEffect(() => {
+    setSegment(null);
+    setSegmentFailed(false);
+  }, [projectId, revision, settled]);
   if (totalFrames < 1)
     return (
       <div
@@ -166,11 +171,12 @@ export function ReferencePreview(props: Props) {
         ) : null}
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            setSegmentFailed(false);
             setSegment(
               `${base}&kind=segment&start=${settled}&frames=${SEGMENT_FRAMES}`,
-            )
-          }
+            );
+          }}
         >
           {t("reference.play")}
         </button>
@@ -183,6 +189,10 @@ export function ReferencePreview(props: Props) {
           autoPlay
           aria-label={t("reference.segment")}
           onEnded={() => setSegment(null)}
+          onError={() => {
+            setSegment(null);
+            setSegmentFailed(true);
+          }}
         />
       ) : (
         current &&
@@ -201,6 +211,11 @@ export function ReferencePreview(props: Props) {
       )}
       {current?.src !== src && !final && !segment ? (
         <small>{t("reference.rendering")}</small>
+      ) : null}
+      {segmentFailed ? (
+        <small className="error" role="alert" data-testid="segment-failed">
+          {t("reference.failed")}
+        </small>
       ) : null}
       {final && !segment ? (
         <small className="error" role="alert">
