@@ -12,6 +12,7 @@ const media = pathToFileURL(
 ).href;
 const CHILDREN = 72;
 const PARALLEL = 12;
+const PROBES = 4;
 
 // Each child starts its own process owner and probes the one shared file, so
 // separate owners update that file's access list at the same moment. A lost
@@ -21,8 +22,8 @@ const child = (file: string) =>
     const code = `
       const { probe } = await import(${JSON.stringify(media)});
       const failures = [];
-      for (let i = 0; i < 4; i++)
-        await probe(${JSON.stringify(file)}).catch((e) => failures.push(e.code));
+      for (let i = 0; i < ${PROBES}; i++)
+        await probe(${JSON.stringify(file)}).catch((e) => failures.push(e.message));
       console.log(JSON.stringify(failures));
       process.exit(0);`;
     const run = spawn(process.execPath, ["--input-type=module", "-e", code], {
@@ -75,11 +76,17 @@ test(
           }
         }),
       );
-      // An unexplained launch failure (CAPABILITY_UNAVAILABLE, Windows error 2)
-      // is tracked separately in docs/evidence/ultimate/SS-017-access-lock.md.
+      // Only the unexplained launch failure (Windows error 2) is tolerated
+      // here; it is tracked in docs/evidence/ultimate/SS-017-access-lock.md. A
+      // refused or timed out grant, or a failed revoke, fails this test.
       assert.deepEqual(
-        failures.filter((code) => code === "MEDIA_INVALID"),
+        failures.filter((message) => !/\(Windows error 2\)/.test(message)),
         [],
+      );
+      // So that this cannot pass with nothing having worked.
+      assert.ok(
+        failures.length < (CHILDREN * PROBES) / 2,
+        `${failures.length} of ${CHILDREN * PROBES} probes failed`,
       );
     } finally {
       await rm(root, { recursive: true, force: true });

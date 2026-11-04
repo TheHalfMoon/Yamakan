@@ -210,13 +210,7 @@ pub fn capability_sid(name: &str) -> Result<Sid, String> {
 /// higher-level SetSecurityInfo also walks and re-propagates the tree, which
 /// took about 35 s on a user's temporary folder.)
 pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<(), String> {
-    // Concurrent read-modify-write cycles on one object (workers sharing a
-    // current directory, procds sharing the tools folder or an input file)
-    // would drop each other's entries: one at a time, across every procd of
-    // this user's session.
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    let _held = LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    let _across = AccessLock::acquire()?;
     unsafe {
         let name = wide(path);
         let handle = OpenForAccess(
@@ -238,6 +232,14 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
             }
         }
         let _close = Close(handle);
+        // Concurrent read-modify-write cycles on one object (workers sharing a
+        // current directory, procds sharing the tools folder or an input file)
+        // would drop each other's entries: one at a time, across every procd
+        // of this user's session. Taken after the open, which a worker holding
+        // an oplock on its input can stall: a stall stays with this update and
+        // never holds up other procds.
+        let _held = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _across = AccessLock::acquire()?;
         let mut old: *mut c_void = null_mut();
         let mut descriptor: *mut c_void = null_mut();
         let code = GetSecurityInfo(
@@ -343,8 +345,9 @@ impl AccessLock {
             match WaitForSingleObject(handle, WAIT_MS) {
                 WAIT_OBJECT_0 | WAIT_ABANDONED => Ok(AccessLock(handle)),
                 _ => {
+                    let error = last_error("waiting for the access list lock");
                     CloseHandle(handle);
-                    Err("timed out waiting for the access list lock".into())
+                    Err(error)
                 }
             }
         }
