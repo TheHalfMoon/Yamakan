@@ -73,3 +73,17 @@ Refusal rather than a receipt: their retries differ, so one mechanism would not 
 **A behaviour change:** a client that sent an id on one of these now gets `VALIDATION` and must drop it. None in this repository does; outside clients were not surveyed. Rollback: revert this slice; no data changes.
 
 Full suite, on AC power: 766 tests, 763 passed, 3 skipped, 0 failed, log `b-test2.log`, `9c1d057ac2dd8b78343b376eb3b770b48c81f78f65100d1f459c382e400346b6`. The run before it had 2 failures, both launch error 2. That checkout's helper turned out to lack the worker profile lock, because the builder had left a pre-lock binary there during the A/B comparison. Rebuilding it from source gave the green run. One failing run and one passing run are consistent with the A/B result and prove nothing further. Log `b-test.log`, `4e47e73c4e23ebba81ab94b279aedd8f10f0e30c04d5872923cd536284ba2dba`.
+
+## Slice C: one read view of committed progress
+
+`yamakan.progress.read`, scope `project:read`, returns format `yamakan.progress` version 1: head revision, the caller's own request id for that revision, the newest 5 Director runs with their newest 20 attempts each, the newest 20 jobs when the caller holds `job:read`, truncation flags, and a cursor. It is derived in one synchronous read from existing tables, with no schema change, new store or subscription. As a registry command it reaches the SDK, CLI and MCP with no adapter code. **The browser can call it through the same SDK but does not yet; its panels still poll their own reads, so browser agreement is not shown.**
+
+- **Cursor:** a hash of the whole view, so it says only "same or different". Passing it as `after` returns `unchanged: true` while the view is the same. It cannot order two reads.
+- **Reconnect:** a client simply reads again. A test reopens the workspace and gets the identical view. There is no session to resume.
+- **Duplicate or out-of-order reads:** `mergeProgress` in `sdk/progress.ts` joins attempts by run and sequence, refuses an older revision, and keeps a settled job settled. **Between unsettled job states, a late answer at the same revision can show an older state until the next read**, because jobs have no version to compare. The inventory's "no events" was too broad: `outbox` records revisions and is readable, but not jobs or attempts, so it cannot order them either.
+- **Cross-project read:** the view reads only its project, and an unknown project is `NOT_FOUND`. A cursor from another project is not treated as unchanged. **The older `job.status` and `director.next` still take no project.** Tokens here hold workspace-wide scopes with no project restriction, so there is no per-project authority for those reads to bypass; they are unchanged.
+- **Redaction:** the view omits job errors, artifacts and payloads, which can name host paths; a test plants a path and checks it stays out. The GC warning no longer logs its raw message. This covers those two places, not all logging.
+
+Tests: `tests/progress-view.test.ts`, 8 tests with planted rows rather than real renders, and `tests/mcp.test.ts`, where MCP, SDK and CLI return a deep-equal view. No live render was watched through the view. Real attempts were not exercised.
+
+**The save replay limit stays:** making the retry work past 15 minutes would change the commit digest and break old receipts. It remains a documented limit: the retry is refused and applies nothing, and a caller reads the head to see what committed. Rollback: revert this slice; no stored data changes.

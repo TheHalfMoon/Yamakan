@@ -1,7 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { fork, spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFileSync, fork, spawn } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { createInterface } from "node:readline";
 import { createServer, type AddressInfo } from "node:net";
+import { YamakanClient } from "../sdk/client.ts";
 // A free loopback port for a child server (tests run concurrently, so no
 // two may share a fixed one).
 const freePort = () =>
@@ -217,6 +218,38 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
     });
     assert.equal(untraced.result.isError, true);
     assert.match(untraced.result._meta["yamakan/requestId"], /^[0-9a-f-]{36}$/);
+    // MCP, the SDK and the CLI read one progress view, cursor included.
+    const viewed = JSON.parse(
+      (
+        await request("tools/call", {
+          name: "yamakan_progress_read",
+          arguments: { projectId: project.id },
+        })
+      ).result.content[0].text,
+    );
+    assert.equal(viewed.format, "yamakan.progress");
+    const sdk = new YamakanClient({
+      baseUrl: env.YAMAKAN_URL,
+      token: (await readFile(path.join(root, "token"), "utf8")).trim(),
+    });
+    assert.deepEqual(
+      await sdk.call("yamakan.progress.read", { projectId: project.id }),
+      viewed,
+    );
+    assert.deepEqual(
+      JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            fileURLToPath(new URL("../cli/main.ts", import.meta.url)),
+            "yamakan.progress.read",
+            JSON.stringify({ projectId: project.id }),
+          ],
+          { env, windowsHide: true },
+        ).toString(),
+      ),
+      viewed,
+    );
     // A mutation with no receipt refuses an id rather than ignoring it.
     const unreplayable = await request("tools/call", {
       name: "yamakan_job_cancel",

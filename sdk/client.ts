@@ -12,6 +12,8 @@ import { DOCUMENT_LIMITS } from "../core/document-ref.ts";
 export const SAVE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,121}$/;
 
 export type { Operation, OperationInput, OperationResult };
+export { mergeProgress } from "./progress.ts";
+export type { ProgressRead, ProgressView } from "./progress.ts";
 
 export type { StagedDocumentReceipt };
 

@@ -16,6 +16,7 @@ import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import { BATCH_LIMITS, ExportVariant, type JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
+import { readProgress } from "../progress.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
   DocumentKind,
@@ -2121,6 +2122,31 @@ export const commands = {
           principalId: principal.id,
         },
         receipt,
+      ),
+  }),
+  "yamakan.progress.read": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read one project's committed progress as a bounded, versioned view with a cursor; jobs appear with job:read.",
+    input: z
+      .object({
+        projectId: Id,
+        // The cursor of an earlier read: an unchanged view says only that.
+        after: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
+      })
+      .strict(),
+    run: ({ store, principal }, a) =>
+      readProgress(
+        store,
+        {
+          principalId: principal.id,
+          jobsVisible: principal.scopes.has("job:read"),
+        },
+        a,
       ),
   }),
   "yamakan.director.next": define({
