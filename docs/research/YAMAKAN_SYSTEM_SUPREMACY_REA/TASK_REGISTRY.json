@@ -447,7 +447,7 @@
       ],
       "rollback": "Remove diagnostic instrumentation; never modify production limits.",
       "legacy": ["YU-026", "YU-090"],
-      "evidence": "PR #160 merged at e534106ee562d6deaa253973e7626e94f070fa75 from qualified head 212bde3a3d8b0af36427bb9a28cc1e07f1c07613; post-main CI 41759119073 SUCCESS; process-tree CPU not collected, labelled gap; docs/evidence/ultimate/SS-005a-m-profile.md.",
+      "evidence": "PR #160 merged at e534106ee562d6deaa253973e7626e94f070fa75 from qualified head 212bde3a3d8b0af36427bb9a28cc1e07f1c07613; post-main CI 41759119073 SUCCESS; process-tree peak memory from the Job Object and CPU from single-process FFmpeg replays; owner-run CPU not collected, builder's ruling recorded in the ledger; docs/evidence/ultimate/SS-005a-m-profile.md.",
       "owner": "Claude Opus after founder handoff; one named builder per task PR",
       "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
       "objective": "Profile M and select a bounded hypothesis",
