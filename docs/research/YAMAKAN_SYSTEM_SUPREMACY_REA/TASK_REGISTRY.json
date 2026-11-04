@@ -849,7 +849,7 @@
     {
       "id": "SS-006",
       "priority": "P2",
-      "state": "QUALIFICATION_READY",
+      "state": "VERIFIED",
       "dependsOn": ["SS-003", "R-02", "R-04"],
       "title": "Expose and qualify existing revision-bound take proposals in Director review",
       "targets": [
@@ -869,7 +869,7 @@
       ],
       "rollback": "Disable new proposal writes/UI; keep existing commands/history readable; add migration rollback only if a schema change proves necessary.",
       "legacy": ["YU-060"],
-      "evidence": null,
+      "evidence": "PR #164 merged at 26c4c4dab9535795ef8fda994972a8563abf8bf6 from qualified head 4ff57bd0f861c2eaa410918dfa27f4225673e856; exact-head and post-main CI 41854774276 SUCCESS; receipt docs/evidence/ultimate/SS-006-take-review.md.",
       "owner": "Claude Opus after founder handoff; one named builder per task PR",
       "gate": "Common contract in 09_ATOMIC_IMPLEMENTATION_PROGRAM.md",
       "objective": "Expose and qualify existing revision-bound take proposals in Director review",
@@ -918,7 +918,7 @@
     {
       "id": "SS-007",
       "priority": "P2",
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": ["SS-006"],
       "title": "Unify request, progress and handoff semantics",
       "targets": [
