@@ -16,6 +16,7 @@ import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import { BATCH_LIMITS, ExportVariant, type JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
+import { checkHandoff, HandoffSchema, readHandoff } from "../handoff.ts";
 import { readProgress } from "../progress.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
@@ -2148,6 +2149,22 @@ export const commands = {
         },
         a,
       ),
+  }),
+  "yamakan.handoff.read": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read a bounded handoff: revision, story and reference hashes, latest attempt and next action. It grants nothing.",
+    input: z.object({ projectId: Id }).strict(),
+    run: ({ store }, a) => readHandoff(store, a.projectId),
+  }),
+  "yamakan.handoff.check": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Check whether a handoff still describes its project, and what moved. It grants nothing.",
+    input: z.object({ handoff: HandoffSchema }).strict(),
+    run: ({ store }, a) => checkHandoff(store, a.handoff),
   }),
   "yamakan.director.next": define({
     scope: "project:read",

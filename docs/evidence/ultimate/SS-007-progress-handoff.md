@@ -87,3 +87,15 @@ Full suite, on AC power: 766 tests, 763 passed, 3 skipped, 0 failed, log `b-test
 Tests: `tests/progress-view.test.ts`, 8 tests with planted rows rather than real renders, and `tests/mcp.test.ts`, where MCP, SDK and CLI return a deep-equal view. No live render was watched through the view. Real attempts were not exercised.
 
 **The save replay limit stays:** making the retry work past 15 minutes would change the commit digest and break old receipts. It remains a documented limit: the retry is refused and applies nothing, and a caller reads the head to see what committed. Rollback: revert this slice; no stored data changes.
+
+## Slice D: a bounded handoff that grants nothing
+
+`yamakan.handoff.read` returns format `yamakan.handoff` version 1: project, revision, story and reference hashes (16 of each at most, with a truncation flag), and for the newest run its brief hash, latest attempt and next action. `yamakan.handoff.check` takes a handoff and says whether it is intact, whether it is current, and which fields moved. Both need `project:read`.
+
+**A departure from the card, for the founder to overrule.** The card says to add the handoff "through existing document storage". This slice stores nothing and derives it on each read. Reasons: a new document kind needs a table rebuild, because SQLite cannot alter the `kind` CHECK, and that migration conflicts with the card's rollback of reverting a presentation delta. And committing a document makes a new revision, so a stored handoff would change the revision it describes. Everything it holds is already committed. **What is lost:** a person cannot leave free-text notes in a handoff, and an old handoff exists only if the caller kept it.
+
+- **No authority:** the schema is strict, so a `token` or `scopes` field is refused; a test also scans a real handoff for those words and for the run's principal, and shows an agent presenting one still cannot create a project. Jobs are left out, so a handoff shows only what any project reader may see.
+- **Checks on resume:** `handoffHash` catches a handoff edited to claim the current state. It is a plain hash, so it detects accidents and casual edits, not a forger, who can recompute it. That costs nothing, because `check` compares against fresh state and a handoff grants nothing.
+- **Limits:** a run whose pipeline manifest is no longer known fails the read with `NOT_FOUND`, as `director.next` does. Only the `framework-smoke` manifest exists to test with. "Brief" means the output of the stage that produces `research_brief`. The browser does not show a handoff yet.
+
+Tests: `tests/handoff.test.ts`, 5 tests. Rollback: revert this slice; no stored data changes.
