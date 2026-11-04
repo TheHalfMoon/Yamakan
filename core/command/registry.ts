@@ -214,11 +214,19 @@ type Definition<S extends z.ZodType, R> = {
   scope: Scope;
   mutation: boolean;
   humanOnly?: boolean;
+  // A mutation that keeps no receipt says so. It refuses a request ID, because
+  // a caller who sends one believes a retry is protected. The text says why.
+  refusesRequestId?: string;
   summary: string;
   input: S;
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
 };
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
+
+const NO_REPLAY =
+  "This operation cannot replay a request ID. Send it without one.";
+const RETRY_WITH_KEY =
+  "This operation cannot replay a request ID. Send it without one: at the same project revision, the same idempotencyKey returns the same export.";
 
 // YU-021: the clip a transition into this one comes from.
 function outgoingClip(project: CanonicalProject, clipId: string) {
@@ -1511,6 +1519,7 @@ export const commands = {
   "yamakan.workspace.collectGarbage": define({
     scope: "project:recover",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Remove crash leftovers older than an hour (unregistered media objects, temporary and staging files).",
     input: z.object({}).strict(),
@@ -1519,6 +1528,7 @@ export const commands = {
   "yamakan.asset.repair": define({
     scope: "project:recover",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Re-probe a quarantined asset object and release it when verification passes.",
     input: z
@@ -1622,6 +1632,7 @@ export const commands = {
   "yamakan.export.video": define({
     scope: "render:execute",
     mutation: true,
+    refusesRequestId: RETRY_WITH_KEY,
     summary: "Queue an MP4 export of the current project revision.",
     input: z
       .object({
@@ -1639,6 +1650,7 @@ export const commands = {
   "yamakan.export.batch": define({
     scope: "render:execute",
     mutation: true,
+    refusesRequestId: RETRY_WITH_KEY,
     summary:
       "Queue MP4 exports of the current revision at up to 4 output sizes (aspect variants such as 1280x720, 608x1080 and 1080x1080, each with the same contain fit), admitted together or not at all. The batch completes only when every output does; its status lists each output's job, error and verified size.",
     input: z
@@ -1667,6 +1679,7 @@ export const commands = {
   "yamakan.export.batchCancel": define({
     scope: "render:execute",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a batch's unfinished outputs; finished exports and the project are untouched.",
     input: z
@@ -1684,6 +1697,7 @@ export const commands = {
   "yamakan.job.cancel": define({
     scope: "job:control",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary: "Request cancellation of a render job.",
     input: z.object({ jobId: Id }).strict(),
     run: ({ queue }, a) => queue.cancel(a.jobId),
@@ -1698,6 +1712,7 @@ export const commands = {
   "yamakan.job.retry": define({
     scope: "job:control",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Re-queue a job that needs reconciliation after too many interruptions.",
     input: z.object({ jobId: Id }).strict(),
@@ -1706,6 +1721,7 @@ export const commands = {
   "yamakan.job.discard": define({
     scope: "job:control",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a job that needs reconciliation without changing project revisions.",
     input: z.object({ jobId: Id }).strict(),
@@ -1721,6 +1737,7 @@ export const commands = {
   "yamakan.scene.save": define({
     scope: "project:write",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Validate, content-hash, and (when Cinema is enabled) persist a scene3d document.",
     input: z
@@ -1799,6 +1816,7 @@ export const commands = {
   "yamakan.studio.open": define({
     scope: "project:write",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Create an empty Studio document (durable project attach behind STUDIO_ENABLED).",
     input: z
@@ -1821,6 +1839,7 @@ export const commands = {
   "yamakan.studio.commit": define({
     scope: "project:write",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Validate and content-hash a Studio document revision (attach behind STUDIO_ENABLED).",
     input: z
@@ -1880,6 +1899,7 @@ export const commands = {
   "yamakan.consent.revalidate": define({
     scope: "consent:grant",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary:
       "Revalidate a likeness consent granted before a restore or import, so it can be used again. Browser session only.",
@@ -2024,6 +2044,7 @@ export const commands = {
   "yamakan.director.importLegacy": define({
     scope: "consent:grant",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary:
       "Import the workspace's pre-database Director files (runs by existing project id, consents, encodings) once; originals are kept, approvals must be given again and consents revalidated. Browser session only.",
@@ -2195,6 +2216,7 @@ export const commands = {
   "yamakan.agent.create": define({
     scope: "agent:create",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary:
       "Create a scoped agent token (shown once). Requires the browser session.",
@@ -2213,6 +2235,7 @@ export const commands = {
   "yamakan.agent.revoke": define({
     scope: "agent:revoke",
     mutation: true,
+    refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary: "Revoke an agent token. Requires the browser session.",
     input: z
@@ -2266,6 +2289,8 @@ export async function execute(
   authorize(ctx.principal, operation);
   const command = commands[operation] as Definition<z.ZodType, unknown>;
   const input = command.input.parse(parameters ?? {});
+  if (command.refusesRequestId && ctx.requestId)
+    throw new CommandError("VALIDATION", command.refusesRequestId);
   // A mutation with a request ID is replayable: the same ID and input return
   // the original result; the same ID with different input is rejected.
   const receipt =
