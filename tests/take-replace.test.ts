@@ -817,9 +817,7 @@ test("a proposal hash is never a Director stage output, and reviewing approves n
   );
   assert.deepEqual(await loadRun(c.store, started.id), waiting);
   // A proposal is refused for any other project.
-  const other = await run<Project>(c, "yamakan.project.create", {
-    name: "Other",
-  });
+  const other = await c.store.create("Other");
   assert.equal(
     await code(
       execute(c.browser, "yamakan.take.apply", {
