@@ -420,6 +420,10 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       cli("yamakan.project.create", input, "cli-replay.1").stdout,
     );
     assert.equal(replayed.id, made.id);
+    // An option typed in that place does not become an id and replay.
+    const option = cli("yamakan.project.create", input, "--verbose");
+    assert.notEqual(option.status, 0);
+    assert.match(option.stderr, /cannot start with '-'/);
     const refusedByCli = cli(
       "yamakan.project.create",
       JSON.stringify({ name: "From the CLI", shell: "whoami" }),

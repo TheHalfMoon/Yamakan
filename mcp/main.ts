@@ -60,6 +60,7 @@ const error = (id: Message["id"], code: number, message: string) =>
 // upload (sdk/client.ts saveDocument). Its frame is still bounded by the
 // 2 MiB MCP line cap; larger documents are saved by the UI or the CLI.
 const SAVE_DOCUMENT = "yamakan_document_save";
+const SAVE_REQUEST_ID_LENGTH = 121;
 function saveDocumentTool(commit: {
   summary: string;
   scope: string;
@@ -82,7 +83,7 @@ function saveDocumentTool(commit: {
           type: "object",
           description: "The whole document (Studio document or Cinema scene).",
         },
-        requestId: { ...REQUEST_ID, maxLength: 121 },
+        requestId: { ...REQUEST_ID, maxLength: SAVE_REQUEST_ID_LENGTH },
       },
       required: [
         ...(schema.required ?? []).filter((r) => r !== "source"),
@@ -179,10 +180,27 @@ async function handle(message: Message) {
             },
           ],
         });
+      const args =
+        params.arguments && typeof params.arguments === "object"
+          ? { ...(params.arguments as Record<string, unknown>) }
+          : {};
+      const requestId = args.requestId;
+      delete args.requestId;
+      // Malformed IDs are refused as over REST, never silently dropped. A save
+      // suffixes its id for the stage and the commit, so its limit is lower.
+      const valid =
+        requestId === undefined ||
+        (typeof requestId === "string" &&
+          new RegExp(REQUEST_ID.pattern).test(requestId) &&
+          requestId.length <=
+            (params.name === SAVE_DOCUMENT
+              ? SAVE_REQUEST_ID_LENGTH
+              : REQUEST_ID.maxLength));
       try {
         if (!operations) await tools();
       } catch (e) {
-        if (e instanceof YamakanError) return toolError(e);
+        if (e instanceof YamakanError)
+          return toolError(e, valid ? requestId : undefined);
         throw e;
       }
       const operation = operations!.get(String(params.name));
@@ -190,18 +208,6 @@ async function handle(message: Message) {
         params.name === SAVE_DOCUMENT &&
         [...operations!.values()].includes("yamakan.document.commit");
       if (!operation && !saving) return error(id, -32602, "Unknown tool.");
-      const args =
-        params.arguments && typeof params.arguments === "object"
-          ? { ...(params.arguments as Record<string, unknown>) }
-          : {};
-      const requestId = args.requestId;
-      delete args.requestId;
-      // Malformed IDs are refused as over REST, never silently dropped.
-      const valid =
-        requestId === undefined ||
-        (typeof requestId === "string" &&
-          new RegExp(REQUEST_ID.pattern).test(requestId) &&
-          requestId.length <= REQUEST_ID.maxLength);
       let sent: unknown = requestId;
       try {
         if (!valid)
@@ -239,7 +245,8 @@ async function handle(message: Message) {
             );
         }
         const service = await client();
-        // A save always has an id, so its caller can retry a lost response.
+        // A save always has an id. One generated here reaches the caller only
+        // with a reply: after a lost response, only a supplied id can retry.
         if (saving)
           sent = (requestId as string | undefined) ?? crypto.randomUUID();
         const result = saving
