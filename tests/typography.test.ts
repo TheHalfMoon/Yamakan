@@ -536,18 +536,23 @@ test("a probe cut short is not reported as the wrong FFmpeg", () => {
     assert.equal(refused?.code, "CAPABILITY_UNAVAILABLE");
     assert.match(refused!.message, /libass 0\.17/);
   }
-  // Cut short, whether or not it got as far as reporting a version: retryable,
+  // Out of time, whether or not it got as far as reporting a version: retryable,
   // and it does not blame the FFmpeg.
-  for (const [code, api, timedOut] of [
-    [1, good, true],
-    [1, 0, true],
-    [1, good, false],
+  for (const [code, api] of [
+    [1, good],
+    [1, 0],
+    [0, good],
   ] as const) {
-    const refused = probeRefusal(code, api, timedOut, "");
+    const refused = probeRefusal(code, api, true, "");
     assert.equal(refused?.code, "UNAVAILABLE");
     assert.equal(refused?.retryable, true);
     assert.doesNotMatch(refused!.message, /libass/);
   }
+  // A good version that then fails is a real failure, not "try again".
+  const failed = probeRefusal(1, good, false, "");
+  assert.equal(failed?.code, "CAPABILITY_UNAVAILABLE");
+  assert.equal(failed?.retryable, false);
+  assert.match(failed!.message, /could not render a test title/);
   // The log stays server-side.
   const logged = probeRefusal(1, 0, true, "C:\\Users\\someone");
   assert.doesNotMatch(logged!.message, /someone/);

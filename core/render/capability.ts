@@ -42,23 +42,31 @@ const unavailable = (cause?: unknown) =>
     { cause },
   );
 
-// What a finished probe means. A probe cut short says nothing about FFmpeg, so
-// it is not reported as the wrong FFmpeg: on a busy machine that sends a person
-// looking for a problem they do not have. It still refuses titles.
+// What a probe's result means. Only a probe that ran out of time is worth
+// retrying: it says nothing about FFmpeg, and on a busy machine the wrong-FFmpeg
+// message sends a person looking for a problem they do not have. A supported
+// version that then fails is a real failure with its own words. Titles stay
+// refused in every case but success.
 export function probeRefusal(
   code: number,
   api: number,
   timedOut: boolean,
   log: string,
 ): CommandError | null {
-  if (code === 0 && titlesSupported(api)) return null;
+  if (!timedOut && code === 0 && titlesSupported(api)) return null;
   const cause = new Error(
     `libass probe code=${code} api=0x${api.toString(16)} log=${log.slice(-1500)}`,
   );
-  return timedOut || titlesSupported(api)
+  if (timedOut)
+    return new CommandError(
+      "UNAVAILABLE",
+      "The check for title support did not finish. Try again when the machine is less busy.",
+      { cause },
+    );
+  return titlesSupported(api)
     ? new CommandError(
-        "UNAVAILABLE",
-        "The check for title support did not finish. Try again when the machine is less busy.",
+        "CAPABILITY_UNAVAILABLE",
+        "FFmpeg could not render a test title, so titles are off. If this keeps happening, FFmpeg needs repair.",
         { cause },
       )
     : unavailable(cause);
