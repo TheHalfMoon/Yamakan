@@ -103,7 +103,7 @@ try {
   const operations = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
   page.on("request", (r) => {
-    if (!r.url().startsWith(origin) && !r.url().startsWith("data:"))
+    if (!r.url().startsWith(origin) && !/^(data|blob):/.test(r.url()))
       external.push(r.url());
     if (r.url().endsWith("/api/v1/call"))
       operations.push(JSON.parse(r.postData() ?? "{}").operation);
@@ -363,8 +363,12 @@ try {
     document.querySelector('[data-testid="take-notice-stale"]'),
   );
   assert.ok((await head()).revision > movedFrom);
+  const lateAnswer = page.waitForResponse((r) =>
+    isCall(r.request(), "yamakan.take.proposeReplace"),
+  );
   releaseReview();
-  await page.waitForTimeout(300);
+  await lateAnswer;
+  await page.waitForTimeout(100);
   await page.unrouteAll({ behavior: "wait" });
   assert.equal(await shown.count(), 0, "a late proposal must be dropped");
   assert.equal(await panel.getByTestId("take-review-open").isEnabled(), true);
@@ -392,6 +396,40 @@ try {
   step(
     "applying is refused while edits are unsaved, and their save needs a fresh review",
   );
+
+  // While an apply runs, the editor neither edits nor switches project.
+  await panel.getByTestId("take-review-open").click();
+  await shown.waitFor();
+  let releaseApply;
+  const applyHeld = new Promise((r) => (releaseApply = r));
+  await page.route("**/api/v1/call", async (route) => {
+    if (isCall(route.request(), "yamakan.take.apply")) await applyHeld;
+    await route.fallback();
+  });
+  const undoButton = page.getByRole("button", { name: "Undo", exact: true });
+  const projectRow = page
+    .getByRole("button", { name: /Takes Revision/ })
+    .first();
+  await page.getByTestId("take-proposal-apply").click();
+  await page.waitForFunction(
+    () => !document.querySelector('[data-testid="take-proposal"]'),
+  );
+  assert.equal(await undoButton.isDisabled(), true);
+  assert.equal(await projectRow.isDisabled(), true);
+  releaseApply();
+  await page.getByTestId("take-notice-applied").waitFor();
+  await page.unrouteAll({ behavior: "wait" });
+  assert.equal(await undoButton.isDisabled(), false);
+  assert.equal(clipShowing(await head(), "yellow.png").length, 1);
+  await undoButton.click();
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(`[data-testid="take-review"] li[data-take="${id}"]`)
+        ?.getAttribute("data-current") === "true",
+    middleOld.id,
+  );
+  step("while an apply runs, undo and project switching are disabled");
 
   // A lost response is asked again under the same request id: one revision.
   await panel.getByTestId("take-review-open").click();

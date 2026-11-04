@@ -813,8 +813,7 @@ test("a proposal hash is never a Director stage output, and reviewing approves n
       ttlMs: 60_000,
     }),
   );
-  assert.notEqual(refused, "ok");
-  assert.doesNotMatch(refused, /Only a reviewable/);
+  assert.match(refused, /does not match/);
   assert.deepEqual(await loadRun(c.store, started.id), waiting);
   // A proposal is refused for any other project.
   const other = await c.store.create("Other");

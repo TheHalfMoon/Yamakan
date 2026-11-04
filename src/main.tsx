@@ -236,8 +236,12 @@ function App() {
         );
       // A lost response is asked again under the same request id, which the
       // service answers with the original result.
+      // An answer the service did not write (no request id, an unreadable
+      // body) counts as lost too: the take may have landed.
+      const refusedByService = (e: unknown) =>
+        e instanceof YamakanError && e.requestId !== null;
       const answer = await send().catch((e) => {
-        if (e instanceof YamakanError) throw e;
+        if (refusedByService(e)) throw e;
         return send();
       });
       const project = ProjectSchema.parse(answer);
@@ -248,7 +252,7 @@ function App() {
       }
       return { kind: "applied", revision: project.revision };
     } catch (e) {
-      return e instanceof YamakanError
+      return e instanceof YamakanError && e.requestId !== null
         ? { kind: "refused", code: e.code, message: e.message }
         : { kind: "unknown" };
     } finally {

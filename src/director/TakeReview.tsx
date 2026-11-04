@@ -116,7 +116,10 @@ export function TakeReview({
     request.current++;
     setReviewing(false);
     setNotice((held) =>
-      held?.kind === "applied" && held.revision !== revision ? null : held,
+      (held?.kind === "applied" && held.revision !== revision) ||
+      held?.kind === "unknown"
+        ? null
+        : held,
     );
     if (
       reviewing ||
@@ -169,7 +172,10 @@ export function TakeReview({
     else if (outcome.kind === "refused") {
       setNotice(refusal(outcome.code, outcome.message));
       setReads((n) => n + 1);
-    } else setNotice({ kind: outcome.kind });
+    } else {
+      setNotice({ kind: outcome.kind });
+      setReads((n) => n + 1);
+    }
   };
 
   if (rows === null) return null;

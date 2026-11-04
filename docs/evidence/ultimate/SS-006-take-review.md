@@ -12,7 +12,7 @@ The take commands existed and were well tested at the command layer, but nothing
 
 The review is derived and held only in the panel: there is no new store, no durable approval and no stage output. It is dropped when the project's revision changes, including while it is still being made.
 
-The host sends the apply under its own busy state, so no edit or project switch runs beside it, and an answer for a project no longer open does not replace the editor. A lost response is asked again under the same request id. If it is lost twice the panel says the outcome is not known, rather than that it failed. While the editor has unsaved changes or holds a rejected draft, Apply is disabled with a message. Only plain refusals are shown as the service wrote them, capped at 200 characters; anything else shows a general message.
+The host sends the apply under its own busy state, so no edit or project switch runs beside it, and an answer for a project no longer open does not replace the editor. A lost response, or one the service did not write such as an unreadable body, is asked again under the same request id. If that fails too, the panel says the outcome is not known, rather than that it failed. While the editor has unsaved changes or holds a rejected draft, Apply is disabled with a message. Only plain refusals are shown as the service wrote them, capped at 200 characters; anything else shows a general message.
 
 Decision: WRAP existing commands. Compare and thumbnails were not added: the panel uses `take.list` metadata only and decodes no original media. The single-clip-shot limitation stays, and a shot that cannot be replaced shows its reason.
 
@@ -28,11 +28,12 @@ Browser journey, `npm run qualify:take-review`, real stills, real service, Edge,
 6. The editor's Undo returned the previous take.
 7. A review held back while a local edit committed: the stale notice shows, the late proposal is dropped, and the buttons stay enabled.
 8. With a commit held back, Apply is disabled with its message; when the commit lands, the review is stale and gone.
-9. A response dropped after the service answered: asked again under the same request id, the request carries the hash shown, and the revision moves by one.
-10. A response lost twice: the panel says the outcome is not known, and the project did change.
-11. Arabic labels and right-to-left page, identifiers left to right.
-12. The panel called only `take.proposeReplace` and `take.apply` among take-changing commands, and no Director approve, advance, next or start. Calls made by the harness are excluded from that record.
-13. No external requests and no page errors.
+9. While an apply is held back, Undo and the project row are disabled; when it lands they return.
+10. A response dropped after the service answered: asked again under the same request id, the request carries the hash shown, and the revision moves by one.
+11. A response lost twice: the panel says the outcome is not known, and the project did change.
+12. Arabic labels and right-to-left page, identifiers left to right.
+13. The panel called only `take.proposeReplace` and `take.apply` among take-changing commands, and no Director approve, advance, next or start. Calls made by the harness are excluded from that record.
+14. No external requests and no page errors.
 
 Command tests, `tests/take-replace.test.ts`, `tests/take-review.test.ts` and `tests/i18n.test.ts`: 21 of 21. New cases:
 
