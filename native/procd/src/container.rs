@@ -567,22 +567,36 @@ mod tests {
     }
 
     #[test]
-    fn an_update_of_one_object_is_not_held_up_by_a_lock_on_another() {
+    fn a_held_lock_delays_updates_of_its_object_and_no_other() {
+        use std::time::{Duration, Instant};
         let dir = std::env::temp_dir().join(format!("yamakan-lock-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let (a, b) = (dir.join("a"), dir.join("b"));
         std::fs::write(&a, b"a").unwrap();
         std::fs::write(&b, b"b").unwrap();
-        let object = open(&a);
-        // Held for this whole test, as a stalled update of `a` would hold it.
-        let _held = AccessLock::acquire(object).unwrap();
+        const HELD: Duration = Duration::from_millis(1500);
+        // On another thread: a mutex is recursive on the thread that holds it,
+        // so a holder on this thread would prove nothing.
+        let (locked, is_locked) = std::sync::mpsc::channel();
+        let holder = {
+            let a = a.clone();
+            std::thread::spawn(move || {
+                let object = open(&a);
+                let held = AccessLock::acquire(object).unwrap();
+                locked.send(()).unwrap();
+                std::thread::sleep(HELD);
+                drop(held);
+                unsafe { CloseHandle(object) };
+            })
+        };
+        is_locked.recv().unwrap();
+        let started = Instant::now();
         let sid = container_sid().unwrap();
-        let started = std::time::Instant::now();
         set_access(&b.to_string_lossy(), sid, Some((0, FILE_GENERIC_READ))).unwrap();
-        set_access(&b.to_string_lossy(), sid, None).unwrap();
-        assert!(started.elapsed().as_secs() < 10, "held up by another object's lock");
-        drop(_held);
-        unsafe { CloseHandle(object) };
+        assert!(started.elapsed() < HELD / 2, "held up by another object's lock");
+        set_access(&a.to_string_lossy(), sid, Some((0, FILE_GENERIC_READ))).unwrap();
+        assert!(started.elapsed() >= HELD / 2, "the object's own lock did not hold");
+        holder.join().unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -597,8 +611,6 @@ mod tests {
         set_access(&path, sid, Some((0, FILE_GENERIC_READ))).unwrap();
         // The change time moves on a write of the access list and not otherwise.
         let change_time = || {
-            use std::os::windows::fs::MetadataExt;
-            let _ = std::fs::metadata(&file).unwrap().last_write_time();
             let mut info = [0u64; 6];
             let handle = open(&file);
             unsafe {
