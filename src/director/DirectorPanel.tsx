@@ -5,6 +5,7 @@ import {
 } from "../../core/director-flags.ts";
 import { MESSAGES, type MessageKey } from "../i18n.ts";
 import { TakeReview } from "./TakeReview.tsx";
+import type { TakeApplyOutcome, TakeProposal } from "./take-review.ts";
 
 type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -238,7 +239,8 @@ type Props = {
   client: Client;
   t: Translate;
   unsaved?: boolean;
-  onTakeApplied?: (project: unknown) => void;
+  assetName?: (assetId: string | null) => string | null;
+  applyTake?: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
 };
 
 /**
@@ -251,7 +253,8 @@ export function DirectorPanel({
   client,
   t,
   unsaved = false,
-  onTakeApplied = () => {},
+  assetName = () => null,
+  applyTake = async () => ({ kind: "busy" }),
 }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
@@ -312,7 +315,8 @@ export function DirectorPanel({
           client={client}
           t={t}
           unsaved={unsaved}
-          onApplied={onTakeApplied}
+          assetName={assetName}
+          onApply={applyTake}
         />
       ) : null}
       <p>

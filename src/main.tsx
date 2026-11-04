@@ -66,6 +66,7 @@ import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
+import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
 import { Captions } from "./captions.tsx";
 import type {
   Operation,
@@ -211,6 +212,45 @@ function App() {
       await fn();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : t("error.operation"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  // Under the editor's busy state, so no edit or project switch runs beside it.
+  const applyTake = async (
+    proposal: TakeProposal,
+  ): Promise<TakeApplyOutcome> => {
+    if (busy) return { kind: "busy" };
+    setBusy(true);
+    try {
+      const requestId = crypto.randomUUID();
+      const send = () =>
+        client.call(
+          "yamakan.take.apply",
+          {
+            projectId: proposal.projectId,
+            expectedRevision: proposal.revision,
+            proposal,
+          } as never,
+          requestId,
+        );
+      // A lost response is asked again under the same request id, which the
+      // service answers with the original result.
+      const answer = await send().catch((e) => {
+        if (e instanceof YamakanError) throw e;
+        return send();
+      });
+      const project = ProjectSchema.parse(answer);
+      // The editor moved on while this ran: it stays where it is.
+      if (head.current?.id === project.id) {
+        accept(project);
+        await refresh().catch(() => {});
+      }
+      return { kind: "applied", revision: project.revision };
+    } catch (e) {
+      return e instanceof YamakanError
+        ? { kind: "refused", code: e.code, message: e.message }
+        : { kind: "unknown" };
     } finally {
       setBusy(false);
     }
@@ -884,11 +924,9 @@ function App() {
           call: (operation, parameters) =>
             client.call(operation as never, parameters as never),
         }}
-        unsaved={Boolean(history?.past.length)}
-        onTakeApplied={(project) => {
-          accept(project as Project);
-          void refresh();
-        }}
+        unsaved={Boolean(history?.past.length || unapplied)}
+        assetName={(id) => p?.assets.find((x) => x.id === id)?.name ?? null}
+        applyTake={applyTake}
       />
     </>
   );

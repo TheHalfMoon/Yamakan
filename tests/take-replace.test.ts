@@ -786,8 +786,8 @@ test("a proposal hash is never a Director stage output, and reviewing approves n
     pipelineName: "framework-smoke",
   });
   const before = await loadRun(c.store, started.id);
-  assert.equal(
-    await code(
+  assert.match(
+    await message(
       advanceStage(c.store, {
         runId: started.id,
         stage: "research",
@@ -795,26 +795,26 @@ test("a proposal hash is never a Director stage output, and reviewing approves n
         outputHash: proposal.proposalHash,
       }),
     ),
-    "VALIDATION",
+    /not a stored object/,
   );
   assert.deepEqual(await loadRun(c.store, started.id), before);
   const waiting = await advanceStage(c.store, {
     runId: started.id,
     stage: "research",
     status: "awaiting_human",
-    outputHash: null,
+    // A real stored output, so that only the hash named below is wrong.
+    outputHash: c.imported.still.hash,
   });
-  assert.equal(
-    await code(
-      approveStage(c.store, {
-        runId: started.id,
-        stage: "research",
-        outputHash: proposal.proposalHash,
-        ttlMs: 60_000,
-      }),
-    ),
-    "VALIDATION",
+  const refused = await message(
+    approveStage(c.store, {
+      runId: started.id,
+      stage: "research",
+      outputHash: proposal.proposalHash,
+      ttlMs: 60_000,
+    }),
   );
+  assert.notEqual(refused, "ok");
+  assert.doesNotMatch(refused, /Only a reviewable/);
   assert.deepEqual(await loadRun(c.store, started.id), waiting);
   // A proposal is refused for any other project.
   const other = await c.store.create("Other");

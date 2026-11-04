@@ -282,7 +282,7 @@ try {
     ],
   });
   await page.getByTestId("take-proposal-apply").click();
-  await page.getByTestId("take-notice-refused").waitFor();
+  await page.getByTestId("take-notice-stale").waitFor();
   assert.equal(await shown.count(), 0, "a refused proposal must not stay up");
   let now = await head();
   assert.equal(now.revision, moved.revision);
@@ -330,27 +330,138 @@ try {
   assert.equal(JSON.stringify(others(now)), untouched);
   step("undo returns the previous take");
 
-  // Unsaved editor changes are not silently replaced by an apply.
+  // A real local edit; its commit moves the revision.
+  let opacity = 0.2;
+  const localEdit = async () => {
+    await page.getByRole("tab", { name: "Edit", exact: true }).click();
+    await page.getByTitle(/^red\.png · /).click();
+    await page.getByTestId("clip-animation-panel").waitFor();
+    opacity += 0.05;
+    await page.locator("#anim-start-opacity").fill(opacity.toFixed(2));
+    await page.locator("#anim-end-opacity").fill("0.8");
+    await page
+      .getByRole("button", { name: "Apply opacity keyframes", exact: true })
+      .click();
+    await page.getByRole("tab", { name: "Story", exact: true }).click();
+  };
+  const isCall = (request, operation) =>
+    request.url().endsWith("/api/v1/call") &&
+    JSON.parse(request.postData() ?? "{}").operation === operation;
+
+  // A review still being made when the project moves on leaves the panel usable.
+  let releaseReview;
+  const reviewHeld = new Promise((r) => (releaseReview = r));
+  await page.route("**/api/v1/call", async (route) => {
+    if (isCall(route.request(), "yamakan.take.proposeReplace"))
+      await reviewHeld;
+    await route.fallback();
+  });
+  const movedFrom = (await head()).revision;
+  await panel.getByTestId("take-review-open").click();
+  await localEdit();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="take-notice-stale"]'),
+  );
+  assert.ok((await head()).revision > movedFrom);
+  releaseReview();
+  await page.waitForTimeout(300);
+  await page.unrouteAll({ behavior: "wait" });
+  assert.equal(await shown.count(), 0, "a late proposal must be dropped");
+  assert.equal(await panel.getByTestId("take-review-open").isEnabled(), true);
+  step("a review overtaken by a save is dropped and the panel stays usable");
+
+  // Unsaved edits hold the apply back; their commit makes the review stale.
   await panel.getByTestId("take-review-open").click();
   await shown.waitFor();
-  // A real local edit, not yet saved: the transform panel's own control.
-  await page.getByRole("tab", { name: "Edit", exact: true }).click();
-  await page.getByTitle(/^red\.png · /).click();
-  await page.getByTestId("clip-animation-panel").waitFor();
-  await page.locator("#anim-start-opacity").fill("0.2");
-  await page.locator("#anim-end-opacity").fill("0.8");
-  await page
-    .getByRole("button", { name: "Apply opacity keyframes", exact: true })
-    .click();
-  await page.getByRole("tab", { name: "Story", exact: true }).click();
+  let releaseCommit;
+  const commitHeld = new Promise((r) => (releaseCommit = r));
+  await page.route("**/api/v1/call", async (route) => {
+    if (isCall(route.request(), "yamakan.project.applyBatch")) await commitHeld;
+    await route.fallback();
+  });
+  await localEdit();
   await page.getByTestId("take-save-first").waitFor();
   assert.equal(
     await page.getByTestId("take-proposal-apply").isDisabled(),
     true,
   );
+  releaseCommit();
+  await page.getByTestId("take-notice-stale").waitFor();
+  assert.equal(await shown.count(), 0);
+  await page.unrouteAll({ behavior: "wait" });
+  step(
+    "applying is refused while edits are unsaved, and their save needs a fresh review",
+  );
+
+  // A lost response is asked again under the same request id: one revision.
+  await panel.getByTestId("take-review-open").click();
+  await shown.waitFor();
+  const shownHash = await page.getByTestId("take-proposal-hash").innerText();
+  const sent = [];
+  await page.route("**/api/v1/call", async (route) => {
+    const request = route.request();
+    if (!isCall(request, "yamakan.take.apply")) return route.fallback();
+    sent.push(JSON.parse(request.postData()));
+    if (sent.length > 1) return route.fallback();
+    await route.fetch();
+    return route.abort("connectionreset");
+  });
+  const beforeLost = (await head()).revision;
+  await page.getByTestId("take-proposal-apply").click();
+  await page.getByTestId("take-notice-applied").waitFor();
+  await page.unrouteAll({ behavior: "wait" });
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].requestId, sent[1].requestId);
+  assert.equal(sent[0].parameters.proposal.proposalHash, shownHash);
+  now = await head();
+  assert.equal(now.revision, beforeLost + 1);
+  assert.equal(clipShowing(now, "yellow.png").length, 1);
+  step(
+    "a lost response is replayed under one request id: the shown proposal, once",
+    {
+      revision: now.revision,
+    },
+  );
+
+  // Lost twice, the panel says it does not know. It may have been applied.
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await page.getByTestId("take-save-first").waitFor({ state: "detached" });
-  step("applying is refused in the panel while edits are unsaved");
+  await page.waitForFunction(
+    (id) =>
+      document
+        .querySelector(`[data-testid="take-review"] li[data-take="${id}"]`)
+        ?.getAttribute("data-current") === "true",
+    middleOld.id,
+  );
+  await panel.getByTestId("take-review-open").click();
+  await shown.waitFor();
+  const beforeUnknown = (await head()).revision;
+  let tries = 0;
+  await page.route("**/api/v1/call", async (route) => {
+    if (!isCall(route.request(), "yamakan.take.apply")) return route.fallback();
+    if (tries++ === 0) await route.fetch();
+    return route.abort("connectionreset");
+  });
+  await page.getByTestId("take-proposal-apply").click();
+  await page.getByTestId("take-notice-unknown").waitFor();
+  await page.unrouteAll({ behavior: "wait" });
+  assert.equal(await page.getByTestId("take-notice-applied").count(), 0);
+  assert.equal(await page.getByTestId("take-notice-refused").count(), 0);
+  assert.equal((await head()).revision, beforeUnknown + 1);
+  step(
+    "a response lost twice says the outcome is not known, not that it failed",
+  );
+
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Takes Revision/ })
+    .first()
+    .click();
+  await page.getByRole("heading", { name: "Takes", exact: true }).waitFor();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
+  await page.locator("details.director > summary").click();
+  await panel.waitFor();
+  await panel.getByTestId("take-review-open").click();
+  await shown.waitFor();
 
   // Arabic: the panel is translated and right to left, values stay left to right.
   await page.getByRole("button", { name: "العربية", exact: true }).click();

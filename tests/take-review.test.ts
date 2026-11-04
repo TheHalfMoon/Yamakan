@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   proposalIsCurrent,
+  refusal,
   shortHash,
   takeRows,
   ticksToSeconds,
@@ -71,4 +72,22 @@ test("times and media versions read plainly", () => {
   assert.equal(ticksToSeconds(23_520_000), "0.033");
   assert.equal(shortHash("a".repeat(64)), "a".repeat(12));
   assert.equal(shortHash(null), "—");
+});
+
+test("only plain refusals are shown as the service wrote them", () => {
+  assert.deepEqual(refusal("REVISION_CONFLICT", "x"), { kind: "stale" });
+  assert.deepEqual(refusal("VALIDATION", "A plain reason."), {
+    kind: "refused",
+    message: "A plain reason.",
+  });
+  assert.equal(
+    (refusal("NOT_FOUND", "x".repeat(500)) as { message: string }).message
+      .length,
+    200,
+  );
+  // An internal error can carry host details.
+  assert.deepEqual(refusal("INTERNAL", "C:\\Users\\someone"), {
+    kind: "failed",
+  });
+  assert.deepEqual(refusal(undefined, "no code"), { kind: "failed" });
 });

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   proposalIsCurrent,
+  refusal,
   shortHash,
   takeRows,
   ticksToSeconds,
+  type TakeApplyOutcome,
   type TakeProposal,
   type TakeRow,
 } from "./take-review.ts";
@@ -19,23 +21,19 @@ type Translate = (
 
 type Notice =
   | { kind: "stale" }
+  | { kind: "failed" }
+  | { kind: "unknown" }
+  | { kind: "busy" }
   | { kind: "applied"; revision: number }
   | { kind: "refused"; message: string };
-
-const media = (t: Translate, side: TakeProposal["mappings"][number]["from"]) =>
-  side.title !== null
-    ? t("take.titleCard", { title: side.title })
-    : t("take.media", {
-        hash: shortHash(side.assetHash),
-        seconds: ticksToSeconds(side.sourceStartTicks),
-      });
 
 /**
  * Reviews one take replacement. The proposal comes from
  * `yamakan.take.proposeReplace` and is sent to `yamakan.take.apply` unchanged,
  * where the commit recomputes and compares it. It lives only in this panel and
  * is dropped when the project moves on, so a stale review needs a fresh one.
- * Viewing or applying grants nothing and is not a Director approval.
+ * The host sends it, because applying replaces what the editor holds. Viewing
+ * or applying grants nothing and is not a Director approval.
  */
 export function TakeReview({
   projectId,
@@ -43,7 +41,8 @@ export function TakeReview({
   client,
   t,
   unsaved,
-  onApplied,
+  assetName,
+  onApply,
 }: {
   projectId: string;
   revision: number | null;
@@ -51,26 +50,39 @@ export function TakeReview({
   t: Translate;
   // Applying replaces what the editor holds, so unsaved edits come first.
   unsaved: boolean;
-  onApplied: (project: unknown) => void;
+  assetName: (assetId: string | null) => string | null;
+  onApply: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
 }) {
   const [rows, setRows] = useState<TakeRow[] | "unknown" | null>(null);
   const [proposal, setProposal] = useState<TakeProposal | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [reads, setReads] = useState(0);
+  const busy = reviewing || applying;
   const caller = useRef(client);
   caller.current = client;
   // A proposal answer for an earlier request or revision is dropped.
   const request = useRef(0);
+  const noticeShown = useRef<HTMLDivElement | null>(null);
+
+  const media = (side: TakeProposal["mappings"][number]["from"]) =>
+    side.title !== null
+      ? t("take.titleCard", { title: side.title })
+      : t("take.media", {
+          name: assetName(side.assetId) ?? t("take.unnamed"),
+          hash: shortHash(side.assetHash),
+          seconds: ticksToSeconds(side.sourceStartTicks),
+        });
 
   useEffect(() => {
     let current = true;
     (async () => {
-      const refs = (await caller.current.call("yamakan.document.list", {
+      const refs = await caller.current.call("yamakan.document.list", {
         projectId,
-      })) as { id?: unknown; kind?: unknown }[];
-      const stories = (Array.isArray(refs) ? refs : []).filter(
+      });
+      if (!Array.isArray(refs)) return "unknown" as const;
+      const stories = (refs as { id?: unknown; kind?: unknown }[]).filter(
         (r): r is { id: string; kind: string } =>
           typeof r?.id === "string" && r.kind === "story",
       );
@@ -85,7 +97,7 @@ export function TakeReview({
       const parsed = lists.map(takeRows);
       return parsed.every((r) => r !== null)
         ? (parsed as TakeRow[][]).flat()
-        : "unknown";
+        : ("unknown" as const);
     })()
       .then((next) => {
         if (current) setRows(next);
@@ -98,22 +110,32 @@ export function TakeReview({
     };
   }, [projectId, revision, reads]);
 
-  // The project moved on: what was reviewed no longer describes it.
+  // The project moved on: what was reviewed, or is being, no longer describes
+  // it. A notice about an applied take also ends here (an undo, say).
   useEffect(() => {
     request.current++;
-    setProposal((held) => {
-      if (held && !proposalIsCurrent(held, projectId, revision)) {
-        setNotice({ kind: "stale" });
-        return null;
-      }
-      return held;
-    });
+    setReviewing(false);
+    setNotice((held) =>
+      held?.kind === "applied" && held.revision !== revision ? null : held,
+    );
+    if (
+      reviewing ||
+      (proposal && !proposalIsCurrent(proposal, projectId, revision))
+    ) {
+      setProposal(null);
+      setNotice({ kind: "stale" });
+    }
+    // Only a change of the project or its revision.
   }, [projectId, revision]);
+
+  // The controls that held focus are gone: the result takes it.
+  useEffect(() => {
+    if (notice) noticeShown.current?.focus();
+  }, [notice]);
 
   const review = async (row: TakeRow) => {
     const ticket = ++request.current;
-    setBusy(true);
-    setError(null);
+    setReviewing(true);
     setNotice(null);
     setProposal(null);
     try {
@@ -125,37 +147,29 @@ export function TakeReview({
       })) as TakeProposal;
       if (ticket === request.current) setProposal(made);
     } catch (e) {
-      if (ticket === request.current)
-        setError(e instanceof Error ? e.message : String(e));
+      if (ticket === request.current) {
+        const { code, message } = e as { code?: unknown; message?: unknown };
+        setNotice(refusal(code, message));
+      }
     } finally {
-      if (ticket === request.current) setBusy(false);
+      if (ticket === request.current) setReviewing(false);
     }
   };
 
   const apply = async () => {
     if (!proposal) return;
     const sent = proposal;
-    setBusy(true);
-    setError(null);
+    setApplying(true);
     setNotice(null);
     setProposal(null);
-    try {
-      const project = (await client.call("yamakan.take.apply", {
-        projectId,
-        expectedRevision: sent.revision,
-        proposal: sent,
-      })) as { revision: number };
-      setNotice({ kind: "applied", revision: project.revision });
-      onApplied(project);
-    } catch (e) {
-      setNotice({
-        kind: "refused",
-        message: e instanceof Error ? e.message : String(e),
-      });
+    const outcome = await onApply(sent);
+    setApplying(false);
+    if (outcome.kind === "applied")
+      setNotice({ kind: "applied", revision: outcome.revision });
+    else if (outcome.kind === "refused") {
+      setNotice(refusal(outcome.code, outcome.message));
       setReads((n) => n + 1);
-    } finally {
-      setBusy(false);
-    }
+    } else setNotice({ kind: outcome.kind });
   };
 
   if (rows === null) return null;
@@ -176,6 +190,7 @@ export function TakeReview({
             >
               {t("take.row", {
                 shot: row.shotName,
+                name: assetName(row.assetId) ?? t("take.unnamed"),
                 hash: shortHash(row.assetHash),
               })}{" "}
               {row.current ? (
@@ -215,9 +230,9 @@ export function TakeReview({
               })}
             </dd>
             <dt>{t("take.from")}</dt>
-            <dd data-testid="take-proposal-from">{media(t, mapping.from)}</dd>
+            <dd data-testid="take-proposal-from">{media(mapping.from)}</dd>
             <dt>{t("take.to")}</dt>
-            <dd data-testid="take-proposal-to">{media(t, mapping.to)}</dd>
+            <dd data-testid="take-proposal-to">{media(mapping.to)}</dd>
             <dt>{t("take.revision")}</dt>
             <dd>{proposal.revision}</dd>
             <dt>{t("take.hash")}</dt>
@@ -246,25 +261,26 @@ export function TakeReview({
           </button>
         </div>
       ) : null}
-      {notice?.kind === "stale" ? (
-        <p role="status" data-testid="take-notice-stale">
-          {t("take.stale")}
-        </p>
-      ) : null}
-      {notice?.kind === "applied" ? (
-        <p role="status" data-testid="take-notice-applied">
-          {t("take.applied", { revision: notice.revision })}
-        </p>
-      ) : null}
-      {notice?.kind === "refused" ? (
-        <p role="alert" data-testid="take-notice-refused">
-          {t("take.refused", { message: notice.message })}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" data-testid="take-error">
-          {error}
-        </p>
+      {notice ? (
+        <div ref={noticeShown} tabIndex={-1}>
+          {notice.kind === "applied" ? (
+            <p role="status" data-testid="take-notice-applied">
+              {t("take.applied", { revision: notice.revision })}
+            </p>
+          ) : notice.kind === "stale" ? (
+            <p role="status" data-testid="take-notice-stale">
+              {t("take.stale")}
+            </p>
+          ) : notice.kind === "refused" ? (
+            <p role="alert" data-testid="take-notice-refused">
+              {t("take.refused", { message: notice.message })}
+            </p>
+          ) : (
+            <p role="alert" data-testid={`take-notice-${notice.kind}`}>
+              {t(`take.${notice.kind}Outcome`)}
+            </p>
+          )}
+        </div>
       ) : null}
     </section>
   );

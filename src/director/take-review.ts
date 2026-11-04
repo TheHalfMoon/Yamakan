@@ -31,11 +31,41 @@ export type TakeProposal = {
   proposalHash: string;
 };
 
+export type TakeApplyOutcome =
+  | { kind: "applied"; revision: number }
+  | { kind: "refused"; code: string; message: string }
+  // The answer was lost twice: the service may have applied it.
+  | { kind: "unknown" }
+  // The editor is busy with something else; nothing was sent.
+  | { kind: "busy" };
+
+// Refusals whose text is shown as the service wrote it, as the reference
+// preview does. Anything else (an internal error can carry host details) shows
+// only the general failure.
+const SHOWN_REASONS = new Set([
+  "VALIDATION",
+  "NOT_FOUND",
+  "LIMIT_EXCEEDED",
+  "CAPABILITY_UNAVAILABLE",
+  "RECOVERY_REQUIRED",
+]);
+const REASON_CHARS = 200;
+
+export function refusal(code: unknown, message: unknown) {
+  if (code === "REVISION_CONFLICT") return { kind: "stale" as const };
+  return typeof code === "string" &&
+    SHOWN_REASONS.has(code) &&
+    typeof message === "string"
+    ? { kind: "refused" as const, message: message.slice(0, REASON_CHARS) }
+    : { kind: "failed" as const };
+}
+
 export type TakeRow = {
   documentId: string;
   shotId: string;
   shotName: string;
   takeId: string;
+  assetId: string | null;
   assetHash: string | null;
   kind: string | null;
   current: boolean;
@@ -50,7 +80,7 @@ const FLICKS_PER_SECOND = 705_600_000;
 export const ticksToSeconds = (ticks: number) =>
   (ticks / FLICKS_PER_SECOND).toFixed(3);
 
-/** A media version, shortened for reading; the panel keeps the whole value. */
+/** A media version, shortened for reading. */
 export const shortHash = (hash: string | null) =>
   hash === null ? "—" : hash.slice(0, 12);
 
@@ -78,6 +108,7 @@ export function takeRows(value: unknown): TakeRow[] | null {
         shotId: shot.shotId,
         shotName: shot.name,
         takeId: take.id,
+        assetId: typeof take.assetId === "string" ? take.assetId : null,
         assetHash: typeof take.assetHash === "string" ? take.assetHash : null,
         kind: typeof take.kind === "string" ? take.kind : null,
         current: timeline?.currentTakeId === take.id,
