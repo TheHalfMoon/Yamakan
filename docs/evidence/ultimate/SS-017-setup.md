@@ -42,6 +42,20 @@ The full captures predate `6b20577`, which changed `scripts/`; **no capture exis
 - "Stale manifest" is covered here only as stale lockfile; nothing compares `environment.json` to `HEAD`.
 - An unavailable reviewer or backend is not something this qualifier models.
 
+## Later capture from a new clone
+
+**A full `RECORDED` capture now exists, at `ee910bcdb0751c0a0d8790fb77a219715bb4d9e0` (the merge of #168).** It ran in a clone made for this run, with `npm ci --ignore-scripts` and then `npm run qualify:ultimate-environment`, from a clean tree on AC power. All eight stages passed, with no blockers, and the tests gave 764 total, 761 passed, 3 skipped and 0 failed. Launch error 2 did not appear as a failure in this run. This is one run. It replaces the statement above that no run passed, not the card's requirement that the capture be at final code: **later code needs a new capture**.
+
+The tracked `docs/evidence/ultimate/environment.json` is this capture, reformatted by Prettier. The hashes below bind the unformatted local files.
+
+Still open on this card: launch error 2 stays tracked rather than explained, and the negatives listed above still need real results or an explicit decision.
+
+| Local file             | SHA-256                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `new-environment.json` | `c978f0d4fa551906a12dc8c82ed440a09b75e50964492a5875f1d4fb6f933168` |
+| `new-test.log`         | `e2e4c2c6a2c5df6a6e4bc8a9fd6c99123ce262bb68fe9fbfdd45974be7fd7c33` |
+| `new-e2e.log`          | `ab2078acf5f08d562cba4ab2af5ec244cd4b806bb364fa23a8ecebba48c70e62` |
+
 ## Impact tools
 
 - Graft, deterministic build only: 694 of 694 files parsed, into a task-owned folder. `graft ask` located `checkoutOwnership` in `scripts/ultimate-environment.mjs`. Structural evidence only.

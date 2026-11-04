@@ -81,3 +81,21 @@ Updated 2026-11-04. Main at this checkpoint: `e1aca99d62a02adaf49d8363aa80c65456
 - Timing results on this host need AC power and a quiet machine, recorded with each result.
 
 **Next eligible after that:** SS-017's capture, SS-009's remaining items, then SS-007, SS-005b, SS-012, SS-013, SS-014 and SS-015.
+
+## Checkpoint: fresh-clone capture and SS-007 slice A
+
+Updated 2026-11-04. Main at this checkpoint: `aaaf7993d58c81430fb8f506066840f923a45c62`; last main with completed post-merge CI: `ee910bcdb0751c0a0d8790fb77a219715bb4d9e0`, run 41874818034 success. Run for `aaaf799`: see the next checkpoint. Models and providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task               | State                   | Exact result                                                                                                                                                                                                                                                                                                          |
+| ------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SS-017 proxy paths | Merged; card still open | [PR #168](https://github.com/TheHalfMoon/Yamakan/pull/168), head `80f6b3554f231e785c9d6206e34b38825a2ec285`, merge `ee910bcdb0751c0a0d8790fb77a219715bb4d9e0`. [Receipt](../../evidence/ultimate/SS-017-proxy-path-length.md).                                                                                        |
+| SS-017 capture     | **RECORDED**, one run   | New clone at `ee910bc`, AC power: 8 of 8 stages, 764 tests, 761 passed, 3 skipped, 0 failed. Later code needs a new capture. [Receipt](../../evidence/ultimate/SS-017-setup.md).                                                                                                                                      |
+| SS-007 slice A     | Merged; card still open | [PR #169](https://github.com/TheHalfMoon/Yamakan/pull/169), head `25a21ea4caf8b52103b54f6bc9dcdece5a6cf4a5`, merge `aaaf7993d58c81430fb8f506066840f923a45c62`. Two independent reviews; each found real items, fixed or listed. Exact-head CI SUCCESS. [Receipt](../../evidence/ultimate/SS-007-progress-handoff.md). |
+
+**Findings changed since the last checkpoint:**
+
+- **Resolved:** the E2E timeout at `scripts/browser-e2e.mjs:873` was a proxy folder reaching 260 characters; #168 fixed it. Other workers keep lower path limits, by arithmetic, and extended-length paths in the process owner remain a follow-up.
+- **Launch error 2, one more data point:** a full suite on a helper accidentally left without the profile lock had 2 launch error 2 failures, and after rebuilding it had none. Consistent with the A/B result; the mechanism stays unproven. **A checkout's helper can be stale, because `npm test` does not rebuild it**, so a local suite result depends on that binary.
+- **New, tracked:** a save's retry stops replaying up to 15 minutes after staging. It is refused and applies nothing. Details in the SS-007 receipt.
+
+**Next:** SS-007 slices B ([PR #170](https://github.com/TheHalfMoon/Yamakan/pull/170), in review), C and D; then SS-017's negatives, SS-009's remaining items, SS-005b, SS-008, SS-012, SS-013, SS-014 and SS-015.
