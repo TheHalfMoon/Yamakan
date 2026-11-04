@@ -52,19 +52,21 @@ Both playback runs failed. The retained receipt, measured 2026-10-26 and added i
 
 Their negative control carries no information here, because the unthrottled runs were already below 24 fps. In the second run playback under an export beat sustained playback, and animation frames ran at about 17 to 22 Hz against 39 Hz before; both point to host contention. Edge also moved from 156.0.4314.42 to 156.0.4314.58 between the receipts.
 
-- The first overlapped the builder's typecheck, with host CPU at 91% before it started.
-- The second overlapped no heavy builder work by the builder's account, with host CPU at 75% before it started.
+- The first overlapped the builder's typecheck, with host CPU at 91% before it started, from a console reading with no bound receipt.
+- The second overlapped no heavy builder work by the builder's account, with host CPU at 75% before it started, also a console reading.
 - Measured right after, in a console check with no bound receipt: the laptop was **on battery** at 81%, the CPU at 1468 MHz and 70% of nominal performance, 1.2 of 15.7 GiB memory free, with `rustc` and `python` processes that were not the builder's using CPU. Earlier in the program the same host reported AC power.
 
-The frozen policy names a hardware profile but not these conditions. No other work was stopped to obtain a number, since it was not the builder's. **Required to close this card:** rerun `npm run qualify:playback` on AC power with the host quiet. If it still falls below 24 fps, treat it as a regression and investigate from `a463247`, the commit that added the passing receipt; its recorded `aba1c6f` is not in the repository, and the browser version changed too.
+The frozen policy names a hardware profile but not these conditions. No other work was stopped to obtain a number, since it was not the builder's. **Required to close this card, and not sufficient alone:** rerun `npm run qualify:playback` on AC power with the host quiet, and exercise or explicitly waive each card item under "Not run". If it still falls below 24 fps, treat it as a regression and investigate from `a463247`, the commit that added the passing receipt; its recorded `aba1c6f` is not in the repository, and the browser version changed too.
 
 ## Not run
 
 - Missing-proxy, unsupported-codec and unsupported-browser fallback through the interactive preview: `src/proxies.ts` was read, and it plays the original until a proxy is ready, but no new test exercised this.
 - A frame answer that arrives after a seek, in the same project, through `src/reference.tsx`: the journey waits for each frame.
 - The object URL release on unmount.
+- A segment that plays successfully: no script clicks Play and sees it play.
+- Varying renderer identity in the cache key, which the card asks for.
 - Frame rate as a cache identity input.
-- Cold and warm preview ran with host CPU at 77% before start, so those figures are not a best case.
+- Cold and warm preview ran with host CPU at 77% before start by console reading, so those figures are not a best case.
 
 Found by reading and not fixed, because it is not demonstrated: `evictPreviews` could delete a file just returned as a cache hit if a listing goes stale once the cache is over its bound. A request would then fail once.
 

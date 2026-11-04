@@ -150,7 +150,7 @@ test("when the last waiter leaves a running render stops, and asking again start
   assert.equal((await frame(w, 40)).cached, true);
 });
 
-test("an already cancelled request neither renders nor stays counted", async () => {
+test("an already cancelled request is refused and not left counted", async () => {
   const w = await workspace();
   const gone = new AbortController();
   gone.abort();
