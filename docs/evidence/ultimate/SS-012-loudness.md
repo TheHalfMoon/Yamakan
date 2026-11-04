@@ -31,6 +31,10 @@ The source sound is untouched, and no DSP or limit changed.
 
 `tests/loudness-export.test.ts` uses real exports: a measured export lands within 1 LU and reports it; a repeat gives the same plan, report and bytes; an export that did not ask says `off`; silence and a −85 dB tone are refused and export fine unnormalized; a muted track is `unmeasured`; delayed sound keeps its start within 50 ms; the report survives a reopen; solo silences the other track; and a fade rises in the decoded output. Five of the first six tests were seen to fail before the change. `tests/w18-audio-flow.test.ts` covers the parser's refusals, and `tests/jobs.test.ts` pins the new receipt field.
 
+## Qualifiers at this change
+
+On AC power, with another review running on the machine. `qualify:w18-loudnorm` passed: −9.75 to −16.05 LUFS against −16. `qualify:av-sync` passed, with its negative control detected. Its timing receipt was not committed, because the machine was not quiet. Local logs: `s12-w18.log`, `02d215ef7b6677ba9193b7ddda5ebca01c2d4b96a792c8a721171c3c03cc7b83`; `s12-av.log`, `03900dd34cf0e08961539f87336f89a8f1f3b9dadc1717b0f754e38feac11be2`; `ss012-probe.jsonl`, `a19b8f3d0e5525cf04dd9d7827e07b10ccae2483070b578d48094a2c74d04b6f`.
+
 ## Not done
 
 - **No interface sets `normalizeLoudness`:** the browser's export button does not offer it, so this reaches SDK, CLI and MCP callers only, and the browser shows no loudness state.
