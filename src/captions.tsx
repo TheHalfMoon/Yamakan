@@ -44,8 +44,9 @@ const TICKS_PER_MS = 705_600;
 const LANGUAGES = ["ar", "en"] as const;
 // Seconds with milliseconds, as typed and shown.
 const seconds = (ticks: number) => (ticks / TICKS_PER_MS / 1000).toFixed(3);
+// An emptied field is not zero: it keeps the time it had.
 const ticksOf = (text: string) => {
-  const s = Number(text);
+  const s = text.trim() === "" ? NaN : Number(text);
   return Number.isFinite(s) && s >= 0
     ? Math.round(s * 1000) * TICKS_PER_MS
     : null;
@@ -71,6 +72,15 @@ function CaptionsPanel(props: Props) {
   const at = useRef(revision);
   at.current = revision;
   const loads = useRef(0);
+  // A control is disabled while its command runs, or goes when it is done,
+  // which drops keyboard focus to the page. It returns to that control, or to
+  // the panel's heading if the control can no longer take it.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const refocus = useRef<HTMLElement | null>(null);
+  const holdFocus = () => {
+    const active = document.activeElement;
+    refocus.current = active instanceof HTMLElement ? active : null;
+  };
 
   const call = (operation: string, args: Record<string, unknown>) =>
     live.current.client.call(operation, args);
@@ -112,11 +122,24 @@ function CaptionsPanel(props: Props) {
   }, [track?.contentHash]);
   const cues = draft?.cues ?? track?.cues ?? [];
   const drafting = draft !== null;
+  useEffect(() => {
+    const control = refocus.current;
+    if (busy || !control) return;
+    refocus.current = null;
+    // Focus that has moved elsewhere in the meantime is left alone.
+    if (document.activeElement !== document.body) return;
+    const usable =
+      control.isConnected &&
+      !control.hidden &&
+      !(control as HTMLButtonElement).disabled;
+    (usable ? control : heading.current)?.focus();
+  }, [busy, drafting]);
 
   // Runs one command; the editor's draft then moves to the new revision
   // and the tracks are read again.
   const commit = async (operation: string, args: Record<string, unknown>) => {
     if (busy) return;
+    holdFocus();
     setBusy(true);
     setError(null);
     const from = at.current;
@@ -213,7 +236,9 @@ function CaptionsPanel(props: Props) {
 
   return (
     <section data-testid="captions-panel" aria-label={t("captions.title")}>
-      <h3>{t("captions.title")}</h3>
+      <h3 ref={heading} tabIndex={-1}>
+        {t("captions.title")}
+      </h3>
       <p>
         <label>
           {t("captions.language")}{" "}
@@ -385,7 +410,10 @@ function CaptionsPanel(props: Props) {
             <button
               type="button"
               disabled={busy}
-              onClick={() => setDraft(null)}
+              onClick={() => {
+                holdFocus();
+                setDraft(null);
+              }}
               hidden={!drafting}
             >
               {t("captions.discard")}
