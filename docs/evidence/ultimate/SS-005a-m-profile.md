@@ -2,7 +2,7 @@
 
 Checked 2026-11-04 (Asia/Riyadh). Builder Claude Opus. Measured on main `9cad22b5b49af5ff56c22e9598c340cf00313981`, renderer version 6. Measurement only: no production code, limit or fixture changed.
 
-**Decision:** one bounded hypothesis is selected for SS-005b: culling layers proven hidden. The planned redundant-decode/scale hypothesis is **REJECTED** for this fixture. **M remains export-unqualified.** One gap against the card remains: process-tree CPU was not collected; replay CPU comes from one direct FFmpeg process, and worker peak memory from the process owner.
+**Decision:** one bounded hypothesis is selected for SS-005b: culling layers proven hidden. The planned redundant-decode/scale hypothesis is **REJECTED** for this fixture. **M remains export-unqualified.** One gap against the card remains: process-tree CPU was not collected; replay CPU comes from one direct FFmpeg process, whether it started children was not checked, and worker peak memory comes from the process owner. The builder ruled this sufficient for attribution and recorded that ruling in the continuation ledger, where the founder can overrule it.
 
 ## Pins
 
