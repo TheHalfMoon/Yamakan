@@ -46,6 +46,8 @@ Clean runs are encouraging and do not prove the suite is stable.
 
 ## Still open: launch error 2
 
+See `SS-017-worker-profile.md` for later work on this error.
+
 `Worker launch failed: CreateProcess failed (Windows error 2)` is **not explained or fixed**. It occurred 29 times in 6000 stress launches on the earlier versions, 28 of them in one round, and 8 times in 2400 on this one. The access list changes did not reduce it. It never appeared in single-owner stress or with owners run one at a time, though those samples are smaller. Ruled out: a dangling AppContainer SID (the pointer is `&'static`), and, weakly, a freshly rebuilt binary (0 in 1800 launches right after a rebuild, though the failures are bursty, with 28 of 29 in one round). A diagnostic that reports whether the executable and working folder exist at the failure was built, but that session produced no failures, so it reported nothing. No retry was added, because that would hide the cause. Its test deliberately ignores this code, so this test staying green says nothing about error 2.
 
 Native unit tests, `cargo test --release`, 2 of 2: a lock held on another thread delays updates of its own object and no other; an unchanged grant does not write, and a real revoke does. With the lock name changed to one constant, the first test **failed** as it should; an earlier same-thread version of it could not fail, because a mutex is recursive on its holding thread. CI does not run these native tests. After `50a76c7` only test code, comments and documents changed, and main was merged with no native changes; the full suite and stress were not rerun.
