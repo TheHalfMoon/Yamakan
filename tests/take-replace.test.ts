@@ -22,6 +22,12 @@ import type { TakeProposal } from "../core/takes.ts";
 import { fromEditView } from "../core/canonical.ts";
 import { applyBatch } from "../core/timeline/operations.ts";
 import { IDENTITY_TRANSFORM } from "../core/effects/registry.ts";
+import {
+  advanceStage,
+  approveStage,
+  loadRun,
+  startDirectorRun,
+} from "../core/director/runtime.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -769,4 +775,120 @@ test("a replacement keeps the clip's effects, animation and sound gain and fades
     fadeInTicks: 5 * FRAME,
     fadeOutTicks: 0,
   });
+});
+
+test("a proposal hash is never a Director stage output, and reviewing approves nothing", async () => {
+  const c = await workspace();
+  const { documentId, t, shots } = await assembled(c);
+  const proposal = await propose(c, documentId, shots[0].id, t.b1);
+  const started = await startDirectorRun(c.store, {
+    projectId: c.projectId,
+    pipelineName: "framework-smoke",
+  });
+  const before = await loadRun(c.store, started.id);
+  assert.match(
+    await message(
+      advanceStage(c.store, {
+        runId: started.id,
+        stage: "research",
+        status: "awaiting_human",
+        outputHash: proposal.proposalHash,
+      }),
+    ),
+    /not a stored object/,
+  );
+  assert.deepEqual(await loadRun(c.store, started.id), before);
+  const waiting = await advanceStage(c.store, {
+    runId: started.id,
+    stage: "research",
+    status: "awaiting_human",
+    // A real stored output, so that only the hash named below is wrong.
+    outputHash: c.imported.still.hash,
+  });
+  const refused = await message(
+    approveStage(c.store, {
+      runId: started.id,
+      stage: "research",
+      outputHash: proposal.proposalHash,
+      ttlMs: 60_000,
+    }),
+  );
+  assert.match(refused, /does not match/);
+  assert.deepEqual(await loadRun(c.store, started.id), waiting);
+  // A proposal is refused for any other project.
+  const other = await c.store.create("Other");
+  assert.equal(
+    await code(
+      execute(c.browser, "yamakan.take.apply", {
+        projectId: other.id,
+        expectedRevision: proposal.revision,
+        proposal,
+      }),
+    ),
+    "REVISION_CONFLICT",
+  );
+  // Applying a reviewed proposal leaves the run exactly as it was.
+  await apply(c, proposal);
+  assert.deepEqual(await loadRun(c.store, started.id), waiting);
+});
+
+test("another writer's later work is never undone with a take", async () => {
+  const c = await workspace();
+  const { documentId, t, shots } = await assembled(c);
+  const agent = {
+    ...c.browser,
+    principal: {
+      id: "agent:take-reviewer" as const,
+      scopes: new Set<Scope>(["project:read", "project:write"]),
+    },
+  };
+  const before = await head(c);
+  const proposal = await propose(c, documentId, shots[0].id, t.b1);
+  const clipId = proposal.mappings[0].clipId;
+  const shownBefore = before.clips.find((x) => x.id === clipId)!;
+  const applied = (
+    await execute(agent, "yamakan.take.apply", {
+      projectId: c.projectId,
+      expectedRevision: proposal.revision,
+      proposal,
+    })
+  ).result as Project;
+  const shownAfter = applied.clips.find((x) => x.id === clipId)!;
+  assert.notEqual(shownAfter.assetId, shownBefore.assetId);
+  const audio = applied.tracks.find((x) => x.kind === "audio")!;
+  const other = await run<Project>(c, "yamakan.project.applyBatch", {
+    expectedRevision: applied.revision,
+    operations: [{ type: "track.update", trackId: audio.id, name: "Other" }],
+  });
+  // The agent cannot undo through the other writer's edit: nothing changes.
+  assert.match(
+    await message(
+      execute(agent, "yamakan.project.undo", {
+        projectId: c.projectId,
+        expectedRevision: other.revision,
+      }),
+    ),
+    /made by another client/,
+  );
+  const held = await head(c);
+  assert.equal(held.revision, other.revision);
+  assert.equal(held.tracks.find((x) => x.id === audio.id)!.name, "Other");
+  assert.equal(
+    held.clips.find((x) => x.id === clipId)!.assetId,
+    shownAfter.assetId,
+  );
+  // Once that writer has undone its own edit, the agent can undo the take.
+  const back = await run<Project>(c, "yamakan.project.undo", {
+    expectedRevision: other.revision,
+  });
+  const undone = (
+    await execute(agent, "yamakan.project.undo", {
+      projectId: c.projectId,
+      expectedRevision: back.revision,
+    })
+  ).result as Project;
+  assert.equal(
+    undone.clips.find((x) => x.id === clipId)!.assetId,
+    shownBefore.assetId,
+  );
 });
