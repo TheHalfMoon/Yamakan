@@ -42,7 +42,7 @@ Qualification policy v1 thresholds, unchanged. The tracked receipts were not ove
 
 ## Playback
 
-The third run, at `2ea4f74f3043080392c2392221119bc1ac195d6d` on AC power with host CPU at 23% before it started, **passed the gate**, and its negative control measured 0.3 fps. The retained receipt, measured 2026-10-26 and added in `a463247`, was 27.3 fps sustained. This is one run close to the threshold, with drift higher than the retained receipt, so it clears this gate and does not show the margin is unchanged. The two earlier runs failed:
+The third run, at `2ea4f74f3043080392c2392221119bc1ac195d6d` on AC power (Windows battery status 2) with host CPU at 23% before it started, **passed the gate**, and its negative control measured 0.3 fps. The retained receipt, measured 2026-10-26 and added in `a463247`, was 27.3 fps sustained. This is one run close to the threshold, with drift higher than the retained receipt, so it clears this gate and does not show the margin is unchanged. The two earlier runs failed:
 
 | Run                 | Sustained | Seek | Under export | Mean drift | p95 drift | Max drift |
 | ------------------- | --------- | ---- | ------------ | ---------- | --------- | --------- |
@@ -51,13 +51,13 @@ The third run, at `2ea4f74f3043080392c2392221119bc1ac195d6d` on AC power with ho
 | Third, AC and quiet | 25        | 23.4 | 24           | 122.1 ms   | 153.8 ms  | 178.7 ms  |
 | Prior receipt       | 27.3      | 25   | 27           | 94.2 ms    | 124 ms    | 144.7 ms  |
 
-The first two runs' negative control carried no information, because they were already below 24 fps. The seek figure is reported and not gated. In the second run playback under an export beat sustained playback, and animation frames ran at about 17 to 22 Hz against 39 Hz before; both point to host contention. Edge also moved from 156.0.4314.42 to 156.0.4314.58 between the receipts.
+The first two runs' negative control carried no information, because they were already below 24 fps. The seek figure, 23.4 fps in the third run, is below 24 but reported and not gated. The third run's sustained 25 fps average hides a worst one-second window of 17 fps. In the second run playback under an export beat sustained playback, and animation frames ran at about 17 to 22 Hz against 39 Hz before; both point to host contention. Edge also moved from 156.0.4314.42 to 156.0.4314.58 between the receipts.
 
 - The first overlapped the builder's typecheck, with host CPU at 91% before it started, from a console reading with no bound receipt.
 - The second overlapped no heavy builder work by the builder's account, with host CPU at 75% before it started, also a console reading.
 - Measured right after, in a console check with no bound receipt: the laptop was **on battery** at 81%, the CPU at 1468 MHz and 70% of nominal performance, 1.2 of 15.7 GiB memory free, with `rustc` and `python` processes that were not the builder's using CPU. Earlier in the program the same host reported AC power.
 
-The frozen policy names a hardware profile but not power state or load. No other work was stopped to obtain a number, since it was not the builder's. This matters for every timing result on this host, including SS-005a's, where power state during the slow runs was not recorded: the same build here measured about a third of its AC speed on battery under load. **Measure on AC power with the host quiet, and record both.**
+The frozen policy names a hardware profile but not power state or load. No other work was stopped to obtain a number, since it was not the builder's. This matters for every timing result on this host, including SS-005a's, where power state during the slow runs was not recorded: playback here measured 8.1 fps on battery under load against 25 fps on AC power and quiet, at different commits and from single runs, so battery and load are not separated. **Measure on AC power with the host quiet, and record both.**
 
 **Required to close this card:** exercise or explicitly waive each card item under "Not run".
 
