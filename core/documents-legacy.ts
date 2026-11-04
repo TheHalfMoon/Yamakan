@@ -271,8 +271,11 @@ export async function migrateCinemaSidecar(
       "This legacy scene was already migrated into another project.",
     );
   const mine = recorded.at(-1);
+  // A retry of the request that migrated this scene goes on to its commit,
+  // which returns the original result or refuses other input.
+  const retry = receipt && store.hasCommittedRequest(receipt, input.projectId);
   // (Projects are never deleted, so a recorded project always loads.)
-  if (mine) {
+  if (mine && !retry) {
     const project = await store.load(input.projectId);
     return {
       migrated: false as const,
@@ -300,7 +303,7 @@ export async function migrateCinemaSidecar(
   const sceneId = SIDECAR.exec(name)![1]!;
   const bytes = await readSidecar(dir, name);
   const { validated, sourceSha256 } = examine(sceneId, bytes);
-  if (sourceSha256 !== input.sourceSha256)
+  if (!retry && sourceSha256 !== input.sourceSha256)
     throw new CommandError(
       "REVISION_CONFLICT",
       "The legacy scene file changed since it was inventoried; inventory it again.",
@@ -308,6 +311,7 @@ export async function migrateCinemaSidecar(
   // A project document of this id that did not come from this file is never
   // overwritten (and a migration is never invented for it).
   if (
+    !retry &&
     store
       .listDocuments(input.projectId)
       .some((d) => d.id.toLowerCase() === sceneId.toLowerCase())

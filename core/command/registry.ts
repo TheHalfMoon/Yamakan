@@ -18,6 +18,7 @@ import { BATCH_LIMITS, ExportVariant, type JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
+  DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   creativeDocumentsEnabled,
   DOCUMENTS_OFF,
@@ -932,7 +933,7 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
+      const current = captionsToEdit(store, receipt, a);
       const doc = CaptionDocumentSchema.parse({
         ...current,
         ...(a.name !== undefined ? { name: a.name } : {}),
@@ -969,7 +970,7 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
+      const current = captionsToEdit(store, receipt, a);
       const doc = splitCue(current, a.cueId, a.atTicks, a.newCueId, a.texts);
       return commitCaptions(store, principal.id, receipt, a, doc);
     },
@@ -2336,6 +2337,25 @@ function readCaptions(
     );
   // A stored track that no longer reads is damage, not a client error.
   return storedCaptions(ref.contentHash, () => bytes);
+}
+
+// The track an edit starts from. A retry of a committed request starts from
+// the track it first edited, not the head, so it rebuilds the same content.
+function captionsToEdit(
+  store: ProjectStore,
+  receipt: RequestReceipt | undefined,
+  a: { projectId: string; documentId: string; expectedContentHash: string },
+): CaptionDocument {
+  if (!receipt || !store.hasCommittedRequest(receipt, a.projectId))
+    return readCaptions(store, a.projectId, a.documentId);
+  return storedCaptions(a.expectedContentHash, () =>
+    store.documentBytes({
+      id: a.documentId,
+      kind: "captions",
+      schemaVersion: DOCUMENT_SCHEMA_VERSIONS.captions,
+      contentHash: a.expectedContentHash,
+    }),
+  );
 }
 
 // Commits a caption track as a new revision (compare-and-swap on the

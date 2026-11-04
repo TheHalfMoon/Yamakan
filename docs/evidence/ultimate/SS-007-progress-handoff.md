@@ -79,10 +79,18 @@ Nothing blocking in the refusal: it runs after the scope check, and by a scan of
 
 Found and left open, in a follow-up slice:
 
-- **Three commands name a receipt and do not always replay.** `captions.split` runs its split before the replay lookup, so an immediate retry reports that a cue is split inside its time. `scene.migrate` returns from its already-migrated branch before using the receipt, so a retry returns `migrated: false` and another source under the same id is not refused. `captions.save` gets `IDEMPOTENCY_MISMATCH` on a retry after another edit. None applied twice. The test's text check cannot see these, and MCP's "returns the original result" is not true of them.
+- **Three commands named a receipt and did not always replay;** closed in slice B2 below.
 - **`proxy.build` and `proxy.cancel` change state but are marked `mutation: false`,** so they ignore an id and advertise `readOnlyHint: true`. Their retries converge.
 - **The catalog does not say which mutations refuse,** so a client learns by being refused, and every MCP tool still lists `requestId`.
 
 **A behaviour change:** a client that sent an id on one of these now gets `VALIDATION` and must drop it. None in this repository does; outside clients were not surveyed. Rollback: revert this slice; no data changes.
 
 Full suite, on AC power: 766 tests, 763 passed, 3 skipped, 0 failed, log `b-test2.log`, `9c1d057ac2dd8b78343b376eb3b770b48c81f78f65100d1f459c382e400346b6`. The run before it had 2 failures, both launch error 2. That checkout's helper held no worker profile lock string, and probably was a pre-lock binary left from the A/B comparison; its hash was not kept. Rebuilding from source gave the green run. One failing run and one passing run are consistent with the A/B result and prove nothing further. Both logs predate the final commit of this slice, which then changed tests, docs and the items below. Log `b-test.log`, `4e47e73c4e23ebba81ab94b279aedd8f10f0e30c04d5872923cd536284ba2dba`.
+
+## Slice B2: three commands that did not always replay
+
+Each built its content from the head before the replay check, so a retry after a lost reply saw different content. `captions.split` reported that a cue is split inside its time; `captions.save` after a later edit got `IDEMPOTENCY_MISMATCH`; `scene.migrate` said `migrated: false`, and accepted another source under the same id. None applied twice.
+
+A retry of a committed request now rebuilds from what it first saw: the captions commands read the track by `expectedContentHash` rather than the head, and `scene.migrate` continues to its commit, where the digest check returns the original or refuses. Other input under the same id gets `IDEMPOTENCY_MISMATCH`. A request not yet committed takes the old path unchanged. Tests are in `tests/captions.test.ts` and `tests/cinema-migration.test.ts`. The old behaviour was reproduced by the slice B review, not by a red run of these tests.
+
+**Limits:** the read by hash does not check that the track belongs to this project, as document content is addressed by hash. Only the commit's result returns, never the bytes, so a wrong hash ends in a refusal. If a migrated sidecar file later changes, the retry gets `IDEMPOTENCY_MISMATCH`, and if it is deleted, `NOT_FOUND`, not the original result. Other receipt commands were checked by reading only, not each by a retry.
