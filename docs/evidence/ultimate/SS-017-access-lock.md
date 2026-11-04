@@ -31,7 +31,7 @@ The name is per session, so owners of another session do not share it; objects s
 
 Seven of the ten earlier rounds used a build with diagnostic code at the launch error. Pre-fix, 1500 launches at concurrency 1, 8 and 24 from a single owner: 0 failures.
 
-`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error, and requires most probes to succeed. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on the next two, including this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
+`tests/process-owner-shared-access.test.ts` runs 72 owners, 12 at a time, on one file. It refuses any failure except the tracked launch error and a probe stopped at its wall limit, which reports the same message as a lost entry, and requires most probes to succeed without either. With the pre-fix binary, selected through `YAMAKAN_PROCD`, it **failed**; with the lock it **passed**: 3 of 3 each on the first version, and 2 of 2 each on the next two, including this one. CI does not run it: the Ubuntu job skips it, and the Windows job runs only bundle and typography tests, so this evidence is local.
 
 Full `npm test` on Windows:
 
@@ -45,6 +45,8 @@ Full `npm test` on Windows:
 Clean runs are encouraging and do not prove the suite is stable.
 
 ## Still open: launch error 2
+
+See `SS-017-worker-profile.md` for later work on this error.
 
 `Worker launch failed: CreateProcess failed (Windows error 2)` is **not explained or fixed**. It occurred 29 times in 6000 stress launches on the earlier versions, 28 of them in one round, and 8 times in 2400 on this one. The access list changes did not reduce it. It never appeared in single-owner stress or with owners run one at a time, though those samples are smaller. Ruled out: a dangling AppContainer SID (the pointer is `&'static`), and, weakly, a freshly rebuilt binary (0 in 1800 launches right after a rebuild, though the failures are bursty, with 28 of 29 in one round). A diagnostic that reports whether the executable and working folder exist at the failure was built, but that session produced no failures, so it reported nothing. No retry was added, because that would hide the cause. Its test deliberately ignores this code, so this test staying green says nothing about error 2.
 
