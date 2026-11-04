@@ -32,6 +32,10 @@ By arithmetic from the 37.5 s window and the passing run's times, 10 windows cov
 
 Two analysis errors are retained. The first reading of these runs used `docs/evidence/ultimate/editor-scale.json` and showed three identical failures; the script leaves that file alone on a partial run, so those were older figures. The results above come from each run's own output. The first version of the profile tool captured a 1280x720 window because it skipped the project size step; those timings were discarded, and the tool now refuses a window not at M's size.
 
+## Later baseline on AC power
+
+Three more unchanged attempts at main `596a20cd169bf6094be2c8bc6e5bef3334d0c8fc`, later on 2026-11-04, on AC power with no builder work running and host CPU at 13%, 27% and 2% before each: **all three failed** `LIMIT_EXCEEDED`, at 479.9, 479.2 and 479.2 s, with short windows at about 28 to 67 s. The one earlier pass, 357.6 s with windows near 22 s, has not been repeated. So battery power does not explain the failures, and the fast state behind that pass is still not understood. M completes within its limit in 1 of 6 attempts on this host. Receipts: `ac/attempts.txt` `676e65e34b2a28128e359cd6d5e87cbc2bb76bdf5882350b1fa4cba698a50c30`, `ac/attempt-1.log` `bd0cfa5d2a659de024085506e5473c71bbf18c7d696dbf3261a6fe360e0d7634`, `ac/attempt-2.log` `1cb33940aa4bf5a330ea1e4f03b81d31fc5f0b519bf48a6316507cb1dfa12821`, `ac/attempt-3.log` `e4f230a778d0474051aaa50057e834e80236673a89303c524eebb89f30b40cd8`.
+
 ## Attribution of one window
 
 `scripts/profile-m-export.mjs` captures the exact command production would run for window 6 of 13, a short, typical window: 37.5 s of output, 28 picture chains, about 14 of them shown at once, 1 input. It replays variants outside the process owner, three times each. Results from the version of the tool with these six variants:
