@@ -213,6 +213,16 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
     });
     assert.equal(untraced.result.isError, true);
     assert.match(untraced.result._meta["yamakan/requestId"], /^[0-9a-f-]{36}$/);
+    // A mutation with no receipt refuses an id rather than ignoring it.
+    const unreplayable = await request("tools/call", {
+      name: "yamakan_job_cancel",
+      arguments: { jobId: project.id, requestId: "mcp-cancel.1" },
+    });
+    assert.equal(unreplayable.result.isError, true);
+    assert.match(
+      unreplayable.result.content[0].text,
+      /cannot replay a request ID/,
+    );
     // The same id with other input is refused, not replayed.
     const mismatch = await request("tools/call", {
       name: "yamakan_project_create",

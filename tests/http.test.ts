@@ -424,6 +424,14 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     const option = cli("yamakan.project.create", input, "--verbose");
     assert.notEqual(option.status, 0);
     assert.match(option.stderr, /cannot start with '-'/);
+    // A mutation with no receipt refuses an id rather than ignoring it.
+    const unreplayable = cli(
+      "yamakan.job.cancel",
+      JSON.stringify({ jobId: made.id }),
+      "cli-cancel.1",
+    );
+    assert.equal(unreplayable.status, 1);
+    assert.match(unreplayable.stderr, /cannot replay a request ID/);
     const refusedByCli = cli(
       "yamakan.project.create",
       JSON.stringify({ name: "From the CLI", shell: "whoami" }),

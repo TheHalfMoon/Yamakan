@@ -47,8 +47,8 @@ try {
       ? await client.catalog()
       : name === "stage-document"
         ? await stageDocument()
-        : // The same request id after a lost response replays the original, on
-          // commands that keep a receipt.
+        : // The same request id after a lost response replays the original.
+          // A command that keeps no receipt refuses an id.
           await client.call(
             name as Operation,
             JSON.parse(args),

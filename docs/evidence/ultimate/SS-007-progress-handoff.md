@@ -49,3 +49,27 @@ Found and left open:
 - **`_meta` carries ids that do not all replay:** the trace id on a refusal with no supplied id, in the CLI too, and an id on a read. Mutations that ignore their id are slice B, which is also when the MCP field's promise of replay becomes true.
 
 Rollback: revert this slice; durable receipts are untouched.
+
+## Slice B: a mutation with no receipt refuses a request id
+
+The inventory's heuristic scan said 14 of 53. Reading each `run` from the imported registry gives **15**. All 15 now refuse a client's request id with `VALIDATION` before any effect, in `execute`, so every transport gets the same answer. The same call with no id is unchanged. The browser sends no id on any of them, and no test in the repository did.
+
+Refusal rather than a receipt: their retries differ, so one mechanism would not be honest for all of them, and a stored result for `yamakan.agent.create` would hold a live credential.
+
+| Mutation                                                   | What a retry does, read from source, not run                                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `agent.create`                                             | **Mints another live token**                                                                           |
+| `studio.open`                                              | New document id each time; persists nothing                                                            |
+| `export.video`, `export.batch`                             | Own `idempotencyKey`, but only at the same project revision. The refusal says so                       |
+| `job.cancel`                                               | Converges; a terminal job returns as it is                                                             |
+| `export.batchCancel`                                       | Converges                                                                                              |
+| `job.retry`, `job.discard`, `asset.repair`, `agent.revoke` | One effect; the second call is refused, so a caller who lost the reply sees an error                   |
+| `consent.revalidate`                                       | Adds another revalidation row                                                                          |
+| `scene.save`, `studio.commit`                              | Not traced past the command: `studio.commit` persists nothing; `scene.save` persists when Cinema is on |
+| `workspace.collectGarbage`, `director.importLegacy`        | Not traced                                                                                             |
+
+`tests/request-id-refusal.test.ts` fails if any mutation neither reads a receipt nor refuses, and pins the list of 15. It was seen to fail before the change. Its check reads the `run` function's source text for `receipt`: a command that names a receipt and ignores it would pass. It runs all 15 with valid input, confirms a refused `agent.create` leaves no token and that the same call with no id creates one, and confirms a receipt command still replays. Only `agent.create` is checked for no effect; the other 14 share the same check before `run`. `job.cancel` is also refused through the CLI and through MCP, in `tests/http.test.ts` and `tests/mcp.test.ts`.
+
+**A behaviour change:** a client that sent an id on one of these now gets `VALIDATION` and must drop it. None in this repository does; outside clients were not surveyed. Rollback: revert this slice; no data changes.
+
+Full suite, on AC power: 766 tests, 763 passed, 3 skipped, 0 failed, log `b-test2.log`, `9c1d057ac2dd8b78343b376eb3b770b48c81f78f65100d1f459c382e400346b6`. The run before it had 2 failures, both launch error 2. That checkout's helper turned out to lack the worker profile lock, because the builder had left a pre-lock binary there during the A/B comparison. Rebuilding it from source gave the green run. One failing run and one passing run are consistent with the A/B result and prove nothing further. Log `b-test.log`, `4e47e73c4e23ebba81ab94b279aedd8f10f0e30c04d5872923cd536284ba2dba`.
