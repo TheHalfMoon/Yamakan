@@ -16,13 +16,13 @@ The folder is now `{uuid}.partial`, 65 characters shorter. Startup cleanup recog
 
 Direct build of the real E2E video at a chosen workspace root length:
 
-| Root length | Before     | After            |
-| ----------- | ---------- | ---------------- |
-| 75          | ready      | ready            |
-| 80          | **failed** | ready            |
-| 85 to 100   | **failed** | not measured     |
-| 110         | **failed** | ready            |
-| 140 to 160  | **failed** | **still failed** |
+| Root length | Before       | After            |
+| ----------- | ------------ | ---------------- |
+| 75          | ready        | ready            |
+| 80          | **failed**   | ready            |
+| 85 to 100   | **failed**   | not measured     |
+| 110         | **failed**   | ready            |
+| 140 to 160  | not measured | **still failed** |
 
 `tests/proxy-timing.test.ts` adds a build at a 110-character root and cleanup of the new form: both failed before the change. After it, all 13 tests in that file pass.
 
@@ -31,5 +31,7 @@ Direct build of the real E2E video at a chosen workspace root length:
 - **The limit moved and did not go away.** Roots somewhere between 110 and 140 characters still fail, with the same generic message. Other worker folders have not been measured at these lengths.
 - The owner's restore failure stays hidden behind that message, and the interface does not retry.
 - The root cause in the restore path, and extended-length paths as a fix, were not explored.
+
+A full environment capture at `d70cbb1a3c7f21a85639b8b38f69c3b2b124f27a`, on AC power from a clean tree in the `Yamakan-opus-clean` clone, recorded `RECORDED`, `pass: true`: all eight stages passed, with 764 tests, 761 passed, 3 skipped and 0 failed, and browser E2E. This is one run, in a clone already used for earlier work. Receipt: `capture2-environment.json`, `dd833334a29566c1ffdc80367a3c34414d1277413293db100ab33b6469718b6b`.
 
 Rollback: revert this change. Long-path builds fail again; no data is affected. Raw logs are local: `ss017c-red.log`, `ss017c-green.log`.
