@@ -4,7 +4,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DEFAULT_LOUDNORM_TARGET } from "../core/audio/loudnorm.ts";
@@ -102,7 +102,12 @@ const F = framesToTicks(1, { num: 30, den: 1 });
 async function timeline(
   w: Workspace,
   source: string,
-  options: { startFrames?: number; muted?: boolean } = {},
+  options: {
+    startFrames?: number;
+    muted?: boolean;
+    frames?: number;
+    audioFrames?: number;
+  } = {},
 ) {
   const project = (await w.call("yamakan.project.create", {
     name: "Sound",
@@ -146,8 +151,13 @@ async function timeline(
     projectId: project.id,
     expectedRevision: head.revision,
     operations: [
-      add(video, still.id, 0, 120),
-      add(audio, tone.id, options.startFrames ?? 0, 60),
+      add(video, still.id, 0, options.frames ?? 120),
+      add(
+        audio,
+        tone.id,
+        options.startFrames ?? 0,
+        options.audioFrames ?? options.frames ?? 60,
+      ),
       ...(options.muted
         ? [{ type: "track.update", trackId: audio, muted: true }]
         : []),
@@ -211,13 +221,18 @@ test("an export that did not ask says off, and its sound is left alone", async (
   assert.ok(integrated(await artifact(w, projectId, job)) < -40);
 });
 
-test("sound too quiet to measure is refused in plain words", async () => {
+test("sound too quiet or too short to measure is refused in plain words", async () => {
   const w = await workspace();
-  for (const source of ["anullsrc=r=48000:cl=mono:d=2", tone(-85)]) {
-    const projectId = await timeline(w, source);
+  // The last is loud, but shorter than one measuring block.
+  for (const [source, audioFrames] of [
+    ["anullsrc=r=48000:cl=mono:d=2", 60],
+    [tone(-85), 60],
+    ["sine=frequency=440:duration=0.2", 6],
+  ] as const) {
+    const projectId = await timeline(w, source, { audioFrames });
     const job = await exported(w, projectId);
     assert.equal(job.state, "FAILED");
-    assert.match(job.error!, /too quiet to measure/);
+    assert.match(job.error!, /too quiet or too short to measure/);
     assert.deepEqual(job.loudness, { state: "unmeasured" });
     // The same sound exports when normalizing is not asked for.
     assert.equal((await exported(w, projectId, false)).state, "COMPLETED");
@@ -356,4 +371,68 @@ test("solo and a fade reach the normalized sound", async () => {
   assert.ok(
     (await w.store.load(projectId)).clips.some((c) => c.id === clip.id),
   );
+});
+
+test("a cancel during the measure pass leaves no export and says unmeasured", async () => {
+  const w = await workspace();
+  // Long enough that the measure pass can be caught running.
+  const projectId = await timeline(w, "sine=frequency=440:duration=600", {
+    frames: 18000,
+  });
+  const queued = await w.queue.submit(projectId, crypto.randomUUID(), {
+    normalizeLoudness: true,
+  });
+  const dir = await w.store.file(projectId, "exports", queued.id);
+  let measuring = false;
+  for (let i = 0; i < 4000 && !measuring; i++) {
+    const names = await readdir(dir, { recursive: true }).catch(() => []);
+    measuring =
+      names.some((n) => n.endsWith("graph-measure.txt")) &&
+      !names.some((n) => n.endsWith("graph.txt"));
+    if (!measuring) await new Promise((r) => setTimeout(r, 5));
+  }
+  assert.ok(measuring, "the measure pass was caught");
+  assert.equal(w.queue.status(queued.id).loudness?.state, "pending");
+  w.queue.cancel(queued.id);
+  for (let i = 0; i < 240; i++) {
+    if (w.queue.status(queued.id).state === "CANCELLED") break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  const job = w.queue.status(queued.id);
+  assert.equal(job.state, "CANCELLED");
+  assert.equal(job.artifact, null);
+  assert.deepEqual(job.loudness, { state: "unmeasured" });
+});
+
+test("a report the job cannot read is unknown, never assumed", async () => {
+  const w = await workspace();
+  const projectId = await timeline(w, tone(-30));
+  const job = await exported(w, projectId);
+  assert.equal(job.loudness?.state, "measured");
+  const receipt = (value: string | null) =>
+    w.store.transaction((db) =>
+      db
+        .prepare("UPDATE attempts SET receipt = ? WHERE job_id = ?")
+        .run(value, job.id),
+    );
+  // A job finished before this was recorded, and odd stored values.
+  for (const stored of [
+    JSON.stringify({ planHash: job.planHash }),
+    null,
+    "not json",
+    JSON.stringify({ loudness: "abc" }),
+    JSON.stringify({ loudness: { state: "off" } }),
+  ]) {
+    receipt(stored);
+    assert.deepEqual(w.queue.status(job.id).loudness, { state: "unknown" });
+  }
+  // A job set aside for reconciliation has no measured result to report.
+  w.store.transaction((db) =>
+    db
+      .prepare(
+        "UPDATE jobs SET state = 'reconciliationRequired' WHERE job_id = ?",
+      )
+      .run(job.id),
+  );
+  assert.deepEqual(w.queue.status(job.id).loudness, { state: "unmeasured" });
 });

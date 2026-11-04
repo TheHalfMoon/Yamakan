@@ -383,6 +383,11 @@ for (const [label, frameRate] of [
     );
     // Both measured loudness once, the same way.
     assert.ok(single.plan.loudnorm?.measured && joined.plan.loudnorm?.measured);
+    assert.deepEqual(joined.receipt.loudness, single.receipt.loudness);
+    assert.equal(
+      joined.receipt.loudness?.inputI,
+      joined.plan.loudnorm.measured.input_i,
+    );
     assert.equal(joined.plan.planHash, single.plan.planHash);
     assert.equal(packets(joined.output, "v:0"), 120);
     assert.equal(packets(single.output, "v:0"), 120);

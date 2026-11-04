@@ -265,11 +265,12 @@ export class JobSupervisor {
       const receipt = done?.receipt
         ? (safeJson(done.receipt) as { loudness?: unknown })
         : null;
-      const measured = receipt?.loudness as
-        { inputI: number; targetI: number } | null | undefined;
-      if (measured === undefined) return { state: "unknown" };
+      const measured = receipt?.loudness;
       if (measured === null) return { state: "unmeasured" };
-      return { state: "measured", ...measured };
+      const { inputI, targetI } = (measured ?? {}) as Record<string, unknown>;
+      return typeof inputI === "number" && typeof targetI === "number"
+        ? { state: "measured", inputI, targetI }
+        : { state: "unknown" };
     }
     return ["failed", "cancelled", "reconciliationRequired"].includes(row.state)
       ? { state: "unmeasured" }
