@@ -317,12 +317,13 @@ test("negated os/cpu lists exclude only the named platform", () => {
 });
 
 test("a checkout whose writable paths are not its own is BLOCKED, never pass", () => {
-  for (const [ownership, code] of [
+  const cases: [object, string][] = [
     [{ nodeModulesLinked: true }, "SHARED_NODE_MODULES"],
     [{ nativeTargetLinked: true }, "SHARED_NATIVE_TARGET"],
     [{ targetRedirected: true }, "NATIVE_TARGET_REDIRECTED"],
     [{ helperOverrides: ["YAMAKAN_PROCD"] }, "NATIVE_HELPER_OVERRIDDEN"],
-  ]) {
+  ];
+  for (const [ownership, code] of cases) {
     const result = evaluateEnvironment({
       ...ready,
       ownership,
