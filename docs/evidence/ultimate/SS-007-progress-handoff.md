@@ -24,7 +24,7 @@ Read from source at the base, not run. Durable replay is solid: receipts key on 
 
 ## Slice A: request ids and errors reach callers
 
-Old fields and result text are unchanged. Three things do change: the CLI's usage text, its third positional, and the stage route's refusal, which now names the caller's id rather than a generated one. The browser checks that id only for null, so it is unaffected.
+Old fields and result text are unchanged. Four things do change: the CLI's usage text, its third positional, the stage route's refusal, which now names the caller's id rather than a generated one, and the message for a save id of 122 to 128 characters, which is now the general `Invalid command envelope.` with the same code. The browser checks the stage refusal's id only for null, so it is unaffected.
 
 - **CLI:** `npm run cli -- <operation> <json> [requestId]` passes an id for replay, and errors now print `retryable` and `requestId`.
 - **MCP:** a supplied id, and the one `yamakan_document_save` generates, returns in `_meta["yamakan/requestId"]` on success and on a tool refusal. A refused save returns its own id rather than the `.stage` or `.commit` id the service echoes, because retrying under those replays nothing. Other refused calls with no id return the service's trace id, which is for reporting and cannot replay. **This does not make a generated id safe after a lost response:** if the connection fails, or the reply to the MCP client is lost, no id arrives. Lost-response safety needs the caller to supply the id.
@@ -32,7 +32,7 @@ Old fields and result text are unchanged. Three things do change: the CLI's usag
 
 Tests, in `tests/mcp.test.ts`, `tests/http.test.ts`, `tests/document-clients.test.ts` and `tests/ag-docs-group.test.ts`, with `tests/parity.test.ts` unchanged and passing. They cover replay through MCP and the CLI, the same id with other input through MCP, refusals carrying the id, a refused save returning its root id, and a malformed id not being echoed. A review reproduced the suffixed-id defect against a stubbed service before this was fixed. `tests/ag-docs-group.test.ts` asserts the generated id on a save that succeeds.
 
-The CLI's third positional argument was ignored before and is now the request id; no invocation in the repository passes one. **Not done in this slice:** the SDK still drops the id on success, and JSON-RPC errors for unknown tools remain outside the code set, to keep old clients working.
+The CLI's third positional argument was ignored before and is now the request id; no invocation outside these tests passes one. **Not done in this slice:** the SDK still drops the id on success, and JSON-RPC errors for unknown tools remain outside the code set, to keep old clients working.
 
 ### Independent review at `d6fdfb5`
 
@@ -45,7 +45,7 @@ Nothing blocking and no security defect; the reviewer applied 11 mutations to th
 
 Found and left open:
 
-- **A save's retry stops replaying after 15 minutes.** A consumed upload is forgotten after `uploadTtlMs`, so a retry stages anew, gets a new upload id, and is refused as `IDEMPOTENCY_MISMATCH` instead of returning the original result. Reproduced by the reviewer by expiring the row. It is refused rather than applied, though the reviewer checked only the error code and not the head revision. This predates the slice, which does make the id more visible. Slice C owns it.
+- **A save's retry stops replaying up to 15 minutes after staging.** A consumed upload is forgotten after `uploadTtlMs`, counted from the stage rather than the commit, so a retry stages anew, gets a new upload id, and is refused as `IDEMPOTENCY_MISMATCH` instead of returning the original result. A second review reproduced this by expiring the row and saw no new revision. The bytes of that refused retry stay sealed for up to 15 minutes and hold one of 2 upload slots per principal, as any save refused at commit does; with both held, a save or late retry gets `LIMIT_EXCEEDED`. This predates the slice, which does make the id more visible. Real 15-minute waits were not run. Slice C owns it.
 - **`_meta` carries ids that do not all replay:** the trace id on a refusal with no supplied id, in the CLI too, and an id on a read. Mutations that ignore their id are slice B, which is also when the MCP field's promise of replay becomes true.
 
 Rollback: revert this slice; durable receipts are untouched.

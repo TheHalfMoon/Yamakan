@@ -87,8 +87,12 @@ test("a refused first tool list keeps the caller's own request id", async () => 
     // Never echoed: a malformed id, or one too long for a save to use.
     assert.equal(await metaFor(create, "<img src=x>"), "service-trace");
     assert.equal(
-      await metaFor("yamakan_document_save", "s".repeat(125)),
+      await metaFor("yamakan_document_save", "s".repeat(122)),
       "service-trace",
+    );
+    assert.equal(
+      await metaFor("yamakan_document_save", "s".repeat(121)),
+      "s".repeat(121),
     );
     assert.equal(await metaFor(create, "s".repeat(125)), "s".repeat(125));
   } finally {

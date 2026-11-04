@@ -432,6 +432,14 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
     );
     assert.equal(unreplayable.status, 1);
     assert.match(unreplayable.stderr, /cannot replay a request ID/);
+    for (const args of [
+      ["yamakan.project.create", input, "-v"],
+      ["stage-document", "p", "studio", "1", "unread-file", "-v"],
+    ]) {
+      const short = cli(...args);
+      assert.notEqual(short.status, 0);
+      assert.match(short.stderr, /cannot start with '-'/);
+    }
     const refusedByCli = cli(
       "yamakan.project.create",
       JSON.stringify({ name: "From the CLI", shell: "whoami" }),
