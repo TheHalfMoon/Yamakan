@@ -1499,6 +1499,18 @@ export class ProjectStore {
    * writers of one document cannot both succeed. The command surface
    * refuses while AG-DOCS is turned off (creativeDocumentsEnabled).
    */
+  // Whether this principal's request already committed in this project. A
+  // command whose input depends on the head uses this to rebuild the same
+  // content for a retry, so the commit below can replay or refuse it.
+  hasCommittedRequest(receipt: RequestReceipt, projectId: string) {
+    return Boolean(
+      this.#database
+        .prepare(
+          "SELECT 1 FROM command_receipts WHERE principal_id = ? AND project_id = ? AND request_id = ?",
+        )
+        .get(receipt.principalId, projectId, receipt.requestId),
+    );
+  }
   async commitDocument(
     input: {
       projectId: string;

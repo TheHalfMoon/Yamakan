@@ -1,6 +1,7 @@
 // SS-007: one read view of a project's committed progress, derived from the
 // tables that already hold it. It adds no store and reads only this project.
 // Job errors, artifacts and payloads stay out: they can name host paths.
+import { PROGRESS_LIMITS } from "../sdk/progress.ts";
 import type {
   ProgressAttempt,
   ProgressJob,
@@ -10,12 +11,6 @@ import type {
 import { CommandError } from "./command/errors.ts";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import type { ProjectStore } from "./store.ts";
-
-export const PROGRESS_LIMITS = {
-  runs: 5,
-  attemptsPerRun: 20,
-  jobs: 20,
-} as const;
 
 export function readProgress(
   store: ProjectStore,

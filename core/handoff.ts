@@ -9,6 +9,7 @@ import {
   loadManifestFromAssets,
   loadRun,
 } from "./director/runtime.ts";
+import { CommandError } from "./command/errors.ts";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import type { ProgressView } from "../sdk/progress.ts";
 import { readProgress } from "./progress.ts";
@@ -68,6 +69,41 @@ export type Handoff = z.infer<typeof HandoffSchema>;
 
 const BRIEF_ARTIFACT = "research_brief";
 
+// A run imported from a legacy file can name a pipeline this build does not
+// know. Its next action is then unknown, and the rest of the handoff still reads.
+async function nextOfRun(
+  store: ProjectStore,
+  run: { runId: string; pipelineName: string },
+) {
+  try {
+    const [loaded, manifest, next] = await Promise.all([
+      loadRun(store, run.runId),
+      loadManifestFromAssets(run.pipelineName),
+      directorNext(store, run.runId),
+    ]);
+    const briefStage = manifest.stages.find((s) =>
+      s.produces?.includes(BRIEF_ARTIFACT),
+    );
+    const brief = loaded.receipts.find((r) => r.stage === briefStage?.name);
+    return {
+      briefHash: brief?.outputHash ?? null,
+      nextAction: {
+        kind: next.kind as string,
+        stage: "stage" in next ? next.stage : null,
+        reasons: ("reasons" in next ? next.reasons : [])
+          .slice(0, HANDOFF_LIMITS.reasons)
+          .map((r) => r.slice(0, HANDOFF_LIMITS.reasonLength)),
+      },
+    };
+  } catch (e) {
+    if (!(e instanceof CommandError && e.code === "NOT_FOUND")) throw e;
+    return {
+      briefHash: null,
+      nextAction: { kind: "unknown", stage: null, reasons: [] },
+    };
+  }
+}
+
 export async function readHandoff(
   store: ProjectStore,
   projectId: string,
@@ -89,20 +125,12 @@ export async function readHandoff(
   const newest = progress.runs[0];
   let run: Handoff["run"] = null;
   if (newest) {
-    const [loaded, manifest, next] = await Promise.all([
-      loadRun(store, newest.runId),
-      loadManifestFromAssets(newest.pipelineName),
-      directorNext(store, newest.runId),
-    ]);
-    const briefStage = manifest.stages.find((s) =>
-      s.produces?.includes(BRIEF_ARTIFACT),
-    );
-    const brief = loaded.receipts.find((r) => r.stage === briefStage?.name);
     const last = newest.attempts.at(-1);
+    const stages = await nextOfRun(store, newest);
     run = {
       runId: newest.runId,
       pipelineName: newest.pipelineName,
-      briefHash: brief?.outputHash ?? null,
+      briefHash: stages.briefHash,
       latestAttempt: last
         ? {
             seq: last.seq,
@@ -111,13 +139,7 @@ export async function readHandoff(
             outputHash: last.outputHash,
           }
         : null,
-      nextAction: {
-        kind: next.kind,
-        stage: "stage" in next ? next.stage : null,
-        reasons: ("reasons" in next ? next.reasons : [])
-          .slice(0, HANDOFF_LIMITS.reasons)
-          .map((r) => r.slice(0, HANDOFF_LIMITS.reasonLength)),
-      },
+      nextAction: stages.nextAction,
     };
   }
   const body = {

@@ -20,6 +20,7 @@ import { checkHandoff, HandoffSchema, readHandoff } from "../handoff.ts";
 import { readProgress } from "../progress.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
+  DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   creativeDocumentsEnabled,
   DOCUMENTS_OFF,
@@ -226,7 +227,7 @@ type Definition<S extends z.ZodType, R> = {
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
 
 const NO_REPLAY =
-  "This operation cannot replay a request ID. Send it without one, and read the current state before retrying.";
+  "This operation cannot replay a request ID. Send it without one.";
 const RETRY_WITH_KEY =
   "This operation cannot replay a request ID. Send it without one: at the same project revision, the same idempotencyKey returns the same export.";
 
@@ -934,7 +935,7 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
+      const current = captionsToEdit(store, receipt, a);
       const doc = CaptionDocumentSchema.parse({
         ...current,
         ...(a.name !== undefined ? { name: a.name } : {}),
@@ -971,7 +972,7 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
+      const current = captionsToEdit(store, receipt, a);
       const doc = splitCue(current, a.cueId, a.atTicks, a.newCueId, a.texts);
       return commitCaptions(store, principal.id, receipt, a, doc);
     },
@@ -2379,6 +2380,25 @@ function readCaptions(
     );
   // A stored track that no longer reads is damage, not a client error.
   return storedCaptions(ref.contentHash, () => bytes);
+}
+
+// The track an edit starts from. A retry of a committed request starts from
+// the track it first edited, not the head, so it rebuilds the same content.
+function captionsToEdit(
+  store: ProjectStore,
+  receipt: RequestReceipt | undefined,
+  a: { projectId: string; documentId: string; expectedContentHash: string },
+): CaptionDocument {
+  if (!receipt || !store.hasCommittedRequest(receipt, a.projectId))
+    return readCaptions(store, a.projectId, a.documentId);
+  return storedCaptions(a.expectedContentHash, () =>
+    store.documentBytes({
+      id: a.documentId,
+      kind: "captions",
+      schemaVersion: DOCUMENT_SCHEMA_VERSIONS.captions,
+      contentHash: a.expectedContentHash,
+    }),
+  );
 }
 
 // Commits a caption track as a new revision (compare-and-swap on the

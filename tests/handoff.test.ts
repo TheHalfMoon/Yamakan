@@ -195,3 +195,88 @@ test("presenting a handoff grants nothing, and reads need the reader's own scope
     code: "SCOPE_DENIED",
   });
 });
+
+test("documents are named by kind, within a limit, and a change shows as moved", async (t) => {
+  const { store, read, check } = await workspace(t);
+  const project = await store.create("A");
+  const ref = (kind: string, n: number) => ({
+    id: `${kind}-${n}`,
+    kind,
+    schemaVersion: 1,
+    contentHash: String(n % 10).repeat(64),
+  });
+  const planted = [
+    ref("story", 1),
+    ref("referencePack", 2),
+    ref("captions", 3),
+  ];
+  const real = store.listDocuments.bind(store);
+  store.listDocuments = (() => planted) as typeof store.listDocuments;
+  t.after(() => {
+    store.listDocuments = real;
+  });
+  const handoff = await read(project.id);
+  assert.deepEqual(
+    handoff.stories.map((d) => d.documentId),
+    ["story-1"],
+  );
+  assert.deepEqual(
+    handoff.references.map((d) => d.documentId),
+    ["referencePack-2"],
+  );
+  assert.equal(handoff.documentsTruncated, false);
+
+  planted[0] = { ...planted[0]!, contentHash: "9".repeat(64) };
+  assert.deepEqual((await check(handoff)).moved, ["stories"]);
+
+  for (let n = 0; n <= HANDOFF_LIMITS.documents; n++)
+    planted.push(ref("story", n + 10));
+  const full = await read(project.id);
+  assert.equal(full.stories.length, HANDOFF_LIMITS.documents);
+  assert.equal(full.documentsTruncated, true);
+  assert.equal((await check(full)).current, true);
+});
+
+test("a run this build cannot read does not take the handoff down", async (t) => {
+  const { store, read, check } = await workspace(t);
+  const project = await store.create("A");
+  await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: pipeline,
+  });
+  const before = await read(project.id);
+  const runId = randomUUID();
+  store.transaction((db) =>
+    db
+      .prepare(
+        "INSERT INTO director_runs(id, project_id, pipeline_name, version, created_at, created_by) VALUES (?, ?, 'gone', 1, 1, 'browser-ui')",
+      )
+      .run(runId, project.id),
+  );
+  const handoff = await read(project.id);
+  assert.equal(handoff.run!.runId, runId);
+  assert.equal(handoff.run!.nextAction.kind, "unknown");
+  assert.equal(handoff.run!.briefHash, null);
+  // And an older handoff can still be checked, and shows the run moved.
+  assert.deepEqual((await check(before)).moved, ["run"]);
+  assert.equal((await check(handoff)).current, true);
+});
+
+test("nested fields of a handoff are strict too", async (t) => {
+  const { store, read, check } = await workspace(t);
+  const project = await store.create("A");
+  await startDirectorRun(store, {
+    projectId: project.id,
+    pipelineName: pipeline,
+  });
+  const handoff = await read(project.id);
+  await assert.rejects(
+    check({ ...handoff, run: { ...handoff.run, token: "secret" } }),
+  );
+  await assert.rejects(
+    check({
+      ...handoff,
+      stories: [{ documentId: "d", contentHash: hash, token: "secret" }],
+    }),
+  );
+});

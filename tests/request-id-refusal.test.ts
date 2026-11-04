@@ -109,6 +109,37 @@ test("a refused request id has no effect, and the call works without one", async
     await execute(ctx, "yamakan.agent.create", args);
     assert.equal(tokens(), 1);
 
+    // The scope check comes first, so a refusal tells a caller nothing extra.
+    const reader = {
+      id: `agent:${randomUUID()}` as const,
+      scopes: new Set(["project:read"]),
+    } as unknown as typeof ctx.principal;
+    await assert.rejects(
+      execute(
+        { ...ctx, principal: reader, requestId: "scope.1" },
+        "yamakan.job.cancel",
+        { jobId: id },
+      ),
+      { code: "SCOPE_DENIED" },
+    );
+
+    // The advice to retry with no id holds for a job being cancelled.
+    const project = await store.create("P");
+    const jobId = randomUUID();
+    store.transaction((db) =>
+      db
+        .prepare(
+          "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', ?, 0, ?, '{}', 'running')",
+        )
+        .run(jobId, project.id, jobId),
+    );
+    const cancel = () => execute(ctx, "yamakan.job.cancel", { jobId });
+    await cancel();
+    assert.equal(
+      ((await cancel()).result as { detail: string }).detail,
+      "cancelRequested",
+    );
+
     // Commands that keep a receipt still replay.
     const made = await execute(
       { ...ctx, requestId: "create.1" },

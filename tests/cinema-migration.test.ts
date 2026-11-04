@@ -525,3 +525,47 @@ test("the commands: inventory reads; migration is refused while AG-DOCS is turne
   await migrate();
   assert.equal(store.listDocuments(project.id).length, 1);
 });
+
+test("a retried migration returns its original result, and other input is refused", async () => {
+  const { store, sidecar } = await workspace();
+  const file = await sidecar(`${A}.json`, JSON.stringify(scene(A)));
+  const project = await store.create("Cinema");
+  const ctx = {
+    store,
+    queue: {} as CommandContext["queue"],
+    principal: {
+      id: "local-client",
+      scopes: new Set(["project:write", "project:read"]),
+    },
+    requestId: "migrate.1",
+  } satisfies CommandContext;
+  const input = {
+    projectId: project.id,
+    expectedRevision: project.revision,
+    sceneId: A,
+    sourceSha256: sha(await readFile(file)),
+  };
+  const first = await execute(ctx, "yamakan.scene.migrate", input);
+  assert.equal((first.result as { migrated: boolean }).migrated, true);
+  const head = await store.load(project.id);
+  // Before this, the retry said migrated: false.
+  assert.deepEqual(
+    (await execute(ctx, "yamakan.scene.migrate", input)).result,
+    first.result,
+  );
+  assert.equal((await store.load(project.id)).revision, head.revision);
+  await refused(
+    execute(ctx, "yamakan.scene.migrate", {
+      ...input,
+      sourceSha256: "0".repeat(64),
+    }),
+    "IDEMPOTENCY_MISMATCH",
+  );
+  // A new request for a migrated scene still gets the plain answer.
+  const fresh = await execute(
+    { ...ctx, requestId: "migrate.2" },
+    "yamakan.scene.migrate",
+    { ...input, expectedRevision: head.revision },
+  );
+  assert.equal((fresh.result as { migrated: boolean }).migrated, false);
+});

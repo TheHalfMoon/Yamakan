@@ -550,7 +550,9 @@ export class JobSupervisor {
     const row = this.store.transaction((db) => {
       const row = this.#row(db, jobId);
       if (!row) throw new Error("Job not found.");
-      if (TERMINAL.includes(row.state)) return row;
+      // Already being cancelled: a retry asks for what is already under way.
+      if (TERMINAL.includes(row.state) || row.state === "cancelRequested")
+        return row;
       if (row.state === "queued") {
         assertAndApplyJobState(db, jobId, "cancelled", () => {
           db.prepare(

@@ -8,10 +8,10 @@ import path from "node:path";
 import test from "node:test";
 import { execute, Scopes } from "../core/command/registry.ts";
 import { JobSupervisor } from "../core/jobs.ts";
-import { PROGRESS_LIMITS } from "../core/progress.ts";
 import { ProjectStore } from "../core/store.ts";
 import {
   mergeProgress,
+  PROGRESS_LIMITS,
   type ProgressJob,
   type ProgressView,
 } from "../sdk/progress.ts";
@@ -266,6 +266,77 @@ const snapshot = (
   jobs: [job(state)],
   jobsTruncated: false,
   cursor: `${revision}.${seqs.join()}.${state}`,
+});
+
+test("attempts and job order are read from committed rows", async (t) => {
+  const { store, read } = await workspace(t);
+  const a = await store.create("A");
+  const older = addJob(store, a.id, "failed");
+  const newer = addJob(store, a.id, "running");
+  store.transaction((db) =>
+    db
+      .prepare(
+        "INSERT INTO attempts(job_id, attempt_no, generation, state) VALUES (?, 1, 1, 'failed'), (?, 2, 1, 'running')",
+      )
+      .run(newer, newer),
+  );
+  const view = await read(a.id);
+  assert.deepEqual(
+    view.jobs.map((j) => [j.jobId, j.attempt]),
+    [
+      [newer, 2],
+      [older, 0],
+    ],
+  );
+  // A new Director attempt moves the cursor with no revision change.
+  const run = addRun(store, a.id, 1);
+  const withRun = await read(a.id);
+  store.transaction((db) =>
+    db
+      .prepare(
+        "INSERT INTO director_attempts(run_id, seq, stage, kind, status, epoch, principal_id, recorded_at) VALUES (?, 2, 's', 'advance', 'succeeded', 1, 'browser-ui', 1)",
+      )
+      .run(run),
+  );
+  const moved = await read(a.id, everything, withRun.cursor);
+  assert.equal("unchanged" in moved, false);
+  assert.equal(moved.revision, withRun.revision);
+});
+
+test("a late read at the same revision loses nothing and stays bounded", () => {
+  const first = snapshot(2, [1], "running");
+  const newRun = {
+    ...first.runs[0]!,
+    runId: "newer",
+    attempts: [attempt(1)],
+  };
+  const newJob = { ...job("queued"), jobId: "k" };
+  const fuller = {
+    ...first,
+    runs: [newRun, ...first.runs],
+    jobs: [newJob, ...first.jobs],
+  };
+  const merged = mergeProgress(fuller, first)!;
+  assert.deepEqual(merged.runs.map((r) => r.runId).sort(), ["newer", "r"]);
+  assert.deepEqual(merged.jobs.map((j) => j.jobId).sort(), ["j", "k"]);
+  // Reads with new attempts each time never grow past the limit.
+  let held: ProgressView | null = null;
+  for (let i = 1; i <= 10; i++) {
+    const seqs = Array.from(
+      { length: PROGRESS_LIMITS.attemptsPerRun },
+      (_, n) => i * 100 + n,
+    );
+    held = mergeProgress(held, snapshot(2, seqs, "running"));
+  }
+  const run = held!.runs[0]!;
+  assert.equal(run.attempts.length, PROGRESS_LIMITS.attemptsPerRun);
+  assert.equal(run.attempts.at(-1)!.seq, 1019);
+  // A gap between windows is marked.
+  const gap = mergeProgress(
+    snapshot(2, [1, 2], "running"),
+    snapshot(2, [50, 51], "running"),
+  )!;
+  assert.equal(gap.runs[0]!.truncated, true);
 });
 
 test("duplicate and out-of-order reads combine by committed identity", () => {
