@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 // prettier-ignore
 // @ts-expect-error Plain .mjs modules without declarations.
-import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, lockfileDrift, redactLocalPaths, satisfiesNodeEngine, scriptOutcome } from "../scripts/ultimate-environment.mjs";
+import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, checkoutOwnership, evaluateEnvironment, helpersBuiltElsewhere, lockfileDrift, redactLocalPaths, satisfiesNodeEngine, scriptOutcome } from "../scripts/ultimate-environment.mjs";
 
 const present = { present: true, sha256: "a".repeat(64), version: "8.1.1" };
 
@@ -311,4 +314,100 @@ test("negated os/cpu lists exclude only the named platform", () => {
   assert.deepEqual(result.drift, [
     { package: "node_modules/not-mac", pinned: "1.0.0", installed: null },
   ]);
+});
+
+test("a checkout whose writable paths are not its own is BLOCKED, never pass", () => {
+  const cases: [object, string][] = [
+    [{ nodeModulesLinked: true }, "SHARED_NODE_MODULES"],
+    [{ nativeTargetLinked: true }, "SHARED_NATIVE_TARGET"],
+    [{ targetRedirected: true }, "NATIVE_TARGET_REDIRECTED"],
+    [{ helperOverrides: ["YAMAKAN_PROCD"] }, "NATIVE_HELPER_OVERRIDDEN"],
+  ];
+  for (const [ownership, code] of cases) {
+    const result = evaluateEnvironment({
+      ...ready,
+      ownership,
+      scripts: REQUIRED_SCRIPTS.map((name: string) => ({
+        name,
+        exitCode: 0,
+      })),
+    });
+    assert.equal(result.status, "BLOCKED", code);
+    assert.equal(result.pass, false);
+    assert.ok(result.blockers.some((b: { code: string }) => b.code === code));
+  }
+});
+
+test("checkout ownership reads real links and the environment", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-ownership-"));
+  const elsewhere = await mkdtemp(path.join(tmpdir(), "yamakan-shared-"));
+  try {
+    assert.deepEqual(checkoutOwnership(root, {}), {
+      nodeModulesLinked: false,
+      nativeTargetLinked: false,
+      targetRedirected: false,
+      helperOverrides: [],
+    });
+    await symlink(elsewhere, path.join(root, "node_modules"), "junction");
+    await mkdir(path.join(root, "native", "procd"), { recursive: true });
+    await symlink(
+      elsewhere,
+      path.join(root, "native", "procd", "target"),
+      "junction",
+    );
+    const linked = checkoutOwnership(root, {
+      CARGO_TARGET_DIR: elsewhere,
+      YAMAKAN_ACL: "acl.exe",
+    });
+    assert.equal(linked.nodeModulesLinked, true);
+    assert.equal(linked.nativeTargetLinked, true);
+    assert.equal(linked.targetRedirected, true);
+    assert.deepEqual(linked.helperOverrides, ["YAMAKAN_ACL"]);
+    // A link further up the path is still a link.
+    const parent = await mkdtemp(path.join(tmpdir(), "yamakan-parent-"));
+    try {
+      await mkdir(path.join(parent, "native"));
+      await symlink(
+        elsewhere,
+        path.join(parent, "native", "procd"),
+        "junction",
+      );
+      assert.equal(checkoutOwnership(parent, {}).nativeTargetLinked, true);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+    // The default target, named explicitly, is not a redirection.
+    assert.equal(
+      checkoutOwnership(root, {
+        CARGO_TARGET_DIR: path.join(root, "native", "procd", "target"),
+      }).targetRedirected,
+      false,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(elsewhere, { recursive: true, force: true });
+  }
+});
+
+test("helpers cargo wrote elsewhere are reported from its own output", () => {
+  const helper = path.join("native", "procd", "target", "release", "a.exe");
+  const repo = path.resolve("repo");
+  const line = (executable: string | null) =>
+    JSON.stringify({ reason: "compiler-artifact", executable });
+  assert.deepEqual(
+    helpersBuiltElsewhere(line(path.join(repo, helper)), repo, [helper]),
+    [],
+  );
+  assert.deepEqual(
+    helpersBuiltElsewhere(
+      [line(path.resolve("elsewhere", "a.exe")), "not json", line(null)].join(
+        "\n",
+      ),
+      repo,
+      [helper],
+    ),
+    [helper],
+  );
+  // No report at all proves nothing was built here.
+  assert.deepEqual(helpersBuiltElsewhere("", repo, [helper]), [helper]);
 });
