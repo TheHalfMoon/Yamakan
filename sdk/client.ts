@@ -153,6 +153,8 @@ export class YamakanClient {
    * Saves a creative document as a new revision: stages its JSON, then
    * commits the sealed upload. One `requestId` makes the pair safe to
    * retry: the stage and the commit each replay their original result.
+   * A consumed upload is forgotten after `uploadTtlMs`; a retry after that
+   * stages anew and is refused as IDEMPOTENCY_MISMATCH, not applied twice.
    */
   async saveDocument(input: {
     projectId: string;

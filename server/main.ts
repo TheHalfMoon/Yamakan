@@ -17,7 +17,7 @@ import {
   creativeDocumentsEnabled,
 } from "../core/documents.ts";
 import type { Principal } from "../core/command/registry.ts";
-import { parseEnvelope } from "../core/command/envelope.ts";
+import { parseEnvelope, RequestId } from "../core/command/envelope.ts";
 import {
   CommandError,
   httpStatus,
@@ -404,6 +404,10 @@ const server = createServer(async (req, res) => {
       if (req.method === "POST" && stage) {
         // A refused upload closes its connection instead of draining the body.
         res.setHeader("Connection", "close");
+        // A refusal names the caller's request, as on /call. A malformed id is
+        // refused by the route, and that refusal keeps the generated one.
+        const named = req.headers["x-request-id"];
+        if (RequestId.safeParse(named).success) requestId = named as string;
         return json(200, await stageDocument(store, principal, stage[1], req));
       }
       const bitmaps = /^\/api\/v1\/projects\/([^/]+)\/studio\/bitmaps$/.exec(

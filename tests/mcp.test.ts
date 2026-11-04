@@ -1,7 +1,8 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { fork, spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,81 @@ const bases: string[] = [];
 after(() =>
   Promise.all(bases.map((b) => rm(b, { recursive: true, force: true }))),
 );
+
+test("a refused first tool list keeps the caller's own request id", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-mcp-"));
+  bases.push(root);
+  await writeFile(path.join(root, "token"), "refused");
+  const refusing = createHttpServer((_req, res) => {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        apiVersion: 1,
+        requestId: "service-trace",
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required.",
+          retryable: false,
+        },
+      }),
+    );
+  });
+  refusing.listen(0, "127.0.0.1");
+  await once(refusing, "listening");
+  const { port } = refusing.address() as AddressInfo;
+  const mcp = spawn(
+    process.execPath,
+    [fileURLToPath(new URL("../mcp/main.ts", import.meta.url))],
+    {
+      env: {
+        ...process.env,
+        YAMAKAN_WORKSPACE: root,
+        YAMAKAN_URL: `http://127.0.0.1:${port}`,
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+    },
+  );
+  try {
+    const lines = createInterface({ input: mcp.stdout! })[
+      Symbol.asyncIterator
+    ]();
+    let id = 1;
+    const metaFor = async (name: string, requestId: unknown) => {
+      mcp.stdin!.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: id++,
+          method: "tools/call",
+          params: { name, arguments: { requestId } },
+        })}\n`,
+      );
+      const { value } = await lines.next();
+      const { result } = JSON.parse(value as string);
+      assert.equal(result.isError, true);
+      return result._meta["yamakan/requestId"];
+    };
+    const create = "yamakan_project_create";
+    assert.equal(await metaFor(create, "mine.1"), "mine.1");
+    assert.equal(await metaFor("yamakan_document_save", "mine.2"), "mine.2");
+    // Never echoed: a malformed id, or one too long for a save to use.
+    assert.equal(await metaFor(create, "<img src=x>"), "service-trace");
+    assert.equal(
+      await metaFor("yamakan_document_save", "s".repeat(122)),
+      "service-trace",
+    );
+    assert.equal(
+      await metaFor("yamakan_document_save", "s".repeat(121)),
+      "s".repeat(121),
+    );
+    assert.equal(await metaFor(create, "s".repeat(125)), "s".repeat(125));
+  } finally {
+    const done = once(mcp, "exit");
+    mcp.stdin!.end();
+    await done;
+    refusing.close();
+  }
+});
 
 test("MCP stdio exposes registry tools and runs the shared command path", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-mcp-"));
@@ -114,6 +190,41 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
         (p: { id: string }) => p.id,
       ),
       [project.id],
+    );
+
+    // A request id comes back beside the result, and replays it; the result
+    // text is the same with or without one.
+    const named = {
+      name: "yamakan_project_create",
+      arguments: { name: "Replayed", requestId: "mcp-replay.1" },
+    };
+    const first = await request("tools/call", named);
+    assert.equal(first.result._meta["yamakan/requestId"], "mcp-replay.1");
+    const again = await request("tools/call", named);
+    assert.equal(again.result.content[0].text, first.result.content[0].text);
+    assert.equal(created.result._meta, undefined);
+    // A refusal carries the caller's id, which is the one to retry under.
+    const refused = await request("tools/call", {
+      name: "yamakan_project_create",
+      arguments: { name: "x", shell: "whoami", requestId: "mcp-refused.1" },
+    });
+    assert.equal(refused.result.isError, true);
+    assert.equal(refused.result._meta["yamakan/requestId"], "mcp-refused.1");
+    // With no id of the caller's, it carries the service's, to report.
+    const untraced = await request("tools/call", {
+      name: "yamakan_project_create",
+      arguments: { name: "x", shell: "whoami" },
+    });
+    assert.equal(untraced.result.isError, true);
+    assert.match(untraced.result._meta["yamakan/requestId"], /^[0-9a-f-]{36}$/);
+    // The same id with other input is refused, not replayed.
+    const mismatch = await request("tools/call", {
+      name: "yamakan_project_create",
+      arguments: { name: "Different", requestId: "mcp-replay.1" },
+    });
+    assert.equal(
+      JSON.parse(mismatch.result.content[0].text).code,
+      "IDEMPOTENCY_MISMATCH",
     );
 
     const invalid = await request("tools/call", {

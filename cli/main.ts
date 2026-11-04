@@ -5,9 +5,15 @@ import type { Operation } from "../sdk/client.ts";
 const [name, args = "{}", ...rest] = process.argv.slice(2);
 if (!name)
   throw new Error(
-    "Usage: npm run cli -- yamakan.project.list {}\n" +
+    "Usage: npm run cli -- yamakan.project.list {} [requestId]\n" +
       "       npm run cli -- stage-document <projectId> <studio|cinemaScene> <schemaVersion> <file> [requestId]",
   );
+// Ids may hold a hyphen, but an option typed here must not silently become one.
+const checkedRequestId = (id: string | undefined) => {
+  if (id?.startsWith("-"))
+    throw new Error("A request id on the command line cannot start with '-'.");
+  return id;
+};
 const env = (key: string) =>
   process.env[`YAMAKAN_${key}`] || process.env[`DARZAIN_${key}`];
 const url = env("URL") || "http://127.0.0.1:4318";
@@ -26,7 +32,7 @@ try {
         "Usage: npm run cli -- stage-document <projectId> <studio|cinemaScene> <schemaVersion> <file> [requestId]",
       );
     // The request id is printed so a lost response can be retried safely.
-    const id = requestId ?? crypto.randomUUID();
+    const id = checkedRequestId(requestId) ?? crypto.randomUUID();
     return {
       requestId: id,
       ...(await client.stageDocument(projectId, await readFile(file), {
@@ -41,10 +47,23 @@ try {
       ? await client.catalog()
       : name === "stage-document"
         ? await stageDocument()
-        : await client.call(name as Operation, JSON.parse(args));
+        : // The same request id after a lost response replays the original, on
+          // commands that keep a receipt.
+          await client.call(
+            name as Operation,
+            JSON.parse(args),
+            checkedRequestId(rest[0]),
+          );
   console.log(JSON.stringify(result, null, 2));
 } catch (e) {
   if (!(e instanceof YamakanError)) throw e;
-  console.error(JSON.stringify({ code: e.code, message: e.message }));
+  console.error(
+    JSON.stringify({
+      code: e.code,
+      message: e.message,
+      retryable: e.retryable,
+      requestId: e.requestId,
+    }),
+  );
   process.exitCode = 1;
 }

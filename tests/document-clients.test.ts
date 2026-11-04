@@ -190,6 +190,24 @@ test("against the real service with AG-DOCS turned off, SDK, MCP and CLI saves a
     JSON.parse(called.result.content[0].text).code,
     "CAPABILITY_UNAVAILABLE",
   );
+  // A refused save returns the id to retry under, not its stage or commit id.
+  assert.match(
+    called.result._meta["yamakan/requestId"],
+    /^[0-9a-f-]{36}$/,
+    "the save's own generated id",
+  );
+  const named = await rpc("tools/call", {
+    name: "yamakan_document_save",
+    arguments: { ...args, requestId: "mcp-save.1" },
+  });
+  assert.equal(named.result._meta["yamakan/requestId"], "mcp-save.1");
+  // A malformed id is refused and never echoed.
+  const malformed = await rpc("tools/call", {
+    name: "yamakan_document_save",
+    arguments: { ...args, requestId: "bad id!" },
+  });
+  assert.equal(malformed.result.isError, true);
+  assert.equal(malformed.result._meta, undefined);
   // As strict as a catalog tool: stray fields and non-object content fail.
   for (const bad of [
     { ...args, source: { contentHash: "a".repeat(64) } },
