@@ -56,6 +56,12 @@ export type RenderJob = {
   // The render plan a completed export drew (contract: async results carry
   // their planHash); null for other jobs and before completion.
   planHash: string | null;
+  // What a loudness request came to; null for jobs that are not exports.
+  loudness: {
+    state: "off" | "pending" | "measured" | "unmeasured" | "unknown";
+    inputI?: number;
+    targetI?: number;
+  } | null;
 };
 
 // Seconds as an exact-enough decimal string from integer flicks (truncated
@@ -188,7 +194,17 @@ export type RenderReceipt = {
   hasAudio: boolean;
   // The libass API version that drew the titles; null without titles.
   libassApi: number | null;
+  // What the two-pass loudness measured; null when nothing was measured.
+  loudness: { inputI: number; targetI: number } | null;
 };
+
+export const measuredLoudness = (plan: RenderPlan) =>
+  plan.loudnorm?.measured
+    ? {
+        inputI: plan.loudnorm.measured.input_i,
+        targetI: plan.loudnorm.target.I,
+      }
+    : null;
 
 // Settles when `signal` aborts, so a wait can be abandoned on cancel.
 const aborted = (signal: AbortSignal) =>
@@ -865,6 +881,7 @@ export async function renderPlan(
         durationFrames: window.output === "png" ? 1 : probed.durationFrames,
         hasAudio: probed.hasAudio,
         libassApi,
+        loudness: measuredLoudness(activePlan),
       },
     };
   } catch (e) {

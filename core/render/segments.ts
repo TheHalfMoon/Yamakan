@@ -22,7 +22,7 @@ import { mediaTools, workers } from "../process/workers.ts";
 import { framesToTicks, ticksToFrames } from "../time.ts";
 import type { ProjectStore } from "../store.ts";
 import type { RenderPlan } from "./plan.ts";
-import { keepMainStream, renderPlan } from "../render.ts";
+import { keepMainStream, measuredLoudness, renderPlan } from "../render.ts";
 
 export type Segment = { startTicks: number; durationTicks: number };
 
@@ -270,6 +270,7 @@ export async function renderSegmented(
         durationFrames: probed.durationFrames,
         hasAudio: probed.hasAudio,
         libassApi,
+        loudness: measuredLoudness(activePlan),
       },
       segments: segments.length,
     };
