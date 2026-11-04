@@ -141,17 +141,46 @@ test(
     try {
       const controller = new AbortController();
       let pid = 0;
-      const running = owner.run({
+      const result = await owner.run({
         ...probe("sleep"),
         signal: controller.signal,
+        // Only once the worker exists: under load a fixed delay can fire before
+        // it does, and then there is no pid to check.
         onCreated: (p) => {
           pid = p;
+          setTimeout(() => controller.abort(), 300);
         },
       });
-      setTimeout(() => controller.abort(), 300);
-      const result = await running;
       assert.notEqual(result.code, 0);
+      assert.ok(pid > 0);
       assert.ok(await gone(pid), "the worker is gone");
+    } finally {
+      owner.close();
+    }
+  },
+);
+
+test(
+  "cancelling before the worker is created ends it without it running",
+  { skip: !windows },
+  async () => {
+    const owner = new ProcessOwner([workerProbe]);
+    try {
+      const controller = new AbortController();
+      controller.abort();
+      let created = false;
+      let out = "";
+      const result = await owner.run({
+        ...probe("env"),
+        signal: controller.signal,
+        onCreated: () => {
+          created = true;
+        },
+        onStdout: (b) => (out += b.toString("utf8")),
+      });
+      assert.notEqual(result.code, 0);
+      assert.equal(created, false);
+      assert.equal(out, "", "the worker never ran");
     } finally {
       owner.close();
     }

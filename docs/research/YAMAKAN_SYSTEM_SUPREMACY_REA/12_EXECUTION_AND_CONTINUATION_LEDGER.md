@@ -99,3 +99,28 @@ Updated 2026-11-04. Main at this checkpoint: `aaaf7993d58c81430fb8f506066840f923
 - **New, tracked:** a save's retry stops replaying up to 15 minutes after staging. It is refused and applies nothing. Details in the SS-007 receipt.
 
 **Next:** SS-007 slices B ([PR #170](https://github.com/TheHalfMoon/Yamakan/pull/170), in review), C and D; then SS-017's negatives, SS-009's remaining items, SS-005b, SS-008, SS-012, SS-013, SS-014 and SS-015.
+
+## Checkpoint: SS-007 slices landed, cancellation test explained
+
+Updated 2026-11-04. Main at this checkpoint: `1c33c34e1efe0d75ab294b1fc3d117777a84093b`, post-merge run 41892425275 success. Models and providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task                   | State                   | Exact result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SS-007 slice B         | Merged; card still open | [PR #170](https://github.com/TheHalfMoon/Yamakan/pull/170), head `e4b992be35e8b1f0e1caabb151766374d01ac184`, merge `ac8385acbea895eb3fcab539c1cbe44d70cfda70`. Exact-head CI SUCCESS.                                                                                                                                                                                                                                                                                                                 |
+| SS-007 slices B2, C, D | Merged; card still open | [PR #172](https://github.com/TheHalfMoon/Yamakan/pull/172), head `484093e958b7187528b6bd055e39aeca6be7a71b`, merge `1c33c34e1efe0d75ab294b1fc3d117777a84093b`. Three reviews and a narrow final check; each found real items, fixed or listed in the [receipt](../../evidence/ultimate/SS-007-progress-handoff.md). Exact-head CI SUCCESS. A full suite at that head had 1 failure, the cancellation test below; two more at the merge passed, 784 of 787 with 3 skipped, while diagnostic loops ran. |
+
+**SS-007 stays open, on two decisions for the founder:**
+
+1. **The handoff is derived on each read, not stored in document storage as the card says.** Reasons and what is lost are in the receipt.
+2. **The browser does not use the progress view or the handoff,** so "browser agrees" is shown only in that it uses the same SDK. Wiring it in is the remaining work unless the founder waives it.
+
+SS-008 depends on SS-007, so it stays waiting until this card closes.
+
+**Findings changed:**
+
+- **Explained: `cancellation terminates the worker's job`,** which failed in 3 of the saved suite logs. A loop with a fresh owner each round, during a full suite, failed 1 of 400 rounds with pid 0: the fixed 300 ms abort fired before the worker was created, so `onCreated` never ran and the test checked whether pid 0 was alive, which is always true. That is a test bug. The 3 suite failures were not individually captured with a pid; their timing matches. A loop with one reused owner failed 0 of 500. By reading, the owner kills a suspended worker in that case without resuming it, and a new test shows it never ran. Receipts: `cancel-fresh.jsonl`, `723c0a0236396d0865f75a45ddfaf5f63a25d09ed5a1ee784a347e562f24214c`; `cancel-loop.jsonl`, `c8101602247cf556fe0fe36e1ad7236a68aa2043518a0981678ee7d6a09f6fdc`.
+- **New, unexplained: `killing the process owner mid-render ends FFmpeg`** failed once in 23 saved logs, at its own check that the marker finds FFmpeg, and passed alone right after. For SS-008.
+- **New, tracked:** during a font outage a retry's pass-through reveals a little about a track whose hash the caller holds; `proxy.build` and `proxy.cancel` change state but are marked `mutation: false`. Both in the receipt.
+- **A correction to the last checkpoint:** launch error 2 stays tracked, and the stale helper explanation is "probably": the replaced binary's hash was not kept.
+
+**Next:** SS-017's negatives, SS-009's remaining items, SS-005b, SS-012, SS-013, SS-014 and SS-015; SS-008 once SS-007 closes.
