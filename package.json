@@ -31,6 +31,7 @@
     "qualify:large-import": "node scripts/qualify-large-import.mjs",
     "qualify:typography": "node scripts/qualify-typography.ts",
     "qualify:preview": "node scripts/qualify-preview.ts",
+    "qualify:preview-lifetime": "node scripts/qualify-preview-lifetime.mjs",
     "qualify:resources": "node scripts/qualify-resources.ts",
     "qualify:q1": "node scripts/qualify-q1-has-audio.ts",
     "qualify:q5": "node scripts/qualify-q5-mediabunny.mjs",

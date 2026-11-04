@@ -126,8 +126,34 @@ test("the plan hash changes with every input that changes the picture or sound",
     ["source offset", changed((p) => (p.clips[0].sourceFrame = 16))],
     ["mute", changed((p) => (p.tracks[1].muted = true))],
     ["size", changed((p) => ((p.width = 640), (p.height = 360)))],
+    ["media version", changed((p) => (p.assets[0].hash = "c".repeat(64)))],
+    [
+      "font",
+      compilePlan(fromEditView(view()), SNAPSHOT, [
+        { ...fonts[0], sha256: "f".repeat(64) },
+        ...fonts.slice(1),
+      ]).plan.planHash,
+    ],
   ] as const)
     assert.notEqual(hash, base, name);
+  // Two versions of a LUT, not a LUT against none.
+  const graded = (contentHash: string) =>
+    changed(
+      (p) =>
+        (p.clips[0].effects = [
+          {
+            type: "lut",
+            version: 1,
+            documentId: "66666666-6666-4666-8666-666666666666",
+            contentHash,
+          },
+        ]),
+    );
+  assert.notEqual(
+    graded("e".repeat(64)),
+    graded("f".repeat(64)),
+    "LUT version",
+  );
 });
 
 test("muted tracks are left out and solo keeps only soloed tracks of a kind", async () => {
