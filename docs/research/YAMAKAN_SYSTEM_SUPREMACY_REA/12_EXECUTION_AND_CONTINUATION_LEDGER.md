@@ -69,7 +69,7 @@ Updated 2026-11-04. Main at this checkpoint: `596a20cd169bf6094be2c8bc6e5bef3334
 
 | SS-006 | Merged, post-main CI pending | [PR #164](https://github.com/TheHalfMoon/Yamakan/pull/164), head `4ff57bd0f861c2eaa410918dfa27f4225673e856`, merge `26c4c4dab9535795ef8fda994972a8563abf8bf6`. Exact-head CI SUCCESS; reviews and deltas in the [receipt](../../evidence/ultimate/SS-006-take-review.md). Post-main run 41854774276 was still queued. Mark VERIFIED only after it succeeds. |
 | SS-009 | **Open**, partial work merged | [PR #165](https://github.com/TheHalfMoon/Yamakan/pull/165), head `026f978ef2bcbeb110241fb972cc6280dfb91cc4`, merge `596a20cd169bf6094be2c8bc6e5bef3334d0c8fc`. Policy targets met, playback 25 fps on AC power. Items listed as not run in the [receipt](../../evidence/ultimate/SS-009-preview-qualification.md) remain. |
-| SS-017 worker profile | **Open PR, not merged** | [PR #166](https://github.com/TheHalfMoon/Yamakan/pull/166), head `a4424f28de8f7229f123175ab89bdb63deff62c0`, final delta approved; exact-head CI was queued. Merge pinned to that head only after CI succeeds. [Receipt](../../evidence/ultimate/SS-017-worker-profile.md). |
+| SS-017 worker profile | **Open PR, not merged** | [PR #166](https://github.com/TheHalfMoon/Yamakan/pull/166), head `a4424f28de8f7229f123175ab89bdb63deff62c0`, final delta approved; exact-head CI was queued. Merge pinned to that head only after CI succeeds. Its receipt, `docs/evidence/ultimate/SS-017-worker-profile.md`, is on that branch. |
 
 **Next action:** when CI succeeds, merge #166 pinned to its head, check post-main CI for `26c4c4d`, `596a20c` and #166's merge, then mark SS-006 VERIFIED.
 
