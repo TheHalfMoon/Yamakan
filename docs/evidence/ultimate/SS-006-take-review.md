@@ -43,7 +43,7 @@ Command tests, `tests/take-replace.test.ts`, `tests/take-review.test.ts` and `te
 - An agent cannot undo through another writer's later edit: the refusal changes nothing. After that writer undoes its own edit, the agent can undo the take. My first version of this test wrongly expected the undo to succeed; the product's stricter rule is correct, and the test was changed to assert it.
 - A malformed `take.list` answer shows "not known", never a partial list.
 
-Existing tests retained for the other negatives, not new: forged mapping, stale revision and story change, missing and unprobed media, revoked consent and scopes in `tests/take-replace.test.ts`. Agent self-approval is refused in `tests/director-durability.test.ts` and `tests/director-stages.test.ts`, which pass in the full suite. A lost response replayed after reopen is covered by `tests/creative-revision-journey.test.ts`.
+Existing tests retained for the other negatives, not new: forged mapping, stale revision and story change, missing and unprobed media, revoked consent and scopes in `tests/take-replace.test.ts`. Agent self-approval is refused in `tests/director-durability.test.ts` and `tests/director-stages.test.ts`, which pass in the full suite at this head. That run was not green: 754 of 759 passed, 3 skipped, and 2 failed outside this change. One is a probe timeout under load in `tests/process-owner-shared-access.test.ts`, addressed separately; the other is `cancellation terminates the worker's job` in `tests/process-owner.test.ts`, which passed in every other run and is unexplained. An earlier run on battery had 7 timing failures. A lost response replayed after reopen is covered by `tests/creative-revision-journey.test.ts`.
 
 ## Limits
 
