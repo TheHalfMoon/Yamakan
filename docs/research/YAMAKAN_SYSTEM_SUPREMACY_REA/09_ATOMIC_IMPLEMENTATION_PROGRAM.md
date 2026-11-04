@@ -348,7 +348,7 @@ Sequence:
 
 Acceptance: Decoded output and audio equivalence across 10 matrix; all required M candidate runs within 480 s and existing ceilings to claim qualification; otherwise record no-go.
 
-Negative/security: Translucency, partial coverage, animated transforms, rational/VFR timing, cancellation and resource pressure. Production LUT and segment-seam controls deferred explicitly from SS-005a, using different content per layer.
+Negative/security: Translucency, partial coverage, animated transforms, rational/VFR timing, cancellation and resource pressure. The segment-seam control retained as a skip from SS-005a; identity fixtures use different content per layer and production LUTs.
 
 Performance: Use all required repeated M runs <=480 s and frozen ceilings for M qualification; no best-run selection.
 

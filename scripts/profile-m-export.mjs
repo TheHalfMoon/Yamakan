@@ -6,12 +6,13 @@
 // (no Job Object), so its times attribute cost and are not export results.
 //
 // Run it from a work folder: it writes m-window-graph.txt to the current folder.
-// --compare-only runs just the owner/direct comparison.
+// --compare-only runs just the owner/direct comparison; --controls-only just
+// the identity and its controls.
 //
-// Usage: node scripts/profile-m-export.mjs [--window N] [--runs N] [--compare-only]
+// Usage: node scripts/profile-m-export.mjs [--window N] [--runs N] [--compare-only] [--controls-only]
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../core/store.ts";
@@ -31,6 +32,7 @@ const option = (name, fallback) => {
 const windowIndex = option("--window", 6);
 const runs = option("--runs", 3);
 const compareOnly = process.argv.includes("--compare-only");
+const controlsOnly = process.argv.includes("--controls-only");
 const profile = SCALE_PROFILES.supported.M;
 // The two chains of the last track shown in the profiled window.
 const KEPT = 2;
@@ -233,7 +235,7 @@ try {
   const variants = {
     "production graph, encode": { graph, output: fileOutput },
     "production graph, no encode": { graph, output: nullOutput },
-    "chains pulled, nothing drawn, no encode": {
+    "nothing drawn, no encode": {
       graph: noBlending,
       output: nullOutput,
     },
@@ -271,7 +273,9 @@ try {
   };
 
   const results = [];
-  for (const [name, variant] of compareOnly ? [] : Object.entries(variants))
+  for (const [name, variant] of compareOnly || controlsOnly
+    ? []
+    : Object.entries(variants))
     for (let attempt = 1; attempt <= runs; attempt++) {
       results.push({
         variant: name,
@@ -283,7 +287,11 @@ try {
 
   // What -benchmark itself adds: paired, the order swapped on each pair.
   const benchmarkOverhead = [];
-  for (let attempt = 1; !compareOnly && attempt <= runs; attempt++) {
+  for (
+    let attempt = 1;
+    !compareOnly && !controlsOnly && attempt <= runs;
+    attempt++
+  ) {
     const first = attempt % 2 === 1;
     const a = await measure(graph, nullOutput, first);
     const b = await measure(graph, nullOutput, !first);
@@ -315,6 +323,16 @@ try {
       .map((line) => (line.endsWith(`[c${n}]`) ? change(line, n) : line))
       .join(";\n");
   const windowStart = segment.startTicks / 705_600_000;
+  // An inverting LUT, through the production filter form (core/render.ts).
+  await mkdir(path.join(dir, "luts"), { recursive: true });
+  const lutCorners = [];
+  for (let b = 1; b >= 0; b--)
+    for (let g = 1; g >= 0; g--)
+      for (let r = 1; r >= 0; r--) lutCorners.push(`${r} ${g} ${b}`);
+  await writeFile(
+    path.join(dir, "luts", "control.cube"),
+    `LUT_3D_SIZE 2\n${lutCorners.join("\n")}\n`,
+  );
   // Removing what lies beneath the changed layer must change the picture when
   // that layer lets it show, and must not when the layer stays opaque.
   const controls = [
@@ -339,10 +357,13 @@ try {
         ),
     },
     {
-      control: "graded top layer, still opaque (LUT stand-in)",
+      control: "graded top layer, still opaque (lut3d)",
       expectDiffers: false,
-      change: (line, n) =>
-        line.replace(`[c${n}]`, `,lutrgb=r=negval:g=negval:b=negval[c${n}]`),
+      change: (line) =>
+        line.replace(
+          /^(\[s0_\d+\])/,
+          "$1format=gbrap,lut3d=file=luts/control.cube:interp=tetrahedral,",
+        ),
     },
   ];
   const identity = compareOnly
@@ -397,7 +418,7 @@ try {
       wallMs: Math.round(performance.now() - started),
     };
   };
-  for (let attempt = 1; attempt <= runs; attempt++) {
+  for (let attempt = 1; !controlsOnly && attempt <= runs; attempt++) {
     const ownerFirst = attempt % 2 === 1;
     const first = ownerFirst ? await viaOwner() : viaDirect();
     const second = ownerFirst ? viaDirect() : await viaOwner();
