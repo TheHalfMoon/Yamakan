@@ -204,6 +204,8 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
     },
   });
   assert.notEqual(saved.result.isError, true, saved.result.content[0].text);
+  // A save that names no request still tells its caller the id it used.
+  assert.match(saved.result._meta["yamakan/requestId"], /^[0-9a-f-]{36}$/);
   mcp.stdin!.end();
 
   // A scene staged by the CLI (it sends only the file's bytes), committed
