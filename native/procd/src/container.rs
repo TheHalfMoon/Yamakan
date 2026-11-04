@@ -104,6 +104,9 @@ extern "system" {
         template: Handle,
     ) -> Handle;
     fn CloseHandle(handle: Handle) -> Bool;
+    fn CreateMutexW(attributes: *mut c_void, owner: Bool, name: *const u16) -> Handle;
+    fn WaitForSingleObject(handle: Handle, milliseconds: u32) -> u32;
+    fn ReleaseMutex(handle: Handle) -> Bool;
 }
 
 const READ_CONTROL: u32 = 0x0002_0000;
@@ -208,9 +211,12 @@ pub fn capability_sid(name: &str) -> Result<Sid, String> {
 /// took about 35 s on a user's temporary folder.)
 pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<(), String> {
     // Concurrent read-modify-write cycles on one object (workers sharing a
-    // current directory) would drop each other's entries: one at a time.
+    // current directory, procds sharing the tools folder or an input file)
+    // would drop each other's entries: one at a time, across every procd of
+    // this user's session.
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _held = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _across = AccessLock::acquire()?;
     unsafe {
         let name = wide(path);
         let handle = OpenForAccess(
@@ -316,6 +322,40 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
         })();
         LocalFree(descriptor);
         result
+    }
+}
+
+// Held across one access-list update. A named mutex is released by Windows if
+// its holder dies; the next holder then rereads the list, so an abandoned wait
+// is an ordinary acquisition. Not acquiring it refuses the update.
+struct AccessLock(Handle);
+impl AccessLock {
+    fn acquire() -> Result<AccessLock, String> {
+        const WAIT_OBJECT_0: u32 = 0;
+        const WAIT_ABANDONED: u32 = 0x80;
+        const WAIT_MS: u32 = 30_000;
+        unsafe {
+            let name = wide("Local\\Yamakan.WorkerAccessList");
+            let handle = CreateMutexW(null_mut(), 0, name.as_ptr());
+            if handle.is_null() {
+                return Err(last_error("access list lock"));
+            }
+            match WaitForSingleObject(handle, WAIT_MS) {
+                WAIT_OBJECT_0 | WAIT_ABANDONED => Ok(AccessLock(handle)),
+                _ => {
+                    CloseHandle(handle);
+                    Err("timed out waiting for the access list lock".into())
+                }
+            }
+        }
+    }
+}
+impl Drop for AccessLock {
+    fn drop(&mut self) {
+        unsafe {
+            ReleaseMutex(self.0);
+            CloseHandle(self.0);
+        }
     }
 }
 
