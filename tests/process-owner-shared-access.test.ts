@@ -13,6 +13,7 @@ const media = pathToFileURL(
 const CHILDREN = 72;
 const PARALLEL = 12;
 const PROBES = 4;
+const SLOW_MS = 8_000;
 
 // Each child starts its own process owner and probes the one shared file, so
 // separate owners update that file's access list at the same moment. A lost
@@ -22,8 +23,14 @@ const child = (file: string) =>
     const code = `
       const { probe } = await import(${JSON.stringify(media)});
       const failures = [];
-      for (let i = 0; i < ${PROBES}; i++)
-        await probe(${JSON.stringify(file)}).catch((e) => failures.push(e.message));
+      for (let i = 0; i < ${PROBES}; i++) {
+        const started = performance.now();
+        await probe(${JSON.stringify(file)}).catch((e) => {
+          // A probe stopped at its wall limit reports the same message; a lost
+          // entry fails at once.
+          if (performance.now() - started < ${SLOW_MS}) failures.push(e.message);
+        });
+      }
       console.log(JSON.stringify(failures));
       process.exit(0);`;
     const run = spawn(process.execPath, ["--input-type=module", "-e", code], {

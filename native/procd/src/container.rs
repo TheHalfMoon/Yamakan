@@ -141,11 +141,18 @@ unsafe impl Sync for Sid {}
 /// The container's SID, created on first use (or derived when the profile
 /// already exists). Fails closed: no container, no worker.
 pub fn container_sid() -> Result<&'static Sid, String> {
-    static SID: OnceLock<Result<Sid, String>> = OnceLock::new();
-    SID.get_or_init(|| unsafe {
-        // One procd at a time: concurrent creation of an existing profile has
-        // been seen to make launches fail with "file not found".
-        let _held = AccessLock::named("Local\\Yamakan.WorkerProfile")?;
+    static SID: OnceLock<Sid> = OnceLock::new();
+    if let Some(sid) = SID.get() {
+        return Ok(sid);
+    }
+    // One procd at a time. Launch failures with "file not found" went with
+    // several procds creating this profile at once; the mechanism is not known.
+    // A failed wait is not kept: the next launch tries again.
+    let _held = AccessLock::named("Local\\Yamakan.WorkerProfile", "worker profile lock", 10_000)?;
+    unsafe {
+        if let Some(sid) = SID.get() {
+            return Ok(sid);
+        }
         let name = wide(CONTAINER_NAME);
         let display = wide("Yamakan media worker");
         let mut sid: *mut c_void = null_mut();
@@ -161,10 +168,8 @@ pub fn container_sid() -> Result<&'static Sid, String> {
         }
         let owned = Sid::copy(sid);
         FreeSid(sid);
-        Ok(owned)
-    })
-    .as_ref()
-    .map_err(|e| e.clone())
+        Ok(SID.get_or_init(|| owned))
+    }
 }
 
 type DeriveCapabilities = unsafe extern "system" fn(
@@ -373,32 +378,35 @@ impl AccessLock {
             if GetFileInformationByHandle(object, &mut id) == 0 {
                 return Err(last_error("access list object identity"));
             }
-            AccessLock::named(&format!(
-                "Local\\Yamakan.WorkerAccessList.{:x}.{:x}.{:x}",
-                id.volume_serial, id.index_high, id.index_low
-            ))
+            AccessLock::named(
+                &format!(
+                    "Local\\Yamakan.WorkerAccessList.{:x}.{:x}.{:x}",
+                    id.volume_serial, id.index_high, id.index_low
+                ),
+                "access list lock",
+                30_000,
+            )
         }
     }
 
-    fn named(name: &str) -> Result<AccessLock, String> {
+    fn named(name: &str, label: &str, wait_ms: u32) -> Result<AccessLock, String> {
         const WAIT_OBJECT_0: u32 = 0;
         const WAIT_ABANDONED: u32 = 0x80;
         const WAIT_TIMEOUT: u32 = 258;
-        const WAIT_MS: u32 = 30_000;
         unsafe {
             let name = wide(name);
             let handle = CreateMutexW(null_mut(), 0, name.as_ptr());
             if handle.is_null() {
-                return Err(last_error("access list lock"));
+                return Err(last_error(label));
             }
-            match WaitForSingleObject(handle, WAIT_MS) {
+            match WaitForSingleObject(handle, wait_ms) {
                 WAIT_OBJECT_0 | WAIT_ABANDONED => Ok(AccessLock(handle)),
                 WAIT_TIMEOUT => {
                     CloseHandle(handle);
-                    Err("timed out waiting for the access list lock".into())
+                    Err(format!("timed out waiting for the {label}"))
                 }
                 _ => {
-                    let error = last_error("waiting for the access list lock");
+                    let error = last_error(&format!("waiting for the {label}"));
                     CloseHandle(handle);
                     Err(error)
                 }
