@@ -131,7 +131,7 @@ try {
     else await page.keyboard.type(value);
     await page.keyboard.press("Tab");
   };
-  // The save's outcome: the button is usable again, or the draft is gone.
+  // A command has finished: the panel's fields are enabled again.
   const settled = () =>
     page.waitForFunction(
       () => !document.querySelector('[data-testid="captions-text"]')?.disabled,
@@ -204,6 +204,27 @@ try {
   assert.equal(await text.inputValue(), "Hello world");
   assert.equal((await focused()).tag, "H3");
   step("text is edited by keyboard, and a discard keeps focus in the panel");
+
+  // Arabic and mixed cues take typed text at the caret, in their own direction.
+  for (const [n, typed] of [
+    [0, " جديد"],
+    [2, " new نص"],
+  ]) {
+    const field = page.getByTestId("captions-text").nth(n);
+    const before = await field.inputValue();
+    await field.focus();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.type(typed);
+    assert.equal(await field.inputValue(), `${before}${typed}`);
+    assert.equal(
+      await field.evaluate((e) => getComputedStyle(e).direction),
+      "rtl",
+    );
+  }
+  await discard.focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.activeElement !== document.body);
+  step("Arabic and mixed text take typed text in their own direction");
 
   await page.reload();
   await page

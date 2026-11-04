@@ -991,7 +991,7 @@ test("a retried caption edit replays after a lost reply, even after later edits"
 
 test("a burned-in cue covers exactly its frames at a rational rate, and text cannot escape", async () => {
   const c = await workspace();
-  // 24000/1001: frames fall on no whole millisecond, so rounding would show.
+  // 24000/1001: frames fall on no whole millisecond.
   const rate = { num: 24000, den: 1001 };
   const project = (
     await execute(c.browser, "yamakan.project.create", {

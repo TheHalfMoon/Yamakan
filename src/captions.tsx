@@ -132,8 +132,17 @@ function CaptionsPanel(props: Props) {
       control.isConnected &&
       !control.hidden &&
       !(control as HTMLButtonElement).disabled;
-    (usable ? control : heading.current)?.focus();
+    (usable ? control : heading.current)?.focus({ preventScroll: true });
   }, [busy, drafting]);
+  // A click elsewhere means the person has moved on, even though it leaves
+  // focus on the page, so nothing is handed back to them afterward.
+  useEffect(() => {
+    const movedOn = () => {
+      refocus.current = null;
+    };
+    document.addEventListener("pointerdown", movedOn, true);
+    return () => document.removeEventListener("pointerdown", movedOn, true);
+  }, []);
 
   // Runs one command; the editor's draft then moves to the new revision
   // and the tracks are read again.
