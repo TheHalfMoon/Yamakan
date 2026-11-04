@@ -52,15 +52,15 @@ The full captures predate `6b20577`, which changed `scripts/`; **no capture exis
 
 Raw logs stay local; SHA-256 binds these files. The capture JSONs record script exit codes, not failure counts. The qualifier overwrites the tracked `docs/evidence/ultimate/environment.json`, so each capture was copied out and the tracked file restored; it is not updated here because no run passed.
 
-| File                    | SHA-256                                                            |
-| ----------------------- | ------------------------------------------------------------------ |
-| First full capture      | `b380d2bd42d62d836e77db4fcba46618a00a43be22811409dfeb7a04610f0418` |
-| Second full capture     | `23fe340e2c72c825797d8ec399ea807856a008731131657871cf6632436d80c0` |
-| Third full capture      | `f1d68a0f2a4c39a7a635517b267667c7bf4684950f2d028bd7398938a6ba36d0` |
-| Separate `npm test` log | `fa77d305556cd6a6b2f905d049435c09a8f401cce2d8bf7ca299e7d4525311b2` |
+| File                                      | SHA-256                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| First full capture                        | `b380d2bd42d62d836e77db4fcba46618a00a43be22811409dfeb7a04610f0418` |
+| Second full capture                       | `23fe340e2c72c825797d8ec399ea807856a008731131657871cf6632436d80c0` |
+| Third full capture                        | `f1d68a0f2a4c39a7a635517b267667c7bf4684950f2d028bd7398938a6ba36d0` |
+| Separate `npm test` log                   | `fa77d305556cd6a6b2f905d049435c09a8f401cce2d8bf7ca299e7d4525311b2` |
+| Third capture's test log                  | `f8a9c19c1137fdbcb0d1c023a9052977be0655b6c4621f9981de3af40ec263f7` |
+| Blocked capture, `CARGO_TARGET_DIR`       | `4e0f2453613c4b1f427d4803eb9e3d3de93ddffa342151ac96d0ebe7b23fa9a2` |
+| Blocked capture, `YAMAKAN_PROCD`          | `04c9aa2ce37e4cebd125183eb5d68bb1a5cb130ac240e970dc1b78b1fef764e4` |
+| Blocked capture, `CARGO_BUILD_TARGET_DIR` | `dabd810fdb39afd1c0834b7ffc5a1e9b83e1355f89010e62b092d5a23dd153f4` |
 
 Rollback: revert the diagnostics and documents. No shared path was cleaned and no historical evidence removed.
-| Third capture's test log | `f8a9c19c1137fdbcb0d1c023a9052977be0655b6c4621f9981de3af40ec263f7` |
-| Blocked capture, `CARGO_TARGET_DIR` | `4e0f2453613c4b1f427d4803eb9e3d3de93ddffa342151ac96d0ebe7b23fa9a2` |
-| Blocked capture, `YAMAKAN_PROCD` | `04c9aa2ce37e4cebd125183eb5d68bb1a5cb130ac240e970dc1b78b1fef764e4` |
-| Blocked capture, `CARGO_BUILD_TARGET_DIR` | `dabd810fdb39afd1c0834b7ffc5a1e9b83e1355f89010e62b092d5a23dd153f4` |

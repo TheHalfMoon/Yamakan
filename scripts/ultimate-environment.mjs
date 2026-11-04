@@ -162,7 +162,7 @@ export function evaluateEnvironment(input) {
       code: "NATIVE_TARGET_REDIRECTED",
       status: "BLOCKED",
       detail:
-        "CARGO_TARGET_DIR sends the build away from the target the hashes and media workers read",
+        "the build goes elsewhere than the target the hashes and media workers read; check CARGO_TARGET_DIR, CARGO_BUILD_TARGET_DIR, CARGO_BUILD_TARGET and .cargo/config.toml",
     });
   }
   if (input.ownership?.helperOverrides?.length) {
