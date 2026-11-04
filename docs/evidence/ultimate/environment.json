@@ -87,18 +87,153 @@
   },
   "ffmpeg": {
     "present": true,
-    "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffmpeg.exe",
-    "sha256": "09948d4cdd0650da6ff5a87577469f2a218dc2615ae379f8f734d24c49de0f73",
-    "version": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers"
+    "path": "<repo>\\vendor\\ffmpeg-win64-r8\\ffmpeg.exe",
+    "sha256": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+    "version": "ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers"
   },
   "ffprobe": {
     "present": true,
-    "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffprobe.exe",
-    "sha256": "a6618e99bb58869ded3c6f37b53aa1a8d701c3591dbb7b5b317d47369c112be2",
-    "version": "ffprobe version 8.1.1-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers"
+    "path": "<repo>\\vendor\\ffmpeg-win64-r8\\ffprobe.exe",
+    "sha256": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
+    "version": "ffprobe version 7.1.1 Copyright (c) 2007-2025 the FFmpeg developers"
+  },
+  "mediaRuntime": {
+    "checked": true,
+    "valid": true,
+    "directories": [
+      {
+        "directory": "<repo>\\vendor\\ffmpeg-win64-r8",
+        "manifestDirectory": "<repo>\\vendor\\ffmpeg-win64-r8\\",
+        "valid": true,
+        "files": [
+          {
+            "file": "ffmpeg.exe",
+            "expected": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b",
+            "actual": "9378168c8ab648d25156001910c1f25ccee4c989b731f94ceaa1972ef1f5bb6b"
+          },
+          {
+            "file": "ffprobe.exe",
+            "expected": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171",
+            "actual": "fd9bb26feba6b9e3e6484d9fea622b425d82cb5c229b6d0f3bab3af7f4917171"
+          },
+          {
+            "file": "libbrotlicommon.dll",
+            "expected": "ca7bc06ead80259971badf2cd0bfc688db9154dad65f139f49a38b4be9976f97",
+            "actual": "ca7bc06ead80259971badf2cd0bfc688db9154dad65f139f49a38b4be9976f97"
+          },
+          {
+            "file": "libbrotlidec.dll",
+            "expected": "a142dc6cfa77cb907028aa9426f486f3d8de37855e8db2ae2894147908121881",
+            "actual": "a142dc6cfa77cb907028aa9426f486f3d8de37855e8db2ae2894147908121881"
+          },
+          {
+            "file": "libbz2-1.dll",
+            "expected": "a4fbb97c26662d2b8a80bf4597ed3effb69b12048b0cb1eef2c3f211e2e66673",
+            "actual": "a4fbb97c26662d2b8a80bf4597ed3effb69b12048b0cb1eef2c3f211e2e66673"
+          },
+          {
+            "file": "libexpat-1.dll",
+            "expected": "6ceb3dd8d285f9a1ab8b9682565591580864c1ca2dcc9470c75872caab8fd8b8",
+            "actual": "6ceb3dd8d285f9a1ab8b9682565591580864c1ca2dcc9470c75872caab8fd8b8"
+          },
+          {
+            "file": "libfontconfig-1.dll",
+            "expected": "bed1827dbb226483026b2b33127866ce173aa2423d89ae7da6f88d6328792ec9",
+            "actual": "bed1827dbb226483026b2b33127866ce173aa2423d89ae7da6f88d6328792ec9"
+          },
+          {
+            "file": "libfreetype-6.dll",
+            "expected": "9f62ad75bdc24573940f2e0b0db1848464ce02928926808885e3744fc5272add",
+            "actual": "9f62ad75bdc24573940f2e0b0db1848464ce02928926808885e3744fc5272add"
+          },
+          {
+            "file": "libfribidi-0.dll",
+            "expected": "ae9e30c61e1c62886d36e23a91d2943970ae990f85155cbd222b9ba44de9c51b",
+            "actual": "ae9e30c61e1c62886d36e23a91d2943970ae990f85155cbd222b9ba44de9c51b"
+          },
+          {
+            "file": "libgcc_s_seh-1.dll",
+            "expected": "661f70dc19fde8c25bb56387b807b7a9ab7e532cf58fa8aeee078256c19d8980",
+            "actual": "661f70dc19fde8c25bb56387b807b7a9ab7e532cf58fa8aeee078256c19d8980"
+          },
+          {
+            "file": "libglib-2.0-0.dll",
+            "expected": "84b15dc907fd1d3bb1cd799fc034d2edcbc3946c8c4acd6a8dd3ace381f9e568",
+            "actual": "84b15dc907fd1d3bb1cd799fc034d2edcbc3946c8c4acd6a8dd3ace381f9e568"
+          },
+          {
+            "file": "libgraphite2.dll",
+            "expected": "063a9ad34a5ec87d038b4646660957395224ecf2cf707917256b7d251a7c5f57",
+            "actual": "063a9ad34a5ec87d038b4646660957395224ecf2cf707917256b7d251a7c5f57"
+          },
+          {
+            "file": "libharfbuzz-0.dll",
+            "expected": "cfbe14d84474dae2b379a746a5325dcc10b7ebfa077bf5a8e9ec0d761f673b22",
+            "actual": "cfbe14d84474dae2b379a746a5325dcc10b7ebfa077bf5a8e9ec0d761f673b22"
+          },
+          {
+            "file": "libiconv-2.dll",
+            "expected": "7a282a854e01be726c6cccfe46f548c716aa45b3014818468253aaa4efbcd067",
+            "actual": "7a282a854e01be726c6cccfe46f548c716aa45b3014818468253aaa4efbcd067"
+          },
+          {
+            "file": "libintl-8.dll",
+            "expected": "0537c3dd2378218508ebe3cc416d72a99ee2d24ae1c5525e23458f32544ef861",
+            "actual": "0537c3dd2378218508ebe3cc416d72a99ee2d24ae1c5525e23458f32544ef861"
+          },
+          {
+            "file": "libmp3lame-0.dll",
+            "expected": "f40c566b56a97e32036f3d5263fd7dc2dafa6fc7ded326045dd637dd55d68c24",
+            "actual": "f40c566b56a97e32036f3d5263fd7dc2dafa6fc7ded326045dd637dd55d68c24"
+          },
+          {
+            "file": "libopus-0.dll",
+            "expected": "e602e0f79080e988df0ab1c9ce2ec9c11325c3d808fbae3230ad1cfd4942acc4",
+            "actual": "e602e0f79080e988df0ab1c9ce2ec9c11325c3d808fbae3230ad1cfd4942acc4"
+          },
+          {
+            "file": "libpcre2-8-0.dll",
+            "expected": "68a7cee2acc36d6a61d73f78825d17dfd32f8580f4bb1bc399134719518213d5",
+            "actual": "68a7cee2acc36d6a61d73f78825d17dfd32f8580f4bb1bc399134719518213d5"
+          },
+          {
+            "file": "libpng16-16.dll",
+            "expected": "fdac85bb70ec3af940810036eb9838765dceb61aaf81a60b244209f99c617f3d",
+            "actual": "fdac85bb70ec3af940810036eb9838765dceb61aaf81a60b244209f99c617f3d"
+          },
+          {
+            "file": "libstdc++-6.dll",
+            "expected": "b720a96289bcd6d9ec6f5f1f5612f1b1a523ce15d3ada20fe119791274cb512f",
+            "actual": "b720a96289bcd6d9ec6f5f1f5612f1b1a523ce15d3ada20fe119791274cb512f"
+          },
+          {
+            "file": "libwinpthread-1.dll",
+            "expected": "55cc37ec4ac551c472d029a5cd9ceadcfad5350c2a3c4c8f8a150be9c0e58864",
+            "actual": "55cc37ec4ac551c472d029a5cd9ceadcfad5350c2a3c4c8f8a150be9c0e58864"
+          },
+          {
+            "file": "libx264-165.dll",
+            "expected": "0d814d13db7eeac0ff5264ed86d376f9260746323107cb07affb6c306b240329",
+            "actual": "0d814d13db7eeac0ff5264ed86d376f9260746323107cb07affb6c306b240329"
+          },
+          {
+            "file": "libx265-217.dll",
+            "expected": "23a4579cf07ad233818d53f941e846847876cb68f57e4492f943d26463cc995f",
+            "actual": "23a4579cf07ad233818d53f941e846847876cb68f57e4492f943d26463cc995f"
+          },
+          {
+            "file": "zlib1.dll",
+            "expected": "93e9243a44c29200eeacaf9658efe2558581770e4b11ca4b500e18e424a6e3b5",
+            "actual": "93e9243a44c29200eeacaf9658efe2558581770e4b11ca4b500e18e424a6e3b5"
+          }
+        ],
+        "issues": []
+      }
+    ],
+    "issues": []
   },
   "disk": {
-    "freeBytes": 8371302400,
+    "freeBytes": 30133723136,
     "reserveBytes": 2147483648,
     "root": "<repo>"
   },
@@ -107,12 +242,18 @@
     "exists": true,
     "redirected": false
   },
-  "capturedAt": "2026-10-25T06:41:37.325Z",
+  "ownership": {
+    "nodeModulesLinked": false,
+    "nativeTargetLinked": false,
+    "targetRedirected": false,
+    "helperOverrides": []
+  },
+  "capturedAt": "2026-11-04T17:19:43.783Z",
   "candidate": {
-    "sha": "7b6640facc74d09d6109a4f216257cd88cb45842",
-    "tree": "78509bf023e2b5568d1853d3b5ff2acda5ede0d3",
-    "dirty": true,
-    "dirtyStatus": "?? docs/evidence/ultimate/"
+    "sha": "ee910bcdb0751c0a0d8790fb77a219715bb4d9e0",
+    "tree": "fe04aa5876561ee57d92e3ce89d5f161c247d455",
+    "dirty": false,
+    "dirtyStatus": ""
   },
   "runtime": {
     "os": "Windows_NT 10.0.26300",
@@ -124,17 +265,17 @@
     {
       "path": "native/procd/target/release/yamakan-procd.exe",
       "present": true,
-      "sha256": "8a04334276ab3ab0c5d87f4576f1c837fbba074cf87eed25be3a8da28bc8b51d"
+      "sha256": "c4c42e647dc398fd889c71af84fef30aeeb7333020b224e321531c7cc6fe203f"
     },
     {
       "path": "native/procd/target/release/yamakan-acl.exe",
       "present": true,
-      "sha256": "9e766f0c9c865017c6304b017e45431cef0d620fc180c4f27cad3437c2639efe"
+      "sha256": "2f2137a7e1bf7e39014fce8dfdede3a4455da025b154640cb99cc2338644de47"
     },
     {
       "path": "native/procd/target/release/worker-probe.exe",
       "present": true,
-      "sha256": "3ae2d88e2985dd6f97cabf55abc8507c57babdd3fbd1120be667434bbcf537ed"
+      "sha256": "191176713d8c7fa65956dfca30b7544449b5f2790e89fcd6a22c82df43488bed"
     }
   ],
   "nativeBuild": {
@@ -144,10 +285,7 @@
   },
   "install": {
     "command": "npm ci --ignore-scripts --no-audit --no-fund",
-    "lifecycleScriptsDeclared": [
-      "fsevents@2.3.3",
-      "lfa-ponyfill@1.1.1"
-    ],
+    "lifecycleScriptsDeclared": ["fsevents@2.3.3", "lfa-ponyfill@1.1.1"],
     "lifecycleScriptsRun": []
   },
   "notes": [

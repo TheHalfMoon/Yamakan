@@ -147,7 +147,8 @@ async function quarantine(dir: string) {
   for (const name of await readdir(dir).catch(() => [])) {
     const file = path.join(dir, name);
     const key = name.slice(0, 64);
-    if (/^[a-f0-9]{64}\.[0-9a-f-]{36}\.partial$/.test(name)) {
+    // The first form is what earlier versions left behind.
+    if (/^([a-f0-9]{64}\.)?[0-9a-f-]{36}\.partial$/.test(name)) {
       if (!works.has(file))
         await rm(file, { recursive: true, force: true }).catch(() => {});
     } else if (keys.has(key)) {
@@ -305,7 +306,9 @@ export async function buildProxy(
       "Too many proxies are being prepared; retry shortly.",
     );
   const controller = new AbortController();
-  const work = path.join(dir, `${key}.${randomUUID()}.partial`);
+  // Short: restoring a worker's folder fails on paths of 260 characters or
+  // more, and the key would take 65 of them.
+  const work = path.join(dir, `${randomUUID()}.partial`);
   const build: Build = {
     dir,
     key,
