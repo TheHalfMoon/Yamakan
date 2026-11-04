@@ -80,7 +80,10 @@ test(
       // here; it is tracked in docs/evidence/ultimate/SS-017-access-lock.md. A
       // refused or timed out grant, or a failed revoke, fails this test.
       assert.deepEqual(
-        failures.filter((message) => !/\(Windows error 2\)/.test(message)),
+        failures.filter(
+          (message) =>
+            !/CreateProcess failed \(Windows error 2\)/.test(message),
+        ),
         [],
       );
       // So that this cannot pass with nothing having worked.

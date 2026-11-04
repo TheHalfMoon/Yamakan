@@ -104,6 +104,9 @@ extern "system" {
         template: Handle,
     ) -> Handle;
     fn CloseHandle(handle: Handle) -> Bool;
+    fn GetFileInformationByHandle(handle: Handle, information: *mut FileIdentity) -> Bool;
+    #[cfg(test)]
+    fn GetFileInformationByHandleEx(handle: Handle, class: u32, information: *mut c_void, size: u32) -> Bool;
     fn CreateMutexW(attributes: *mut c_void, owner: Bool, name: *const u16) -> Handle;
     fn WaitForSingleObject(handle: Handle, milliseconds: u32) -> u32;
     fn ReleaseMutex(handle: Handle) -> Bool;
@@ -115,6 +118,7 @@ const FILE_SHARE_ALL: u32 = 0x7;
 const OPEN_EXISTING: u32 = 3;
 const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
 const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+const FILE_READ_ATTRIBUTES: u32 = 0x80;
 const INVALID_HANDLE: Handle = -1isize as Handle;
 
 /// A SID copied into owned memory (u64-aligned, as SIDs require).
@@ -210,12 +214,11 @@ pub fn capability_sid(name: &str) -> Result<Sid, String> {
 /// higher-level SetSecurityInfo also walks and re-propagates the tree, which
 /// took about 35 s on a user's temporary folder.)
 pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<(), String> {
-    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     unsafe {
         let name = wide(path);
         let handle = OpenForAccess(
             name.as_ptr(),
-            READ_CONTROL | WRITE_DAC,
+            READ_CONTROL | WRITE_DAC | FILE_READ_ATTRIBUTES,
             FILE_SHARE_ALL,
             null_mut(),
             OPEN_EXISTING,
@@ -233,13 +236,13 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
         }
         let _close = Close(handle);
         // Concurrent read-modify-write cycles on one object (workers sharing a
-        // current directory, procds sharing the tools folder or an input file)
-        // would drop each other's entries: one at a time, across every procd
-        // of this user's session. Taken after the open, which a worker holding
-        // an oplock on its input can stall: a stall stays with this update and
-        // never holds up other procds.
-        let _held = LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        let _across = AccessLock::acquire()?;
+        // current directory, procds sharing an input file) would drop each
+        // other's entries: one at a time, across every thread and procd of
+        // this user's session. A worker holding an oplock on an object it can
+        // read can stall both the open and the write below, so the lock is per
+        // object: a stall holds up only updates of that same object, and those
+        // are refused when their wait ends.
+        let _held = AccessLock::acquire(handle)?;
         let mut old: *mut c_void = null_mut();
         let mut descriptor: *mut c_void = null_mut();
         let code = GetSecurityInfo(
@@ -283,6 +286,22 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
                 Ok((ace, kind, *bytes.add(1), *(bytes.add(2) as *const u16) as u32, named))
             };
             let explicit_deny = |kind: u8, flags: u8| kind == 1 && flags & 0x10 == 0;
+            // Nothing to change means no write, which a shared folder such as
+            // the tools folder would otherwise take on every launch.
+            let mut named_entries = Vec::new();
+            for i in 0..count {
+                let (ace, kind, flags, _, named) = entry(i)?;
+                if named {
+                    named_entries.push((kind, flags, *((ace as *const u8).add(4) as *const u32)));
+                }
+            }
+            let unchanged = match grant {
+                Some((flags, mask)) => named_entries == [(0u8, flags as u8, mask)],
+                None => named_entries.is_empty(),
+            };
+            if unchanged {
+                return Ok(());
+            }
             for i in 0..count {
                 let (ace, kind, flags, size, named) = entry(i)?;
                 if !named && explicit_deny(kind, flags) && AddAce(acl_ptr, ACL_REVISION, u32::MAX, ace, size) == 0 {
@@ -327,23 +346,48 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
     }
 }
 
-// Held across one access-list update. A named mutex is released by Windows if
-// its holder dies; the next holder then rereads the list, so an abandoned wait
-// is an ordinary acquisition. Not acquiring it refuses the update.
+#[repr(C)]
+#[derive(Default)]
+struct FileIdentity {
+    attributes: u32,
+    times: [u32; 6],
+    volume_serial: u32,
+    size: [u32; 2],
+    links: u32,
+    index_high: u32,
+    index_low: u32,
+}
+
+// Held across one object's access-list update, named by that object's file
+// identity, so the same file under any path shares it. A named mutex is released
+// by Windows if its holder dies; the next holder then rereads the list, so an
+// abandoned wait is an ordinary acquisition. Not acquiring it refuses the update.
 struct AccessLock(Handle);
 impl AccessLock {
-    fn acquire() -> Result<AccessLock, String> {
+    fn acquire(object: Handle) -> Result<AccessLock, String> {
         const WAIT_OBJECT_0: u32 = 0;
         const WAIT_ABANDONED: u32 = 0x80;
+        const WAIT_TIMEOUT: u32 = 258;
         const WAIT_MS: u32 = 30_000;
         unsafe {
-            let name = wide("Local\\Yamakan.WorkerAccessList");
+            let mut id = FileIdentity::default();
+            if GetFileInformationByHandle(object, &mut id) == 0 {
+                return Err(last_error("access list object identity"));
+            }
+            let name = wide(&format!(
+                "Local\\Yamakan.WorkerAccessList.{:x}.{:x}.{:x}",
+                id.volume_serial, id.index_high, id.index_low
+            ));
             let handle = CreateMutexW(null_mut(), 0, name.as_ptr());
             if handle.is_null() {
                 return Err(last_error("access list lock"));
             }
             match WaitForSingleObject(handle, WAIT_MS) {
                 WAIT_OBJECT_0 | WAIT_ABANDONED => Ok(AccessLock(handle)),
+                WAIT_TIMEOUT => {
+                    CloseHandle(handle);
+                    Err("timed out waiting for the access list lock".into())
+                }
                 _ => {
                     let error = last_error("waiting for the access list lock");
                     CloseHandle(handle);
@@ -501,5 +545,74 @@ fn same_bytes(a: &std::path::Path, b: &std::path::Path) -> Result<bool, String> 
         if n == 0 {
             return Ok(y.read(&mut q[..1]).map_err(|e| e.to_string())? == 0);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn open(path: &std::path::Path) -> Handle {
+        unsafe {
+            OpenForAccess(
+                wide(&path.to_string_lossy()).as_ptr(),
+                READ_CONTROL | FILE_READ_ATTRIBUTES,
+                FILE_SHARE_ALL,
+                null_mut(),
+                OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS,
+                null_mut(),
+            )
+        }
+    }
+
+    #[test]
+    fn an_update_of_one_object_is_not_held_up_by_a_lock_on_another() {
+        let dir = std::env::temp_dir().join(format!("yamakan-lock-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (a, b) = (dir.join("a"), dir.join("b"));
+        std::fs::write(&a, b"a").unwrap();
+        std::fs::write(&b, b"b").unwrap();
+        let object = open(&a);
+        // Held for this whole test, as a stalled update of `a` would hold it.
+        let _held = AccessLock::acquire(object).unwrap();
+        let sid = container_sid().unwrap();
+        let started = std::time::Instant::now();
+        set_access(&b.to_string_lossy(), sid, Some((0, FILE_GENERIC_READ))).unwrap();
+        set_access(&b.to_string_lossy(), sid, None).unwrap();
+        assert!(started.elapsed().as_secs() < 10, "held up by another object's lock");
+        drop(_held);
+        unsafe { CloseHandle(object) };
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_update_that_changes_nothing_writes_nothing() {
+        let dir = std::env::temp_dir().join(format!("yamakan-same-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("f");
+        std::fs::write(&file, b"f").unwrap();
+        let path = file.to_string_lossy().to_string();
+        let sid = container_sid().unwrap();
+        set_access(&path, sid, Some((0, FILE_GENERIC_READ))).unwrap();
+        // The change time moves on a write of the access list and not otherwise.
+        let change_time = || {
+            use std::os::windows::fs::MetadataExt;
+            let _ = std::fs::metadata(&file).unwrap().last_write_time();
+            let mut info = [0u64; 6];
+            let handle = open(&file);
+            unsafe {
+                assert_ne!(GetFileInformationByHandleEx(handle, 0, info.as_mut_ptr() as *mut c_void, 40), 0);
+                CloseHandle(handle);
+            }
+            info[3]
+        };
+        let before = change_time();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        set_access(&path, sid, Some((0, FILE_GENERIC_READ))).unwrap();
+        assert_eq!(change_time(), before, "an unchanged grant was written");
+        set_access(&path, sid, None).unwrap();
+        assert_ne!(change_time(), before, "a real revoke was not written");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
