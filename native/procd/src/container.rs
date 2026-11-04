@@ -238,10 +238,10 @@ pub fn set_access(path: &str, sid: &Sid, grant: Option<(u32, u32)>) -> Result<()
         // Concurrent read-modify-write cycles on one object (workers sharing a
         // current directory, procds sharing an input file) would drop each
         // other's entries: one at a time, across every thread and procd of
-        // this user's session. A worker holding an oplock on an object it can
-        // read can stall both the open and the write below, so the lock is per
-        // object: a stall holds up only updates of that same object, and those
-        // are refused when their wait ends.
+        // this user's session. A process holding an oplock on an object can stall
+        // the open above and the write below, neither of which has a timeout, so
+        // the lock is per object: such a stall holds up only updates of that same
+        // object.
         let _held = AccessLock::acquire(handle)?;
         let mut old: *mut c_void = null_mut();
         let mut descriptor: *mut c_void = null_mut();
