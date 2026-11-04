@@ -145,9 +145,8 @@ const collect = () => {
   collecting = true;
   void store
     .collectGarbage()
-    .catch((e: Error) =>
-      console.warn("Garbage collection skipped: " + e.message),
-    )
+    // The message can name a host path, and this reaches the service log.
+    .catch(() => console.warn("Garbage collection skipped."))
     .finally(() => (collecting = false));
 };
 collect();

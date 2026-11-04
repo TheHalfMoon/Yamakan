@@ -872,3 +872,117 @@ test("line-end spaces, SRT ampersands, damaged tracks, names and header cues", a
     "VALIDATION",
   );
 });
+
+test("a retried caption edit replays after a lost reply, even after later edits", async () => {
+  const c = await workspace();
+  const documentId = ids();
+  const imported = (
+    await execute(c.browser, "yamakan.captions.import", {
+      projectId: c.projectId,
+      expectedRevision: (await head(c)).revision,
+      documentId,
+      expectedContentHash: null,
+      name: "Arabic",
+      language: "ar",
+      format: "srt",
+      text: SRT,
+    })
+  ).result as { document: { contentHash: string } };
+  const cue = CaptionDocumentSchema.parse(
+    JSON.parse(
+      c.store.getDocument(c.projectId, documentId).bytes.toString("utf8"),
+    ),
+  ).cues[0]!;
+  const splitInput = {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    documentId,
+    expectedContentHash: imported.document.contentHash,
+    cueId: cue.id,
+    atTicks: 1800 * MS,
+    newCueId: ids(),
+  };
+  const asked = { ...c.browser, requestId: "split.1" };
+  const split = await execute(asked, "yamakan.captions.split", splitInput);
+  // Before this, the retry was refused: the cue is already split.
+  assert.deepEqual(
+    (await execute(asked, "yamakan.captions.split", splitInput)).result,
+    split.result,
+  );
+  // Other input under the same id is not treated as the same request.
+  assert.equal(
+    await code(
+      execute(asked, "yamakan.captions.split", {
+        ...splitInput,
+        atTicks: 1900 * MS,
+      }),
+    ),
+    "IDEMPOTENCY_MISMATCH",
+  );
+
+  const splitDone = split.result as { document: { contentHash: string } };
+  const saveInput = {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    documentId,
+    expectedContentHash: splitDone.document.contentHash,
+    burnIn: true,
+  };
+  const saving = { ...c.browser, requestId: "save.1" };
+  const saved = await execute(saving, "yamakan.captions.save", saveInput);
+  const savedDone = saved.result as { document: { contentHash: string } };
+  const before = await head(c);
+  // Another edit lands; the retry still returns its own result, and moves nothing.
+  await execute(c.browser, "yamakan.captions.save", {
+    projectId: c.projectId,
+    expectedRevision: before.revision,
+    documentId,
+    expectedContentHash: savedDone.document.contentHash,
+    name: "Later",
+  });
+  const later = await head(c);
+  const again = await execute(saving, "yamakan.captions.save", saveInput);
+  // The whole original result, including the document of its own revision.
+  assert.deepEqual(again.result, saved.result);
+  assert.equal((await head(c)).revision, later.revision);
+
+  // After a restart the track is no longer parsed in memory; a retry reads it.
+  const track = Buffer.from(c.store.getDocument(c.projectId, documentId).bytes);
+  for (let i = 0; i < 16; i++) storedCaptions(ids(), () => track);
+  assert.deepEqual(
+    (await execute(asked, "yamakan.captions.split", splitInput)).result,
+    split.result,
+  );
+
+  // An id already used here, with a hash that names nothing or a track this
+  // request did not edit, gets one answer and learns nothing about that track.
+  for (const expectedContentHash of [
+    "f".repeat(64),
+    imported.document.contentHash,
+  ])
+    assert.equal(
+      await code(
+        execute(saving, "yamakan.captions.split", {
+          ...splitInput,
+          expectedContentHash,
+          cueId: ids(),
+        }),
+      ),
+      "IDEMPOTENCY_MISMATCH",
+    );
+  // The receipt belongs to one project.
+  assert.equal(
+    c.store.hasCommittedRequest(
+      { principalId: "browser-ui", requestId: "save.1", digest: "" },
+      c.projectId,
+    ),
+    true,
+  );
+  assert.equal(
+    c.store.hasCommittedRequest(
+      { principalId: "browser-ui", requestId: "save.1", digest: "" },
+      ids(),
+    ),
+    false,
+  );
+});

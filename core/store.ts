@@ -1490,6 +1490,28 @@ export class ProjectStore {
       migratedAt: r.migrated_at,
     }));
   }
+  // Whether this principal's request already committed in this project. A
+  // command whose input depends on the head uses this to rebuild the same
+  // content for a retry, so the commit below can replay or refuse it.
+  hasCommittedRequest(receipt: RequestReceipt, projectId: string) {
+    return Boolean(
+      this.#database
+        .prepare(
+          "SELECT 1 FROM command_receipts WHERE principal_id = ? AND project_id = ? AND request_id = ?",
+        )
+        .get(receipt.principalId, projectId, receipt.requestId),
+    );
+  }
+  // The documents of one retained revision.
+  listDocumentsAt(projectId: string, revision: number): DocumentRef[] {
+    const row = this.#database
+      .prepare(
+        "SELECT snapshot_hash FROM revisions WHERE project_id = ? AND revision = ?",
+      )
+      .get(projectId, revision) as { snapshot_hash: string } | undefined;
+    if (!row) throw new CommandError("NOT_FOUND", "Revision not found.");
+    return this.#canonical(row.snapshot_hash, projectId, revision).documents;
+  }
   /**
    * Commits one creative document as a new project revision (YU-010).
    * `source` is either new bytes, validated here outside the transaction, or

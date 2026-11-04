@@ -16,8 +16,11 @@ import type { ProjectStore, RequestReceipt } from "../store.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import { BATCH_LIMITS, ExportVariant, type JobSupervisor } from "../jobs.ts";
 import { CommandError } from "./errors.ts";
+import { checkHandoff, HandoffSchema, readHandoff } from "../handoff.ts";
+import { readProgress } from "../progress.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
+  DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   creativeDocumentsEnabled,
   DOCUMENTS_OFF,
@@ -442,8 +445,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -486,8 +490,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -871,8 +876,9 @@ export const commands = {
       );
       return {
         project,
+        // Of this result's revision: a replay's may not be the head.
         document: store
-          .listDocuments(a.projectId)
+          .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
       };
     },
@@ -932,14 +938,15 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
-      const doc = CaptionDocumentSchema.parse({
-        ...current,
-        ...(a.name !== undefined ? { name: a.name } : {}),
-        ...(a.language !== undefined ? { language: a.language } : {}),
-        ...(a.burnIn !== undefined ? { burnIn: a.burnIn } : {}),
-        ...(a.cues !== undefined ? { cues: a.cues } : {}),
-      });
+      const doc = await editedCaptions(store, receipt, a, (current) =>
+        CaptionDocumentSchema.parse({
+          ...current,
+          ...(a.name !== undefined ? { name: a.name } : {}),
+          ...(a.language !== undefined ? { language: a.language } : {}),
+          ...(a.burnIn !== undefined ? { burnIn: a.burnIn } : {}),
+          ...(a.cues !== undefined ? { cues: a.cues } : {}),
+        }),
+      );
       return commitCaptions(store, principal.id, receipt, a, doc);
     },
   }),
@@ -969,8 +976,9 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const current = readCaptions(store, a.projectId, a.documentId);
-      const doc = splitCue(current, a.cueId, a.atTicks, a.newCueId, a.texts);
+      const doc = await editedCaptions(store, receipt, a, (current) =>
+        splitCue(current, a.cueId, a.atTicks, a.newCueId, a.texts),
+      );
       return commitCaptions(store, principal.id, receipt, a, doc);
     },
   }),
@@ -2123,6 +2131,47 @@ export const commands = {
         receipt,
       ),
   }),
+  "yamakan.progress.read": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read one project's committed progress as a bounded, versioned view with a cursor; jobs appear with job:read.",
+    input: z
+      .object({
+        projectId: Id,
+        // The cursor of an earlier read: an unchanged view says only that.
+        after: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
+      })
+      .strict(),
+    run: ({ store, principal }, a) =>
+      readProgress(
+        store,
+        {
+          principalId: principal.id,
+          jobsVisible: principal.scopes.has("job:read"),
+        },
+        a,
+      ),
+  }),
+  "yamakan.handoff.read": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read a bounded handoff: revision, story and reference hashes, latest attempt and next action. It grants nothing.",
+    input: z.object({ projectId: Id }).strict(),
+    run: ({ store }, a) => readHandoff(store, a.projectId),
+  }),
+  "yamakan.handoff.check": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Check whether a handoff still describes its project, and what moved. It grants nothing.",
+    input: z.object({ handoff: HandoffSchema }).strict(),
+    run: ({ store }, a) => checkHandoff(store, a.handoff),
+  }),
   "yamakan.director.next": define({
     scope: "project:read",
     mutation: false,
@@ -2338,6 +2387,46 @@ function readCaptions(
   return storedCaptions(ref.contentHash, () => bytes);
 }
 
+// An edited track. A retry of a committed request starts from the track it
+// first edited, not the head, so it rebuilds the same content and replays. If
+// that fails, this is not that request, and the caller's hash may name any
+// track, so the refusal says only that.
+async function editedCaptions(
+  store: ProjectStore,
+  receipt: RequestReceipt | undefined,
+  a: { projectId: string; documentId: string; expectedContentHash: string },
+  edit: (current: CaptionDocument) => CaptionDocument,
+): Promise<CaptionDocument> {
+  if (!receipt || !store.hasCommittedRequest(receipt, a.projectId))
+    return edit(readCaptions(store, a.projectId, a.documentId));
+  try {
+    const doc = edit(
+      storedCaptions(a.expectedContentHash, () =>
+        store.documentBytes({
+          id: a.documentId,
+          kind: "captions",
+          schemaVersion: DOCUMENT_SCHEMA_VERSIONS.captions,
+          contentHash: a.expectedContentHash,
+        }),
+      ),
+    );
+    await assertBurnInGlyphs(doc);
+    return doc;
+  } catch (e) {
+    if (!(e instanceof CommandError || e instanceof z.ZodError)) throw e;
+    // The service cannot answer right now; that says nothing about the request.
+    if (
+      e instanceof CommandError &&
+      (e.code === "BUSY" || e.code === "CAPABILITY_UNAVAILABLE")
+    )
+      throw e;
+    throw new CommandError(
+      "IDEMPOTENCY_MISMATCH",
+      "Request ID was already used for a different request.",
+    );
+  }
+}
+
 // Commits a caption track as a new revision (compare-and-swap on the
 // revision and the track's content hash).
 async function commitCaptions(
@@ -2369,8 +2458,9 @@ async function commitCaptions(
   );
   return {
     project,
+    // Of this result's revision: a replay's may not be the head.
     document: store
-      .listDocuments(a.projectId)
+      .listDocumentsAt(a.projectId, project.revision)
       .find((d) => d.id === a.documentId),
   };
 }
