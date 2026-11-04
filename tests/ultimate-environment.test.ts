@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 // prettier-ignore
 // @ts-expect-error Plain .mjs modules without declarations.
-import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, evaluateEnvironment, lockfileDrift, redactLocalPaths, satisfiesNodeEngine, scriptOutcome } from "../scripts/ultimate-environment.mjs";
+import { ENVIRONMENT_FORMAT, REQUIRED_SCRIPTS, checkoutOwnership, evaluateEnvironment, lockfileDrift, redactLocalPaths, satisfiesNodeEngine, scriptOutcome } from "../scripts/ultimate-environment.mjs";
 
 const present = { present: true, sha256: "a".repeat(64), version: "8.1.1" };
 
@@ -311,4 +314,63 @@ test("negated os/cpu lists exclude only the named platform", () => {
   assert.deepEqual(result.drift, [
     { package: "node_modules/not-mac", pinned: "1.0.0", installed: null },
   ]);
+});
+
+test("a checkout whose writable paths are not its own is BLOCKED, never pass", () => {
+  for (const [ownership, code] of [
+    [{ nodeModulesLinked: true }, "SHARED_NODE_MODULES"],
+    [{ nativeTargetLinked: true }, "SHARED_NATIVE_TARGET"],
+    [{ targetRedirected: true }, "NATIVE_TARGET_REDIRECTED"],
+    [{ helperOverrides: ["YAMAKAN_PROCD"] }, "NATIVE_HELPER_OVERRIDDEN"],
+  ]) {
+    const result = evaluateEnvironment({
+      ...ready,
+      ownership,
+      scripts: REQUIRED_SCRIPTS.map((name: string) => ({
+        name,
+        exitCode: 0,
+      })),
+    });
+    assert.equal(result.status, "BLOCKED", code);
+    assert.equal(result.pass, false);
+    assert.ok(result.blockers.some((b: { code: string }) => b.code === code));
+  }
+});
+
+test("checkout ownership reads real links and the environment", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-ownership-"));
+  const elsewhere = await mkdtemp(path.join(tmpdir(), "yamakan-shared-"));
+  try {
+    assert.deepEqual(checkoutOwnership(root, {}), {
+      nodeModulesLinked: false,
+      nativeTargetLinked: false,
+      targetRedirected: false,
+      helperOverrides: [],
+    });
+    await symlink(elsewhere, path.join(root, "node_modules"), "junction");
+    await mkdir(path.join(root, "native", "procd"), { recursive: true });
+    await symlink(
+      elsewhere,
+      path.join(root, "native", "procd", "target"),
+      "junction",
+    );
+    const linked = checkoutOwnership(root, {
+      CARGO_TARGET_DIR: elsewhere,
+      YAMAKAN_ACL: "acl.exe",
+    });
+    assert.equal(linked.nodeModulesLinked, true);
+    assert.equal(linked.nativeTargetLinked, true);
+    assert.equal(linked.targetRedirected, true);
+    assert.deepEqual(linked.helperOverrides, ["YAMAKAN_ACL"]);
+    // The default target, named explicitly, is not a redirection.
+    assert.equal(
+      checkoutOwnership(root, {
+        CARGO_TARGET_DIR: path.join(root, "native", "procd", "target"),
+      }).targetRedirected,
+      false,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(elsewhere, { recursive: true, force: true });
+  }
 });

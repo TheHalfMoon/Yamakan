@@ -59,6 +59,7 @@ rtk proxy git fetch origin main
 rtk proxy git worktree list
 rtk proxy node --version
 rtk proxy npm ci --ignore-scripts
+rtk proxy npm run build:native
 rtk proxy npm run qualify:ultimate-environment
 rtk proxy node docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/tools/validate-plan.mjs
 rtk proxy npm run provenance:check
@@ -70,7 +71,7 @@ rtk proxy npm test
 rtk proxy npm run build
 ```
 
-Node must satisfy `package.json` (>=24.11.0). Retrieve already-authorized repository LFS assets only if needed; do not download a model/browser or alternate media stack. Native builds require an owned `CARGO_TARGET_DIR`. TesterArmy uses its own lockfile under `e2e/testerarmy`. Preserve missing/corrupt DLL/LFS and insufficient-disk failures instead of calling setup ready.
+Node must satisfy `package.json` (>=24.11.0). Retrieve already-authorized repository LFS assets only if needed; do not download a model/browser or alternate media stack. Native builds use the checkout's own default target; leave `CARGO_TARGET_DIR` unset, as [07](07_DEVELOPER_ENVIRONMENT_AND_TEST_HARNESS.md) explains. TesterArmy uses its own lockfile under `e2e/testerarmy`. Preserve missing/corrupt DLL/LFS and insufficient-disk failures instead of calling setup ready.
 
 Focused examples, selected by changed boundary rather than run indiscriminately:
 

@@ -2,6 +2,9 @@
  * YU-001 — Isolated dependency/native/browser environment evaluation.
  * Missing helper, FFmpeg or dependency is BLOCKED, never PASS.
  */
+import { lstatSync } from "node:fs";
+import path from "node:path";
+
 export const ENVIRONMENT_FORMAT = "yamakan.ultimate-environment/v1";
 
 export const REQUIRED_SCRIPTS = Object.freeze([
@@ -139,6 +142,36 @@ export function evaluateEnvironment(input) {
       detail: "the worker tools cache is a link or junction, not a folder",
     });
   }
+  if (input.ownership?.nodeModulesLinked) {
+    blockers.push({
+      code: "SHARED_NODE_MODULES",
+      status: "BLOCKED",
+      detail: "node_modules is a link or junction, not this checkout's own",
+    });
+  }
+  if (input.ownership?.nativeTargetLinked) {
+    blockers.push({
+      code: "SHARED_NATIVE_TARGET",
+      status: "BLOCKED",
+      detail:
+        "the native target is a link or junction, not this checkout's own",
+    });
+  }
+  if (input.ownership?.targetRedirected) {
+    blockers.push({
+      code: "NATIVE_TARGET_REDIRECTED",
+      status: "BLOCKED",
+      detail:
+        "CARGO_TARGET_DIR sends the build away from the target the hashes and media workers read",
+    });
+  }
+  if (input.ownership?.helperOverrides?.length) {
+    blockers.push({
+      code: "NATIVE_HELPER_OVERRIDDEN",
+      status: "BLOCKED",
+      detail: `${input.ownership.helperOverrides.join(",")} replace the helpers that were hashed`,
+    });
+  }
   const freeBytes = input.disk?.freeBytes;
   const reserveBytes = input.disk?.reserveBytes ?? DISK_RESERVE_BYTES;
   if (input.disk && !Number.isFinite(freeBytes)) {
@@ -182,6 +215,30 @@ export function evaluateEnvironment(input) {
     mediaRuntime: input.mediaRuntime || null,
     disk: input.disk || null,
     workerTools: input.workerTools || null,
+    ownership: input.ownership || null,
+  };
+}
+
+// Whether the writable paths a capture depends on are this checkout's own.
+// The recorded helper hashes describe native/procd/target; a build sent
+// elsewhere, or a helper named by the environment, would leave them describing
+// something other than what the tests ran.
+export function checkoutOwnership(repoRoot, env = process.env) {
+  const linked = (rel) => {
+    try {
+      return lstatSync(path.join(repoRoot, rel)).isSymbolicLink();
+    } catch {
+      return false;
+    }
+  };
+  const target = path.join(repoRoot, "native", "procd", "target");
+  return {
+    nodeModulesLinked: linked("node_modules"),
+    nativeTargetLinked: linked(path.join("native", "procd", "target")),
+    targetRedirected:
+      Boolean(env.CARGO_TARGET_DIR) &&
+      path.resolve(repoRoot, env.CARGO_TARGET_DIR) !== path.resolve(target),
+    helperOverrides: ["YAMAKAN_PROCD", "YAMAKAN_ACL"].filter((n) => env[n]),
   };
 }
 

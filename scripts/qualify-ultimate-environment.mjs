@@ -18,6 +18,7 @@ import {
   DISK_RESERVE_BYTES,
   ENVIRONMENT_FORMAT,
   REQUIRED_SCRIPTS,
+  checkoutOwnership,
   evaluateEnvironment,
   lockfileDrift,
   redactLocalPaths,
@@ -112,7 +113,8 @@ const freeBytes = diskFree(repo);
 // The helpers are always rebuilt from source here, so the recorded hashes
 // are this checkout's, never a stale binary left from an earlier build.
 const nativeBuild = { attempted: false, exitCode: null, logPath: null };
-if (freeBytes >= DISK_RESERVE_BYTES) {
+const ownership = checkoutOwnership(repo);
+if (freeBytes >= DISK_RESERVE_BYTES && !ownership.targetRedirected) {
   nativeBuild.attempted = true;
   mkdirSync(logDir, { recursive: true });
   const logPath = path.join(logDir, "build-native.log");
@@ -211,6 +213,7 @@ const precheck = evaluateEnvironment({
   mediaRuntime,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
   workerTools,
+  ownership,
   scripts: [],
 });
 
@@ -240,6 +243,7 @@ const evaluation = evaluateEnvironment({
   mediaRuntime,
   disk: { freeBytes, reserveBytes: DISK_RESERVE_BYTES, root: repo },
   workerTools,
+  ownership,
   scripts,
 });
 
