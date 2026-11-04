@@ -884,6 +884,11 @@ function App() {
           call: (operation, parameters) =>
             client.call(operation as never, parameters as never),
         }}
+        unsaved={Boolean(history?.past.length)}
+        onTakeApplied={(project) => {
+          accept(project as Project);
+          void refresh();
+        }}
       />
     </>
   );

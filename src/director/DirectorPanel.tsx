@@ -4,6 +4,7 @@ import {
   directorCapability,
 } from "../../core/director-flags.ts";
 import { MESSAGES, type MessageKey } from "../i18n.ts";
+import { TakeReview } from "./TakeReview.tsx";
 
 type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -236,6 +237,8 @@ type Props = {
   revision?: number | null;
   client: Client;
   t: Translate;
+  unsaved?: boolean;
+  onTakeApplied?: (project: unknown) => void;
 };
 
 /**
@@ -247,6 +250,8 @@ export function DirectorPanel({
   revision = null,
   client,
   t,
+  unsaved = false,
+  onTakeApplied = () => {},
 }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
@@ -297,6 +302,17 @@ export function DirectorPanel({
           revision={revision}
           client={client}
           t={t}
+        />
+      ) : null}
+      {projectId ? (
+        <TakeReview
+          key={`takes-${projectId}`}
+          projectId={projectId}
+          revision={revision}
+          client={client}
+          t={t}
+          unsaved={unsaved}
+          onApplied={onTakeApplied}
         />
       ) : null}
       <p>
