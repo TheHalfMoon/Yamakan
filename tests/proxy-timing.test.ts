@@ -250,6 +250,13 @@ test("a build interrupted by a restart is quarantined, then completes on the nex
   );
   await mkdir(partial);
   await writeFile(path.join(partial, "proxy.mp4"), "partial");
+  // The shorter name a build's folder has now.
+  const shortPartial = path.join(
+    dir,
+    "00000000-0000-4000-8000-000000000001.partial",
+  );
+  await mkdir(shortPartial);
+  await writeFile(path.join(shortPartial, "proxy.mp4"), "partial");
   const orphan = path.join(dir, `${"d".repeat(64)}.mp4`);
   await writeFile(orphan, "no record");
   assert.equal(
@@ -257,6 +264,25 @@ test("a build interrupted by a restart is quarantined, then completes on the nex
     "absent",
   );
   assert.deepEqual(await readdir(dir), [], "both quarantined");
+  await buildProxy(store, project.id, asset.id);
+  assert.equal((await settled(store, project.id, asset.id)).state, "ready");
+});
+
+test("a workspace on a long path still builds proxies", async () => {
+  resetProxiesForTests();
+  const { file } = await fixture("long-path", { seconds: 1 });
+  // A root of 110 characters: the build folder must stay within the 260
+  // characters that restoring a worker's folder can reach.
+  const base = await mkdtemp(path.join(tmpdir(), "yamakan-proxy-long-"));
+  bases.push(base);
+  const root = path.join(base, "x".repeat(Math.max(1, 110 - base.length - 1)));
+  await mkdir(root);
+  assert.equal(root.length, 110);
+  const store = new ProjectStore(root);
+  handles.push(store);
+  await store.initialize();
+  const project = await store.create("Long path");
+  const asset = await imported(store, project.id, file);
   await buildProxy(store, project.id, asset.id);
   assert.equal((await settled(store, project.id, asset.id)).state, "ready");
 });
