@@ -20,18 +20,18 @@ Read from source at the base, not run. Durable replay is solid: receipts key on 
 | Oversized MCP frame                                     | Satisfied, `tests/mcp-transport.test.ts`                                              | —     |
 | Secret or path logging                                  | Partly: unit checks only; a GC warning logs an unredacted message                     | C     |
 
-**Riskiest finding, slice B:** a heuristic scan found 14 of 53 mutations that accept a request id and ignore it, including `job.cancel`, `scene.save` and `studio.commit`, which were spot-checked. A caller who retries after a lost response believes it is protected, and is not. Slice B must make each one enforce the id or refuse it.
+**Riskiest finding, slice B:** a heuristic scan found 14 of 53 mutations that accept a request id and ignore it, including `job.cancel`, `scene.save` and `studio.commit`, which were spot-checked. For most, a caller who retries after a lost response believes it is protected, and is not; `studio.commit` persists nothing, so its retry is harmless. Slice B must make each one enforce the id or refuse it.
 
 ## Slice A: request ids and errors reach callers
 
 Additive: old fields and result text are unchanged.
 
 - **CLI:** `npm run cli -- <operation> <json> [requestId]` passes an id for replay, and errors now print `retryable` and `requestId`.
-- **MCP:** a supplied id, and the one `yamakan_document_save` generates, returns in `_meta["yamakan/requestId"]` on success and failure. Before, a generated save id was never revealed, so a lost response could not be retried under it.
+- **MCP:** a supplied id, and the one `yamakan_document_save` generates, returns in `_meta["yamakan/requestId"]` on success and on a tool refusal. A refused save returns its own id rather than the `.stage` or `.commit` id the service echoes, because retrying under those replays nothing. Other refused calls with no id return the service's trace id, which is for reporting and cannot replay. **This does not make a generated id safe after a lost response:** if the connection fails, or the reply to the MCP client is lost, no id arrives. Lost-response safety needs the caller to supply the id.
 - **Stage route:** a refusal names the caller's valid `X-Request-Id`; a malformed one is not echoed.
 
-Tests, in `tests/mcp.test.ts` and `tests/http.test.ts`, with `tests/parity.test.ts` and `tests/document-clients.test.ts` unchanged and passing: 8 of 8. They cover replay through MCP and the CLI, the same id with other input through MCP, and refusals carrying the id. `yamakan_document_save`'s generated id is not asserted in a new test.
+Tests, in `tests/mcp.test.ts`, `tests/http.test.ts` and `tests/document-clients.test.ts`, with `tests/parity.test.ts` unchanged and passing. They cover replay through MCP and the CLI, the same id with other input through MCP, refusals carrying the id, a refused save returning its root id, and a malformed id not being echoed. A review reproduced the suffixed-id defect against a stubbed service before this was fixed. A save that succeeds with a generated id is not asserted, since documents are not enabled in that test.
 
-**Not done in this slice:** the SDK still drops the id on success, and JSON-RPC errors for unknown tools remain outside the code set, to keep old clients working.
+The CLI's third positional argument was ignored before and is now the request id; no invocation in the repository passes one. **Not done in this slice:** the SDK still drops the id on success, and JSON-RPC errors for unknown tools remain outside the code set, to keep old clients working.
 
 Rollback: revert this slice; durable receipts are untouched.

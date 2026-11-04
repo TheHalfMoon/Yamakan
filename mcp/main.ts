@@ -163,8 +163,10 @@ async function handle(message: Message) {
       // that includes a refused credential while loading the tool list.
       const toolError = (e: YamakanError, sent?: unknown) =>
         reply(id, {
-          // The id to retry or report with; the text stays as it was.
-          ...requestMeta(e.requestId ?? sent),
+          // The caller's or save's own id first: a save's stage and commit
+          // suffix theirs, and retrying under one of those replays nothing.
+          // Otherwise the service's trace id, to report. The text stays as it was.
+          ...requestMeta(sent ?? e.requestId),
           isError: true,
           content: [
             {

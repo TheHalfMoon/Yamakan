@@ -41,7 +41,8 @@ try {
       ? await client.catalog()
       : name === "stage-document"
         ? await stageDocument()
-        : // The same request id after a lost response replays the original.
+        : // The same request id after a lost response replays the original, on
+          // commands that keep a receipt.
           await client.call(name as Operation, JSON.parse(args), rest[0]);
   console.log(JSON.stringify(result, null, 2));
 } catch (e) {
