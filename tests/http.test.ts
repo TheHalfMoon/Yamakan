@@ -1,6 +1,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { fork, execFileSync } from "node:child_process";
+import { fork, execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, access, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -116,6 +116,21 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       ((await staged.json()) as { error: { code: string } }).error.code,
       "VALIDATION",
     );
+    // Its refusal names the caller's request, as /call does; a malformed id
+    // is not echoed back.
+    const stageRefusal = async (id: string) =>
+      (await (
+        await fetch(stageUrl, {
+          method: "POST",
+          headers: { ...headers, "X-Request-Id": id },
+          body: "{}",
+        })
+      ).json()) as { requestId: string };
+    assert.equal(
+      (await stageRefusal("stage-named.1")).requestId,
+      "stage-named.1",
+    );
+    assert.notEqual((await stageRefusal("bad id!")).requestId, "bad id!");
     const call = async (name: string, args: unknown) =>
       fetch(`${origin}/api/v1/call`, {
         method: "POST",
@@ -385,6 +400,38 @@ test("loopback API rejects unauthenticated and cross-site access; restart preser
       ).toString(),
     );
     assert.ok(Array.isArray(listed));
+    // The CLI can name a request, replay it after a lost response, and report
+    // a refusal with what a caller needs to act on it.
+    const cli = (...args: string[]) =>
+      spawnSync(
+        process.execPath,
+        [fileURLToPath(new URL("../cli/main.ts", import.meta.url)), ...args],
+        {
+          env: { ...process.env, YAMAKAN_URL: origin, YAMAKAN_WORKSPACE: root },
+          windowsHide: true,
+          encoding: "utf8",
+        },
+      );
+    const input = JSON.stringify({ name: "From the CLI" });
+    const made = JSON.parse(
+      cli("yamakan.project.create", input, "cli-replay.1").stdout,
+    );
+    const replayed = JSON.parse(
+      cli("yamakan.project.create", input, "cli-replay.1").stdout,
+    );
+    assert.equal(replayed.id, made.id);
+    const refusedByCli = cli(
+      "yamakan.project.create",
+      JSON.stringify({ name: "From the CLI", shell: "whoami" }),
+      "cli-refused.1",
+    );
+    assert.equal(refusedByCli.status, 1);
+    assert.deepEqual(
+      (({ code, retryable, requestId }) => ({ code, retryable, requestId }))(
+        JSON.parse(refusedByCli.stderr),
+      ),
+      { code: "VALIDATION", retryable: false, requestId: "cli-refused.1" },
+    );
     assert.equal(catalog.service, "yamakan");
     assert.match(catalog.resourcePolicy.hash, /^[a-f0-9]{64}$/);
     assert.ok(

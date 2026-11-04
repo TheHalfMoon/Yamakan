@@ -5,7 +5,7 @@ import type { Operation } from "../sdk/client.ts";
 const [name, args = "{}", ...rest] = process.argv.slice(2);
 if (!name)
   throw new Error(
-    "Usage: npm run cli -- yamakan.project.list {}\n" +
+    "Usage: npm run cli -- yamakan.project.list {} [requestId]\n" +
       "       npm run cli -- stage-document <projectId> <studio|cinemaScene> <schemaVersion> <file> [requestId]",
   );
 const env = (key: string) =>
@@ -41,10 +41,18 @@ try {
       ? await client.catalog()
       : name === "stage-document"
         ? await stageDocument()
-        : await client.call(name as Operation, JSON.parse(args));
+        : // The same request id after a lost response replays the original.
+          await client.call(name as Operation, JSON.parse(args), rest[0]);
   console.log(JSON.stringify(result, null, 2));
 } catch (e) {
   if (!(e instanceof YamakanError)) throw e;
-  console.error(JSON.stringify({ code: e.code, message: e.message }));
+  console.error(
+    JSON.stringify({
+      code: e.code,
+      message: e.message,
+      retryable: e.retryable,
+      requestId: e.requestId,
+    }),
+  );
   process.exitCode = 1;
 }

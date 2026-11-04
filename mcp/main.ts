@@ -127,6 +127,12 @@ function catalogTools(
   });
 }
 
+// A tool result's request id, in the place MCP keeps for such things.
+const requestMeta = (requestId: unknown) =>
+  typeof requestId === "string"
+    ? { _meta: { "yamakan/requestId": requestId } }
+    : {};
+
 async function handle(message: Message) {
   const { id, method } = message;
   const params =
@@ -155,8 +161,10 @@ async function handle(message: Message) {
     case "tools/call": {
       // Tool failures are results the model can read, not protocol errors;
       // that includes a refused credential while loading the tool list.
-      const toolError = (e: YamakanError) =>
+      const toolError = (e: YamakanError, sent?: unknown) =>
         reply(id, {
+          // The id to retry or report with; the text stays as it was.
+          ...requestMeta(e.requestId ?? sent),
           isError: true,
           content: [
             {
@@ -192,6 +200,7 @@ async function handle(message: Message) {
         (typeof requestId === "string" &&
           new RegExp(REQUEST_ID.pattern).test(requestId) &&
           requestId.length <= REQUEST_ID.maxLength);
+      let sent: unknown = requestId;
       try {
         if (!valid)
           throw new YamakanError(
@@ -228,12 +237,14 @@ async function handle(message: Message) {
             );
         }
         const service = await client();
+        // A save always has an id, so its caller can retry a lost response.
+        if (saving)
+          sent = (requestId as string | undefined) ?? crypto.randomUUID();
         const result = saving
           ? await service.saveDocument({
               ...(args as Parameters<YamakanClient["saveDocument"]>[0]),
               // Stage and commit each replay under this id on a retry.
-              requestId:
-                (requestId as string | undefined) ?? crypto.randomUUID(),
+              requestId: sent as string,
             })
           : await service.call(
               operation!,
@@ -242,11 +253,12 @@ async function handle(message: Message) {
               requestId === undefined ? undefined : (requestId as string),
             );
         return reply(id, {
+          ...requestMeta(sent),
           content: [{ type: "text", text: JSON.stringify(result) }],
         });
       } catch (e) {
         if (!(e instanceof YamakanError)) throw e;
-        return toolError(e);
+        return toolError(e, valid ? sent : undefined);
       }
     }
     default:

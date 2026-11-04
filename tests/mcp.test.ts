@@ -116,6 +116,34 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
       [project.id],
     );
 
+    // A request id comes back beside the result, and replays it; the result
+    // text is the same with or without one.
+    const named = {
+      name: "yamakan_project_create",
+      arguments: { name: "Replayed", requestId: "mcp-replay.1" },
+    };
+    const first = await request("tools/call", named);
+    assert.equal(first.result._meta["yamakan/requestId"], "mcp-replay.1");
+    const again = await request("tools/call", named);
+    assert.equal(again.result.content[0].text, first.result.content[0].text);
+    assert.equal(created.result._meta, undefined);
+    // A refusal carries the service's id, so it can be reported.
+    const refused = await request("tools/call", {
+      name: "yamakan_project_create",
+      arguments: { name: "x", shell: "whoami", requestId: "mcp-refused.1" },
+    });
+    assert.equal(refused.result.isError, true);
+    assert.equal(refused.result._meta["yamakan/requestId"], "mcp-refused.1");
+    // The same id with other input is refused, not replayed.
+    const mismatch = await request("tools/call", {
+      name: "yamakan_project_create",
+      arguments: { name: "Different", requestId: "mcp-replay.1" },
+    });
+    assert.equal(
+      JSON.parse(mismatch.result.content[0].text).code,
+      "IDEMPOTENCY_MISMATCH",
+    );
+
     const invalid = await request("tools/call", {
       name: "yamakan_project_create",
       arguments: { name: "x", shell: "whoami" },
