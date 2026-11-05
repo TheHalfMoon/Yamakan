@@ -88,7 +88,7 @@ export type OtioProposal = {
   name: string;
   clips: OtioProposalClip[];
   unresolved: number;
-  /** What the file held that the proposal leaves out, by OTIO schema. */
+  /** What the file held that the proposal leaves out, by OTIO schema or field. */
   ignored: { schema: string; count: number }[];
 };
 
@@ -216,6 +216,9 @@ export function otioLossReport(project: CanonicalProject): OtioLossReport {
   ) => losses.push({ subject, id, field, effect });
   lose("project", project.id, "output");
   lose("project", project.id, "language");
+  const placed = new Set(project.clips.map((c) => c.assetId));
+  for (const a of project.assets)
+    if (!placed.has(a.id)) lose("project", project.id, `asset:${a.id}`);
   if (project.scenes.length) lose("project", project.id, "scenes");
   for (const d of project.documents)
     lose("project", project.id, `document:${d.id}`);
@@ -247,8 +250,8 @@ export function otioLossReport(project: CanonicalProject): OtioLossReport {
   losses.sort(
     (a, b) =>
       order[a.subject] - order[b.subject] ||
-      a.id.localeCompare(b.id) ||
-      a.field.localeCompare(b.field),
+      byCodeUnit(a.id, b.id) ||
+      byCodeUnit(a.field, b.field),
   );
   const used = new Set(carried.map((c) => c.assetId));
   return {
@@ -262,9 +265,12 @@ export function otioLossReport(project: CanonicalProject): OtioLossReport {
         hash: a.hash,
         bytes: a.bytes,
       }))
-      .sort((a, b) => a.assetId.localeCompare(b.assetId)),
+      .sort((a, b) => byCodeUnit(a.assetId, b.assetId)),
   };
 }
+
+// The same order on any machine, whatever its locale.
+const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 function countObjects(value: unknown, depth: number, state: { n: number }) {
   if (depth > OTIO_LIMITS.maxDepth)
@@ -364,20 +370,40 @@ export function fromOtio(
   let unresolved = 0;
   let timelineCursor = 0;
   const ignoredBySchema = new Map<string, number>();
+  const count = (key: string) =>
+    ignoredBySchema.set(key, (ignoredBySchema.get(key) ?? 0) + 1);
   const ignore = (value: unknown) => {
     const schema = (value as { OTIO_SCHEMA?: unknown } | null)?.OTIO_SCHEMA;
-    const key =
+    count(
       typeof schema === "string"
         ? schema.slice(0, OTIO_LIMITS.maxString)
-        : "unknown";
-    ignoredBySchema.set(key, (ignoredBySchema.get(key) ?? 0) + 1);
+        : "unknown",
+    );
   };
+  // Fields of a known object that this reader does not apply.
+  const unread = (value: unknown, schema: string, fields: string[]) => {
+    for (const field of fields) {
+      const held = (value as Record<string, unknown>)[field];
+      if (
+        held !== undefined &&
+        held !== null &&
+        !(Array.isArray(held) && held.length === 0)
+      )
+        count(`${schema}.${field}`);
+    }
+  };
+  unread(root, "Timeline", ["global_start_time"]);
+  if (root.tracks && typeof root.tracks === "object")
+    unread(root.tracks, "Stack", ["source_range", "effects", "markers"]);
   for (const entry of childrenOf(root.tracks?.children, "stack")) {
     const track = entry as TrackJson;
     if (!track || track.OTIO_SCHEMA !== "Track.1") {
       ignore(entry);
       continue;
     }
+    if (track.kind !== "Video" && track.kind !== "Audio")
+      throw new CommandError("VALIDATION", "OTIO track kind is not supported.");
+    unread(track, "Track", ["source_range", "effects", "markers"]);
     const trackKind = track.kind === "Audio" ? "audio" : "video";
     const trackName =
       typeof track.name === "string"
@@ -385,28 +411,43 @@ export function fromOtio(
         : "Track";
     timelineCursor = 0;
     for (const child of childrenOf(track.children, "track")) {
-      if (!child || typeof child !== "object") {
+      const schema = (child as { OTIO_SCHEMA?: unknown } | null)?.OTIO_SCHEMA;
+      // A transition takes no time of its own. Anything else unread might, and
+      // then every later clip's place would be a guess.
+      if (schema === "Transition.1") {
         ignore(child);
         continue;
       }
-      if ((child as GapJson).OTIO_SCHEMA === "Gap.1") {
-        timelineCursor += ticksFrom(rangeOf(child, "gap").duration);
+      if (schema !== "Gap.1" && schema !== "Clip.1")
+        throw new CommandError(
+          "VALIDATION",
+          "OTIO track holds something this cannot place.",
+        );
+      if (schema === "Gap.1") {
+        timelineCursor += ticksFrom(rangeOf(child as GapJson, "gap").duration);
         if (!Number.isSafeInteger(timelineCursor))
           throw new CommandError("VALIDATION", "OTIO clip start is invalid.");
         continue;
       }
-      if ((child as ClipJson).OTIO_SCHEMA !== "Clip.1") {
-        ignore(child);
-        continue;
-      }
       const clipChild = child as ClipJson;
+      unread(clipChild, "Clip", ["effects", "markers"]);
+      if ((clipChild as { enabled?: unknown }).enabled === false)
+        count("Clip.enabled");
       const range = rangeOf(clipChild, "clip");
       const duration = ticksFrom(range.duration);
       const sourceStart = ticksFrom(range.start_time);
-      const startTicks = clipChild.metadata?.yamakan_timeline_start
-        ? Number(clipChild.metadata.yamakan_timeline_start)
-        : timelineCursor;
-      if (!Number.isSafeInteger(startTicks) || startTicks < 0)
+      const startText: unknown = clipChild.metadata?.yamakan_timeline_start;
+      if (
+        startText !== undefined &&
+        !(typeof startText === "string" && /^\d{1,16}$/.test(startText))
+      )
+        throw new CommandError("VALIDATION", "OTIO clip start is invalid.");
+      const startTicks =
+        startText === undefined ? timelineCursor : Number(startText);
+      if (
+        !Number.isSafeInteger(startTicks) ||
+        !Number.isSafeInteger(startTicks + duration)
+      )
         throw new CommandError("VALIDATION", "OTIO clip start is invalid.");
       const ref = clipChild.media_reference;
       let assetId: string | null = null;
@@ -414,7 +455,12 @@ export function fromOtio(
       if (ref?.OTIO_SCHEMA === "ExternalReference.1") {
         const metaId = ref.metadata?.yamakan_asset_id;
         const metaHash = ref.metadata?.yamakan_content_hash;
-        const url = ref.target_url ?? "";
+        const url: unknown = ref.target_url ?? "";
+        if (typeof url !== "string")
+          throw new CommandError(
+            "VALIDATION",
+            "OTIO media address is invalid.",
+          );
         if (metaId && byId.has(metaId)) assetId = metaId;
         else if (metaHash && byHash.has(metaHash))
           assetId = byHash.get(metaHash)!.id;
@@ -425,7 +471,12 @@ export function fromOtio(
           // A web address, a host path or anything else: never opened.
           remoteUrlIgnored = true;
         }
-      }
+      } else if (
+        ref?.OTIO_SCHEMA !== "MissingReference.1" &&
+        ref !== undefined &&
+        ref !== null
+      )
+        ignore(ref);
       if (!assetId) unresolved += 1;
       // Effects come back only as Yamakan's own validated stack; anything
       // else there is refused, never half-read.
@@ -499,7 +550,7 @@ export function fromOtio(
   }
   const ignored = [...ignoredBySchema]
     .map(([schema, count]) => ({ schema, count }))
-    .sort((a, b) => a.schema.localeCompare(b.schema));
+    .sort((a, b) => byCodeUnit(a.schema, b.schema));
   return { name, clips, unresolved, ignored };
 }
 

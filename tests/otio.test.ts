@@ -367,6 +367,48 @@ test("malformed shapes are refused as validation errors, not crashes", () => {
   refused(7);
   refused({ OTIO_SCHEMA: "Timeline.1", tracks: { children: 7 } });
   refused(timeline(7));
+  refused(timeline([{ OTIO_SCHEMA: "Stack.1" }]));
+  refused(timeline([5, clipOf("")]));
+  refused({
+    OTIO_SCHEMA: "Timeline.1",
+    tracks: {
+      children: [{ OTIO_SCHEMA: "Track.1", kind: "Data", children: [] }],
+    },
+  });
+  for (const target_url of [5, {}, true, ["x"]])
+    refused(
+      timeline([
+        {
+          ...clipOf(""),
+          media_reference: {
+            OTIO_SCHEMA: "ExternalReference.1",
+            target_url,
+          },
+        },
+      ]),
+    );
+  for (const yamakan_timeline_start of [
+    { toString: 1 },
+    7,
+    true,
+    [5],
+    "",
+    "1e3",
+    "0x10",
+    "12345678901234567",
+  ])
+    refused(
+      timeline([{ ...clipOf(""), metadata: { yamakan_timeline_start } }]),
+    );
+  refused(
+    timeline([
+      {
+        ...clipOf(""),
+        metadata: { yamakan_timeline_start: "9007199254740990" },
+        source_range: { start_time: time(0), duration: time(F) },
+      },
+    ]),
+  );
   refused(timeline([{ OTIO_SCHEMA: "Gap.1", name: "g" }]));
   refused(timeline([{ OTIO_SCHEMA: "Gap.1", source_range: 3 }]));
   refused(timeline([{ OTIO_SCHEMA: "Clip.1", name: "c" }]));
@@ -425,21 +467,84 @@ test("no address in a file is opened or treated as media", () => {
 
 test("what a file holds that the proposal leaves out is counted, not dropped silently", () => {
   const proposal = fromOtio(
-    JSON.stringify(
-      timeline([
+    JSON.stringify({
+      ...timeline([
         { OTIO_SCHEMA: "Transition.1" },
         { OTIO_SCHEMA: "Transition.1" },
-        { OTIO_SCHEMA: "Stack.1" },
-        5,
-        clipOf(""),
+        {
+          ...clipOf(""),
+          effects: [{ OTIO_SCHEMA: "LinearTimeWarp.1" }],
+          markers: [{ OTIO_SCHEMA: "Marker.2" }],
+          enabled: false,
+        },
+        {
+          ...clipOf(""),
+          effects: [],
+          media_reference: {
+            OTIO_SCHEMA: "ImageSequenceReference.1",
+            target_url_base: "https://evil.example/",
+          },
+        },
+        {
+          ...clipOf(""),
+          media_reference: { OTIO_SCHEMA: "MissingReference.1" },
+        },
       ]),
-    ),
+      global_start_time: time(F),
+    }),
     [],
   );
-  assert.equal(proposal.clips.length, 1);
+  assert.equal(proposal.clips.length, 3);
+  assert.equal(proposal.unresolved, 3);
   assert.deepEqual(proposal.ignored, [
-    { schema: "Stack.1", count: 1 },
+    { schema: "Clip.effects", count: 1 },
+    { schema: "Clip.enabled", count: 1 },
+    { schema: "Clip.markers", count: 1 },
+    { schema: "ImageSequenceReference.1", count: 1 },
+    { schema: "Timeline.global_start_time", count: 1 },
     { schema: "Transition.1", count: 2 },
-    { schema: "unknown", count: 1 },
   ]);
+});
+
+test("a clip's start and an address are matched without coercion, and a known asset still resolves", () => {
+  const asset = { id: crypto.randomUUID(), hash: "c".repeat(64) };
+  const { clips, unresolved, ignored } = fromOtio(
+    JSON.stringify(
+      timeline([
+        {
+          ...clipOf(`yamakan:asset:${asset.id}`),
+          metadata: { yamakan_timeline_start: String(3 * F) },
+        },
+      ]),
+    ),
+    [asset],
+  );
+  assert.equal(clips[0]!.assetId, asset.id);
+  assert.equal(clips[0]!.startTicks, 3 * F);
+  assert.equal(unresolved, 0);
+  assert.deepEqual(ignored, []);
+});
+
+test("the report also names unused media, scenes, documents, animation and every track state", () => {
+  const p = sampleProject();
+  const unused = crypto.randomUUID();
+  const documentId = crypto.randomUUID();
+  p.assets.push({ ...p.assets[0]!, id: unused, hash: "d".repeat(64) });
+  p.scenes = [{ id: crypto.randomUUID() }] as unknown as typeof p.scenes;
+  p.documents = [{ id: documentId }] as unknown as typeof p.documents;
+  Object.assign(p.tracks[0]!, { solo: true, targeted: true });
+  p.clips[1]!.animation = {
+    channels: {},
+  } as unknown as (typeof p.clips)[1]["animation"];
+  const fields = otioLossReport(p).losses.map((l) => l.field);
+  for (const field of [
+    `asset:${unused}`,
+    "scenes",
+    `document:${documentId}`,
+    "solo",
+    "targeted",
+    "animation",
+  ])
+    assert.ok(fields.includes(field), field);
+  assert.ok(!otioLossReport(p).media.some((m) => m.assetId === unused));
 });
