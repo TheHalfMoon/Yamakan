@@ -791,7 +791,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         if (!recipe) return { refused: "RECIPE_UNKNOWN" };
         const refused = refusal(request, capabilityOf(recipe));
         if (refused) return { refused };
-        // The person owns this process, and may have restarted it since the check.
+        // The person started this process, and may have restarted it since the check.
         const start = await startProblem();
         if (start) {
           ready.clear();

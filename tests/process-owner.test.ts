@@ -367,7 +367,8 @@ test(
       procd.stdin!.on("error", () => {});
       procd.stdin!.write("x".repeat(300 * 1024));
       procd.stdin!.write("\n");
-      await exited;
+      const [code] = await exited;
+      assert.equal(code, 0, "the designed exit, not a crash");
     } finally {
       procd.kill();
     }

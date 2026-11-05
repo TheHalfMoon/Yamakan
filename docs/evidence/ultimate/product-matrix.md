@@ -24,7 +24,7 @@ Updated 2026-11-05. Facts only: each row says what was actually run, and a blank
 
 ## Model integration
 
-No model is enabled, downloaded or qualified. `ENGINE_ENABLED` is false. Commercial providers are off. Nothing sends media to a cloud service today, because the ComfyUI path is not wired to anything. It refuses partner nodes and a ComfyUI not started offline; `--offline` is not an egress block. The person owns its process, which has no Yamakan sandbox.
+No model is enabled, downloaded or qualified. `ENGINE_ENABLED` is false. Commercial providers are off. Nothing sends media to a cloud service today, because the ComfyUI path is not wired to anything. It refuses partner nodes and a ComfyUI not started offline; `--offline` is not an egress block. As proposed, not yet decided, a person would start it, with no Yamakan sandbox.
 
 ## What blocks real generation
 

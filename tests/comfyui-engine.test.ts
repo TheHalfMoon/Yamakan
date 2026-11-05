@@ -419,6 +419,8 @@ test("the reported arguments rule a copy out in each form they can take", () => 
     [...good, "--listen=0.0.0.0"],
     [...good, "--listen", "127.0.0.1", "--listen", "0.0.0.0"],
     [...good, "--listen", "127.0.0.1", "--listen"],
+    [...good, "--liste", "0.0.0.0"],
+    [...good, "--listen", "127.0.0.1", "--liste=0.0.0.0"],
     [...good, "--listen", "127.0.0.1,0.0.0.0"],
     [...good, "--listen"],
   ])

@@ -21,7 +21,7 @@ Offline editing/render/export must launch without GPU/Python/weights/cloud. Opti
 
 First AI qualification should use one existing supported user-owned ComfyUI backend or an explicitly consented user-controlled inference host. Direct BYOK can be qualified independently without pretending this laptop supports cinematic diffusion. No paid run or weight download occurred during planning.
 
-Supervisor owns processes, concurrency, CPU/GPU/disk budgets and cancellation, except a person-started ComfyUI, which it does not own: see `docs/evidence/ultimate/comfyui-engine.md`. Shared ComfyUI global interrupt requires exclusive ownership or a documented limitation. No automatic custom-node installation. Project archives cannot supply trusted executable configs/pickle checkpoints. Inference failures cannot disable offline editing.
+Supervisor owns processes, concurrency, CPU/GPU/disk budgets and cancellation, except, under a proposal the founder has not decided, a person-started ComfyUI: see `docs/evidence/ultimate/comfyui-engine.md`. Shared ComfyUI global interrupt requires exclusive ownership or a documented limitation. No automatic custom-node installation. Project archives cannot supply trusted executable configs/pickle checkpoints. Inference failures cannot disable offline editing.
 
 ## Execution profiles (independent review, 2026-10-11)
 
