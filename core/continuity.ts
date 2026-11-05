@@ -352,8 +352,12 @@ export function assertLinkedMediaNotRevoked(
     if (!rows.length) continue;
     // The newest consent decides: revoking it does not fall back on an older
     // grant, and revoking an old grant after renewing leaves the renewal standing.
+    // On a tie the revoked one wins, so a clock cannot free the media.
     const newest = rows.reduce((a, b) =>
-      b.row!.granted_at > a.row!.granted_at ? b : a,
+      b.row!.granted_at > a.row!.granted_at ||
+      (b.row!.granted_at === a.row!.granted_at && b.row!.revoked_at !== null)
+        ? b
+        : a,
     );
     if (newest.row!.revoked_at !== null)
       throw new CommandError(

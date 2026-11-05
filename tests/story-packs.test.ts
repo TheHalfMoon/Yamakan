@@ -1147,7 +1147,7 @@ test("screen time counts per playing channel, so unmuting a second clip is new u
     ),
     REVOKED,
   );
-  // Lengthening is more of it too, while what adds no time still works.
+  // Lengthening is more of it too.
   assert.match(
     await failure(
       edit([

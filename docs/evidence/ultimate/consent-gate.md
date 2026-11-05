@@ -21,7 +21,7 @@ No schema change. Each pack version's links are read once and kept by content ha
 
 ## Results
 
-- `tests/story-packs.test.ts`, nine tests, through commands: placement with a usable consent; refusal of `clip.add`, undo, `clip.replaceMedia`, a re-import, restore and another project; an emptied later pack; a new consent as the way back; a reopen; renewing then revoking; a clip that stays opening nothing further, while it can still be moved and split; two characters on one photo; an older grant revoked after renewing; unmuting a second clip, spending another clip's time and lengthening, all refused; and revalidation after a new epoch, set directly rather than by a real restore. The first three failed with the gate removed.
+- `tests/story-packs.test.ts`, nine tests, through commands: placement with a usable consent; refusal of `clip.add`, undo, `clip.replaceMedia`, a re-import, restore and another project; an emptied later pack; a new consent as the way back; a reopen; renewing then revoking; a clip that stays opening nothing further, while it can still be moved and split; two characters on one photo; an older grant revoked after renewing; unmuting a second clip and lengthening, both refused; and revalidation after a new epoch, set directly rather than by a real restore. The first three failed with the gate removed.
 - `npm run qualify:consent-gate`, real Edge against the real service: the real Undo button is refused with the message on screen, the head unmoved and the file kept. CI does not run it. Its way back is driven through the service, not the interface.
 - A review ran redo, relink, assembly and `project.save` against an earlier form of the gate, and they were refused; the suite has no test of its own for those.
 
@@ -37,6 +37,8 @@ The decision asked that a revoked person's photo not be placed or used. These re
 - **A take that only pins a pack:** a pin does not show the take depicts that person.
 - **A `style` pack entry or a story naming the photo can be saved after revocation.** It cannot then be used at the attempt stage or placed, by reading; the check at the attempt and attach stages has no test of its own.
 - **A recovery restore over a damaged head is exempt,** so committed work can come back; it needs a damaged head to reach. By reading and a review's tamper test of the earlier form.
+- **One batch can swap play time between clips of the photo,** shortening one and adding another, as it adds none. The total only goes down across commits.
+- **A consent granted before the revocation but not yet linked can still free the photo,** by being linked later, as it is newer than the one revoked. This is what "a newer consent" means here.
 - **A browser session can block any medium across the workspace,** by linking it to a throwaway consent and revoking it. Agents cannot. In the contract.
 - **The interface has no way to record a consent, save a pack or revoke,** and no explicit removal or cleanup action. All of this works only through the commands.
 
