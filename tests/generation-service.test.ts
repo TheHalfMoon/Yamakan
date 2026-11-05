@@ -357,7 +357,304 @@ test("an output that fails while being read is this call's error, and a retry wo
   assert.ok((await g.importResult(id)).assetId);
 });
 
-test("the commands refuse today, and say why, without touching anything", async () => {
+test("an import returns where the video came from, without repeating the prompt", async () => {
+  const f = await fixture();
+  const { adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const { generationId: id } = await g.start(
+    ask(f.projectId, {
+      recipe: stillRecipe,
+      firstFrameAssetId: still.id,
+      seed: 7,
+      prompt: "a private prompt",
+    }),
+  );
+  const { lineage } = await g.importResult(id);
+  assert.deepEqual(lineage, {
+    outputHash: sha(f.video),
+    inputs: [{ assetId: still.id, assetHash: still.hash }],
+    recipeId: stillRecipe.id,
+    recipeHash: stillRecipe.hash,
+    modelManifestHash: stillRecipe.modelManifestHash,
+    seed: 7,
+    promptHash: sha(Buffer.from("a private prompt")),
+  });
+  assert.ok(!JSON.stringify(lineage).includes("private"));
+});
+
+const consented = async (
+  f: Awaited<ReturnType<typeof fixture>>,
+  stillId: string,
+  hash: string,
+) => {
+  const consent = (
+    await execute(f.ctx, "yamakan.consent.grant", {
+      characterId: "lead",
+      purpose: "likeness-generate",
+      version: "v1",
+      ttlMs: 3_600_000,
+    })
+  ).result as { id: string };
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", {
+      projectId: f.projectId,
+    })
+  ).result as { revision: number };
+  await execute(f.ctx, "yamakan.pack.save", {
+    projectId: f.projectId,
+    expectedRevision: head.revision,
+    documentId: crypto.randomUUID(),
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "Cast",
+      entries: [
+        {
+          id: crypto.randomUUID(),
+          role: "character",
+          label: "Lead",
+          assetId: stillId,
+          assetHash: hash,
+          characterId: "lead",
+          consentId: consent.id,
+        },
+      ],
+    },
+  });
+  return consent.id;
+};
+
+test("a still whose consent has expired is refused, as placing it would not be", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const later = createGenerationService({
+    adapter,
+    store: f.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    now: () => Date.now() + 2 * 3_600_000,
+  });
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const request = ask(f.projectId, {
+    recipe: stillRecipe,
+    firstFrameAssetId: still.id,
+  });
+  await service(f, adapter).start(request);
+  assert.equal(state.submitted.length, 1, "allowed before it expires");
+  assert.equal(await code(later.start(request)), "VALIDATION");
+  assert.equal(state.submitted.length, 1);
+});
+
+test("when consents tie, a revoked one still refuses, and a newer renewal frees it", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const first = await consented(f, still.id, still.hash);
+  const second = await consented(f, still.id, still.hash);
+  const request = ask(f.projectId, {
+    recipe: stillRecipe,
+    firstFrameAssetId: still.id,
+  });
+  // Older revoked, newer standing: the renewal decides.
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: first });
+  await g.start(request);
+  assert.equal(state.submitted.length, 1);
+  // The same moment on the clock: the revoked one counts, in either order.
+  f.store.read((db) =>
+    db.prepare("UPDATE likeness_consents SET granted_at = 1000").run(),
+  );
+  assert.equal(await code(g.start(request)), "VALIDATION");
+  assert.equal(state.submitted.length, 1);
+  void second;
+});
+
+test("a consent ending during the upload gives the consent reason", async () => {
+  const f = await fixture();
+  const { adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  // As the real adapter answers: the failed read becomes a plain refusal.
+  adapter.submit = async () => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    return { refused: "INVALID_REQUEST" };
+  };
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    (e: Error) => /revoked/i.test(e.message),
+  );
+});
+
+test("consent revoked during the download stops the import", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const { generationId: id } = await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  adapter.readArtifact = async function* () {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    yield state.bytes;
+  };
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
+  const { assets } = await f.store.exportProject(f.projectId);
+  assert.equal(assets.length, 1);
+});
+
+test("consent revoked between the check and the read stops the upload", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const submit = adapter.submit;
+  adapter.submit = async (request, context) => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    return submit(request, context);
+  };
+  assert.equal(
+    await code(
+      g.start(
+        ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+      ),
+    ),
+    "VALIDATION",
+  );
+  assert.equal(state.inputRead, null, "no byte was read for the engine");
+});
+
+test("a still is refused once its consent is revoked", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const request = ask(f.projectId, {
+    recipe: stillRecipe,
+    firstFrameAssetId: still.id,
+  });
+  await g.start(request);
+  assert.equal(state.submitted.length, 1, "allowed while consent stands");
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  assert.equal(await code(g.start(request)), "VALIDATION");
+  assert.equal(state.submitted.length, 1);
+});
+
+test("what was made from a still is not imported once its consent is revoked", async () => {
+  const f = await fixture();
+  const { adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const { generationId: id } = await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
+  const { assets } = await f.store.exportProject(f.projectId);
+  assert.deepEqual(
+    assets.map((x) => x.id),
+    [still.id],
+  );
+});
+
+test("the commands reach the service for a person, and an agent cannot start one", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const generation = { service: service(f, adapter), recipes: [recipe] };
+  const person = { ...f.ctx, generation };
+  const args = {
+    projectId: f.projectId,
+    recipeId: recipe.id,
+    prompt: "go",
+    width: 64,
+    height: 36,
+    durationFrames: 24,
+  };
+  const { generationId } = (
+    await execute(person, "yamakan.generation.start", args)
+  ).result as { generationId: string };
+  assert.equal(state.submitted.length, 1);
+  assert.equal(
+    (
+      (await execute(person, "yamakan.generation.status", { generationId }))
+        .result as { state: string }
+    ).state,
+    "succeeded",
+  );
+  const imported = (
+    await execute(person, "yamakan.generation.import", { generationId })
+  ).result as { assetId: string };
+  assert.ok(imported.assetId);
+  assert.equal(
+    await code(
+      execute(person, "yamakan.generation.start", {
+        ...args,
+        recipeId: "other",
+      }),
+    ),
+    "NOT_FOUND",
+  );
+  const agent = {
+    ...person,
+    principal: {
+      id: `agent:${crypto.randomUUID()}`,
+      scopes: new Set(Scopes),
+    },
+  } as unknown as CommandContext;
+  for (const [operation, input] of [
+    ["yamakan.generation.start", args],
+    ["yamakan.generation.cancel", { generationId }],
+    ["yamakan.generation.import", { generationId }],
+  ] as const)
+    assert.equal(
+      await code(execute(agent, operation, input)),
+      "SCOPE_DENIED",
+      operation,
+    );
+  assert.equal(state.submitted.length, 1, "an agent started nothing");
+});
+
+test("without a service the commands refuse, and say why, touching nothing", async () => {
   const f = await fixture();
   const before = await f.store.exportProject(f.projectId);
   for (const [operation, args] of [
