@@ -1,6 +1,6 @@
 # SS-013: exact cue timing and keyboard editing
 
-Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `da209315784d330e7247a375dedccc00f14a0ff2`. **The card stays open:** caption edits cannot be undone, and native Arabic judgment stays blocked on X-01.
+Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `da209315784d330e7247a375dedccc00f14a0ff2`. **The card stays open:** native Arabic judgment stays blocked on X-01.
 
 ## What was already right
 
@@ -22,9 +22,39 @@ Both were seen in the browser first.
 - `npm run qualify:captions-keyboard`, a new real-browser qualifier, runs the keyboard steps above plus a reopen. CI does not run it, as CI runs no `qualify:` script, so nothing in CI covers these two fixes. It failed at the emptied field before the fix and passed after. Receipt `ss013-receipt.json` stays local.
 - `tests/captions.test.ts` adds a real export at 24000/1001, whose frames fall on no whole millisecond, with a cue from 1.000 s to 2.000 s burned in. Decoded frames show ink on exactly frames 24 to 47, of 72: frame 23 is at 0.959 s and frame 48 at 2.002 s. The margins are 11 ms or more, so a 1 ms timing error would pass. It also calls `escapeAssText` directly on braces and a backslash that pass import, and finds no override or line break formed; ink alone cannot tell literal text from parsed text. This test passed the first time it could run, so it records behaviour that was already right rather than a fix.
 
+## Undo across document saves
+
+At the founder's instruction. Any document save used to delete the project's edit history, so after a timeline edit then a caption edit, Undo answered "Nothing to undo at this revision" and those timeline edits could never be undone. Undo restores whole snapshots along a linear stack, so the deletion was only needed because document saves were outside that stack.
+
+**Change:** a save of a caption track, LUT, Studio canvas or Cinema scene by a named writer is now a step in that writer's history, and undo and redo restore the documents of the revision they return to. Another writer's save refuses as "made by another client", as a timeline edit does. No schema change; existing rows are read as before.
+
+**Still ends the history, on purpose:**
+
+- **Stories and reference packs:** undo must not bring one back past the check made when it is committed. So this defect remains for them: a timeline edit before a story save cannot be undone after it.
+- **Legacy migrations:** the record outlives a snapshot, so undo would leave a recorded migration with no document.
+- **A save with no named writer,** which nobody could undo.
+- **Asset import and whole-project save,** which were not part of this request. **After a timeline edit then an import, Undo is still refused.**
+
+**Tests:** `tests/undo-across-documents.test.ts`, 10 tests through commands and the store: the step-by-step sequence with redo, an undone edit restoring its version and the hash check following it, a Studio save, another writer refused, a retried save adding no second step, a reopen, an unnamed save, a pack and a story each ending the history, and the rollback switch. Six of the first eight were seen to fail before the change. `tests/cinema-migration.test.ts` covers a migration ending it. `npm run qualify:captions-keyboard` adds the sequence in real Edge with the real Undo and Redo buttons, and the panel showing the old time. An existing test that timeline undo keeps document references still passes.
+
+**An independent review ran two checks on safety, and neither failed.** A story's hash held through undo and redo, because among history steps only undo, redo and document commits write document references. And a step restoring a clip whose take has continuity references under a revoked consent was refused at the commit. Studio, Cinema, captions and LUTs have no commit-time consent check to bypass. It also found the missing story and migration tests and the rollback switch gap, fixed above.
+
+**A related gap, by reading, not run, and older than this change:** `take.apply` also checks a shot's reference-pin consents, but the commit check covers only continuity references. So a take with pins and no continuity references could return through undo or redo after its consent is revoked.
+
+**Open, for a follow-up:**
+
+- **Toolbar Undo can strand unsaved document work, by reading.** With unsaved Studio strokes, a toolbar Undo goes to the service, as it has no local step. The canvas keeps showing the undone version, the next Save gets a conflict, and that state offers only Reload, which discards the strokes. Nothing is overwritten, and it was already reachable with two writers, but one person can now hit it alone. Studio does not track unsaved changes, so preventing this is separate work.
+- **The same for a caption draft, by reading:** it is dropped, with a message saying the track changed elsewhere, which is wrong here. Redo does not bring it back.
+- **A save with identical content adds a step** whose Undo shows no change; run. Undoing a save from a workspace that does not show it also changes nothing on screen, by reading.
+
+**Full suite at `bd13818405c0e4630d8e7b5521ddaf85445d4c71`,** on AC with nothing else running: 811 tests, 808 passed, 3 skipped, 0 failed. Log `undo2-test.log`, `7e5e8515e2e58020a791bd395bd92bdec37118fb5761478d32844f42ee479ca8`. An earlier run at `cf19dae` with a reviewer active had 1 failure, `a service killed mid-render`, which timed out and passed 3 of 3 alone.
+
+**Not checked:** Studio and Cinema editors in a browser after an undo; only the caption panel was seen re-reading. The refusal under the rollback switch is tested for undo only; redo shares its path. `project.restore` still changes documents with the switch on, as it did before. LUT and Cinema saves share the path but have no sequence of their own. An actual rollback was not run.
+
+Rollback: revert this change. Nothing is corrupted, by reading: older code undoes to a step's snapshot but keeps the head's documents, so an undo over a document step uses up a press and changes nothing, and a redo into a clip whose LUT is absent at the head is refused.
+
 ## Not done
 
-- **A caption save ends undo, not only for the caption.** Any document commit deletes the project's edit history (`core/store.ts`). After a timeline edit then a caption edit, Undo answers "Nothing to undo at this revision", changes nothing, and **the earlier timeline edits can never be undone again.** After a further timeline edit, one Undo works and the next is refused. Reopen keeps the edit, and history restore remains by reading, untested. Run through commands by a review; the Undo button itself was read, not clicked. Fixing it means changing per-writer history, which this card does not ask to redesign, so it is reported, not fixed. **This is the main open item, and it affects every document kind, not only captions.**
 - **Focus still falls to the page in one keyboard path:** a first edit in a Start field followed by Shift+Tab, because the previous row's Split button is disabled as the draft starts. A review saw this; it predates this change.
 - **After a reload no track is selected,** so a user picks the track again. Left as it is.
 - **Native Arabic judgment remains blocked on X-01.** The review packet exists at `docs/evidence/h1-arabic-review-packet`, and its caption fixtures parse by an existing test. No human has reviewed anything here. Direction was read from computed style, not judged by a reader of Arabic.
@@ -33,6 +63,8 @@ Both were seen in the browser first.
 
 ## Full suite
 
-**The one full run at `be332c311abdef3fac8eb744ebe34737d2f5a9ac` had 8 failures and is not valid evidence either way:** the machine was on battery at 88% load with 0.7 GB of memory free, and the suite took 727 s against about 405 s normally. Log `s13-test.log`, `022f770e08955b2b5b05c2be55e25272cecd215151acc880a92aa26096ed2d3a`. They were FFmpeg probes and renders timing out, an interruption test, and an MCP load test. A review found no link to this diff, by reading. It also found that `core/render/capability.ts` reports a timed-out probe as "Titles need FFmpeg with libass 0.17 or newer", a wrong reason on a starved machine. **A run on a healthy host is still owed.**
+At `5f253cb555b6f89053cca0e5afdac5546dde9171`, on AC power: 799 tests, 796 passed, 3 skipped, 0 failed. Log `s13c-test.log`, `fc9671d6f040be2783be0b8de48411173b5787309a900f37485f810dc498b3dd`.
+
+Two earlier runs, at `be332c3` and `5f253cb`, had 8 and 14 failures on battery at high load, with 0.7 GB free in the first, taking 727 s and 855 s. Logs `s13-test.log`, `022f770e08955b2b5b05c2be55e25272cecd215151acc880a92aa26096ed2d3a`; `s13b-test.log`, `9a89f31b672ecf6e5fd8ab337dd43f63e86967a16d4abd13ac2ded569a0c2603`. They are not evidence about this change, and three of those tests passed alone during them. **So timed render tests in this suite fail on a loaded machine on battery**, which is a limit of the suite.
 
 Rollback: revert this change. No stored data is affected.
