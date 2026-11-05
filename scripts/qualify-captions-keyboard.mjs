@@ -2,7 +2,8 @@
  * SS-013: the caption editor by keyboard in a real browser against the real
  * service. Times and text are edited from the keyboard, an emptied time keeps
  * its value, focus survives a save, a refusal and a discard, mixed-script text
- * reads in its own direction, and the edit survives a reopen.
+ * reads in its own direction, the edit survives a reopen, and undo takes back
+ * a caption save and then the timeline edit before it.
  *
  * Usage: node scripts/qualify-captions-keyboard.mjs [receipt.json]
  */
@@ -237,6 +238,81 @@ try {
   await page.getByTestId("captions-editor").waitFor();
   assert.equal(await start(2).inputValue(), "3.250");
   step("the saved time survives a reopen");
+
+  // The sequence that used to lose the timeline's undo: a timeline edit, then
+  // a caption save, then Undo and Undo again, then Redo.
+  const service = (operation, parameters) =>
+    page.evaluate(
+      async ([operation, parameters]) => {
+        const stored = JSON.parse(
+          sessionStorage.getItem("yamakan.session") ?? "null",
+        );
+        const headers = { "Content-Type": "application/json" };
+        if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+        const res = await fetch("/api/v1/call", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ apiVersion: 1, operation, parameters }),
+        });
+        return (await res.json()).result;
+      },
+      [operation, parameters],
+    );
+  const projectId = (await service("yamakan.project.list", {}))[0].id;
+  const project = () => service("yamakan.project.open", { projectId });
+  const before = await project();
+  await service("yamakan.project.applyBatch", {
+    projectId,
+    expectedRevision: before.revision,
+    operations: [
+      {
+        type: "track.add",
+        trackId: crypto.randomUUID(),
+        name: "Undo me",
+        kind: "video",
+      },
+    ],
+  });
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Captions/ })
+    .first()
+    .click();
+  await page.getByRole("tab", { name: "Finish", exact: true }).click();
+  await page.getByTestId("captions-panel").waitFor();
+  await page.getByTestId("captions-track").selectOption({ index: 1 });
+  await page.getByTestId("captions-editor").waitFor();
+  await typeInto(end(3), "6.5");
+  await save.click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="captions-save"]')?.disabled,
+  );
+  await settled();
+  const undoButton = page.getByRole("button", { name: "Undo", exact: true });
+  const redoButton = page.getByRole("button", { name: "Redo", exact: true });
+  const tracks = async () => (await project()).tracks.length;
+  const withTrack = await tracks();
+  const shows = (field, value) =>
+    field.and(page.locator(`[value="${value}"]`)).waitFor({ timeout: 15_000 });
+
+  await undoButton.click();
+  await shows(end(3), "6.000");
+  assert.equal(await tracks(), withTrack);
+  step("Undo takes back the caption save, and the panel shows the old time");
+
+  await undoButton.click();
+  for (let i = 0; i < 60 && (await tracks()) === withTrack; i++)
+    await page.waitForTimeout(100);
+  assert.equal(await tracks(), withTrack - 1);
+  step("Undo again takes back the timeline edit made before the caption save");
+
+  await redoButton.click();
+  for (let i = 0; i < 60 && (await tracks()) !== withTrack; i++)
+    await page.waitForTimeout(100);
+  assert.equal(await tracks(), withTrack);
+  await redoButton.click();
+  await shows(end(3), "6.500");
+  step("Redo brings both back in order");
 
   await page.locator(".language").first().click();
   await page.waitForFunction(() => document.documentElement.dir === "rtl");

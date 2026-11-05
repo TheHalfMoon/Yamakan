@@ -77,7 +77,7 @@ Bounds are applied before a document is built: a linear pre-scan of the text ref
 
   The original file is never written, renamed or deleted. Two concurrent first migrations of different scenes against the same revision: one commits and the other gets `REVISION_CONFLICT`. Calling again then returns a fresh result.
 
-  Undo: like any document commit, a migration ends the project's per-writer editing undo history, so it is not undone by `yamakan.project.undo`. A scene is restored to an earlier version by committing that version again (a revert, `source: {contentHash}`).
+  Undo: a migration ends the project's per-writer editing undo history, so it is not undone by `yamakan.project.undo`. A scene is restored to an earlier version by committing that version again (a revert, `source: {contentHash}`).
 
   Filesystem errors are reported without host paths. While AG-DOCS is turned off, migration refuses with `CAPABILITY_UNAVAILABLE`; the inventory stays available.
 
@@ -171,6 +171,7 @@ UI, REST, CLI, MCP stdio and a thin TypeScript SDK use the same schema/reducer/a
 - **Verification.** The batch is verified before it is sent: applied to the head locally, it must reproduce the view exactly.
 - **Drafts.** A change the operations cannot express that way (renaming the project, output settings, more than 64 operations) is never committed lossily. It stays a visible unsaved draft, which Save commits as a whole-project save.
 - **Undo and Redo.** These take back a change that has not been committed yet locally. Otherwise they use the service's revision-bound history, which undoes only the browser's own steps and never another writer's.
+- **Documents in undo.** Saving a caption track, LUT, Studio canvas or Cinema scene is a step in its writer's history, and undo restores the documents of the revision it returns to. A story, a reference pack or a legacy migration still ends the history, because a story or pack is checked against the consent ledger only when committed, and a migration's record outlives a snapshot. So does a save that names no writer. Importing an asset and a whole-project save also still end it.
 - **Stored bytes.** A plain move or trim is sent as `clip.move` or `clip.trim` with setters, so the stored bytes equal those of the same edit made through the CLI or MCP. Only clips that would overlap on the way (trading places) are taken out and put back whole.
 - **Commits.** Commits run one at a time. Editing goes on during a commit: what was edited meanwhile is kept on top of the committed head and committed next. A lost response is asked again under the same request id, and the service answers it with the original result. A change undone by the next one leaves nothing pending.
 - **Conflicts.** If another writer moved the project first, the editor fetches the current version. When the change's operations still apply there, they are committed onto it and the user is told. When they don't, the current version is shown and the change is offered for download. The editor never overwrites.

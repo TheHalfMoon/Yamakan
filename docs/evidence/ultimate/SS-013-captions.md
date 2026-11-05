@@ -1,6 +1,6 @@
 # SS-013: exact cue timing and keyboard editing
 
-Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `da209315784d330e7247a375dedccc00f14a0ff2`. **The card stays open:** caption edits cannot be undone, and native Arabic judgment stays blocked on X-01.
+Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `da209315784d330e7247a375dedccc00f14a0ff2`. **The card stays open:** native Arabic judgment stays blocked on X-01.
 
 ## What was already right
 
@@ -22,9 +22,27 @@ Both were seen in the browser first.
 - `npm run qualify:captions-keyboard`, a new real-browser qualifier, runs the keyboard steps above plus a reopen. CI does not run it, as CI runs no `qualify:` script, so nothing in CI covers these two fixes. It failed at the emptied field before the fix and passed after. Receipt `ss013-receipt.json` stays local.
 - `tests/captions.test.ts` adds a real export at 24000/1001, whose frames fall on no whole millisecond, with a cue from 1.000 s to 2.000 s burned in. Decoded frames show ink on exactly frames 24 to 47, of 72: frame 23 is at 0.959 s and frame 48 at 2.002 s. The margins are 11 ms or more, so a 1 ms timing error would pass. It also calls `escapeAssText` directly on braces and a backslash that pass import, and finds no override or line break formed; ink alone cannot tell literal text from parsed text. This test passed the first time it could run, so it records behaviour that was already right rather than a fix.
 
+## Undo across document saves
+
+At the founder's instruction. Any document save used to delete the project's edit history, so after a timeline edit then a caption edit, Undo answered "Nothing to undo at this revision" and those timeline edits could never be undone. Undo restores whole snapshots along a linear stack, so the deletion was only needed because document saves were outside that stack.
+
+**Change:** a save of a caption track, LUT, Studio canvas or Cinema scene by a named writer is now a step in that writer's history, and undo and redo restore the documents of the revision they return to. Another writer's save refuses as "made by another client", as a timeline edit does. No schema change; existing rows are read as before.
+
+**Still ends the history, on purpose:**
+
+- **Stories and reference packs:** they are checked against the consent ledger only when committed, and undo must not bring one back past that check. So this defect remains for them: a timeline edit before a story save cannot be undone after it.
+- **Legacy migrations:** the record outlives a snapshot, so undo would leave a recorded migration with no document. By reading; no new test.
+- **A save with no named writer,** which nobody could undo.
+- **Asset import and whole-project save,** which were not part of this request. **After a timeline edit then an import, Undo is still refused.**
+
+**Tests:** `tests/undo-across-documents.test.ts`, 8 tests through commands and the store: the step-by-step sequence with redo, an undone edit restoring its version and the hash check following it, a Studio save, another writer refused, a retried save adding no second step, a reopen, an unnamed save, and a pack ending the history. Six were seen to fail before the change. `npm run qualify:captions-keyboard` adds the sequence in real Edge with the real Undo and Redo buttons, and the panel showing the old time. An existing test that timeline undo keeps document references still passes.
+
+**Not checked:** the Studio and Cinema editors in a browser after an undo, including a draft held open across one; only the caption panel was seen re-reading. LUT and Cinema saves share the path but have no test of their own here.
+
+Rollback: revert this change. Steps already recorded stay harmless to older code, which undoes to their snapshot but keeps the head's documents, so after a rollback an undo across a document save would not take the document back.
+
 ## Not done
 
-- **A caption save ends undo, not only for the caption.** Any document commit deletes the project's edit history (`core/store.ts`). After a timeline edit then a caption edit, Undo answers "Nothing to undo at this revision", changes nothing, and **the earlier timeline edits can never be undone again.** After a further timeline edit, one Undo works and the next is refused. Reopen keeps the edit, and history restore remains by reading, untested. Run through commands by a review; the Undo button itself was read, not clicked. Fixing it means changing per-writer history, which this card does not ask to redesign, so it is reported, not fixed. **This is the main open item, and it affects every document kind, not only captions.**
 - **Focus still falls to the page in one keyboard path:** a first edit in a Start field followed by Shift+Tab, because the previous row's Split button is disabled as the draft starts. A review saw this; it predates this change.
 - **After a reload no track is selected,** so a user picks the track again. Left as it is.
 - **Native Arabic judgment remains blocked on X-01.** The review packet exists at `docs/evidence/h1-arabic-review-packet`, and its caption fixtures parse by an existing test. No human has reviewed anything here. Direction was read from computed style, not judged by a reader of Arabic.
