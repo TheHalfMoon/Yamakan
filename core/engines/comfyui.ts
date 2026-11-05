@@ -193,8 +193,39 @@ export type ComfyEngineOptions = {
   enabled?: boolean;
 };
 
+// How a ComfyUI this adapter talks to must be started: on loopback, with partner
+// nodes off, its browser page restricted, and no custom node code. This is not an
+// egress block on its process; the arguments alone start nothing.
+export function comfyLaunchArguments(options: {
+  port: number;
+  baseDirectory: string;
+}) {
+  return [
+    "--listen",
+    "127.0.0.1",
+    "--port",
+    String(options.port),
+    "--offline",
+    "--disable-all-custom-nodes",
+    "--disable-auto-launch",
+    "--base-directory",
+    options.baseDirectory,
+  ];
+}
+
+// Whether ComfyUI's own node description marks a partner node.
+export function isComfyCloudNode(info: unknown) {
+  const node = info as { api_node?: unknown; python_module?: unknown } | null;
+  return (
+    node?.api_node === true ||
+    (typeof node?.python_module === "string" &&
+      /^comfy_api_nodes(\.|$)/.test(node.python_module))
+  );
+}
+
 export type ComfySetupProblem =
   | { kind: "unreachable" }
+  | { kind: "cloud-node"; recipe: string; classType: string }
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
 
@@ -302,6 +333,14 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           if (!entry)
             problems.push({
               kind: "node",
+              recipe: recipe.id,
+              classType: type,
+            });
+          // A partner node sends what it is given to a remote service. The flag
+          // alone misses some, so the module it came from counts too.
+          else if (isComfyCloudNode(entry))
+            problems.push({
+              kind: "cloud-node",
               recipe: recipe.id,
               classType: type,
             });
@@ -693,9 +732,10 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         listen();
         const promptId = randomUUID();
         let executionRef: unknown;
+        const prompt = buildGraph(recipe, request, uploaded);
         try {
           const res = await post("/prompt", {
-            prompt: buildGraph(recipe, request, uploaded),
+            prompt,
             client_id: clientId,
             prompt_id: promptId,
           });
@@ -703,9 +743,11 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           executionRef = ((await json(res)) as { prompt_id?: unknown })
             .prompt_id;
         } catch {
-          // No answer does not mean no job: it may have been accepted.
-          await cancel(promptId);
-          return { refused: "INVALID_REQUEST" };
+          // No answer does not mean no job: it may have been accepted, even after
+          // this gave up waiting. It stays followed by its id and reports unknown
+          // until ComfyUI says otherwise, and the same generation replays it. A new
+          // generation can still overlap a job enqueued this late.
+          executionRef = promptId;
         }
         if (executionRef !== promptId) {
           await cancel(promptId);

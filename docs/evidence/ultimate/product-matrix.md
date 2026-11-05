@@ -24,7 +24,7 @@ Updated 2026-11-05. Facts only: each row says what was actually run, and a blank
 
 ## Model integration
 
-No model is enabled, downloaded or qualified. `ENGINE_ENABLED` is false. Commercial providers are off. Nothing sends media to a cloud service today, because the ComfyUI path is not wired to anything; its node allowlist and offline mode are required first.
+No model is enabled, downloaded or qualified. `ENGINE_ENABLED` is false. Commercial providers are off. Nothing sends media to a cloud service today, because the ComfyUI path is not wired to anything. It refuses partner nodes; `--offline` is not an egress block, and owning its process is required before wiring.
 
 ## What blocks real generation
 

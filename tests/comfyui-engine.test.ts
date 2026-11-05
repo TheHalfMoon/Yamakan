@@ -13,6 +13,8 @@ import {
 import {
   PINNED_COMFY_RECIPES,
   comfyBaseUrl,
+  comfyLaunchArguments,
+  isComfyCloudNode,
   comfyRecipeHash,
   createComfyEngine,
   type ComfyRecipe,
@@ -163,7 +165,7 @@ async function fake(): Promise<Fake> {
     const url = new URL(req.url!, "http://x");
     const send = (status: number, body: unknown) => {
       res.writeHead(status, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(body));
+      res.end(body === "not json" ? "not json" : JSON.stringify(body));
     };
     state.posted.push(`${req.method} ${url.pathname}`);
     if (state.redirect) {
@@ -313,6 +315,103 @@ test("one recipe's qualification lends nothing to another for the same operation
   );
   assert.equal(f.prompts.length, 0);
   assert.ok("executionRef" in (await engine.submit(request(good), context)));
+  engine.close();
+});
+
+test("a recipe using a node that calls a remote service is not available", async () => {
+  const f = await fake();
+  f.classes.Sampler = { api_node: true, input: { required: {} } };
+  const r = recipe();
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+  });
+  assert.deepEqual(await engine.checkSetup(), [
+    { kind: "cloud-node", recipe: r.id, classType: "Sampler" },
+  ]);
+  assert.equal(
+    engine.capabilities().find((c) => c.operation === "textToVideo")!.available,
+    false,
+  );
+  assert.deepEqual(await engine.submit(request(r), context), {
+    refused: "WEIGHTS_ABSENT",
+  });
+  assert.equal(f.prompts.length, 0);
+});
+
+test("a partner node is known by its module even when its flag is not set", async () => {
+  assert.equal(
+    isComfyCloudNode({
+      api_node: false,
+      python_module: "comfy_api_nodes.nodes_krea",
+    }),
+    true,
+  );
+  assert.equal(isComfyCloudNode({ api_node: true }), true);
+  assert.equal(
+    isComfyCloudNode({
+      api_node: false,
+      python_module: "comfy_extras.nodes_video",
+    }),
+    false,
+  );
+  assert.equal(
+    isComfyCloudNode({ python_module: "comfy_api_nodes_lookalike" }),
+    false,
+  );
+  const f = await fake();
+  f.classes.Sampler = {
+    api_node: false,
+    python_module: "comfy_api_nodes.nodes_krea",
+    input: { required: {} },
+  };
+  const r = recipe();
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+  });
+  assert.deepEqual(await engine.checkSetup(), [
+    { kind: "cloud-node", recipe: r.id, classType: "Sampler" },
+  ]);
+});
+
+test("nothing accepted and no answer reports unknown, and claims no job ran", async () => {
+  const { f, engine, r } = await started();
+  let posted = "";
+  f.promptAnswer = (id) => {
+    posted = id;
+    return { status: 200, body: "not json" as unknown as object };
+  };
+  const answer = await engine.submit(request(r), context);
+  assert.deepEqual(answer, { executionRef: posted });
+  const status = await engine.status(posted);
+  assert.equal(status.state, "unknown");
+  assert.deepEqual(await engine.enumerateArtifacts(posted), []);
+  engine.close();
+});
+
+test("ComfyUI is always started offline, on loopback, without custom nodes", () => {
+  const argv = comfyLaunchArguments({ port: 1234, baseDirectory: "D:/x" });
+  assert.deepEqual(argv.slice(0, 2), ["--listen", "127.0.0.1"]);
+  for (const flag of ["--offline", "--disable-all-custom-nodes"])
+    assert.ok(argv.includes(flag), flag);
+});
+
+test("a lost answer leaves the job followed, and the same attempt replays it", async () => {
+  const { f, engine, r } = await started();
+  let posted = "";
+  f.promptAnswer = (id) => {
+    posted = id;
+    f.queue.pending = [id];
+    return { status: 200, body: "not json" as unknown as object };
+  };
+  const first = await engine.submit(request(r), context);
+  assert.deepEqual(first, { executionRef: posted });
+  assert.equal((await engine.status(posted)).state, "queued");
+  assert.deepEqual(await engine.submit(request(r), context), first);
+  assert.equal(f.prompts.length, 1, "no second job");
   engine.close();
 });
 
