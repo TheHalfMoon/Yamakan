@@ -447,6 +447,7 @@ try {
   try {
     let answer = null;
     for (let i = 0; i < 240 && !answer; i++) {
+      assert.equal(control.exitCode, null, "the control ComfyUI exited");
       answer = await fetch(`http://127.0.0.1:${controlPort}/object_info`, {
         redirect: "error",
       }).then(
@@ -463,10 +464,27 @@ try {
       "and the unflagged one",
     );
     assert.equal(answer.Krea2StyleReferenceNode.api_node, false);
-    step("without --offline, the same check finds partner nodes", {
-      nodes: Object.keys(answer).length,
-      partnerNodes: found.length,
+    const notOffline = createComfyEngine({
+      baseUrl: `http://127.0.0.1:${controlPort}`,
+      recipes: [t2v],
+      enabled: true,
     });
+    assert.deepEqual(await notOffline.checkSetup(), [
+      {
+        kind: "not-started-locally",
+        missing: ["--offline"],
+        refused: [],
+        exposed: false,
+      },
+    ]);
+    notOffline.close();
+    step(
+      "without --offline, the same check finds partner nodes, and it is not used",
+      {
+        nodes: Object.keys(answer).length,
+        partnerNodes: found.length,
+      },
+    );
   } finally {
     if (control.pid)
       try {

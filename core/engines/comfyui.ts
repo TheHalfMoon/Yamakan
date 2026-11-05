@@ -193,9 +193,9 @@ export type ComfyEngineOptions = {
   enabled?: boolean;
 };
 
-// How a ComfyUI this adapter talks to must be started: on loopback, with partner
-// nodes off, its browser page restricted, and no custom node code. This is not an
-// egress block on its process; the arguments alone start nothing.
+// How the person's ComfyUI must be started for this adapter to use it: on
+// loopback, with partner nodes off, its browser page restricted, and no custom
+// node code. This is not an egress block on its process, and it starts nothing.
 export function comfyLaunchArguments(options: {
   port: number;
   baseDirectory: string;
@@ -223,8 +223,55 @@ export function isComfyCloudNode(info: unknown) {
   );
 }
 
+// ComfyUI reports the arguments it was started with. Yamakan does not own this
+// process, so a copy started any other way is not used, whichever recipe asks.
+const REQUIRED_ARGUMENTS = ["--offline", "--disable-all-custom-nodes"] as const;
+// These run other code, install packages, fetch a page to serve, or let a website
+// reach it, whatever else was given.
+const REFUSED_ARGUMENTS = [
+  "--enable-cors-header",
+  "--front-end-version",
+  "--whitelist-custom-nodes",
+  "--enable-manager",
+  "--enable-manager-legacy-ui",
+  "--enable-agent",
+] as const;
+
+// What in these arguments rules this copy out, allowing for `--flag=value`, a
+// shortened flag, and a flag given twice, where the last one counts.
+export function comfyStartProblems(argv: unknown) {
+  const given = Array.isArray(argv)
+    ? argv.filter((a): a is string => typeof a === "string").slice(1)
+    : [];
+  const names = given.map((a) => a.split("=")[0]);
+  const shortens = (name: string, flag: string) =>
+    name.length >= 3 && name.startsWith("--") && flag.startsWith(name);
+  const refused: string[] = REFUSED_ARGUMENTS.filter((flag) =>
+    names.some((name) => shortens(name, flag)),
+  );
+  const missing: string[] = REQUIRED_ARGUMENTS.filter(
+    (flag) => !given.includes(flag),
+  );
+  // Without --listen ComfyUI binds loopback; with it, the value must say so.
+  const at = names.findLastIndex((name) => shortens(name, "--listen"));
+  const listen =
+    at < 0
+      ? "127.0.0.1"
+      : given[at].includes("=")
+        ? given[at].slice(given[at].indexOf("=") + 1)
+        : given[at + 1];
+  const exposed = listen !== "127.0.0.1" && listen !== "::1";
+  return { missing, refused, exposed };
+}
+
 export type ComfySetupProblem =
   | { kind: "unreachable" }
+  | {
+      kind: "not-started-locally";
+      missing: string[];
+      refused: string[];
+      exposed: boolean;
+    }
   | { kind: "cloud-node"; recipe: string; classType: string }
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
@@ -240,6 +287,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   const progress = new Map<string, number>();
   // Recipes a setup check found everything for, until the next check.
   const ready = new Set<string>();
+  let checks = 0;
+  let startedWrongly = false;
   let socket: WebSocket | null = null;
   let closed = false;
 
@@ -311,12 +360,33 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     ws.addEventListener("error", gone);
   }
 
+  // Why this ComfyUI, as it is running now, may not be used; null if it may.
+  async function startProblem(): Promise<ComfySetupProblem | null> {
+    try {
+      const res = await call("/system_stats");
+      if (!res.ok) return { kind: "unreachable" };
+      const stats = (await json(res)) as { system?: { argv?: unknown } };
+      const found = comfyStartProblems(stats?.system?.argv);
+      if (found.missing.length || found.refused.length || found.exposed) {
+        startedWrongly = true;
+        return { kind: "not-started-locally", ...found };
+      }
+      startedWrongly = false;
+      return null;
+    } catch {
+      return { kind: "unreachable" };
+    }
+  }
+
   // What this ComfyUI lacks for each recipe: node classes and model files,
   // asked one class at a time since the full list can take many seconds.
   async function checkSetup(): Promise<ComfySetupProblem[]> {
     ready.clear();
     if (!enabled) return [];
     const problems: ComfySetupProblem[] = [];
+    const start = await startProblem();
+    if (start) return [start];
+    const check = ++checks;
     for (const recipe of recipes) {
       const before = problems.length;
       const registry = new Map<string, Record<string, unknown> | null>();
@@ -374,7 +444,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
             name: String(name).slice(0, 200),
           });
       }
-      if (problems.length === before) ready.add(recipe.id);
+      // A newer check owns the result; only the one still current records it.
+      if (problems.length === before && check === checks) ready.add(recipe.id);
     }
     return problems;
   }
@@ -387,7 +458,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   });
   // One recipe's own standing: another recipe's qualification never lends it any.
   const capabilityOf = (recipe: ComfyRecipe): CapabilityV2 => {
-    if (!enabled) return off(recipe.operation, "ENGINE_DISABLED");
+    if (!enabled || startedWrongly)
+      return off(recipe.operation, "ENGINE_DISABLED");
     if (!recipe.qualificationHash)
       return off(recipe.operation, "HARDWARE_UNQUALIFIED");
     if (!ready.has(recipe.id)) return off(recipe.operation, "WEIGHTS_ABSENT");
@@ -403,7 +475,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   const capabilities = (): CapabilityV2[] =>
     Operation.options.map((operation) => {
       const own = recipes.filter((r) => r.operation === operation);
-      if (!enabled) return off(operation, "ENGINE_DISABLED");
+      if (!enabled || startedWrongly) return off(operation, "ENGINE_DISABLED");
       if (!own.length) return off(operation, "RECIPE_UNKNOWN");
       const all = own.map(capabilityOf);
       return all.find((c) => c.available) ?? all[0];
@@ -719,6 +791,17 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         if (!recipe) return { refused: "RECIPE_UNKNOWN" };
         const refused = refusal(request, capabilityOf(recipe));
         if (refused) return { refused };
+        // The person started this process, and may have restarted it since the check.
+        const start = await startProblem();
+        if (start) {
+          ready.clear();
+          return {
+            refused:
+              start.kind === "unreachable"
+                ? "WEIGHTS_ABSENT"
+                : "ENGINE_DISABLED",
+          };
+        }
         const uploaded = new Map<string, string>();
         for (const { role, asset } of request.inputs) {
           if (!recipe.bindings.roles?.[role])

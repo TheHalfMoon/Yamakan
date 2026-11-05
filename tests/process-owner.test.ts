@@ -363,9 +363,12 @@ test(
       procd.stdin!.write("KILL\tok1\n");
       await waitFor((l) => l.startsWith("EXITED\tok1"));
       const exited = once(procd, "exit");
+      // procd exits on this by design, possibly before these writes finish.
+      procd.stdin!.on("error", () => {});
       procd.stdin!.write("x".repeat(300 * 1024));
       procd.stdin!.write("\n");
-      await exited;
+      const [code] = await exited;
+      assert.equal(code, 0, "the designed exit, not a crash");
     } finally {
       procd.kill();
     }
