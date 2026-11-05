@@ -66,7 +66,17 @@ import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
 import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
 import { assertLanguage, assertTranscribable } from "../audio/transcription.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
-import { comfyGeneration, probeComfy } from "../engines/comfyui.ts";
+import {
+  PINNED_COMFY_RECIPES,
+  comfyGeneration,
+  comfyRecipeHash,
+  createComfyEngine,
+  probeComfy,
+} from "../engines/comfyui.ts";
+import {
+  createGenerationService,
+  type GenerationRecipe,
+} from "../engines/generation.ts";
 import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
 import {
   StudioDocumentSchema,
@@ -224,6 +234,11 @@ export type CommandContext = {
   modelRoot?: string;
   // A person-started ComfyUI the service was told to look at (unset: none).
   comfyUrl?: string;
+  // Tests only: a generation service, since this build can build none.
+  generation?: {
+    service: ReturnType<typeof createGenerationService>;
+    recipes: readonly GenerationRecipe[];
+  };
 };
 type RunContext = CommandContext & { receipt?: RequestReceipt };
 
@@ -240,11 +255,42 @@ type Definition<S extends z.ZodType, R> = {
 };
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
 
-function generationUnavailable(): never {
-  throw new CommandError(
-    "CAPABILITY_UNAVAILABLE",
-    comfyGeneration().reason ?? "Generation is not available in this build.",
-  );
+// The service behind the generation commands. One is built for a store only when
+// this build has a qualified recipe and a person named a ComfyUI to use.
+type Generation = {
+  service: ReturnType<typeof createGenerationService>;
+  recipes: readonly GenerationRecipe[];
+};
+const generations = new WeakMap<ProjectStore, Generation>();
+function generationOf(ctx: CommandContext): Generation {
+  if (ctx.generation) return ctx.generation;
+  const { available, reason } = comfyGeneration();
+  if (!available || !ctx.comfyUrl)
+    throw new CommandError(
+      "CAPABILITY_UNAVAILABLE",
+      reason ?? "No local engine is configured for this service.",
+    );
+  let held = generations.get(ctx.store);
+  if (!held) {
+    held = {
+      service: createGenerationService({
+        adapter: createComfyEngine({ baseUrl: ctx.comfyUrl }),
+        store: ctx.store,
+        resourcePolicyHash: RESOURCE_POLICY_HASH,
+      }),
+      recipes: PINNED_COMFY_RECIPES.filter(
+        (r): r is typeof r & { operation: GenerationRecipe["operation"] } =>
+          r.operation === "textToVideo" || r.operation === "imageToVideo",
+      ).map((r) => ({
+        id: r.id,
+        hash: comfyRecipeHash(r),
+        operation: r.operation,
+        modelManifestHash: r.modelManifestHash,
+      })),
+    };
+    generations.set(ctx.store, held);
+  }
+  return held;
 }
 
 const NO_REPLAY =
@@ -2076,15 +2122,15 @@ export const commands = {
         : { configured: false, ...answer };
     },
   }),
-  // A person's generation. Nothing can run today: engines are off and no recipe
-  // is pinned, so each refuses with the reason. An agent cannot start one.
+  // A person's generation. Nothing can run in this build: engines are off and no
+  // recipe is pinned, so each refuses with the reason. An agent cannot start one.
   "yamakan.generation.start": define({
     scope: "project:write",
     mutation: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Not available in this build, and always refused. It will start a generation at the person's request, from a browser session only.",
+      "Start a generation with a qualified recipe, at the person's request, from a browser session only. Refused while this build has none, as it does now.",
     input: z
       .object({
         projectId: Id,
@@ -2102,15 +2148,21 @@ export const commands = {
         firstFrameAssetId: Id.optional(),
       })
       .strict(),
-    run: () => generationUnavailable(),
+    run: (ctx, { recipeId, ...request }) => {
+      const generation = generationOf(ctx);
+      const recipe = generation.recipes.find((r) => r.id === recipeId);
+      if (!recipe)
+        throw new CommandError("NOT_FOUND", "That recipe is not available.");
+      return generation.service.start({ ...request, recipe });
+    },
   }),
   "yamakan.generation.status": define({
     scope: "project:read",
     mutation: false,
     summary:
-      "Not available in this build, and always refused. It will report a generation's state and progress.",
+      "Report a generation's state and, where the engine gives it, its progress. Refused while this build can generate nothing, as it does now.",
     input: z.object({ generationId: Id }).strict(),
-    run: () => generationUnavailable(),
+    run: (ctx, a) => generationOf(ctx).service.status(a.generationId),
   }),
   "yamakan.generation.cancel": define({
     scope: "project:write",
@@ -2118,9 +2170,9 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Not available in this build, and always refused. It will ask the engine to stop a generation, from a browser session only.",
+      "Ask the engine to stop a generation, from a browser session only. Refused while this build can generate nothing, as it does now.",
     input: z.object({ generationId: Id }).strict(),
-    run: () => generationUnavailable(),
+    run: (ctx, a) => generationOf(ctx).service.cancel(a.generationId),
   }),
   "yamakan.generation.import": define({
     scope: "project:write",
@@ -2128,9 +2180,9 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Not available in this build, and always refused. It will bring a finished generation's checked video into the project as an asset, from a browser session only.",
+      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it. Refused while this build can generate nothing, as it does now.",
     input: z.object({ generationId: Id }).strict(),
-    run: () => generationUnavailable(),
+    run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
   }),
   "yamakan.engines.capabilities": define({
     scope: "project:read",

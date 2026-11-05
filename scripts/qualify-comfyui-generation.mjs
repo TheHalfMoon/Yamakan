@@ -175,6 +175,8 @@ try {
 
   const { assetId } = await generation.importResult(generationId);
   const again = await generation.importResult(generationId);
+  assert.equal(again.lineage.inputs.length, 0);
+  assert.equal(again.lineage.recipeId, recipe.id);
   assert.equal(again.assetId, assetId, "importing twice gives one asset");
   const head = await execute(ctx, "yamakan.project.open", { projectId });
   const asset = head.result.assets.find((a) => a.id === assetId);
