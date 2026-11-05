@@ -56,6 +56,10 @@ Still open on this card then: launch error 2 stays tracked rather than explained
 | `new-test.log`         | `e2e4c2c6a2c5df6a6e4bc8a9fd6c99123ce262bb68fe9fbfdd45974be7fd7c33` |
 | `new-e2e.log`          | `ab2078acf5f08d562cba4ab2af5ec244cd4b806bb364fa23a8ecebba48c70e62` |
 
+## Capture at a later main
+
+Run 2026-11-05 at `ae55852daf4251de31ba5b7a101eba5c14fe9c40`, in a new clone from GitHub with `npm ci --ignore-scripts`, on AC at low load: **`RECORDED`, all eight stages passed, no blockers.** The clone skipped LFS, and the media runtime was copied in from another checkout and matched its pins, so the tree shows those files as changed; this did not test fetching them. One run, and **later code needs a new capture**. It is not committed as `environment.json`. Local capture SHA-256: `74fa29ba525f39070be1ab2fc23713b5c84263d4ee71bdb3a49ce37909065d15`.
+
 ## Negatives as real conditions
 
 Run 2026-11-05 at `32187feee193485de17a31b6894b2a16a79aedac`, in a clone made for this run with `GIT_LFS_SKIP_SMUDGE=1` and `npm ci --ignore-scripts`, running `scripts/qualify-ultimate-environment.mjs` for each. No code changed.
