@@ -38,6 +38,8 @@ type Props = {
   client: Client;
   t: Translate;
   onSaved: (projectId: string, from: number, revision: number) => void;
+  // Tells the editor when edits here are unsaved, so an undo waits for them.
+  registerUnsaved?: (isUnsaved: () => boolean) => () => void;
 };
 
 const TICKS_PER_MS = 705_600;
@@ -122,6 +124,9 @@ function CaptionsPanel(props: Props) {
   }, [track?.contentHash]);
   const cues = draft?.cues ?? track?.cues ?? [];
   const drafting = draft !== null;
+  const hasDraft = useRef(false);
+  hasDraft.current = drafting;
+  useEffect(() => live.current.registerUnsaved?.(() => hasDraft.current), []);
   useEffect(() => {
     const control = refocus.current;
     if (busy || !control) return;
