@@ -127,6 +127,9 @@ function App() {
     [revisionHistory, setRevisionHistory] = useState<ProjectHistory | null>(
       null,
     ),
+    // The local generation engine's health, read only and on request.
+    [engine, setEngine] =
+      useState<OperationResult<"yamakan.engines.comfyui"> | null>(null),
     // Workspace backups, loaded on request.
     [backups, setBackups] =
       useState<OperationResult<"yamakan.workspace.backups"> | null>(null);
@@ -1773,6 +1776,60 @@ function App() {
               </div>
             ))}
           </div>
+          <section
+            className="backups engine-health"
+            aria-label={t("localEngine.title")}
+            data-testid="engine-panel"
+          >
+            <h2>{t("localEngine.title")}</h2>
+            <p className="note">{t("localEngine.note")}</p>
+            <button
+              disabled={busy}
+              data-testid="engine-check"
+              onClick={() =>
+                run(async () => {
+                  // A failed check must not leave an earlier answer on screen.
+                  setEngine(null);
+                  setEngine(await call("yamakan.engines.comfyui", {}));
+                })
+              }
+            >
+              {t("localEngine.check")}
+            </button>
+            {engine && (
+              <div data-testid="engine-result">
+                <p data-testid="engine-connection">
+                  {!engine.configured
+                    ? t("localEngine.notConfigured")
+                    : !engine.reachable
+                      ? t("localEngine.unreachable")
+                      : t("localEngine.reachable", {
+                          version: engine.version ?? t("localEngine.unknown"),
+                          device:
+                            engine.device?.name ||
+                            engine.device?.type ||
+                            t("localEngine.unknown"),
+                        })}
+                </p>
+                {engine.configured && engine.reachable && (
+                  <p data-testid="engine-start">
+                    {engine.startedSafely
+                      ? t("localEngine.startedSafely")
+                      : t("localEngine.startedUnsafely")}
+                    {engine.missing.length > 0 &&
+                      ` ${t("localEngine.missing", { flags: engine.missing.join(", ") })}`}
+                    {engine.refused.length > 0 &&
+                      ` ${t("localEngine.refused", { flags: engine.refused.join(", ") })}`}
+                    {engine.exposed ? ` ${t("localEngine.exposed")}` : ""}
+                  </p>
+                )}
+                {/* Apart, always: a healthy connection is not working generation. */}
+                <p data-testid="engine-generation">
+                  {t("localEngine.generationUnavailable")}
+                </p>
+              </div>
+            )}
+          </section>
           <section className="backups" aria-label={t("backups.title")}>
             <h2>{t("backups.title")}</h2>
             <p className="note">{t("backups.note")}</p>

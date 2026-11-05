@@ -2120,8 +2120,12 @@ export const commands = {
         generationReason: generation.reason,
       };
       return ctx.comfyUrl
-        ? { configured: true, ...(await probeComfy(ctx.comfyUrl)), ...answer }
-        : { configured: false, ...answer };
+        ? {
+            configured: true as const,
+            ...(await probeComfy(ctx.comfyUrl)),
+            ...answer,
+          }
+        : { configured: false as const, ...answer };
     },
   }),
   // A person's generation. Nothing can run in this build: engines are off and no

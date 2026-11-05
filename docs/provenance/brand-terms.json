@@ -24,6 +24,7 @@
   "skipExactFiles": [
     "core/engines/comfyui.ts",
     "scripts/qualify-comfyui.mjs",
+    "scripts/qualify-engine-panel.mjs",
     "scripts/qualify-comfyui-generation.mjs",
     "tests/comfyui-engine.test.ts",
     "docs/provenance/REBRAND_INVENTORY.md",
@@ -35,6 +36,10 @@
     "tests/provenance.test.ts"
   ],
   "allowLiteralPatterns": [
+    {
+      "pattern": "YAMAKAN_COMFYUI_URL",
+      "reason": "the setting a person must name to point Yamakan at their engine"
+    },
     {
       "pattern": "the ComfyUI this service was configured with",
       "reason": "the health command must name the program a person configured"

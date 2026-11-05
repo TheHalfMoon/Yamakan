@@ -51,6 +51,24 @@ const en = {
   "projects.create": "Create project",
   "projects.revision": "Revision {revision}",
   "projects.history": "History & recovery",
+  "localEngine.title": "Local generation engine",
+  "localEngine.note":
+    "You start the engine yourself. This only reads its status: it starts, installs and generates nothing.",
+  "localEngine.check": "Check engine",
+  "localEngine.unknown": "unknown",
+  "localEngine.notConfigured":
+    "No engine is configured. Set YAMAKAN_COMFYUI_URL to its address on this machine and restart Yamakan.",
+  "localEngine.unreachable": "The configured engine did not answer.",
+  "localEngine.reachable":
+    "The engine answered: version {version}, on {device}.",
+  "localEngine.startedSafely":
+    "It reports a safe start: offline, with no custom nodes, on this machine only.",
+  "localEngine.startedUnsafely": "Yamakan will not use it as started.",
+  "localEngine.missing": "Start it with: {flags}.",
+  "localEngine.refused": "Start it without: {flags}.",
+  "localEngine.exposed": "It is also reachable from beyond this machine.",
+  "localEngine.generationUnavailable":
+    "Generation is not available in this build. A working connection does not change that.",
   "backups.title": "Backups",
   "backups.note":
     "A backup copies the database (with creative documents), verified media and older scene files to a folder beside this workspace while you keep working. Restoring creates a new workspace folder; this one is not changed.",
@@ -377,6 +395,23 @@ const ar: Record<MessageKey, string> = {
   "projects.create": "إنشاء مشروع",
   "projects.revision": "المراجعة {revision}",
   "projects.history": "السجل والاستعادة",
+  "localEngine.title": "محرك التوليد المحلي",
+  "localEngine.note":
+    "أنت من يشغّل المحرك. هذا يقرأ حالته فقط: لا يشغّل شيئًا ولا يثبّت شيئًا ولا يولّد شيئًا.",
+  "localEngine.check": "فحص المحرك",
+  "localEngine.unknown": "غير معروف",
+  "localEngine.notConfigured":
+    "لم يُضبط أي محرك. اضبط YAMAKAN_COMFYUI_URL على عنوانه في هذا الجهاز ثم أعد تشغيل يماكن.",
+  "localEngine.unreachable": "لم يستجب المحرك المضبوط.",
+  "localEngine.reachable": "استجاب المحرك: الإصدار {version}، على {device}.",
+  "localEngine.startedSafely":
+    "يُبلغ عن تشغيل آمن: دون اتصال، وبلا عُقد مخصصة، وعلى هذا الجهاز فقط.",
+  "localEngine.startedUnsafely": "لن يستخدمه يماكن كما شُغّل.",
+  "localEngine.missing": "شغّله مع: {flags}.",
+  "localEngine.refused": "شغّله بدون: {flags}.",
+  "localEngine.exposed": "يمكن الوصول إليه أيضًا من خارج هذا الجهاز.",
+  "localEngine.generationUnavailable":
+    "التوليد غير متاح في هذا الإصدار. والاتصال السليم لا يغيّر ذلك.",
   "backups.title": "النسخ الاحتياطية",
   "backups.note":
     "تنسخ النسخة الاحتياطية قاعدة البيانات (ومعها المستندات الإبداعية) والوسائط المتحقَّق منها وملفات المشاهد الأقدم إلى مجلد بجوار مساحة العمل هذه وأنت تواصل العمل. تُنشئ الاستعادة مجلد مساحة عمل جديدًا ولا تغيّر هذا المجلد.",
