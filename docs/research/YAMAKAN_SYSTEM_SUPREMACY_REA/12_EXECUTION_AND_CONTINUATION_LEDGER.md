@@ -145,3 +145,30 @@ Updated 2026-11-05. Main at this checkpoint: `2f65c8bf3bd2ee28500f85084db5ef5498
 - Timed render tests fail on a loaded machine on battery, so a suite result needs AC and a quiet host.
 
 **A pasted source integration directive was declined on 2026-11-05.** It asked to integrate generation engines and model workflows from ten outside repositories, which conflicts with the handoff's rule keeping models disabled. Asked whether it replaced that rule, the founder answered: "No, keep the rules." No source from it was fetched or copied.
+
+## Checkpoint: undo, consent gate, keyboard editing
+
+Updated 2026-11-05. Main at this checkpoint: `223bc2df1d9b1780f9a7c2b329e710e14d3b3312`, post-merge run 41961310495 success. Models and providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task                          | State                                                         | Exact result                                                                                                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SS-014 keyboard editing       | Merged; card still open                                       | [PR #178](https://github.com/TheHalfMoon/Yamakan/pull/178), head `be5a079906bd4ad7c55ae78a492b8760e28f7cdf`, merge `b5117b103a8d61e91e1e617ed5f6d6525f6ad8fc`. Suite at that head 809 of 812, 3 skipped, 0 failed.                                                     |
+| Undo and consent, measured    | Merged                                                        | [PR #179](https://github.com/TheHalfMoon/Yamakan/pull/179), head `020fd358ce11bfe0bb351faf3a03fe42bf8fde15`, merge `19613c1d7a2a714548015d109aa2663afb39d027`. Tests and docs only; no full suite at that head.                                                        |
+| Unsaved work and toolbar Undo | Merged                                                        | [PR #180](https://github.com/TheHalfMoon/Yamakan/pull/180), head `f80762872df28546c0bcfd88cb0567c08ff541f2`, merge `50f18c890cba1cb38af8b553fc3400a8afec337e`. Suite at that head 809 of 812, 3 skipped, 0 failed.                                                     |
+| Consent gate                  | Merged                                                        | [PR #181](https://github.com/TheHalfMoon/Yamakan/pull/181), head `6400e1943f135fad1a73e3159bb6da034dbe3a83`, merge `223bc2df1d9b1780f9a7c2b329e710e14d3b3312`. Suite at that head 818 of 821, 3 skipped, 0 failed. [Receipt](../../evidence/ultimate/consent-gate.md). |
+| SS-014 crossfade              | In [PR #182](https://github.com/TheHalfMoon/Yamakan/pull/182) | Not merged at this checkpoint.                                                                                                                                                                                                                                         |
+
+**Founder's decisions on 2026-11-05:**
+
+- **Gate a person's media once consent is revoked:** "Yes, gate it." Done in #181.
+- **For the founder to overrule, in the gate:** after any restore to a new folder, pack-linked media cannot be newly placed until someone revalidates, even if nobody revoked anything, and the browser has no control for that. The receipt gives the reason.
+- **A second pasted directive, of unstated origin in this session, asks for AI generation, ComfyUI and copying donor code.** It conflicts with the founder's own answer the same day, "No, keep the rules." Not acted on, and no source was fetched or copied, until the founder says directly which stands.
+
+**Open findings added:**
+
+- `process owners sharing an input never lose each other's access entries` failed once in a full suite with "The process owner exited", and passed 3 of 3 alone. Unexplained.
+- The timeline jumps when the reference preview finishes rendering, by about 690 px in one qualifier, so a press can land on the preview.
+- The browser has no way to record a consent, save a pack, revoke, or remove media. A refused placement's way back works only through commands.
+- Timed render tests fail on a loaded machine on battery.
+
+**Next:** SS-005b and SS-015; SS-017's negatives and SS-009's remaining items.
