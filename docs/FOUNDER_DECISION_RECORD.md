@@ -129,3 +129,10 @@ Approval line in the packet's format:
 - **Authorized:** implementing and qualifying local AI generation, including local ComfyUI, and copying from `codyclack/opensfield`, `D3voz/openjutsu`, `Arfolomew/backlot`, `Anil-matcha/Open-Generative-AI` and `wide-trace/open-higgsfield` after licence and revision checks. A qualified local model may then be enabled.
 - **Still in force:** each model stays disabled until its own functional, security and resource tests pass. Commercial providers stay off. Media is never silently routed to a cloud service. Plume stays deferred, limits frozen, spending zero, release NO-GO; X-01 and X-02 stay external. The builder reads this as allowing local-model qualification under X-03, which the founder's words did not name. Each model still needs its own weight, rights and resource authority and a reviewed protocol before any download or run, and this host lacks the hardware. Existing security, consent and licensing requirements hold.
 - **Limit found:** `wide-trace/open-higgsfield` has no licence, so nothing may be copied from it.
+
+## 2026-11-05: A person starts ComfyUI
+
+- **Source and form:** chat to Claude Opus in Claude Code. Shown the trade-off, the founder chose "Yes, person starts it".
+- **Decided:** Yamakan does not own ComfyUI's process, and its worker sandbox is not widened. A person starts ComfyUI, and Yamakan uses only a copy reporting a safe start.
+- **Accepted with it:** such a copy has no Yamakan sandbox or memory limit, Yamakan cannot stop it or confirm it stopped, and the reported arguments are ComfyUI's own word.
+- **Unchanged:** nothing is enabled by this. Each model still needs its own weight, rights and resource authority and a reviewed protocol.

@@ -34,6 +34,9 @@ export const COMFY_LIMITS = Object.freeze({
   requestMs: 15_000,
   transferMs: 30 * 60 * 1000,
   tracked: 256,
+  // How long a job ComfyUI does not report may stay unknown: it may yet appear,
+  // since a request can be enqueued after this gave up waiting.
+  lostAfterMs: 5 * 60 * 1000,
 });
 
 export type ComfyNode = {
@@ -183,6 +186,11 @@ type HistoryEntry = {
 
 type Execution = {
   recipe: ComfyRecipe;
+  submittedAt: number;
+  deadlineMs: number;
+  // ComfyUI last reported this job at, once it has.
+  seenAt?: number;
+  deadlineCancelled?: boolean;
   artifacts?: (Artifact & { file: SavedFile })[];
 };
 
@@ -191,6 +199,9 @@ export type ComfyEngineOptions = {
   recipes?: readonly ComfyRecipe[];
   // Tests only: the build's ENGINE_ENABLED decides otherwise.
   enabled?: boolean;
+  // Tests only.
+  lostAfterMs?: number;
+  now?: () => number;
 };
 
 // How the person's ComfyUI must be started for this adapter to use it: on
@@ -287,6 +298,11 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   const progress = new Map<string, number>();
   // Recipes a setup check found everything for, until the next check.
   const ready = new Set<string>();
+  const now = options.now ?? Date.now;
+  const lostAfterMs = options.lostAfterMs ?? COMFY_LIMITS.lostAfterMs;
+  // Replaced jobs a cancel could not find: one may still be enqueued late, and is
+  // cancelled when it appears, until it can no longer.
+  const replaced = new Map<string, number>();
   let checks = 0;
   let startedWrongly = false;
   let socket: WebSocket | null = null;
@@ -623,8 +639,60 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     return null;
   }
 
-  // What ComfyUI knows, never a resubmit.
+  // Cancels any replaced job that has turned up, and forgets those past hoping.
+  async function sweepReplaced() {
+    for (const [id, since] of replaced) {
+      if (now() - since > lostAfterMs) {
+        replaced.delete(id);
+        continue;
+      }
+      const where = await inQueue(id).catch(() => null);
+      if (where) {
+        await cancel(id);
+        replaced.delete(id);
+      }
+    }
+  }
+
+  // What is known, bounded: a job past its deadline is stopped, and one ComfyUI
+  // has stopped reporting for long enough is not left unknown forever. A job this
+  // adapter does not know, after a restart, stays as ComfyUI reports it.
   async function observe(executionRef: string): Promise<ExecutionStatus> {
+    if (enabled) await sweepReplaced();
+    const status = await report(executionRef);
+    const e = executions.get(executionRef);
+    if (!e || !enabled) return status;
+    const at = now();
+    if (status.state === "queued" || status.state === "running") {
+      e.seenAt = at;
+      if (at - e.submittedAt <= e.deadlineMs) return status;
+      if (!e.deadlineCancelled) {
+        e.deadlineCancelled = true;
+        await cancel(executionRef);
+      }
+      return {
+        executionRef,
+        state: "failed",
+        diagnostic:
+          "The job passed its deadline; ComfyUI was asked to stop it.",
+      };
+    }
+    if (
+      status.state === "unknown" &&
+      at - (e.seenAt ?? e.submittedAt) > lostAfterMs
+    )
+      return {
+        executionRef,
+        state: "failed",
+        diagnostic: e.seenAt
+          ? "ComfyUI stopped reporting this job."
+          : "ComfyUI never reported this job.",
+      };
+    return status;
+  }
+
+  // What ComfyUI knows, never a resubmit.
+  async function report(executionRef: string): Promise<ExecutionStatus> {
     if (!enabled)
       return {
         executionRef,
@@ -841,9 +909,16 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           executions.delete(oldest);
           progress.delete(oldest);
         }
-        executions.set(executionRef, { recipe });
+        executions.set(executionRef, {
+          recipe,
+          submittedAt: now(),
+          deadlineMs: request.deadlineMs,
+        });
         const superseded = claim.supersede(executionRef);
-        if (superseded) await cancel(superseded);
+        if (superseded) {
+          const stopped = await cancel(superseded);
+          if (!stopped.remoteAcknowledged) replaced.set(superseded, now());
+        }
         return superseded === executionRef
           ? { refused: "STALE_ATTEMPT" }
           : { executionRef };

@@ -485,6 +485,108 @@ test("a ComfyUI started any other way is not used, even after a good check", asy
   engine.close();
 });
 
+async function clocked(deadlineMs = 60_000) {
+  const f = await fake();
+  const r = recipe();
+  let time = 1_000_000;
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+    lostAfterMs: 1000,
+    now: () => time,
+  });
+  await engine.checkSetup();
+  return {
+    f,
+    r,
+    engine,
+    pass: (ms: number) => (time += ms),
+    req: (over: object = {}) => request(r, { deadlineMs, ...over }),
+  };
+}
+
+test("a job ComfyUI never reports is unknown for a while, then failed", async () => {
+  const { engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  assert.equal((await engine.status(id)).state, "unknown");
+  pass(1001);
+  const lost = await engine.status(id);
+  assert.equal(lost.state, "failed");
+  assert.equal(lost.diagnostic, "ComfyUI never reported this job.");
+  engine.close();
+});
+
+test("a job ComfyUI stops reporting fails from when it was last seen", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  f.queue.running = [id];
+  pass(900);
+  assert.equal((await engine.status(id)).state, "running");
+  f.queue.running = [];
+  pass(900);
+  assert.equal((await engine.status(id)).state, "unknown", "seen 900 ms ago");
+  pass(200);
+  assert.equal(
+    (await engine.status(id)).diagnostic,
+    "ComfyUI stopped reporting this job.",
+  );
+  engine.close();
+});
+
+test("a job past its deadline is stopped once, and fails", async () => {
+  const { f, engine, pass, req } = await clocked(5000);
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  f.queue.running = [id];
+  assert.equal((await engine.status(id)).state, "running");
+  pass(5001);
+  assert.equal((await engine.status(id)).state, "failed");
+  await engine.status(id);
+  assert.equal(
+    f.posted.filter((p) => p.startsWith("/interrupt")).length,
+    1,
+    "asked once",
+  );
+  engine.close();
+});
+
+test("a replaced job that appears late is cancelled, and no other job is", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const one = (await engine.submit(req(), context)) as { executionRef: string };
+  const two = (await engine.submit(req({ leaseGeneration: 2 }), context)) as {
+    executionRef: string;
+  };
+  assert.notEqual(one.executionRef, two.executionRef);
+  const deleted = () => f.posted.filter((p) => p.startsWith("/queue {")).length;
+  assert.equal(deleted(), 0, "nothing to cancel yet");
+  f.queue.pending = [one.executionRef];
+  await engine.status(two.executionRef);
+  assert.ok(
+    f.posted.includes(
+      `/queue ${JSON.stringify({ delete: [one.executionRef] })}`,
+    ),
+    "the late one is cancelled",
+  );
+  // Once done, it is not cancelled again, and a job past hope is forgotten.
+  const after = deleted();
+  await engine.status(two.executionRef);
+  assert.equal(deleted(), after);
+  const three = (await engine.submit(req({ leaseGeneration: 3 }), context)) as {
+    executionRef: string;
+  };
+  pass(1001);
+  f.queue.pending = [two.executionRef];
+  await engine.status(three.executionRef);
+  assert.equal(deleted(), after, "too late to be this attempt's");
+  engine.close();
+});
+
 test("the launch arguments name offline mode, loopback and no custom nodes", () => {
   const argv = comfyLaunchArguments({ port: 1234, baseDirectory: "D:/x" });
   assert.deepEqual(argv.slice(0, 2), ["--listen", "127.0.0.1"]);
