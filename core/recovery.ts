@@ -1007,18 +1007,30 @@ async function restore(
       mode: 0o600,
     });
     await rename(partial, path.join(root, "restore.json"));
-    await rm(path.join(root, RESTORE_UNFINISHED), { force: true });
+    // Committed. A mark that cannot be removed now is cleared at the next open.
+    await rm(path.join(root, RESTORE_UNFINISHED), { force: true }).catch(
+      () => {},
+    );
     return { root, ...receipt };
   } catch (e) {
     // Only what this restore made is removed: the folder if it created it,
-    // otherwise (the folder was empty) its contents.
-    if (!existed)
-      await rm(root, { recursive: true, force: true }).catch(() => {});
-    else if (initialized)
+    // otherwise (the folder was empty) its contents. The mark goes last, and only
+    // with nothing else left, so a file held open cannot pass for a workspace.
+    if (initialized || !existed) {
       for (const name of await readdir(root).catch(() => [] as string[]))
-        await rm(path.join(root, name), { recursive: true, force: true }).catch(
-          () => {},
-        );
+        if (name !== RESTORE_UNFINISHED)
+          await rm(path.join(root, name), {
+            recursive: true,
+            force: true,
+          }).catch(() => {});
+      const left = await readdir(root).catch(() => [] as string[]);
+      if (!left.some((name) => name !== RESTORE_UNFINISHED))
+        await (
+          existed
+            ? rm(path.join(root, RESTORE_UNFINISHED), { force: true })
+            : rm(root, { recursive: true, force: true })
+        ).catch(() => {});
+    }
     throw e;
   }
 }

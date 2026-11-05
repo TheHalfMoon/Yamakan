@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import {
   access,
   lstat,
@@ -28,7 +27,7 @@ import {
 import { TRANSITIONS_OFF, transitionWritesEnabled } from "./transitions.ts";
 
 import type { Project, Asset } from "./project.ts";
-import { RESTORE_UNFINISHED, safePath, initializeRoot } from "./paths.ts";
+import { isUnfinishedRestore, safePath, initializeRoot } from "./paths.ts";
 import {
   durationFramesAt,
   mediaHeader,
@@ -742,12 +741,7 @@ export class ProjectStore {
     return this.#db;
   }
   async initialize() {
-    if (
-      await access(join(this.root, RESTORE_UNFINISHED)).then(
-        () => true,
-        () => false,
-      )
-    )
+    if (await isUnfinishedRestore(this.root))
       throw new CommandError(
         "RECOVERY_REQUIRED",
         "This folder is a restore that did not finish. Delete it and restore again; the backup and the original workspace are not affected.",

@@ -46,7 +46,6 @@ const receipt = process.argv[2] ?? null;
 const root = mkdtempSync(join(tmpdir(), "yamakan-browser-restore-"));
 const workspace = join(root, "workspace");
 const steps = [];
-const findings = [];
 const step = (name, detail = {}) => {
   steps.push({ name, ...detail });
   console.log(`ok - ${name}`);
@@ -65,9 +64,8 @@ const tree = (workspaceDir) => {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((f) => f.isFile())
     .map((f) => join(f.parentPath, f.name))
-    .filter((f) => !/\.sqlite|\.lock|\.tmp|service/.test(f))
-    .sort()
-    .map((f) => [relative(dir, f), sha(readFileSync(f))]);
+    .map((f) => [relative(dir, f), sha(readFileSync(f))])
+    .sort(([x], [y]) => (x < y ? -1 : 1));
 };
 
 // The project, built before any service holds the workspace.
@@ -251,6 +249,7 @@ let passed = false;
 const live = [];
 try {
   const before = tree(workspace);
+  assert.ok(before.length >= 3, "the project's media files are compared");
   const a = await serve(workspace, 24401);
   live.push(a);
   browser = await chromium.launch({
@@ -290,7 +289,6 @@ try {
   );
 
   // By the browser's own controls.
-  const status = page.getByRole("status").first();
   await page.getByRole("button", { name: "Back up now" }).click();
   await page.waitForFunction(() =>
     /Backup created/.test(document.body.innerText),
@@ -310,7 +308,6 @@ try {
   )?.[1];
   assert.ok(restoredRoot && existsSync(restoredRoot), said.slice(0, 300));
   step("a restore is made with the browser's control, and names its folder");
-  void status;
   await a.stop();
   live.pop();
   assert.deepEqual(
@@ -343,15 +340,19 @@ try {
     "Yamakan starts on the restored folder, and the project opens in the browser",
   );
 
-  const stored = new ProjectStore(restoredRoot);
-  void stored;
   const docs = await service("yamakan.document.list", { projectId });
   assert.ok(
     docs.some((d) => d.id === packId && d.kind === "referencePack"),
     JSON.stringify(docs),
   );
-  const head = JSON.parse(original);
+  const head = await service("yamakan.project.export", { projectId });
   assert.ok(head.assets.some((x) => x.id === assets.converted.id));
+  const said2 = JSON.parse(
+    readFileSync(join(restoredRoot, "restore.json"), "utf8"),
+  );
+  assert.deepEqual(said2.quarantined, []);
+  assert.equal(said2.creative, "complete");
+  assert.equal(said2.closure.gaps, 0);
   step("the converted clip and the pack came through", {
     documents: docs.length,
     assets: head.assets.length,
@@ -427,6 +428,16 @@ try {
   await b.stop();
   live.pop();
   assert.deepEqual(tree(workspace), before, "the original is still as it was");
+  {
+    const reopened = new ProjectStore(workspace);
+    await reopened.initialize();
+    assert.equal(
+      JSON.stringify(await reopened.exportProject(projectId)),
+      original,
+      "the original project has no edit from the restored one",
+    );
+    await reopened.close();
+  }
   step("the original never changed, and the browser saw no page errors");
 
   // A restore killed partway, at several points.
@@ -464,21 +475,42 @@ try {
       finished,
       leftFolder: existsSync(target),
       hasDatabase: left.includes("workspace.sqlite"),
+      left,
     });
-    // Starting Yamakan on what was left must refuse, not open an empty workspace.
-    // A kill before anything was written leaves an empty folder, which holds
-    // nothing to mistake.
+    // Yamakan itself, started on what was left, must refuse and name the folder.
+    // A kill before the mark leaves an empty folder, which would open as a new
+    // empty workspace; it holds nothing, but a person could still be misled.
     if (left.length && !finished) {
       const opened = new ProjectStore(target);
       await assert.rejects(opened.initialize(), (e) => {
         kills.at(-1).startingThere = e.code;
         return e.code === "RECOVERY_REQUIRED";
       });
+      const started = fork(
+        fileURLToPath(new URL("../server/main.ts", import.meta.url)),
+        [],
+        {
+          env: {
+            ...process.env,
+            YAMAKAN_WORKSPACE: target,
+            YAMAKAN_PORT: "24403",
+          },
+          silent: true,
+          windowsHide: true,
+        },
+      );
+      let said = "";
+      started.stderr.on("data", (c) => (said += String(c)));
+      const code = await new Promise((r) => started.once("exit", r));
+      assert.equal(code, 1, said);
+      assert.ok(said.includes("did not finish") && said.includes(target), said);
+      kills.at(-1).serverRefused = true;
     }
   }
   assert.deepEqual(tree(workspace), before, "kills leave the original alone");
   assert.ok(
-    kills.some((k) => k.leftFolder && !k.finished),
+    // A refusal seen on a folder holding copied content, beyond the mark itself.
+    kills.some((k) => k.serverRefused && k.left.length > 1),
     `no kill landed during a restore: ${JSON.stringify(kills)}`,
   );
   const again = fork(
@@ -512,7 +544,6 @@ try {
           }).trim(),
           passed,
           steps,
-          findings,
         },
         null,
         2,

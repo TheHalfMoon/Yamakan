@@ -320,3 +320,29 @@ test("a folder a restore did not finish refuses to open, and a finished one does
   });
   assert.deepEqual(await readdir(unfinished), [RESTORE_UNFINISHED]);
 });
+
+test("restore.json commits a restore: a mark left beside it is cleared", async () => {
+  const folder = await temp("yamakan-closure-committed-");
+  await writeFile(path.join(folder, RESTORE_UNFINISHED), "");
+  await writeFile(path.join(folder, "restore.json"), "{}");
+  const store = new ProjectStore(folder);
+  handles.push(store);
+  await store.initialize();
+  assert.ok(!(await readdir(folder)).includes(RESTORE_UNFINISHED));
+});
+
+test("a refused restore into an existing empty folder leaves it empty", async () => {
+  const home = await temp("yamakan-closure-empty-");
+  const root = await temp("yamakan-closure-root-");
+  const p = await project(root);
+  const backup = await backupWorkspace(p.store, home);
+  const dir = path.join(home, "backups", backup.backupId);
+  const database = path.join(dir, "workspace.sqlite");
+  const good = await readFile(database);
+  await writeFile(database, good.subarray(0, Math.floor(good.length / 2)));
+  const target = await temp("yamakan-closure-target-");
+  await assert.rejects(restoreWorkspace(dir, target), {
+    code: "RECOVERY_REQUIRED",
+  });
+  assert.deepEqual(await readdir(target), []);
+});

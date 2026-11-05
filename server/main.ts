@@ -9,7 +9,11 @@ import { fileURLToPath } from "node:url";
 import { ProjectStore } from "../core/store.ts";
 import { CreativeAPI, principals } from "./api.ts";
 import { consumeLaunchSecret } from "../core/launch.ts";
-import { safePath, initializeRoot } from "../core/paths.ts";
+import {
+  isUnfinishedRestore,
+  safePath,
+  initializeRoot,
+} from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
 import { stageDocument, uploadStudioBitmap } from "./document-stage.ts";
 import {
@@ -76,6 +80,12 @@ if (!env("WORKSPACE") && (await isLegacyWorkspace(legacyDefault)))
   console.warn(
     `A pre-Yamakan workspace was found and left untouched. Migrate it with: ${legacyHint(legacyDefault)}`,
   );
+if (await isUnfinishedRestore(root)) {
+  console.error(
+    `This folder is a restore that did not finish, and was not opened: ${root}. Delete it and restore again; the backup and the original workspace are not affected.`,
+  );
+  process.exit(1);
+}
 await initializeRoot(root);
 // Owner-only before anything secret is written: on Windows a protected DACL
 // (this user, SYSTEM, Administrators) that everything below inherits; other
