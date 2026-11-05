@@ -259,7 +259,9 @@ try {
     await settle(pointer.id, before);
     await page.waitForTimeout(700);
     // Edit 2, by pointer with snapping off: B's end 7 frames shorter.
+    await page.locator(`[data-clip-id="${ids.a}"]`).focus();
     await page.keyboard.press("n");
+    await page.getByTitle("Snapping off (N)").waitFor();
     before = JSON.stringify(await canonical(pointer.id));
     let b = await clipBox(ids.b);
     await dragBy(
@@ -305,10 +307,8 @@ try {
     await settle(keyboard.id, before);
     await page.waitForTimeout(700);
     before = JSON.stringify(await canonical(keyboard.id));
-    for (let i = 0; i < 5; i++)
-      await page.keyboard.press("Alt+Shift+ArrowRight");
+    for (let i = 0; i < 5; i++) await page.keyboard.press("Period");
     const byKeyboard = await committed(keyboard.id, before);
-    assert.equal(new URL(page.url()).origin, origin, "Alt+Arrow left the page");
 
     assert.deepEqual(byKeyboard, byPointer);
     const b1 = byKeyboard.find((c) => c.id === ids.b);
@@ -342,11 +342,34 @@ try {
     assert.equal(JSON.stringify(await canonical(keyboard.id)), edited);
     step(`${label}: undo, redo and a reopen keep the result`);
 
+    // The keys do nothing away from the timeline, here or in another workspace.
+    await page.locator(`[data-clip-id="${ids.b}"]`).focus();
+    await page.getByRole("tab", { name: "Finish", exact: true }).click();
+    await page.getByRole("tab", { name: "Finish", exact: true }).focus();
+    for (const key of [
+      "BracketRight",
+      "Shift+ArrowLeft",
+      "Alt+ArrowRight",
+      "Comma",
+    ])
+      await page.keyboard.press(key);
+    await page.getByRole("tab", { name: "Edit", exact: true }).click();
+    await page.waitForTimeout(900);
+    assert.equal(JSON.stringify(await canonical(keyboard.id)), edited);
+    step(`${label}: the keys do nothing with focus away from the timeline`);
+
+    // The playhead is at 0 after the reopen, before clip B: "]" would collapse it.
+    await page.locator(`[data-clip-id="${ids.b}"]`).focus();
+    await page.keyboard.press("BracketRight");
+    await page.waitForTimeout(900);
+    assert.equal(JSON.stringify(await canonical(keyboard.id)), edited);
+    step(`${label}: trimming to a playhead outside the clip does nothing`);
+
     // A locked track refuses both.
     await page.getByRole("button", { name: /lock/i }).first().click();
     await page.waitForTimeout(700);
     await page.locator(`[data-clip-id="${ids.b}"]`).focus();
-    for (const key of ["Shift+ArrowLeft", "Alt+ArrowRight", "BracketRight"])
+    for (const key of ["Shift+ArrowLeft", "Alt+ArrowRight", "Period"])
       await page.keyboard.press(key);
     b = await clipBox(ids.b);
     await dragBy(b.x + b.width / 2, b.y + b.height / 2, 40);

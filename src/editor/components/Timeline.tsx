@@ -845,35 +845,54 @@ const Timeline: React.FC<TimelineProps> = (props) => {
         else if (key === 'd' && selected) { event.preventDefault(); duplicateClip(selected); }
         return;
       }
-      // By physical key, so these work on an Arabic layout too. Time runs left to
-      // right in every language, so the arrows do as well.
-      if (event.code === 'KeyN' && !event.altKey && !event.shiftKey) {
-        event.preventDefault();
-        onSnappingToggle();
-        return;
-      }
-      const arrow = event.code === 'ArrowRight' ? 1 : event.code === 'ArrowLeft' ? -1 : 0;
-      const editing = selected && !tracks.find((track) => track.id === selected.trackId)?.isLocked;
-      if (selected && arrow && (event.shiftKey || event.altKey)) {
-        event.preventDefault();
-        if (!editing) return;
-        const delta = arrow * frameSeconds;
-        const next = event.shiftKey
-          ? normalTrim(clips, selected, event.altKey ? 'start' : 'end', delta)
-          : movedClips(clips, selected, Math.max(0, selected.start + delta), selected.trackId);
-        applyClipSet(resolveTrackCollisions(next, selected.trackId));
-        return;
-      }
-      // The clip's edge to the playhead, as a pointer snap to it does.
-      if (selected && (event.code === 'BracketLeft' || event.code === 'BracketRight') && !event.altKey && !event.shiftKey) {
-        event.preventDefault();
-        if (!editing) return;
-        const handle = event.code === 'BracketLeft' ? 'start' : 'end';
-        const edge = handle === 'start' ? selected.start : selected.end;
-        applyClipSet(
-          resolveTrackCollisions(normalTrim(clips, selected, handle, playheadPosition - edge), selected.trackId),
-        );
-        return;
+      // The editing keys act only with focus in this timeline: it stays mounted,
+      // hidden, in other workspaces, and those keys mean other things elsewhere.
+      // By physical key, so they work on an Arabic layout too, and time runs left
+      // to right in every language, so the arrows do as well.
+      if (target?.closest('.tl-root') && !event.ctrlKey && !event.metaKey) {
+        if (event.code === 'KeyN' && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!event.repeat) onSnappingToggle();
+          return;
+        }
+        const editing = selected && !tracks.find((track) => track.id === selected.trackId)?.isLocked;
+        const arrow = event.code === 'ArrowRight' ? 1 : event.code === 'ArrowLeft' ? -1 : 0;
+        if (selected && arrow && event.shiftKey !== event.altKey) {
+          event.preventDefault();
+          if (!editing) return;
+          const delta = arrow * frameSeconds;
+          const next = event.shiftKey
+            ? normalTrim(clips, selected, 'end', delta)
+            : movedClips(clips, selected, Math.max(0, selected.start + delta), selected.trackId);
+          applyClipSet(resolveTrackCollisions(next, selected.trackId));
+          return;
+        }
+        // Comma and period, as Alt+Shift switches the keyboard language on Windows.
+        const startStep = event.code === 'Comma' ? -1 : event.code === 'Period' ? 1 : 0;
+        if (selected && startStep && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!editing) return;
+          applyClipSet(
+            resolveTrackCollisions(
+              normalTrim(clips, selected, 'start', startStep * frameSeconds),
+              selected.trackId,
+            ),
+          );
+          return;
+        }
+        // The clip's edge to the playhead, as a pointer snap to it does. A playhead
+        // on the far side of the clip would collapse it, so that does nothing.
+        if (selected && (event.code === 'BracketLeft' || event.code === 'BracketRight') && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!editing) return;
+          const handle = event.code === 'BracketLeft' ? 'start' : 'end';
+          if (handle === 'start' ? playheadPosition >= selected.end : playheadPosition <= selected.start) return;
+          const edge = handle === 'start' ? selected.start : selected.end;
+          applyClipSet(
+            resolveTrackCollisions(normalTrim(clips, selected, handle, playheadPosition - edge), selected.trackId),
+          );
+          return;
+        }
       }
       if (event.altKey) return;
       if (event.key === 'ArrowUp') { event.preventDefault(); goToEditPoint(-1); }

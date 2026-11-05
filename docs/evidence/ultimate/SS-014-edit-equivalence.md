@@ -8,15 +8,15 @@ The card asks that equivalent keyboard and pointer sequences give identical resu
 
 ## Change
 
-`src/editor/components/Timeline.tsx` keeps the pointer's trim and move logic, moved into two functions both inputs call, so the guards are shared: neighbours, source length, the minimum clip length and track collisions. With a clip focused or selected:
+`src/editor/components/Timeline.tsx` keeps the pointer's trim and move logic, moved into two functions both inputs call, so the guards are shared: neighbours, source length, the minimum clip length and track collisions. With focus in the timeline and a clip selected:
 
-| Keys              | Effect                                                              |
-| ----------------- | ------------------------------------------------------------------- |
-| `Shift+Arrow`     | Trim the end by one frame                                           |
-| `Alt+Shift+Arrow` | Trim the start by one frame                                         |
-| `Alt+Arrow`       | Move by one frame                                                   |
-| `[` and `]`       | Trim the start or end to the playhead, as a pointer snap to it does |
-| `N`               | Snapping on or off                                                  |
+| Keys          | Effect                                                              |
+| ------------- | ------------------------------------------------------------------- |
+| `Shift+Arrow` | Trim the end by one frame                                           |
+| `,` and `.`   | Trim the start by one frame                                         |
+| `Alt+Arrow`   | Move by one frame                                                   |
+| `[` and `]`   | Trim the start or end to the playhead, as a pointer snap to it does |
+| `N`           | Snapping on or off                                                  |
 
 Clips take focus by Tab, and focusing one selects it. The keys are matched by physical key, so they work on an Arabic layout, and time runs left to right in every language. A step is one project frame, passed as a new `frameSeconds` prop. No command, schema or stored format changed. **The `aria-label` on a clip, "Clip" and its name, is English only.**
 
@@ -31,7 +31,7 @@ Clips take focus by Tab, and focusing one selects it. The keys are matched by ph
 | B moved 11 frames later                                  | B moves 11 frames                                                       |
 | B's start 5 frames later                                 | B starts at 166, is 78 frames, and its source frame moves from 30 to 35 |
 
-Canonical `startFrame`, `durationFrames` and `sourceFrame` match exactly at both rates. Undo, redo and a reopen keep the result on the keyboard's copy. A locked track refuses both inputs, and the same keys do change an unlocked one. `Alt+Arrow` does not leave the page in Edge.
+Canonical `startFrame`, `durationFrames` and `sourceFrame` match exactly at both rates. Undo, redo and a reopen keep the result on the keyboard's copy. A reopen was read through the service, not from the editor's own display. A locked track refuses both inputs, and the same keys do change an unlocked one. The keys do nothing with focus on a tab or in another workspace, and `]` does nothing with the playhead before the clip. `N` was checked by the toolbar's title changing.
 
 **Pointer precision has a limit.** A drag is pixels turned into seconds, then rounded to a frame, so it matches only where a frame is more than a pixel. At the default zoom one frame was under a pixel here, so a pointer cannot reach every frame there, and the keyboard can.
 
@@ -43,5 +43,11 @@ Canonical `startFrame`, `durationFrames` and `sourceFrame` match exactly at both
 - `core/timeline/snapping.ts` holds integer-tick snapping, but this timeline snaps in floating seconds by pixels, as it did before. Rounding hides that in the cases above; replacing it was not attempted.
 - Trim modes other than normal have no keyboard path. The main editor passes `trimMode="normal"`, so they are not reachable there either.
 - Screen readers were not run. CI does not run this qualifier.
+
+## Independent review
+
+By reading only. It confirmed the pointer's behaviour was preserved line for line. It found a blocker, fixed above: the keys edited clips while the timeline was hidden in another workspace, because panels stay mounted. It also found `]` collapsing a clip with the playhead outside it, a test of `N` that could not fail, and a claim that `Alt+Arrow` stays on the page which the qualifier could not show; that claim is removed. Start trim moved off `Alt+Shift`, which switches the keyboard language on Windows.
+
+**Left as it is:** a move to the right pushes the next clip and those after it, and any edit stretches a clip under 0.5 s on that track, both as the pointer does, so one press is not always one frame there. Every clip is a Tab stop, its `aria-label` has no time or track and sits on a div with no role. `Alt+ArrowLeft` in a real browser was not tested by hand; with no clip selected the handler does not stop it from going back. Older `Ctrl+V`, `Ctrl+X` and `Ctrl+D` still fire with the timeline hidden.
 
 Rollback: revert this change. No stored data is affected.
