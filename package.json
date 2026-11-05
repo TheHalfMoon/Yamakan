@@ -56,6 +56,7 @@
     "qualify:consent-gate": "node scripts/qualify-consent-gate.mjs",
     "qualify:undo-unsaved": "node scripts/qualify-undo-unsaved.mjs",
     "qualify:comfyui-generation": "node scripts/qualify-comfyui-generation.mjs",
+    "qualify:engine-panel": "node scripts/qualify-engine-panel.mjs",
     "qualify:comfyui": "node scripts/qualify-comfyui.mjs",
     "qualify:browser-restore": "node scripts/qualify-browser-restore.mjs",
     "qualify:crossfade": "node scripts/qualify-crossfade.mjs",
