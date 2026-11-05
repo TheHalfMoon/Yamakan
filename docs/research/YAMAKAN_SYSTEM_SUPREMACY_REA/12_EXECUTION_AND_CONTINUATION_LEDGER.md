@@ -198,3 +198,32 @@ Updated 2026-11-05. Main: `335f21bcb9598c205911615804023758c5d883a1`. Models and
 - The `EBUSY` in `process owners sharing an input` was given retries, which only stop it failing the test; its cause is not established.
 
 **Next, required before the ComfyUI path is wired to anything:** a node allowlist and offline mode, following a job after a transport failure, and owning ComfyUI's process. Then a command, and a model only on a suitable host with its own authority and protocol. Also: SS-015's remaining items, SS-017's launch error and a capture at final code, SS-005b, and SS-009's remaining items.
+
+## Checkpoint: the generation path, with no model
+
+Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and commercial providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task                                          | State  | Exact result                                                                                                                                                                                                     |
+| --------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Safe-start check, ComfyUI                     | Merged | [PR #192](https://github.com/TheHalfMoon/Yamakan/pull/192), merge `8d581309493039ebab3eddc02eb58e54a44aed2b`                                                                                                     |
+| Environment capture                           | Merged | [PR #193](https://github.com/TheHalfMoon/Yamakan/pull/193), merge `3196b43a477e29c9a3b2dc71104996ad198c4b25`. `RECORDED` at `ae55852` from a new clone                                                           |
+| Job limits, health command, founder decisions | Merged | [PR #194](https://github.com/TheHalfMoon/Yamakan/pull/194), merge `b4bbe0ff6fc9fc28d9e8508de16883d3d3e050bf`                                                                                                     |
+| Generation path                               | Merged | [PR #195](https://github.com/TheHalfMoon/Yamakan/pull/195), merge `baa37c82dfff0aa33d2d36c7d85fa4a899c46b44`                                                                                                     |
+| Managed Mode design, a proposal               | Merged | [PR #196](https://github.com/TheHalfMoon/Yamakan/pull/196), merge `ab7695ebbee0960177938ef86e1ccffd7e0442b9`                                                                                                     |
+| Consent, lineage, commands                    | Merged | [PR #197](https://github.com/TheHalfMoon/Yamakan/pull/197), merge `71a4c78e21565aa74e3357945c0f81e0fcb3b048`                                                                                                     |
+| Read-only engine panel                        | Merged | [PR #198](https://github.com/TheHalfMoon/Yamakan/pull/198), head `29a907479b5648db222ce59ed0c6d23702cbe66a`, merge `ddb60b65b350e851973c3103a6bd37a782a97de0`. Suite 899 of 902, 3 skipped, 0 failed, on battery |
+
+**No AI output has been generated, and nothing can generate in this build.** Against real ComfyUI with core nodes and no weights, a video was started, followed, imported, placed and exported. It is a solid colour. [Receipt](../../evidence/ultimate/comfyui-engine.md), [matrix](../../evidence/ultimate/product-matrix.md).
+
+**Founder's decisions on 2026-11-05:** see `docs/FOUNDER_DECISION_RECORD.md`. A person starts ComfyUI, as a temporary model. No automatic start, model download, custom node or arbitrary workflow.
+
+**Blocked on the founder:** a first real AI video needs an approved model, with licence and rights checked, and a machine that can run it. This laptop has no discrete GPU.
+
+**Open findings added:**
+
+- A full suite at `af0fa16` had 19 failures: 11 `Media probe failed`, 2 render time limits, a startup timeout and others, with no launch error, on battery at about 3 GiB free. The next head, changing only a UI panel, passed in the same conditions. **Unexplained.** Memory pressure was the first guess, and that passing run argues against it being enough.
+- `burned-in captions draw the same` hit its render time limit twice under a full suite, and passes alone.
+- `3196b43`'s main run was cancelled, like `qualify` jobs that hit the 35-minute limit on `apt-get`. Its log was not read, and later main runs passed.
+- A chained command pushed past a failed brand check once, to a draft branch. Gates are now read before committing.
+
+**Next, independent of a model:** SS-015's remaining items, SS-017's launch error, SS-005b and SS-009's remaining items. **With a model:** a pinned recipe, connecting the setup check, and a start control.
