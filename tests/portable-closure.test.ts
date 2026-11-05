@@ -213,11 +213,12 @@ const portrait = async (c: { store: ProjectStore }, projectId: string) => {
 const tree = async (root: string) => {
   const files = (await readdir(root, { recursive: true, withFileTypes: true }))
     .filter((f) => f.isFile())
-    .map((f) => path.join(f.parentPath, f.name))
+    .map((f) => path.relative(root, path.join(f.parentPath, f.name)))
     .filter((f) => !/workspace\.sqlite|\.lock|\.tmp/.test(f))
     .sort();
+  assert.ok(files.length >= 2, "the media files are compared");
   return Promise.all(
-    files.map(async (f) => [path.relative(root, f), sha(await readFile(f))]),
+    files.map(async (f) => [f, sha(await readFile(path.join(root, f)))]),
   );
 };
 
@@ -265,7 +266,7 @@ test("a restore to a new root holds the project's media, timing, references and 
   assert.equal(await otio(copy), await otio(p));
 });
 
-test("a restore that fails leaves the original as it was, and the backup too", async () => {
+test("a refused restore leaves no folder and the original as it was, and the backup can still restore", async () => {
   const home = await temp("yamakan-closure-bad-");
   const root = await temp("yamakan-closure-root-");
   const p = await project(root);
@@ -274,12 +275,14 @@ test("a restore that fails leaves the original as it was, and the backup too", a
   const original = await tree(root);
   const held = await portrait(p, p.projectId);
 
-  // A damaged database copy, as an interrupted copy would leave it.
+  // A database copy cut short: refused by its size, before anything is read.
   const database = path.join(dir, "workspace.sqlite");
   const good = await readFile(database);
   await writeFile(database, good.subarray(0, Math.floor(good.length / 2)));
   const target = path.join(home, "restored");
-  await assert.rejects(restoreWorkspace(dir, target));
+  await assert.rejects(restoreWorkspace(dir, target), {
+    code: "RECOVERY_REQUIRED",
+  });
   assert.ok(
     await stat(target).then(
       () => false,
