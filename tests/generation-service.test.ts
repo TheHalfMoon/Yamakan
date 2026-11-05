@@ -319,6 +319,19 @@ test("cancel reaches the engine, and what it leaves is not imported", async () =
   assert.equal((await f.store.exportProject(f.projectId)).assets.length, 0);
 });
 
+test("a cancel during an import's download stops it joining the project", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { generationId: id } = await g.start(ask(f.projectId));
+  adapter.readArtifact = async function* () {
+    await g.cancel(id);
+    yield state.bytes;
+  };
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
+  assert.equal((await f.store.exportProject(f.projectId)).assets.length, 0);
+});
+
 test("two imports at once are one asset", async () => {
   const f = await fixture();
   const { adapter } = engine(f.video);

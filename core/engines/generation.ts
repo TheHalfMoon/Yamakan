@@ -46,7 +46,8 @@ type Tracked = {
   executionRef: string;
   imported?: { assetId: string };
   importing?: Promise<{ assetId: string }>;
-  // Asked to stop: whatever the engine then does, this is not imported.
+  // Asked to stop: whatever the engine then does, this is not imported, unless
+  // that import had already reached the store.
   cancelled?: boolean;
 };
 
@@ -124,7 +125,14 @@ export function createGenerationService(options: {
           "VALIDATION",
           "The generated video does not match what the engine reported.",
         );
+      if (g.cancelled)
+        throw new CommandError(
+          "VALIDATION",
+          "A cancelled generation cannot be imported.",
+        );
       const source = createReadStream(file);
+      // Until the store reads it, an error opening the file has no other listener.
+      source.on("error", () => {});
       try {
         const { asset } = await store.importAsset(
           g.projectId,

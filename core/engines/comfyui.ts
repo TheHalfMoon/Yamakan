@@ -747,7 +747,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   // What is known, bounded: a job past its deadline is stopped, and one ComfyUI
   // has stopped reporting for long enough is not left unknown forever. Either is
   // final, and leaves no output to read. A job this adapter does not know, after a
-  // restart or past its tracking limit, stays as ComfyUI reports it, unbounded.
+  // restart or past its tracking limit, stays as ComfyUI reports it, unbounded, and
+  // so does one while ComfyUI cannot be reached.
   async function observe(executionRef: string): Promise<ExecutionStatus> {
     if (enabled) await sweepReplaced();
     const e = executions.get(executionRef);
@@ -767,7 +768,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     };
     const active = status.state === "queued" || status.state === "running";
     if (status.state !== "unknown") e.seenAt = at;
-    if (status.state === "succeeded") e.finished = true;
+    if (!active && status.state !== "unknown") e.finished = true;
     if (active && at - e.submittedAt > e.deadlineMs) {
       const stopped = await cancel(executionRef);
       return stopped.remoteAcknowledged
