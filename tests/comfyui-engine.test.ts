@@ -14,6 +14,7 @@ import {
   PINNED_COMFY_RECIPES,
   comfyBaseUrl,
   comfyLaunchArguments,
+  comfyStartProblems,
   isComfyCloudNode,
   comfyRecipeHash,
   createComfyEngine,
@@ -396,7 +397,46 @@ test("an unreadable answer with nothing queued reports unknown, and does not cla
   engine.close();
 });
 
-test("a ComfyUI not started offline and without custom nodes is not used", async () => {
+const good = ["main.py", "--offline", "--disable-all-custom-nodes"];
+
+test("the reported arguments are read as ComfyUI's parser reads them", () => {
+  const clean = { missing: [], refused: [], exposed: false };
+  assert.deepEqual(comfyStartProblems(good), clean);
+  assert.deepEqual(
+    comfyStartProblems([...good, "--listen", "127.0.0.1"]),
+    clean,
+  );
+  assert.deepEqual(comfyStartProblems([...good, "--listen=::1"]), clean);
+  for (const argv of [
+    [...good, "--listen", "0.0.0.0"],
+    [...good, "--listen=0.0.0.0"],
+    [...good, "--list", "0.0.0.0"],
+    [...good, "--listen"],
+  ])
+    assert.equal(comfyStartProblems(argv).exposed, true, argv.join(" "));
+  for (const [flag, name] of [
+    ["--enable-manager", "--enable-manager"],
+    ["--enable-man", "--enable-manager"],
+    ["--enable-manager-legacy-ui", "--enable-manager-legacy-ui"],
+    ["--enable-agent", "--enable-agent"],
+    ["--whitelist-custom-nodes", "--whitelist-custom-nodes"],
+    ["--white=x", "--whitelist-custom-nodes"],
+  ])
+    assert.ok(comfyStartProblems([...good, flag]).refused.includes(name), flag);
+  assert.deepEqual(comfyStartProblems(["main.py"]).missing, [
+    "--offline",
+    "--disable-all-custom-nodes",
+  ]);
+  // The program's own name is not one of its arguments.
+  assert.deepEqual(comfyStartProblems(["--offline"]).missing, [
+    "--offline",
+    "--disable-all-custom-nodes",
+  ]);
+  assert.equal(comfyStartProblems(undefined).missing.length, 2);
+  assert.equal(comfyStartProblems("--offline").missing.length, 2);
+});
+
+test("a ComfyUI started any other way is not used, even after a good check", async () => {
   const f = await fake();
   const r = recipe();
   const engine = createComfyEngine({
@@ -404,27 +444,32 @@ test("a ComfyUI not started offline and without custom nodes is not used", async
     recipes: [r],
     enabled: true,
   });
-  f.argv = ["main.py", "--listen", "127.0.0.1"];
+  const cap = () =>
+    engine.capabilities().find((c) => c.operation === "textToVideo")!;
+  assert.deepEqual(await engine.checkSetup(), []);
+  assert.equal(cap().available, true);
+  f.argv = [...good, "--enable-manager"];
   assert.deepEqual(await engine.checkSetup(), [
     {
       kind: "not-started-locally",
-      missing: ["--offline", "--disable-all-custom-nodes"],
+      missing: [],
+      refused: ["--enable-manager", "--enable-manager-legacy-ui"],
+      exposed: false,
     },
   ]);
-  assert.equal(
-    engine.capabilities().find((c) => c.operation === "textToVideo")!.available,
-    false,
-  );
-  f.argv = ["main.py", "--offline"];
-  assert.deepEqual(await engine.checkSetup(), [
-    { kind: "not-started-locally", missing: ["--disable-all-custom-nodes"] },
-  ]);
-  f.argv = undefined;
-  assert.equal((await engine.checkSetup())[0].kind, "not-started-locally");
-  assert.equal(
-    engine.capabilities().find((c) => c.operation === "textToVideo")!.available,
-    false,
-  );
+  assert.equal(cap().available, false);
+  assert.equal(cap().reason, "ENGINE_DISABLED");
+  f.argv = good;
+  assert.deepEqual(await engine.checkSetup(), []);
+  assert.equal(cap().available, true);
+  // Restarted without the flags after the check: submit asks again.
+  f.argv = ["main.py"];
+  assert.deepEqual(await engine.submit(request(r), context), {
+    refused: "ENGINE_DISABLED",
+  });
+  assert.equal(f.prompts.length, 0);
+  assert.equal(cap().available, false);
+  engine.close();
 });
 
 test("the launch arguments name offline mode, loopback and no custom nodes", () => {

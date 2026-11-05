@@ -470,7 +470,12 @@ try {
       enabled: true,
     });
     assert.deepEqual(await notOffline.checkSetup(), [
-      { kind: "not-started-locally", missing: ["--offline"] },
+      {
+        kind: "not-started-locally",
+        missing: ["--offline"],
+        refused: [],
+        exposed: false,
+      },
     ]);
     notOffline.close();
     step(
