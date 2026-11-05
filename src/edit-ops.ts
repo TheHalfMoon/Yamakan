@@ -84,9 +84,12 @@ export function setClipDissolve(
   clipId: string,
   frames: number | null,
 ): Project {
-  // Directly, so that removing one always works, even from a project a command
-  // left with a dissolve that no longer draws.
-  if (frames === null)
+  const clip = p.clips.find((c) => c.id === clipId);
+  // Directly, so that removing one works even from a project a command left with
+  // a dissolve that no longer draws. A locked track still refuses, as at the commit.
+  if (frames === null) {
+    if (p.tracks.find((t) => t.id === clip?.trackId)?.locked)
+      throw new Error("Track is locked.");
     return {
       ...p,
       clips: p.clips.map((c) => {
@@ -95,7 +98,7 @@ export function setClipDissolve(
         return rest;
       }),
     };
-  const clip = p.clips.find((c) => c.id === clipId);
+  }
   const previous = clip && dissolveSource(p, clip);
   if (!previous) return p;
   return plainly(() =>
