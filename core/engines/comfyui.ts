@@ -193,9 +193,9 @@ export type ComfyEngineOptions = {
   enabled?: boolean;
 };
 
-// How a ComfyUI this adapter talks to must be started: on loopback, with partner
-// nodes off, its browser page restricted, and no custom node code. This is not an
-// egress block on its process; the arguments alone start nothing.
+// How the person's ComfyUI must be started for this adapter to use it: on
+// loopback, with partner nodes off, its browser page restricted, and no custom
+// node code. This is not an egress block on its process, and it starts nothing.
 export function comfyLaunchArguments(options: {
   port: number;
   baseDirectory: string;
@@ -223,8 +223,13 @@ export function isComfyCloudNode(info: unknown) {
   );
 }
 
+// ComfyUI reports the arguments it was started with. Yamakan does not own this
+// process, so a copy started any other way is not used, whichever recipe asks.
+const REQUIRED_ARGUMENTS = ["--offline", "--disable-all-custom-nodes"] as const;
+
 export type ComfySetupProblem =
   | { kind: "unreachable" }
+  | { kind: "not-started-locally"; missing: string[] }
   | { kind: "cloud-node"; recipe: string; classType: string }
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
@@ -317,6 +322,23 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     ready.clear();
     if (!enabled) return [];
     const problems: ComfySetupProblem[] = [];
+    try {
+      const res = await call("/system_stats");
+      const stats = res.ok
+        ? ((await json(res)) as { system?: { argv?: unknown } })
+        : null;
+      const argv = stats?.system?.argv;
+      if (!stats) return [{ kind: "unreachable" }];
+      const given = new Set(
+        Array.isArray(argv)
+          ? argv.filter((a): a is string => typeof a === "string")
+          : [],
+      );
+      const missing = REQUIRED_ARGUMENTS.filter((a) => !given.has(a));
+      if (missing.length) return [{ kind: "not-started-locally", missing }];
+    } catch {
+      return [{ kind: "unreachable" }];
+    }
     for (const recipe of recipes) {
       const before = problems.length;
       const registry = new Map<string, Record<string, unknown> | null>();

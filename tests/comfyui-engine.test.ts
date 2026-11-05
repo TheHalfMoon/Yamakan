@@ -124,6 +124,7 @@ type Fake = {
   promptAnswer?: (id: string) => { status: number; body: object };
   uploads: Buffer[];
   redirect?: boolean;
+  argv?: string[];
   outputs: Record<string, unknown>;
   classes: Record<string, object>;
 };
@@ -146,6 +147,7 @@ async function fake(): Promise<Fake> {
     history: {},
     uploads: [],
     outputs: {},
+    argv: ["main.py", "--offline", "--disable-all-custom-nodes"],
     classes: {
       Loader: { input: { required: { model: [["model.safetensors"]] } } },
       Sampler: { input: { required: {} } },
@@ -172,6 +174,8 @@ async function fake(): Promise<Fake> {
       res.writeHead(302, { Location: `${state.url}/elsewhere` });
       return res.end();
     }
+    if (url.pathname === "/system_stats")
+      return send(200, { system: { argv: state.argv } });
     if (url.pathname.startsWith("/object_info/")) {
       const type = decodeURIComponent(url.pathname.slice(13));
       return send(
@@ -377,7 +381,7 @@ test("a partner node is known by its module even when its flag is not set", asyn
   ]);
 });
 
-test("nothing accepted and no answer reports unknown, and claims no job ran", async () => {
+test("an unreadable answer with nothing queued reports unknown, and does not claim a job ran", async () => {
   const { f, engine, r } = await started();
   let posted = "";
   f.promptAnswer = (id) => {
@@ -392,7 +396,38 @@ test("nothing accepted and no answer reports unknown, and claims no job ran", as
   engine.close();
 });
 
-test("ComfyUI is always started offline, on loopback, without custom nodes", () => {
+test("a ComfyUI not started offline and without custom nodes is not used", async () => {
+  const f = await fake();
+  const r = recipe();
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+  });
+  f.argv = ["main.py", "--listen", "127.0.0.1"];
+  assert.deepEqual(await engine.checkSetup(), [
+    {
+      kind: "not-started-locally",
+      missing: ["--offline", "--disable-all-custom-nodes"],
+    },
+  ]);
+  assert.equal(
+    engine.capabilities().find((c) => c.operation === "textToVideo")!.available,
+    false,
+  );
+  f.argv = ["main.py", "--offline"];
+  assert.deepEqual(await engine.checkSetup(), [
+    { kind: "not-started-locally", missing: ["--disable-all-custom-nodes"] },
+  ]);
+  f.argv = undefined;
+  assert.equal((await engine.checkSetup())[0].kind, "not-started-locally");
+  assert.equal(
+    engine.capabilities().find((c) => c.operation === "textToVideo")!.available,
+    false,
+  );
+});
+
+test("the launch arguments name offline mode, loopback and no custom nodes", () => {
   const argv = comfyLaunchArguments({ port: 1234, baseDirectory: "D:/x" });
   assert.deepEqual(argv.slice(0, 2), ["--listen", "127.0.0.1"]);
   for (const flag of ["--offline", "--disable-all-custom-nodes"])
