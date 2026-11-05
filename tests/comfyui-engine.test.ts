@@ -797,5 +797,17 @@ test("an input is streamed, and one failing its hash is never submitted", async 
   assert.deepEqual(bad, { refused: "INVALID_REQUEST" });
   assert.equal(f.prompts.length, 1);
   assert.equal(f.uploads.length, uploadsBefore, "ComfyUI never sees it");
+  // Right on the first read, changed on the second: uploaded, but never named.
+  let reads = 0;
+  const changed = await engine.submit(
+    request(r, { ...base, attemptKey: "changed" }),
+    {
+      async *openAsset() {
+        yield reads++ === 0 ? png : Buffer.from("changed bytes");
+      },
+    },
+  );
+  assert.deepEqual(changed, { refused: "INVALID_REQUEST" });
+  assert.equal(f.prompts.length, 1);
   engine.close();
 });

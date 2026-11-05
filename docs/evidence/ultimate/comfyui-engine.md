@@ -21,6 +21,8 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 
 `tests/comfyui-engine.test.ts`, 24 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
 
+Local capture at `08a581992a9f10c4ef6d2d90fc2dace340f4802c`: `comfyui-q6.json`, SHA-256 `045c6866c9ea9126968f51be4e97efcb9df571bb0ebb533f25d8446428af26b5`.
+
 **Found by the real run:**
 
 - **Frame rate is not exact.** At 24000/1001, ComfyUI's `CreateVideo` wrote `2997/125`, not the rational asked for, because it takes a decimal. The frame count is right, but a generated clip's timing needs conforming on import. Not fixed here.
@@ -54,4 +56,4 @@ ComfyUI is GPL-3.0. Yamakan talks to a separately installed copy over HTTP and b
 
 ## Not done
 
-An allowlist of node classes, and running ComfyUI with `--offline`, since it ships partner API nodes that call the cloud: **both are required before this is wired to anything**. A command or browser path to generate; a pinned recipe; any model; progress during a real model run; ownership of the ComfyUI process (start, stop, process-tree limits); conforming a generated clip's frame rate; publishing an output as a project asset with consent and lineage; running on a GPU.
+An allowlist of node classes, and running ComfyUI with `--offline`, since it ships partner API nodes that call the cloud: **both are required before this is wired to anything**. So is following a job after a transport failure: if `/prompt` times out, ComfyUI can still enqueue it afterwards, the cancel finds nothing, and a retry could run a second job. A command or browser path to generate; a pinned recipe; any model; progress during a real model run; ownership of the ComfyUI process (start, stop, process-tree limits); conforming a generated clip's frame rate; publishing an output as a project asset with consent and lineage; running on a GPU.
