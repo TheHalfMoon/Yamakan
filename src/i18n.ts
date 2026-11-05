@@ -151,6 +151,14 @@ const en = {
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
   "engine.list": "Generative operations",
+  "clip.dissolve.heading": "Dissolve",
+  "clip.dissolve.none":
+    "Select a clip on a video track that starts where another clip ends.",
+  "clip.dissolve.frames": "Length (frames, an even number)",
+  "clip.dissolve.length":
+    "A dissolve lasts a whole, even number of frames, at least 2.",
+  "clip.dissolve.apply": "Set dissolve",
+  "clip.dissolve.remove": "Remove dissolve",
   "clip.transform.heading": "Transform",
   "clip.transform.none":
     "Select footage or a still on a video track to transform it.",
@@ -465,6 +473,13 @@ const ar: Record<MessageKey, string> = {
   "director.title": "المخرج",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "engine.list": "عمليات التوليد",
+  "clip.dissolve.heading": "مزج انتقالي",
+  "clip.dissolve.none": "حدد مقطعًا على مسار فيديو يبدأ حيث ينتهي مقطع آخر.",
+  "clip.dissolve.frames": "الطول (بالإطارات، عدد زوجي)",
+  "clip.dissolve.length":
+    "يستمر المزج عددًا زوجيًا صحيحًا من الإطارات، 2 على الأقل.",
+  "clip.dissolve.apply": "ضبط المزج",
+  "clip.dissolve.remove": "إزالة المزج",
   "clip.transform.heading": "التحويل",
   "clip.transform.none": "اختر لقطة فيديو أو صورة على مسار فيديو لتحويلها.",
   "clip.transform.scale": "الحجم (%)",
