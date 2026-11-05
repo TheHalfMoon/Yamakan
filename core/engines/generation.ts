@@ -10,7 +10,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { CommandError } from "../command/errors.ts";
-import { assertLinkedMediaNotRevoked } from "../continuity.ts";
+import { assertLinkedMediaGeneratable } from "../continuity.ts";
 import type { ProjectStore } from "../store.ts";
 import { framesToTicks, rational } from "../time.ts";
 import {
@@ -42,9 +42,8 @@ export type GenerationRequest = {
   firstFrameAssetId?: string;
 };
 
-// Where an imported video came from, shaped so a story's take can carry it as its
-// lineage, with what made it beside that. Returned to the caller: nothing stores it
-// until a take does, so a restart forgets it for a video not yet in a story.
+// Where an imported video came from. Returned to the caller and stored nowhere: a
+// story's take can hold its output and inputs, not the recipe, seed or prompt hash.
 export type GenerationLineage = {
   outputHash: string;
   inputs: { assetId: string; assetHash: string }[];
@@ -52,7 +51,7 @@ export type GenerationLineage = {
   recipeHash: string;
   modelManifestHash: string;
   seed: number | null;
-  // The prompt by hash, so a record of the video does not repeat what was asked.
+  // The prompt by hash, unsalted: a guessable prompt can be confirmed by trying it.
   promptHash: string | null;
 };
 
@@ -78,9 +77,15 @@ export function createGenerationService(options: {
   adapter: EngineAdapterV2;
   store: ProjectStore;
   resourcePolicyHash: string;
+  // Tests only.
+  now?: () => number;
 }) {
   const { adapter, store, resourcePolicyHash } = options;
   const generations = new Map<string, Tracked>();
+  const permitted = (hashes: string[]) =>
+    store.read((db) =>
+      assertLinkedMediaGeneratable(db, hashes, (options.now ?? Date.now)()),
+    );
 
   const tracked = (id: string) => {
     const g = generations.get(id);
@@ -94,13 +99,9 @@ export function createGenerationService(options: {
         "VALIDATION",
         "A cancelled generation cannot be imported.",
       );
-    // Revoked since it started: what was made from it does not join the project.
-    store.read((db) =>
-      assertLinkedMediaNotRevoked(
-        db,
-        g.inputs.map((i) => i.assetHash),
-      ),
-    );
+    // No longer allowed since it started: what was made from it does not join.
+    const inputs = g.inputs.map((i) => i.assetHash);
+    permitted(inputs);
     const { state } = await adapter.status(g.executionRef);
     if (state !== "succeeded")
       throw new CommandError(
@@ -154,6 +155,8 @@ export function createGenerationService(options: {
           "VALIDATION",
           "A cancelled generation cannot be imported.",
         );
+      // The copy can take a while, and consent can end during it.
+      permitted(inputs);
       const source = createReadStream(file);
       // Until the store reads it, an error opening the file has no other listener.
       source.on("error", () => {});
@@ -210,8 +213,8 @@ export function createGenerationService(options: {
           request.projectId,
           request.firstFrameAssetId,
         );
-        // A person's revoked media does not go to an engine, by any route.
-        store.read((db) => assertLinkedMediaNotRevoked(db, [asset.hash]));
+        // A person's media goes to an engine only while their consent allows it.
+        permitted([asset.hash]);
         const mediaType = MEDIA_TYPES[asset.extension];
         if (!mediaType)
           throw new CommandError(
@@ -259,6 +262,8 @@ export function createGenerationService(options: {
           openAsset: (asset) => {
             const file = held.get(asset.assetVersionId);
             if (!file) throw new Error("An input is not this request's.");
+            // Checked again as it is about to be read for the engine.
+            permitted([asset.sha256]);
             return createReadStream(file);
           },
         },

@@ -430,7 +430,80 @@ const consented = async (
   return consent.id;
 };
 
-test("a still linked to a revoked consent never reaches the engine", async () => {
+test("a still whose consent has expired is refused, as placing it would not be", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const later = createGenerationService({
+    adapter,
+    store: f.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    now: () => Date.now() + 2 * 3_600_000,
+  });
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const request = ask(f.projectId, {
+    recipe: stillRecipe,
+    firstFrameAssetId: still.id,
+  });
+  await service(f, adapter).start(request);
+  assert.equal(state.submitted.length, 1, "allowed before it expires");
+  assert.equal(await code(later.start(request)), "VALIDATION");
+  assert.equal(state.submitted.length, 1);
+});
+
+test("consent revoked during the download stops the import", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const { generationId: id } = await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  adapter.readArtifact = async function* () {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    yield state.bytes;
+  };
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
+  const { assets } = await f.store.exportProject(f.projectId);
+  assert.equal(assets.length, 1);
+});
+
+test("consent revoked between the check and the read stops the upload", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const submit = adapter.submit;
+  adapter.submit = async (request, context) => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    return submit(request, context);
+  };
+  assert.equal(
+    await code(
+      g.start(
+        ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+      ),
+    ),
+    "VALIDATION",
+  );
+  assert.equal(state.inputRead, null, "no byte was read for the engine");
+});
+
+test("a still is refused once its consent is revoked", async () => {
   const f = await fixture();
   const { state, adapter } = engine(f.video);
   const g = service(f, adapter);
@@ -447,7 +520,7 @@ test("a still linked to a revoked consent never reaches the engine", async () =>
   await g.start(request);
   assert.equal(state.submitted.length, 1, "allowed while consent stands");
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
-  assert.notEqual(await code(g.start(request)), "ok");
+  assert.equal(await code(g.start(request)), "VALIDATION");
   assert.equal(state.submitted.length, 1);
 });
 
@@ -465,7 +538,7 @@ test("what was made from a still is not imported once its consent is revoked", a
     ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
   );
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
-  assert.notEqual(await code(g.importResult(id)), "ok");
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
   const { assets } = await f.store.exportProject(f.projectId);
   assert.deepEqual(
     assets.map((x) => x.id),
@@ -522,9 +595,9 @@ test("the commands reach the service for a person, and an agent cannot start one
     ["yamakan.generation.cancel", { generationId }],
     ["yamakan.generation.import", { generationId }],
   ] as const)
-    assert.notEqual(
+    assert.equal(
       await code(execute(agent, operation, input)),
-      "ok",
+      "SCOPE_DENIED",
       operation,
     );
   assert.equal(state.submitted.length, 1, "an agent started nothing");

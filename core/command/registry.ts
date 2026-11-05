@@ -256,7 +256,9 @@ type Definition<S extends z.ZodType, R> = {
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
 
 // The service behind the generation commands. One is built for a store only when
-// this build has a qualified recipe and a person named a ComfyUI to use.
+// this build has a qualified recipe and a person named a ComfyUI to use. Pinning a
+// recipe is not enough to make this run: nothing here calls the adapter's setup
+// check yet, so it would refuse until something does.
 type Generation = {
   service: ReturnType<typeof createGenerationService>;
   recipes: readonly GenerationRecipe[];

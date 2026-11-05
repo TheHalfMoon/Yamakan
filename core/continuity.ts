@@ -27,6 +27,7 @@ import {
 } from "./director/runtime.ts";
 import type { ConsentPurpose } from "./identity.ts";
 import {
+  REFERENCE_CONSENT_PURPOSE,
   ReferencePackSchema,
   StoryDocumentSchema,
   consentPurposeOf,
@@ -369,6 +370,57 @@ export function assertLinkedMediaNotRevoked(
         "VALIDATION",
         "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
       );
+  }
+}
+
+/**
+ * Whether media a person's pack links may go to an engine now. Making something
+ * new from a likeness needs more than placing what exists: every character's newest
+ * linked consent must be usable now for generating (purpose, expiry, revocation,
+ * restore epoch), and one that cannot be found refuses. Media no pack links passes:
+ * this goes by hash, and cannot tell who a still shows.
+ */
+export function assertLinkedMediaGeneratable(
+  db: DatabaseSync,
+  hashes: readonly string[],
+  nowMs: number,
+) {
+  if (!hashes.length) return;
+  const wanted = new Set(hashes);
+  const linked = new Map<string, { characterId: string; ids: Set<string> }>();
+  const versions = db
+    .prepare(
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack'",
+    )
+    .all() as { hash: string }[];
+  for (const { hash } of versions)
+    for (const link of linksOf(db, hash, hashes)) {
+      if (!wanted.has(link.assetHash)) continue;
+      const key = `${link.assetHash}|${link.characterId}`;
+      const entry = linked.get(key) ?? {
+        characterId: link.characterId,
+        ids: new Set<string>(),
+      };
+      entry.ids.add(link.consentId);
+      linked.set(key, entry);
+    }
+  const granted = db.prepare(
+    "SELECT granted_at FROM likeness_consents WHERE id = ?",
+  );
+  for (const { characterId, ids } of linked.values()) {
+    const order = [...ids].map((id) => ({
+      id,
+      at:
+        (granted.get(id) as { granted_at: number } | undefined)?.granted_at ??
+        -1,
+    }));
+    const newest = order.reduce((x, y) => (y.at > x.at ? y : x));
+    // Refuses a revoked, expired, wrong-purpose, unrevalidated or missing consent.
+    assertConsentUsable(db, newest.id, {
+      characterId,
+      purpose: REFERENCE_CONSENT_PURPOSE,
+      nowMs,
+    });
   }
 }
 
