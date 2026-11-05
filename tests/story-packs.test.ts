@@ -746,3 +746,74 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   await saveStory(after, storyId, story(after, null));
   assert.equal(upgraded.getDocument(c.projectId, storyId).ref.kind, "story");
 });
+
+test("a take with only a pinned pack can return after revocation, as any project media can", async () => {
+  const c = await workspace();
+  const consent = await grant(c);
+  const packId = id(),
+    storyId = id();
+  const packHash = await savePack(c, packId, pack(c, consent.id));
+  await saveStory(
+    c,
+    storyId,
+    story(c, { documentId: packId, contentHash: packHash }),
+  );
+  const apply = async (operation: string, args: object) =>
+    (await execute(c.browser, operation, args)).result as Project;
+  await apply("yamakan.story.assemble", {
+    projectId: c.projectId,
+    expectedRevision: (await head(c)).revision,
+    documentId: storyId,
+    trackId: (await head(c)).tracks.find((t) => t.kind === "video")!.id,
+  });
+  const placed = await head(c);
+  const shown = placed.clips.find((x) => x.assetId === c.imported.footage.id)!;
+  const removed = await apply("yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: placed.revision,
+    operations: [{ type: "clip.remove", clipId: shown.id }],
+  });
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  // The assembly that names the pack is refused from now on.
+  assert.equal(
+    await code(
+      apply("yamakan.story.assemble", {
+        projectId: c.projectId,
+        expectedRevision: removed.revision,
+        documentId: storyId,
+        trackId: placed.tracks.find((t) => t.kind === "video")!.id,
+      }),
+    ),
+    "VALIDATION",
+  );
+  // But the take carries no continuity references, so its medium is not gated:
+  // undo brings it back...
+  const undone = await apply("yamakan.project.undo", {
+    projectId: c.projectId,
+    expectedRevision: removed.revision,
+  });
+  assert.ok(undone.clips.some((x) => x.id === shown.id));
+  // ...and so does an ordinary edit, so undo is no bypass of its own.
+  const again = await apply("yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: undone.revision,
+    operations: [{ type: "clip.remove", clipId: shown.id }],
+  });
+  const added = await apply("yamakan.project.applyBatch", {
+    projectId: c.projectId,
+    expectedRevision: again.revision,
+    operations: [
+      {
+        type: "clip.add",
+        clipId: id(),
+        trackId: shown.trackId,
+        assetId: shown.assetId,
+        title: null,
+        startTicks: 0,
+        durationTicks: FRAME,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  assert.ok(added.clips.some((x) => x.assetId === shown.assetId));
+});
