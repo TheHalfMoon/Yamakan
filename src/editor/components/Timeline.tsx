@@ -1386,6 +1386,9 @@ const Timeline: React.FC<TimelineProps> = (props) => {
                             )}
                           </div>
                           <div className="tl-clip__scrim" />
+                          {clip.dissolveInFrames ? (
+                            <div className="tl-clip__dissolve" data-testid="tl-clip-dissolve">{clip.dissolveInFrames}f</div>
+                          ) : null}
                           {showLabel && (
                             <div className="tl-clip__label">
                               <span className="tl-clip__name">{clip.textConfig?.content || media.name}</span>

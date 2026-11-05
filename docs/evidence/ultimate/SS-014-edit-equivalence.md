@@ -1,6 +1,6 @@
 # SS-014: keyboard and pointer edit equivalence
 
-Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `22d7bb6e61877070c5d948a6dae0f40cc2039bf0`. **The card stays open:** crossfade has no browser control, and reference frames were not compared.
+Started 2026-11-05 (Asia/Riyadh). Builder Claude Opus. Base main `22d7bb6e61877070c5d948a6dae0f40cc2039bf0`. **The card stays open:** reference frames were not compared across the copies, and a crossfade cannot be dragged on the timeline.
 
 ## What was found
 
@@ -35,9 +35,29 @@ Canonical `startFrame`, `durationFrames` and `sourceFrame` match exactly at both
 
 **Pointer precision has a limit.** A drag is pixels turned into seconds, then rounded to a frame, so it matches only where a frame is more than a pixel. At the default zoom one frame was under a pixel here, so a pointer cannot reach every frame there, and the keyboard can.
 
+## Crossfade
+
+A person could not set a crossfade in the browser at all. The clip inspector now has one: with a clip selected on a video track that starts where another ends, a length in frames, **Set dissolve**, and **Remove dissolve**. It uses the same `clip.setTransition` operation and rules as `yamakan.transition.set`, with `audio: "equalPower"` always, so no audio choice is offered. The timeline shows the length on the clip, in its own marker, since a clip's label hides at narrow widths; the qualifier caught that.
+
+`npm run qualify:crossfade`, real Edge against the real service, on two copies with the same clip ids, at 30 fps and 24000/1001:
+
+| Step                                                             | Result                                                                                                                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Set a 24-frame dissolve by mouse, and by keyboard                | Identical canonical clips, including the transition; the marker shows `24f`                                                                             |
+| Real export, frames decoded to one pixel, the same at both rates | `253,0,0` before the cut, `189,1,62` a quarter in, `127,0,125` at it, `64,2,191` a quarter out, `0,0,253` after; 120 frames, so the length is unchanged |
+| Undo, redo, a reopen, removal                                    | All hold, and the marker follows                                                                                                                        |
+| An odd or empty length                                           | Refused with the reason on screen, and nothing stored                                                                                                   |
+| Removing or setting one on a locked track                        | Refused at once, naming the lock, and nothing stored                                                                                                    |
+| A clip with nothing before it                                    | Offers no dissolve                                                                                                                                      |
+
+A review found that an edit breaking a dissolve was not refused when made, and led to a dead end with a false "kept as a draft" message, and that a duplicate copied the transition. Both are fixed: such an edit is refused at once, naming the reason, a duplicate follows nothing, and Remove works even when the dissolve no longer draws. A second review found that this fix let Remove skip the track lock, bringing the dead end back, and that the frame checks would have passed most other lengths, down to 2 frames. Remove now refuses a locked track, and the export is checked at frames 47, 54, 60, 66 and 72, with the fading colour within 3 of a quarter at frames 54 and 66. Scaled from the measured values, a 22- or 26-frame dissolve falls outside that; neither was exported.
+
+In this qualifier, "by mouse" selects the clip with a programmatic focus and only clicks **Set dissolve**. Both paths run the same handler, so their equality shows little beyond that. Reaching the panel from the timeline by Tab, equal-power audio, and the canvas preview, which shows a cut and says so, were not run.
+
+**Not done for crossfade:** it cannot be dragged on the timeline, as the card's "pointer" sequence might mean; pointer here is clicking the inspector. Too long a dissolve for the source was not run in the browser, though the operation refuses it by its existing tests. The Arabic text has had no native review (X-01). The reference preview was not compared at the cut here; existing tests in `tests/transitions.test.ts` cover its parity with export. The timeline stretches a clip shorter than half a second whenever its track is edited, older behaviour that, next to a dissolve without enough source, now refuses every edit on that track until the dissolve is removed; found by reading, not run.
+
 ## Not done
 
-- **Crossfade.** The command exists, but a person cannot set one in the browser by either input. Equivalence does not apply until a control exists, and adding one is new work, not a fix to an adapter.
 - **Reference frames were not compared across the copies.** Equal canonical values should compile to the same plan, but that was not run for this card. Existing tests cover preview and export parity in general.
 - Zero length, overlaps and VFR were covered only through the shared guards. Concurrent revisions were not run here.
 - `core/timeline/snapping.ts` holds integer-tick snapping, but this timeline snaps in floating seconds by pixels, as it did before. Rounding hides that in the cases above; replacing it was not attempted.
