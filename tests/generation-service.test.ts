@@ -307,13 +307,41 @@ test("an image-to-video starts from a project still, and nothing else", async ()
   assert.deepEqual(state.inputRead, f.still);
 });
 
-test("cancel reaches the engine for this generation", async () => {
+test("cancel reaches the engine, and what it leaves is not imported", async () => {
   const f = await fixture();
   const { state, adapter } = engine(f.video);
   const g = service(f, adapter);
   const { generationId: id } = await g.start(ask(f.projectId));
   await g.cancel(id);
   assert.deepEqual(state.cancelled, ["run-1"]);
+  assert.equal(state.status, "succeeded", "it finished anyway");
+  assert.equal(await code(g.importResult(id)), "VALIDATION");
+  assert.equal((await f.store.exportProject(f.projectId)).assets.length, 0);
+});
+
+test("two imports at once are one asset", async () => {
+  const f = await fixture();
+  const { adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { generationId: id } = await g.start(ask(f.projectId));
+  const [a, b] = await Promise.all([g.importResult(id), g.importResult(id)]);
+  assert.deepEqual(a, b);
+  assert.equal((await f.store.exportProject(f.projectId)).assets.length, 1);
+});
+
+test("an output that fails while being read is this call's error, and a retry works", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { generationId: id } = await g.start(ask(f.projectId));
+  const read = adapter.readArtifact;
+  adapter.readArtifact = async function* () {
+    yield state.bytes.subarray(0, 10);
+    throw new Error("connection lost");
+  };
+  await assert.rejects(g.importResult(id), /connection lost/);
+  adapter.readArtifact = read;
+  assert.ok((await g.importResult(id)).assetId);
 });
 
 test("the commands refuse today, and say why, without touching anything", async () => {

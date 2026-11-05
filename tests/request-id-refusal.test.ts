@@ -14,6 +14,15 @@ import { createEmptyStudioDocument } from "../core/studio.ts";
 
 const id = randomUUID();
 const validInput: Record<string, unknown> = {
+  "yamakan.generation.start": {
+    projectId: id,
+    recipeId: "x",
+    width: 64,
+    height: 36,
+    durationFrames: 24,
+  },
+  "yamakan.generation.cancel": { generationId: id },
+  "yamakan.generation.import": { generationId: id },
   "yamakan.workspace.collectGarbage": {},
   "yamakan.asset.repair": { projectId: id, assetId: id },
   "yamakan.export.video": { projectId: id, idempotencyKey: "k" },

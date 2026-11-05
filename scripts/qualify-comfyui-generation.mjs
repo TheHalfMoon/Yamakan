@@ -180,12 +180,14 @@ try {
   const asset = head.result.assets.find((a) => a.id === assetId);
   assert.ok(asset, "the output joined the project");
   assert.equal(head.result.assets.length, 1);
+  assert.equal(head.result.clips.length, 0);
+  assert.equal(asset.width, 160);
+  assert.equal(asset.height, 90);
   step("its output is imported as one asset, with no clip yet", {
     name: asset.name,
     hash: asset.hash,
     clips: head.result.clips.length,
   });
-  assert.equal(head.result.clips.length, 0);
 
   const track = head.result.tracks.find((t) => t.kind === "video").id;
   const clipId = crypto.randomUUID();
@@ -244,8 +246,11 @@ try {
   );
   const frames = raw.length / 3;
   assert.equal(frames, 48, "the export has the clip's frames");
+  for (let n = 0; n < frames; n++) {
+    const [r, g, b] = raw.subarray(n * 3, n * 3 + 3);
+    assert.ok(g > 200 && r < 50 && b < 50, `frame ${n}: ${r},${g},${b}`);
+  }
   const pixel = [...raw.subarray(0, 3)];
-  assert.ok(pixel[1] > 200 && pixel[0] < 50 && pixel[2] < 50, `pixel ${pixel}`);
   step("a real export of it comes out, with its frames and colour", {
     frames,
     pixel,

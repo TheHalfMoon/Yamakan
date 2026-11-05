@@ -2084,7 +2084,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Start a generation with one of this build's qualified recipes, at the person's request. Refused while no qualified recipe is available.",
+      "Not available in this build, and always refused. It will start a generation at the person's request, from a browser session only.",
     input: z
       .object({
         projectId: Id,
@@ -2108,7 +2108,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Report a generation's state and, where the engine gives it, its progress.",
+      "Not available in this build, and always refused. It will report a generation's state and progress.",
     input: z.object({ generationId: Id }).strict(),
     run: () => generationUnavailable(),
   }),
@@ -2118,7 +2118,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Ask the engine to stop a generation. Its outcome is reported by status.",
+      "Not available in this build, and always refused. It will ask the engine to stop a generation, from a browser session only.",
     input: z.object({ generationId: Id }).strict(),
     run: () => generationUnavailable(),
   }),
@@ -2128,7 +2128,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Bring a finished generation's checked video into the project as an asset. It reaches the timeline only when the person places it.",
+      "Not available in this build, and always refused. It will bring a finished generation's checked video into the project as an asset, from a browser session only.",
     input: z.object({ generationId: Id }).strict(),
     run: () => generationUnavailable(),
   }),

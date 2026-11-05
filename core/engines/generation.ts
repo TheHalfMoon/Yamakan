@@ -4,10 +4,11 @@
 // restart forgets a generation, whose output stays in the engine, unimported.
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { once } from "node:events";
 import { CommandError } from "../command/errors.ts";
 import type { ProjectStore } from "../store.ts";
 import { framesToTicks, rational } from "../time.ts";
@@ -44,6 +45,9 @@ type Tracked = {
   projectId: string;
   executionRef: string;
   imported?: { assetId: string };
+  importing?: Promise<{ assetId: string }>;
+  // Asked to stop: whatever the engine then does, this is not imported.
+  cancelled?: boolean;
 };
 
 const MEDIA_TYPES: Record<string, AssetRef["mediaType"]> = {
@@ -65,6 +69,81 @@ export function createGenerationService(options: {
     if (!g) throw new CommandError("NOT_FOUND", "Generation not found.");
     return g;
   };
+
+  async function bringIn(id: string, g: Tracked) {
+    if (g.cancelled)
+      throw new CommandError(
+        "VALIDATION",
+        "A cancelled generation cannot be imported.",
+      );
+    const { state } = await adapter.status(g.executionRef);
+    if (state !== "succeeded")
+      throw new CommandError(
+        "VALIDATION",
+        "Only a finished generation can be imported.",
+      );
+    const artifacts = (await adapter.enumerateArtifacts(g.executionRef)).filter(
+      (a) => a.mediaType === "video/mp4",
+    );
+    if (artifacts.length !== 1)
+      throw new CommandError(
+        "VALIDATION",
+        "A generation must leave exactly one video to import.",
+      );
+    const [artifact] = artifacts;
+    const folder = await mkdtemp(path.join(tmpdir(), "yamakan-generation-"));
+    try {
+      const file = path.join(folder, "output.mp4");
+      const hash = createHash("sha256");
+      let bytes = 0;
+      const checked = async function* () {
+        for await (const chunk of adapter.readArtifact(
+          g.executionRef,
+          artifact.handle,
+        )) {
+          bytes += chunk.byteLength;
+          if (bytes > artifact.byteLength)
+            throw new CommandError(
+              "VALIDATION",
+              "The generated video does not match what the engine reported.",
+            );
+          hash.update(chunk);
+          yield chunk;
+        }
+      };
+      // Any failure of either side ends both, and is this call's to report.
+      await pipeline(
+        Readable.from(checked()),
+        createWriteStream(file, { flags: "wx", mode: 0o600 }),
+      );
+      if (
+        bytes !== artifact.byteLength ||
+        hash.digest("hex") !== artifact.sha256
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "The generated video does not match what the engine reported.",
+        );
+      const source = createReadStream(file);
+      try {
+        const { asset } = await store.importAsset(
+          g.projectId,
+          `generated-${id.slice(0, 8)}.mp4`,
+          source,
+          bytes,
+        );
+        g.imported = { assetId: asset.id };
+        return g.imported;
+      } finally {
+        source.destroy();
+      }
+    } finally {
+      // Failing to tidy a temporary folder does not hide what actually happened.
+      await rm(folder, { recursive: true, force: true, maxRetries: 5 }).catch(
+        () => {},
+      );
+    }
+  }
 
   return {
     // The person's own request: nothing here runs on any other trigger.
@@ -162,7 +241,9 @@ export function createGenerationService(options: {
     },
 
     async cancel(id: string) {
-      return adapter.requestCancel(tracked(id).executionRef);
+      const g = tracked(id);
+      g.cancelled = true;
+      return adapter.requestCancel(g.executionRef);
     },
 
     // The finished video joins the project as an asset, checked by its declared
@@ -170,61 +251,11 @@ export function createGenerationService(options: {
     async importResult(id: string) {
       const g = tracked(id);
       if (g.imported) return g.imported;
-      const { state } = await adapter.status(g.executionRef);
-      if (state !== "succeeded")
-        throw new CommandError(
-          "VALIDATION",
-          "Only a finished generation can be imported.",
-        );
-      const artifacts = (
-        await adapter.enumerateArtifacts(g.executionRef)
-      ).filter((a) => a.mediaType === "video/mp4");
-      if (artifacts.length !== 1)
-        throw new CommandError(
-          "VALIDATION",
-          "A generation must leave exactly one video to import.",
-        );
-      const [artifact] = artifacts;
-      const folder = await mkdtemp(path.join(tmpdir(), "yamakan-generation-"));
-      try {
-        const file = path.join(folder, "output.mp4");
-        const out = createWriteStream(file, { flags: "wx", mode: 0o600 });
-        const hash = createHash("sha256");
-        let bytes = 0;
-        try {
-          for await (const chunk of adapter.readArtifact(
-            g.executionRef,
-            artifact.handle,
-          )) {
-            bytes += chunk.byteLength;
-            if (bytes > artifact.byteLength)
-              throw new Error("An output is longer than it declared.");
-            hash.update(chunk);
-            if (!out.write(chunk)) await once(out, "drain");
-          }
-        } finally {
-          out.end();
-          await once(out, "close");
-        }
-        if (
-          bytes !== artifact.byteLength ||
-          hash.digest("hex") !== artifact.sha256
-        )
-          throw new CommandError(
-            "VALIDATION",
-            "The generated video does not match what the engine reported.",
-          );
-        const { asset } = await store.importAsset(
-          g.projectId,
-          `generated-${id.slice(0, 8)}.mp4`,
-          createReadStream(file),
-          bytes,
-        );
-        g.imported = { assetId: asset.id };
-        return g.imported;
-      } finally {
-        await rm(folder, { recursive: true, force: true, maxRetries: 5 });
-      }
+      // Asked twice at once, it is still one asset.
+      g.importing ??= bringIn(id, g).finally(() => {
+        g.importing = undefined;
+      });
+      return g.importing;
     },
   };
 }
