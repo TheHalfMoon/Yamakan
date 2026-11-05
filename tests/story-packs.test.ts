@@ -774,19 +774,8 @@ test("a take with only a pinned pack can return after revocation, as any project
     operations: [{ type: "clip.remove", clipId: shown.id }],
   });
   await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
-  // The assembly that names the pack is refused from now on.
-  assert.equal(
-    await code(
-      apply("yamakan.story.assemble", {
-        projectId: c.projectId,
-        expectedRevision: removed.revision,
-        documentId: storyId,
-        trackId: placed.tracks.find((t) => t.kind === "video")!.id,
-      }),
-    ),
-    "VALIDATION",
-  );
-  // But the take carries no continuity references, so its medium is not gated:
+  // (That a revoked pin refuses assembly is the test above this one's business.)
+  // The take carries no continuity references, so its medium is not gated:
   // undo brings it back...
   const undone = await apply("yamakan.project.undo", {
     projectId: c.projectId,
