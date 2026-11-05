@@ -26,9 +26,10 @@
     "modifications": [
       "Use isolated LibraryAsset type; omit cloud-backed library hook.",
       "Duplicate clips use canonical UUIDs.",
-      "YU-016: audio clips draw Waveform from peak tiles over the clip's source range (sourceIn..sourceOut); the waveformCache prop is removed."
+      "YU-016: audio clips draw Waveform from peak tiles over the clip's source range (sourceIn..sourceOut); the waveformCache prop is removed.",
+      "SS-014: the normal trim and move become functions shared by the pointer and new keyboard controls (frame trim, frame move, trim to playhead, snapping key); clips take keyboard focus."
     ],
-    "importedSha256": "c62369c5b92d326031a840ec89d5e0eb9a3f6c88dfdd2b35ebeef33d36514bcb",
+    "importedSha256": "9ab77d63654f386394ff926697af3db8d053ce9aca70d062beda6eb7ad585447",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -296,7 +297,7 @@
     "modifications": [
       "Extract timeline/editor CSS and tokens only; omit remote fonts and unrelated global rules; scope tokens to Darzain app."
     ],
-    "importedSha256": "ec10b881ca35357be77dba06b57f7f5d0cc1d30c1d35f97162a0e069540cadf8",
+    "importedSha256": "fd2cee72eb789587b343f7a755b5fccfe545e9317c4edb6f95c5c1ec6dc92417",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

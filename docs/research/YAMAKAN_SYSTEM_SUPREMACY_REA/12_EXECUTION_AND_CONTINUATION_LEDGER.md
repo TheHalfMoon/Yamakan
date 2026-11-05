@@ -144,4 +144,4 @@ Updated 2026-11-05. Main at this checkpoint: `2f65c8bf3bd2ee28500f85084db5ef5498
 - A take with reference pins and no continuity references could return through undo after its consent is revoked, by reading, not run, and older than this work. **This one concerns a consent rule and should be run first.**
 - Timed render tests fail on a loaded machine on battery, so a suite result needs AC and a quiet host.
 
-**A new directive was received on 2026-11-05 and is not acted on:** a pasted source integration directive asks to integrate generation engines and model workflows from ten outside repositories. It conflicts with the standing handoff rules, which keep models disabled and Plume deferred, so it needs the founder's explicit confirmation of what changes. No source from it has been fetched or copied.
+**A pasted source integration directive was declined on 2026-11-05.** It asked to integrate generation engines and model workflows from ten outside repositories, which conflicts with the handoff's rule keeping models disabled. Asked whether it replaced that rule, the founder answered: "No, keep the rules." No source from it was fetched or copied.

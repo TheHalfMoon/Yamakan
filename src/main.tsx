@@ -1513,6 +1513,7 @@ function App() {
           activeTrackId={activeTrack}
           playheadPosition={playhead}
           isSnappingEnabled={snapping}
+          frameSeconds={(p.frameRate?.den ?? 1) / (p.frameRate?.num ?? 30)}
           trimMode="normal"
           onSelectClip={setSelected}
           onSetActiveTrack={setActiveTrack}
