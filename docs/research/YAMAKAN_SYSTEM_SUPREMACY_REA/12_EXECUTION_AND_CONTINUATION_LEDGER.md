@@ -172,3 +172,29 @@ Updated 2026-11-05. Main at this checkpoint: `223bc2df1d9b1780f9a7c2b329e710e14d
 - Timed render tests fail on a loaded machine on battery.
 
 **Next:** the rest of SS-015, then SS-005b, SS-017's negatives and SS-009's remaining items.
+
+## Checkpoint: local AI authorized, ComfyUI path, restore in the browser
+
+Updated 2026-11-05. Main: `335f21bcb9598c205911615804023758c5d883a1`. Models and commercial providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task                                        | State               | Exact result                                                                                                                                                                                                |
+| ------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OTIO loss report and commands               | Merged; SS-015 open | [PR #184](https://github.com/TheHalfMoon/Yamakan/pull/184), merge `32187feee193485de17a31b6894b2a16a79aedac`                                                                                                |
+| Restore closure tests                       | Merged              | [PR #185](https://github.com/TheHalfMoon/Yamakan/pull/185), merge `3a06b40b401e5e96958b86dd8a81994b9c44fe81`                                                                                                |
+| Setup negatives                             | Merged; SS-017 open | [PR #186](https://github.com/TheHalfMoon/Yamakan/pull/186), merge `b71aa0ac0947f8a0db89a4c03f3843b100d93cbc`                                                                                                |
+| False FFmpeg report                         | Merged              | [PR #187](https://github.com/TheHalfMoon/Yamakan/pull/187), merge `6fac11dea7032350b3bebc23965957a13209112a`                                                                                                |
+| Local ComfyUI adapter, off, no recipe       | Merged              | [PR #188](https://github.com/TheHalfMoon/Yamakan/pull/188), merge `b6f2581ca05ad84acac4bf79bdb5175e5e077d7e`. [Receipt](../../evidence/ultimate/comfyui-engine.md)                                          |
+| Unfinished restore refused; browser restore | Merged              | [PR #189](https://github.com/TheHalfMoon/Yamakan/pull/189), head `8141fe7174af199f6ed84167a47baaadef5eb720`, merge `335f21bcb9598c205911615804023758c5d883a1`. Suite 864 of 867, 3 skipped, 0 failed, on AC |
+
+**Founder's decisions on 2026-11-05:** "Keep the rules", then, asked directly, "Yes, I authorize it" for local AI work and copying from the five named repositories. See `docs/FOUNDER_DECISION_RECORD.md`. Nothing may be taken from `wide-trace/open-higgsfield`, which has no licence.
+
+**Current state of the product:** [product matrix](../../evidence/ultimate/product-matrix.md). **No AI output has been generated, and no person can reach generation.** This laptop has no discrete GPU, so a real text-to-video result needs another machine.
+
+**Open findings added:**
+
+- `no descendant outlives an exiting worker` failed once under load, and passed 3 of 3 alone. `killing the process owner mid-render` failed again once under a suite. Both unexplained.
+- A suite on battery at 77% load had 15 failures, all time limits, and passed on AC at the next head. A run's power and load must be recorded, as `SS-017` already says.
+- ComfyUI's `CreateVideo` writes `2997/125` for 24000/1001, so a generated clip's timing needs conforming.
+- The `EBUSY` in `process owners sharing an input` was given retries, which only stop it failing the test; its cause is not established.
+
+**Next, required before the ComfyUI path is wired to anything:** a node allowlist and offline mode, following a job after a transport failure, and owning ComfyUI's process. Then a command, and a model only on a suitable host with its own authority and protocol. Also: SS-015's remaining items, SS-017's launch error and a capture at final code, SS-005b, and SS-009's remaining items.
