@@ -5,7 +5,7 @@
   "license": "apache-2.0",
   "prompt": "A paper boat floats slowly along a calm stream in soft morning light.",
   "seed": 42,
-  "steps": 20,
+  "steps": 50,
   "frames": 49,
   "fps": 8,
   "packages": [
@@ -23,13 +23,13 @@
   "python": "3.13.16",
   "torch": "2.11.0+cu130",
   "cuda": "13.0",
-  "loadSeconds": 85.8,
-  "generateSeconds": 439.9,
+  "loadSeconds": 74.4,
+  "generateSeconds": 1051.1,
   "peakGpuBytes": 11602235392,
-  "sha256": "2c04b28d4f48783b37e1f1c1e80deea2ba52f812118d89464050fd9bfacaa877",
-  "bytes": 285479,
+  "sha256": "e1c3f4880272e913b7c1ee329308e3a1cf3b93f941dc0c4f967402be0a2bc38b",
+  "bytes": 303402,
   "decodedFrames": 49,
   "size": [720, 480],
-  "spatialStd": 66.33,
-  "temporalDiff": 6.67
+  "spatialStd": 73.11,
+  "temporalDiff": 4.969
 }
