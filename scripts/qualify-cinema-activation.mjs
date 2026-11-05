@@ -116,6 +116,34 @@ try {
     { timeout: 60000 },
   );
 
+  // #203: the lens inspector must control the real Cinema camera, not just
+  // change text or pretend to condition a generative model.
+  await page.getByTestId("cinema-lens-85").click();
+  assert.equal(
+    await page.getByTestId("cinema-lens-85").getAttribute("aria-pressed"),
+    "true",
+  );
+  const longLensFov = await page.getByTestId("cinema-lens-fov").textContent();
+  assert.equal(
+    await page.evaluate(
+      () => window.__yamakanCinema.getScene().camera.focalLengthMm,
+    ),
+    85,
+  );
+  await page.getByTestId("cinema-lens-24").click();
+  const wideLensFov = await page.getByTestId("cinema-lens-fov").textContent();
+  assert.equal(
+    await page.evaluate(
+      () => window.__yamakanCinema.getScene().camera.focalLengthMm,
+    ),
+    24,
+  );
+  assert.notEqual(wideLensFov, longLensFov);
+  assert.match(
+    await page.getByTestId("cinema-lens-panel").textContent(),
+    /not saved/i,
+  );
+
   const before = await page.evaluate(() => {
     const h = window.__yamakanCinema;
     return {

@@ -19,46 +19,31 @@
   "sourceNotices": [
     {
       "source": "LudwigKienle/ai-video-production-editor",
-      "notices": [
-        "notices/ai-video-production-editor-LICENSE"
-      ]
+      "notices": ["notices/ai-video-production-editor-LICENSE"]
     },
     {
       "source": "TheHalfMoon/Ninerr",
-      "notices": [
-        "notices/Ninerr-LICENSE"
-      ]
+      "notices": ["notices/Ninerr-LICENSE"]
     },
     {
       "source": "OpenCut-app/opencut-classic",
-      "notices": [
-        "notices/OpenCut-LICENSE"
-      ]
+      "notices": ["notices/OpenCut-LICENSE"]
     },
     {
       "source": "Vanilagy/mediabunny",
-      "notices": [
-        "notices/mediabunny-LICENSE"
-      ]
+      "notices": ["notices/mediabunny-LICENSE"]
     },
     {
       "source": "soundtouchjs",
-      "notices": [
-        "notices/soundtouchjs-LICENSE"
-      ]
+      "notices": ["notices/soundtouchjs-LICENSE"]
     },
     {
       "source": "ThaUnknown/jassub",
-      "notices": [
-        "notices/jassub-LICENSE",
-        "notices/jassub-NOTICE"
-      ]
+      "notices": ["notices/jassub-LICENSE", "notices/jassub-NOTICE"]
     },
     {
       "source": "D3voz/openjutsu",
-      "notices": [
-        "notices/openjutsu-LICENSE"
-      ]
+      "notices": ["notices/openjutsu-LICENSE"]
     },
     {
       "source": "storytold/artcraft",
@@ -77,30 +62,19 @@
     },
     {
       "source": "calesthio/OpenMontage",
-      "notices": [
-        "notices/OpenMontage-LICENSE"
-      ]
+      "notices": ["notices/OpenMontage-LICENSE"]
     },
     {
       "source": "invoke-ai/InvokeAI",
-      "notices": [
-        "notices/InvokeAI-LICENSE",
-        "notices/InvokeAI-NOTICE"
-      ]
+      "notices": ["notices/InvokeAI-LICENSE", "notices/InvokeAI-NOTICE"]
     },
     {
       "source": "TheHalfMoon/Gomrey",
-      "notices": [
-        "notices/Gomrey-LICENSE",
-        "notices/Gomrey-NOTICE"
-      ]
+      "notices": ["notices/Gomrey-LICENSE", "notices/Gomrey-NOTICE"]
     },
     {
       "source": "TheHalfMoon/Ascout",
-      "notices": [
-        "notices/Ascout-LICENSE",
-        "notices/Ascout-NOTICE"
-      ]
+      "notices": ["notices/Ascout-LICENSE", "notices/Ascout-NOTICE"]
     }
   ],
   "localFilesInDonorRoots": [
@@ -187,6 +161,10 @@
     {
       "path": "src/cinema/CinemaViewport.tsx",
       "reason": "Yamakan-authored Cinema preview viewport and activation test handle; not a donor file copy."
+    },
+    {
+      "path": "src/cinema/cinemaCameraOptics.ts",
+      "reason": "Yamakan-authored physical lens preview math and input validation; new original code, not adapted or copied from a donor."
     }
   ],
   "excludedPaths": [
@@ -281,12 +259,5 @@
     "core/process/access.ts",
     "core/render.ts"
   ],
-  "productionRoots": [
-    "core",
-    "server",
-    "cli",
-    "sdk",
-    "mcp",
-    "src"
-  ]
+  "productionRoots": ["core", "server", "cli", "sdk", "mcp", "src"]
 }
