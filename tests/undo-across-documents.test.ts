@@ -310,3 +310,54 @@ test("a story or pack still ends history, so undo cannot bring one back unchecke
   assert.equal(w.store.listDocuments(w.id).length, 1);
   assert.equal(await w.refused(w.undo()), "REVISION_CONFLICT");
 });
+
+test("a story ends history too, and steps after it never move it", async () => {
+  const w = await workspace();
+  await w.addTrack();
+  const documentId = randomUUID();
+  await w.call("yamakan.story.save", {
+    projectId: w.id,
+    expectedRevision: await w.revision(),
+    documentId,
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 1,
+      title: "Story",
+      scenes: [],
+    },
+  });
+  const story = () =>
+    w.store.listDocuments(w.id).find((d) => d.id === documentId)!.contentHash;
+  const saved = story();
+  assert.equal(await w.refused(w.undo()), "REVISION_CONFLICT");
+  // A caption and a timeline edit after it undo down to the story, no further.
+  await w.importCaptions(randomUUID());
+  await w.addTrack();
+  await w.undo();
+  await w.undo();
+  assert.equal(story(), saved);
+  assert.equal(await w.refused(w.undo()), "REVISION_CONFLICT");
+  await w.redo();
+  await w.redo();
+  assert.equal(story(), saved);
+});
+
+test("with document writes off, undo may not change documents but may change the timeline", async () => {
+  const w = await workspace();
+  const documentId = randomUUID();
+  await w.importCaptions(documentId);
+  await w.addTrack();
+  process.env.YAMAKAN_AG_DOCS_OFF = "1";
+  try {
+    const tracks = (await w.head()).tracks.length;
+    await w.undo();
+    assert.equal((await w.head()).tracks.length, tracks - 1);
+    assert.equal(await w.refused(w.undo()), "CAPABILITY_UNAVAILABLE");
+    assert.equal(w.store.listDocuments(w.id).length, 1);
+  } finally {
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
+  }
+  await w.undo();
+  assert.equal(w.store.listDocuments(w.id).length, 0);
+});

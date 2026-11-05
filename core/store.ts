@@ -51,6 +51,8 @@ import {
   toEditView,
 } from "./canonical.ts";
 import {
+  creativeDocumentsEnabled,
+  DOCUMENTS_OFF,
   DOCUMENT_LIMITS,
   DocumentKind,
   DocumentRefSchema,
@@ -3052,6 +3054,19 @@ export class ProjectStore {
           );
         target = direction === "undo" ? step.before_revision : step.revision;
         cursor = direction === "undo" ? at.cursor - 1 : at.cursor + 1;
+        // The rollback switch stops document writes, by this route too. A step
+        // that leaves the documents alone can still be undone.
+        if (
+          !creativeDocumentsEnabled() &&
+          canonicalJson(
+            this.#canonical(targetSnapshot(), projectId, target).documents,
+          ) !==
+            canonicalJson(
+              this.#canonical(head.snapshot_hash, projectId, head.revision)
+                .documents,
+            )
+        )
+          throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
       },
       // The target's documents, as a saved document is a step too.
       documents: () =>

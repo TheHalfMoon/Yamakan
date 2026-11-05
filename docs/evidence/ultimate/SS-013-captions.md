@@ -30,16 +30,24 @@ At the founder's instruction. Any document save used to delete the project's edi
 
 **Still ends the history, on purpose:**
 
-- **Stories and reference packs:** they are checked against the consent ledger only when committed, and undo must not bring one back past that check. So this defect remains for them: a timeline edit before a story save cannot be undone after it.
-- **Legacy migrations:** the record outlives a snapshot, so undo would leave a recorded migration with no document. By reading; no new test.
+- **Stories and reference packs:** undo must not bring one back past the check made when it is committed. So this defect remains for them: a timeline edit before a story save cannot be undone after it.
+- **Legacy migrations:** the record outlives a snapshot, so undo would leave a recorded migration with no document.
 - **A save with no named writer,** which nobody could undo.
 - **Asset import and whole-project save,** which were not part of this request. **After a timeline edit then an import, Undo is still refused.**
 
-**Tests:** `tests/undo-across-documents.test.ts`, 8 tests through commands and the store: the step-by-step sequence with redo, an undone edit restoring its version and the hash check following it, a Studio save, another writer refused, a retried save adding no second step, a reopen, an unnamed save, and a pack ending the history. Six were seen to fail before the change. `npm run qualify:captions-keyboard` adds the sequence in real Edge with the real Undo and Redo buttons, and the panel showing the old time. An existing test that timeline undo keeps document references still passes.
+**Tests:** `tests/undo-across-documents.test.ts`, 10 tests through commands and the store: the step-by-step sequence with redo, an undone edit restoring its version and the hash check following it, a Studio save, another writer refused, a retried save adding no second step, a reopen, an unnamed save, a pack and a story each ending the history, and the rollback switch. Six of the first eight were seen to fail before the change. `tests/cinema-migration.test.ts` covers a migration ending it. `npm run qualify:captions-keyboard` adds the sequence in real Edge with the real Undo and Redo buttons, and the panel showing the old time. An existing test that timeline undo keeps document references still passes.
 
-**Not checked:** the Studio and Cinema editors in a browser after an undo, including a draft held open across one; only the caption panel was seen re-reading. LUT and Cinema saves share the path but have no test of their own here.
+**An independent review could not break the safety claim.** By its runs, a story's hash holds through undo and redo, since only undo and document commits write document references, and a timeline step that would restore a clip under a revoked consent is still refused at the commit. Neither Studio, Cinema, captions nor LUTs have a commit-time consent check to bypass. It found the missing story and migration tests and the rollback switch gap, fixed above.
 
-Rollback: revert this change. Steps already recorded stay harmless to older code, which undoes to their snapshot but keeps the head's documents, so after a rollback an undo across a document save would not take the document back.
+**Open, for a follow-up:**
+
+- **Toolbar Undo can strand unsaved document work, by reading.** With unsaved Studio strokes, a toolbar Undo goes to the service, as it has no local step. The canvas keeps showing the undone version, the next Save gets a conflict, and that state offers only Reload, which discards the strokes. Nothing is overwritten, and it was already reachable with two writers, but one person can now hit it alone. Studio does not track unsaved changes, so preventing this is separate work.
+- **The same for a caption draft, by reading:** it is dropped, with a message saying the track changed elsewhere, which is wrong here. Redo does not bring it back.
+- **A save with identical content adds a step** whose Undo shows no change; run. Undoing a save from a workspace that does not show it also changes nothing on screen, by reading.
+
+**Not checked:** Studio and Cinema editors in a browser after an undo; only the caption panel was seen re-reading. LUT and Cinema saves share the path but have no sequence of their own. An actual rollback was not run.
+
+Rollback: revert this change. Nothing is corrupted, by reading: older code undoes to a step's snapshot but keeps the head's documents, so an undo over a document step uses up a press and changes nothing, and a redo into a clip whose LUT is absent at the head is refused.
 
 ## Not done
 

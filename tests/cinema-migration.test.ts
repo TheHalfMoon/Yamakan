@@ -569,3 +569,38 @@ test("a retried migration returns its original result, and other input is refuse
   );
   assert.equal((fresh.result as { migrated: boolean }).migrated, false);
 });
+
+test("a migration ends undo history, as its record would outlive a snapshot", async () => {
+  const { store, sidecar } = await workspace();
+  const file = await sidecar(`${A}.json`, JSON.stringify(scene(A)));
+  const project = await store.create("Cinema");
+  const ctx = {
+    store,
+    queue: {} as CommandContext["queue"],
+    principal: {
+      id: "local-client",
+      scopes: new Set(["project:write", "project:read"]),
+    },
+  } satisfies CommandContext;
+  await store.applyOperations(
+    project.id,
+    project.revision,
+    [{ type: "scene.add", sceneId: crypto.randomUUID(), name: "Opening" }],
+    "local-client",
+  );
+  await execute(ctx, "yamakan.scene.migrate", {
+    projectId: project.id,
+    expectedRevision: (await store.load(project.id)).revision,
+    sceneId: A,
+    sourceSha256: sha(await readFile(file)),
+  });
+  await refused(
+    store.undo(
+      project.id,
+      (await store.load(project.id)).revision,
+      "local-client",
+    ),
+    "REVISION_CONFLICT",
+  );
+  assert.equal(store.listDocuments(project.id).length, 1);
+});
