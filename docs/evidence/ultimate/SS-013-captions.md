@@ -37,7 +37,9 @@ At the founder's instruction. Any document save used to delete the project's edi
 
 **Tests:** `tests/undo-across-documents.test.ts`, 10 tests through commands and the store: the step-by-step sequence with redo, an undone edit restoring its version and the hash check following it, a Studio save, another writer refused, a retried save adding no second step, a reopen, an unnamed save, a pack and a story each ending the history, and the rollback switch. Six of the first eight were seen to fail before the change. `tests/cinema-migration.test.ts` covers a migration ending it. `npm run qualify:captions-keyboard` adds the sequence in real Edge with the real Undo and Redo buttons, and the panel showing the old time. An existing test that timeline undo keeps document references still passes.
 
-**An independent review could not break the safety claim.** By its runs, a story's hash holds through undo and redo, since only undo and document commits write document references, and a timeline step that would restore a clip under a revoked consent is still refused at the commit. Neither Studio, Cinema, captions nor LUTs have a commit-time consent check to bypass. It found the missing story and migration tests and the rollback switch gap, fixed above.
+**An independent review ran two checks on safety, and neither failed.** A story's hash held through undo and redo, because among history steps only undo, redo and document commits write document references. And a step restoring a clip whose take has continuity references under a revoked consent was refused at the commit. Studio, Cinema, captions and LUTs have no commit-time consent check to bypass. It also found the missing story and migration tests and the rollback switch gap, fixed above.
+
+**A related gap, by reading, not run, and older than this change:** `take.apply` also checks a shot's reference-pin consents, but the commit check covers only continuity references. So a take with pins and no continuity references could return through undo or redo after its consent is revoked.
 
 **Open, for a follow-up:**
 
@@ -45,7 +47,9 @@ At the founder's instruction. Any document save used to delete the project's edi
 - **The same for a caption draft, by reading:** it is dropped, with a message saying the track changed elsewhere, which is wrong here. Redo does not bring it back.
 - **A save with identical content adds a step** whose Undo shows no change; run. Undoing a save from a workspace that does not show it also changes nothing on screen, by reading.
 
-**Not checked:** Studio and Cinema editors in a browser after an undo; only the caption panel was seen re-reading. LUT and Cinema saves share the path but have no sequence of their own. An actual rollback was not run.
+**Full suite at `bd13818405c0e4630d8e7b5521ddaf85445d4c71`,** on AC with nothing else running: 811 tests, 808 passed, 3 skipped, 0 failed. Log `undo2-test.log`, `7e5e8515e2e58020a791bd395bd92bdec37118fb5761478d32844f42ee479ca8`. An earlier run at `cf19dae` with a reviewer active had 1 failure, `a service killed mid-render`, which timed out and passed 3 of 3 alone.
+
+**Not checked:** Studio and Cinema editors in a browser after an undo; only the caption panel was seen re-reading. The refusal under the rollback switch is tested for undo only; redo shares its path. `project.restore` still changes documents with the switch on, as it did before. LUT and Cinema saves share the path but have no sequence of their own. An actual rollback was not run.
 
 Rollback: revert this change. Nothing is corrupted, by reading: older code undoes to a step's snapshot but keeps the head's documents, so an undo over a document step uses up a press and changes nothing, and a redo into a clip whose LUT is absent at the head is refused.
 
@@ -59,6 +63,8 @@ Rollback: revert this change. Nothing is corrupted, by reading: older code undoe
 
 ## Full suite
 
-**The one full run at `be332c311abdef3fac8eb744ebe34737d2f5a9ac` had 8 failures and is not valid evidence either way:** the machine was on battery at 88% load with 0.7 GB of memory free, and the suite took 727 s against about 405 s normally. Log `s13-test.log`, `022f770e08955b2b5b05c2be55e25272cecd215151acc880a92aa26096ed2d3a`. They were FFmpeg probes and renders timing out, an interruption test, and an MCP load test. A review found no link to this diff, by reading. It also found that `core/render/capability.ts` reports a timed-out probe as "Titles need FFmpeg with libass 0.17 or newer", a wrong reason on a starved machine. **A run on a healthy host is still owed.**
+At `5f253cb555b6f89053cca0e5afdac5546dde9171`, on AC power: 799 tests, 796 passed, 3 skipped, 0 failed. Log `s13c-test.log`, `fc9671d6f040be2783be0b8de48411173b5787309a900f37485f810dc498b3dd`.
+
+Two earlier runs, at `be332c3` and `5f253cb`, had 8 and 14 failures on battery at high load, with 0.7 GB free in the first, taking 727 s and 855 s. Logs `s13-test.log`, `022f770e08955b2b5b05c2be55e25272cecd215151acc880a92aa26096ed2d3a`; `s13b-test.log`, `9a89f31b672ecf6e5fd8ab337dd43f63e86967a16d4abd13ac2ded569a0c2603`. They are not evidence about this change, and three of those tests passed alone during them. **So timed render tests in this suite fail on a loaded machine on battery**, which is a limit of the suite.
 
 Rollback: revert this change. No stored data is affected.

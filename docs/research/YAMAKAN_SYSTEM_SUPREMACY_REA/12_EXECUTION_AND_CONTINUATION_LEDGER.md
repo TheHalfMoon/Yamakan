@@ -125,3 +125,23 @@ SS-008 depends on SS-007, so it stays waiting until this card closes.
 - **A correction to the last checkpoint:** launch error 2 stays tracked, and the stale helper explanation is "probably": the replaced binary's hash was not kept.
 
 **Next:** SS-017's negatives, SS-009's remaining items, SS-005b, SS-012, SS-013, SS-014 and SS-015; SS-008 once SS-007 closes.
+
+## Checkpoint: SS-012, SS-013 and undo across document saves
+
+Updated 2026-11-05. Main at this checkpoint: `2f65c8bf3bd2ee28500f85084db5ef5498cab888` and later; see the PR that carries this section. Models and providers disabled, Plume deferred, limits frozen, spending zero, release NO-GO.
+
+| Task                       | State                                                                           | Exact result                                                                                                                                                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SS-012                     | Merged; card still open                                                         | [PR #174](https://github.com/TheHalfMoon/Yamakan/pull/174), head `bb45225623c42122594f2d170fa8e4dd8a849e97`, merge `da209315784d330e7247a375dedccc00f14a0ff2`. Real exports land within 1 LU; the defects were reporting. [Receipt](../../evidence/ultimate/SS-012-loudness.md). |
+| SS-013                     | Merged; card still open on X-01                                                 | [PR #175](https://github.com/TheHalfMoon/Yamakan/pull/175), head `5f253cb555b6f89053cca0e5afdac5546dde9171`, merge `987dcd2207bdc0e717d19e953dff8a112ae1806d`. [Receipt](../../evidence/ultimate/SS-013-captions.md).                                                            |
+| Title probe message        | Merged                                                                          | [PR #176](https://github.com/TheHalfMoon/Yamakan/pull/176), head `ad8ba5436c2652eca98ab724ae94a82b719ab727`, merge `2f65c8bf3bd2ee28500f85084db5ef5498cab888`.                                                                                                                   |
+| Undo across document saves | In [PR #177](https://github.com/TheHalfMoon/Yamakan/pull/177) with this section | At the founder's instruction. Receipt: the SS-013 receipt.                                                                                                                                                                                                                       |
+
+**Open findings added:**
+
+- Toolbar Undo can strand an unsaved Studio canvas or caption draft, by reading. Nothing is overwritten, but Reload discards the strokes.
+- Undo still ends at a story, pack or migration, on purpose, and at an asset import or whole-project save, which was not requested.
+- A take with reference pins and no continuity references could return through undo after its consent is revoked, by reading, not run, and older than this work. **This one concerns a consent rule and should be run first.**
+- Timed render tests fail on a loaded machine on battery, so a suite result needs AC and a quiet host.
+
+**A new directive was received on 2026-11-05 and is not acted on:** a pasted source integration directive asks to integrate generation engines and model workflows from ten outside repositories. It conflicts with the standing handoff rules, which keep models disabled and Plume deferred, so it needs the founder's explicit confirmation of what changes. No source from it has been fetched or copied.
