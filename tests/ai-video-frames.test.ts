@@ -209,17 +209,32 @@ test("drift over four frames is compared end to end", () => {
 });
 
 test("a source faster than the project skips what never shows", () => {
-  // At half a project frame per source frame, frame 0 starts at frame 0 and has none.
-  const values = Array.from({ length: 8 }, (_, n) => 100 + n * 4);
-  const result = compareFrames(clip(values), clip([100, 112, 120, 128]), 0.5);
+  // Above 60 fps here: source frame 0 has no project frame of its own.
+  assert.equal(exportFramesOf(0, 0.4, 4), null);
+  const values = Array.from({ length: 10 }, (_, n) => 100 + n * 4);
+  const delivered = Array.from({ length: 4 }, (_, i) => {
+    let n = 0;
+    while (Math.floor((n + 1) * 0.4 + 0.5) <= i) n++;
+    return values[n];
+  });
+  const result = compareFrames(clip(values), clip(delivered), 0.4);
   assert.equal(result.problem, null);
   assert.ok(result.shown > 0);
+  assert.ok(result.orderChecks > 0);
 });
 
 test("nothing to compare is a problem, not a pass", () => {
   const some = clip([100, 110]);
   assert.match(compareFrames(clip([]), some, 1).problem, /no frames/);
   assert.match(compareFrames(some, clip([]), 1).problem, /no frames/);
+  assert.match(
+    compareFrames(clip([100]), clip([200]), 0.1).problem,
+    /no source frame/,
+  );
+  assert.match(
+    compareFrames(some.subarray(0, FRAME * 1.5), some, 1).problem,
+    /part of a frame/,
+  );
   for (const rate of [0, -1, Number.NaN, Infinity])
     assert.match(compareFrames(some, some, rate).problem, /no frame rate/);
 });

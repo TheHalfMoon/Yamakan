@@ -49,12 +49,15 @@ export function compareFrames(source, result, perSource) {
   });
   if (!(perSource > 0) || !Number.isFinite(perSource))
     return nothing(`no frame rate to compare at: ${perSource}`);
+  if (!Number.isInteger(sourceFrames) || !Number.isInteger(frames))
+    return nothing("a part of a frame cannot be compared");
   if (sourceFrames < 1 || frames < 1) return nothing("no frames to compare");
   const shownAt = new Map();
   for (let n = 0; n < sourceFrames; n++) {
     const shown = exportFramesOf(n, perSource, frames);
     if (shown) shownAt.set(n, shown);
   }
+  if (shownAt.size === 0) return nothing("no source frame shows in the export");
   let worst = 0;
   let compared = 0;
   const offset = [0, 0, 0];
