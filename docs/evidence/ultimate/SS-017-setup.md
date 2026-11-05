@@ -60,22 +60,22 @@ Still open on this card then: launch error 2 stays tracked rather than explained
 
 Run 2026-11-05 at `32187feee193485de17a31b6894b2a16a79aedac`, in a clone made for this run with `GIT_LFS_SKIP_SMUDGE=1` and `npm ci --ignore-scripts`, running `scripts/qualify-ultimate-environment.mjs` for each. No code changed.
 
-| Condition                                                            | Exit | Status    | Blockers                                                                           | Stages           |
-| -------------------------------------------------------------------- | ---- | --------- | ---------------------------------------------------------------------------------- | ---------------- |
-| Media runtime as LFS pointers, as a clone without LFS objects has it | 2    | `BLOCKED` | `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID`                       | 8 skipped, 0 ran |
-| Real runtime, with one DLL one byte longer                           | 2    | `BLOCKED` | The same three                                                                     | 8 skipped, 0 ran |
-| `zod` at a version the lockfile does not pin                         | 2    | `BLOCKED` | `DEPENDENCY_MISSING`                                                               | 8 skipped, 0 ran |
-| `zod` removed                                                        | 2    | `BLOCKED` | `DEPENDENCY_MISSING`, `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID` | 8 skipped, 0 ran |
+| Condition                                                               | Exit | Status    | Blockers                                                                           | Stages           |
+| ----------------------------------------------------------------------- | ---- | --------- | ---------------------------------------------------------------------------------- | ---------------- |
+| Media runtime as LFS pointers, as a clone without LFS objects has it    | 2    | `BLOCKED` | `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID`                       | 8 skipped, 0 ran |
+| Real runtime, with one DLL one byte longer                              | 2    | `BLOCKED` | The same three                                                                     | 8 skipped, 0 ran |
+| `zod`'s `package.json` version rewritten to `0.0.1`, its code unchanged | 2    | `BLOCKED` | `DEPENDENCY_MISSING`                                                               | 8 skipped, 0 ran |
+| `zod` removed                                                           | 2    | `BLOCKED` | `DEPENDENCY_MISSING`, `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID` | 8 skipped, 0 ran |
 
 The third row is also the control for the second: with the DLL restored, its media blockers are gone. No condition gave `RECORDED` or a pass.
 
-**Friction observed, not changed:** with `zod` removed, the capture also reports FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. The verdict is right; the extra blockers are misleading, and why they appear was not traced.
+**Friction observed, not changed here:** in the last row, the capture also reports FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact; its JSON records the cause, `Cannot find package 'zod'`. In the second row, `FFMPEG_MISSING` also appears though `ffmpeg.exe` matches its pin, because a runtime that fails its preflight is not run. The verdicts are right; these extra blockers mislead.
 
 **The remaining negatives, decided rather than run:**
 
-- **Insufficient disk** stays a unit test. Filling a real drive on this machine to trigger it is not worth the risk to the founder's work, and a small virtual disk would need administrator rights.
-- **Stale manifest:** nothing reads `environment.json` as a verdict; only the qualifier writes it. It records the head it was captured at, so a stale one cannot yield `RECORDED` for later code, because nothing takes it as such. A reader comparing it with `HEAD` must do so by hand.
-- **Unavailable reviewer or backend:** the qualifier does not model these and should not. A review that did not run is recorded as not run in each receipt, as the d1 line below does.
+- **Insufficient disk** stays a unit test of `evaluateEnvironment`; the qualifier's own low-disk path was not exercised. Filling a real drive on this machine to trigger it is not worth the risk to the founder's work, and a small virtual disk would need administrator rights.
+- **Stale manifest:** no script, test or workflow reads `environment.json`; only the qualifier writes it. A human reader can still be misled: `docs/evidence/ultimate/receipts/YU-001.json` cites this file as evidence for `01ccbe5`, and the file now holds a later capture. It records the head it was captured at, so a stale one cannot yield `RECORDED` for later code, because nothing takes it as such. A reader comparing it with `HEAD` must do so by hand.
+- **Unavailable reviewer or backend:** the qualifier does not model these and should not. The card asks that an unavailable tool or reviewer be recorded explicitly, which is a matter for each receipt, not checked across them here.
 
 This is a founder's call to overrule. **The card stays open** for a `RECORDED` capture at final code, and launch error 2, tracked and not explained.
 
