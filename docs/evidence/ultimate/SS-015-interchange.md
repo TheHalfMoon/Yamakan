@@ -36,11 +36,23 @@ All three read only, under `project:read`. A loss is either `dropped`, or `yamak
 
 CI's `otio-oracle` job reads Yamakan's output with OpenTimelineIO itself; its fixture was not changed here.
 
+## Restore to a new root
+
+`tests/portable-closure.test.ts`, with a real store, real media, and a project at 24000/1001 holding two videos, a story with takes of both, captions, a LUT and a clip:
+
+- The backup reports its creative scope complete with no gaps, and the restore finds all three documents.
+- From the new root, the canonical project is byte-identical, every document has the same hash and bytes, the clip's start, duration and source start are exact, each video's file hashes to its asset hash, and an OTIO export is the same file.
+- A backup with a truncated database is refused, and leaves no restored folder. The original's files and project are unchanged, and the same backup restores once the database is put back.
+
+This found no defect in the backup path; it is qualification of what `core/recovery.ts` already did.
+
+**Fonts** are not project data: titles and burned-in captions use fonts pinned in the build, so a project has none to carry. **Variants** were not in this project; proxies are rebuilt rather than backed up, which was not checked here. **Reference packs and consent records** were not in this project; `tests/creative-recovery.test.ts` covers revoked consent through a restore, and the consent gate's receipt covers packs.
+
 ## Not done
 
 - **A proposal cannot be applied.** No command turns it into edits, so importing still ends at a report.
 - **The browser shows none of this.** The card asks to return or display a report; this returns it.
-- **Backup closure and restore,** the card's steps 3 and 4, were not qualified: originals, variants, stories, takes, references, captions and fonts used by a project, compared by hash and timing after a restore to a new root, and an interrupted restore. Existing tests in `tests/creative-recovery.test.ts` cover documents and objects, not this list.
+- **A restore killed partway** was not run. A truncated database stands in for it, which is not the same as a process dying mid-copy.
 - **Archive hazards:** there is no new archive parser, so traversal, symlink, bomb and name-collision cases belong to the backup path, and were not rerun here.
 - **A file written by another tool is, in practice, refused.** The reader takes `Clip.1` at the flick rate only. As far as recalled, and not checked here, current OpenTimelineIO writes `Clip.2`, so even a Yamakan export re-saved through it is refused, naming the schema. The refusal is honest, but this is Yamakan's own round trip, not interchange with other editors yet. CI's oracle only reads Yamakan's output with OpenTimelineIO; nothing feeds its output back.
 - An animation with no keys is reported as a loss, though it animates nothing.
