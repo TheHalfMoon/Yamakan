@@ -1,7 +1,7 @@
 /**
  * The ComfyUI adapter against a real ComfyUI on CPU. It uses only ComfyUI's core
  * nodes, with no model weights, so what it qualifies is the path: setup check,
- * upload, submit, progress, cancel, history and a real MP4 read back and decoded.
+ * upload, submit, cancel, history and a real MP4 read back and decoded.
  * It says nothing about any model, and no output here is AI-generated.
  *
  * Usage: YAMAKAN_COMFYUI_DIR=<folder holding ComfyUI and venv> \

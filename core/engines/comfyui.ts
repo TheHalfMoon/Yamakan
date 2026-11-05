@@ -1,7 +1,7 @@
 // A local ComfyUI as an EngineAdapterV2. It speaks only to a loopback address,
 // follows no redirect, and runs only graphs the server owns: a request names a
 // recipe and fills that recipe's bindings, and no graph, node, path or URL ever
-// crosses the contract. Off under ENGINE_ENABLED, when it does no IO; and this
+// crosses the contract. Off under ENGINE_ENABLED, when no call does IO; and this
 // build pins no recipe, so nothing runs until one is qualified. Setup inspection
 // follows D3voz/openjutsu lib/setup.ts (MIT); see notices/openjutsu-LICENSE.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
@@ -82,6 +82,7 @@ export const comfyRecipeHash = (recipe: ComfyRecipe) =>
         recipe.constraints,
         recipe.graph,
         recipe.bindings,
+        recipe.modelInputs ?? [],
         recipe.outputNode,
       ]),
     )
@@ -306,14 +307,23 @@ export function createComfyEngine(options: ComfyEngineOptions) {
             });
         }
       } catch {
+        ready.clear();
         return [{ kind: "unreachable" }];
       }
       for (const { node, input } of recipe.modelInputs ?? []) {
         const n = nodeByTitle(recipe.graph, node)[0];
         const name = n.inputs[input];
         const schema = registry.get(n.class_type)?.input as
-          { required?: Record<string, unknown[]> } | undefined;
-        const choices = schema?.required?.[input]?.[0];
+          | {
+              required?: Record<string, unknown[]>;
+              optional?: Record<string, unknown[]>;
+            }
+          | undefined;
+        const spec = schema?.required?.[input] ?? schema?.optional?.[input];
+        const choices =
+          spec?.[0] === "COMBO"
+            ? (spec[1] as { options?: unknown } | undefined)?.options
+            : spec?.[0];
         if (
           typeof name !== "string" ||
           !Array.isArray(choices) ||
@@ -330,29 +340,34 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     return problems;
   }
 
-  const recipeFor = (operation: Operation) =>
-    recipes.find((r) => r.operation === operation);
-
+  const off = (operation: Operation, reason: RefusalReason): CapabilityV2 => ({
+    operation,
+    available: false,
+    reason,
+    constraintsHash: constraintsHash(null),
+  });
+  // One recipe's own standing: another recipe's qualification never lends it any.
+  const capabilityOf = (recipe: ComfyRecipe): CapabilityV2 => {
+    if (!enabled) return off(recipe.operation, "ENGINE_DISABLED");
+    if (!recipe.qualificationHash)
+      return off(recipe.operation, "HARDWARE_UNQUALIFIED");
+    if (!ready.has(recipe.id)) return off(recipe.operation, "WEIGHTS_ABSENT");
+    return {
+      operation: recipe.operation,
+      available: true,
+      qualificationHash: recipe.qualificationHash,
+      constraints: recipe.constraints,
+      constraintsHash: constraintsHash(recipe.constraints),
+    };
+  };
+  // Per operation, the first recipe that can run, or why the first cannot.
   const capabilities = (): CapabilityV2[] =>
     Operation.options.map((operation) => {
-      const recipe = recipeFor(operation);
-      const off = (reason: RefusalReason): CapabilityV2 => ({
-        operation,
-        available: false,
-        reason,
-        constraintsHash: constraintsHash(null),
-      });
-      if (!enabled) return off("ENGINE_DISABLED");
-      if (!recipe) return off("RECIPE_UNKNOWN");
-      if (!recipe.qualificationHash) return off("HARDWARE_UNQUALIFIED");
-      if (!ready.has(recipe.id)) return off("WEIGHTS_ABSENT");
-      return {
-        operation,
-        available: true,
-        qualificationHash: recipe.qualificationHash,
-        constraints: recipe.constraints,
-        constraintsHash: constraintsHash(recipe.constraints),
-      };
+      const own = recipes.filter((r) => r.operation === operation);
+      if (!enabled) return off(operation, "ENGINE_DISABLED");
+      if (!own.length) return off(operation, "RECIPE_UNKNOWN");
+      const all = own.map(capabilityOf);
+      return all.find((c) => c.available) ?? all[0];
     });
 
   // One input to ComfyUI's input folder, streamed, its hash checked on the way:
@@ -363,6 +378,14 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     asset: AssetRef,
     context: EngineContextV2,
   ) {
+    const check = createHash("sha256");
+    let length = 0;
+    for await (const chunk of context.openAsset(asset)) {
+      length += chunk.byteLength;
+      if (length > COMFY_LIMITS.uploadBytes) return null;
+      check.update(chunk);
+    }
+    if (check.digest("hex") !== asset.sha256) return null;
     const boundary = `yamakan${randomBytes(16).toString("hex")}`;
     const name = `${request.attemptKey}-${request.leaseGeneration}-${role}-${randomBytes(4).toString("hex")}.${EXTENSION_BY_MEDIA[asset.mediaType]}`;
     const field = (key: string, value: string) =>
@@ -442,24 +465,30 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     return graph;
   }
 
-  // Only a node or a model file it does not have is missing weights; a value it
-  // will not take is the request's.
-  async function whyRejected(res: Response): Promise<RefusalReason> {
+  // Only a node, or a model file this recipe names, that it does not have is
+  // missing weights; any other value it will not take is the request's.
+  async function whyRejected(
+    res: Response,
+    recipe: ComfyRecipe,
+  ): Promise<RefusalReason> {
     const answer = (await json(res).catch(() => null)) as {
       error?: { type?: unknown };
-      node_errors?: Record<string, { errors?: { type?: unknown }[] }>;
+      node_errors?: Record<
+        string,
+        { errors?: { type?: unknown; extra_info?: { input_name?: unknown } }[] }
+      >;
     } | null;
-    const types = [
-      answer?.error?.type,
-      ...Object.values(answer?.node_errors ?? {}).flatMap((n) =>
-        Array.isArray(n?.errors) ? n.errors.map((e) => e?.type) : [],
-      ),
-    ];
-    return types.some(
-      (t) => t === "missing_node_type" || t === "value_not_in_list",
-    )
-      ? "WEIGHTS_ABSENT"
-      : "INVALID_REQUEST";
+    if (answer?.error?.type === "missing_node_type") return "WEIGHTS_ABSENT";
+    const modelInputs = new Set((recipe.modelInputs ?? []).map((m) => m.input));
+    for (const node of Object.values(answer?.node_errors ?? {}))
+      for (const e of Array.isArray(node?.errors) ? node.errors : [])
+        if (
+          e?.type === "missing_node_type" ||
+          (e?.type === "value_not_in_list" &&
+            modelInputs.has(e.extra_info?.input_name as string))
+        )
+          return "WEIGHTS_ABSENT";
+    return "INVALID_REQUEST";
   }
 
   async function history(id: string): Promise<HistoryEntry | null> {
@@ -485,6 +514,12 @@ export function createComfyEngine(options: ComfyEngineOptions) {
 
   // What ComfyUI knows, never a resubmit.
   async function observe(executionRef: string): Promise<ExecutionStatus> {
+    if (!enabled)
+      return {
+        executionRef,
+        state: "unknown",
+        diagnostic: "Engines are off.",
+      };
     try {
       const entry = await history(executionRef);
       if (entry) {
@@ -506,6 +541,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
               "ComfyUI reported an error.",
           };
         }
+        if (entry.status?.status_str !== "success")
+          return { executionRef, state: "unknown" };
         return { executionRef, state: "succeeded", progress: 1 };
       }
       const queued = await inQueue(executionRef);
@@ -527,16 +564,17 @@ export function createComfyEngine(options: ComfyEngineOptions) {
 
   async function cancel(executionRef: string): Promise<Cancellation> {
     let acknowledged = false;
-    try {
-      const where = await inQueue(executionRef);
-      if (where === "queued")
-        acknowledged = (await post("/queue", { delete: [executionRef] })).ok;
-      else if (where === "running")
-        acknowledged = (await post("/interrupt", { prompt_id: executionRef }))
-          .ok;
-    } catch {
-      acknowledged = false;
-    }
+    if (enabled)
+      try {
+        const where = await inQueue(executionRef);
+        if (where === "queued")
+          acknowledged = (await post("/queue", { delete: [executionRef] })).ok;
+        else if (where === "running")
+          acknowledged = (await post("/interrupt", { prompt_id: executionRef }))
+            .ok;
+      } catch {
+        acknowledged = false;
+      }
     return {
       requested: true,
       // Yamakan does not own ComfyUI's process, so this does not claim it ended.
@@ -581,8 +619,9 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         // Anything else in the list, such as a temporary preview, is not output.
         const file = savedFile(raw);
         if (!file) continue;
-        const mediaType = MEDIA_BY_EXTENSION[extensionOf(file.filename)];
-        if (!mediaType) continue;
+        const extension = extensionOf(file.filename);
+        if (!Object.hasOwn(MEDIA_BY_EXTENSION, extension)) continue;
+        const mediaType = MEDIA_BY_EXTENSION[extension];
         if (found.length >= ENGINE_V2_LIMITS.artifacts)
           throw new Error("ComfyUI reported too many outputs.");
         const hash = createHash("sha256");
@@ -630,11 +669,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
       const claim = fence.claim(request);
       if (claim.kind === "done") return claim.result;
       return underClaim(claim, async () => {
-        const capability = capabilities().find(
-          (c) => c.operation === request.operation,
-        );
-        const refused = refusal(request, capability);
-        if (refused) return { refused };
+        if (!enabled) return { refused: "ENGINE_DISABLED" };
         const recipe = recipes.find(
           (r) =>
             r.id === request.recipeId &&
@@ -643,6 +678,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
             comfyRecipeHash(r) === request.recipeHash,
         );
         if (!recipe) return { refused: "RECIPE_UNKNOWN" };
+        const refused = refusal(request, capabilityOf(recipe));
+        if (refused) return { refused };
         const uploaded = new Map<string, string>();
         for (const { role, asset } of request.inputs) {
           if (!recipe.bindings.roles?.[role])
@@ -655,19 +692,25 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         }
         listen();
         const promptId = randomUUID();
-        const res = await post("/prompt", {
-          prompt: buildGraph(recipe, request, uploaded),
-          client_id: clientId,
-          prompt_id: promptId,
-        });
-        if (!res.ok) return { refused: await whyRejected(res) };
-        const answer = (await json(res)) as { prompt_id?: unknown };
-        const executionRef = answer.prompt_id;
-        if (
-          typeof executionRef !== "string" ||
-          !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(executionRef)
-        )
+        let executionRef: unknown;
+        try {
+          const res = await post("/prompt", {
+            prompt: buildGraph(recipe, request, uploaded),
+            client_id: clientId,
+            prompt_id: promptId,
+          });
+          if (!res.ok) return { refused: await whyRejected(res, recipe) };
+          executionRef = ((await json(res)) as { prompt_id?: unknown })
+            .prompt_id;
+        } catch {
+          // No answer does not mean no job: it may have been accepted.
+          await cancel(promptId);
           return { refused: "INVALID_REQUEST" };
+        }
+        if (executionRef !== promptId) {
+          await cancel(promptId);
+          return { refused: "INVALID_REQUEST" };
+        }
         if (executions.size >= COMFY_LIMITS.tracked) {
           const oldest = executions.keys().next().value as string;
           executions.delete(oldest);

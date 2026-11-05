@@ -270,6 +270,94 @@ test("this build enables nothing: engines are off and no recipe is pinned", asyn
   assert.equal(f.requests(), 0, "off means no IO at all");
 });
 
+test("while off, status, reconcile and cancel do no IO either", async () => {
+  const f = await fake();
+  const engine = createComfyEngine({ baseUrl: f.url, recipes: [recipe()] });
+  assert.equal((await engine.status("x")).state, "unknown");
+  assert.equal((await engine.reconcile("x")).state, "unknown");
+  const cancelled = await engine.requestCancel("x");
+  assert.equal(cancelled.remoteAcknowledged, false);
+  assert.equal(f.requests(), 0);
+});
+
+test("one recipe's qualification lends nothing to another for the same operation", async () => {
+  const good = recipe();
+  const bad = recipe({ id: "unqualified", qualificationHash: undefined });
+  const missing = recipe({
+    id: "lacks-model",
+    graph: {
+      ...recipe().graph,
+      "1": {
+        class_type: "Loader",
+        inputs: { model: "absent.safetensors" },
+        _meta: { title: "model" },
+      },
+    },
+  });
+  const f = await fake();
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [good, bad, missing],
+    enabled: true,
+  });
+  await engine.checkSetup();
+  const cap = engine.capabilities().find((c) => c.operation === "textToVideo")!;
+  assert.equal(cap.available, true);
+  assert.deepEqual(
+    await engine.submit(request(bad, { attemptKey: "bad" }), context),
+    { refused: "HARDWARE_UNQUALIFIED" },
+  );
+  assert.deepEqual(
+    await engine.submit(request(missing, { attemptKey: "missing" }), context),
+    { refused: "WEIGHTS_ABSENT" },
+  );
+  assert.equal(f.prompts.length, 0);
+  assert.ok("executionRef" in (await engine.submit(request(good), context)));
+  engine.close();
+});
+
+test("a job ComfyUI may have accepted is cancelled when its answer is unusable", async () => {
+  const { f, engine, r } = await started();
+  let accepted = "";
+  f.promptAnswer = (id) => {
+    accepted = id;
+    f.queue.pending = [id];
+    return { status: 200, body: { prompt_id: "another-valid-id" } };
+  };
+  assert.deepEqual(await engine.submit(request(r), context), {
+    refused: "INVALID_REQUEST",
+  });
+  assert.ok(
+    f.posted.includes(`/queue ${JSON.stringify({ delete: [accepted] })}`),
+  );
+  engine.close();
+});
+
+test("a history entry that does not state success is not success", async () => {
+  const { f, engine, r } = await started();
+  const { executionRef: id } = (await engine.submit(request(r), context)) as {
+    executionRef: string;
+  };
+  f.history[id] = { outputs: {} };
+  assert.equal((await engine.status(id)).state, "unknown");
+  engine.close();
+});
+
+test("model choices are read in either of ComfyUI's two shapes", async () => {
+  const f = await fake();
+  f.classes.Loader = {
+    input: {
+      optional: { model: ["COMBO", { options: ["model.safetensors"] }] },
+    },
+  };
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [recipe()],
+    enabled: true,
+  });
+  assert.deepEqual(await engine.checkSetup(), []);
+});
+
 test("only a loopback address by number is accepted", () => {
   assert.equal(comfyBaseUrl("http://127.0.0.1:8188"), "http://127.0.0.1:8188");
   assert.equal(comfyBaseUrl("http://[::1]:8188/"), "http://[::1]:8188");
@@ -442,18 +530,23 @@ test("output beyond what a recipe was qualified for is refused", async () => {
 
 test("ComfyUI refusing a graph is a refusal, not a running job", async () => {
   const { f, engine, r } = await started();
-  const rejected = (type: string) => () => ({
+  const rejected = (type: string, input_name: string) => () => ({
     status: 400,
     body: {
       error: { type: "prompt_outputs_failed_validation" },
-      node_errors: { "2": { errors: [{ type }] } },
+      node_errors: { "2": { errors: [{ type, extra_info: { input_name } }] } },
     },
   });
-  f.promptAnswer = rejected("value_not_in_list");
+  f.promptAnswer = rejected("value_not_in_list", "model");
   assert.deepEqual(await engine.submit(request(r), context), {
     refused: "WEIGHTS_ABSENT",
   });
-  f.promptAnswer = rejected("value_bigger_than_max");
+  f.promptAnswer = rejected("value_not_in_list", "sampler_name");
+  assert.deepEqual(
+    await engine.submit(request(r, { attemptKey: "bad-choice" }), context),
+    { refused: "INVALID_REQUEST" },
+  );
+  f.promptAnswer = rejected("value_bigger_than_max", "length");
   assert.deepEqual(
     await engine.submit(request(r, { attemptKey: "too-big" }), context),
     { refused: "INVALID_REQUEST" },
@@ -695,6 +788,7 @@ test("an input is streamed, and one failing its hash is never submitted", async 
       .prompt["2"].inputs.text,
     "yamakan/uploaded.png",
   );
+  const uploadsBefore = f.uploads.length;
   const bad = await engine.submit(request(r, { ...base, attemptKey: "bad" }), {
     async *openAsset() {
       yield Buffer.from("something else");
@@ -702,5 +796,6 @@ test("an input is streamed, and one failing its hash is never submitted", async 
   });
   assert.deepEqual(bad, { refused: "INVALID_REQUEST" });
   assert.equal(f.prompts.length, 1);
+  assert.equal(f.uploads.length, uploadsBefore, "ComfyUI never sees it");
   engine.close();
 });

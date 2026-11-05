@@ -4,7 +4,7 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 
 ## What exists now
 
-`core/engines/comfyui.ts` implements the existing `EngineAdapterV2`. It speaks only to `127.0.0.1` or `[::1]` by number, follows no redirect, and runs only graphs the server owns: a request names a recipe, hash and model manifest, and fills that recipe's bindings. While off it does no IO. It is not yet wired to any command or to the browser, so **a person cannot generate anything yet.**
+`core/engines/comfyui.ts` implements the existing `EngineAdapterV2`. It speaks only to `127.0.0.1` or `[::1]` by number, follows no redirect, and runs only graphs the server owns: a request names a recipe, hash and model manifest, and fills that recipe's bindings. While off, no call does IO. It is not yet wired to any command or to the browser, so **a person cannot generate anything yet.**
 
 ## Real run
 
@@ -19,19 +19,17 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 | Input failing its hash | Not submitted                                                                                         |
 | Cancel                 | A running job was interrupted, ended `cancelled`, and left no output                                  |
 
-`tests/comfyui-engine.test.ts`, 19 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
-
-Local capture of this run: SHA-256 `19ad004d52366ef4898b311ab36281acaaf673a1ac41de794df44f4c8b014773`, at `f045691`; the commit after it adds one test and changes no product code.
+`tests/comfyui-engine.test.ts`, 24 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
 
 **Found by the real run:**
 
 - **Frame rate is not exact.** At 24000/1001, ComfyUI's `CreateVideo` wrote `2997/125`, not the rational asked for, because it takes a decimal. The frame count is right, but a generated clip's timing needs conforming on import. Not fixed here.
-- **A rejected value was reported as missing weights.** Fixed: only a missing node or model file is `WEIGHTS_ABSENT`.
+- **A rejected value was reported as missing weights.** Fixed: only a missing node, or a missing model file a recipe names, is `WEIGHTS_ABSENT`.
 - `EmptyImage` caps a batch at 4,096 frames, and 13 GiB of frames exceeded this host. Real recipes must declare limits they were measured at.
 
 ## This host cannot qualify a video model
 
-Measured 2026-11-05: Intel UHD Graphics with no discrete GPU, 15.7 GiB RAM, 18.2 GiB free on C:, and 17.4 GiB on D:. The heaviest stack surveyed, MiniMax H3, was reported by its own project at about 98 GB of models on a 16 GB NVIDIA card. **No video model has been downloaded, run or qualified here, and none is likely to run usefully on this host.** Qualifying one needs a machine with a suitable GPU, or a founder decision about which small CPU model is worth trying.
+Measured 2026-11-05: Intel UHD Graphics with no discrete GPU, 15.7 GiB RAM, 18.2 GiB free on C:, and 17.4 GiB on D:. `backlot` reports about 98 GB of required models and a 16 GB NVIDIA card for MiniMax H3, the heaviest stack surveyed; this was not measured here. **No video model has been downloaded, run or qualified here, and none is likely to run usefully on this host.** Qualifying one needs a machine with a suitable GPU, or a founder decision about which small CPU model is worth trying.
 
 ## Sources checked
 
@@ -52,10 +50,8 @@ ComfyUI is GPL-3.0. Yamakan talks to a separately installed copy over HTTP and b
 ## Decisions to overrule
 
 - The brand rule bans the name ComfyUI as a donor product. Three files are excepted by exact path, since this adapter must name what it talks to; a user-visible use elsewhere still fails.
-- Cancelling a running job uses ComfyUI's targeted interrupt. ComfyUI checks between steps, so a long step may finish first, and `localProcessExited` is always false since Yamakan does not own that process. Input files uploaded to ComfyUI are not deleted, since it offers no way to.
+- Cancelling a running job uses ComfyUI's targeted interrupt. ComfyUI checks between steps, so a long step may finish first, and `localProcessExited` is always false since Yamakan does not own that process. Input files uploaded to ComfyUI are not deleted: its assets API can delete when enabled, which was not tried. An interrupt can arrive after ComfyUI's last check, so a cancelled job can still succeed; `remoteOutcome` stays `unknown` for this reason, and the service must fence publication.
 
 ## Not done
 
-A command or browser path to generate; a pinned recipe; any model; progress during a real model run; ownership of the ComfyUI process (start, stop, process-tree limits); conforming a generated clip's frame rate; publishing an output as a project asset with consent and lineage; running on a GPU.
-
-Reviews: see the pull request.
+An allowlist of node classes, and running ComfyUI with `--offline`, since it ships partner API nodes that call the cloud: **both are required before this is wired to anything**. A command or browser path to generate; a pinned recipe; any model; progress during a real model run; ownership of the ComfyUI process (start, stop, process-tree limits); conforming a generated clip's frame rate; publishing an output as a project asset with consent and lineage; running on a GPU.
