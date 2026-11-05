@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+// @ts-expect-error Plain .mjs modules without declarations.
+import { mediaPreflight } from "../scripts/media-runtime-preflight.mjs";
 import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -410,4 +412,57 @@ test("helpers cargo wrote elsewhere are reported from its own output", () => {
   );
   // No report at all proves nothing was built here.
   assert.deepEqual(helpersBuiltElsewhere("", repo, [helper]), [helper]);
+});
+
+test("a resolver that cannot load blocks as unchecked, not as missing FFmpeg", () => {
+  const notRun = () => {
+    throw new Error("no tool is recorded when nothing was resolved");
+  };
+  for (const code of ["ERR_MODULE_NOT_FOUND", "MODULE_NOT_FOUND"]) {
+    const media = mediaPreflight({
+      platform: "win32",
+      resolveTools: () => {
+        throw Object.assign(new Error("Cannot find package 'zod'"), { code });
+      },
+      recordTool: notRun,
+    });
+    assert.equal(media.mediaRuntime.unchecked, true);
+    const { status, pass, blockers } = evaluateEnvironment({
+      dependency: { present: true },
+      helper: { present: true },
+      ...media,
+      scripts: [],
+    });
+    assert.equal(status, "BLOCKED");
+    assert.equal(pass, false);
+    assert.deepEqual(
+      blockers.map((b: { code: string }) => b.code),
+      ["MEDIA_RUNTIME_UNCHECKED"],
+    );
+    assert.match(blockers[0].detail, /Cannot find package 'zod'/);
+  }
+});
+
+test("any other failure to resolve the media tools is still an invalid runtime", () => {
+  const media = mediaPreflight({
+    platform: "win32",
+    resolveTools: () => {
+      throw new Error("pinned executable is not there");
+    },
+    recordTool: () => {
+      throw new Error("not reached");
+    },
+  });
+  assert.equal(media.mediaRuntime.unchecked, false);
+  const { status, blockers } = evaluateEnvironment({
+    dependency: { present: true },
+    helper: { present: true },
+    ...media,
+    scripts: [],
+  });
+  assert.equal(status, "BLOCKED");
+  assert.deepEqual(
+    blockers.map((b: { code: string }) => b.code),
+    ["FFMPEG_MISSING", "FFPROBE_MISSING", "MEDIA_RUNTIME_INVALID"],
+  );
 });

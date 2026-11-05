@@ -69,7 +69,7 @@ Run 2026-11-05 at `32187feee193485de17a31b6894b2a16a79aedac`, in a clone made fo
 
 The third row is also the control for the second: with the DLL restored, its media blockers are gone. No condition gave `RECORDED` or a pass.
 
-**Friction observed, not changed here:** in the last row, the capture also reports FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact; its JSON records the cause, `Cannot find package 'zod'`. In the second row, `FFMPEG_MISSING` also appears though `ffmpeg.exe` matches its pin, because a runtime that fails its preflight is not run. The verdicts are right; these extra blockers mislead.
+**Friction observed:** in the last row, fixed in the next section, the capture also reports FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact; its JSON records the cause, `Cannot find package 'zod'`. In the second row, `FFMPEG_MISSING` also appears though `ffmpeg.exe` matches its pin, because a runtime that fails its preflight is not run. The verdicts are right; these extra blockers mislead.
 
 **The remaining negatives, decided rather than run:**
 
@@ -85,6 +85,12 @@ This is a founder's call to overrule. **The card stays open** for a `RECORDED` c
 | `tampered-dll.json`       | `ce1a0669f2fd58fc3f103f233ecbb2a025b95258cfb72ec5b3bae9246598c70d` |
 | `drifted-dependency.json` | `560be454fe1fb22aea920070c3e55f5c75b0252802d290f4d23c42528f2dfc6a` |
 | `missing-dependency.json` | `c43176520699449237f3be76d81167927dfd293fed9266496629b7caeca6e4c6` |
+
+## A missing dependency is not missing FFmpeg
+
+With `zod` removed, the capture reported FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. Resolving the tools loads `core/process/workers.ts`, which needs `zod`, and any failure there was reported as a bad runtime. A module not found while loading the resolver now gives `MEDIA_RUNTIME_UNCHECKED` in their place, naming the module, which still blocks; any other failure to resolve, including other load failures such as a corrupt package, stays `FFMPEG_MISSING`, `FFPROBE_MISSING` and `MEDIA_RUNTIME_INVALID`.
+
+Real run with `zod` removed from a checkout: exit 2, `BLOCKED`, `DEPENDENCY_MISSING` and `MEDIA_RUNTIME_UNCHECKED`, 8 stages skipped, and the blocker names the package. Local capture SHA-256 `40ef449f9d4f22ccd16bcafbfba93d910d7d1e39d1d7c054f1048fd10f66737d`, from the uncommitted tree just before this commit. Unit tests cover both branches.
 
 ## Impact tools
 
