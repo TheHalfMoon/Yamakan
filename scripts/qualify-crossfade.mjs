@@ -294,12 +294,12 @@ try {
     assert.ok(near(pixel(30), [254, 0, 0]), `before: ${pixel(30)}`);
     assert.ok(near(pixel(100), [0, 0, 254]), `after: ${pixel(100)}`);
     // 24 frames centred on frame 60: red up to 48, blue from 72, and a quarter of
-    // the way in and out the fading colour is at a quarter, within 4 of 253. A
-    // dissolve of 22 or 26 frames would be 58 or 69 there.
+    // the way in and out the fading colour is within 3 of 63, measured at 62 and 64.
+    // Scaled from those, 22 frames would be about 56 and 58, and 26 about 67 and 69.
     assert.ok(near(pixel(47), [254, 0, 0]), `frame 47: ${pixel(47)}`);
     assert.ok(near(pixel(72), [0, 0, 254]), `frame 72: ${pixel(72)}`);
-    assert.ok(Math.abs(pixel(54)[2] - 63) <= 4, `frame 54: ${pixel(54)}`);
-    assert.ok(Math.abs(pixel(66)[0] - 63) <= 4, `frame 66: ${pixel(66)}`);
+    assert.ok(Math.abs(pixel(54)[2] - 63) <= 3, `frame 54: ${pixel(54)}`);
+    assert.ok(Math.abs(pixel(66)[0] - 63) <= 3, `frame 66: ${pixel(66)}`);
     const middle = pixel(60);
     assert.ok(
       middle[0] > 70 && middle[0] < 190 && middle[2] > 70 && middle[2] < 190,
@@ -378,21 +378,22 @@ try {
         operations: [{ type: "track.update", trackId: byKeys.trackId, locked }],
       });
     await lockTrack(true);
-    await openProject(byKeys.name);
     const lockedHeld = await canonical(byKeys.id);
+    // A reopen before each press, so the message can only come from that press.
     for (const press of [
       () => page.getByTestId("clip-dissolve-remove").click(),
       () => applyButton.click(),
     ]) {
-      await page.evaluate(() => {
-        const live = document.querySelector('[role="status"].status');
-        if (live) live.textContent = "";
-      });
+      await openProject(byKeys.name);
+      assert.doesNotMatch(await status.innerText(), /Track is locked/);
       await press();
-      await page.waitForFunction(() =>
-        /Track is locked/.test(
-          document.querySelector('[role="status"].status')?.textContent ?? "",
-        ),
+      await page.waitForFunction(
+        () =>
+          /Track is locked/.test(
+            document.querySelector('[role="status"].status')?.textContent ?? "",
+          ),
+        null,
+        { timeout: 10_000 },
       );
       await page.waitForTimeout(500);
       assert.equal(await canonical(byKeys.id), lockedHeld);
