@@ -1,4 +1,4 @@
-import { lstat, mkdir, realpath } from "node:fs/promises";
+import { access, lstat, mkdir, realpath, rm } from "node:fs/promises";
 import path from "node:path";
 export async function safePath(
   root: string,
@@ -25,6 +25,23 @@ export async function safePath(
   }
   return target;
 }
+// Present while a restore is writing a folder. `restore.json` is what commits a
+// restore: with it present the mark is only left over, and is cleared.
+export const RESTORE_UNFINISHED = "restore.unfinished";
+export async function isUnfinishedRestore(root: string) {
+  const here = (name: string) =>
+    access(path.join(root, name)).then(
+      () => true,
+      () => false,
+    );
+  if (!(await here(RESTORE_UNFINISHED))) return false;
+  if (!(await here("restore.json"))) return true;
+  await rm(path.join(root, RESTORE_UNFINISHED), { force: true }).catch(
+    () => {},
+  );
+  return false;
+}
+
 export async function initializeRoot(root: string): Promise<string> {
   const absolute = path.resolve(root);
   await safePath(absolute);

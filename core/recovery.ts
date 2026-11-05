@@ -32,7 +32,7 @@ import path from "node:path";
 import { DatabaseSync, backup } from "node:sqlite";
 import { z } from "zod";
 import { Id, ProjectSchema } from "./project.ts";
-import { initializeRoot, safePath } from "./paths.ts";
+import { RESTORE_UNFINISHED, initializeRoot, safePath } from "./paths.ts";
 import { CommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { inspectWal } from "./wal.ts";
@@ -847,6 +847,9 @@ async function restore(
   try {
     await initializeRoot(root);
     initialized = true;
+    // Until the very end this folder says it is unfinished, so a restore killed
+    // partway cannot be opened as if it were a workspace.
+    await writeFile(path.join(root, RESTORE_UNFINISHED), "", { mode: 0o600 });
     await restrictToOwner(root, "dir");
     // The database is verified and fenced under a staging name and becomes
     // the workspace's only as the last step: a crash or a failed cleanup
@@ -1004,17 +1007,31 @@ async function restore(
       mode: 0o600,
     });
     await rename(partial, path.join(root, "restore.json"));
+    // Committed. A mark that cannot be removed now is cleared at the next open.
+    await rm(path.join(root, RESTORE_UNFINISHED), { force: true }).catch(
+      () => {},
+    );
     return { root, ...receipt };
   } catch (e) {
     // Only what this restore made is removed: the folder if it created it,
-    // otherwise (the folder was empty) its contents.
-    if (!existed)
-      await rm(root, { recursive: true, force: true }).catch(() => {});
-    else if (initialized)
+    // otherwise (the folder was empty) its contents. The mark goes last, and only
+    // with nothing else left, so a file held open cannot pass for a workspace.
+    if (initialized || !existed) {
       for (const name of await readdir(root).catch(() => [] as string[]))
-        await rm(path.join(root, name), { recursive: true, force: true }).catch(
-          () => {},
-        );
+        if (name !== RESTORE_UNFINISHED)
+          await rm(path.join(root, name), {
+            recursive: true,
+            force: true,
+          }).catch(() => {});
+      // A folder that cannot be read keeps its mark.
+      const left = await readdir(root).catch(() => null);
+      if (left && !left.some((name) => name !== RESTORE_UNFINISHED))
+        await (
+          existed
+            ? rm(path.join(root, RESTORE_UNFINISHED), { force: true })
+            : rm(root, { recursive: true, force: true })
+        ).catch(() => {});
+    }
     throw e;
   }
 }
