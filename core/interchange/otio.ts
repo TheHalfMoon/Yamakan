@@ -88,6 +88,26 @@ export type OtioProposal = {
   name: string;
   clips: OtioProposalClip[];
   unresolved: number;
+  /** What the file held that the proposal leaves out, by OTIO schema. */
+  ignored: { schema: string; count: number }[];
+};
+
+/**
+ * One thing a conversion does not carry. "dropped" is gone from the file;
+ * "yamakanOnly" travels as metadata that only Yamakan reads back.
+ */
+export type OtioLoss = {
+  subject: "project" | "track" | "clip";
+  id: string;
+  field: string;
+  effect: "dropped" | "yamakanOnly";
+};
+
+export type OtioLossReport = {
+  carried: { tracks: number; clips: number };
+  losses: OtioLoss[];
+  /** The media the file refers to, by content, since it holds none of it. */
+  media: { assetId: string; name: string; hash: string; bytes: number }[];
 };
 
 function rational(value: number): RationalTimeJson {
@@ -185,6 +205,67 @@ export function toOtio(project: CanonicalProject): TimelineJson {
   };
 }
 
+/** What `toOtio` would leave behind, in a fixed order, without converting. */
+export function otioLossReport(project: CanonicalProject): OtioLossReport {
+  const losses: OtioLoss[] = [];
+  const lose = (
+    subject: OtioLoss["subject"],
+    id: string,
+    field: string,
+    effect: OtioLoss["effect"] = "dropped",
+  ) => losses.push({ subject, id, field, effect });
+  lose("project", project.id, "output");
+  lose("project", project.id, "language");
+  if (project.scenes.length) lose("project", project.id, "scenes");
+  for (const d of project.documents)
+    lose("project", project.id, `document:${d.id}`);
+  for (const t of project.tracks)
+    for (const field of ["muted", "locked", "solo", "targeted"] as const)
+      if (t[field]) lose("track", t.id, field);
+  const known = new Set(project.assets.map((a) => a.id));
+  const carried = project.clips.filter((c) => c.title === null && c.assetId);
+  for (const c of project.clips) {
+    if (c.title !== null) lose("clip", c.id, "title");
+    else if (!c.assetId || !known.has(c.assetId)) lose("clip", c.id, "media");
+    if (c.gainDb !== 0) lose("clip", c.id, "gain");
+    if (c.fadeInTicks !== 0 || c.fadeOutTicks !== 0)
+      lose("clip", c.id, "fades");
+    if (
+      c.sound &&
+      (!c.sound.enabled ||
+        c.sound.gainDb !== 0 ||
+        c.sound.fadeInTicks !== 0 ||
+        c.sound.fadeOutTicks !== 0)
+    )
+      lose("clip", c.id, "sound");
+    if (c.speed && c.speed.num !== c.speed.den) lose("clip", c.id, "speed");
+    if (c.animation) lose("clip", c.id, "animation");
+    if (c.effects) lose("clip", c.id, "effects", "yamakanOnly");
+    if (c.transition) lose("clip", c.id, "transition", "yamakanOnly");
+  }
+  const order = { project: 0, track: 1, clip: 2 };
+  losses.sort(
+    (a, b) =>
+      order[a.subject] - order[b.subject] ||
+      a.id.localeCompare(b.id) ||
+      a.field.localeCompare(b.field),
+  );
+  const used = new Set(carried.map((c) => c.assetId));
+  return {
+    carried: { tracks: project.tracks.length, clips: carried.length },
+    losses,
+    media: project.assets
+      .filter((a) => used.has(a.id))
+      .map((a) => ({
+        assetId: a.id,
+        name: a.name,
+        hash: a.hash,
+        bytes: a.bytes,
+      }))
+      .sort((a, b) => a.assetId.localeCompare(b.assetId)),
+  };
+}
+
 function countObjects(value: unknown, depth: number, state: { n: number }) {
   if (depth > OTIO_LIMITS.maxDepth)
     throw new CommandError("VALIDATION", "OTIO JSON nests too deeply.");
@@ -212,6 +293,29 @@ const RationalSchema = z
     value: z.number().int().nonnegative(),
   })
   .strict();
+
+// A time from the file, whose shape is not yet known to be a time.
+function ticksFrom(value: unknown): number {
+  const parsed = RationalSchema.safeParse(value);
+  if (!parsed.success)
+    throw new CommandError("VALIDATION", "OTIO time is invalid.");
+  return ticksFromRational(parsed.data);
+}
+
+function rangeOf(child: { source_range?: unknown }, label: string) {
+  const range = child.source_range as
+    { start_time?: unknown; duration?: unknown } | null | undefined;
+  if (!range || typeof range !== "object")
+    throw new CommandError("VALIDATION", `OTIO ${label} has no source range.`);
+  return range;
+}
+
+function childrenOf(value: unknown, label: string): unknown[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value))
+    throw new CommandError("VALIDATION", `OTIO ${label} must be a list.`);
+  return value;
+}
 
 function ticksFromRational(rt: z.infer<typeof RationalSchema>): number {
   if (rt.rate !== OTIO_RATE)
@@ -259,30 +363,46 @@ export function fromOtio(
   const clips: OtioProposalClip[] = [];
   let unresolved = 0;
   let timelineCursor = 0;
-  for (const track of root.tracks?.children ?? []) {
-    if (!track || track.OTIO_SCHEMA !== "Track.1") continue;
+  const ignoredBySchema = new Map<string, number>();
+  const ignore = (value: unknown) => {
+    const schema = (value as { OTIO_SCHEMA?: unknown } | null)?.OTIO_SCHEMA;
+    const key =
+      typeof schema === "string"
+        ? schema.slice(0, OTIO_LIMITS.maxString)
+        : "unknown";
+    ignoredBySchema.set(key, (ignoredBySchema.get(key) ?? 0) + 1);
+  };
+  for (const entry of childrenOf(root.tracks?.children, "stack")) {
+    const track = entry as TrackJson;
+    if (!track || track.OTIO_SCHEMA !== "Track.1") {
+      ignore(entry);
+      continue;
+    }
     const trackKind = track.kind === "Audio" ? "audio" : "video";
     const trackName =
       typeof track.name === "string"
         ? track.name.slice(0, OTIO_LIMITS.maxString)
         : "Track";
     timelineCursor = 0;
-    for (const child of track.children ?? []) {
-      if (!child || typeof child !== "object") continue;
-      if ((child as GapJson).OTIO_SCHEMA === "Gap.1") {
-        timelineCursor += ticksFromRational(
-          RationalSchema.parse((child as GapJson).source_range.duration),
-        );
+    for (const child of childrenOf(track.children, "track")) {
+      if (!child || typeof child !== "object") {
+        ignore(child);
         continue;
       }
-      if ((child as ClipJson).OTIO_SCHEMA !== "Clip.1") continue;
+      if ((child as GapJson).OTIO_SCHEMA === "Gap.1") {
+        timelineCursor += ticksFrom(rangeOf(child, "gap").duration);
+        if (!Number.isSafeInteger(timelineCursor))
+          throw new CommandError("VALIDATION", "OTIO clip start is invalid.");
+        continue;
+      }
+      if ((child as ClipJson).OTIO_SCHEMA !== "Clip.1") {
+        ignore(child);
+        continue;
+      }
       const clipChild = child as ClipJson;
-      const duration = ticksFromRational(
-        RationalSchema.parse(clipChild.source_range.duration),
-      );
-      const sourceStart = ticksFromRational(
-        RationalSchema.parse(clipChild.source_range.start_time),
-      );
+      const range = rangeOf(clipChild, "clip");
+      const duration = ticksFrom(range.duration);
+      const sourceStart = ticksFrom(range.start_time);
       const startTicks = clipChild.metadata?.yamakan_timeline_start
         ? Number(clipChild.metadata.yamakan_timeline_start)
         : timelineCursor;
@@ -301,12 +421,8 @@ export function fromOtio(
         else if (url.startsWith("yamakan:asset:")) {
           const id = url.slice("yamakan:asset:".length);
           if (byId.has(id)) assetId = id;
-        } else if (
-          url.startsWith("http://") ||
-          url.startsWith("https://") ||
-          url.startsWith("file:")
-        ) {
-          // Hostile: never open. Leave unresolved.
+        } else if (url) {
+          // A web address, a host path or anything else: never opened.
           remoteUrlIgnored = true;
         }
       }
@@ -381,7 +497,10 @@ export function fromOtio(
       timelineCursor = startTicks + duration;
     }
   }
-  return { name, clips, unresolved };
+  const ignored = [...ignoredBySchema]
+    .map(([schema, count]) => ({ schema, count }))
+    .sort((a, b) => a.schema.localeCompare(b.schema));
+  return { name, clips, unresolved, ignored };
 }
 
 export function otioJson(project: CanonicalProject): string {
