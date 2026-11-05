@@ -1160,15 +1160,10 @@ function App() {
               : null;
             const from =
               clip && track?.kind === "video" ? dissolveSource(p, clip) : null;
-            if (!clip || !from)
+            if (!clip || (!from && !clip.transition))
               return <p className="hint">{t("clip.dissolve.none")}</p>;
-            const apply = (frames: number | null) => {
-              try {
-                edit((proj) => setClipDissolve(proj, clip.id, frames));
-              } catch (e) {
-                setMessage(e instanceof Error ? e.message : String(e));
-              }
-            };
+            const apply = (frames: number | null) =>
+              edit((proj) => setClipDissolve(proj, clip.id, frames));
             const length = clip.transition?.durationFrames ?? 12;
             return (
               <div
@@ -1195,7 +1190,8 @@ function App() {
                       "input",
                     ) as HTMLInputElement;
                     const frames = Number(input.value);
-                    if (Number.isInteger(frames)) apply(frames);
+                    if (Number.isInteger(frames) && frames >= 2) apply(frames);
+                    else setMessage(msg("clip.dissolve.length"));
                   }}
                 >
                   {t("clip.dissolve.apply")}

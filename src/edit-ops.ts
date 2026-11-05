@@ -84,25 +84,44 @@ export function setClipDissolve(
   clipId: string,
   frames: number | null,
 ): Project {
+  // Directly, so that removing one always works, even from a project a command
+  // left with a dissolve that no longer draws.
   if (frames === null)
-    return applyLocal(p, [
-      { type: "clip.setTransition", clipId, transition: null },
-    ]);
+    return {
+      ...p,
+      clips: p.clips.map((c) => {
+        if (c.id !== clipId) return c;
+        const { transition: _transition, ...rest } = c;
+        return rest;
+      }),
+    };
   const clip = p.clips.find((c) => c.id === clipId);
   const previous = clip && dissolveSource(p, clip);
   if (!previous) return p;
-  return applyLocal(p, [
-    {
-      type: "clip.setTransition",
-      clipId,
-      transition: {
-        kind: "dissolve",
-        fromClipId: previous.id,
-        durationTicks: framesToTicks(frames, frameRateOf(p)),
-        audio: "equalPower",
+  return plainly(() =>
+    applyLocal(p, [
+      {
+        type: "clip.setTransition",
+        clipId,
+        transition: {
+          kind: "dissolve",
+          fromClipId: previous.id,
+          durationTicks: framesToTicks(frames, frameRateOf(p)),
+          audio: clip?.transition?.audio ?? "equalPower",
+        },
       },
-    },
-  ]);
+    ]),
+  );
+}
+
+// A validation's own reason, as a person reads it, rather than its issue list.
+function plainly<T>(run: () => T): T {
+  try {
+    return run();
+  } catch (e) {
+    const issue = (e as { issues?: { message?: string }[] }).issues?.[0];
+    throw issue?.message ? new Error(issue.message) : e;
+  }
 }
 
 // The clip a dissolve into this one would come from.
@@ -252,7 +271,7 @@ export function groupMoveClips(
 // Applies drag and trim updates from the timeline component. Clips on locked
 // tracks are not moved; fades are clamped to the new duration.
 export function updateClips(p: Project, updates: TimelineClip[]): Project {
-  return {
+  const next = {
     ...p,
     clips: updates.reduce((clips, c) => {
       const existing = clips.find((x) => x.id === c.id);
@@ -274,8 +293,10 @@ export function updateClips(p: Project, updates: TimelineClip[]): Project {
         old.fadeInFrames ?? 0,
         old.fadeOutFrames ?? 0,
       );
+      // A new clip copied from this one does not follow what this one follows.
+      const { transition: _transition, ...untransitioned } = old;
       const converted: Clip = {
-        ...old,
+        ...(existing ? old : untransitioned),
         id: c.id,
         trackId: c.trackId,
         startFrame: Math.max(0, Math.round(c.start * fps)),
@@ -295,4 +316,8 @@ export function updateClips(p: Project, updates: TimelineClip[]): Project {
         : [...clips, converted];
     }, p.clips),
   };
+  // An edit that would break a dissolve is refused here, with its reason, rather
+  // than found at the commit with no way forward.
+  if (next.clips.some((c) => c.transition)) plainly(() => fromEditView(next));
+  return next;
 }

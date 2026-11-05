@@ -155,6 +155,8 @@ const en = {
   "clip.dissolve.none":
     "Select a clip on a video track that starts where another clip ends.",
   "clip.dissolve.frames": "Length (frames, an even number)",
+  "clip.dissolve.length":
+    "A dissolve lasts a whole, even number of frames, at least 2.",
   "clip.dissolve.apply": "Set dissolve",
   "clip.dissolve.remove": "Remove dissolve",
   "clip.transform.heading": "Transform",
@@ -474,6 +476,8 @@ const ar: Record<MessageKey, string> = {
   "clip.dissolve.heading": "مزج انتقالي",
   "clip.dissolve.none": "حدد مقطعًا على مسار فيديو يبدأ حيث ينتهي مقطع آخر.",
   "clip.dissolve.frames": "الطول (بالإطارات، عدد زوجي)",
+  "clip.dissolve.length":
+    "يستمر المزج عددًا زوجيًا صحيحًا من الإطارات، 2 على الأقل.",
   "clip.dissolve.apply": "ضبط المزج",
   "clip.dissolve.remove": "إزالة المزج",
   "clip.transform.heading": "التحويل",

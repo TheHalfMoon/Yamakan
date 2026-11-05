@@ -268,7 +268,7 @@ try {
     // The export as the service published it, in the workspace.
     const exported = readdirSync(join(root, "workspace"), { recursive: true })
       .map(String)
-      .find((f) => f.includes(job.id) && f.endsWith(".mp4"));
+      .find((f) => f.replaceAll("\\", "/").endsWith(finished.artifact));
     assert.ok(exported, "the export is in the workspace");
     const raw = execFileSync(
       mediaTools().ffmpeg,
@@ -293,6 +293,12 @@ try {
     assert.equal(raw.length / 3, 120, "the timeline's length is unchanged");
     assert.ok(near(pixel(30), [254, 0, 0]), `before: ${pixel(30)}`);
     assert.ok(near(pixel(100), [0, 0, 254]), `after: ${pixel(100)}`);
+    // 24 frames centred on frame 60: red up to 48, blue from 72, and in between
+    // the mix follows the frame, which a shorter or longer dissolve would not.
+    assert.ok(near(pixel(47), [254, 0, 0]), `frame 47: ${pixel(47)}`);
+    assert.ok(near(pixel(72), [0, 0, 254]), `frame 72: ${pixel(72)}`);
+    assert.ok(pixel(54)[0] > pixel(54)[2] + 80, `frame 54: ${pixel(54)}`);
+    assert.ok(pixel(66)[2] > pixel(66)[0] + 80, `frame 66: ${pixel(66)}`);
     const middle = pixel(60);
     assert.ok(
       middle[0] > 70 && middle[0] < 190 && middle[2] > 70 && middle[2] < 190,
@@ -312,14 +318,53 @@ try {
       () => dissolveOf(byKeys.id),
       (t) => t === null,
     );
+    await page.getByTestId("tl-clip-dissolve").waitFor({ state: "detached" });
     await redoButton.click();
     await until(
       () => dissolveOf(byKeys.id),
       (t) => t?.durationFrames === 24,
     );
+    await page.getByTestId("tl-clip-dissolve").waitFor();
     await openProject(byKeys.name);
     assert.equal(await frames.inputValue(), "24");
     assert.equal(await page.getByTestId("tl-clip-dissolve").innerText(), "24f");
+
+    // An edit that would break it is refused when made, with the reason, and the
+    // service is left as it was.
+    const status = page.locator('[role="status"].status');
+    const held = await canonical(byKeys.id);
+    await page.locator(`[data-clip-id="${ids.b}"]`).focus();
+    await page.keyboard.press("Alt+ArrowRight");
+    await page.waitForFunction(() =>
+      /transition/i.test(
+        document.querySelector('[role="status"].status')?.textContent ?? "",
+      ),
+    );
+    const refused = await status.innerText();
+    assert.match(refused, /^A transition needs/);
+    await page.waitForTimeout(800);
+    assert.equal(await canonical(byKeys.id), held);
+    step(`${label}: an edit that would break the dissolve is refused`, {
+      refused,
+    });
+
+    // A duplicate does not carry it: it follows nothing.
+    await page.keyboard.press("Control+d");
+    await until(
+      async () => JSON.parse(await canonical(byKeys.id)).length,
+      (n) => n === 3,
+    );
+    assert.equal(
+      JSON.parse(await canonical(byKeys.id)).filter((c) => c.transition).length,
+      1,
+    );
+    step(`${label}: a duplicate does not carry the dissolve`);
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await until(
+      async () => JSON.parse(await canonical(byKeys.id)).length,
+      (n) => n === 2,
+    );
+    await page.locator(`[data-clip-id="${ids.b}"]`).focus();
     await page.getByTestId("clip-dissolve-remove").click();
     await until(
       () => dissolveOf(byKeys.id),
@@ -328,15 +373,25 @@ try {
     await page.getByTestId("tl-clip-dissolve").waitFor({ state: "detached" });
     step(`${label}: undo, redo, a reopen and removal all hold`);
 
-    // Refusals: an odd length, and more source than the clip has.
-    const status = page.locator('[role="status"].status');
+    // Refusals: an odd length, and no length at all.
     await frames.fill("13");
     await applyButton.click();
     await page.waitForTimeout(800);
     const odd = await status.innerText();
-    assert.match(odd, /even|frames/i);
+    assert.match(odd, /A transition lasts an even number/);
+    assert.doesNotMatch(odd, /"code"/);
     assert.equal(await dissolveOf(byKeys.id), null);
-    step(`${label}: an odd length is refused, with the reason`, { odd });
+    await frames.fill("");
+    await applyButton.click();
+    await page.waitForFunction(() =>
+      /whole, even number/.test(
+        document.querySelector('[role="status"].status')?.textContent ?? "",
+      ),
+    );
+    assert.equal(await dissolveOf(byKeys.id), null);
+    step(`${label}: an odd or empty length is refused, with the reason`, {
+      odd,
+    });
 
     // The first clip has no previous clip, so it offers no dissolve.
     await page.locator(`[data-clip-id="${ids.a}"]`).focus();

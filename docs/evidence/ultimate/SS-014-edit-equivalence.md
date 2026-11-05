@@ -49,6 +49,10 @@ A person could not set a crossfade in the browser at all. The clip inspector now
 | An odd length                                     | Refused with the reason on screen, and nothing stored                                                |
 | A clip with nothing before it                     | Offers no dissolve                                                                                   |
 
+A review found that an edit breaking a dissolve was not refused when made, and led to a dead end with a false "kept as a draft" message, and that a duplicate copied the transition. Both are fixed: such an edit is refused at once, naming the reason, a duplicate follows nothing, and Remove always works. The export is now checked at frames 47, 54, 60, 66 and 72, so a dissolve of another length would fail.
+
+In this qualifier, "by mouse" selects the clip with a programmatic focus and only clicks **Set dissolve**. Both paths run the same handler, so their equality shows little beyond that. Reaching the panel from the timeline by Tab, equal-power audio, and the canvas preview, which shows a cut and says so, were not run.
+
 **Not done for crossfade:** it cannot be dragged on the timeline, as the card's "pointer" sequence might mean; pointer here is clicking the inspector. Too long a dissolve for the source, and a locked track, were not run in the browser, though the operation refuses them by its existing tests. The Arabic text has had no native review (X-01). The reference preview was not compared at the cut here; existing tests in `tests/transitions.test.ts` cover its parity with export.
 
 ## Not done
