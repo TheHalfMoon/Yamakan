@@ -2,8 +2,10 @@
 
 Pinned to one model revision. It writes the video and a receipt to the working
 folder: versions, GPU, memory, timings, and the video's hash and decoded frame
-count. A run counts only if the receipt says so, and every frame decoded differs
-from a solid image. It uses no token or secret, and its weights never leave Kaggle.
+count. `verified` is a rough check of frame count, contrast in the first frame and
+change between frames. Noise would pass it, and it says nothing about the prompt, so
+real inference rests on this code path and the log, and fit to the prompt on looking.
+It uses no token or secret, and its weights never leave Kaggle.
 """
 import hashlib
 import json

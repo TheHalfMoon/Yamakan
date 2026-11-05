@@ -5,6 +5,7 @@
  * brought in as a file: this says nothing about generating inside Yamakan.
  *
  * Usage: node scripts/qualify-ai-video.mjs <video.mp4> <sha256> [receipt.json]
+ * With a receipt path, the export is also kept beside it, so keep that outside git.
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
@@ -93,7 +94,7 @@ try {
   const bytes = await readFile(video);
   const sha = createHash("sha256").update(bytes).digest("hex");
   assert.equal(sha, expected, "the file is the one the receipt names");
-  step("the file matches the hash its receipt gives", { sha256: sha });
+  step("the file matches the hash given for it", { sha256: sha });
 
   await new Promise((ready, reject) => {
     const timer = setTimeout(
@@ -231,15 +232,16 @@ try {
   const source = small(video);
   // A 3:2 video in a 16:9 project: 1080x720 of picture between black bars.
   const result = small(out, "crop=1080:720:100:0,scale=64:36");
-  const bars = small(out, "crop=100:720:0:0,scale=64:36");
   let brightest = 0;
-  for (const value of bars) brightest = Math.max(brightest, value);
+  for (const x of [0, 1180])
+    for (const value of small(out, `crop=100:720:${x}:0`))
+      brightest = Math.max(brightest, value);
   assert.ok(brightest < 24, `the bars reach ${brightest}`);
   const count = result.length / FRAME;
   assert.equal(count, frames, "every frame came through");
   const differences = [];
   // Each source frame against an export frame from the middle of where it shows.
-  for (let n = 0; n < Math.floor((frames * 8) / 30); n++)
+  for (let n = 0; n < sourceFrames; n++)
     differences.push(
       difference(
         frameOf(source, n),
