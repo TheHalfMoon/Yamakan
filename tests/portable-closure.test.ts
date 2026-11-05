@@ -15,6 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../core/store.ts";
+import { RESTORE_UNFINISHED } from "../core/paths.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes, type Scope } from "../core/command/registry.ts";
 import { mediaTools } from "../core/process/workers.ts";
@@ -297,4 +298,25 @@ test("a refused restore leaves no folder and the original as it was, and the bac
   await writeFile(database, good);
   const restored = await restoreWorkspace(dir, path.join(home, "restored-2"));
   assert.equal(restored.closure.gaps, 0);
+});
+
+test("a folder a restore did not finish refuses to open, and a finished one does not", async () => {
+  const home = await temp("yamakan-closure-unfinished-");
+  const root = await temp("yamakan-closure-root-");
+  const p = await project(root);
+  const backup = await backupWorkspace(p.store, home);
+  const restored = await restoreWorkspace(
+    path.join(home, "backups", backup.backupId),
+    path.join(home, "restored"),
+  );
+  assert.ok(
+    !(await readdir(restored.root)).includes(RESTORE_UNFINISHED),
+    "a finished restore carries no mark",
+  );
+  const unfinished = await temp("yamakan-closure-partial-");
+  await writeFile(path.join(unfinished, RESTORE_UNFINISHED), "");
+  await assert.rejects(new ProjectStore(unfinished).initialize(), {
+    code: "RECOVERY_REQUIRED",
+  });
+  assert.deepEqual(await readdir(unfinished), [RESTORE_UNFINISHED]);
 });

@@ -25,6 +25,9 @@ export async function safePath(
   }
   return target;
 }
+// Present while a restore is writing a folder, and gone once it has finished.
+export const RESTORE_UNFINISHED = "restore.unfinished";
+
 export async function initializeRoot(root: string): Promise<string> {
   const absolute = path.resolve(root);
   await safePath(absolute);
