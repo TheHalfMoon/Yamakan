@@ -14,6 +14,8 @@ interface TimelineProps {
   activeTrackId: string | null;
   playheadPosition: number;
   isSnappingEnabled: boolean;
+  /** One frame of the project, the keyboard's smallest step. */
+  frameSeconds?: number;
   trimMode: 'normal' | 'ripple' | 'roll' | 'slip' | 'slide';
   onTrimModeChange?: (mode: 'normal' | 'ripple' | 'roll' | 'slip' | 'slide') => void;
   /** Program in/out marks, drawn on the ruler. */
@@ -86,6 +88,7 @@ const Timeline: React.FC<TimelineProps> = (props) => {
     activeTrackId,
     playheadPosition,
     isSnappingEnabled,
+    frameSeconds = 1 / 30,
     trimMode,
     onTrimModeChange,
     onSelectClip,
@@ -181,6 +184,67 @@ const Timeline: React.FC<TimelineProps> = (props) => {
       sourceOut,
       duration: Math.max(MIN_CLIP_DURATION * speed, sourceOut - sourceIn),
     };
+  };
+
+  // A trim and a move, shared by the pointer and the keyboard so the same change
+  // gives the same clips.
+  const normalTrim = (
+    allClips: TimelineClip[],
+    clip: TimelineClip,
+    handle: 'start' | 'end',
+    deltaTime: number,
+  ) => {
+    const working = allClips.map((entry) => ({ ...entry }));
+    const index = working.findIndex((entry) => entry.id === clip.id);
+    if (index < 0) return working;
+    const activeClip = normalizeClip({ ...working[index] });
+    const mediaDuration = getMediaDuration(activeClip.mediaId, activeClip.duration || 5);
+    const speed = Math.max(0.05, activeClip.speed || 1);
+    const sourceIn = activeClip.sourceIn ?? 0;
+    const sourceOut = activeClip.sourceOut ?? (sourceIn + activeClip.duration);
+    const { previous, next } = getAdjacentClips(allClips, clip);
+    if (handle === 'start') {
+      const minByNeighbor = previous ? previous.end : 0;
+      const minBySource = clip.start - sourceIn / speed;
+      const maxByDuration = clip.end - MIN_CLIP_DURATION;
+      const proposedStart = clamp(clip.start + deltaTime, Math.max(minByNeighbor, minBySource), maxByDuration);
+      const appliedDelta = proposedStart - clip.start;
+      working[index] = normalizeClip({
+        ...activeClip,
+        start: proposedStart,
+        sourceIn: sourceIn + appliedDelta * speed,
+      });
+    } else {
+      const maxByNeighbor = next ? next.start : Number.POSITIVE_INFINITY;
+      const maxBySource = clip.end + (mediaDuration - sourceOut) / speed;
+      const minByDuration = clip.start + MIN_CLIP_DURATION;
+      const proposedEnd = clamp(clip.end + deltaTime, minByDuration, Math.min(maxByNeighbor, maxBySource));
+      const appliedDelta = proposedEnd - clip.end;
+      working[index] = normalizeClip({
+        ...activeClip,
+        end: proposedEnd,
+        sourceOut: sourceOut + appliedDelta * speed,
+      });
+    }
+    return working;
+  };
+
+  const movedClips = (
+    allClips: TimelineClip[],
+    clip: TimelineClip,
+    newStart: number,
+    trackId: string,
+  ) => {
+    const working = allClips.map((entry) => ({ ...entry }));
+    const index = working.findIndex((entry) => entry.id === clip.id);
+    if (index < 0) return working;
+    working[index] = normalizeClip({
+      ...working[index],
+      start: newStart,
+      end: newStart + (clip.end - clip.start),
+      trackId,
+    });
+    return working;
   };
 
   const getTrackClips = (allClips: TimelineClip[], trackId: string) =>
@@ -548,29 +612,13 @@ const Timeline: React.FC<TimelineProps> = (props) => {
             });
           }
         } else {
-          if (handle === 'start') {
-            const minByNeighbor = previous ? previous.end : 0;
-            const minBySource = initialClip.start - sourceIn / speed;
-            const maxByDuration = initialClip.end - MIN_CLIP_DURATION;
-            const proposedStart = clamp(initialClip.start + deltaTime, Math.max(minByNeighbor, minBySource), maxByDuration);
-            const appliedDelta = proposedStart - initialClip.start;
-            setActiveClip({
-              ...activeClip,
-              start: proposedStart,
-              sourceIn: sourceIn + appliedDelta * speed,
-            });
-          } else {
-            const maxByNeighbor = next ? next.start : Number.POSITIVE_INFINITY;
-            const maxBySource = initialClip.end + (mediaDuration - sourceOut) / speed;
-            const minByDuration = initialClip.start + MIN_CLIP_DURATION;
-            const proposedEnd = clamp(initialClip.end + deltaTime, minByDuration, Math.min(maxByNeighbor, maxBySource));
-            const appliedDelta = proposedEnd - initialClip.end;
-            setActiveClip({
-              ...activeClip,
-              end: proposedEnd,
-              sourceOut: sourceOut + appliedDelta * speed,
-            });
-          }
+          applyClipSet(
+            resolveTrackCollisions(
+              normalTrim(initialClips, initialClip, handle, deltaTime),
+              initialClip.trackId,
+            ),
+          );
+          return;
         }
 
         applyClipSet(resolveTrackCollisions(working, initialClip.trackId));
@@ -632,17 +680,7 @@ const Timeline: React.FC<TimelineProps> = (props) => {
           }
         }
 
-        const working = initialClips.map((clip) => ({ ...clip }));
-        const clipIndex = working.findIndex((clip) => clip.id === initialClip.id);
-        if (clipIndex < 0) return;
-        const clipLength = initialClip.end - initialClip.start;
-        working[clipIndex] = normalizeClip({
-          ...working[clipIndex],
-          start: newStart,
-          end: newStart + clipLength,
-          trackId: newTrackId,
-        });
-
+        const working = movedClips(initialClips, initialClip, newStart, newTrackId);
         let resolved = resolveTrackCollisions(working, newTrackId);
         if (newTrackId !== initialClip.trackId) {
           resolved = resolveTrackCollisions(resolved, initialClip.trackId);
@@ -807,13 +845,62 @@ const Timeline: React.FC<TimelineProps> = (props) => {
         else if (key === 'd' && selected) { event.preventDefault(); duplicateClip(selected); }
         return;
       }
+      // The editing keys act only with focus in this timeline: it stays mounted,
+      // hidden, in other workspaces, and those keys mean other things elsewhere.
+      // By physical key, so they work on an Arabic layout too, and time runs left
+      // to right in every language, so the arrows do as well.
+      if (target?.closest?.('.tl-root') && !event.ctrlKey && !event.metaKey) {
+        if (event.code === 'KeyN' && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!event.repeat) onSnappingToggle();
+          return;
+        }
+        const editing = selected && !tracks.find((track) => track.id === selected.trackId)?.isLocked;
+        const arrow = event.code === 'ArrowRight' ? 1 : event.code === 'ArrowLeft' ? -1 : 0;
+        if (selected && arrow && event.shiftKey !== event.altKey) {
+          event.preventDefault();
+          if (!editing) return;
+          const delta = arrow * frameSeconds;
+          const next = event.shiftKey
+            ? normalTrim(clips, selected, 'end', delta)
+            : movedClips(clips, selected, Math.max(0, selected.start + delta), selected.trackId);
+          applyClipSet(resolveTrackCollisions(next, selected.trackId));
+          return;
+        }
+        // Comma and period, as Alt+Shift switches the keyboard language on Windows.
+        const startStep = event.code === 'Comma' ? -1 : event.code === 'Period' ? 1 : 0;
+        if (selected && startStep && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!editing) return;
+          applyClipSet(
+            resolveTrackCollisions(
+              normalTrim(clips, selected, 'start', startStep * frameSeconds),
+              selected.trackId,
+            ),
+          );
+          return;
+        }
+        // The clip's edge to the playhead, as a pointer snap to it does. A playhead
+        // on the far side of the clip would collapse it, so that does nothing.
+        if (selected && (event.code === 'BracketLeft' || event.code === 'BracketRight') && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          if (!editing) return;
+          const handle = event.code === 'BracketLeft' ? 'start' : 'end';
+          if (handle === 'start' ? playheadPosition >= selected.end : playheadPosition <= selected.start) return;
+          const edge = handle === 'start' ? selected.start : selected.end;
+          applyClipSet(
+            resolveTrackCollisions(normalTrim(clips, selected, handle, playheadPosition - edge), selected.trackId),
+          );
+          return;
+        }
+      }
       if (event.altKey) return;
       if (event.key === 'ArrowUp') { event.preventDefault(); goToEditPoint(-1); }
       else if (event.key === 'ArrowDown') { event.preventDefault(); goToEditPoint(1); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [clips, selectedClipId, copyClip, pasteClip, duplicateClip, goToEditPoint, onDeleteClip]);
+  }, [clips, tracks, selectedClipId, playheadPosition, frameSeconds, onSnappingToggle, copyClip, pasteClip, duplicateClip, goToEditPoint, onDeleteClip]);
 
   useEffect(() => {
     if (!clipMenu) return;
@@ -954,7 +1041,7 @@ const Timeline: React.FC<TimelineProps> = (props) => {
   const tracksHeight = tracks.length * rowHeight;
 
   return (
-    <div className="tl-root select-none">
+    <div className="tl-root select-none" tabIndex={-1}>
       {/* Header: trim modes · timecode · tools */}
       <div className="tl-header">
         <div className="tl-header__group">
@@ -1238,6 +1325,13 @@ const Timeline: React.FC<TimelineProps> = (props) => {
                       return (
                         <div
                           key={clip.id}
+                          tabIndex={0}
+                          data-clip-id={clip.id}
+                          aria-label={`Clip ${getMediaForItem(clip.mediaId)?.name ?? clip.id}`}
+                          onFocus={() => {
+                            if (clip.id !== selectedClipId) onSelectClip(clip.id);
+                            onSetActiveTrack(clip.trackId);
+                          }}
                           onMouseDown={(e) => { if (e.button === 2) return; handleClipMouseDown(e, clip); }}
                           onContextMenu={(e) => openClipMenu(e, clip)}
                           onMouseEnter={() => setHoveredClipId(clip.id)}
