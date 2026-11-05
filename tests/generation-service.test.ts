@@ -455,6 +455,57 @@ test("a still whose consent has expired is refused, as placing it would not be",
   assert.equal(state.submitted.length, 1);
 });
 
+test("when consents tie, a revoked one still refuses, and a newer renewal frees it", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const first = await consented(f, still.id, still.hash);
+  const second = await consented(f, still.id, still.hash);
+  const request = ask(f.projectId, {
+    recipe: stillRecipe,
+    firstFrameAssetId: still.id,
+  });
+  // Older revoked, newer standing: the renewal decides.
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: first });
+  await g.start(request);
+  assert.equal(state.submitted.length, 1);
+  // The same moment on the clock: the revoked one counts, in either order.
+  f.store.read((db) =>
+    db.prepare("UPDATE likeness_consents SET granted_at = 1000").run(),
+  );
+  assert.equal(await code(g.start(request)), "VALIDATION");
+  assert.equal(state.submitted.length, 1);
+  void second;
+});
+
+test("a consent ending during the upload gives the consent reason", async () => {
+  const f = await fixture();
+  const { adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  // As the real adapter answers: the failed read becomes a plain refusal.
+  adapter.submit = async () => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    return { refused: "INVALID_REQUEST" };
+  };
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    (e: Error) => /revoked/i.test(e.message),
+  );
+});
+
 test("consent revoked during the download stops the import", async () => {
   const f = await fixture();
   const { state, adapter } = engine(f.video);

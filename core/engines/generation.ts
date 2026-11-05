@@ -268,11 +268,18 @@ export function createGenerationService(options: {
           },
         },
       );
-      if ("refused" in answer)
+      if ("refused" in answer) {
+        // An upload refused because consent ended says that, not a general reason.
+        permitted(
+          (inputs as unknown as { asset: AssetRef }[]).map(
+            (i) => i.asset.sha256,
+          ),
+        );
         throw new CommandError(
           "CAPABILITY_UNAVAILABLE",
           engineReasonMessage(answer.refused),
         );
+      }
       generations.set(id, {
         projectId: request.projectId,
         executionRef: answer.executionRef,

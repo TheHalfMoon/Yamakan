@@ -377,7 +377,9 @@ export function assertLinkedMediaNotRevoked(
  * Whether media a person's pack links may go to an engine now. Making something
  * new from a likeness needs more than placing what exists: every character's newest
  * linked consent must be usable now for generating (purpose, expiry, revocation,
- * restore epoch), and one that cannot be found refuses. Media no pack links passes:
+ * restore epoch), and a character with none that can be found refuses. Only a
+ * person's image media reaches this: a voice entry's purpose differs, and would
+ * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
  */
 export function assertLinkedMediaGeneratable(
@@ -414,13 +416,16 @@ export function assertLinkedMediaGeneratable(
         (granted.get(id) as { granted_at: number } | undefined)?.granted_at ??
         -1,
     }));
-    const newest = order.reduce((x, y) => (y.at > x.at ? y : x));
-    // Refuses a revoked, expired, wrong-purpose, unrevalidated or missing consent.
-    assertConsentUsable(db, newest.id, {
-      characterId,
-      purpose: REFERENCE_CONSENT_PURPOSE,
-      nowMs,
-    });
+    const latest = Math.max(...order.map((o) => o.at));
+    // Refuses a revoked, expired, wrong-purpose or unrevalidated consent. On a tie
+    // every one must pass, so a clock cannot free the media.
+    for (const { id, at } of order)
+      if (at === latest)
+        assertConsentUsable(db, id, {
+          characterId,
+          purpose: REFERENCE_CONSENT_PURPOSE,
+          nowMs,
+        });
   }
 }
 
