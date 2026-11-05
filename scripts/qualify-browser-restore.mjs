@@ -509,7 +509,7 @@ try {
   }
   assert.deepEqual(tree(workspace), before, "kills leave the original alone");
   assert.ok(
-    // A refusal seen on a folder holding copied content, beyond the mark itself.
+    // A refusal seen on a folder holding something beyond the mark itself.
     kills.some((k) => k.serverRefused && k.left.length > 1),
     `no kill landed during a restore: ${JSON.stringify(kills)}`,
   );

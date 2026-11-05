@@ -36,7 +36,9 @@ export async function isUnfinishedRestore(root: string) {
     );
   if (!(await here(RESTORE_UNFINISHED))) return false;
   if (!(await here("restore.json"))) return true;
-  await rm(path.join(root, RESTORE_UNFINISHED), { force: true });
+  await rm(path.join(root, RESTORE_UNFINISHED), { force: true }).catch(
+    () => {},
+  );
   return false;
 }
 

@@ -1023,8 +1023,9 @@ async function restore(
             recursive: true,
             force: true,
           }).catch(() => {});
-      const left = await readdir(root).catch(() => [] as string[]);
-      if (!left.some((name) => name !== RESTORE_UNFINISHED))
+      // A folder that cannot be read keeps its mark.
+      const left = await readdir(root).catch(() => null);
+      if (left && !left.some((name) => name !== RESTORE_UNFINISHED))
         await (
           existed
             ? rm(path.join(root, RESTORE_UNFINISHED), { force: true })

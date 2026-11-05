@@ -65,7 +65,7 @@ The original's unchanged state holds largely by construction, since a restore is
 
 **A restore killed partway found a real defect, now fixed.** A process killed while copying left a folder that opened as a normal workspace with zero or one projects and no warning, so a person following the message could believe their work was gone, or work in a broken copy. A restore now marks its folder `restore.unfinished` first and clears the mark last, and `restore.json` is what commits it. A marked folder without that file refuses to open, and Yamakan exits saying so and naming the folder. On a failed restore the mark goes last, and only with nothing else left.
 
-Kills are timed from the folder appearing. The qualifier fails unless Yamakan itself, started on a folder holding copied content, refuses it. An earlier version of this check used fixed delays and landed no kill during a copy at all, so it proved nothing. The original's project files and canonical project were unchanged afterwards, and the same backup restored.
+Kills are timed from the folder appearing. The qualifier fails unless Yamakan itself, started on a folder holding more than the mark, refuses it. An earlier version of this check used fixed delays and landed no kill during a copy at all, so it proved nothing. The original's project files and canonical project were unchanged afterwards, and the same backup restored.
 
 ## Not done
 
