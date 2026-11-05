@@ -136,3 +136,10 @@ Approval line in the packet's format:
 - **Decided:** Yamakan does not own ComfyUI's process, and its worker sandbox is not widened. A person starts ComfyUI, and Yamakan uses only a copy reporting a safe start.
 - **Accepted with it:** such a copy has no Yamakan sandbox or memory limit, Yamakan cannot stop it or confirm it stopped, and the reported arguments are ComfyUI's own word.
 - **Unchanged:** nothing is enabled by this. Each model still needs its own weight, rights and resource authority and a reviewed protocol.
+
+## 2026-11-05: Temporary integration, and a statement about copying ComfyUI
+
+- **Source and form:** a pasted "Founder decision clarification" with no words of the founder's own, then, asked whether it was theirs, the founder wrote: "i have full legal permission to copy and re name ComfyUI. follow the plan." The builder reads "the plan" as that clarification.
+- **Recorded from the clarification:** a person starting ComfyUI is a temporary, user-controlled integration, not the final architecture. Build real read-only health checks, then the generation workflow with explicit user initiation, progress, result import and failure handling. Do not automatically start ComfyUI, download models, install custom nodes or execute arbitrary workflows under this authorization. Design a future Managed ComfyUI Mode, subject to separate security qualification and approval. Prioritize a first real AI-generated video on the timeline, then verify rendering and export.
+- **The copying statement is the founder's, and its basis was not seen.** Asked what it rests on, the founder wrote: "full legal permission , i cant share it with you". ComfyUI's licence in the copy inspected is GPL-3.0, and any copy keeps those notices, the only terms the builder can see. No ComfyUI code has been copied or renamed, and the current path does not need it. If it comes to that, it belongs to Managed Mode, with its licence terms recorded first.
+- **Unchanged:** local-first privacy, consent, model licensing, frozen resource limits, spending zero, release NO-GO.

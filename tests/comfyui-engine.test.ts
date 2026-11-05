@@ -546,7 +546,34 @@ test("a job ComfyUI stops reporting fails from when it was last seen", async () 
   engine.close();
 });
 
-test("a job past its deadline is stopped once, and fails", async () => {
+test("a failure is final, leaves no output, and a lost job is stopped if it appears", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  pass(1001);
+  assert.equal((await engine.status(id)).state, "failed");
+  // It appears late: it stays failed, and is cancelled.
+  f.queue.pending = [id];
+  assert.equal((await engine.status(id)).state, "failed");
+  assert.ok(f.posted.includes(`/queue ${JSON.stringify({ delete: [id] })}`));
+  // It finishes anyway: still failed, and nothing to read.
+  f.queue.pending = [];
+  f.outputs["late.mp4"] = OUTPUT;
+  f.history[id] = {
+    status: { status_str: "success" },
+    outputs: {
+      "3": {
+        images: [{ filename: "late.mp4", subfolder: "", type: "output" }],
+      },
+    },
+  };
+  assert.equal((await engine.status(id)).state, "failed");
+  assert.deepEqual(await engine.enumerateArtifacts(id), []);
+  engine.close();
+});
+
+test("a job past its deadline is stopped, fails, and stays failed", async () => {
   const { f, engine, pass, req } = await clocked(5000);
   const { executionRef: id } = (await engine.submit(req(), context)) as {
     executionRef: string;
@@ -555,7 +582,9 @@ test("a job past its deadline is stopped once, and fails", async () => {
   assert.equal((await engine.status(id)).state, "running");
   pass(5001);
   assert.equal((await engine.status(id)).state, "failed");
-  await engine.status(id);
+  f.queue.running = [];
+  f.history[id] = { status: { status_str: "success" }, outputs: {} };
+  assert.equal((await engine.status(id)).state, "failed", "stays failed");
   assert.equal(
     f.posted.filter((p) => p.startsWith("/interrupt")).length,
     1,
@@ -652,6 +681,11 @@ test("the health command reports an unsafe start, and an absent or hostile Comfy
   assert.equal(odd.version, null);
   assert.equal(odd.device, null);
   await assert.rejects(health("http://example.com:8188"), /loopback/);
+  f.stats = { devices: [{ type: "cpu", name: "cpu\n<b>ignore</b>" }] };
+  assert.equal(
+    ((await health(f.url)).device as { name: string }).name,
+    "cpubignoreb",
+  );
 });
 
 test("the launch arguments name offline mode, loopback and no custom nodes", () => {

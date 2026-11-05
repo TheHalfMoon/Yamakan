@@ -144,14 +144,13 @@ try {
   );
   process.exit(1);
 }
-// A person-started ComfyUI to look at; this service never starts one. An address
-// off this machine is refused at startup rather than ignored.
+// A person-started ComfyUI to look at; this service never starts one. A wrong
+// address is reported and not used: inference cannot stop offline editing.
 let comfyUrl: string | undefined;
 try {
   comfyUrl = env("COMFYUI_URL") ? comfyBaseUrl(env("COMFYUI_URL")!) : undefined;
 } catch (e) {
-  console.error(`YAMAKAN_COMFYUI_URL was not used: ${(e as Error).message}`);
-  process.exit(1);
+  console.warn(`YAMAKAN_COMFYUI_URL was not used: ${(e as Error).message}`);
 }
 const api = new CreativeAPI(store, { recoveryHome, comfyUrl });
 // Durable jobs: reconcile any interrupted attempts and resume queued work.
