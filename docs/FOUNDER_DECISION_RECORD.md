@@ -143,3 +143,10 @@ Approval line in the packet's format:
 - **Recorded from the clarification:** a person starting ComfyUI is a temporary, user-controlled integration, not the final architecture. Build real read-only health checks, then the generation workflow with explicit user initiation, progress, result import and failure handling. Do not automatically start ComfyUI, download models, install custom nodes or execute arbitrary workflows under this authorization. Design a future Managed ComfyUI Mode, subject to separate security qualification and approval. Prioritize a first real AI-generated video on the timeline, then verify rendering and export.
 - **The copying statement is the founder's, and its basis was not seen.** Asked what it rests on, the founder wrote: "full legal permission , i cant share it with you". ComfyUI's licence in the copy inspected is GPL-3.0, and any copy keeps those notices, the only terms the builder can see. No ComfyUI code has been copied or renamed, and the current path does not need it. If it comes to that, it belongs to Managed Mode, with its licence terms recorded first.
 - **Unchanged:** local-first privacy, consent, model licensing, frozen resource limits, spending zero, release NO-GO.
+
+## 2026-11-05: Kaggle as the zero-cost GPU environment
+
+- **Source and form:** pasted instructions naming CogVideoX-2B first and Wan2.2-TI2V-5B after, then, asked directly whether the builder may use the founder's Kaggle account to push and run a private notebook, the founder answered "Yes, use Kaggle".
+- **Authorized:** the existing Kaggle CLI and credentials, for private Yamakan notebooks on free GPUs, within quota.
+- **Limits from those instructions:** no model weights on the founder's PC; no credentials, weights or large generated files in the repository; no interference with other notebooks on that account; paid services stay off; no claim of generation until real inference and export are verified.
+- **Unchanged:** nothing here enables a model in Yamakan.
