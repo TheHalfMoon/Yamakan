@@ -110,7 +110,7 @@ export function evaluateEnvironment(input) {
     blockers.push({
       code: "MEDIA_RUNTIME_UNCHECKED",
       status: "BLOCKED",
-      detail: "the media tools could not be resolved, so they were not checked",
+      detail: `the media tools were not checked: ${input.mediaRuntime.issues?.[0]?.detail ?? "their resolver did not load"}`,
     });
   }
   // A tool counts only if it ran and reported a version.

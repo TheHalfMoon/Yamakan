@@ -58,9 +58,9 @@ Still open on this card: launch error 2 stays tracked rather than explained, and
 
 ## A missing dependency is not missing FFmpeg
 
-With `zod` removed, the capture reported FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. Resolving the tools loads `core/process/workers.ts`, which needs `zod`, and any failure there was reported as a bad runtime. A resolver that cannot load now gives `MEDIA_RUNTIME_UNCHECKED` in their place, which still blocks; any other failure to resolve stays `FFMPEG_MISSING`, `FFPROBE_MISSING` and `MEDIA_RUNTIME_INVALID`.
+With `zod` removed, the capture reported FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. Resolving the tools loads `core/process/workers.ts`, which needs `zod`, and any failure there was reported as a bad runtime. A module not found while loading the resolver now gives `MEDIA_RUNTIME_UNCHECKED` in their place, naming the module, which still blocks; any other failure to resolve, including other load failures such as a corrupt package, stays `FFMPEG_MISSING`, `FFPROBE_MISSING` and `MEDIA_RUNTIME_INVALID`.
 
-Real run with `zod` removed from a checkout: exit 2, `BLOCKED`, `DEPENDENCY_MISSING` and `MEDIA_RUNTIME_UNCHECKED`, 8 stages skipped, and the issue names the package. Unit tests cover both branches.
+Real run with `zod` removed from a checkout: exit 2, `BLOCKED`, `DEPENDENCY_MISSING` and `MEDIA_RUNTIME_UNCHECKED`, 8 stages skipped, and the blocker names the package. Local capture SHA-256 `40ef449f9d4f22ccd16bcafbfba93d910d7d1e39d1d7c054f1048fd10f66737d`, from the uncommitted tree just before this commit. Unit tests cover both branches.
 
 ## Impact tools
 

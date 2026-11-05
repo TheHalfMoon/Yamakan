@@ -439,6 +439,7 @@ test("a resolver that cannot load blocks as unchecked, not as missing FFmpeg", (
       blockers.map((b: { code: string }) => b.code),
       ["MEDIA_RUNTIME_UNCHECKED"],
     );
+    assert.match(blockers[0].detail, /Cannot find package 'zod'/);
   }
 });
 
