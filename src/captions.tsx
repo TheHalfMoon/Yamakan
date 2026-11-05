@@ -122,7 +122,7 @@ function CaptionsPanel(props: Props) {
       setDraft(null);
       setError(t("captions.changed"));
     }
-  }, [track?.contentHash]);
+  }, [track?.contentHash, busy]);
   const cues = draft?.cues ?? track?.cues ?? [];
   const drafting = draft !== null;
   const hasDraft = useRef(false);

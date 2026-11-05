@@ -207,6 +207,27 @@ try {
     { timeout: 30_000 },
   );
   await page.evaluate(() => window.__yamakanStudioQ8.setBrushTool());
+  const studioDocuments = await page.evaluate(async () => {
+    const stored = JSON.parse(
+      sessionStorage.getItem("yamakan.session") ?? "null",
+    );
+    const headers = { "Content-Type": "application/json" };
+    if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+    const call = async (operation, parameters) =>
+      (
+        await (
+          await fetch("/api/v1/call", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ apiVersion: 1, operation, parameters }),
+          })
+        ).json()
+      ).result;
+    const [{ id: projectId }] = await call("yamakan.project.list", {});
+    const refs = await call("yamakan.document.list", { projectId });
+    return refs.filter((r) => r.kind === "studio").length;
+  });
+  assert.equal(studioDocuments, 1);
   step("Undo and redo of the first canvas save keep one document");
   await stroke(0);
   const second = await saveCanvas();
