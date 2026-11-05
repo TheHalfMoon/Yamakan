@@ -48,13 +48,43 @@ The full captures predate `6b20577`, which changed `scripts/`; **no capture exis
 
 The tracked `docs/evidence/ultimate/environment.json` is this capture, reformatted by Prettier. The hashes below bind the unformatted local files.
 
-Still open on this card: launch error 2 stays tracked rather than explained, and the negatives listed above still need real results or an explicit decision.
+Still open on this card then: launch error 2 stays tracked rather than explained, and the negatives listed above, since answered below.
 
 | Local file             | SHA-256                                                            |
 | ---------------------- | ------------------------------------------------------------------ |
 | `new-environment.json` | `c978f0d4fa551906a12dc8c82ed440a09b75e50964492a5875f1d4fb6f933168` |
 | `new-test.log`         | `e2e4c2c6a2c5df6a6e4bc8a9fd6c99123ce262bb68fe9fbfdd45974be7fd7c33` |
 | `new-e2e.log`          | `ab2078acf5f08d562cba4ab2af5ec244cd4b806bb364fa23a8ecebba48c70e62` |
+
+## Negatives as real conditions
+
+Run 2026-11-05 at `32187feee193485de17a31b6894b2a16a79aedac`, in a clone made for this run with `GIT_LFS_SKIP_SMUDGE=1` and `npm ci --ignore-scripts`, running `scripts/qualify-ultimate-environment.mjs` for each. No code changed.
+
+| Condition                                                            | Exit | Status    | Blockers                                                                           | Stages           |
+| -------------------------------------------------------------------- | ---- | --------- | ---------------------------------------------------------------------------------- | ---------------- |
+| Media runtime as LFS pointers, as a clone without LFS objects has it | 2    | `BLOCKED` | `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID`                       | 8 skipped, 0 ran |
+| Real runtime, with one DLL one byte longer                           | 2    | `BLOCKED` | The same three                                                                     | 8 skipped, 0 ran |
+| `zod` at a version the lockfile does not pin                         | 2    | `BLOCKED` | `DEPENDENCY_MISSING`                                                               | 8 skipped, 0 ran |
+| `zod` removed                                                        | 2    | `BLOCKED` | `DEPENDENCY_MISSING`, `FFMPEG_MISSING`, `FFPROBE_MISSING`, `MEDIA_RUNTIME_INVALID` | 8 skipped, 0 ran |
+
+The third row is also the control for the second: with the DLL restored, its media blockers are gone. No condition gave `RECORDED` or a pass.
+
+**Friction observed, not changed:** with `zod` removed, the capture also reports FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. The verdict is right; the extra blockers are misleading, and why they appear was not traced.
+
+**The remaining negatives, decided rather than run:**
+
+- **Insufficient disk** stays a unit test. Filling a real drive on this machine to trigger it is not worth the risk to the founder's work, and a small virtual disk would need administrator rights.
+- **Stale manifest:** nothing reads `environment.json` as a verdict; only the qualifier writes it. It records the head it was captured at, so a stale one cannot yield `RECORDED` for later code, because nothing takes it as such. A reader comparing it with `HEAD` must do so by hand.
+- **Unavailable reviewer or backend:** the qualifier does not model these and should not. A review that did not run is recorded as not run in each receipt, as the d1 line below does.
+
+This is a founder's call to overrule. **The card stays open** for a `RECORDED` capture at final code, and launch error 2, tracked and not explained.
+
+| Local file                | SHA-256                                                            |
+| ------------------------- | ------------------------------------------------------------------ |
+| `lfs-pointers.json`       | `99c40ff0e331400ffa440631ab9403ae5ba81a959260b0b6cb90cf778ad2dc73` |
+| `tampered-dll.json`       | `ce1a0669f2fd58fc3f103f233ecbb2a025b95258cfb72ec5b3bae9246598c70d` |
+| `drifted-dependency.json` | `560be454fe1fb22aea920070c3e55f5c75b0252802d290f4d23c42528f2dfc6a` |
+| `missing-dependency.json` | `c43176520699449237f3be76d81167927dfd293fed9266496629b7caeca6e4c6` |
 
 ## Impact tools
 
