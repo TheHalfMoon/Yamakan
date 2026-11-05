@@ -612,6 +612,8 @@ function withinDocumentBudget(
     );
 }
 type Commit = {
+  // Records this commit as a step in the author's undo history.
+  editStepAuthor?: string;
   operation: string;
   projectId: string;
   // null: apply to whatever head is current (commutative appends such as asset import).
@@ -1204,8 +1206,16 @@ export class ProjectStore {
       );
       for (const ref of canonicalNext.documents)
         refDocument.run(hash, ref.contentHash);
+      if (c.editStepAuthor && c.expectedRevision !== null)
+        this.#recordEditStep(
+          db,
+          c.projectId,
+          c.expectedRevision,
+          revision,
+          c.editStepAuthor,
+        );
       // Edits made any other way end the undo history they would invalidate.
-      if (!EDIT_HISTORY_OPERATIONS.has(c.operation)) {
+      else if (!EDIT_HISTORY_OPERATIONS.has(c.operation)) {
         db.prepare("DELETE FROM edit_cursor WHERE project_id = ?").run(
           c.projectId,
         );
@@ -1602,6 +1612,15 @@ export class ProjectStore {
       projectId: input.projectId,
       expectedRevision: input.expectedRevision,
       receipt: bound,
+      // A save is a step in its writer's undo history, because undo restores a
+      // whole snapshot, documents included. These still end the history: a story
+      // or pack is checked against the consent ledger when committed, and undo
+      // must not bring one back unchecked; a migration's record outlives a
+      // snapshot; and a save with no named writer could never be undone.
+      editStepAuthor:
+        kind === "story" || kind === "referencePack" || input.migration
+          ? undefined
+          : input.principalId,
       check: () => {
         if (migration) {
           // Never inferred, never moved: a source belongs to the first
@@ -2925,19 +2944,27 @@ export class ProjectStore {
           next = applyBatch(next, ops.slice(i, i + 64));
         return { ...toEditView(next), revision };
       },
-      effects: (db, revision) => {
-        const at = this.#cursor(db, projectId);
-        const cursor = at?.head_revision === expectedRevision ? at.cursor : 0;
-        // A new edit discards anything that could have been redone.
-        db.prepare(
-          "DELETE FROM edit_history WHERE project_id = ? AND seq > ?",
-        ).run(projectId, cursor);
-        db.prepare(
-          "INSERT INTO edit_history(project_id, seq, revision, before_revision, author) VALUES (?, ?, ?, ?, ?)",
-        ).run(projectId, cursor + 1, revision, expectedRevision, author);
-        this.#setCursor(db, projectId, cursor + 1, revision);
-      },
+      editStepAuthor: author,
     });
+  }
+  #recordEditStep(
+    db: DatabaseSync,
+    projectId: string,
+    expectedRevision: number,
+    revision: number,
+    author: string,
+  ) {
+    const at = this.#cursor(db, projectId);
+    const cursor = at?.head_revision === expectedRevision ? at.cursor : 0;
+    // A new edit discards anything that could have been redone.
+    db.prepare("DELETE FROM edit_history WHERE project_id = ? AND seq > ?").run(
+      projectId,
+      cursor,
+    );
+    db.prepare(
+      "INSERT INTO edit_history(project_id, seq, revision, before_revision, author) VALUES (?, ?, ?, ?, ?)",
+    ).run(projectId, cursor + 1, revision, expectedRevision, author);
+    this.#setCursor(db, projectId, cursor + 1, revision);
   }
   // Undo commits a new revision equal to the state before the last batch,
   // and only from the head that batch (or a redo of it) produced.
@@ -2984,6 +3011,14 @@ export class ProjectStore {
     Id.parse(projectId);
     let target = 0;
     let cursor = 0;
+    const targetSnapshot = () =>
+      (
+        this.#database
+          .prepare(
+            "SELECT snapshot_hash FROM revisions WHERE project_id = ? AND revision = ?",
+          )
+          .get(projectId, target) as { snapshot_hash: string }
+      ).snapshot_hash;
     return this.#commit({
       operation: `project.${direction}`,
       projectId,
@@ -3018,17 +3053,13 @@ export class ProjectStore {
         target = direction === "undo" ? step.before_revision : step.revision;
         cursor = direction === "undo" ? at.cursor - 1 : at.cursor + 1;
       },
-      next: (_current, revision) => {
-        const row = this.#database
-          .prepare(
-            "SELECT snapshot_hash FROM revisions WHERE project_id = ? AND revision = ?",
-          )
-          .get(projectId, target) as { snapshot_hash: string };
-        return {
-          ...this.#snapshot(row.snapshot_hash, projectId, target),
-          revision,
-        };
-      },
+      // The target's documents, as a saved document is a step too.
+      documents: () =>
+        this.#canonical(targetSnapshot(), projectId, target).documents,
+      next: (_current, revision) => ({
+        ...this.#snapshot(targetSnapshot(), projectId, target),
+        revision,
+      }),
       effects: (db, revision) =>
         this.#setCursor(db, projectId, cursor, revision),
     });
