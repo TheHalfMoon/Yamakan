@@ -193,8 +193,28 @@ export type ComfyEngineOptions = {
   enabled?: boolean;
 };
 
+// How a ComfyUI this adapter talks to must be started: on loopback, with partner
+// nodes and the frontend's internet access off, and no custom node code.
+export function comfyLaunchArguments(options: {
+  port: number;
+  baseDirectory: string;
+}) {
+  return [
+    "--listen",
+    "127.0.0.1",
+    "--port",
+    String(options.port),
+    "--offline",
+    "--disable-all-custom-nodes",
+    "--disable-auto-launch",
+    "--base-directory",
+    options.baseDirectory,
+  ];
+}
+
 export type ComfySetupProblem =
   | { kind: "unreachable" }
+  | { kind: "cloud-node"; recipe: string; classType: string }
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
 
@@ -302,6 +322,13 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           if (!entry)
             problems.push({
               kind: "node",
+              recipe: recipe.id,
+              classType: type,
+            });
+          // A partner node sends what it is given to a remote service.
+          else if ((entry as { api_node?: unknown }).api_node === true)
+            problems.push({
+              kind: "cloud-node",
               recipe: recipe.id,
               classType: type,
             });
@@ -703,9 +730,10 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           executionRef = ((await json(res)) as { prompt_id?: unknown })
             .prompt_id;
         } catch {
-          // No answer does not mean no job: it may have been accepted.
-          await cancel(promptId);
-          return { refused: "INVALID_REQUEST" };
+          // No answer does not mean no job: it may have been accepted, even after
+          // this gave up waiting. It stays followed by its id, and reports unknown
+          // until ComfyUI says otherwise, so a retry cannot silently run a second.
+          executionRef = promptId;
         }
         if (executionRef !== promptId) {
           await cancel(promptId);

@@ -14,7 +14,11 @@ import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { comfyRecipeHash, createComfyEngine } from "../core/engines/comfyui.ts";
+import {
+  comfyLaunchArguments,
+  comfyRecipeHash,
+  createComfyEngine,
+} from "../core/engines/comfyui.ts";
 import {
   ENGINE_CONTRACT_V2,
   readArtifactVerified,
@@ -143,14 +147,7 @@ const server = spawn(
   [
     join(dir, "ComfyUI", "main.py"),
     "--cpu",
-    "--listen",
-    "127.0.0.1",
-    "--port",
-    String(port),
-    "--disable-auto-launch",
-    "--disable-all-custom-nodes",
-    "--base-directory",
-    root,
+    ...comfyLaunchArguments({ port, baseDirectory: root }),
   ],
   { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
 );
@@ -234,6 +231,15 @@ try {
   });
   assert.deepEqual(await engine.checkSetup(), []);
   step("the setup check finds every core node");
+
+  const everyNode = await (await fetch(`${base}/object_info`)).json();
+  const cloud = Object.entries(everyNode)
+    .filter(([, info]) => info.api_node === true)
+    .map(([name]) => name);
+  assert.deepEqual(cloud, [], "started offline, no partner node is present");
+  step("started offline, no node that calls a remote service is present", {
+    nodes: Object.keys(everyNode).length,
+  });
 
   const lacking = createComfyEngine({
     baseUrl: base,
