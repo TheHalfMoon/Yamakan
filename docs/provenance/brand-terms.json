@@ -35,6 +35,10 @@
   ],
   "allowLiteralPatterns": [
     {
+      "pattern": "the ComfyUI this service was configured with",
+      "reason": "the health command must name the program a person configured"
+    },
+    {
       "pattern": "formerly.*Darzain",
       "reason": "one-line historical rename note in README"
     },
