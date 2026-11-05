@@ -453,7 +453,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - Every linked consent must exist and match its character and purpose. It must also be unrevoked, unexpired, and from (or revalidated in) the current execution epoch.
   - Assembly checks all of this again, so a revoked consent refuses the assembly of a story pinning its pack.
   - The consent ledger is separate from project revisions: an undo or restore never brings back a revoked consent. Consents are workspace-wide and named by character, so a pack may link any usable consent for its character.
-  - Assembly is one revision of up to 200 shots, built and checked inside the commit, so a retry with the same request id replays it. Redo of an assembly restores that timeline without checking consents again: the clips are project media, and a consent governs the use of a likeness reference, which every later consumer must check (`assertConsentUsable`) when it uses it.
+  - Assembly is one revision of up to 200 shots, built and checked inside the commit, so a retry with the same request id replays it. Redo of an assembly restores that timeline without checking a pinned pack's consents again, though the commit point still checks takes made with continuity references: the clips are project media, and a consent governs the use of a likeness reference, which every later consumer must check (`assertConsentUsable`) when it uses it.
 - **Principals.** Linking a likeness consent requires the browser session. Agents can save stories, and packs without likeness entries. Inline saves are bounded by the creative-document storage budget (agents share their own share of it), 32 documents per project and the revision limit; they are not staged.
 - **Rollback.** The AG-DOCS switch (`YAMAKAN_AG_DOCS_OFF=1`) turns story and pack writes off; stored documents stay readable. The workspace database moves to version 13, which rebuilds the two document tables to accept the new kinds with the same rows (foreign keys checked in the same transaction) and adds the table of committed story and pack versions. Stored versions are never pruned; any future pruning must also remove their rows there. An earlier build refuses a version 13 workspace, so going back to one needs a verified backup from before the upgrade.
 - **UI.** The Director panel lists the project's stories and packs: shots and title cards, and how many references link a likeness consent (linked, not necessarily still usable). It lists them again at each revision of the open project or on request, and reads their content only when a version changed.
@@ -470,7 +470,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - The pack version is held by this project under that document id, and its stored bytes match its hash.
     - The entry is in that version.
     - A named encoding is the recorded one for that entry's character.
-    - Neither consent nor the entry's media is needed. So a revocation or a removed medium never stops a story with old takes from being saved.
+    - Neither consent nor the entry's media is needed for these references. So a revocation or a removed medium does not stop a story with old takes from being saved, though a story still pinning a pack whose consent was revoked is refused by the pin's own check.
   - **attempt** (before a generation is submitted) and **attach**: as record, and also:
     - the entry's pinned media version is still in the project;
     - every consent the references rely on is usable now, covering purpose, expiry, revocation and the restore epoch. A character reference uses its `likeness-generate` consent, a voice reference its `voice-clone` consent, and an encoding the consent it was recorded under, for that consent's purpose.
@@ -482,7 +482,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
     - **Check:** if the medium is the recorded output of a take made with continuity references, the take is attached, and its references' consents must be usable now.
     - **Restore is checked too:** a revoked consent can never be revalidated, so restoring an earlier revision brings its media back like an edit does. A recovery restore over a head whose snapshot no longer verifies still works: nothing then counts as already presented, which is stricter. A recovery restore past a revoked or expired take is refused.
     - **Which takes count:** takes are matched by their recorded output hash in every story version the project committed. Removing a take from the current story therefore does not free its medium.
-    - **What stays allowed:** moving, trimming, splitting or copying a clip already presented the same way presents nothing new, so history keeps playing. Undo of a clip deletion is refused once the consent is revoked or expired.
+    - **What stays allowed:** moving, trimming, splitting or copying a clip already presented the same way presents nothing new, so history keeps playing. Undo of the deletion of a clip of a take made with continuity references is refused once its consent is revoked or expired.
     - **Cost:** a commit that presents nothing new reads no story. One that does scans the project's story versions once, for all newly presented hashes together, and parses only the versions that name one.
     - **Damage:** a damaged story version blocks only the media it still names. A version damaged so badly that it no longer names the hash is not found, which fails open; the workspace integrity checks report that damage.
 - **No carried approval.** `yamakan.continuity.check` (`project:read`) is advisory: it reads the head outside any commit, changes nothing and approves nothing. The attach checks again under the write lock, so a consent revoked or expired after an attempt-time check refuses the attach.
@@ -498,7 +498,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Not done:**
   - No generation submits yet (engines are off), so the attempt stage runs only through the check command. It is the check a submission must call.
   - Stored reference media is not deleted when consent is revoked. A revocation blocks new use and cannot be undone. A reference entry's own source media (for example the person's imported photo) is not gated on the timeline; only a take made with continuity references is.
-  - Clips already on the timeline when consent is revoked stay, and so do earlier exports. Revocation stops new placements and generations, and does not erase history.
+  - Clips already on the timeline when consent is revoked stay, and so do earlier exports. Revocation stops generations and new placements of takes made with continuity references, and does not erase history. Other media linked to that consent can still be placed, as listed here.
   - **Not gated:**
     - a scene's `referenceAssetId`, and Studio canvas bitmaps;
     - a reference entry's own source media.
@@ -522,11 +522,11 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - The clip keeps its id, place, length, track, effects and animation. It takes the take's media and in-point, and its title is cleared, so a title card can be replaced by a take.
   - Footage keeps the clip's embedded-sound gain and fades. Sound the editor turned off stays off, and a take with no audio plays none. After a take with no audio (or a still, which has no sound settings), the next take plays its own sound if it has any.
   - Refused: a locked track, a retimed clip, a clip whose sound is unlinked onto an audio track (relink it first), a take whose sound is unlinked elsewhere, a still that does not start at 0, and a take shorter than the clip. A shot shown by more than one clip (for example after a split) is refused, and so is a clip that no longer shows the shot's title card or one of its takes. The clip is found by the shot's id, so this check keeps a clip that shows a take from being taken for another story's shot of the same id. A title card carries no media to compare, so story shot ids should stay unique across a project's stories.
-  - The operation is also part of `yamakan.project.applyBatch`, like `clip.add`. The checks there are the timeline's own: project media, not audio, fitting the clip. The probe, consent, lineage and story binding are guaranteed only through `yamakan.take.apply`.
+  - The operation is also part of `yamakan.project.applyBatch`, like `clip.add`. The checks there are the timeline's own: project media, not audio, fitting the clip. The probe, a pin's consent, lineage and story binding are guaranteed only through `yamakan.take.apply`, while the commit point still gates a take made with continuity references.
   - `yamakan.take.list` reports a shot it cannot resolve to one clip in its `problem` field; compare and propose refuse such a shot. Two takes with the same media and in-point look the same on the timeline, and the first is reported as the one shown.
 - **Undo and rollback.**
   - Undo is a new revision with exactly the old clip. The original take stays in the story and its media in the project, so undo, redo and restore bring it back byte for byte.
-  - As with assembly, undo and redo do not check consents again.
+  - Undo and redo run the commit point's check on newly presented media, as every timeline commit does. So a take made with continuity references is refused once its consent is revoked. A take with only a pinned pack is not gated there: `yamakan.take.apply` and assembly check the pin, but undo and redo do not, and neither does placing the same media with `clip.add`.
   - The story's `selectedTakeId` is the storyboard's choice for assembly. A replacement changes the timeline, not the story.
   - Stories without lineage keep their canonical bytes. An earlier build refuses a story with lineage as invalid, so going back needs stories saved without it.
 
