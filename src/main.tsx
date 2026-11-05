@@ -1787,9 +1787,11 @@ function App() {
               disabled={busy}
               data-testid="engine-check"
               onClick={() =>
-                run(async () =>
-                  setEngine(await call("yamakan.engines.comfyui", {})),
-                )
+                run(async () => {
+                  // A failed check must not leave an earlier answer on screen.
+                  setEngine(null);
+                  setEngine(await call("yamakan.engines.comfyui", {}));
+                })
               }
             >
               {t("localEngine.check")}
@@ -1804,8 +1806,8 @@ function App() {
                       : t("localEngine.reachable", {
                           version: engine.version ?? t("localEngine.unknown"),
                           device:
-                            engine.device?.name ??
-                            engine.device?.type ??
+                            engine.device?.name ||
+                            engine.device?.type ||
                             t("localEngine.unknown"),
                         })}
                 </p>
@@ -1813,22 +1815,17 @@ function App() {
                   <p data-testid="engine-start">
                     {engine.startedSafely
                       ? t("localEngine.startedSafely")
-                      : t("localEngine.startedUnsafely", {
-                          flags: [...engine.missing, ...engine.refused].join(
-                            ", ",
-                          ),
-                        })}
+                      : t("localEngine.startedUnsafely")}
+                    {engine.missing.length > 0 &&
+                      ` ${t("localEngine.missing", { flags: engine.missing.join(", ") })}`}
+                    {engine.refused.length > 0 &&
+                      ` ${t("localEngine.refused", { flags: engine.refused.join(", ") })}`}
                     {engine.exposed ? ` ${t("localEngine.exposed")}` : ""}
                   </p>
                 )}
                 {/* Apart, always: a healthy connection is not working generation. */}
                 <p data-testid="engine-generation">
-                  {engine.generationAvailable
-                    ? t("localEngine.generationAvailable")
-                    : t("localEngine.generationUnavailable", {
-                        reason:
-                          engine.generationReason ?? t("localEngine.unknown"),
-                      })}
+                  {t("localEngine.generationUnavailable")}
                 </p>
               </div>
             )}

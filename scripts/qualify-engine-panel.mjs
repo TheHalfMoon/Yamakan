@@ -51,8 +51,9 @@ const stopTree = (child) => {
     child.kill();
   }
 };
+let comfy;
 const startComfy = async (filter = (a) => a) => {
-  const child = spawn(
+  const child = (comfy = spawn(
     join(dir, "venv", "Scripts", "python.exe"),
     [
       join(dir, "ComfyUI", "main.py"),
@@ -65,7 +66,7 @@ const startComfy = async (filter = (a) => a) => {
       ),
     ],
     { windowsHide: true, stdio: "ignore" },
-  );
+  ));
   for (let i = 0; i < 240; i++) {
     assert.equal(child.exitCode, null, "ComfyUI exited");
     const up = await fetch(`${comfyUrl}/system_stats`, {
@@ -82,7 +83,6 @@ const startComfy = async (filter = (a) => a) => {
 
 let browser;
 let service;
-let comfy;
 let passed = false;
 let portNow = 24410;
 const serve = async (extra = {}) => {
@@ -104,7 +104,8 @@ const serve = async (extra = {}) => {
     },
   );
   let log = "";
-  child.stderr.on("data", (c) => (log += String(c)));
+  const logged = (c) => (log += String(c));
+  child.stderr.on("data", logged);
   await new Promise((ready, reject) => {
     const timer = setTimeout(
       () => reject(new Error(`Timeout: ${log}`)),
@@ -125,11 +126,13 @@ const serve = async (extra = {}) => {
   await writeLaunchLink(folder, `http://127.0.0.1:${port}`);
   return {
     child,
+    log: () => log,
     link: (await readFile(join(folder, "launch"), "utf8"))
       .split("\n")[0]
       .trim(),
     stop: () =>
       new Promise((done) => {
+        if (child.exitCode !== null) return done();
         child.once("exit", done);
         child.kill();
       }),
@@ -166,40 +169,44 @@ try {
     await page.waitForFunction(() => location.hash === "");
     await page.getByTestId("engine-panel").waitFor();
   };
-  const notGenerating = (seen) =>
-    assert.match(seen.generation, /^Generation is not available: /);
+  const notGenerating = async (seen) => {
+    assert.match(seen.generation, /^Generation is not available in this build/);
+    // In this state too, nothing on the page offers to generate.
+    assert.equal(
+      await page
+        .locator("button, a, [role=button], [role=menuitem]")
+        .filter({ hasText: /generat|توليد/i })
+        .count(),
+      0,
+      "nothing offers to generate",
+    );
+  };
 
   await visit({});
   const none = await read();
   assert.match(none.connection, /No engine is configured/);
   assert.equal(none.start, null);
-  notGenerating(none);
+  await notGenerating(none);
   step(
     "with no engine configured, it says so, and that generation is unavailable",
     none,
   );
-  assert.equal(
-    await page.getByRole("button", { name: /generate/i }).count(),
-    0,
-    "nothing offers to generate",
-  );
-  step("no control offers to generate");
   await service.stop();
 
   await visit({ YAMAKAN_COMFYUI_URL: comfyUrl });
   const absent = await read();
   assert.match(absent.connection, /did not answer/);
   assert.equal(absent.start, null);
-  notGenerating(absent);
+  await notGenerating(absent);
   step("with one that does not answer, it says so", absent);
   await service.stop();
 
-  comfy = await startComfy();
+  await startComfy();
   await visit({ YAMAKAN_COMFYUI_URL: comfyUrl });
   const safe = await read();
   assert.match(safe.connection, /The engine answered: version \d/);
   assert.match(safe.start, /reports a safe start/);
-  notGenerating(safe);
+  await notGenerating(safe);
   step(
     "a real ComfyUI started safely is described, and generation stays unavailable",
     safe,
@@ -208,17 +215,21 @@ try {
   stopTree(comfy);
   await new Promise((r) => setTimeout(r, 1500));
 
-  comfy = await startComfy((args) => args.filter((a) => a !== "--offline"));
+  await startComfy((args) => args.filter((a) => a !== "--offline"));
   await visit({ YAMAKAN_COMFYUI_URL: comfyUrl });
   const unsafe = await read();
-  assert.match(unsafe.start, /will not use it as started.*--offline/);
-  notGenerating(unsafe);
+  assert.match(unsafe.start, /will not use it as started/);
+  assert.match(unsafe.start, /Start it with: --offline/);
+  await notGenerating(unsafe);
   step("a real ComfyUI started without --offline is called out", unsafe);
   await service.stop();
 
   await visit({ YAMAKAN_COMFYUI_URL: "http://example.com:8188" });
   const bad = await read();
   assert.match(bad.connection, /No engine is configured/);
+  assert.equal(bad.start, null);
+  await notGenerating(bad);
+  assert.match(service.log(), /YAMAKAN_COMFYUI_URL was not used/);
   step(
     "an address off this machine is not used, and the editor still opens",
     bad,
