@@ -1,7 +1,8 @@
 // A local ComfyUI as an EngineAdapterV2. It speaks only to a loopback address,
 // follows no redirect, and runs only graphs the server owns: a request names a
 // recipe and fills that recipe's bindings, and no graph, node, path or URL ever
-// crosses the contract. Off under ENGINE_ENABLED, when no call does IO; and this
+// crosses the contract. Off under ENGINE_ENABLED, when no adapter call does IO
+// (`probeComfy`, a person's read-only health check, is apart); and this
 // build pins no recipe, so nothing runs until one is qualified. Setup inspection
 // follows D3voz/openjutsu lib/setup.ts (MIT); see notices/openjutsu-LICENSE.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
@@ -34,6 +35,9 @@ export const COMFY_LIMITS = Object.freeze({
   requestMs: 15_000,
   transferMs: 30 * 60 * 1000,
   tracked: 256,
+  // How long a job ComfyUI does not report may stay unknown: it may yet appear,
+  // since a request can be enqueued after this gave up waiting.
+  lostAfterMs: 5 * 60 * 1000,
 });
 
 export type ComfyNode = {
@@ -183,6 +187,12 @@ type HistoryEntry = {
 
 type Execution = {
   recipe: ComfyRecipe;
+  submittedAt: number;
+  deadlineMs: number;
+  // ComfyUI last reported this job at, once it has.
+  seenAt?: number;
+  // Reported past its deadline or lost: final, whatever ComfyUI says afterwards.
+  failed?: ExecutionStatus;
   artifacts?: (Artifact & { file: SavedFile })[];
 };
 
@@ -191,6 +201,9 @@ export type ComfyEngineOptions = {
   recipes?: readonly ComfyRecipe[];
   // Tests only: the build's ENGINE_ENABLED decides otherwise.
   enabled?: boolean;
+  // Tests only.
+  lostAfterMs?: number;
+  now?: () => number;
 };
 
 // How the person's ComfyUI must be started for this adapter to use it: on
@@ -276,6 +289,87 @@ export type ComfySetupProblem =
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
 
+// A read-only look at a ComfyUI a person named: whether it answers, what it is,
+// and whether Yamakan could use it. It starts, installs and runs nothing, and
+// says nothing about generating, which `generationAvailable` answers apart.
+export async function probeComfy(baseUrl: string) {
+  const base = comfyBaseUrl(baseUrl);
+  const offline = {
+    reachable: false as const,
+    version: null,
+    device: null,
+    startedSafely: false,
+    missing: [] as string[],
+    refused: [] as string[],
+    exposed: false,
+  };
+  let stats: {
+    system?: { comfyui_version?: unknown; argv?: unknown };
+    devices?: { type?: unknown; name?: unknown; vram_total?: unknown }[];
+  };
+  try {
+    const res = await fetch(`${base}/system_stats`, {
+      redirect: "error",
+      signal: AbortSignal.timeout(COMFY_LIMITS.requestMs),
+    });
+    if (!res.ok || !res.body) return offline;
+    let text = "";
+    let bytes = 0;
+    const decoder = new TextDecoder();
+    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+      bytes += chunk.byteLength;
+      if (bytes > 1024 * 1024) return offline;
+      text += decoder.decode(chunk, { stream: true });
+    }
+    stats = JSON.parse(text);
+  } catch {
+    return offline;
+  }
+  if (!stats || typeof stats !== "object" || !stats.system) return offline;
+  const found = comfyStartProblems(stats.system.argv);
+  const version = stats.system.comfyui_version;
+  const device = Array.isArray(stats.devices) ? stats.devices[0] : undefined;
+  return {
+    reachable: true as const,
+    version:
+      typeof version === "string" && /^[\w.+-]{1,40}$/.test(version)
+        ? version
+        : null,
+    device:
+      device && typeof device === "object"
+        ? {
+            type:
+              typeof device.type === "string" ? device.type.slice(0, 40) : null,
+            name:
+              typeof device.name === "string"
+                ? device.name.replace(/[^\w .:()+-]/g, "").slice(0, 120)
+                : null,
+            memoryBytes:
+              typeof device.vram_total === "number" &&
+              Number.isSafeInteger(device.vram_total) &&
+              device.vram_total >= 0
+                ? device.vram_total
+                : null,
+          }
+        : null,
+    startedSafely:
+      !found.missing.length && !found.refused.length && !found.exposed,
+    ...found,
+  };
+}
+
+// Whether generation could run: today never, and not because of anything a
+// healthy connection says.
+export const comfyGeneration = (recipes = PINNED_COMFY_RECIPES) =>
+  !ENGINE_ENABLED
+    ? { available: false, reason: "Engines are off in this build." }
+    : !recipes.some((r) => r.qualificationHash)
+      ? {
+          available: false,
+          reason: "No qualified recipe is pinned in this build.",
+        }
+      : { available: true, reason: null };
+
 export function createComfyEngine(options: ComfyEngineOptions) {
   const enabled = options.enabled ?? ENGINE_ENABLED;
   const base = comfyBaseUrl(options.baseUrl);
@@ -287,6 +381,11 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   const progress = new Map<string, number>();
   // Recipes a setup check found everything for, until the next check.
   const ready = new Set<string>();
+  const now = options.now ?? Date.now;
+  const lostAfterMs = options.lostAfterMs ?? COMFY_LIMITS.lostAfterMs;
+  // Replaced jobs a cancel could not find: one may still be enqueued late, and is
+  // cancelled when it appears, until it can no longer.
+  const replaced = new Map<string, number>();
   let checks = 0;
   let startedWrongly = false;
   let socket: WebSocket | null = null;
@@ -610,21 +709,83 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   }
 
   async function inQueue(id: string) {
+    return (await readQueue())(id);
+  }
+
+  // The queue at this moment, as a lookup.
+  async function readQueue() {
     const res = await call("/queue");
     if (!res.ok) throw new Error("ComfyUI did not answer about its queue.");
     const q = (await json(res)) as {
       queue_running?: unknown[][];
       queue_pending?: unknown[][];
     };
-    const has = (list?: unknown[][]) =>
+    const has = (id: string, list?: unknown[][]) =>
       Array.isArray(list) && list.some((e) => Array.isArray(e) && e[1] === id);
-    if (has(q.queue_running)) return "running" as const;
-    if (has(q.queue_pending)) return "queued" as const;
-    return null;
+    return (id: string) => {
+      if (has(id, q.queue_running)) return "running" as const;
+      if (has(id, q.queue_pending)) return "queued" as const;
+      return null;
+    };
+  }
+
+  // Cancels any abandoned job that has turned up, and forgets those past hoping.
+  async function sweepReplaced() {
+    for (const [id, since] of replaced)
+      if (now() - since > lostAfterMs) replaced.delete(id);
+    if (!replaced.size) return;
+    const queue = await readQueue().catch(() => null);
+    if (!queue) return;
+    for (const id of replaced.keys())
+      if (queue(id) && (await cancel(id)).remoteAcknowledged)
+        replaced.delete(id);
+  }
+
+  // What is known, bounded: a job past its deadline is stopped, and one ComfyUI
+  // has stopped reporting for long enough is not left unknown forever. Either is
+  // final, and leaves no output to read. A job this adapter does not know, after a
+  // restart or past its tracking limit, stays as ComfyUI reports it, unbounded.
+  async function observe(executionRef: string): Promise<ExecutionStatus> {
+    if (enabled) await sweepReplaced();
+    const e = executions.get(executionRef);
+    if (e?.failed) return e.failed;
+    const status = await report(executionRef);
+    if (!e || !enabled) return status;
+    const at = now();
+    const fail = (diagnosticText: string) => {
+      e.failed = {
+        executionRef,
+        state: "failed",
+        diagnostic: diagnosticText,
+      };
+      // It may yet run or appear: stopped when it does, for as long as it can.
+      replaced.set(executionRef, at);
+      return e.failed;
+    };
+    const finished = status.state !== "queued" && status.state !== "running";
+    if (!finished) e.seenAt = at;
+    if (!finished && at - e.submittedAt > e.deadlineMs) {
+      const stopped = await cancel(executionRef);
+      return fail(
+        stopped.remoteAcknowledged
+          ? "The job passed its deadline; ComfyUI was asked to stop it."
+          : "The job passed its deadline, and ComfyUI could not be asked to stop it.",
+      );
+    }
+    if (
+      status.state === "unknown" &&
+      at - (e.seenAt ?? e.submittedAt) > lostAfterMs
+    )
+      return fail(
+        e.seenAt
+          ? "ComfyUI stopped reporting this job."
+          : "ComfyUI never reported this job.",
+      );
+    return status;
   }
 
   // What ComfyUI knows, never a resubmit.
-  async function observe(executionRef: string): Promise<ExecutionStatus> {
+  async function report(executionRef: string): Promise<ExecutionStatus> {
     if (!enabled)
       return {
         executionRef,
@@ -841,9 +1002,16 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           executions.delete(oldest);
           progress.delete(oldest);
         }
-        executions.set(executionRef, { recipe });
+        executions.set(executionRef, {
+          recipe,
+          submittedAt: now(),
+          deadlineMs: request.deadlineMs,
+        });
         const superseded = claim.supersede(executionRef);
-        if (superseded) await cancel(superseded);
+        if (superseded) {
+          const stopped = await cancel(superseded);
+          if (!stopped.remoteAcknowledged) replaced.set(superseded, now());
+        }
         return superseded === executionRef
           ? { refused: "STALE_ATTEMPT" }
           : { executionRef };

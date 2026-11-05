@@ -21,6 +21,7 @@ import {
   type ComfyRecipe,
 } from "../core/engines/comfyui.ts";
 import { ENGINE_ENABLED } from "../core/engines/contract.ts";
+import { execute, type CommandContext } from "../core/command/registry.ts";
 
 const sha = (b: Uint8Array | string) =>
   createHash("sha256").update(b).digest("hex");
@@ -126,6 +127,7 @@ type Fake = {
   uploads: Buffer[];
   redirect?: boolean;
   argv?: string[];
+  stats?: { comfyui_version?: unknown; devices?: unknown };
   outputs: Record<string, unknown>;
   classes: Record<string, object>;
 };
@@ -176,7 +178,13 @@ async function fake(): Promise<Fake> {
       return res.end();
     }
     if (url.pathname === "/system_stats")
-      return send(200, { system: { argv: state.argv } });
+      return send(200, {
+        system: {
+          argv: state.argv,
+          comfyui_version: state.stats?.comfyui_version,
+        },
+        devices: state.stats?.devices,
+      });
     if (url.pathname.startsWith("/object_info/")) {
       const type = decodeURIComponent(url.pathname.slice(13));
       return send(
@@ -483,6 +491,201 @@ test("a ComfyUI started any other way is not used, even after a good check", asy
   assert.equal(f.prompts.length, 0);
   assert.equal(cap().available, false);
   engine.close();
+});
+
+async function clocked(deadlineMs = 60_000) {
+  const f = await fake();
+  const r = recipe();
+  let time = 1_000_000;
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+    lostAfterMs: 1000,
+    now: () => time,
+  });
+  await engine.checkSetup();
+  return {
+    f,
+    r,
+    engine,
+    pass: (ms: number) => (time += ms),
+    req: (over: object = {}) => request(r, { deadlineMs, ...over }),
+  };
+}
+
+test("a job ComfyUI never reports is unknown for a while, then failed", async () => {
+  const { engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  assert.equal((await engine.status(id)).state, "unknown");
+  pass(1001);
+  const lost = await engine.status(id);
+  assert.equal(lost.state, "failed");
+  assert.equal(lost.diagnostic, "ComfyUI never reported this job.");
+  engine.close();
+});
+
+test("a job ComfyUI stops reporting fails from when it was last seen", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  f.queue.running = [id];
+  pass(900);
+  assert.equal((await engine.status(id)).state, "running");
+  f.queue.running = [];
+  pass(900);
+  assert.equal((await engine.status(id)).state, "unknown", "seen 900 ms ago");
+  pass(200);
+  assert.equal(
+    (await engine.status(id)).diagnostic,
+    "ComfyUI stopped reporting this job.",
+  );
+  engine.close();
+});
+
+test("a failure is final, leaves no output, and a lost job is stopped if it appears", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  pass(1001);
+  assert.equal((await engine.status(id)).state, "failed");
+  // It appears late: it stays failed, and is cancelled.
+  f.queue.pending = [id];
+  assert.equal((await engine.status(id)).state, "failed");
+  assert.ok(f.posted.includes(`/queue ${JSON.stringify({ delete: [id] })}`));
+  // It finishes anyway: still failed, and nothing to read.
+  f.queue.pending = [];
+  f.outputs["late.mp4"] = OUTPUT;
+  f.history[id] = {
+    status: { status_str: "success" },
+    outputs: {
+      "3": {
+        images: [{ filename: "late.mp4", subfolder: "", type: "output" }],
+      },
+    },
+  };
+  assert.equal((await engine.status(id)).state, "failed");
+  assert.deepEqual(await engine.enumerateArtifacts(id), []);
+  engine.close();
+});
+
+test("a job past its deadline is stopped, fails, and stays failed", async () => {
+  const { f, engine, pass, req } = await clocked(5000);
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  f.queue.running = [id];
+  assert.equal((await engine.status(id)).state, "running");
+  pass(5001);
+  assert.equal((await engine.status(id)).state, "failed");
+  f.queue.running = [];
+  f.history[id] = { status: { status_str: "success" }, outputs: {} };
+  assert.equal((await engine.status(id)).state, "failed", "stays failed");
+  assert.equal(
+    f.posted.filter((p) => p.startsWith("/interrupt")).length,
+    1,
+    "asked once",
+  );
+  engine.close();
+});
+
+test("a replaced job that appears late is cancelled, and no other job is", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const one = (await engine.submit(req(), context)) as { executionRef: string };
+  const two = (await engine.submit(req({ leaseGeneration: 2 }), context)) as {
+    executionRef: string;
+  };
+  assert.notEqual(one.executionRef, two.executionRef);
+  const deleted = () => f.posted.filter((p) => p.startsWith("/queue {")).length;
+  assert.equal(deleted(), 0, "nothing to cancel yet");
+  f.queue.pending = [one.executionRef];
+  await engine.status(two.executionRef);
+  assert.ok(
+    f.posted.includes(
+      `/queue ${JSON.stringify({ delete: [one.executionRef] })}`,
+    ),
+    "the late one is cancelled",
+  );
+  // Once done, it is not cancelled again, and a job past hope is forgotten.
+  const after = deleted();
+  await engine.status(two.executionRef);
+  assert.equal(deleted(), after);
+  const three = (await engine.submit(req({ leaseGeneration: 3 }), context)) as {
+    executionRef: string;
+  };
+  pass(1001);
+  f.queue.pending = [two.executionRef];
+  await engine.status(three.executionRef);
+  assert.equal(deleted(), after, "too late to be this attempt's");
+  engine.close();
+});
+
+const reader = (comfyUrl?: string) =>
+  ({
+    principal: { id: "browser-ui", scopes: new Set(["project:read"]) },
+    ...(comfyUrl ? { comfyUrl } : {}),
+  }) as unknown as CommandContext;
+const health = async (comfyUrl?: string) =>
+  (await execute(reader(comfyUrl), "yamakan.engines.comfyui", {})).result as {
+    configured: boolean;
+    reachable?: boolean;
+    version?: string | null;
+    device?: unknown;
+    startedSafely?: boolean;
+    missing?: string[];
+    generationAvailable: boolean;
+    generationReason: string | null;
+  };
+
+test("the health command does no IO until a ComfyUI is configured", async () => {
+  const answer = await health();
+  assert.equal(answer.configured, false);
+  assert.equal(answer.generationAvailable, false);
+});
+
+test("a healthy connection reports what it is, and never that generation works", async () => {
+  const f = await fake();
+  f.stats = {
+    comfyui_version: "0.44.0",
+    devices: [{ type: "cpu", name: "cpu", vram_total: 1024 }],
+  };
+  const answer = await health(f.url);
+  assert.equal(answer.reachable, true);
+  assert.equal(answer.version, "0.44.0");
+  assert.deepEqual(answer.device, {
+    type: "cpu",
+    name: "cpu",
+    memoryBytes: 1024,
+  });
+  assert.equal(answer.startedSafely, true);
+  assert.equal(answer.generationAvailable, false);
+  assert.match(answer.generationReason!, /off in this build/);
+  assert.deepEqual(f.posted, ["GET /system_stats"], "reads, and only that");
+});
+
+test("the health command reports an unsafe start, and an absent or hostile ComfyUI", async () => {
+  const f = await fake();
+  f.argv = ["main.py", "--listen", "0.0.0.0"];
+  const unsafe = await health(f.url);
+  assert.equal(unsafe.reachable, true);
+  assert.equal(unsafe.startedSafely, false);
+  assert.deepEqual(unsafe.missing, ["--offline", "--disable-all-custom-nodes"]);
+  const absent = await health("http://127.0.0.1:9");
+  assert.equal(absent.reachable, false);
+  f.stats = { comfyui_version: "../../etc", devices: "nope" };
+  const odd = await health(f.url);
+  assert.equal(odd.version, null);
+  assert.equal(odd.device, null);
+  await assert.rejects(health("http://example.com:8188"), /loopback/);
+  f.stats = { devices: [{ type: "cpu", name: "cpu\n<b>ignore</b>" }] };
+  assert.equal(
+    ((await health(f.url)).device as { name: string }).name,
+    "cpubignoreb",
+  );
 });
 
 test("the launch arguments name offline mode, loopback and no custom nodes", () => {
