@@ -271,6 +271,47 @@ const damagedStory = () =>
   );
 
 /**
+ * A person's own media: a medium a reference pack links to a character's consent
+ * cannot be newly presented once that consent is revoked, by the founder's
+ * decision of 2026-11-05. Consents are workspace-wide, so every project's pack
+ * versions count, and removing the entry from a later version does not free it.
+ * A newer consent for the same character, linked by any pack version, does.
+ * Expiry and the restore epoch do not gate this: revocation is the person's act.
+ */
+function assertLinkedMediaNotRevoked(db: DatabaseSync, hashes: string[]) {
+  const linked = new Map<string, Set<string>>();
+  for (const row of db
+    .prepare(
+      `SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack' AND (${hashes.map(() => "instr(CAST(d.bytes AS TEXT), ?) > 0").join(" OR ")})`,
+    )
+    .all(...hashes) as { hash: string; bytes: Uint8Array }[]) {
+    if (sha256Hex(Buffer.from(row.bytes)) !== row.hash) throw damagedStory();
+    let pack: ReferencePack;
+    try {
+      pack = ReferencePackSchema.parse(
+        JSON.parse(Buffer.from(row.bytes).toString("utf8")),
+      );
+    } catch {
+      throw damagedStory();
+    }
+    for (const entry of pack.entries) {
+      if (!entry.consentId || !hashes.includes(entry.assetHash)) continue;
+      const key = `${entry.assetHash}|${entry.characterId}`;
+      linked.set(key, (linked.get(key) ?? new Set()).add(entry.consentId));
+    }
+  }
+  const revoked = db.prepare(
+    "SELECT 1 FROM consent_revocations WHERE consent_id = ?",
+  );
+  for (const consents of linked.values())
+    if ([...consents].every((id) => revoked.get(id)))
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent was revoked, so this media cannot be placed on the timeline again. Clips already there stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+      );
+}
+
+/**
  * YU-051b: a timeline commit that newly presents a medium (seen or heard
  * where the previous head did not, keyed by content hash) that is the
  * output of a take made with continuity references attaches that take,
@@ -294,6 +335,7 @@ export function assertPlacementConsent(
       .map((k) => k.slice(0, k.indexOf("|"))),
   );
   if (!placed.size) return;
+  assertLinkedMediaNotRevoked(c.db, [...placed]);
   // One pass over the project's story versions for all placed hashes (at
   // most 200, one per clip, well within SQLite's expression limits); only
   // versions naming one are parsed.

@@ -806,3 +806,207 @@ test("a take with only a pinned pack can return after revocation, as any project
   });
   assert.ok(added.clips.some((x) => x.assetId === shown.assetId));
 });
+
+// A person's own media after their consent is revoked (founder's decision).
+async function placedStill(c: Ctx) {
+  const consent = await grant(c);
+  const packHash = await savePack(c, id(), pack(c, consent.id));
+  const start = await head(c);
+  const track = start.tracks.find((t) => t.kind === "video")!;
+  const clipId = id();
+  const edit = async (operations: object[]) =>
+    (
+      await execute(c.browser, "yamakan.project.applyBatch", {
+        projectId: c.projectId,
+        expectedRevision: (await head(c)).revision,
+        operations,
+      })
+    ).result as Project;
+  const add = (
+    newId = id(),
+    assetId = c.imported.still.id,
+    startFrame = 0,
+  ) => ({
+    type: "clip.add",
+    clipId: newId,
+    trackId: track.id,
+    assetId,
+    title: null,
+    startTicks: startFrame * FRAME,
+    durationTicks: 30 * FRAME,
+    sourceStartTicks: 0,
+  });
+  return { consent, packHash, track, clipId, edit, add };
+}
+const failure = async (p: Promise<unknown>) => {
+  try {
+    await p;
+  } catch (e) {
+    return `${(e as { code?: string }).code}: ${(e as Error).message}`;
+  }
+  return "accepted";
+};
+const REVOKED = /^VALIDATION: This person's consent was revoked/;
+
+test("a usable consent allows a person's photo, and revocation stops new placement", async () => {
+  const c = await workspace();
+  const { consent, clipId, edit, add } = await placedStill(c);
+  await edit([add(clipId)]);
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+
+  // The clip already there stays, and can still be moved.
+  await edit([{ type: "clip.move", clipId, startTicks: 30 * FRAME }]);
+  assert.ok((await head(c)).clips.some((x) => x.id === clipId));
+
+  // Taken off the timeline, it cannot come back by any route.
+  const removed = await edit([{ type: "clip.remove", clipId }]);
+  assert.match(await failure(edit([add(id(), undefined, 300)])), REVOKED);
+  assert.match(
+    await failure(
+      execute(c.browser, "yamakan.project.undo", {
+        projectId: c.projectId,
+        expectedRevision: removed.revision,
+      }),
+    ),
+    REVOKED,
+  );
+  assert.equal((await head(c)).revision, removed.revision);
+  // Swapping another clip's media for it is refused too.
+  const other = id();
+  await edit([add(other, c.imported.footage.id)]);
+  assert.match(
+    await failure(
+      edit([
+        {
+          type: "clip.replaceMedia",
+          clipId: other,
+          assetId: c.imported.still.id,
+          sourceStartTicks: 0,
+        },
+      ]),
+    ),
+    REVOKED,
+  );
+  // The same bytes imported again are the same medium.
+  const bytes = await readFile(
+    await c.store.objectFile(
+      c.projectId,
+      (await head(c)).assets.find((a) => a.id === c.imported.still.id)!,
+    ),
+  );
+  const copy = await c.store.importAsset(c.projectId, "again.png", bytes);
+  assert.match(await failure(edit([add(id(), copy.asset.id, 300)])), REVOKED);
+  // Media linked to no consent is unaffected, and the file stays in the project.
+  assert.ok((await head(c)).assets.some((a) => a.id === c.imported.still.id));
+  assert.ok((await head(c)).clips.some((x) => x.id === other));
+});
+
+test("revocation also stops a restore and another project, and a new consent is the way back", async () => {
+  const c = await workspace();
+  const { consent, clipId, edit, add } = await placedStill(c);
+  const shown = await edit([add(clipId)]);
+  const removed = await edit([{ type: "clip.remove", clipId }]);
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  const { headFingerprint } = (
+    await execute(c.browser, "yamakan.project.history", {
+      projectId: c.projectId,
+    })
+  ).result as { headFingerprint: string };
+  assert.match(
+    await failure(
+      execute(c.browser, "yamakan.project.restore", {
+        projectId: c.projectId,
+        revision: shown.revision,
+        expectedHeadFingerprint: headFingerprint,
+      }),
+    ),
+    REVOKED,
+  );
+  assert.equal((await head(c)).revision, removed.revision);
+
+  // In another project of this workspace, the same bytes.
+  const bytes = await readFile(
+    await c.store.objectFile(
+      c.projectId,
+      (await head(c)).assets.find((a) => a.id === c.imported.still.id)!,
+    ),
+  );
+  const other = await c.store.create("Other");
+  const { asset } = await c.store.importAsset(other.id, "s.png", bytes);
+  const track = other.tracks.find((t) => t.kind === "video")!;
+  const place = async () =>
+    execute(c.browser, "yamakan.project.applyBatch", {
+      projectId: other.id,
+      expectedRevision: (await c.store.load(other.id)).revision,
+      operations: [
+        {
+          type: "clip.add",
+          clipId: id(),
+          trackId: track.id,
+          assetId: asset.id,
+          title: null,
+          startTicks: 0,
+          durationTicks: 30 * FRAME,
+          sourceStartTicks: 0,
+        },
+      ],
+    });
+  assert.match(await failure(place()), REVOKED);
+
+  // Removing the entry from a later pack version does not free it.
+  const emptied = { ...pack(c, consent.id), entries: [] };
+  await savePack(c, id(), emptied);
+  assert.match(await failure(edit([add()])), REVOKED);
+
+  // A newer consent, saved in a pack with that media, is the way back.
+  const renewed = await grant(c);
+  await savePack(c, id(), pack(c, renewed.id));
+  await edit([add()]);
+  assert.ok(
+    (await head(c)).clips.some((x) => x.assetId === c.imported.still.id),
+  );
+});
+
+test("a revocation holds after the workspace is reopened, and undo stays refused", async () => {
+  const c = await workspace();
+  const { consent, clipId, edit, add } = await placedStill(c);
+  await edit([add(clipId)]);
+  const removed = await edit([{ type: "clip.remove", clipId }]);
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  await c.queue.close();
+  c.store.close();
+  const store = new ProjectStore(c.root);
+  await store.initialize();
+  const queue = new JobSupervisor(store);
+  try {
+    const browser = { ...c.browser, store, queue };
+    assert.match(
+      await failure(
+        execute(browser, "yamakan.project.undo", {
+          projectId: c.projectId,
+          expectedRevision: removed.revision,
+        }),
+      ),
+      REVOKED,
+    );
+    assert.match(
+      await failure(
+        execute(browser, "yamakan.project.applyBatch", {
+          projectId: c.projectId,
+          expectedRevision: removed.revision,
+          operations: [add()],
+        }),
+      ),
+      REVOKED,
+    );
+    assert.ok(
+      (await store.load(c.projectId)).assets.some(
+        (a) => a.id === c.imported.still.id,
+      ),
+      "the file is kept",
+    );
+  } finally {
+    await queue.close();
+    store.close();
+  }
+});

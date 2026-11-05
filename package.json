@@ -53,6 +53,7 @@
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:captions-keyboard": "node scripts/qualify-captions-keyboard.mjs",
+    "qualify:consent-gate": "node scripts/qualify-consent-gate.mjs",
     "qualify:playback": "node scripts/qualify-playback.mjs",
     "qualify:release": "node scripts/qualify-release.ts",
     "qualify:release-evidence": "node scripts/qualify-release-evidence.ts",
