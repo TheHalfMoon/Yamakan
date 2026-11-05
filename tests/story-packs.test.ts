@@ -1116,3 +1116,44 @@ test("after a restore, a surviving consent is revalidated before the photo is pl
     (await head(c)).clips.some((x) => x.assetId === c.imported.still.id),
   );
 });
+
+test("revoking an old grant after renewing leaves the renewal standing", async () => {
+  const c = await workspace();
+  const { consent, edit, add } = await placedStill(c);
+  const renewed = await grant(c);
+  await savePack(c, id(), pack(c, renewed.id));
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  await edit([add()]);
+  assert.ok(
+    (await head(c)).clips.some((x) => x.assetId === c.imported.still.id),
+  );
+});
+
+test("screen time counts per playing channel, so unmuting a second clip is new use", async () => {
+  const c = await workspace();
+  const { consent, clipId, edit, add } = await placedStill(c);
+  const muted = id();
+  const second = id();
+  await edit([
+    { type: "track.add", trackId: muted, name: "Second", kind: "video" },
+    add(clipId),
+    { ...add(second), trackId: muted },
+    { type: "track.update", trackId: muted, muted: true },
+  ]);
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  assert.match(
+    await failure(
+      edit([{ type: "track.update", trackId: muted, muted: false }]),
+    ),
+    REVOKED,
+  );
+  // Lengthening is more of it too, while what adds no time still works.
+  assert.match(
+    await failure(
+      edit([
+        { type: "clip.trim", clipId, startTicks: 0, endTicks: 45 * FRAME },
+      ]),
+    ),
+    REVOKED,
+  );
+});

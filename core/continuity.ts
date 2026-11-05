@@ -315,10 +315,9 @@ function linksOf(db: DatabaseSync, hash: string, hashes: readonly string[]) {
  * A person's own media: a medium a reference pack links to a character's consent
  * cannot be newly used once that consent is revoked, by the founder's decision
  * of 2026-11-05. Consents are workspace-wide, so every project's pack versions
- * count, and removing the entry from a later version does not free it. Only a
- * consent granted after the latest revocation does, so renewing and then revoking
- * cannot fall back on an older grant. After a restore, a surviving consent must
- * be revalidated, as a backup taken before a revocation does not know of it.
+ * count, and removing the entry from a later version does not free it. The
+ * newest consent linked for that character decides. After a restore it must be
+ * revalidated, as a backup taken before a revocation does not know of it.
  * Expiry does not gate this: revocation is the person's act.
  */
 export function assertLinkedMediaNotRevoked(
@@ -351,19 +350,17 @@ export function assertLinkedMediaNotRevoked(
       }))
       .filter((x) => x.row);
     if (!rows.length) continue;
-    const lastRevoked = Math.max(
-      -Infinity,
-      ...rows.map((x) => x.row!.revoked_at ?? -Infinity),
+    // The newest consent decides: revoking it does not fall back on an older
+    // grant, and revoking an old grant after renewing leaves the renewal standing.
+    const newest = rows.reduce((a, b) =>
+      b.row!.granted_at > a.row!.granted_at ? b : a,
     );
-    const live = rows.filter(
-      (x) => x.row!.revoked_at === null && x.row!.granted_at >= lastRevoked,
-    );
-    if (!live.length)
+    if (newest.row!.revoked_at !== null)
       throw new CommandError(
         "VALIDATION",
         "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
       );
-    if (!live.some((x) => consentInCurrentEpoch(db, x.id)))
+    if (!consentInCurrentEpoch(db, newest.id))
       throw new CommandError(
         "VALIDATION",
         "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
@@ -371,17 +368,23 @@ export function assertLinkedMediaNotRevoked(
   }
 }
 
-// How long each medium is on screen or heard, whatever its clips' arrangement.
+// How long each medium plays on each channel, whatever its clips' arrangement.
 function presentedTicks(p: Placed) {
   const out = new Map<string, number>();
   const assets = new Map(p.assets.map((a) => [a.id, a]));
-  const shown = presented(p);
+  const tracks = new Map(p.tracks.map((t) => [t.id, t]));
+  const soloed = new Set(p.tracks.filter((t) => t.solo).map((t) => t.kind));
+  const add = (key: string, ticks: number) =>
+    out.set(key, (out.get(key) ?? 0) + ticks);
   for (const clip of p.clips) {
     const asset = clip.assetId ? assets.get(clip.assetId) : undefined;
-    if (!asset) continue;
-    if (!shown.has(`${asset.hash}|seen`) && !shown.has(`${asset.hash}|heard`))
-      continue;
-    out.set(asset.hash, (out.get(asset.hash) ?? 0) + clip.durationTicks);
+    const track = tracks.get(clip.trackId);
+    if (!asset || !track) continue;
+    if (track.muted || (soloed.has(track.kind) && !track.solo)) continue;
+    if (track.kind === "video" && asset.kind !== "audio")
+      add(`${asset.hash}|seen`, clip.durationTicks);
+    if (track.kind === "audio" || clip.sound?.enabled === true)
+      add(`${asset.hash}|heard`, clip.durationTicks);
   }
   return out;
 }
@@ -415,8 +418,8 @@ export function assertPlacementConsent(
   if (before) {
     const was = presentedTicks(before);
     const more = [...presentedTicks(after)]
-      .filter(([hash, ticks]) => ticks > (was.get(hash) ?? 0))
-      .map(([hash]) => hash);
+      .filter(([key, ticks]) => ticks > (was.get(key) ?? 0))
+      .map(([key]) => key.slice(0, key.indexOf("|")));
     assertLinkedMediaNotRevoked(c.db, [...new Set([...placed, ...more])]);
   }
   if (!placed.size) return;
