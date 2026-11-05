@@ -87,6 +87,35 @@ const difference = (a, b) => {
   return total / FRAME;
 };
 const frameOf = (raw, n) => raw.subarray(n * FRAME, (n + 1) * FRAME);
+// What a file holds, by decoding it, not by what anything says about it.
+const probe = (file) => {
+  const stream = JSON.parse(
+    execFileSync(
+      mediaTools().ffprobe,
+      [
+        "-v",
+        "error",
+        "-count_frames",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=codec_name,width,height,r_frame_rate,nb_read_frames",
+        "-of",
+        "json",
+        file,
+      ],
+      { windowsHide: true, encoding: "utf8" },
+    ),
+  ).streams[0];
+  const [top, bottom] = stream.r_frame_rate.split("/").map(Number);
+  return {
+    codec: stream.codec_name,
+    width: stream.width,
+    height: stream.height,
+    fps: top / bottom,
+    frames: Number(stream.nb_read_frames),
+  };
+};
 
 let browser;
 let passed = false;
@@ -152,8 +181,8 @@ try {
 
   const project = await service("yamakan.project.create", {
     name: "First AI video",
-    // Projects do not offer the 8 fps this model makes, so this is a 30 fps project,
-    // the default, where a source frame lasts 3.75 of its frames.
+    // The default 30 fps project, whatever the model's rate: projects offer neither
+    // CogVideoX's 8 fps nor Wan's 24, so a source frame lasts 30/fps of its frames.
   });
   const uploaded = await page.evaluate(
     async ([projectId, base64, name]) => {
@@ -181,9 +210,15 @@ try {
   const open = await service("yamakan.project.open", { projectId: project.id });
   const track = open.tracks.find((t) => t.kind === "video").id;
   const clipId = crypto.randomUUID();
-  const sourceFrames = 49;
-  const frames = Math.floor((sourceFrames * 30) / 8);
+  const made = probe(video);
+  const sourceFrames = made.frames;
+  const perSource = 30 / made.fps;
+  const frames = Math.floor(sourceFrames * perSource);
   const tick = FLICKS / 30;
+  // A video narrower than 16:9 sits between black bars, on an even width.
+  const pictureWidth = 2 * Math.round((720 * made.width) / made.height / 2);
+  assert.ok(pictureWidth < 1280, `this expects bars, not ${pictureWidth}`);
+  const bar = (1280 - pictureWidth) / 2;
   await service("yamakan.project.applyBatch", {
     projectId: project.id,
     expectedRevision: open.revision,
@@ -230,11 +265,16 @@ try {
   const out = join(root, "workspace", exported);
   if (receipt) copyFileSync(out, `${receipt}.export.mp4`);
   const source = small(video);
-  // A 3:2 video in a 16:9 project: 1080x720 of picture between black bars.
-  const result = small(out, "crop=1080:720:100:0,scale=64:36");
+  const delivered = probe(out);
+  assert.deepEqual(
+    [delivered.codec, delivered.width, delivered.height, delivered.fps],
+    ["h264", 1280, 720, 30],
+    "the export is H.264, 1280x720, 30 fps",
+  );
+  const result = small(out, `crop=${pictureWidth}:720:${bar}:0,scale=64:36`);
   let brightest = 0;
-  for (const x of [0, 1180])
-    for (const value of small(out, `crop=100:720:${x}:0`))
+  for (const x of [0, 1280 - bar])
+    for (const value of small(out, `crop=${bar}:720:${x}:0`))
       brightest = Math.max(brightest, value);
   assert.ok(brightest < 24, `the bars reach ${brightest}`);
   const count = result.length / FRAME;
@@ -245,7 +285,7 @@ try {
     differences.push(
       difference(
         frameOf(source, n),
-        frameOf(result, Math.floor(((n + 0.5) * 30) / 8)),
+        frameOf(result, Math.floor((n + 0.5) * perSource)),
       ),
     );
   const worst = Math.max(...differences);
@@ -253,14 +293,31 @@ try {
   const apart = difference(frameOf(source, 0), frameOf(result, frames - 1));
   assert.ok(worst < 8, `worst frame differs by ${worst}`);
   assert.ok(apart > worst, `frames ${apart} apart, worst match ${worst}`);
+  // A quiet clip passes that limit however its frames are ordered, so the right
+  // frames must also clearly beat the wrong ones. Frozen or shifted pictures do not.
+  let twoFramesOff = 0;
+  for (let n = 0; n + 2 < sourceFrames; n++)
+    twoFramesOff = Math.max(
+      twoFramesOff,
+      difference(
+        frameOf(source, n),
+        frameOf(result, Math.floor((n + 2.5) * perSource)),
+      ),
+    );
+  assert.ok(
+    worst * 2 < twoFramesOff,
+    `worst match ${worst}, two frames off ${twoFramesOff}`,
+  );
   step(
     "the export has every frame at 30 fps, and matches its source frame by frame",
     {
+      source: made,
       frames: count,
-      size: "1280x720, picture 1080x720",
+      size: `1280x720, picture ${pictureWidth}x720`,
       brightestBar: brightest,
       worstDifference: Number(worst.toFixed(2)),
       firstToLast: Number(apart.toFixed(2)),
+      twoFramesOff: Number(twoFramesOff.toFixed(2)),
     },
   );
   assert.deepEqual(pageErrors, []);
