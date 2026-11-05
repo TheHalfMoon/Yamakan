@@ -56,6 +56,12 @@ Still open on this card: launch error 2 stays tracked rather than explained, and
 | `new-test.log`         | `e2e4c2c6a2c5df6a6e4bc8a9fd6c99123ce262bb68fe9fbfdd45974be7fd7c33` |
 | `new-e2e.log`          | `ab2078acf5f08d562cba4ab2af5ec244cd4b806bb364fa23a8ecebba48c70e62` |
 
+## A missing dependency is not missing FFmpeg
+
+With `zod` removed, the capture reported FFmpeg and FFprobe missing and the runtime invalid, though the runtime was intact. Resolving the tools loads `core/process/workers.ts`, which needs `zod`, and any failure there was reported as a bad runtime. A resolver that cannot load now gives `MEDIA_RUNTIME_UNCHECKED` in their place, which still blocks; any other failure to resolve stays `FFMPEG_MISSING`, `FFPROBE_MISSING` and `MEDIA_RUNTIME_INVALID`.
+
+Real run with `zod` removed from a checkout: exit 2, `BLOCKED`, `DEPENDENCY_MISSING` and `MEDIA_RUNTIME_UNCHECKED`, 8 stages skipped, and the issue names the package. Unit tests cover both branches.
+
 ## Impact tools
 
 - Graft, deterministic build only: 694 of 694 files parsed, into a task-owned folder. `graft ask` located `checkoutOwnership` in `scripts/ultimate-environment.mjs`. Structural evidence only.

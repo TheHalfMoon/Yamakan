@@ -136,8 +136,15 @@ export function mediaPreflight({
   } catch (error) {
     mediaRuntime.checked = true;
     mediaRuntime.valid = false;
+    // The resolver could not load, so nothing is known about the runtime: this
+    // is not evidence that FFmpeg is missing.
+    mediaRuntime.unchecked =
+      error.code === "ERR_MODULE_NOT_FOUND" ||
+      error.code === "MODULE_NOT_FOUND";
     mediaRuntime.issues.push({
-      code: "RESOLUTION_FAILED",
+      code: mediaRuntime.unchecked
+        ? "RESOLVER_UNAVAILABLE"
+        : "RESOLUTION_FAILED",
       detail: error.message,
     });
   }

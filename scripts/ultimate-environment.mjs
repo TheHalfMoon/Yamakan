@@ -105,14 +105,22 @@ export function evaluateEnvironment(input) {
       detail: input.helper?.path || "yamakan-procd",
     });
   }
+  const mediaUnchecked = input.mediaRuntime?.unchecked === true;
+  if (mediaUnchecked) {
+    blockers.push({
+      code: "MEDIA_RUNTIME_UNCHECKED",
+      status: "BLOCKED",
+      detail: "the media tools could not be resolved, so they were not checked",
+    });
+  }
   // A tool counts only if it ran and reported a version.
-  if (!input.ffmpeg?.present || !input.ffmpeg?.version) {
+  if (!mediaUnchecked && (!input.ffmpeg?.present || !input.ffmpeg?.version)) {
     blockers.push({
       code: "FFMPEG_MISSING",
       status: "BLOCKED",
     });
   }
-  if (!input.ffprobe?.present || !input.ffprobe?.version) {
+  if (!mediaUnchecked && (!input.ffprobe?.present || !input.ffprobe?.version)) {
     blockers.push({
       code: "FFPROBE_MISSING",
       status: "BLOCKED",
@@ -125,7 +133,11 @@ export function evaluateEnvironment(input) {
       detail: `node ${input.node.version} does not satisfy ${input.node.engine}`,
     });
   }
-  if (input.mediaRuntime?.checked && input.mediaRuntime.valid !== true) {
+  if (
+    !mediaUnchecked &&
+    input.mediaRuntime?.checked &&
+    input.mediaRuntime.valid !== true
+  ) {
     blockers.push({
       code: "MEDIA_RUNTIME_INVALID",
       status: "BLOCKED",
