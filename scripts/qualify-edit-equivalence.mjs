@@ -329,7 +329,7 @@ try {
     // Undo and redo by the toolbar, on the keyboard's copy.
     const undoButton = page.getByRole("button", { name: "Undo", exact: true });
     const redoButton = page.getByRole("button", { name: "Redo", exact: true });
-    const edited = JSON.stringify(byKeyboard);
+    let edited = JSON.stringify(byKeyboard);
     await undoButton.click();
     await settle(keyboard.id, edited);
     assert.notEqual(JSON.stringify(await canonical(keyboard.id)), edited);
@@ -364,6 +364,58 @@ try {
     await page.waitForTimeout(900);
     assert.equal(JSON.stringify(await canonical(keyboard.id)), edited);
     step(`${label}: trimming to a playhead outside the clip does nothing`);
+
+    // A real click on the ruler keeps the keys working: the playhead placed by
+    // mouse, then both edges trimmed to it, then a start trim by key.
+    const ruler = page.locator(".tl-ruler");
+    await ruler.scrollIntoViewIfNeeded();
+    b = await clipBox(ids.b);
+    const shown = await canonical(keyboard.id);
+    const bNow = shown.find((c) => c.id === ids.b);
+    const rulerBox = await ruler.boundingBox();
+    await page.locator(`[data-clip-id="${ids.b}"]`).click({
+      position: { x: b.width / 2, y: b.height / 2 },
+    });
+    const framePx = b.width / bNow.durationFrames;
+    await page.mouse.click(
+      b.x + 30 * framePx,
+      rulerBox.y + rulerBox.height / 2,
+    );
+    before = JSON.stringify(shown);
+    await page.keyboard.press("BracketRight");
+    await settle(keyboard.id, before);
+    await page.waitForTimeout(700);
+    const afterEnd = (await canonical(keyboard.id)).find((c) => c.id === ids.b);
+    assert.ok(
+      Math.abs(afterEnd.durationFrames - 30) <= 2,
+      `] after a ruler click: ${afterEnd.durationFrames}`,
+    );
+    before = JSON.stringify(await canonical(keyboard.id));
+    b = await clipBox(ids.b);
+    await page.mouse.click(
+      b.x + 15 * framePx,
+      rulerBox.y + rulerBox.height / 2,
+    );
+    await page.keyboard.press("BracketLeft");
+    await settle(keyboard.id, before);
+    await page.waitForTimeout(700);
+    const afterStart = (await canonical(keyboard.id)).find(
+      (c) => c.id === ids.b,
+    );
+    assert.ok(
+      Math.abs(afterStart.durationFrames - afterEnd.durationFrames + 15) <= 2,
+      `[ after a ruler click: ${afterStart.durationFrames}`,
+    );
+    before = JSON.stringify(await canonical(keyboard.id));
+    await page.keyboard.press("Comma");
+    await settle(keyboard.id, before);
+    await page.waitForTimeout(700);
+    const afterComma = (await canonical(keyboard.id)).find(
+      (c) => c.id === ids.b,
+    );
+    assert.equal(afterComma.durationFrames, afterStart.durationFrames + 1);
+    step(`${label}: the keys work after a real click on the ruler`);
+    edited = JSON.stringify(await canonical(keyboard.id));
 
     // A locked track refuses both.
     await page.getByRole("button", { name: /lock/i }).first().click();

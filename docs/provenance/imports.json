@@ -29,7 +29,7 @@
       "YU-016: audio clips draw Waveform from peak tiles over the clip's source range (sourceIn..sourceOut); the waveformCache prop is removed.",
       "SS-014: the normal trim and move become functions shared by the pointer and new keyboard controls (frame trim, frame move, trim to playhead, snapping key); clips take keyboard focus."
     ],
-    "importedSha256": "722065f5dd682f7c818c88812e85a273c4f59ae1c876ee12d6f192f10e3677d3",
+    "importedSha256": "9ab77d63654f386394ff926697af3db8d053ce9aca70d062beda6eb7ad585447",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

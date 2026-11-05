@@ -849,7 +849,7 @@ const Timeline: React.FC<TimelineProps> = (props) => {
       // hidden, in other workspaces, and those keys mean other things elsewhere.
       // By physical key, so they work on an Arabic layout too, and time runs left
       // to right in every language, so the arrows do as well.
-      if (target?.closest('.tl-root') && !event.ctrlKey && !event.metaKey) {
+      if (target?.closest?.('.tl-root') && !event.ctrlKey && !event.metaKey) {
         if (event.code === 'KeyN' && !event.altKey && !event.shiftKey) {
           event.preventDefault();
           if (!event.repeat) onSnappingToggle();
@@ -1041,7 +1041,7 @@ const Timeline: React.FC<TimelineProps> = (props) => {
   const tracksHeight = tracks.length * rowHeight;
 
   return (
-    <div className="tl-root select-none">
+    <div className="tl-root select-none" tabIndex={-1}>
       {/* Header: trim modes · timecode · tools */}
       <div className="tl-header">
         <div className="tl-header__group">
