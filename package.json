@@ -53,6 +53,7 @@
     "qualify:w18-loudnorm": "node scripts/qualify-w18-loudnorm.ts",
     "qualify:av-sync": "node scripts/qualify-av-sync.ts",
     "qualify:captions-keyboard": "node scripts/qualify-captions-keyboard.mjs",
+    "qualify:undo-unsaved": "node scripts/qualify-undo-unsaved.mjs",
     "qualify:edit-equivalence": "node scripts/qualify-edit-equivalence.mjs",
     "qualify:playback": "node scripts/qualify-playback.mjs",
     "qualify:release": "node scripts/qualify-release.ts",

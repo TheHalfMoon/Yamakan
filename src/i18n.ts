@@ -29,6 +29,8 @@ const en = {
   "status.working": "Working…",
   "status.opened": "Opened {name}, revision {revision}.",
   "status.saved": "Saved revision {revision}.",
+  "status.documentUnsaved":
+    "Save your unsaved caption or canvas edits first. Undo, redo and restore of saved changes wait for them.",
   "status.conflictReloaded":
     "This project changed elsewhere and your last change no longer applies to it. The current version is shown; your change can be downloaded.",
   "status.mergedAfterConflict":
@@ -345,6 +347,8 @@ const ar: Record<MessageKey, string> = {
   "status.working": "جارٍ العمل…",
   "status.opened": "فُتح {name}، المراجعة {revision}.",
   "status.saved": "حُفظت المراجعة {revision}.",
+  "status.documentUnsaved":
+    "احفظ أولًا تعديلات الترجمة النصية أو اللوحة غير المحفوظة. ينتظرها التراجع عن التغييرات المحفوظة وإعادتها واستعادتها.",
   "status.conflictReloaded":
     "تغيّر هذا المشروع في مكان آخر ولم يعد تعديلك الأخير ينطبق عليه. تُعرض النسخة الحالية، ويمكن تنزيل تعديلك.",
   "status.mergedAfterConflict":

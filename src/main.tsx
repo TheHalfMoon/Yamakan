@@ -178,6 +178,17 @@ function App() {
   // revision unchanged (the service carries documents forward on its next
   // save). A draft based on anything else is left alone, so its save still
   // meets another writer's changes.
+  // Panels holding unsaved document work. An undo in the service restores a
+  // whole snapshot, documents included, so it waits until they are saved.
+  const unsavedDocuments = useRef(new Set<() => boolean>());
+  const registerUnsaved = (isUnsaved: () => boolean) => {
+    unsavedDocuments.current.add(isUnsaved);
+    return () => {
+      unsavedDocuments.current.delete(isUnsaved);
+    };
+  };
+  const documentWorkUnsaved = () =>
+    [...unsavedDocuments.current].some((isUnsaved) => isUnsaved());
   const documentSaved = (projectId: string, from: number, revision: number) =>
     putHistory((h) => {
       if (!h || h.present.id !== projectId || h.present.revision !== from)
@@ -646,6 +657,10 @@ function App() {
                 putHistory((h) => h && undoHistoryState(h));
                 return;
               }
+              if (documentWorkUnsaved()) {
+                setMessage(msg("status.documentUnsaved"));
+                return;
+              }
               run(async () => {
                 const undone = ProjectSchema.parse(
                   await call("yamakan.project.undo", {
@@ -666,6 +681,10 @@ function App() {
             onClick={() => {
               if (history?.future.length) {
                 putHistory((h) => h && redoHistoryState(h));
+                return;
+              }
+              if (documentWorkUnsaved()) {
+                setMessage(msg("status.documentUnsaved"));
                 return;
               }
               run(async () => {
@@ -904,6 +923,7 @@ function App() {
         client={client as unknown as StudioClient}
         t={(key) => t(key)}
         onSaved={documentSaved}
+        registerUnsaved={registerUnsaved}
       />
     </>
   );
@@ -1936,6 +1956,11 @@ function App() {
                     }
                     onClick={() =>
                       run(async () => {
+                        // A restore replaces documents too, as an undo does.
+                        if (documentWorkUnsaved()) {
+                          setMessage(msg("status.documentUnsaved"));
+                          return;
+                        }
                         accept(
                           await call("yamakan.project.restore", {
                             projectId: revisionHistory.projectId,
@@ -2092,6 +2117,7 @@ function App() {
                           client.call(operation as never, parameters as never),
                       }}
                       onSaved={documentSaved}
+                      registerUnsaved={registerUnsaved}
                     />
                   </section>
                 ) : (

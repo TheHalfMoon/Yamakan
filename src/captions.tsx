@@ -38,6 +38,8 @@ type Props = {
   client: Client;
   t: Translate;
   onSaved: (projectId: string, from: number, revision: number) => void;
+  // Tells the editor when edits here are unsaved, so an undo waits for them.
+  registerUnsaved?: (isUnsaved: () => boolean) => () => void;
 };
 
 const TICKS_PER_MS = 705_600;
@@ -115,13 +117,17 @@ function CaptionsPanel(props: Props) {
   useEffect(() => {
     // Our own commit moves the track too; it clears the draft itself.
     if (busy) return;
-    if (draft && track && draft.base !== track.contentHash) {
+    // That includes the track going, as Discard goes with it.
+    if (draft && draft.base !== track?.contentHash) {
       setDraft(null);
       setError(t("captions.changed"));
     }
-  }, [track?.contentHash]);
+  }, [track?.contentHash, busy]);
   const cues = draft?.cues ?? track?.cues ?? [];
   const drafting = draft !== null;
+  const hasDraft = useRef(false);
+  hasDraft.current = drafting;
+  useEffect(() => live.current.registerUnsaved?.(() => hasDraft.current), []);
   useEffect(() => {
     const control = refocus.current;
     if (busy || !control) return;
