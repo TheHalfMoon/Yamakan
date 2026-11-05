@@ -4,6 +4,8 @@
 // trip mixed Arabic and Latin text; burned-in captions draw the same in the
 // reference preview and the export.
 import test, { after } from "node:test";
+import { escapeAssText } from "../core/render/ass.ts";
+import { framesToTicks } from "../core/time.ts";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -984,5 +986,120 @@ test("a retried caption edit replays after a lost reply, even after later edits"
       ids(),
     ),
     false,
+  );
+});
+
+test("a burned-in cue covers exactly its frames at a rational rate, and text cannot escape", async () => {
+  const c = await workspace();
+  // 24000/1001: frames fall on no whole millisecond.
+  const rate = { num: 24000, den: 1001 };
+  const project = (
+    await execute(c.browser, "yamakan.project.create", {
+      name: "Rational",
+      frameRate: rate,
+    })
+  ).result as Project;
+  const still = await c.store.importAsset(
+    project.id,
+    "still.png",
+    await readFile(path.join(c.root, "grey.png")),
+  );
+  const fresh = await c.store.load(project.id);
+  const FRAME = framesToTicks(1, rate);
+  await execute(c.browser, "yamakan.project.applyBatch", {
+    projectId: project.id,
+    expectedRevision: fresh.revision,
+    operations: [
+      {
+        type: "clip.add",
+        clipId: ids(),
+        trackId: fresh.tracks.find((t) => t.kind === "video")!.id,
+        assetId: still.asset.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 72 * FRAME,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  // Override markup is refused at import. Braces and a backslash that get past
+  // that travel as plain text.
+  const hostile = "{H} a\\Nb {I}";
+  const srt = `1\n00:00:01,000 --> 00:00:02,000\n${hostile}\n`;
+  const documentId = ids();
+  const imported = (
+    await execute(c.browser, "yamakan.captions.import", {
+      projectId: project.id,
+      expectedRevision: (await c.store.load(project.id)).revision,
+      documentId,
+      expectedContentHash: null,
+      name: "Exact",
+      language: "en",
+      format: "srt",
+      text: srt,
+    })
+  ).result as { document: { contentHash: string } };
+  const cue = CaptionDocumentSchema.parse(
+    JSON.parse(
+      c.store.getDocument(project.id, documentId).bytes.toString("utf8"),
+    ),
+  ).cues[0]!;
+  assert.equal(cue.text, hostile);
+  const assLine = escapeAssText(cue.text);
+  assert.ok(!/(^|[^\\])\{/.test(assLine), "no brace opens an override");
+  assert.ok(!assLine.includes("\\N"), "no line break is formed");
+  await execute(c.browser, "yamakan.captions.save", {
+    projectId: project.id,
+    expectedRevision: (await c.store.load(project.id)).revision,
+    documentId,
+    expectedContentHash: imported.document.contentHash,
+    burnIn: true,
+  });
+  const queued = await c.queue.submit(project.id, ids());
+  let job = queued;
+  for (let i = 0; i < 240 && job.state !== "COMPLETED"; i++) {
+    assert.notEqual(job.state, "FAILED", job.error ?? "");
+    await new Promise((r) => setTimeout(r, 250));
+    job = c.queue.status(queued.id);
+  }
+  const file = await c.store.file(
+    project.id,
+    ...(job.artifact!.split("/") as [string, ...string[]]),
+  );
+  const width = 160;
+  const height = 90;
+  const gray = execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      file,
+      "-vf",
+      `scale=${width}:${height}`,
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "gray",
+      "-",
+    ],
+    { windowsHide: true, maxBuffer: 1 << 28 },
+  );
+  const size = width * height;
+  const frames = gray.length / size;
+  assert.equal(frames, 72);
+  const inked = (n: number) => {
+    let different = 0;
+    for (let i = 0; i < size; i++)
+      if (Math.abs(gray[n * size + i]! - gray[i]!) > 40) different++;
+    return different > 10;
+  };
+  const shown = Array.from({ length: frames }, (_, n) => n).filter(inked);
+  // 1.000 s falls between frames 23 and 24; 2.000 s between 47 and 48.
+  assert.deepEqual(
+    [shown[0], shown.at(-1), shown.length],
+    [24, 47, 24],
+    `shown on ${shown.join()}`,
   );
 });
