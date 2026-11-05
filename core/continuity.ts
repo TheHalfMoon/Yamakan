@@ -21,7 +21,10 @@ import { CommandError } from "./command/errors.ts";
 import type { Project } from "./project.ts";
 import type { DocumentKind } from "./document-ref.ts";
 import { sha256Hex } from "./hash/canonical.ts";
-import { assertConsentUsable } from "./director/runtime.ts";
+import {
+  assertConsentUsable,
+  consentInCurrentEpoch,
+} from "./director/runtime.ts";
 import type { ConsentPurpose } from "./identity.ts";
 import {
   ReferencePackSchema,
@@ -112,6 +115,7 @@ export function resolveContinuity(
   if (new Set(keys).size !== keys.length)
     throw invalid("A take names each reference entry once.");
   const packs = new Map<string, ReferencePack>();
+  const media: string[] = [];
   const references: ResolvedReference[] = refs.map((ref) => {
     // Keyed by document and version: identical bytes held under another
     // document (or by another project) are not this pack.
@@ -127,6 +131,7 @@ export function resolveContinuity(
     // keeping the record of an old take does not need it.
     const asset = c.project.assets.find((a) => a.id === entry.assetId);
     const mediaPresent = Boolean(asset && asset.hash === entry.assetHash);
+    media.push(entry.assetHash);
     if (stage !== "record" && !mediaPresent)
       throw invalid(
         `Reference "${entry.label}" no longer matches its media version in this project.`,
@@ -182,6 +187,7 @@ export function resolveContinuity(
       consentsChecked,
     };
   });
+  if (stage !== "record") assertLinkedMediaNotRevoked(c.db, media);
   return {
     stage,
     // The references are what they say: held versions, real entries and
@@ -234,6 +240,7 @@ type Placed = {
   clips: readonly {
     trackId: string;
     assetId: string | null;
+    durationTicks: number;
     sound: { enabled: boolean } | null;
   }[];
 };
@@ -270,6 +277,122 @@ const damagedStory = () =>
     "A story version is missing or damaged in the workspace; restore a verified backup.",
   );
 
+// What a pack version links, kept by its content hash, as it can never change.
+// Only entries with a consent are kept, so this stays small.
+type PackLink = { assetHash: string; characterId: string; consentId: string };
+const packLinks = new Map<string, readonly PackLink[]>();
+
+function linksOf(db: DatabaseSync, hash: string, hashes: readonly string[]) {
+  const known = packLinks.get(hash);
+  if (known) return known;
+  const row = db
+    .prepare("SELECT bytes FROM creative_documents WHERE hash = ?")
+    .get(hash) as { bytes: Uint8Array } | undefined;
+  const bytes = row ? Buffer.from(row.bytes) : null;
+  try {
+    if (!bytes || sha256Hex(bytes) !== hash) throw new Error("damaged");
+    const links: PackLink[] = [];
+    for (const e of ReferencePackSchema.parse(
+      JSON.parse(bytes.toString("utf8")),
+    ).entries)
+      if (e.consentId && e.characterId)
+        links.push({
+          assetHash: e.assetHash,
+          characterId: e.characterId,
+          consentId: e.consentId,
+        });
+    packLinks.set(hash, links);
+    return links;
+  } catch {
+    // A damaged version blocks only the media it still names.
+    const text = bytes?.toString("utf8") ?? "";
+    if (hashes.some((h) => text.includes(h))) throw damagedStory();
+    return [];
+  }
+}
+
+/**
+ * A person's own media: a medium a reference pack links to a character's consent
+ * cannot be newly used once that consent is revoked, by the founder's decision
+ * of 2026-11-05. Consents are workspace-wide, so every project's pack versions
+ * count, and removing the entry from a later version does not free it. The
+ * newest consent linked for that character decides. After a restore it must be
+ * revalidated, as a backup taken before a revocation does not know of it.
+ * Expiry does not gate this: revocation is the person's act.
+ */
+export function assertLinkedMediaNotRevoked(
+  db: DatabaseSync,
+  hashes: readonly string[],
+) {
+  if (!hashes.length) return;
+  const linked = new Map<string, Set<string>>();
+  const versions = db
+    .prepare(
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack'",
+    )
+    .all() as { hash: string }[];
+  const wanted = new Set(hashes);
+  for (const { hash } of versions)
+    for (const link of linksOf(db, hash, hashes)) {
+      if (!wanted.has(link.assetHash)) continue;
+      const key = `${link.assetHash}|${link.characterId}`;
+      linked.set(key, (linked.get(key) ?? new Set()).add(link.consentId));
+    }
+  const consent = db.prepare(
+    "SELECT c.granted_at, r.revoked_at FROM likeness_consents c LEFT JOIN consent_revocations r ON r.consent_id = c.id WHERE c.id = ?",
+  );
+  for (const ids of linked.values()) {
+    const rows = [...ids]
+      .map((id) => ({
+        id,
+        row: consent.get(id) as
+          { granted_at: number; revoked_at: number | null } | undefined,
+      }))
+      .filter((x) => x.row);
+    if (!rows.length) continue;
+    // The newest consent decides: revoking it does not fall back on an older
+    // grant, and revoking an old grant after renewing leaves the renewal standing.
+    // On a tie the revoked one wins, so a clock cannot free the media.
+    const newest = rows.reduce((a, b) =>
+      b.row!.granted_at > a.row!.granted_at ||
+      (b.row!.granted_at === a.row!.granted_at && b.row!.revoked_at !== null)
+        ? b
+        : a,
+    );
+    if (newest.row!.revoked_at !== null)
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+      );
+    if (!consentInCurrentEpoch(db, newest.id))
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
+      );
+  }
+}
+
+// How long each medium plays on each channel, whatever its clips' arrangement.
+function presentedTicks(p: Placed) {
+  const out = new Map<string, number>();
+  const assets = new Map(p.assets.map((a) => [a.id, a]));
+  const tracks = new Map(p.tracks.map((t) => [t.id, t]));
+  const soloed = new Set(p.tracks.filter((t) => t.solo).map((t) => t.kind));
+  const add = (key: string, ticks: number) =>
+    out.set(key, (out.get(key) ?? 0) + ticks);
+  for (const clip of p.clips) {
+    const asset = clip.assetId ? assets.get(clip.assetId) : undefined;
+    const track = tracks.get(clip.trackId);
+    if (!asset || !track) continue;
+    if (track.muted || (soloed.has(track.kind) && !track.solo)) continue;
+    if (track.kind === "video" && asset.kind !== "audio")
+      add(`${asset.hash}|seen`, clip.durationTicks);
+    if (track.kind === "audio" || clip.sound?.enabled === true)
+      add(`${asset.hash}|heard`, clip.durationTicks);
+  }
+  return out;
+}
+
 /**
  * YU-051b: a timeline commit that newly presents a medium (seen or heard
  * where the previous head did not, keyed by content hash) that is the
@@ -293,6 +416,16 @@ export function assertPlacementConsent(
       .filter((k) => !shown.has(k))
       .map((k) => k.slice(0, k.indexOf("|"))),
   );
+  // More of a medium than before is a new use, by whatever route, so a clip that
+  // stays cannot open further placements; a split or a move adds nothing. A
+  // recovery over a damaged head (no `before`) puts back committed work instead.
+  if (before) {
+    const was = presentedTicks(before);
+    const more = [...presentedTicks(after)]
+      .filter(([key, ticks]) => ticks > (was.get(key) ?? 0))
+      .map(([key]) => key.slice(0, key.indexOf("|")));
+    assertLinkedMediaNotRevoked(c.db, [...new Set([...placed, ...more])]);
+  }
   if (!placed.size) return;
   // One pass over the project's story versions for all placed hashes (at
   // most 200, one per clip, well within SQLite's expression limits); only
