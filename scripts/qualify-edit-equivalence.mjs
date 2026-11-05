@@ -225,21 +225,52 @@ try {
     await page.waitForTimeout(700);
     return canonical(projectId);
   };
-  // The reference preview grows as it renders, so the timeline moves.
+  // The reference preview grows as it renders, so the timeline moves: measure
+  // only once the clip has stopped moving.
   const clipBox = async (id) => {
     const clip = page.locator(`[data-clip-id="${id}"]`);
-    await clip.scrollIntoViewIfNeeded();
-    return clip.boundingBox();
+    let last = null;
+    for (let i = 0; i < 40; i++) {
+      await clip.scrollIntoViewIfNeeded();
+      const box = await clip.boundingBox();
+      if (last && box && last.x === box.x && last.y === box.y) return box;
+      last = box;
+      await page.waitForTimeout(250);
+    }
+    return last;
   };
   // Pixels per frame, from the clip as drawn: 90 frames wide at the start.
-  const dragBy = async (fromX, y, dx) => {
-    await page.mouse.move(fromX, y);
-    // A clip's trim handles appear once the pointer rests on it.
-    await page.waitForTimeout(200);
-    await page.mouse.down();
-    await page.mouse.move(fromX + dx / 2, y, { steps: 3 });
-    await page.mouse.move(fromX + dx, y, { steps: 3 });
-    await page.mouse.up();
+  // A real drag, pressed only with that clip under the pointer. The preview above
+  // grows when it finishes rendering, which moves the timeline at any moment.
+  const dragClip = async (id, where, dx) => {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const box = await clipBox(id);
+      const x =
+        where === "end"
+          ? box.x + box.width - 2
+          : where === "start"
+            ? box.x + 2
+            : box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      // A clip's trim handles appear once the pointer rests on it.
+      await page.waitForTimeout(200);
+      const under = await page.evaluate(
+        ([x, y]) =>
+          document
+            .elementFromPoint(x, y)
+            ?.closest("[data-clip-id]")
+            ?.getAttribute("data-clip-id"),
+        [x, y],
+      );
+      if (under !== id) continue;
+      await page.mouse.down();
+      await page.mouse.move(x + dx / 2, y, { steps: 3 });
+      await page.mouse.move(x + dx, y, { steps: 3 });
+      await page.mouse.up();
+      return;
+    }
+    throw new Error(`Clip ${id} never came under the pointer.`);
   };
 
   for (const [label, frameRate] of [
@@ -253,9 +284,9 @@ try {
     // Edit 1, by pointer: drag A's end to just short of B's start; it snaps.
     await openProject(pointer.name);
     let before = JSON.stringify(await canonical(pointer.id));
-    let a = await clipBox(ids.a);
+    const a = await clipBox(ids.a);
     const pxPerFrame = a.width / 90;
-    await dragBy(a.x + a.width - 2, a.y + a.height / 2, 60 * pxPerFrame - 2);
+    await dragClip(ids.a, "end", 60 * pxPerFrame - 2);
     await settle(pointer.id, before);
     await page.waitForTimeout(700);
     // Edit 2, by pointer with snapping off: B's end 7 frames shorter.
@@ -263,28 +294,17 @@ try {
     await page.keyboard.press("n");
     await page.getByTitle("Snapping off (N)").waitFor();
     before = JSON.stringify(await canonical(pointer.id));
-    let b = await clipBox(ids.b);
-    await dragBy(
-      b.x + b.width - 2,
-      b.y + b.height / 2,
-      Math.round(-7 * pxPerFrame),
-    );
+    await dragClip(ids.b, "end", Math.round(-7 * pxPerFrame));
     await settle(pointer.id, before);
     await page.waitForTimeout(700);
     // Edit 3: B moved 11 frames later.
     before = JSON.stringify(await canonical(pointer.id));
-    b = await clipBox(ids.b);
-    await dragBy(
-      b.x + b.width / 2,
-      b.y + b.height / 2,
-      Math.round(11 * pxPerFrame),
-    );
+    await dragClip(ids.b, "middle", Math.round(11 * pxPerFrame));
     await settle(pointer.id, before);
     await page.waitForTimeout(700);
     // Edit 4: B's start 5 frames later, which moves its source frame too.
     before = JSON.stringify(await canonical(pointer.id));
-    b = await clipBox(ids.b);
-    await dragBy(b.x + 2, b.y + b.height / 2, Math.round(5 * pxPerFrame));
+    await dragClip(ids.b, "start", Math.round(5 * pxPerFrame));
     const byPointer = await committed(pointer.id, before);
 
     // The same, by keyboard.
@@ -369,7 +389,7 @@ try {
     // mouse, then both edges trimmed to it, then a start trim by key.
     const ruler = page.locator(".tl-ruler");
     await ruler.scrollIntoViewIfNeeded();
-    b = await clipBox(ids.b);
+    let b = await clipBox(ids.b);
     const shown = await canonical(keyboard.id);
     const bNow = shown.find((c) => c.id === ids.b);
     const rulerBox = await ruler.boundingBox();
@@ -423,8 +443,7 @@ try {
     await page.locator(`[data-clip-id="${ids.b}"]`).focus();
     for (const key of ["Shift+ArrowLeft", "Alt+ArrowRight", "Period"])
       await page.keyboard.press(key);
-    b = await clipBox(ids.b);
-    await dragBy(b.x + b.width / 2, b.y + b.height / 2, 40);
+    await dragClip(ids.b, "middle", 40);
     await page.waitForTimeout(900);
     assert.equal(JSON.stringify(await canonical(keyboard.id)), edited);
     step(`${label}: a locked track refuses both inputs`);

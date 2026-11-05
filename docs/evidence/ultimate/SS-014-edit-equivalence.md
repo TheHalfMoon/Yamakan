@@ -42,6 +42,7 @@ Canonical `startFrame`, `durationFrames` and `sourceFrame` match exactly at both
 - Zero length, overlaps and VFR were covered only through the shared guards. Concurrent revisions were not run here.
 - `core/timeline/snapping.ts` holds integer-tick snapping, but this timeline snaps in floating seconds by pixels, as it did before. Rounding hides that in the cases above; replacing it was not attempted.
 - Trim modes other than normal have no keyboard path. The main editor passes `trimMode="normal"`, so they are not reachable there either.
+- **The timeline jumps when the reference preview finishes rendering.** It moved about 690 px down in this qualifier, between measuring a clip and pressing on it, so a real press could land on the preview. The qualifier was flaky until it waited for the clip to be under the pointer. No drag was lost, but the jump itself is a real, open usability defect.
 - Screen readers were not run. CI does not run this qualifier.
 
 ## Independent review
