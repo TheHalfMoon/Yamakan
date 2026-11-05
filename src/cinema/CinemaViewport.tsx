@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CINEMA_ENABLED, cinemaCapability } from "../../core/scene3d-flags.ts";
+import {
+  CINEMA_LENS_PRESETS_MM,
+  assertCinemaCameraOptics,
+  cinemaVerticalFovDegrees,
+  type CinemaCameraOptics,
+} from "./cinemaCameraOptics.ts";
+import type { MessageKey } from "../i18n.ts";
 
 /** Browser-local scene shape (mirrors core Scene3D; validated server-side on save). */
 export type CinemaSceneLocal = {
@@ -64,6 +71,7 @@ function assertLocalScene(raw: unknown): CinemaSceneLocal {
   ) {
     throw new Error("Invalid local Cinema scene");
   }
+  assertCinemaCameraOptics(s.camera);
   for (const item of s.items) {
     if (item.assetId != null && typeof item.assetId !== "string") {
       throw new Error("Cinema items may only carry asset ids, not URLs");
@@ -97,6 +105,7 @@ type Props = {
   initialScene?: CinemaSceneLocal;
   // False while another workspace is open: the loop draws nothing.
   active?: boolean;
+  t?: (key: MessageKey, vars?: Record<string, string | number>) => string;
 };
 
 /**
@@ -106,6 +115,7 @@ type Props = {
 export function CinemaViewport({
   initialScene = SAMPLE_SCENE,
   active = true,
+  t = (key) => key,
 }: Props) {
   // Hidden (another workspace is open): the scene is kept, nothing is drawn.
   const activeRef = useRef(active);
@@ -114,6 +124,30 @@ export function CinemaViewport({
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState<string | null>(null);
   const sceneRef = useRef<CinemaSceneLocal>(initialScene);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const [lensMm, setLensMm] = useState(initialScene.camera.focalLengthMm);
+
+  // Camera controls change the preview and browser-local scene only. They are
+  // not connected to AI inference or automatic project persistence.
+  const applyLocalCamera = (intrinsics: CinemaCameraOptics) => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    camera.fov = cinemaVerticalFovDegrees(intrinsics, camera.aspect);
+    camera.near = intrinsics.near;
+    camera.far = intrinsics.far;
+    camera.updateProjectionMatrix();
+  };
+
+  const chooseLens = (focalLengthMm: number) => {
+    if (!CINEMA_ENABLED) return;
+    const next = {
+      ...sceneRef.current,
+      camera: { ...sceneRef.current.camera, focalLengthMm },
+    };
+    sceneRef.current = next;
+    setLensMm(focalLengthMm);
+    applyLocalCamera(next.camera);
+  };
 
   useEffect(() => {
     const cap = cinemaCapability();
@@ -136,6 +170,8 @@ export function CinemaViewport({
     const threeScene = new THREE.Scene();
     threeScene.background = new THREE.Color(0x1a1d21);
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    cameraRef.current = camera;
+    applyLocalCamera(sceneRef.current.camera);
     camera.position.set(2.5, 2, 4);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -196,6 +232,8 @@ export function CinemaViewport({
         const next = assertLocalScene(raw);
         sceneRef.current = next;
         syncMeshes(next);
+        setLensMm(next.camera.focalLengthMm);
+        applyLocalCamera(next.camera);
         return next;
       },
       getItemCount: () => sceneRef.current.items.length,
@@ -230,6 +268,7 @@ export function CinemaViewport({
       cancelled = true;
       cancelAnimationFrame(raf);
       delete window.__yamakanCinema;
+      cameraRef.current = null;
       controls.dispose();
       renderer.dispose();
       for (const mesh of meshes.values()) {
@@ -268,6 +307,36 @@ export function CinemaViewport({
         data-testid="cinema-surface"
         style={{ width: "100%", minHeight: 360 }}
       />
+      <div
+        className="cinema-lens-panel"
+        role="group"
+        aria-label={t("cinema.lens.title")}
+        data-testid="cinema-lens-panel"
+      >
+        <strong>{t("cinema.lens.title")}</strong>
+        <div className="cinema-lens-presets">
+          {CINEMA_LENS_PRESETS_MM.map((mm) => (
+            <button
+              key={mm}
+              type="button"
+              aria-pressed={lensMm === mm}
+              data-testid={"cinema-lens-" + mm}
+              onClick={() => chooseLens(mm)}
+            >
+              {t("cinema.lens.preset", { value: mm })}
+            </button>
+          ))}
+        </div>
+        <output aria-live="polite" data-testid="cinema-lens-fov">
+          {t("cinema.lens.fov", {
+            value: Math.round(
+              cameraRef.current?.fov ??
+                cinemaVerticalFovDegrees(sceneRef.current.camera, 16 / 9),
+            ),
+          })}
+        </output>
+        <p className="cinema-lens-note">{t("cinema.lens.note")}</p>
+      </div>
       {error ? (
         <p role="alert" data-testid="cinema-error">
           {error}
