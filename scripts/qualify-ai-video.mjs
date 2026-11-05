@@ -252,9 +252,17 @@ try {
     await new Promise((r) => setTimeout(r, 200));
   }
   assert.equal(done.state, "COMPLETED", done.error ?? "");
-  const exported = readdirSync(join(root, "workspace"), { recursive: true })
-    .map(String)
-    .find((f) => f.replaceAll("\\", "/").endsWith(done.artifact));
+  // A preview's temporary folder can vanish while this looks: look again.
+  let exported;
+  for (let attempt = 0; !exported && attempt < 10; attempt++)
+    try {
+      exported = readdirSync(join(root, "workspace"), { recursive: true })
+        .map(String)
+        .find((f) => f.replaceAll("\\", "/").endsWith(done.artifact));
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      await new Promise((r) => setTimeout(r, 200));
+    }
   assert.ok(exported, "the export is in the workspace");
   const out = join(root, "workspace", exported);
   if (receipt) copyFileSync(out, `${receipt}.export.mp4`);
@@ -318,13 +326,23 @@ try {
         2,
       )}\n`,
     );
-  await new Promise((r) => setTimeout(r, 1000));
-  rmSync(root, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 300,
+  // The service must be gone before its folder can be. A folder Windows still holds
+  // is left behind and said so: tidying up does not change what was found above.
+  await new Promise((r) => {
+    if (child.exitCode !== null) return r();
+    child.once("exit", r);
+    setTimeout(r, 10_000);
   });
+  try {
+    rmSync(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 300,
+    });
+  } catch (e) {
+    console.log(`note - left behind: ${root} (${e.code})`);
+  }
 }
 console.log(passed ? "AI VIDEO PASS" : "AI VIDEO FAIL");
 process.exit(passed ? 0 : 1);

@@ -28,13 +28,28 @@ export function exportFramesOf(n, perSource, frames) {
 
 /**
  * How closely an export follows its source, and `problem` if it does not. Where two
- * source frames differ, every export frame of each must be closer to its own, so a
- * fully frozen export always fails once any pair differs. A still stretch cannot show
- * its order: `orderedFrames` says how many source frames this reached, perhaps none.
+ * compared source frames differ, every export frame of each must be closer to its
+ * own, so a fully frozen export fails once any such pair exists. A still stretch
+ * cannot show its order: `orderedFrames` says how many source frames this reached,
+ * perhaps none. One steady offset is taken out, so a flat-colour fade, whose real
+ * offset varies with its colour, can be refused although it is right.
  */
 export function compareFrames(source, result, perSource) {
   const sourceFrames = source.length / FRAME;
   const frames = result.length / FRAME;
+  const nothing = (problem) => ({
+    shown: 0,
+    worst: 0,
+    offset: [0, 0, 0],
+    pairs: 0,
+    orderChecks: 0,
+    orderedFrames: 0,
+    orderFailures: [],
+    problem,
+  });
+  if (!(perSource > 0) || !Number.isFinite(perSource))
+    return nothing(`no frame rate to compare at: ${perSource}`);
+  if (sourceFrames < 1 || frames < 1) return nothing("no frames to compare");
   const shownAt = new Map();
   for (let n = 0; n < sourceFrames; n++) {
     const shown = exportFramesOf(n, perSource, frames);
@@ -54,11 +69,13 @@ export function compareFrames(source, result, perSource) {
   for (let c = 0; c < 3; c++) offset[c] /= (compared * FRAME) / 3;
 
   const pairs = [];
-  const lastShown = Math.max(...shownAt.keys());
+  const shownFrames = [...shownAt.keys()];
+  const firstShown = shownFrames[0];
+  const lastShown = shownFrames.at(-1);
   for (const n of shownAt.keys())
     for (const m of [n + 1, n + 2]) if (shownAt.has(m)) pairs.push([n, m]);
-  // Slow drift can stay under the limit between neighbours, but not across the clip.
-  if (lastShown > 2) pairs.push([0, lastShown]);
+  // Slow drift in one direction can stay under the limit between neighbours.
+  if (lastShown - firstShown > 2) pairs.push([firstShown, lastShown]);
 
   const closerToOwn = (n, own, other) => {
     const [first, last] = shownAt.get(n);

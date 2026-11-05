@@ -149,3 +149,77 @@ test("the order rule reaches only frames near a change", () => {
   // Frames 10 and 11 pair with 12 and 13 across the jump, and frame 0 with 23.
   assert.equal(result.orderedFrames, 6);
 });
+
+// A clip of pictures whose channels differ, each channel moved by its own offset.
+const coloured = (values: number[], offset: number[]) =>
+  Buffer.concat(
+    values.map((v) => {
+      const frame = Buffer.alloc(FRAME);
+      for (let i = 0; i < FRAME; i++) frame[i] = v + offset[i % 3];
+      return frame;
+    }),
+  );
+const ramp = Array.from({ length: 24 }, (_, n) => 60 + n * 3);
+
+test("the steady offset is taken out, by its own sign", () => {
+  const right = compareFrames(clip(ramp), clip(ramp.map((v) => v - 4)), 1);
+  assert.equal(right.problem, null);
+  assert.deepEqual(right.offset, [-4, -4, -4]);
+  const shifted = ramp.map((_, n) => ramp[Math.max(0, n - 1)] - 4);
+  assert.match(
+    compareFrames(clip(ramp), clip(shifted), 1).problem,
+    /out of order/,
+  );
+});
+
+test("each channel's offset is its own", () => {
+  // Their mean is nothing, so one offset for all three would see no offset at all.
+  const result = compareFrames(clip(ramp), coloured(ramp, [-5, -5, 10]), 1);
+  assert.deepEqual(result.offset, [-5, -5, 10]);
+  assert.equal(result.problem, null);
+});
+
+for (const place of [0, 1, 2]) {
+  test(`one wrong frame among a source frame's fails, at place ${place}`, () => {
+    const values = [100, 100, 100, 104, 108, 108, 108];
+    const delivered = values.flatMap((v) => [v, v, v]);
+    // Three frames of source frame 3, one of them showing source frame 4.
+    delivered[3 * 3 + place] = 108;
+    const result = compareFrames(clip(values), clip(delivered), 3);
+    assert.ok(result.worst < 8);
+    assert.match(result.problem, /out of order/);
+  });
+
+  test(`the limit holds a source frame's every frame, at place ${place}`, () => {
+    const values = Array(5).fill(100);
+    const delivered = Array(15).fill(100);
+    delivered[3 + place] = 108;
+    assert.match(
+      compareFrames(clip(values), clip(delivered), 3).problem,
+      /worst frame/,
+    );
+  });
+}
+
+test("drift over four frames is compared end to end", () => {
+  const drift = [100, 101, 101, 102];
+  assert.equal(compareFrames(clip(drift), clip(drift), 1).orderChecks, 1);
+  const short = [100, 101, 102];
+  assert.equal(compareFrames(clip(short), clip(short), 1).orderChecks, 1);
+});
+
+test("a source faster than the project skips what never shows", () => {
+  // At half a project frame per source frame, frame 0 starts at frame 0 and has none.
+  const values = Array.from({ length: 8 }, (_, n) => 100 + n * 4);
+  const result = compareFrames(clip(values), clip([100, 112, 120, 128]), 0.5);
+  assert.equal(result.problem, null);
+  assert.ok(result.shown > 0);
+});
+
+test("nothing to compare is a problem, not a pass", () => {
+  const some = clip([100, 110]);
+  assert.match(compareFrames(clip([]), some, 1).problem, /no frames/);
+  assert.match(compareFrames(some, clip([]), 1).problem, /no frames/);
+  for (const rate of [0, -1, Number.NaN, Infinity])
+    assert.match(compareFrames(some, some, rate).problem, /no frame rate/);
+});

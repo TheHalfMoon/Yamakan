@@ -42,20 +42,20 @@ The `verified` in each receipt, this and Wan's below, is a rough check that nois
 - **Yamakan projects offer no 8 fps,** this model's rate, only 30 and 24000/1001. So the 8 fps video plays in a 30 fps project, with each source frame lasting 3.75 of its frames. It works, but a person cannot edit on the model's own frames.
 - **A 3:2 video gets black bars in a 16:9 project.** That is correct fitting, and a person has no way yet to set a project to the video's shape from this path.
 
-**What the picture check catches.** Two rules. Every export frame is within 8 of 255 of the source frame it shows. And wherever two source frames one or two apart, or the clip's first and last, differ by at least 2, each one's export frames are closer to it than to the other, once the export's steady colour offset is taken out. A fully frozen export can never meet the second rule if any pair differs. The earlier rules passed exports shifted by one source frame, and rejected good still and looping clips.
+**What the picture check catches.** Two rules. Every export frame is within 8 of 255 of the source frame it shows. And wherever two source frames one or two apart, or the clip's first and last, differ by at least 2, each one's export frames are closer to it than to the other, once the export's steady colour offset is taken out. A fully frozen export cannot meet the second rule if any compared pair differs that much; a clip that drifts away and back, with no such pair, passes frozen. The earlier rules passed exports shifted by one source frame, and rejected good still and looping clips.
 
 A reviewer built bad exports from the real ones, re-encoded with libx264, not through Yamakan's pipeline. They are kept outside the repository, and were measured with `scripts/ai-video-frames.mjs` directly. Swaps and repeats were simulated on real export frames, without re-encoding. The unit tests are in `tests/ai-video-frames.test.ts`.
 
-| Bad export                                       | CogVideoX, 50 steps          | Wan                            |
-| ------------------------------------------------ | ---------------------------- | ------------------------------ |
-| Fully frozen                                     | Rejected                     | Rejected                       |
-| One source frame late, or early                  | Rejected                     | Rejected                       |
-| Every other source frame dropped                 | Rejected                     | Not measured under these rules |
-| Two neighbouring frames swapped, or one repeated | Rejected at all 47 positions | **Passes at 38 of 39**         |
-| Two stills, either side of the clip's jump       | Not built                    | **Passes**                     |
-| Each side of the jump reversed                   | Not built                    | **Passes**                     |
+| Bad export                                       | CogVideoX, 50 steps                | Wan                                              |
+| ------------------------------------------------ | ---------------------------------- | ------------------------------------------------ |
+| Fully frozen                                     | Rejected                           | Rejected                                         |
+| One source frame late, or early                  | Rejected                           | Rejected                                         |
+| Every other source frame dropped                 | Rejected                           | Passes keeping even frames, rejected keeping odd |
+| Two neighbouring frames swapped, or one repeated | Rejected at all 47 positions tried | **Passes at 38 of 39 tried**                     |
+| Two stills, either side of the clip's jump       | Not built                          | **Passes**                                       |
+| Each side of the jump reversed                   | Not built                          | **Passes**                                       |
 
-**The order rule only reaches frames near a change.** It reaches all 49 of CogVideoX's frames, with all 96 pairs compared, and 6 of Wan's 41, with 4 of 80. The rest of Wan differs by under 1 of 255 from frame to frame at this measure, so a mistake confined to those frames passes, as the table shows. A clip with no such pairs passes with its order unchecked. Each run prints how many frames the rule reached.
+**The order rule only reaches frames near a change.** It reaches all 49 of CogVideoX's frames, with all 96 pairs compared, and 6 of Wan's 41, with 4 of 80: around its one jump, plus its first and last. The rest of Wan differs by under 1 of 255 from frame to frame at this measure, so a mistake confined to those frames passes, as the table shows. A clip with no such pairs passes with its order unchecked. In the other direction, a reviewer's correct exports of flat-colour fades were refused, because one steady offset does not fit them: the check fails safe there, and has only been shown right on natural clips like these three. A grainy clip's bars can also reach past the limit of 24, and a picture as wide as 16:9, such as Wan's own 1280x704, stops the check with a message. Each run prints how many frames the rule reached.
 
 **Open finding:** real exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in red, green and blue on all three videos. The cause has not been looked at. The check takes this out when comparing order, but the limit of 8 counts it.
 
