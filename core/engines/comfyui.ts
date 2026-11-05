@@ -194,7 +194,8 @@ export type ComfyEngineOptions = {
 };
 
 // How a ComfyUI this adapter talks to must be started: on loopback, with partner
-// nodes and the frontend's internet access off, and no custom node code.
+// nodes off, its browser page restricted, and no custom node code. This is not an
+// egress block on its process; the arguments alone start nothing.
 export function comfyLaunchArguments(options: {
   port: number;
   baseDirectory: string;
@@ -210,6 +211,16 @@ export function comfyLaunchArguments(options: {
     "--base-directory",
     options.baseDirectory,
   ];
+}
+
+// Whether ComfyUI's own node description marks a partner node.
+export function isComfyCloudNode(info: unknown) {
+  const node = info as { api_node?: unknown; python_module?: unknown } | null;
+  return (
+    node?.api_node === true ||
+    (typeof node?.python_module === "string" &&
+      /^comfy_api_nodes(\.|$)/.test(node.python_module))
+  );
 }
 
 export type ComfySetupProblem =
@@ -325,8 +336,9 @@ export function createComfyEngine(options: ComfyEngineOptions) {
               recipe: recipe.id,
               classType: type,
             });
-          // A partner node sends what it is given to a remote service.
-          else if ((entry as { api_node?: unknown }).api_node === true)
+          // A partner node sends what it is given to a remote service. The flag
+          // alone misses some, so the module it came from counts too.
+          else if (isComfyCloudNode(entry))
             problems.push({
               kind: "cloud-node",
               recipe: recipe.id,
@@ -720,9 +732,10 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         listen();
         const promptId = randomUUID();
         let executionRef: unknown;
+        const prompt = buildGraph(recipe, request, uploaded);
         try {
           const res = await post("/prompt", {
-            prompt: buildGraph(recipe, request, uploaded),
+            prompt,
             client_id: clientId,
             prompt_id: promptId,
           });
@@ -731,8 +744,9 @@ export function createComfyEngine(options: ComfyEngineOptions) {
             .prompt_id;
         } catch {
           // No answer does not mean no job: it may have been accepted, even after
-          // this gave up waiting. It stays followed by its id, and reports unknown
-          // until ComfyUI says otherwise, so a retry cannot silently run a second.
+          // this gave up waiting. It stays followed by its id and reports unknown
+          // until ComfyUI says otherwise, and the same generation replays it. A new
+          // generation can still overlap a job enqueued this late.
           executionRef = promptId;
         }
         if (executionRef !== promptId) {

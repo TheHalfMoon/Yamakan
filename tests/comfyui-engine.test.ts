@@ -14,6 +14,7 @@ import {
   PINNED_COMFY_RECIPES,
   comfyBaseUrl,
   comfyLaunchArguments,
+  isComfyCloudNode,
   comfyRecipeHash,
   createComfyEngine,
   type ComfyRecipe,
@@ -337,6 +338,58 @@ test("a recipe using a node that calls a remote service is not available", async
     refused: "WEIGHTS_ABSENT",
   });
   assert.equal(f.prompts.length, 0);
+});
+
+test("a partner node is known by its module even when its flag is not set", async () => {
+  assert.equal(
+    isComfyCloudNode({
+      api_node: false,
+      python_module: "comfy_api_nodes.nodes_krea",
+    }),
+    true,
+  );
+  assert.equal(isComfyCloudNode({ api_node: true }), true);
+  assert.equal(
+    isComfyCloudNode({
+      api_node: false,
+      python_module: "comfy_extras.nodes_video",
+    }),
+    false,
+  );
+  assert.equal(
+    isComfyCloudNode({ python_module: "comfy_api_nodes_lookalike" }),
+    false,
+  );
+  const f = await fake();
+  f.classes.Sampler = {
+    api_node: false,
+    python_module: "comfy_api_nodes.nodes_krea",
+    input: { required: {} },
+  };
+  const r = recipe();
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [r],
+    enabled: true,
+  });
+  assert.deepEqual(await engine.checkSetup(), [
+    { kind: "cloud-node", recipe: r.id, classType: "Sampler" },
+  ]);
+});
+
+test("nothing accepted and no answer reports unknown, and claims no job ran", async () => {
+  const { f, engine, r } = await started();
+  let posted = "";
+  f.promptAnswer = (id) => {
+    posted = id;
+    return { status: 200, body: "not json" as unknown as object };
+  };
+  const answer = await engine.submit(request(r), context);
+  assert.deepEqual(answer, { executionRef: posted });
+  const status = await engine.status(posted);
+  assert.equal(status.state, "unknown");
+  assert.deepEqual(await engine.enumerateArtifacts(posted), []);
+  engine.close();
 });
 
 test("ComfyUI is always started offline, on loopback, without custom nodes", () => {

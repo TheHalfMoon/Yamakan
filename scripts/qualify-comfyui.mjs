@@ -16,6 +16,7 @@ import { join } from "node:path";
 import assert from "node:assert/strict";
 import {
   comfyLaunchArguments,
+  isComfyCloudNode,
   comfyRecipeHash,
   createComfyEngine,
 } from "../core/engines/comfyui.ts";
@@ -233,11 +234,12 @@ try {
   step("the setup check finds every core node");
 
   const everyNode = await (await fetch(`${base}/object_info`)).json();
-  const cloud = Object.entries(everyNode)
-    .filter(([, info]) => info.api_node === true)
-    .map(([name]) => name);
-  assert.deepEqual(cloud, [], "started offline, no partner node is present");
-  step("started offline, no node that calls a remote service is present", {
+  const cloudNodes = (all) =>
+    Object.entries(all)
+      .filter(([, info]) => isComfyCloudNode(info))
+      .map(([name]) => name);
+  assert.deepEqual(cloudNodes(everyNode), [], "no partner node when offline");
+  step("with --offline, no partner node is present", {
     nodes: Object.keys(everyNode).length,
   });
 
@@ -427,6 +429,55 @@ try {
   step("a running job is interrupted, and leaves no output", {
     state: end.state,
   });
+  // The control: without --offline the same check does find them, including the
+  // reference node whose flag is not set, so its silence above means something.
+  const controlPort = port + 1;
+  const control = spawn(
+    python,
+    [
+      join(dir, "ComfyUI", "main.py"),
+      "--cpu",
+      ...comfyLaunchArguments({
+        port: controlPort,
+        baseDirectory: root,
+      }).filter((a) => a !== "--offline"),
+    ],
+    { windowsHide: true, stdio: "ignore" },
+  );
+  try {
+    let answer = null;
+    for (let i = 0; i < 240 && !answer; i++) {
+      answer = await fetch(`http://127.0.0.1:${controlPort}/object_info`, {
+        redirect: "error",
+      }).then(
+        (r) => (r.ok ? r.json() : null),
+        () => null,
+      );
+      if (!answer) await new Promise((r) => setTimeout(r, 500));
+    }
+    assert.ok(answer, "the control ComfyUI did not start");
+    const found = cloudNodes(answer);
+    assert.ok(found.length > 0, "the check finds partner nodes when present");
+    assert.ok(
+      found.includes("Krea2StyleReferenceNode"),
+      "and the unflagged one",
+    );
+    assert.equal(answer.Krea2StyleReferenceNode.api_node, false);
+    step("without --offline, the same check finds partner nodes", {
+      nodes: Object.keys(answer).length,
+      partnerNodes: found.length,
+    });
+  } finally {
+    if (control.pid)
+      try {
+        execFileSync("taskkill", ["/PID", String(control.pid), "/T", "/F"], {
+          windowsHide: true,
+          stdio: "ignore",
+        });
+      } catch {
+        control.kill();
+      }
+  }
   passed = true;
 } catch (e) {
   console.error(e);
