@@ -558,6 +558,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
 - **Rendering.** The plan compiler expands each dissolve into handle-extended layers and sounds (`dissolveInTicks`, `crossfadeInTicks`, `crossfadeOutTicks`, and `transitionPolicy` on the plan). The graph adds one `fade` (alpha) per incoming layer and one `afade` (`curve=qsin`) per crossfaded sound. Export and the reference preview compile the same plan, so they draw the same frames.
 - **Interactive preview.** The canvas shows a dissolve as a cut, and the preview-parity notice names it (`transition`).
 - **Interchange.** OTIO export carries a transition as `yamakan_transition` metadata, and import accepts it only as a valid transition.
+- **Interchange commands (SS-015).** `yamakan.project.otioLosses` reports, before conversion, what an OTIO export would not carry; `yamakan.project.exportOtio` returns the file with that report; `yamakan.project.proposeOtio` reads a file into a proposal, opens no address in it, counts what it leaves out, and writes nothing. No command applies a proposal.
 - **Rollback.** `YAMAKAN_TRANSITIONS_OFF=1` refuses new or changed transitions (by command, batch or whole-project save; restating an unchanged one is accepted); stored ones stay, render, and can be removed. Undo, redo and restore move between stored revisions and are not gated by the switch, so they may bring a transition back. Going back to an earlier build needs projects without transitions (it refuses v7) or a backup.
 
 ## Color pipeline and LUTs (YU-023)

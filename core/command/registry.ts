@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  OTIO_LIMITS,
+  fromOtio,
+  otioLossReport,
+  toOtio,
+} from "../interchange/otio.ts";
 import { ProjectSchema, Id, isSupportedRate } from "../project.ts";
 import { BatchSchema } from "../timeline/operations.ts";
 import {
@@ -108,7 +114,11 @@ import {
   replaceOperations,
   shotWithTake,
 } from "../takes.ts";
-import { fromEditView, type CanonicalProject } from "../canonical.ts";
+import {
+  fromEditView,
+  parseCanonical,
+  type CanonicalProject,
+} from "../canonical.ts";
 import {
   RelinkProposalSchema,
   proposeRelink,
@@ -318,6 +328,42 @@ export const commands = {
       "Export the current revision as canonical project JSON (no host paths or credentials).",
     input: z.object({ projectId: Id }).strict(),
     run: ({ store }, a) => store.exportProject(a.projectId),
+  }),
+  "yamakan.project.otioLosses": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report, before any conversion, what an OTIO export of the current revision would not carry, and the media it refers to by content hash.",
+    input: z.object({ projectId: Id }).strict(),
+    run: async ({ store }, a) =>
+      otioLossReport(parseCanonical(await store.exportProject(a.projectId))),
+  }),
+  "yamakan.project.exportOtio": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Export the current revision as OTIO JSON at the flick rate, with the same loss report. It holds no media and no host paths.",
+    input: z.object({ projectId: Id }).strict(),
+    run: async ({ store }, a) => {
+      const project = parseCanonical(await store.exportProject(a.projectId));
+      return { timeline: toOtio(project), report: otioLossReport(project) };
+    },
+  }),
+  "yamakan.project.proposeOtio": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read OTIO JSON into a proposal against this project's media, changing nothing. Media matches by Yamakan asset id or content hash; addresses in the file are never opened, and what the file holds that the proposal leaves out is counted.",
+    input: z
+      .object({ projectId: Id, text: z.string().max(OTIO_LIMITS.maxBytes) })
+      .strict(),
+    run: async ({ store }, a) => {
+      const { assets } = await store.exportProject(a.projectId);
+      return fromOtio(
+        a.text,
+        assets.map((x) => ({ id: x.id, hash: x.hash })),
+      );
+    },
   }),
   "yamakan.document.list": define({
     scope: "project:read",
