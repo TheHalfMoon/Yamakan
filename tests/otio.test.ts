@@ -368,6 +368,14 @@ test("malformed shapes are refused as validation errors, not crashes", () => {
   refused({ OTIO_SCHEMA: "Timeline.1", tracks: { children: 7 } });
   refused(timeline(7));
   refused(timeline([{ OTIO_SCHEMA: "Stack.1" }]));
+  assert.throws(
+    () =>
+      fromOtio(
+        JSON.stringify(timeline([{ OTIO_SCHEMA: "Clip.2", name: "newer" }])),
+        [],
+      ),
+    /holds Clip\.2, which this cannot place/,
+  );
   refused(timeline([5, clipOf("")]));
   refused({
     OTIO_SCHEMA: "Timeline.1",
@@ -494,6 +502,23 @@ test("what a file holds that the proposal leaves out is counted, not dropped sil
     }),
     [],
   );
+  const offTrack = fromOtio(
+    JSON.stringify({
+      OTIO_SCHEMA: "Timeline.1",
+      tracks: {
+        children: [
+          {
+            OTIO_SCHEMA: "Track.1",
+            kind: "Video",
+            enabled: false,
+            children: [],
+          },
+        ],
+      },
+    }),
+    [],
+  );
+  assert.deepEqual(offTrack.ignored, [{ schema: "Track.enabled", count: 1 }]);
   assert.equal(proposal.clips.length, 3);
   assert.equal(proposal.unresolved, 3);
   assert.deepEqual(proposal.ignored, [

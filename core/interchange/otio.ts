@@ -404,6 +404,8 @@ export function fromOtio(
     if (track.kind !== "Video" && track.kind !== "Audio")
       throw new CommandError("VALIDATION", "OTIO track kind is not supported.");
     unread(track, "Track", ["source_range", "effects", "markers"]);
+    if ((track as { enabled?: unknown }).enabled === false)
+      count("Track.enabled");
     const trackKind = track.kind === "Audio" ? "audio" : "video";
     const trackName =
       typeof track.name === "string"
@@ -421,7 +423,7 @@ export function fromOtio(
       if (schema !== "Gap.1" && schema !== "Clip.1")
         throw new CommandError(
           "VALIDATION",
-          "OTIO track holds something this cannot place.",
+          `OTIO track holds ${typeof schema === "string" ? schema.slice(0, 40) : "an unknown item"}, which this cannot place. It reads Clip.1, Gap.1 and Transition.1.`,
         );
       if (schema === "Gap.1") {
         timelineCursor += ticksFrom(rangeOf(child as GapJson, "gap").duration);
