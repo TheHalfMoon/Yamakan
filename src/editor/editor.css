@@ -1411,6 +1411,20 @@ body[data-theme="light"] .tl-track__header {
   pointer-events: none;
 }
 
+.tl-clip__dissolve {
+  position: absolute;
+  left: 8px;
+  bottom: 2px;
+  z-index: 2;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
 .tl-clip__handle {
   position: absolute;
   top: 0;

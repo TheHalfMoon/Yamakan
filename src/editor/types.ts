@@ -363,6 +363,8 @@ export type TimelineClip = {
     type: TransitionType;
     duration: number;
   };
+  /** A dissolve into this clip, in frames. */
+  dissolveInFrames?: number;
   textConfig?: {
     content: string;
     font: string;

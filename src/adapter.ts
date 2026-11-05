@@ -44,6 +44,7 @@ export function editorView(
     id: c.id,
     trackId: c.trackId,
     mediaId: c.assetId || `title-${c.id}`,
+    ...(c.transition ? { dissolveInFrames: c.transition.durationFrames } : {}),
     start: s(c.startFrame),
     end: s(c.startFrame + c.durationFrames),
     duration: s(c.durationFrames),

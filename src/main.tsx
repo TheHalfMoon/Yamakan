@@ -53,6 +53,8 @@ import {
   FRAME_TICKS,
   frameTicksOf,
   setClipAnimation,
+  dissolveSource,
+  setClipDissolve,
   setClipSound,
   setClipTransform,
   splitClip,
@@ -1148,6 +1150,63 @@ function App() {
                   />
                 </label>
               </>
+            );
+          })()}
+          <h2>{t("clip.dissolve.heading")}</h2>
+          {(() => {
+            const clip = p.clips.find((c) => c.id === selected);
+            const track = clip
+              ? p.tracks.find((tr) => tr.id === clip.trackId)
+              : null;
+            const from =
+              clip && track?.kind === "video" ? dissolveSource(p, clip) : null;
+            if (!clip || (!from && !clip.transition))
+              return <p className="hint">{t("clip.dissolve.none")}</p>;
+            const apply = (frames: number | null) =>
+              edit((proj) => setClipDissolve(proj, clip.id, frames));
+            const length = clip.transition?.durationFrames ?? 12;
+            return (
+              <div
+                data-testid="clip-dissolve-panel"
+                key={`${clip.id}${length}`}
+              >
+                <label>
+                  {t("clip.dissolve.frames")}
+                  <input
+                    type="number"
+                    data-testid="clip-dissolve-frames"
+                    min={2}
+                    step={2}
+                    disabled={busy}
+                    defaultValue={length}
+                  />
+                </label>
+                <button
+                  type="button"
+                  data-testid="clip-dissolve-apply"
+                  disabled={busy}
+                  onClick={(e) => {
+                    const input = e.currentTarget.parentElement?.querySelector(
+                      "input",
+                    ) as HTMLInputElement;
+                    const frames = Number(input.value);
+                    if (Number.isInteger(frames) && frames >= 2) apply(frames);
+                    else setMessage(msg("clip.dissolve.length"));
+                  }}
+                >
+                  {t("clip.dissolve.apply")}
+                </button>{" "}
+                {clip.transition ? (
+                  <button
+                    type="button"
+                    data-testid="clip-dissolve-remove"
+                    disabled={busy}
+                    onClick={() => apply(null)}
+                  >
+                    {t("clip.dissolve.remove")}
+                  </button>
+                ) : null}
+              </div>
             );
           })()}
           <h2>{t("clip.transform.heading")}</h2>
