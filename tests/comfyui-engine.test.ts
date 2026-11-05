@@ -428,13 +428,30 @@ test("output beyond what a recipe was qualified for is refused", async () => {
 
 test("ComfyUI refusing a graph is a refusal, not a running job", async () => {
   const { f, engine, r } = await started();
-  f.promptAnswer = () => ({
+  const rejected = (type: string) => () => ({
     status: 400,
-    body: { error: { type: "prompt_outputs_failed_validation" } },
+    body: {
+      error: { type: "prompt_outputs_failed_validation" },
+      node_errors: { "2": { errors: [{ type }] } },
+    },
   });
+  f.promptAnswer = rejected("value_not_in_list");
   assert.deepEqual(await engine.submit(request(r), context), {
     refused: "WEIGHTS_ABSENT",
   });
+  f.promptAnswer = rejected("value_bigger_than_max");
+  assert.deepEqual(
+    await engine.submit(request(r, { attemptKey: "too-big" }), context),
+    { refused: "INVALID_REQUEST" },
+  );
+  f.promptAnswer = () => ({
+    status: 400,
+    body: { error: { type: "missing_node_type" } },
+  });
+  assert.deepEqual(
+    await engine.submit(request(r, { attemptKey: "no-node" }), context),
+    { refused: "WEIGHTS_ABSENT" },
+  );
   f.promptAnswer = () => ({ status: 200, body: { prompt_id: "../../evil" } });
   assert.deepEqual(
     await engine.submit(request(r, { leaseGeneration: 2 }), context),

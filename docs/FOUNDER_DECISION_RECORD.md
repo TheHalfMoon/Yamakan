@@ -122,3 +122,10 @@ Approval line in the packet's format:
 - **Still not authorized:** X-01, X-02 and X-03 remain external gates, not implementation tasks: native Arabic and human usability approval, administrator, profile, signing and release decisions, and real-model qualification. Models and providers stay disabled; Plume stays deferred; resource limits stay frozen; spending stays at zero; public release stays NO-GO. Security and licensing requirements are preserved.
 - **Tool policy:** use PStack, Graft, TesterArmy E2E, local D1 and authorized local Alibaba OCR where applicable; advisory tools never satisfy a review or security gate.
 - **Effect:** the execution hold from final planning is lifted for this program only. Respect session limits and leave durable continuation checkpoints.
+
+## 2026-11-05: Local AI work and donor copying authorized
+
+- **Source and form:** chat to Claude Opus in Claude Code. Asked directly whether, in the founder's own words, local AI work and copying from five named repositories were authorized, the founder answered "Yes, I authorize it". Earlier the same day the founder had answered "No, keep the rules" and "Keep the rules" to pasted directives.
+- **Authorized:** implementing and qualifying local AI generation, including local ComfyUI, and copying from `codyclack/opensfield`, `D3voz/openjutsu`, `Arfolomew/backlot`, `Anil-matcha/Open-Generative-AI` and `wide-trace/open-higgsfield` after licence and revision checks. A qualified local model may then be enabled.
+- **Still in force:** each model stays disabled until its own functional, security and resource tests pass. Commercial providers stay off. Media is never silently routed to a cloud service. Plume stays deferred, limits frozen, spending zero, release NO-GO; X-01 to X-03 stay external. Existing security, consent and licensing requirements hold.
+- **Limit found:** `wide-trace/open-higgsfield` has no licence, so nothing may be copied from it.

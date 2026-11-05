@@ -442,6 +442,26 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     return graph;
   }
 
+  // Only a node or a model file it does not have is missing weights; a value it
+  // will not take is the request's.
+  async function whyRejected(res: Response): Promise<RefusalReason> {
+    const answer = (await json(res).catch(() => null)) as {
+      error?: { type?: unknown };
+      node_errors?: Record<string, { errors?: { type?: unknown }[] }>;
+    } | null;
+    const types = [
+      answer?.error?.type,
+      ...Object.values(answer?.node_errors ?? {}).flatMap((n) =>
+        Array.isArray(n?.errors) ? n.errors.map((e) => e?.type) : [],
+      ),
+    ];
+    return types.some(
+      (t) => t === "missing_node_type" || t === "value_not_in_list",
+    )
+      ? "WEIGHTS_ABSENT"
+      : "INVALID_REQUEST";
+  }
+
   async function history(id: string): Promise<HistoryEntry | null> {
     const res = await call(`/history/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error("ComfyUI did not answer about its history.");
@@ -640,8 +660,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           client_id: clientId,
           prompt_id: promptId,
         });
-        // ComfyUI refuses a graph whose nodes or models it does not have.
-        if (!res.ok) return { refused: "WEIGHTS_ABSENT" };
+        if (!res.ok) return { refused: await whyRejected(res) };
         const answer = (await json(res)) as { prompt_id?: unknown };
         const executionRef = answer.prompt_id;
         if (

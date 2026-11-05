@@ -390,14 +390,19 @@ try {
   assert.deepEqual(refused, { refused: "INVALID_REQUEST" });
   step("an input failing its hash is not submitted");
 
-  // Long enough to catch running, then cancelled: 1200 frames at the largest size.
+  // Long enough to catch running, then cancelled, and small enough for this RAM.
   const long = await engine.submit(
-    request(t2v, "long", {
-      width: 1280,
-      height: 720,
-      fps: { num: 30, den: 1 },
-      durationTicks: TICK * 40,
-    }),
+    request(
+      t2v,
+      "long",
+      {
+        width: 256,
+        height: 144,
+        fps: { num: 30, den: 1 },
+        durationTicks: TICK * 133,
+      },
+      { prompt: "a long solid red clip" },
+    ),
     context,
   );
   assert.ok(long.executionRef, JSON.stringify(long));
