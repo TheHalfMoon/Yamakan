@@ -399,24 +399,35 @@ test("an unreadable answer with nothing queued reports unknown, and does not cla
 
 const good = ["main.py", "--offline", "--disable-all-custom-nodes"];
 
-test("the reported arguments are read as ComfyUI's parser reads them", () => {
+test("the reported arguments rule a copy out in each form they can take", () => {
   const clean = { missing: [], refused: [], exposed: false };
   assert.deepEqual(comfyStartProblems(good), clean);
   assert.deepEqual(
-    comfyStartProblems([...good, "--listen", "127.0.0.1"]),
+    comfyStartProblems([
+      ...good,
+      "--listen",
+      "0.0.0.0",
+      "--listen",
+      "127.0.0.1",
+    ]),
     clean,
+    "the last one counts",
   );
   assert.deepEqual(comfyStartProblems([...good, "--listen=::1"]), clean);
   for (const argv of [
     [...good, "--listen", "0.0.0.0"],
     [...good, "--listen=0.0.0.0"],
-    [...good, "--list", "0.0.0.0"],
+    [...good, "--listen", "127.0.0.1", "--listen", "0.0.0.0"],
+    [...good, "--listen", "127.0.0.1", "--listen"],
+    [...good, "--listen", "127.0.0.1,0.0.0.0"],
     [...good, "--listen"],
   ])
     assert.equal(comfyStartProblems(argv).exposed, true, argv.join(" "));
   for (const [flag, name] of [
     ["--enable-manager", "--enable-manager"],
-    ["--enable-man", "--enable-manager"],
+    ["--enable-cors-header", "--enable-cors-header"],
+    ["--enable-cors-header=*", "--enable-cors-header"],
+    ["--front-end-version=a/b@1", "--front-end-version"],
     ["--enable-manager-legacy-ui", "--enable-manager-legacy-ui"],
     ["--enable-agent", "--enable-agent"],
     ["--whitelist-custom-nodes", "--whitelist-custom-nodes"],

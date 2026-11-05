@@ -226,16 +226,19 @@ export function isComfyCloudNode(info: unknown) {
 // ComfyUI reports the arguments it was started with. Yamakan does not own this
 // process, so a copy started any other way is not used, whichever recipe asks.
 const REQUIRED_ARGUMENTS = ["--offline", "--disable-all-custom-nodes"] as const;
-// These run other code or install packages, whatever else was given.
+// These run other code, install packages, fetch a page to serve, or let a website
+// reach it, whatever else was given.
 const REFUSED_ARGUMENTS = [
+  "--enable-cors-header",
+  "--front-end-version",
   "--whitelist-custom-nodes",
   "--enable-manager",
   "--enable-manager-legacy-ui",
   "--enable-agent",
 ] as const;
 
-// What in these arguments rules this copy out, reading them as ComfyUI's parser
-// does: `--flag=value`, and a flag shortened to any unambiguous start.
+// What in these arguments rules this copy out, allowing for `--flag=value`, a
+// shortened flag, and a flag given twice, where the last one counts.
 export function comfyStartProblems(argv: unknown) {
   const given = Array.isArray(argv)
     ? argv.filter((a): a is string => typeof a === "string").slice(1)
@@ -250,7 +253,7 @@ export function comfyStartProblems(argv: unknown) {
     (flag) => !given.includes(flag),
   );
   // Without --listen ComfyUI binds loopback; with it, the value must say so.
-  const at = names.findIndex((name) => shortens(name, "--listen"));
+  const at = names.findLastIndex((name) => shortens(name, "--listen"));
   const listen =
     at < 0
       ? "127.0.0.1"
@@ -441,7 +444,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
             name: String(name).slice(0, 200),
           });
       }
-      // A later check may have ruled this copy out while this one ran.
+      // A newer check owns the result; only the one still current records it.
       if (problems.length === before && check === checks) ready.add(recipe.id);
     }
     return problems;
