@@ -55,6 +55,7 @@
     "qualify:captions-keyboard": "node scripts/qualify-captions-keyboard.mjs",
     "qualify:consent-gate": "node scripts/qualify-consent-gate.mjs",
     "qualify:undo-unsaved": "node scripts/qualify-undo-unsaved.mjs",
+    "qualify:comfyui": "node scripts/qualify-comfyui.mjs",
     "qualify:crossfade": "node scripts/qualify-crossfade.mjs",
     "qualify:edit-equivalence": "node scripts/qualify-edit-equivalence.mjs",
     "qualify:playback": "node scripts/qualify-playback.mjs",
