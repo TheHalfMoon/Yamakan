@@ -154,6 +154,12 @@ function revalidated(db: DatabaseSync, row: ConsentRow, epoch: number) {
   );
 }
 
+/** Whether a consent was granted, or revalidated, in the current epoch. */
+export function consentInCurrentEpoch(db: DatabaseSync, consentId: string) {
+  const row = consentRow(db, consentId);
+  return Boolean(row && revalidated(db, row, epochOf(db)));
+}
+
 /**
  * Inside a caller's transaction: a consent that exists, matches its
  * character and purpose, is unrevoked and unexpired, and belongs to (or was

@@ -4,32 +4,39 @@ Founder's decision, 2026-11-05: gate it. Builder Claude Opus. Before this, a per
 
 ## Behaviour
 
-At the store's one commit point, so every route is covered: a batch edit, `clip.replaceMedia`, undo, redo, restore, relink, assembly, and the same bytes imported again. A medium that any reference pack version in the workspace links to a character's consent cannot be newly presented once every consent linked to it for that character is revoked.
+At the store's one commit point: a batch edit, `clip.replaceMedia`, undo, redo, restore, relink, assembly, `project.save`, and the same bytes imported again. `npm run migrate`'s `importHistory` is offline, for a new project with no documents, and does not pass this point.
 
-The refusal is `VALIDATION`, and it reads: "This person's consent was revoked, so this media cannot be placed on the timeline again. Clips already there stay, and the file is kept. To use it again, record a new consent and save the reference pack with it."
+A medium that any reference pack version in the workspace links to a character's consent cannot be newly presented, or presented for longer than before, once the consents linked to it for that character are revoked. Consents count per character, so a second person's consent does not free the first's photo.
 
-- **Stays:** clips already presented, moving or trimming them, earlier exports, exporting a project that still shows the clip, the file itself and saved projects. Nothing is deleted.
-- **Does not free it:** removing the entry from a later pack version, or another project in the workspace.
-- **Way back:** a newer consent for that character, saved in a pack with that media.
-- **Only revocation gates this.** An expired consent, or one awaiting revalidation after a restore, does not. Revocation is the person's act; the decision was about revocation.
+The refusal is `VALIDATION`, and it gives the reason and the way back.
 
-No schema change. A medium newly presented costs one scan of pack versions naming it.
+- **Stays:** clips still showing it, moving, splitting or shortening them, earlier exports, exporting a project that still shows them, the file and saved projects. Nothing is deleted.
+- **Does not free it:** removing the entry from a later pack version, another project, an older consent that was never revoked, or a clip left on the timeline.
+- **Way back:** a consent granted after the latest revocation, saved in a pack with that media.
+- **After a restore:** a surviving consent must be revalidated first, because a backup taken before a revocation does not know of it. Otherwise that backup would undo the revocation.
+- **Generation boundary:** `yamakan.continuity.check` at the attempt stage, and the attach stage, check a reference entry's media the same way, whatever the entry's role.
+- **Only revocation and the restore epoch gate this.** An expired consent does not.
+
+No schema change. Each pack version's links are read once and kept by content hash, so the scan after that is one list query. **The first scan in a service run reads every pack version in the workspace, inside the commit.** A review measured an earlier form of this scan at 85 s for 10,000 full-size pack versions and 200 hashes on a synthetic table; this form was not re-measured.
 
 ## Results
 
-- `tests/story-packs.test.ts`, three tests, through commands: a usable consent allows placement; after revocation a clip stays and moves; `clip.add`, undo, `clip.replaceMedia`, a re-import of the same bytes, restore and another project are refused; an emptied later pack does not free it; a new consent does; and the refusal holds after the workspace is reopened. All three failed with the gate removed. Other media is unaffected.
-- `npm run qualify:consent-gate`, real Edge against the real service: the real Undo button is refused, with the message on screen, the head unmoved and the file kept. CI does not run it.
+- `tests/story-packs.test.ts`, seven tests, through commands: placement with a usable consent; refusal of `clip.add`, undo, `clip.replaceMedia`, a re-import, restore and another project; an emptied later pack; a new consent as the way back; a reopen; renewing then revoking; a clip that stays opening nothing further, while it can still be moved and split; two characters on one photo; and revalidation after a new epoch. The first three failed with the gate removed.
+- `npm run qualify:consent-gate`, real Edge against the real service: the real Undo button is refused with the message on screen, the head unmoved and the file kept. CI does not run it. Its way back is driven through the service, not the interface.
+- A review ran redo, relink, assembly and `project.save` against an earlier form of the gate, and they were refused; the suite has no test of its own for those.
 
-## Not gated, and why
+## What is left open
 
-- **A re-encode.** The gate matches exact bytes.
-- **Copying a clip already on the timeline.** A copy presents nothing new, by the commit point's rule, so splits and moves keep working. A copy of a clip that stays on the timeline is therefore allowed.
-- **Export of clips already on the timeline.** They stay and export, as the contract has said and the decision does not change: "Clips already there stay".
-- **A photo no pack links to a consent.** Nothing says it is a person.
-- **A take that only pins a pack.** A pin does not show the take depicts that person.
-- **A backup restored to a new workspace** runs no timeline commit; its later placements are gated, as the consent ledger comes with it. By reading.
-- **A restore across this change is refused for that revision,** and for a recovery restore too, as with continuity takes. An owner of such a project keeps the current head. By reading.
+The decision asked that a revoked person's photo not be placed or used. These remain:
 
-**The interface has no way to record a consent and a new pack from this message.** The way back works through the commands, and there is no explicit removal or cleanup action in the browser; neither was added here.
+- **A clip already there can be seen and exported,** by the decision's own terms.
+- **Unmuting a track, or ending a solo, that reveals the photo is refused,** and so is undoing that mute. So a person can be stuck with a mute or solo until they remove the clip. The message says it can no longer be shown, which is the rule as written, but this is a sharp edge.
+- **A re-encode, or an export re-imported,** has a different hash, so it is not caught. The gate matches exact bytes.
+- **A photo no pack links to a consent:** nothing says it is a person. This includes a scene's `referenceAssetId` and Studio bitmaps, which do not reach this check.
+- **A take that only pins a pack:** a pin does not show the take depicts that person.
+- **A `style` pack entry or a story naming the photo can be saved after revocation.** It cannot then be used at the attempt stage or placed, by reading; only the attempt stage's call was added, with no test of its own.
+- **A recovery restore over a damaged head is exempt,** so committed work can come back; it needs a damaged head to reach. By reading and a review's tamper test of the earlier form.
+- **A browser session can block any medium across the workspace,** by linking it to a throwaway consent and revoking it. Agents cannot. In the contract.
+- **The interface has no way to record a consent, save a pack or revoke,** and no explicit removal or cleanup action. All of this works only through the commands.
 
 Rollback: revert this change. No stored data is affected, and placements the gate refused become possible again.

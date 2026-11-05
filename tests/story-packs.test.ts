@@ -1010,3 +1010,109 @@ test("a revocation holds after the workspace is reopened, and undo stays refused
     store.close();
   }
 });
+
+test("renewing and then revoking does not fall back on the older consent", async () => {
+  const c = await workspace();
+  const { edit, add } = await placedStill(c);
+  // placedStill granted v1 and saved its pack; renew with v2, and revoke v2.
+  const renewed = await grant(c);
+  await savePack(c, id(), pack(c, renewed.id));
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: renewed.id });
+  assert.match(await failure(edit([add()])), REVOKED);
+});
+
+test("a clip that stays opens no further placement, but can be split and moved", async () => {
+  const c = await workspace();
+  const { consent, clipId, edit, add } = await placedStill(c);
+  await edit([add(clipId)]);
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
+  assert.match(await failure(edit([add(id(), undefined, 300)])), REVOKED);
+  // The same bytes as a new asset add nothing new to the rule.
+  const bytes = await readFile(
+    await c.store.objectFile(
+      c.projectId,
+      (await head(c)).assets.find((a) => a.id === c.imported.still.id)!,
+    ),
+  );
+  const copy = await c.store.importAsset(c.projectId, "again.png", bytes);
+  assert.match(await failure(edit([add(id(), copy.asset.id, 300)])), REVOKED);
+  // Editing what is there still works.
+  await edit([{ type: "clip.move", clipId, startTicks: 60 * FRAME }]);
+  await edit([
+    {
+      type: "clip.split",
+      clipId,
+      atTicks: 75 * FRAME,
+      newClipId: id(),
+    },
+  ]);
+  assert.equal(
+    (await head(c)).clips.filter((x) => x.assetId === c.imported.still.id)
+      .length,
+    2,
+  );
+});
+
+test("each character's consent counts on its own for shared media", async () => {
+  const c = await workspace();
+  const lead = await grant(c, "lead");
+  const entry = (characterId: string, consentId: string) => ({
+    id: id(),
+    role: "character" as const,
+    label: characterId,
+    assetId: c.imported.still.id,
+    assetHash: c.imported.still.hash,
+    characterId,
+    consentId,
+  });
+  const packOf = (characterId: string, consentId: string) => ({
+    format: "yamakan.reference-pack" as const,
+    formatVersion: 1 as const,
+    name: characterId,
+    entries: [entry(characterId, consentId)],
+  });
+  await savePack(c, id(), packOf("lead", lead.id));
+  await execute(c.browser, "yamakan.consent.revoke", { consentId: lead.id });
+  // A fresh consent for someone else, after the revocation, does not free it.
+  const other = await grant(c, "other");
+  await savePack(c, id(), packOf("other", other.id));
+  const now = await head(c);
+  assert.match(
+    await failure(
+      execute(c.browser, "yamakan.project.applyBatch", {
+        projectId: c.projectId,
+        expectedRevision: now.revision,
+        operations: [
+          {
+            type: "clip.add",
+            clipId: id(),
+            trackId: now.tracks.find((t) => t.kind === "video")!.id,
+            assetId: c.imported.still.id,
+            title: null,
+            startTicks: 0,
+            durationTicks: 30 * FRAME,
+            sourceStartTicks: 0,
+          },
+        ],
+      }),
+    ),
+    REVOKED,
+  );
+});
+
+test("after a restore, a surviving consent is revalidated before the photo is placed", async () => {
+  const c = await workspace();
+  const { consent, edit, add } = await placedStill(c);
+  // What a restored backup looks like: a new execution epoch.
+  c.store.transaction((db) =>
+    db.prepare("UPDATE director_epoch SET value = value + 1").run(),
+  );
+  assert.match(await failure(edit([add()])), /must be revalidated/);
+  await execute(c.browser, "yamakan.consent.revalidate", {
+    consentId: consent.id,
+  });
+  await edit([add()]);
+  assert.ok(
+    (await head(c)).clips.some((x) => x.assetId === c.imported.still.id),
+  );
+});

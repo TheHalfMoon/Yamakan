@@ -1,7 +1,7 @@
 /**
  * A person's photo after their consent is revoked, in a real browser against the
- * real service: the clip on the timeline stays, Undo of its removal is refused
- * with the reason on screen, and the project and file are kept.
+ * real service: Undo of its removal is refused with the reason on screen, and the
+ * file is kept. The way back is driven through the service.
  *
  * Usage: node scripts/qualify-consent-gate.mjs [receipt.json]
  */
@@ -224,7 +224,7 @@ try {
     },
   );
 
-  // The way back: a new consent and a pack with it. Undo then works.
+  // The way back: a new consent and a pack with it, then a new placement.
   const renewed = await service("yamakan.consent.grant", {
     characterId: "lead",
     purpose: "likeness-generate",
