@@ -774,7 +774,7 @@ test("a take with only a pinned pack can return after revocation, as any project
     operations: [{ type: "clip.remove", clipId: shown.id }],
   });
   await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
-  // (That a revoked pin refuses assembly is the test above this one's business.)
+  // ("a revoked consent refuses the pack and the assembly" covers assembly.)
   // The take carries no continuity references, so its medium is not gated:
   // undo brings it back...
   const undone = await apply("yamakan.project.undo", {
