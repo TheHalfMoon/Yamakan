@@ -58,6 +58,7 @@
     "qualify:comfyui-generation": "node scripts/qualify-comfyui-generation.mjs",
     "qualify:engine-panel": "node scripts/qualify-engine-panel.mjs",
     "qualify:ai-video": "node scripts/qualify-ai-video.mjs",
+    "qualify:create": "node scripts/qualify-create-workspace.mjs",
     "qualify:comfyui": "node scripts/qualify-comfyui.mjs",
     "qualify:browser-restore": "node scripts/qualify-browser-restore.mjs",
     "qualify:crossfade": "node scripts/qualify-crossfade.mjs",

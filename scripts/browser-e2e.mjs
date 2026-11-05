@@ -391,8 +391,10 @@ try {
     page.evaluate(() => document.activeElement?.textContent);
   await page.getByRole("tab", { name: "Finish", exact: true }).focus();
   await page.keyboard.press("Home");
-  assert.equal(await focusedTab(), "Story");
+  assert.equal(await focusedTab(), "Create");
   assert.equal(await selectedTab(), "Finish", "focus alone opens nothing");
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await focusedTab(), "Story");
   await page.keyboard.press("ArrowRight");
   assert.equal(await focusedTab(), "Edit");
   await page.keyboard.press("Enter");

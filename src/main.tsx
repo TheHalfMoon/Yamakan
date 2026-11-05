@@ -23,6 +23,7 @@ import {
 import { editorView } from "./adapter";
 import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
+import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
 import {
   WorkspacePanel,
   WorkspaceTabs,
@@ -286,6 +287,54 @@ function App() {
         return h;
       }
     });
+  };
+  // A file joins the project; its new asset, or null if it made none.
+  const importMedia = async (p: Project, file: File) => {
+    const before = new Set(p.assets.map((a) => a.id));
+    let made: any = null;
+    await save();
+    const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
+      method: "POST",
+      headers: {
+        ...sessionHeaders(),
+        "X-Asset-Name": encodeURIComponent(file.name),
+      },
+      body: file,
+    });
+    const v = await r.json();
+    if (!r.ok) throw new Error(v.error?.message || t("import.failed"));
+    if (v.job) {
+      // Variable-frame-rate video: wait for its constant-rate version.
+      setMessage(msg("import.converting", { name: file.name }));
+      let job = v.job;
+      // Stop waiting (the job continues) after twice the
+      // conversion time limit, queueing included.
+      const deadline =
+        Date.now() + 2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
+      while (job.state === "QUEUED" || job.state === "RUNNING") {
+        if (Date.now() > deadline)
+          throw new Error(t("import.stillConverting", { name: file.name }));
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        job = await call("yamakan.job.status", {
+          jobId: job.id,
+        });
+      }
+      if (job.state !== "COMPLETED")
+        throw new Error(job.error || t("import.incomplete"));
+      const opened = await call("yamakan.project.open", {
+        projectId: p.id,
+      });
+      accept(opened);
+      made =
+        opened.assets.find((a: { id: string }) => !before.has(a.id)) ?? null;
+      setMessage(msg("import.converted", { name: file.name }));
+    } else {
+      accept(v.project);
+      made = v.asset;
+      setMessage(msg("import.done", { name: v.asset.name }));
+    }
+    await refresh();
+    return made;
   };
   const accept = (project: Project) => {
     const opened = ProjectSchema.parse(project);
@@ -1954,59 +2003,7 @@ function App() {
                     e.target.value = "";
                     if (!file) return;
                     run(async () => {
-                      await save();
-                      const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
-                        method: "POST",
-                        headers: {
-                          ...sessionHeaders(),
-                          "X-Asset-Name": encodeURIComponent(file.name),
-                        },
-                        body: file,
-                      });
-                      const v = await r.json();
-                      if (!r.ok)
-                        throw new Error(v.error?.message || t("import.failed"));
-                      if (v.job) {
-                        // Variable-frame-rate video: wait for its constant-rate version.
-                        setMessage(
-                          msg("import.converting", { name: file.name }),
-                        );
-                        let job = v.job;
-                        // Stop waiting (the job continues) after twice the
-                        // conversion time limit, queueing included.
-                        const deadline =
-                          Date.now() +
-                          2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
-                        while (
-                          job.state === "QUEUED" ||
-                          job.state === "RUNNING"
-                        ) {
-                          if (Date.now() > deadline)
-                            throw new Error(
-                              t("import.stillConverting", { name: file.name }),
-                            );
-                          await new Promise((resolve) =>
-                            setTimeout(resolve, 500),
-                          );
-                          job = await call("yamakan.job.status", {
-                            jobId: job.id,
-                          });
-                        }
-                        if (job.state !== "COMPLETED")
-                          throw new Error(job.error || t("import.incomplete"));
-                        accept(
-                          await call("yamakan.project.open", {
-                            projectId: p.id,
-                          }),
-                        );
-                        setMessage(
-                          msg("import.converted", { name: file.name }),
-                        );
-                      } else {
-                        accept(v.project);
-                        setMessage(msg("import.done", { name: v.asset.name }));
-                      }
-                      await refresh();
+                      await importMedia(p, file);
                     });
                   }}
                 />
@@ -2145,6 +2142,49 @@ function App() {
               {p ? topBar(p) : null}
               {/* The job tray: one export job, seen in every workspace. */}
               {p ? jobPanel() : null}
+              <WorkspacePanel
+                id="create"
+                workspace={workspace}
+                visited={visited}
+              >
+                {p ? (
+                  <CreateWorkspace
+                    key={p.id}
+                    projectId={p.id}
+                    assets={p.assets}
+                    placedAssetIds={
+                      new Set(p.clips.map((c) => c.assetId ?? ""))
+                    }
+                    busy={busy}
+                    t={t}
+                    checkEngine={async () => {
+                      const { operations } = await call(
+                        "yamakan.engines.capabilities",
+                        {},
+                      );
+                      const video = operations.find(
+                        (o: { operation: string }) =>
+                          o.operation === "textToVideo",
+                      );
+                      return video
+                        ? { available: video.available, message: video.message }
+                        : null;
+                    }}
+                    importVideo={(file) =>
+                      new Promise((resolve) => {
+                        let made: any = null;
+                        run(async () => {
+                          made = await importMedia(p, file);
+                        }).finally(() => resolve(made));
+                      })
+                    }
+                    place={(assetId) => addAsset(assetId)}
+                    openEdit={() => openWorkspace("edit")}
+                  />
+                ) : (
+                  emptyPanel()
+                )}
+              </WorkspacePanel>
               <WorkspacePanel
                 id="story"
                 workspace={workspace}

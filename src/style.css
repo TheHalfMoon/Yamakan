@@ -541,3 +541,140 @@ footer {
 .studio-panel {
   margin-top: 12px;
 }
+
+/* The Create workspace: the shot on one side, what came of it on the other. */
+.create {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+.create-composer,
+.create-results {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 0;
+}
+.create h2,
+.create h3 {
+  margin: 0 0 8px;
+}
+.create h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 20px;
+}
+.create h3:first-child {
+  margin-top: 0;
+}
+.create p {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.create .note {
+  color: #aeb7c9;
+  font-size: 0.8rem;
+}
+.create legend,
+.create label {
+  font-size: 0.8rem;
+  color: #c6cede;
+}
+.create textarea {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.create-notice,
+.create-problem {
+  font-size: 0.85rem;
+}
+.create-field,
+.create-direction label,
+.create-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.create textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  background: #111722;
+  color: var(--ink);
+  border: 1px solid #344156;
+  border-radius: 6px;
+  padding: 8px;
+}
+.create textarea:focus-visible {
+  outline: 2px solid #8cafef;
+  outline-offset: 2px;
+}
+.create small {
+  opacity: 0.75;
+}
+.create-direction {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 12px 0;
+  padding: 8px 12px 12px;
+}
+.create-direction .note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.create-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+.create-final p {
+  background: #111722;
+  border-radius: 6px;
+  padding: 8px;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+.create-notice:not(:empty),
+.create-problem {
+  margin-top: 8px;
+}
+.create-problem {
+  color: #ffb4a8;
+}
+.create-videos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.create-videos li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.create-videos video {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 6px;
+  background: #000;
+}
+.create-video-actions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
