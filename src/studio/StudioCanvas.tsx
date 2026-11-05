@@ -22,6 +22,8 @@ type Props = {
    * documents (the timeline is unchanged).
    */
   onSaved?: (projectId: string, from: number, to: number) => void;
+  /** Tells the editor when strokes here are unsaved, so an undo waits for them. */
+  registerUnsaved?: (isUnsaved: () => boolean) => () => void;
 };
 
 /** Q8/Q10 measurement handle exposed only while forceMount is active. */
@@ -66,6 +68,7 @@ export function StudioCanvas({
   client,
   t,
   onSaved,
+  registerUnsaved,
 }: Props) {
   const screenRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -81,6 +84,28 @@ export function StudioCanvas({
   revision.current = Math.max(revision.current, project?.revision ?? 0);
   const saver = useRef<(() => Promise<void>) | null>(null);
   const projectId = project?.id ?? null;
+  // Whether strokes are unsaved, and a re-read of the stored canvas: set by the
+  // run below, for the editor's undo.
+  const unsaved = useRef<(() => boolean) | null>(null);
+  const storedMoved = useRef<(() => Promise<boolean>) | null>(null);
+  useEffect(
+    () => registerUnsaved?.(() => unsaved.current?.() ?? false),
+    [registerUnsaved],
+  );
+  // An undo or redo can change the stored canvas under a clean view. Show what
+  // is stored then, or the next stroke would save over a version it never saw.
+  const projectRevision = project?.revision;
+  useEffect(() => {
+    let current = true;
+    void (async () => {
+      if (unsaved.current?.()) return;
+      if ((await storedMoved.current?.()) && current && !unsaved.current?.())
+        setReloads((n) => n + 1);
+    })().catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [projectRevision]);
 
   useEffect(() => {
     const cap = studioCapability();
@@ -94,6 +119,8 @@ export function StudioCanvas({
     let refresh: ((canvas: unknown) => Promise<void>) | undefined;
     // A new run starts clean: nothing of the previous project's state stays.
     saver.current = null;
+    unsaved.current = null;
+    storedMoved.current = null;
     setSave(null);
     setError(null);
     (async () => {
@@ -195,6 +222,17 @@ export function StudioCanvas({
         if (enabled && projectId && client) {
           // The reference's own id (an agent may have committed it).
           const documentId = stored?.ref.id ?? studioDocument.id;
+          unsaved.current = () => port.isDirty();
+          storedMoved.current = async () => {
+            const refs = (await client.call("yamakan.document.list", {
+              projectId,
+            })) as { kind: string; contentHash: string }[];
+            // By kind, as the loader reads it: a redo can bring back a document
+            // under another id than the session this view started after an undo.
+            const now =
+              refs.find((r) => r.kind === "studio")?.contentHash ?? null;
+            return now !== savedHash;
+          };
           saver.current = async () => {
             if (cancelled) return;
             setSave({ state: "saving" });
@@ -365,6 +403,15 @@ export function StudioCanvas({
           </p>
           {save.state === "error" || save.state === "conflict" ? (
             <p data-testid="studio-save-detail">{save.message}</p>
+          ) : null}
+          {save.state === "error" ? (
+            <button
+              type="button"
+              data-testid="studio-discard"
+              onClick={() => setReloads((n) => n + 1)}
+            >
+              {t?.("studio.reload")}
+            </button>
           ) : null}
           {save.state === "conflict" ? (
             <button
