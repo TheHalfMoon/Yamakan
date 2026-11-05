@@ -23,6 +23,7 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { mediaTools } from "../core/process/workers.ts";
+import { FRAME, compareFrames } from "./ai-video-frames.mjs";
 
 const [video, expected, receipt] = process.argv.slice(2);
 if (!video || !expected) {
@@ -80,14 +81,7 @@ const small = (file, filter = "scale=64:36") =>
     ],
     { windowsHide: true, maxBuffer: 1 << 28 },
   );
-const FRAME = 64 * 36 * 3;
-const difference = (a, b) => {
-  let total = 0;
-  for (let i = 0; i < FRAME; i++) total += Math.abs(a[i] - b[i]);
-  return total / FRAME;
-};
-const frameOf = (raw, n) => raw.subarray(n * FRAME, (n + 1) * FRAME);
-// What a file holds, by decoding it, not by what anything says about it.
+// What a file holds: its frames counted by decoding, the rest from its stream.
 const probe = (file) => {
   const stream = JSON.parse(
     execFileSync(
@@ -279,35 +273,14 @@ try {
   assert.ok(brightest < 24, `the bars reach ${brightest}`);
   const count = result.length / FRAME;
   assert.equal(count, frames, "every frame came through");
-  const differences = [];
-  // Each source frame against an export frame from the middle of where it shows.
-  for (let n = 0; n < sourceFrames; n++)
-    differences.push(
-      difference(
-        frameOf(source, n),
-        frameOf(result, Math.floor((n + 0.5) * perSource)),
-      ),
-    );
-  const worst = Math.max(...differences);
-  // Against a frame elsewhere in the clip, so that closeness means something.
-  const apart = difference(frameOf(source, 0), frameOf(result, frames - 1));
+  const compared = compareFrames(source, result, perSource);
+  const { worst, apart } = compared;
   assert.ok(worst < 8, `worst frame differs by ${worst}`);
+  // A frozen picture cannot pass: its first frame is as far off as its last.
   assert.ok(apart > worst, `frames ${apart} apart, worst match ${worst}`);
-  // A quiet clip passes that limit however its frames are ordered, so the right
-  // frames must also clearly beat the wrong ones. Frozen or shifted pictures do not.
-  let twoFramesOff = 0;
-  for (let n = 0; n + 2 < sourceFrames; n++)
-    twoFramesOff = Math.max(
-      twoFramesOff,
-      difference(
-        frameOf(source, n),
-        frameOf(result, Math.floor((n + 2.5) * perSource)),
-      ),
-    );
-  assert.ok(
-    worst * 2 < twoFramesOff,
-    `worst match ${worst}, two frames off ${twoFramesOff}`,
-  );
+  assert.deepEqual(compared.orderFailures, [], "frames out of order");
+  if (compared.orderChecks === 0)
+    console.log("note - this clip is too still for its order to be checked");
   step(
     "the export has every frame at 30 fps, and matches its source frame by frame",
     {
@@ -317,7 +290,9 @@ try {
       brightestBar: brightest,
       worstDifference: Number(worst.toFixed(2)),
       firstToLast: Number(apart.toFixed(2)),
-      twoFramesOff: Number(twoFramesOff.toFixed(2)),
+      sourceFramesShown: compared.shown,
+      orderChecks: compared.orderChecks,
+      sourceFramesOrderReached: compared.orderedFrames,
     },
   );
   assert.deepEqual(pageErrors, []);
