@@ -1,0 +1,14 @@
+{
+  "id": "abdulazizshehri/yamakan-wan22-ti2v-5b-first-video",
+  "title": "yamakan-wan22-ti2v-5b-first-video",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "enable_tpu": false,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
