@@ -3,72 +3,96 @@
  * so a difference is a mean over the picture, out of 255.
  */
 export const FRAME = 64 * 36 * 3;
-// Source frames at least this far apart can be told from each other in an export,
-// where a right frame already sits about 2 away from its source.
-const DISTINCT = 4;
+// How far off a right frame may be, and how far apart two source frames must be for
+// an export to tell them apart once its steady colour offset is taken out.
+const LIMIT = 8;
+const DISTINCT = 2;
 
-const difference = (a, b) => {
+const frameOf = (raw, n) => raw.subarray(n * FRAME, (n + 1) * FRAME);
+const difference = (a, b, offset = [0, 0, 0]) => {
   let total = 0;
-  for (let i = 0; i < FRAME; i++) total += Math.abs(a[i] - b[i]);
+  for (let i = 0; i < FRAME; i++)
+    total += Math.abs(b[i] - a[i] - offset[i % 3]);
   return total / FRAME;
 };
-const frameOf = (raw, n) => raw.subarray(n * FRAME, (n + 1) * FRAME);
 
 /**
- * The export frame from the middle of where source frame n shows, when export frame
- * i shows source frame floor(i / perSource). Null if it does not show at all.
+ * The export frames that show source frame n, as [first, last]: the export starts
+ * each source frame at the project frame nearest its time. Null if it never shows.
  */
-export function exportFrameOf(n, perSource, frames) {
-  const first = Math.ceil(n * perSource);
-  const last = Math.min(Math.ceil((n + 1) * perSource) - 1, frames - 1);
-  return first > last ? null : Math.floor((first + last) / 2);
+export function exportFramesOf(n, perSource, frames) {
+  const first = Math.floor(n * perSource + 0.5);
+  const last = Math.min(Math.floor((n + 1) * perSource + 0.5) - 1, frames - 1);
+  return first > last ? null : [first, last];
 }
 
 /**
- * How closely an export follows its source. A still stretch of a clip cannot show
- * its order, however it is measured, so `orderedFrames` says how many source frames
- * the order check reached: on a quiet clip that may be few, or none.
+ * How closely an export follows its source, and `problem` if it does not. Where two
+ * source frames differ, every export frame of each must be closer to its own, so a
+ * fully frozen export always fails once any pair differs. A still stretch cannot show
+ * its order: `orderedFrames` says how many source frames this reached, perhaps none.
  */
 export function compareFrames(source, result, perSource) {
   const sourceFrames = source.length / FRAME;
   const frames = result.length / FRAME;
   const shownAt = new Map();
   for (let n = 0; n < sourceFrames; n++) {
-    const i = exportFrameOf(n, perSource, frames);
-    if (i !== null) shownAt.set(n, i);
+    const shown = exportFramesOf(n, perSource, frames);
+    if (shown) shownAt.set(n, shown);
   }
   let worst = 0;
-  for (const [n, i] of shownAt)
-    worst = Math.max(worst, difference(frameOf(source, n), frameOf(result, i)));
-  const apart = difference(frameOf(source, 0), frameOf(result, frames - 1));
+  let compared = 0;
+  const offset = [0, 0, 0];
+  for (const [n, [first, last]] of shownAt)
+    for (let i = first; i <= last; i++) {
+      const a = frameOf(source, n);
+      const b = frameOf(result, i);
+      worst = Math.max(worst, difference(a, b));
+      for (let k = 0; k < FRAME; k++) offset[k % 3] += b[k] - a[k];
+      compared++;
+    }
+  for (let c = 0; c < 3; c++) offset[c] /= (compared * FRAME) / 3;
 
-  // Where two nearby source frames differ, each one's export frame must be closer
-  // to its own source frame than to the other's.
+  const pairs = [];
+  const lastShown = Math.max(...shownAt.keys());
+  for (const n of shownAt.keys())
+    for (const m of [n + 1, n + 2]) if (shownAt.has(m)) pairs.push([n, m]);
+  // Slow drift can stay under the limit between neighbours, but not across the clip.
+  if (lastShown > 2) pairs.push([0, lastShown]);
+
+  const closerToOwn = (n, own, other) => {
+    const [first, last] = shownAt.get(n);
+    for (let i = first; i <= last; i++) {
+      const frame = frameOf(result, i);
+      if (difference(own, frame, offset) >= difference(other, frame, offset))
+        return false;
+    }
+    return true;
+  };
   let orderChecks = 0;
   const ordered = new Set();
   const orderFailures = [];
-  for (const [n, i] of shownAt)
-    for (const m of [n + 1, n + 2]) {
-      if (!shownAt.has(m)) continue;
-      const a = frameOf(source, n);
-      const b = frameOf(source, m);
-      if (difference(a, b) < DISTINCT) continue;
-      const atA = frameOf(result, i);
-      const atB = frameOf(result, shownAt.get(m));
-      orderChecks++;
-      ordered.add(n).add(m);
-      if (
-        difference(a, atA) >= difference(b, atA) ||
-        difference(b, atB) >= difference(a, atB)
-      )
-        orderFailures.push([n, m]);
-    }
+  for (const [n, m] of pairs) {
+    const a = frameOf(source, n);
+    const b = frameOf(source, m);
+    if (difference(a, b) < DISTINCT) continue;
+    orderChecks++;
+    ordered.add(n).add(m);
+    if (!closerToOwn(n, a, b) || !closerToOwn(m, b, a))
+      orderFailures.push([n, m]);
+  }
+  let problem = null;
+  if (worst >= LIMIT) problem = `worst frame differs by ${worst}`;
+  else if (orderFailures.length > 0)
+    problem = `frames out of order: ${JSON.stringify(orderFailures)}`;
   return {
     shown: shownAt.size,
     worst,
-    apart,
+    offset,
+    pairs: pairs.length,
     orderChecks,
     orderedFrames: ordered.size,
     orderFailures,
+    problem,
   };
 }

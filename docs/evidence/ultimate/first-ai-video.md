@@ -29,32 +29,37 @@ The `verified` in each receipt, this and Wan's below, is a rough check that nois
 
 `npm run qualify:ai-video <video> <sha256>`, real Edge against the real service, passing for the 20-step, 50-step and Wan videos. Import, placing and export are calls made from the page; the timeline check is what uses the interface.
 
-| Step     | Result                                                                                                                                                                                                                             |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Import   | One asset, with the same hash                                                                                                                                                                                                      |
-| Timeline | The clip shows in the browser                                                                                                                                                                                                      |
-| Export   | H.264, 1280x720, 30 fps, 183 frames. The boat is plainly there in an exported frame looked at from the 50-step run                                                                                                                 |
-| Picture  | All 49 source frames, each compared with an export frame from the middle of where it shows: mean difference at most 1.88 of 255 at 50 steps, against 12.28 between the first and last frames. See "What the picture check catches" |
-| Bars     | Both sides dark, brightest value 19 and 20 of 255                                                                                                                                                                                  |
+| Step     | Result                                                                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Import   | One asset, with the same hash                                                                                                                                                   |
+| Timeline | The clip shows in the browser                                                                                                                                                   |
+| Export   | H.264, 1280x720, 30 fps, 183 frames. The boat is plainly there in an exported frame looked at from the 50-step run                                                              |
+| Picture  | All 49 source frames, each compared with every export frame that shows it: mean difference at most 1.80 of 255 at 20 steps and 1.89 at 50. See "What the picture check catches" |
+| Bars     | Both sides dark, brightest value 19 and 20 of 255                                                                                                                               |
 
 **Found by this:**
 
 - **Yamakan projects offer no 8 fps,** this model's rate, only 30 and 24000/1001. So the 8 fps video plays in a 30 fps project, with each source frame lasting 3.75 of its frames. It works, but a person cannot edit on the model's own frames.
 - **A 3:2 video gets black bars in a 16:9 project.** That is correct fitting, and a person has no way yet to set a project to the video's shape from this path.
 
-**What the picture check catches.** Three rules: every frame within 8 of 255; the first-to-last difference larger than the worst match, which a fully frozen picture cannot meet; and, wherever two source frames one or two apart differ by at least 4, each one's export frame closer to its own source frame than to the other's. The third is new. The first two alone passed exports shifted by one source frame.
+**What the picture check catches.** Two rules. Every export frame is within 8 of 255 of the source frame it shows. And wherever two source frames one or two apart, or the clip's first and last, differ by at least 2, each one's export frames are closer to it than to the other, once the export's steady colour offset is taken out. A fully frozen export can never meet the second rule if any pair differs. The earlier rules passed exports shifted by one source frame, and rejected good still and looping clips.
 
-A reviewer built bad exports from the real ones, re-encoded with libx264, not through Yamakan's pipeline. These are kept outside the repository; the rules' unit tests are in `tests/ai-video-frames.test.ts`.
+A reviewer built bad exports from the real ones, re-encoded with libx264, not through Yamakan's pipeline. They are kept outside the repository, and were measured with `scripts/ai-video-frames.mjs` directly. Swaps and repeats were simulated on real export frames, without re-encoding. The unit tests are in `tests/ai-video-frames.test.ts`.
 
-| Bad export                                 | CogVideoX, 50 steps | Wan                       |
-| ------------------------------------------ | ------------------- | ------------------------- |
-| Fully frozen                               | Rejected            | Rejected                  |
-| One source frame late, or early            | Rejected            | Rejected                  |
-| Every other source frame dropped           | Rejected            | Not run under these rules |
-| Two stills, either side of the clip's jump | Not built           | **Passes**                |
-| Each side of the jump reversed             | Not built           | **Passes**                |
+| Bad export                                       | CogVideoX, 50 steps          | Wan                            |
+| ------------------------------------------------ | ---------------------------- | ------------------------------ |
+| Fully frozen                                     | Rejected                     | Rejected                       |
+| One source frame late, or early                  | Rejected                     | Rejected                       |
+| Every other source frame dropped                 | Rejected                     | Not measured under these rules |
+| Two neighbouring frames swapped, or one repeated | Rejected at all 47 positions | **Passes at 38 of 39**         |
+| Two stills, either side of the clip's jump       | Not built                    | **Passes**                     |
+| Each side of the jump reversed                   | Not built                    | **Passes**                     |
 
-**The order rule only reaches frames near a change.** It reaches all 49 of CogVideoX's frames and 4 of Wan's 41, where the clip's one jump falls. The rest of Wan differs by under 1 of 255 from frame to frame at this measure, less than the roughly 2 that a correct export already sits from its source, so a mistake confined to those frames passes, as the table shows. Each run's output says how many frames the rule reached, and a clip with no such frames passes with a note that its order went unchecked. The rule assumes export frame i shows source frame floor(i / rate ratio), which was confirmed at Wan's one jump only.
+**The order rule only reaches frames near a change.** It reaches all 49 of CogVideoX's frames, with all 96 pairs compared, and 6 of Wan's 41, with 4 of 80. The rest of Wan differs by under 1 of 255 from frame to frame at this measure, so a mistake confined to those frames passes, as the table shows. A clip with no such pairs passes with its order unchecked. Each run prints how many frames the rule reached.
+
+**Open finding:** real exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in red, green and blue on all three videos. The cause has not been looked at. The check takes this out when comparing order, but the limit of 8 counts it.
+
+The rule that a source frame starts at the project frame nearest its time matches all 183 frames of the CogVideoX exports. A reviewer's clean test clips showed that the check's earlier mapping rejected good video at 25, 23.976 and 29.97 fps.
 
 ## Not done
 
@@ -77,7 +82,7 @@ Generation from inside Yamakan; a start control; a check of the notebook's priva
 | SHA-256               | `4946b41cfc1ec709abd0b0a0c308289cfce3488201126d4a17e1e58d7e9e6f4e`                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **Shows the prompt?** | **In part, by the builder's look at six frames and one exported frame.** A boat on a stream between banks in warm light, plainly. But it reads as a wooden boat, not a folded paper one, in an illustrated style the prompt did not ask for, and it stays in place with small movement in the water, plus one visible pop between frames 25 and 26, where the picture shifts and its texture changes. A reviewer agreed after looking at all 41. No person has judged it yet |
 
-`qualify:ai-video` passes for it: one asset with the same hash, on the timeline in a real browser, export H.264, 1280x720, 30 fps, 51 frames with a 1056x720 picture, bars at most 8 of 255. All 41 source frames match with a worst difference of 1.93, against 5.45 first to last, nearly all of which is the one jump. The order rule made 3 comparisons and reached 4 source frames.
+`qualify:ai-video` passes for it: one asset with the same hash, on the timeline in a real browser, export H.264, 1280x720, 30 fps, 51 frames with a 1056x720 picture, bars at most 8 of 255. All 41 source frames match with a worst difference of 1.93. The order rule compared 4 of 80 pairs and reached 6 source frames.
 
 **Not a comparison of the two models.** One prompt and seed each, different sizes, steps and lengths: 6.1 s of CogVideoX against 1.7 s of Wan. Wan's 24 fps also has no matching project rate: a source frame lasts 1.25 project frames, so some repeat.
 

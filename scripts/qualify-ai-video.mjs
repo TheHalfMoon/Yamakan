@@ -274,13 +274,11 @@ try {
   const count = result.length / FRAME;
   assert.equal(count, frames, "every frame came through");
   const compared = compareFrames(source, result, perSource);
-  const { worst, apart } = compared;
-  assert.ok(worst < 8, `worst frame differs by ${worst}`);
-  // A frozen picture cannot pass: its first frame is as far off as its last.
-  assert.ok(apart > worst, `frames ${apart} apart, worst match ${worst}`);
-  assert.deepEqual(compared.orderFailures, [], "frames out of order");
-  if (compared.orderChecks === 0)
-    console.log("note - this clip is too still for its order to be checked");
+  assert.equal(compared.problem, null, compared.problem);
+  const { worst } = compared;
+  console.log(
+    `note - order rule reached ${compared.orderedFrames} of ${sourceFrames} source frames`,
+  );
   step(
     "the export has every frame at 30 fps, and matches its source frame by frame",
     {
@@ -289,9 +287,10 @@ try {
       size: `1280x720, picture ${pictureWidth}x720`,
       brightestBar: brightest,
       worstDifference: Number(worst.toFixed(2)),
-      firstToLast: Number(apart.toFixed(2)),
+      steadyOffset: compared.offset.map((v) => Number(v.toFixed(2))),
       sourceFramesShown: compared.shown,
       orderChecks: compared.orderChecks,
+      orderPairs: compared.pairs,
       sourceFramesOrderReached: compared.orderedFrames,
     },
   );
