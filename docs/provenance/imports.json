@@ -297,7 +297,7 @@
     "modifications": [
       "Extract timeline/editor CSS and tokens only; omit remote fonts and unrelated global rules; scope tokens to Darzain app."
     ],
-    "importedSha256": "ec10b881ca35357be77dba06b57f7f5d0cc1d30c1d35f97162a0e069540cadf8",
+    "importedSha256": "fd2cee72eb789587b343f7a755b5fccfe545e9317c4edb6f95c5c1ec6dc92417",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
