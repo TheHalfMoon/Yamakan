@@ -31,6 +31,10 @@ So a person starts ComfyUI, and the adapter reads the arguments it reports, at e
 
 Cancelling on a copy the person also uses is limited: ComfyUI checks and then interrupts, so an interrupt could land on the person's next job.
 
+**The whole path, with no AI.** `npm run qualify:comfyui-generation` against real ComfyUI on CPU, core nodes, no weights, at 24000/1001: a generation starts on an explicit request, is followed to success, and its 48-frame output is imported as one asset with no clip added. It is then placed on the timeline and exported by the real pipeline, and the export decodes to 48 green frames. **The source is a solid colour, so this shows every step a real model's video would take, and nothing about any model.** It ran `core/engines/generation.ts` directly. `tests/generation-service.test.ts` covers refusals, importing before finishing, and output that differs from what was reported.
+
+**The commands are not connected yet.** `yamakan.generation.start`, `status`, `cancel` and `import` exist and always refuse with the reason, since engines are off and no recipe is pinned. Connecting them to the service, and a browser control, are still to do; a generation is held in memory, so a restart forgets it; progress over a real model run, lineage and consent checks on a generation's inputs are not done.
+
 **Found by the real run:**
 
 - **Frame rate is not exact.** At 24000/1001, ComfyUI's `CreateVideo` wrote `2997/125`, not the rational asked for, because it takes a decimal. The frame count is right, but a generated clip's timing needs conforming on import. Not fixed here.

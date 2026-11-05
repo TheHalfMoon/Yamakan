@@ -24,6 +24,7 @@
   "skipExactFiles": [
     "core/engines/comfyui.ts",
     "scripts/qualify-comfyui.mjs",
+    "scripts/qualify-comfyui-generation.mjs",
     "tests/comfyui-engine.test.ts",
     "docs/provenance/REBRAND_INVENTORY.md",
     "docs/provenance/brand-terms.json",
