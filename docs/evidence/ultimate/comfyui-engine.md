@@ -4,7 +4,7 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 
 ## What exists now
 
-`core/engines/comfyui.ts` implements the existing `EngineAdapterV2`. It speaks only to `127.0.0.1` or `[::1]` by number, follows no redirect, and runs only graphs the server owns: a request names a recipe, hash and model manifest, and fills that recipe's bindings. While off, no call does IO. It is not yet wired to any command or to the browser, so **a person cannot generate anything yet.**
+`core/engines/comfyui.ts` implements the existing `EngineAdapterV2`. It speaks only to `127.0.0.1` or `[::1]` by number, follows no redirect, and runs only graphs the server owns: a request names a recipe, hash and model manifest, and fills that recipe's bindings. While off, no call does IO. **A person cannot generate anything yet.** One read-only command, `yamakan.engines.comfyui`, reports whether the ComfyUI named by `YAMAKAN_COMFYUI_URL` answers, its version and device, and whether it was started safely. It starts, installs and runs nothing, does no IO when no address is configured, and reports `generationAvailable` apart, which is false: a healthy connection is not working generation.
 
 ## Real run
 
@@ -19,7 +19,7 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 | Input failing its hash | Not submitted                                                                                         |
 | Cancel                 | A running job was interrupted, ended `cancelled`, and left no output                                  |
 
-`tests/comfyui-engine.test.ts`, 35 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
+`tests/comfyui-engine.test.ts`, 38 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
 
 **Added after review:** `comfyLaunchArguments` gives ComfyUI's arguments, on loopback with `--offline` and no custom nodes; nothing calls them outside the qualifier yet. `--offline` turns partner nodes off and restricts ComfyUI's browser page. **It is not an egress block on ComfyUI's process.** A recipe using a partner node reports `cloud-node` and is not available, judged by ComfyUI's flag or by the module the node came from, since a review found a partner node, `Krea2StyleReferenceNode`, that uploads images without setting the flag. The real run shows no such node with `--offline`, and as a control, finds them without it, including that one. Measured: 690 nodes with `--offline`; 1,035 without, of which 345 are partner nodes.
 

@@ -21,10 +21,15 @@ export class CreativeAPI {
   readonly store: ProjectStore;
   readonly queue: JobSupervisor;
   readonly recoveryHome: string | undefined;
-  constructor(store: ProjectStore, options: { recoveryHome?: string } = {}) {
+  readonly comfyUrl: string | undefined;
+  constructor(
+    store: ProjectStore,
+    options: { recoveryHome?: string; comfyUrl?: string } = {},
+  ) {
     this.store = store;
     this.queue = new JobSupervisor(store);
     this.recoveryHome = options.recoveryHome;
+    this.comfyUrl = options.comfyUrl;
   }
   catalog() {
     return {
@@ -61,6 +66,7 @@ export class CreativeAPI {
         principal,
         requestId,
         recoveryHome: this.recoveryHome,
+        comfyUrl: this.comfyUrl,
       },
       name,
       args,

@@ -287,6 +287,87 @@ export type ComfySetupProblem =
   | { kind: "node"; recipe: string; classType: string }
   | { kind: "model"; recipe: string; name: string };
 
+// A read-only look at a ComfyUI a person named: whether it answers, what it is,
+// and whether Yamakan could use it. It starts, installs and runs nothing, and
+// says nothing about generating, which `generationAvailable` answers apart.
+export async function probeComfy(baseUrl: string) {
+  const base = comfyBaseUrl(baseUrl);
+  const offline = {
+    reachable: false as const,
+    version: null,
+    device: null,
+    startedSafely: false,
+    missing: [] as string[],
+    refused: [] as string[],
+    exposed: false,
+  };
+  let stats: {
+    system?: { comfyui_version?: unknown; argv?: unknown };
+    devices?: { type?: unknown; name?: unknown; vram_total?: unknown }[];
+  };
+  try {
+    const res = await fetch(`${base}/system_stats`, {
+      redirect: "error",
+      signal: AbortSignal.timeout(COMFY_LIMITS.requestMs),
+    });
+    if (!res.ok || !res.body) return offline;
+    let text = "";
+    let bytes = 0;
+    const decoder = new TextDecoder();
+    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+      bytes += chunk.byteLength;
+      if (bytes > 1024 * 1024) return offline;
+      text += decoder.decode(chunk, { stream: true });
+    }
+    stats = JSON.parse(text);
+  } catch {
+    return offline;
+  }
+  if (!stats || typeof stats !== "object" || !stats.system) return offline;
+  const found = comfyStartProblems(stats.system.argv);
+  const version = stats.system.comfyui_version;
+  const device = Array.isArray(stats.devices) ? stats.devices[0] : undefined;
+  return {
+    reachable: true as const,
+    version:
+      typeof version === "string" && /^[\w.+-]{1,40}$/.test(version)
+        ? version
+        : null,
+    device:
+      device && typeof device === "object"
+        ? {
+            type:
+              typeof device.type === "string" ? device.type.slice(0, 40) : null,
+            name:
+              typeof device.name === "string"
+                ? device.name.slice(0, 120)
+                : null,
+            memoryBytes:
+              typeof device.vram_total === "number" &&
+              Number.isSafeInteger(device.vram_total) &&
+              device.vram_total >= 0
+                ? device.vram_total
+                : null,
+          }
+        : null,
+    startedSafely:
+      !found.missing.length && !found.refused.length && !found.exposed,
+    ...found,
+  };
+}
+
+// Whether generation could run: today never, and not because of anything a
+// healthy connection says.
+export const comfyGeneration = (recipes = PINNED_COMFY_RECIPES) =>
+  !ENGINE_ENABLED
+    ? { available: false, reason: "Engines are off in this build." }
+    : !recipes.some((r) => r.qualificationHash)
+      ? {
+          available: false,
+          reason: "No qualified recipe is pinned in this build.",
+        }
+      : { available: true, reason: null };
+
 export function createComfyEngine(options: ComfyEngineOptions) {
   const enabled = options.enabled ?? ENGINE_ENABLED;
   const base = comfyBaseUrl(options.baseUrl);

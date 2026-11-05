@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import {
   comfyLaunchArguments,
   isComfyCloudNode,
+  probeComfy,
   comfyRecipeHash,
   createComfyEngine,
 } from "../core/engines/comfyui.ts";
@@ -232,6 +233,13 @@ try {
   });
   assert.deepEqual(await engine.checkSetup(), []);
   step("the setup check finds every core node");
+
+  const health = await probeComfy(base);
+  assert.equal(health.reachable, true);
+  assert.equal(health.startedSafely, true);
+  assert.equal(health.version, stats.system.comfyui_version);
+  assert.equal(health.device?.type, "cpu");
+  step("the read-only health check describes the real ComfyUI", health);
 
   const everyNode = await (await fetch(`${base}/object_info`)).json();
   const cloudNodes = (all) =>

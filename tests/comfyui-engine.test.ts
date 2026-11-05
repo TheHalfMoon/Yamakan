@@ -21,6 +21,7 @@ import {
   type ComfyRecipe,
 } from "../core/engines/comfyui.ts";
 import { ENGINE_ENABLED } from "../core/engines/contract.ts";
+import { execute, type CommandContext } from "../core/command/registry.ts";
 
 const sha = (b: Uint8Array | string) =>
   createHash("sha256").update(b).digest("hex");
@@ -126,6 +127,7 @@ type Fake = {
   uploads: Buffer[];
   redirect?: boolean;
   argv?: string[];
+  stats?: { comfyui_version?: unknown; devices?: unknown };
   outputs: Record<string, unknown>;
   classes: Record<string, object>;
 };
@@ -176,7 +178,13 @@ async function fake(): Promise<Fake> {
       return res.end();
     }
     if (url.pathname === "/system_stats")
-      return send(200, { system: { argv: state.argv } });
+      return send(200, {
+        system: {
+          argv: state.argv,
+          comfyui_version: state.stats?.comfyui_version,
+        },
+        devices: state.stats?.devices,
+      });
     if (url.pathname.startsWith("/object_info/")) {
       const type = decodeURIComponent(url.pathname.slice(13));
       return send(
@@ -585,6 +593,65 @@ test("a replaced job that appears late is cancelled, and no other job is", async
   await engine.status(three.executionRef);
   assert.equal(deleted(), after, "too late to be this attempt's");
   engine.close();
+});
+
+const reader = (comfyUrl?: string) =>
+  ({
+    principal: { id: "browser-ui", scopes: new Set(["project:read"]) },
+    ...(comfyUrl ? { comfyUrl } : {}),
+  }) as unknown as CommandContext;
+const health = async (comfyUrl?: string) =>
+  (await execute(reader(comfyUrl), "yamakan.engines.comfyui", {})).result as {
+    configured: boolean;
+    reachable?: boolean;
+    version?: string | null;
+    device?: unknown;
+    startedSafely?: boolean;
+    missing?: string[];
+    generationAvailable: boolean;
+    generationReason: string | null;
+  };
+
+test("the health command does no IO until a ComfyUI is configured", async () => {
+  const answer = await health();
+  assert.equal(answer.configured, false);
+  assert.equal(answer.generationAvailable, false);
+});
+
+test("a healthy connection reports what it is, and never that generation works", async () => {
+  const f = await fake();
+  f.stats = {
+    comfyui_version: "0.44.0",
+    devices: [{ type: "cpu", name: "cpu", vram_total: 1024 }],
+  };
+  const answer = await health(f.url);
+  assert.equal(answer.reachable, true);
+  assert.equal(answer.version, "0.44.0");
+  assert.deepEqual(answer.device, {
+    type: "cpu",
+    name: "cpu",
+    memoryBytes: 1024,
+  });
+  assert.equal(answer.startedSafely, true);
+  assert.equal(answer.generationAvailable, false);
+  assert.match(answer.generationReason!, /off in this build/);
+  assert.deepEqual(f.posted, ["GET /system_stats"], "reads, and only that");
+});
+
+test("the health command reports an unsafe start, and an absent or hostile ComfyUI", async () => {
+  const f = await fake();
+  f.argv = ["main.py", "--listen", "0.0.0.0"];
+  const unsafe = await health(f.url);
+  assert.equal(unsafe.reachable, true);
+  assert.equal(unsafe.startedSafely, false);
+  assert.deepEqual(unsafe.missing, ["--offline", "--disable-all-custom-nodes"]);
+  const absent = await health("http://127.0.0.1:9");
+  assert.equal(absent.reachable, false);
+  f.stats = { comfyui_version: "../../etc", devices: "nope" };
+  const odd = await health(f.url);
+  assert.equal(odd.version, null);
+  assert.equal(odd.device, null);
+  await assert.rejects(health("http://example.com:8188"), /loopback/);
 });
 
 test("the launch arguments name offline mode, loopback and no custom nodes", () => {

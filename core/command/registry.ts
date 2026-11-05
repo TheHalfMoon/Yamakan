@@ -66,6 +66,7 @@ import { SERVER_RECIPES, recipeHash } from "../engines/v1-bridge.ts";
 import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
 import { assertLanguage, assertTranscribable } from "../audio/transcription.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
+import { comfyGeneration, probeComfy } from "../engines/comfyui.ts";
 import {
   StudioDocumentSchema,
   createEmptyStudioDocument,
@@ -220,6 +221,8 @@ export type CommandContext = {
   recoveryHome?: string;
   // Where pinned local models live, chosen by the service (unset: none).
   modelRoot?: string;
+  // A person-started ComfyUI the service was told to look at (unset: none).
+  comfyUrl?: string;
 };
 type RunContext = CommandContext & { receipt?: RequestReceipt };
 
@@ -2046,6 +2049,23 @@ export const commands = {
           ? "Transcription is not available in this build."
           : transcribe.message,
       );
+    },
+  }),
+  "yamakan.engines.comfyui": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report, read only, whether the ComfyUI this service was configured with answers, what it is, and whether it was started safely. It starts, installs and runs nothing. A healthy connection does not mean generation works; generationAvailable says that apart.",
+    input: z.object({}).strict(),
+    run: async (ctx) => {
+      const generation = comfyGeneration();
+      const answer = {
+        generationAvailable: generation.available,
+        generationReason: generation.reason,
+      };
+      return ctx.comfyUrl
+        ? { configured: true, ...(await probeComfy(ctx.comfyUrl)), ...answer }
+        : { configured: false, ...answer };
     },
   }),
   "yamakan.engines.capabilities": define({

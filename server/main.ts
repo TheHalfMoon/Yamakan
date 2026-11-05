@@ -16,6 +16,7 @@ import {
 } from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
 import { stageDocument, uploadStudioBitmap } from "./document-stage.ts";
+import { comfyBaseUrl } from "../core/engines/comfyui.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
   creativeDocumentsEnabled,
@@ -143,7 +144,16 @@ try {
   );
   process.exit(1);
 }
-const api = new CreativeAPI(store, { recoveryHome });
+// A person-started ComfyUI to look at; this service never starts one. An address
+// off this machine is refused at startup rather than ignored.
+let comfyUrl: string | undefined;
+try {
+  comfyUrl = env("COMFYUI_URL") ? comfyBaseUrl(env("COMFYUI_URL")!) : undefined;
+} catch (e) {
+  console.error(`YAMAKAN_COMFYUI_URL was not used: ${(e as Error).message}`);
+  process.exit(1);
+}
+const api = new CreativeAPI(store, { recoveryHome, comfyUrl });
 // Durable jobs: reconcile any interrupted attempts and resume queued work.
 await api.queue.start();
 // Crash leftovers from an earlier run (older than the grace period), then
