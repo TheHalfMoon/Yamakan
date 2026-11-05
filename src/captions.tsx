@@ -117,7 +117,8 @@ function CaptionsPanel(props: Props) {
   useEffect(() => {
     // Our own commit moves the track too; it clears the draft itself.
     if (busy) return;
-    if (draft && track && draft.base !== track.contentHash) {
+    // That includes the track going, as Discard goes with it.
+    if (draft && draft.base !== track?.contentHash) {
       setDraft(null);
       setError(t("captions.changed"));
     }

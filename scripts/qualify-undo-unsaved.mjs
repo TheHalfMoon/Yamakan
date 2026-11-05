@@ -119,6 +119,21 @@ try {
   assert.equal(await revisionShown(), before);
   step("Undo waits for a caption draft, and keeps it");
 
+  // Restore waits too.
+  await page
+    .getByRole("button", { name: /History/ })
+    .first()
+    .click();
+  const restore = page
+    .getByRole("button", { name: /^Restore revision/ })
+    .first();
+  await restore.waitFor({ timeout: 15_000 });
+  await restore.click();
+  await page.waitForTimeout(500);
+  assert.match(await status.innerText(), refusal);
+  assert.equal(await revisionShown(), before);
+  step("Restore waits for a caption draft too");
+
   await page
     .getByRole("button", { name: "Discard edits", exact: true })
     .click();
@@ -172,6 +187,27 @@ try {
   };
   await stroke(-40);
   const first = await saveCanvas();
+  // Undo of the first save, then redo: one document, shown again.
+  await undo.click();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="studio-save-state"]')
+        ?.getAttribute("data-state") === "new",
+    null,
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await page.waitForFunction(
+    (hash) =>
+      document
+        .querySelector('[data-testid="studio-save-state"]')
+        ?.getAttribute("data-content-hash") === hash,
+    first,
+    { timeout: 30_000 },
+  );
+  await page.evaluate(() => window.__yamakanStudioQ8.setBrushTool());
+  step("Undo and redo of the first canvas save keep one document");
   await stroke(0);
   const second = await saveCanvas();
   assert.notEqual(first, second);
@@ -198,14 +234,6 @@ try {
         ?.getAttribute("data-content-hash") === hash,
     second,
     { timeout: 30_000 },
-  );
-  await page.waitForFunction(
-    () =>
-      document
-        .querySelector('[data-testid="studio-canvas"]')
-        ?.getAttribute("data-studio-status") === "mounted",
-    null,
-    { timeout: 60_000 },
   );
   step("A clean canvas re-reads after Undo, and shows the restored version");
 

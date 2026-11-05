@@ -1955,6 +1955,11 @@ function App() {
                     }
                     onClick={() =>
                       run(async () => {
+                        // A restore replaces documents too, as an undo does.
+                        if (documentWorkUnsaved()) {
+                          setMessage(msg("status.documentUnsaved"));
+                          return;
+                        }
                         accept(
                           await call("yamakan.project.restore", {
                             projectId: revisionHistory.projectId,

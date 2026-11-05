@@ -226,9 +226,11 @@ export function StudioCanvas({
           storedMoved.current = async () => {
             const refs = (await client.call("yamakan.document.list", {
               projectId,
-            })) as { id: string; contentHash: string }[];
+            })) as { kind: string; contentHash: string }[];
+            // By kind, as the loader reads it: a redo can bring back a document
+            // under another id than the session this view started after an undo.
             const now =
-              refs.find((r) => r.id === documentId)?.contentHash ?? null;
+              refs.find((r) => r.kind === "studio")?.contentHash ?? null;
             return now !== savedHash;
           };
           saver.current = async () => {
@@ -401,6 +403,15 @@ export function StudioCanvas({
           </p>
           {save.state === "error" || save.state === "conflict" ? (
             <p data-testid="studio-save-detail">{save.message}</p>
+          ) : null}
+          {save.state === "error" ? (
+            <button
+              type="button"
+              data-testid="studio-discard"
+              onClick={() => setReloads((n) => n + 1)}
+            >
+              {t?.("studio.reload")}
+            </button>
           ) : null}
           {save.state === "conflict" ? (
             <button
