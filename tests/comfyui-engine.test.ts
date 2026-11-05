@@ -121,6 +121,7 @@ type Fake = {
   send: (message: object) => void;
   promptAnswer?: (id: string) => { status: number; body: object };
   uploads: Buffer[];
+  redirect?: boolean;
   outputs: Record<string, unknown>;
   classes: Record<string, object>;
 };
@@ -165,6 +166,10 @@ async function fake(): Promise<Fake> {
       res.end(JSON.stringify(body));
     };
     state.posted.push(`${req.method} ${url.pathname}`);
+    if (state.redirect) {
+      res.writeHead(302, { Location: `${state.url}/elsewhere` });
+      return res.end();
+    }
     if (url.pathname.startsWith("/object_info/")) {
       const type = decodeURIComponent(url.pathname.slice(13));
       return send(
@@ -214,10 +219,6 @@ async function fake(): Promise<Fake> {
       if (!bytes) return send(404, {});
       res.writeHead(200);
       return res.end(bytes);
-    }
-    if (url.pathname === "/redirect") {
-      res.writeHead(302, { Location: "http://example.invalid/" });
-      return res.end();
     }
     send(404, {});
   });
@@ -344,6 +345,19 @@ test("an unreachable ComfyUI is reported, and nothing is available", async () =>
   });
   assert.deepEqual(await engine.checkSetup(), [{ kind: "unreachable" }]);
   assert.ok(engine.capabilities().every((c) => !c.available));
+});
+
+test("a redirect is never followed", async () => {
+  const f = await fake();
+  f.redirect = true;
+  const engine = createComfyEngine({
+    baseUrl: f.url,
+    recipes: [recipe()],
+    enabled: true,
+  });
+  assert.deepEqual(await engine.checkSetup(), [{ kind: "unreachable" }]);
+  assert.ok(!f.posted.some((p) => p.includes("/elsewhere")));
+  assert.equal(f.requests(), 1);
 });
 
 test("a recipe with no qualification never reports available", async () => {

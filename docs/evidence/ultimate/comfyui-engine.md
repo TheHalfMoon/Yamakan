@@ -19,7 +19,9 @@ Builder: Claude Opus, 2026-11-05. Founder authorization: see `docs/FOUNDER_DECIS
 | Input failing its hash | Not submitted                                                                                         |
 | Cancel                 | A running job was interrupted, ended `cancelled`, and left no output                                  |
 
-`tests/comfyui-engine.test.ts`, 18 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect-free client, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
+`tests/comfyui-engine.test.ts`, 19 tests against a fake server on a real port, also covers: addresses other than loopback, a redirect not followed, recipes with no qualification, a graph or URL in a request, outputs beyond a recipe's limits, stale generations, a path outside the output folder in history, temporary previews not counted, and real socket progress for only this execution.
+
+Local capture of this run: SHA-256 `19ad004d52366ef4898b311ab36281acaaf673a1ac41de794df44f4c8b014773`, at `f045691`; the commit after it adds one test and changes no product code.
 
 **Found by the real run:**
 
