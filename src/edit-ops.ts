@@ -77,6 +77,46 @@ export function setClipTransform(
   ]);
 }
 
+// A dissolve from the clip ending where this one starts, or none. The same
+// operation and rules as the service's, so a refusal here names the same reason.
+export function setClipDissolve(
+  p: Project,
+  clipId: string,
+  frames: number | null,
+): Project {
+  if (frames === null)
+    return applyLocal(p, [
+      { type: "clip.setTransition", clipId, transition: null },
+    ]);
+  const clip = p.clips.find((c) => c.id === clipId);
+  const previous = clip && dissolveSource(p, clip);
+  if (!previous) return p;
+  return applyLocal(p, [
+    {
+      type: "clip.setTransition",
+      clipId,
+      transition: {
+        kind: "dissolve",
+        fromClipId: previous.id,
+        durationTicks: framesToTicks(frames, frameRateOf(p)),
+        audio: "equalPower",
+      },
+    },
+  ]);
+}
+
+// The clip a dissolve into this one would come from.
+export function dissolveSource(p: Project, clip: Project["clips"][number]) {
+  return (
+    p.clips.find(
+      (c) =>
+        c.id !== clip.id &&
+        c.trackId === clip.trackId &&
+        c.startFrame + c.durationFrames === clip.startFrame,
+    ) ?? null
+  );
+}
+
 // Removes a clip (and its place in any shot) unless its track is locked.
 export function setClipSound(
   p: Project,

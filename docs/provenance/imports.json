@@ -9,7 +9,7 @@
       "Add optional TimelineClip.soundEnabled for W1 preview parity with export.",
       "YU-016: MediaItem gains hash and peaksPath; WaveformCache removed (peaks come from server tiles)."
     ],
-    "importedSha256": "f6688594e361fc37c9fa6a894f24d04f37a9ae922623ca65ef385609f548a551",
+    "importedSha256": "260ac4390106f49ab731ad683ba9636d7f76d79c4be552201b493e3e97191548",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -27,9 +27,10 @@
       "Use isolated LibraryAsset type; omit cloud-backed library hook.",
       "Duplicate clips use canonical UUIDs.",
       "YU-016: audio clips draw Waveform from peak tiles over the clip's source range (sourceIn..sourceOut); the waveformCache prop is removed.",
-      "SS-014: the normal trim and move become functions shared by the pointer and new keyboard controls (frame trim, frame move, trim to playhead, snapping key); clips take keyboard focus."
+      "SS-014: the normal trim and move become functions shared by the pointer and new keyboard controls (frame trim, frame move, trim to playhead, snapping key); clips take keyboard focus.",
+      "SS-014: shows a dissolve's length on the clip."
     ],
-    "importedSha256": "9ab77d63654f386394ff926697af3db8d053ce9aca70d062beda6eb7ad585447",
+    "importedSha256": "ef85f9934faeb8fc08ffee994e00526ccad3419673d7f1aeda580834f1a17d4f",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
@@ -297,7 +298,7 @@
     "modifications": [
       "Extract timeline/editor CSS and tokens only; omit remote fonts and unrelated global rules; scope tokens to Darzain app."
     ],
-    "importedSha256": "fd2cee72eb789587b343f7a755b5fccfe545e9317c4edb6f95c5c1ec6dc92417",
+    "importedSha256": "5104e23577e55387d0398e2a9b64d8f50b10a0335b2d97a98ecb8a7d060b29be",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
