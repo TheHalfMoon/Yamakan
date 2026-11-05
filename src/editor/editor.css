@@ -874,6 +874,9 @@ body[data-theme="light"] .edit-timeline-surface {
   color: var(--app-text);
 }
 
+/* Takes focus from a click so the editing keys work; never a Tab stop. */
+.tl-root:focus { outline: none; }
+
 .tl-header {
   display: flex;
   align-items: center;
