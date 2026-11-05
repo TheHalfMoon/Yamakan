@@ -105,6 +105,10 @@
   ],
   "localFilesInDonorRoots": [
     {
+      "path": "core/engines/generation.ts",
+      "reason": "Yamakan-authored generation service over the engine contract; no donor copy."
+    },
+    {
       "path": "core/engines/comfyui.ts",
       "reason": "Yamakan-authored ComfyUI adapter; its setup check follows D3voz/openjutsu lib/setup.ts @ 7fe118bb5a61fcfac0148e1bfea3dd29884dbf26 (MIT, notices/openjutsu-LICENSE), rewritten. No file copied."
     },

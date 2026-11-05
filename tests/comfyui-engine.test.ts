@@ -126,6 +126,7 @@ type Fake = {
   promptAnswer?: (id: string) => { status: number; body: object };
   uploads: Buffer[];
   redirect?: boolean;
+  broken?: boolean;
   argv?: string[];
   stats?: { comfyui_version?: unknown; devices?: unknown };
   outputs: Record<string, unknown>;
@@ -173,6 +174,7 @@ async function fake(): Promise<Fake> {
       res.end(body === "not json" ? "not json" : JSON.stringify(body));
     };
     state.posted.push(`${req.method} ${url.pathname}`);
+    if (state.broken) return send(500, {});
     if (state.redirect) {
       res.writeHead(302, { Location: `${state.url}/elsewhere` });
       return res.end();
@@ -570,6 +572,33 @@ test("a failure is final, leaves no output, and a lost job is stopped if it appe
   };
   assert.equal((await engine.status(id)).state, "failed");
   assert.deepEqual(await engine.enumerateArtifacts(id), []);
+  engine.close();
+});
+
+test("an outage does not fail a job, and neither does a finished one aging out", async () => {
+  const { f, engine, pass, req } = await clocked();
+  const { executionRef: id } = (await engine.submit(req(), context)) as {
+    executionRef: string;
+  };
+  f.history[id] = { status: { status_str: "success" }, outputs: {} };
+  assert.equal((await engine.status(id)).state, "succeeded");
+  f.history = {};
+  pass(5000);
+  assert.equal((await engine.status(id)).state, "unknown", "aged out");
+  const two = (await engine.submit(req({ attemptKey: "two" }), context)) as {
+    executionRef: string;
+  };
+  f.broken = true;
+  pass(5000);
+  const during = await engine.status(two.executionRef);
+  assert.equal(during.state, "unknown", "ComfyUI is not answering");
+  assert.equal(during.diagnostic, "ComfyUI could not be reached.");
+  f.broken = false;
+  assert.equal(
+    (await engine.status(two.executionRef)).state,
+    "failed",
+    "back, and it does not know this job",
+  );
   engine.close();
 });
 

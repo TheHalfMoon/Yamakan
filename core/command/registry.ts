@@ -67,6 +67,7 @@ import { SCENE_CUT_LIMITS, detectSceneCuts } from "../media/repair.ts";
 import { assertLanguage, assertTranscribable } from "../audio/transcription.ts";
 import { discoverEngineCapabilities } from "../engines/manifests.ts";
 import { comfyGeneration, probeComfy } from "../engines/comfyui.ts";
+import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
 import {
   StudioDocumentSchema,
   createEmptyStudioDocument,
@@ -238,6 +239,13 @@ type Definition<S extends z.ZodType, R> = {
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
 };
 const define = <S extends z.ZodType, R>(d: Definition<S, R>) => d;
+
+function generationUnavailable(): never {
+  throw new CommandError(
+    "CAPABILITY_UNAVAILABLE",
+    comfyGeneration().reason ?? "Generation is not available in this build.",
+  );
+}
 
 const NO_REPLAY =
   "This operation cannot replay a request ID. Send it without one.";
@@ -2067,6 +2075,62 @@ export const commands = {
         ? { configured: true, ...(await probeComfy(ctx.comfyUrl)), ...answer }
         : { configured: false, ...answer };
     },
+  }),
+  // A person's generation. Nothing can run today: engines are off and no recipe
+  // is pinned, so each refuses with the reason. An agent cannot start one.
+  "yamakan.generation.start": define({
+    scope: "project:write",
+    mutation: true,
+    humanOnly: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Not available in this build, and always refused. It will start a generation at the person's request, from a browser session only.",
+    input: z
+      .object({
+        projectId: Id,
+        recipeId: z.string().min(1).max(80),
+        prompt: z.string().min(1).max(ENGINE_V2_LIMITS.promptChars).optional(),
+        seed: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(2 ** 32 - 1)
+          .optional(),
+        width: z.number().int().min(16).max(ENGINE_V2_LIMITS.dimension),
+        height: z.number().int().min(16).max(ENGINE_V2_LIMITS.dimension),
+        durationFrames: z.number().int().positive().max(14_400),
+        firstFrameAssetId: Id.optional(),
+      })
+      .strict(),
+    run: () => generationUnavailable(),
+  }),
+  "yamakan.generation.status": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Not available in this build, and always refused. It will report a generation's state and progress.",
+    input: z.object({ generationId: Id }).strict(),
+    run: () => generationUnavailable(),
+  }),
+  "yamakan.generation.cancel": define({
+    scope: "project:write",
+    mutation: true,
+    humanOnly: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Not available in this build, and always refused. It will ask the engine to stop a generation, from a browser session only.",
+    input: z.object({ generationId: Id }).strict(),
+    run: () => generationUnavailable(),
+  }),
+  "yamakan.generation.import": define({
+    scope: "project:write",
+    mutation: true,
+    humanOnly: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Not available in this build, and always refused. It will bring a finished generation's checked video into the project as an asset, from a browser session only.",
+    input: z.object({ generationId: Id }).strict(),
+    run: () => generationUnavailable(),
   }),
   "yamakan.engines.capabilities": define({
     scope: "project:read",

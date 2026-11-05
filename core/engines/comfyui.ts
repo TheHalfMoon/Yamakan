@@ -193,6 +193,7 @@ type Execution = {
   seenAt?: number;
   // Reported past its deadline or lost: final, whatever ComfyUI says afterwards.
   failed?: ExecutionStatus;
+  finished?: boolean;
   artifacts?: (Artifact & { file: SavedFile })[];
 };
 
@@ -720,6 +721,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
       queue_running?: unknown[][];
       queue_pending?: unknown[][];
     };
+    if (!q || typeof q !== "object")
+      throw new Error("ComfyUI did not answer about its queue.");
     const has = (id: string, list?: unknown[][]) =>
       Array.isArray(list) && list.some((e) => Array.isArray(e) && e[1] === id);
     return (id: string) => {
@@ -744,7 +747,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   // What is known, bounded: a job past its deadline is stopped, and one ComfyUI
   // has stopped reporting for long enough is not left unknown forever. Either is
   // final, and leaves no output to read. A job this adapter does not know, after a
-  // restart or past its tracking limit, stays as ComfyUI reports it, unbounded.
+  // restart or past its tracking limit, stays as ComfyUI reports it, unbounded, and
+  // so does one while ComfyUI cannot be reached.
   async function observe(executionRef: string): Promise<ExecutionStatus> {
     if (enabled) await sweepReplaced();
     const e = executions.get(executionRef);
@@ -752,34 +756,44 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     const status = await report(executionRef);
     if (!e || !enabled) return status;
     const at = now();
-    const fail = (diagnosticText: string) => {
+    const fail = (diagnosticText: string, watch: boolean) => {
       e.failed = {
         executionRef,
         state: "failed",
         diagnostic: diagnosticText,
       };
       // It may yet run or appear: stopped when it does, for as long as it can.
-      replaced.set(executionRef, at);
+      if (watch) replaced.set(executionRef, at);
       return e.failed;
     };
-    const finished = status.state !== "queued" && status.state !== "running";
-    if (!finished) e.seenAt = at;
-    if (!finished && at - e.submittedAt > e.deadlineMs) {
+    const active = status.state === "queued" || status.state === "running";
+    if (status.state !== "unknown") e.seenAt = at;
+    if (!active && status.state !== "unknown") e.finished = true;
+    if (active && at - e.submittedAt > e.deadlineMs) {
       const stopped = await cancel(executionRef);
-      return fail(
-        stopped.remoteAcknowledged
-          ? "The job passed its deadline; ComfyUI was asked to stop it."
-          : "The job passed its deadline, and ComfyUI could not be asked to stop it.",
-      );
+      return stopped.remoteAcknowledged
+        ? fail(
+            "The job passed its deadline; ComfyUI was asked to stop it.",
+            false,
+          )
+        : fail(
+            "The job passed its deadline, and ComfyUI could not be asked to stop it.",
+            true,
+          );
     }
+    // Lost only when ComfyUI answered and does not know it: an outage says nothing
+    // about a job, and one that finished may simply have aged out of its history.
     if (
       status.state === "unknown" &&
+      !status.diagnostic &&
+      !e.finished &&
       at - (e.seenAt ?? e.submittedAt) > lostAfterMs
     )
       return fail(
         e.seenAt
           ? "ComfyUI stopped reporting this job."
           : "ComfyUI never reported this job.",
+        true,
       );
     return status;
   }
@@ -876,6 +890,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
   }
 
   async function artifactsOf(executionRef: string, e: Execution) {
+    if (e.failed) return [];
     if (e.artifacts) return e.artifacts;
     const status = await observe(executionRef);
     if (status.state !== "succeeded") return [];
