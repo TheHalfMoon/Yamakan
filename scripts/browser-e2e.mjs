@@ -440,7 +440,7 @@ try {
     ["Unmute track (Alt+M)", false],
   ]) {
     // Nothing pending first, so the next revision is this gesture's.
-    await page.getByText("Unsaved changes").waitFor({ state: "detached" });
+    await page.getByTestId("shell-unsaved").waitFor({ state: "detached" });
     await page.waitForTimeout(600);
     const before = await getProject();
     await page.getByTitle(titled).first().click();
