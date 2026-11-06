@@ -374,6 +374,19 @@ export function CreateWorkspace(props: {
             onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
           />
         </label>
+        {receiptFile && (
+          <button
+            type="button"
+            data-testid="create-receipt-clear"
+            onClick={() => {
+              setReceiptFile(null);
+              setProblem(null);
+              if (receiptInput.current) receiptInput.current.value = "";
+            }}
+          >
+            {t("create.receiptClear")}
+          </button>
+        )}
         <button
           type="button"
           disabled={busy}

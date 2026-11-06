@@ -26,11 +26,11 @@ const en = {
   "create.outside":
     "This model has been run in a private Kaggle notebook: {folder}. Its prompt and seed are set in that script, not from this page. Its video and receipt can then be brought in here.",
   "create.bringInNote":
-    "Add its receipt to check that this is the file the run made. A receipt is only what the run wrote: it shows the file matches it, not that its model, seed or prompt are true.",
+    "Add its receipt to check that this is the file it describes. A match does not show that its model, seed or prompt are true: anyone can write a receipt.",
   "create.receiptNotFinished":
     "That receipt is from a run that did not finish or did not pass its own checks, so nothing was brought in.",
   "create.tooLargeToCheck":
-    "This video is too large to check against a receipt here, so nothing was brought in. It can be brought in without one.",
+    "This video is too large to check against a receipt here, so nothing was brought in. Remove the receipt to bring it in without one.",
   "create.checkFailed":
     "This video could not be read to check it, so nothing was brought in.",
   "create.importFailed":
@@ -69,6 +69,7 @@ const en = {
   "create.engineTitle": "Making it",
   "create.bringInTitle": "Bring a video in",
   "create.receipt": "Receipt (optional)",
+  "create.receiptClear": "Remove the receipt",
   "create.bringIn": "Choose a video",
   "create.receiptInvalid":
     "That file is not a run receipt, so nothing was brought in.",
@@ -438,11 +439,11 @@ const ar: Record<MessageKey, string> = {
   "create.outside":
     "شُغّل هذا النموذج في دفتر Kaggle خاص: {folder}. يُضبط وصفه وبذرته في ذلك الملف، لا من هذه الصفحة. يمكن بعدها إحضار الفيديو وإيصاله إلى هنا.",
   "create.bringInNote":
-    "أضف الإيصال للتحقق من أن هذا هو الملف الذي أنتجه التشغيل. الإيصال هو ما كتبه التشغيل فقط: يثبت أن الملف يطابقه، لا صحة نموذجه أو بذرته أو وصفه.",
+    "أضف الإيصال للتحقق من أن هذا هو الملف الذي يصفه. لا تثبت المطابقة صحة نموذجه أو بذرته أو وصفه: يمكن لأي شخص كتابة إيصال.",
   "create.receiptNotFinished":
     "هذا الإيصال من تشغيل لم يكتمل أو لم يجتز فحوصه، فلم يُحضر شيء.",
   "create.tooLargeToCheck":
-    "هذا الفيديو أكبر من أن يُطابق مع إيصال هنا، فلم يُحضر شيء. يمكن إحضاره دون إيصال.",
+    "هذا الفيديو أكبر من أن يُطابق مع إيصال هنا، فلم يُحضر شيء. أزل الإيصال لإحضاره دونه.",
   "create.checkFailed": "تعذرت قراءة هذا الفيديو للتحقق منه، فلم يُحضر شيء.",
   "create.importFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
   "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
@@ -477,6 +478,7 @@ const ar: Record<MessageKey, string> = {
   "create.engineTitle": "الإنتاج",
   "create.bringInTitle": "إحضار فيديو",
   "create.receipt": "الإيصال (اختياري)",
+  "create.receiptClear": "إزالة الإيصال",
   "create.bringIn": "اختيار فيديو",
   "create.receiptInvalid": "هذا الملف ليس إيصال تشغيل، فلم يُحضر شيء.",
   "create.receiptMismatch":

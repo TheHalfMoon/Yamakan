@@ -10,7 +10,7 @@ First slice of issue #203. **It does not start a model.** Generation inside Yama
 - The shot stays across a reload, per project. **It is kept in this browser's storage, not in the project,** so it does not move with a backup and is lost if site data is cleared.
 - Bring a video in, with its run receipt. A video that is not the receipt's file, a receipt from a run that did not finish or did not pass its own checks, and a video over 512 MiB with a receipt, are refused and nothing is imported. **A match shows only that the file is the one the receipt describes.** Anyone can write a receipt, so its model, seed and prompt are its claims.
 - Add it to the timeline, open it in Edit, and export with the toolbar's button: a decodable H.264 file.
-- A file converted to a constant frame rate on the way in says its original matched the receipt, not this copy. A placed video keeps its whole length.
+- A file converted to a constant frame rate on the way in says its original matched the receipt, not this copy. A placed video keeps its whole length, where a clip placed from the media list stops at 5 seconds.
 - Keyboard: the panel's main controls are reached by Tab, model before bring-in. Every field has a name. No sideways scroll at 390 px. Arabic lays out right to left. **The Arabic wording has had no native review.**
 
 The check's default video is a test pattern with a receipt written by the check, so it qualifies the path and is not AI output. The check takes a real video and receipt as arguments. Its screenshots were looked at by the builder; **no pixel comparison against a saved baseline exists yet.**

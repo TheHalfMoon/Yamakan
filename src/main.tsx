@@ -678,7 +678,11 @@ function App() {
     try {
       ProjectSchema.parse(withAsset(p, assetId, undefined, undefined, true));
     } catch (e) {
-      return e instanceof Error ? e.message : t("error.edit");
+      // A schema's message is all its issues, as JSON: the first says enough.
+      const first = (e as { issues?: { message?: string }[] }).issues?.[0];
+      return (
+        first?.message ?? (e instanceof Error ? e.message : t("error.edit"))
+      );
     }
     edit((now) => withAsset(now, assetId, undefined, undefined, true));
     return null;
