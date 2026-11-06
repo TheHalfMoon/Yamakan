@@ -30,6 +30,7 @@ import {
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import { stripImage } from "./strip-image.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -151,7 +152,12 @@ export function scriptWithBrief(
     prompt: string;
     seed: number;
     runId: string;
-    firstFrame?: { data: string; mediaType: string; sha256: string };
+    firstFrame?: {
+      data: string;
+      mediaType: string;
+      sha256: string;
+      orientation: number;
+    };
   },
 ) {
   const lines = script.split("\n");
@@ -863,10 +869,18 @@ export function createKaggleEngine(options: {
         "VALIDATION",
         "That image is not the version this run was started with.",
       );
+    // The founder chose that a photo's metadata does not go. Its hash is now this copy's.
+    let stripped;
+    try {
+      stripped = stripImage(image, asset.mediaType);
+    } catch (e) {
+      throw new CommandError("VALIDATION", (e as Error).message);
+    }
     return {
-      data: image.toString("base64"),
+      data: stripped.image.toString("base64"),
       mediaType: asset.mediaType,
-      sha256: asset.sha256,
+      sha256: sha256(stripped.image),
+      orientation: stripped.orientation,
     };
   }
 

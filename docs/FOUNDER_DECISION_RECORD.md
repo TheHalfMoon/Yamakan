@@ -163,7 +163,8 @@ Approval line in the packet's format:
 - **Source and form:** chat to Claude Opus in Claude Code. Asked "Should a reference image travel to Kaggle inside the run's brief?", the founder answered "Yes, in the brief".
 - **Shown with that question:** this needs no new Kaggle object, and the image stays in the notebook's history, as prompts already do. A private dataset was said arguably to go beyond the recorded permission, which names a private notebook.
 - **Built within that:** the path, with its recipe not offered. No image has left this PC.
-- **Not shown with that question, and to be raised before this is offered:** an image's metadata, such as a phone photo's location, goes with it unless removed, and revoking consent later cannot reach the notebook's history.
+- **Not shown with that question, and to be raised before this is offered:** revoking consent later cannot reach the notebook's history.
+- **Decided after it, on 2026-11-07, in the same chat:** asked "Should a photo's metadata, such as location, be removed before it's sent?", the founder answered "Yes, remove it". Only the picture goes, and its upright direction as one number.
 - **Decided after it, on 2026-11-07, in the same chat:** asked "Should sending a person's image to Kaggle need its own separate consent?", the founder answered "Yes, separate consent". It was shown that today's consent does not distinguish use on this computer from leaving it. This is the `likeness-send` purpose, required for an image a pack links to a character, for an engine that says it sends a run elsewhere, which today is only Kaggle.
 - **Not decided by this:** how a fictional character is stored; whether media with revoked consent may be kept as a place or prop.
 - **Unchanged:** each run states what leaves and a person starts it, each model is offered only after its own run from Yamakan is tested, commercial providers stay off, spending zero, frozen resource limits, release NO-GO.

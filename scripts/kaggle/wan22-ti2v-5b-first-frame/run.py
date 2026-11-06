@@ -99,6 +99,17 @@ from diffusers import AutoencoderKLWan, WanImageToVideoPipeline  # noqa: E402
 from diffusers.utils import export_to_video  # noqa: E402
 from PIL import Image, ImageOps  # noqa: E402
 
+# The eight Exif orientations, as a turn to make each upright.
+UPRIGHT = {
+    2: Image.Transpose.FLIP_LEFT_RIGHT,
+    3: Image.Transpose.ROTATE_180,
+    4: Image.Transpose.FLIP_TOP_BOTTOM,
+    5: Image.Transpose.TRANSPOSE,
+    6: Image.Transpose.ROTATE_270,
+    7: Image.Transpose.TRANSVERSE,
+    8: Image.Transpose.ROTATE_90,
+}
+
 receipt["torch"] = torch.__version__
 try:
     receipt["stage"] = "reading the frame"
@@ -109,11 +120,12 @@ try:
         raise ValueError("The first frame is not the one this run was sent.")
     with Image.open(io.BytesIO(frame_bytes)) as opened:
         receipt["firstFrameSize"] = list(opened.size)
-        # Upright first, as a phone's photo is only by its metadata.
+        # Upright first. A phone's photo is upright only by its metadata, which was removed
+        # before it was sent, so that one number comes beside it.
+        turn = UPRIGHT.get(FIRST_FRAME.get("orientation", 1))
+        upright = opened.transpose(turn) if turn is not None else opened
         first_frame = ImageOps.fit(
-            ImageOps.exif_transpose(opened).convert("RGB"),
-            (WIDTH, HEIGHT),
-            Image.LANCZOS,
+            upright.convert("RGB"), (WIDTH, HEIGHT), Image.LANCZOS
         )
     receipt["stage"] = "loading"
     save()
