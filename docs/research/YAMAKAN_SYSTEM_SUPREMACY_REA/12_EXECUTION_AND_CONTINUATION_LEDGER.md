@@ -245,7 +245,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Open findings added:**
 
-- Exports sat steadily darker than their sources. Fixed in PR #208, see the next checkpoint.
+- Exports sat steadily darker than their sources. Reduced, not removed, in PR #208: under 1 of 255 remains on the one real clip measured. See the next checkpoint.
 - One of five 81-frame runs was killed while decoding, most likely out of host memory: a later run peaked at 24.6 GiB of 31 with the text encoder freed. More runs are needed to know if that change fixes it.
 - Wan at 41 frames snapped to a different picture for its last 3 frames, and its frame changes were the same with tiling off. 81 frames did not, on one prompt and seed. Why was not worked out.
 - Kaggle's public interface cannot stop a run. A restart no longer loses one: see the next checkpoint.
@@ -266,7 +266,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 | Durable Kaggle runs              | Merged: [PR #209](https://github.com/TheHalfMoon/Yamakan/pull/209), merge `160823e0c0a837b22f32a29000191d235c732690`                                                                                                                |
 | A killed run says how far it got | Draft: [PR #210](https://github.com/TheHalfMoon/Yamakan/pull/210). Waits for one real run                                                                                                                                           |
 
-**True now:** a Kaggle run is recorded in the job table before it is sent, followed across a restart, and never sent again by anything but a person. Past its time limit it says so and is still asked about: only its result or Kaggle's answer ends it. A new run is refused while another of that model is still being followed. Cancel on Kaggle is not supported, and every surface says so. See `docs/evidence/ultimate/create-workspace.md` for what each of these does and does not cover.
+**True now:** a Kaggle run is recorded in the job table before it is sent, followed across a restart, and never sent again by anything but a person. Past its time limit it says so and is still asked about: the clock alone ends nothing. It ends on its result, on Kaggle's answer, after four fetches that come no differently, or when a person stops following it. A new run first asks about any other of that model still being followed, which collects it if finished, and is refused if that leaves one going. Cancel on Kaggle is not supported: the page, the cancel answer and the job list do not claim otherwise. See `docs/evidence/ultimate/create-workspace.md` for what each of these does and does not cover.
 
 **Real Kaggle evidence for PR #209:** at `48623d7` a real run with the service killed partway was found again after the restart, and its video came in and was placed on the timeline. It stopped at the export step on a bug in the test script, since fixed. Later commits were tested with a stand-in only. Receipts: `kaggle-restart-run-receipt.json`, `kaggle-quota-refusal-receipt.json`.
 
