@@ -587,6 +587,60 @@ footer {
   font-size: 0.95rem;
   color: var(--ink);
 }
+.create-element-new {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+.create-element-new label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.create-element-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.create-element-list li {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.create-element-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.create-element-images img {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+}
+.create-element-shots {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  min-width: 0;
+}
+.create-element-shots label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.create-element-shots input {
+  flex: none;
+  width: auto;
+  margin: 0;
+}
+.create-element-list button {
+  justify-self: start;
+}
 .create-notice,
 .create-problem {
   font-size: 0.85rem;
