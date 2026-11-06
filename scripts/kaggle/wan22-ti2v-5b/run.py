@@ -27,7 +27,7 @@ WIDTH = 704
 HEIGHT = 480
 OUT = "/kaggle/working"
 PACKAGES = [
-    "diffusers==0.35.1",
+    "diffusers==0.36.0",
     "transformers==4.57.1",
     "accelerate==1.10.1",
     "sentencepiece==0.2.1",
