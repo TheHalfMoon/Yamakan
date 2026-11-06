@@ -465,6 +465,122 @@ try {
   assert.deepEqual(unnamed, [], "every field has a name");
   step("every field has a name");
 
+  // Places and props: kept and pinned, and said not to reach a model.
+  const stillOf = (name, colour) => {
+    const file = join(root, name);
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `color=c=${colour}:s=320x200`,
+        "-frames:v",
+        "1",
+        file,
+      ],
+      { windowsHide: true },
+    );
+    return file;
+  };
+  const elements = page.getByTestId("create-elements");
+  assert.match(
+    await page.getByTestId("create-elements-note").textContent(),
+    /not sent to a model/,
+  );
+  assert.equal(await page.getByTestId("create-element-add").isDisabled(), true);
+  await page.getByTestId("create-element-name").fill("The harbour");
+  const notAnImage = join(root, "not-an-image.txt");
+  writeFileSync(notAnImage, "words");
+  // Through the button a person presses, then the picker.
+  const pick = async (control, file) => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      control.click(),
+    ]);
+    await chooser.setFiles(file);
+  };
+  await pick(page.getByTestId("create-element-add"), notAnImage);
+  assert.match(await elements.getByRole("alert").textContent(), /PNG or JPEG/);
+  assert.equal(await page.getByTestId("create-element").count(), 0);
+  await pick(
+    page.getByTestId("create-element-add"),
+    stillOf("harbour.png", "navy"),
+  );
+  const element = page.getByTestId("create-element").first();
+  await element.waitFor({ timeout: 60_000 });
+  assert.match(await element.textContent(), /The harbour/);
+  step("a place is kept from an image, and something else is refused");
+
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  const reopen = async () => {
+    await page.reload();
+    await page.waitForFunction(() => location.hash === "");
+    await page
+      .getByRole("button", { name: /revision/i })
+      .first()
+      .click();
+    await page.getByRole("tab", { name: "Create", exact: true }).click();
+    await element.waitFor({ timeout: 30_000 });
+  };
+  await reopen();
+  await page.getByTestId("create-element-pin").first().waitFor();
+  assert.equal(
+    await page.getByTestId("create-element-pin").first().isChecked(),
+    true,
+  );
+  await page.waitForFunction(() => {
+    const image = document.querySelector('[data-testid="create-element"] img');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  step("it and its pin on a shot stay after a reload, with its image shown");
+
+  await pick(
+    page.getByTestId("create-element-more").first(),
+    stillOf("harbour-2.jpg", "teal"),
+  );
+  await page
+    .getByTestId("create-element-older")
+    .first()
+    .waitFor({ timeout: 60_000 });
+  assert.equal(await element.locator("img").count(), 2);
+  step(
+    "another image makes a new version, and the shot says it holds an older one",
+  );
+
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      !document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  assert.equal(await page.getByTestId("create-element-older").count(), 0);
+  step("it comes off a shot, and pinned again holds the newest version");
+  const unnamedHere = await elements.evaluate((panel) =>
+    [...panel.querySelectorAll(":is(input,select)")]
+      .filter(
+        (el) =>
+          !el.hidden && !el.labels?.length && !el.getAttribute("aria-label"),
+      )
+      .map((el) => el.dataset.testid),
+  );
+  assert.deepEqual(unnamedHere, [], "every field here has a name");
+  await shot("create-elements");
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId("create-panel").waitFor();
   await noSideways("390");

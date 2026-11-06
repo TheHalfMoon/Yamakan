@@ -66,6 +66,7 @@ import { operationsBetween, touched } from "./edit-diff.ts";
 import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
+import { asElement } from "./create/create-elements.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
@@ -2242,10 +2243,7 @@ function App() {
                             expectedRevision: head.current!.revision,
                             ...next,
                           } as any)) as any;
-                          const opened = await call("yamakan.project.open", {
-                            projectId: p.id,
-                          });
-                          accept(opened);
+                          // Kept from here, whatever reopening the project then says.
                           kept = {
                             documentId: next.documentId,
                             contentHash:
@@ -2254,12 +2252,79 @@ function App() {
                               null,
                             story: next.story,
                           };
+                          accept(
+                            await call("yamakan.project.open", {
+                              projectId: p.id,
+                            }),
+                          );
                         }).finally(() => resolve(kept));
                       })
                     }
                     loadModels={async () =>
                       (await call("yamakan.generation.options", {})).models
                     }
+                    elements={{
+                      load: async () => {
+                        const documents = (await call("yamakan.document.list", {
+                          projectId: p.id,
+                        })) as unknown as { id: string; kind: string }[];
+                        const found = [];
+                        for (const ref of documents)
+                          if (ref.kind === "referencePack") {
+                            const read = (await call("yamakan.document.get", {
+                              projectId: p.id,
+                              documentId: ref.id,
+                            })) as any;
+                            const pack = asElement(read.content);
+                            // A pack can hold footage too, which this cannot show.
+                            const stills = pack?.entries.every(
+                              (e) =>
+                                head.current?.assets.find(
+                                  (a) => a.id === e.assetId,
+                                )?.kind === "image",
+                            );
+                            if (pack && stills)
+                              found.push({
+                                documentId: ref.id,
+                                contentHash: read.contentHash,
+                                pack,
+                              });
+                          }
+                        return found;
+                      },
+                      save: (next) =>
+                        new Promise((resolve) => {
+                          let kept: any = null;
+                          run(async () => {
+                            await save();
+                            const answer = (await call("yamakan.pack.save", {
+                              projectId: p.id,
+                              expectedRevision: head.current!.revision,
+                              ...next,
+                            } as any)) as any;
+                            // Kept from here, whatever reopening the project then says.
+                            kept = {
+                              documentId: next.documentId,
+                              contentHash: answer.document.contentHash,
+                              pack: next.pack,
+                            };
+                            accept(
+                              await call("yamakan.project.open", {
+                                projectId: p.id,
+                              }),
+                            );
+                          }).finally(() => resolve(kept));
+                        }),
+                      importImage: (file) => {
+                        if (busy) return Promise.resolve("busy" as const);
+                        return new Promise((resolve) => {
+                          let made: any = null;
+                          run(async () => {
+                            made = await importMedia(p, file);
+                          }).finally(() => resolve(made));
+                        });
+                      },
+                    }}
                     generation={{
                       start: (request) =>
                         call("yamakan.generation.start", {
