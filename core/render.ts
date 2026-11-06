@@ -179,7 +179,18 @@ export function ptsOffset(ticks: number) {
 // YU-023 color conversion and tags; 5: YU-026b stills read once and
 // looped on demand).
 // 6 (YU-026e): a still's fixed picture chain runs once, before its loop.
-export const RENDERER_VERSION = 6;
+// 7: accurate scaling where colour is converted, which changes those pictures.
+export const RENDERER_VERSION = 7;
+
+// Converting colour with the scaler's default flags left pictures about 2 of 255
+// darker on average, measured on real video. These cost about half as much again, so
+// only where there is a conversion: BT.709 limited range and RGB show no such shift.
+export const conversionFlags = (
+  color: { matrix: string; range: string } | null | undefined,
+) =>
+  color && (color.matrix !== "bt709" || color.range !== "tv")
+    ? ":flags=bicubic+accurate_rnd+full_chroma_int"
+    : "";
 
 // A read margin of one frame: of the profile, and never less than 1/30 s
 // (so a 30 fps profile reads exactly as before; YU-019).
@@ -549,19 +560,10 @@ export async function renderPlan(
       let graded = "";
       if (layer.lut) {
         const name = await lutFile(layer.lut);
-        graded = `${reading ? `scale=${reading}:out_range=pc:flags=bicubic+accurate_rnd+full_chroma_int,` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
+        graded = `${reading ? `scale=${reading}:out_range=pc${conversionFlags(layer.color)},` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
       }
       const sourceReading = !layer.lut && reading ? `:${reading}` : "";
-      // Converting colour with the scaler's default flags left pictures about 2 of 255
-      // darker on average, measured on real video. They cost about half as much again,
-      // so only where there is a conversion: BT.709 limited range shows no such shift.
-      const converts =
-        layer.color &&
-        (layer.color.matrix !== "bt709" || layer.color.range !== "tv");
-      const accurate =
-        !layer.lut && converts
-          ? ":flags=bicubic+accurate_rnd+full_chroma_int"
-          : "";
+      const accurate = layer.lut ? "" : conversionFlags(layer.color);
       const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease${sourceReading}:out_color_matrix=bt709:out_range=tv${accurate},setsar=1,format=yuva420p`;
       const shaped = layer.transform
         ? transformFilters(layer.transform, fit)

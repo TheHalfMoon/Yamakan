@@ -346,7 +346,7 @@
       "SS-012: the render receipt records what two-pass loudness measured (input and target), or null; no change to the render.",
       "Export colour: accurate scaling flags where a matrix or range conversion happens, because the defaults left pictures about 2 of 255 darker."
     ],
-    "importedSha256": "15580ea95cbdfcf9515061dc40c204fd5e6519193f5701f640fee7d82dd40d04",
+    "importedSha256": "298285ca38443ae1f8ff53cc085dfd375e0b6d9972139eb135e133229f27c155",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

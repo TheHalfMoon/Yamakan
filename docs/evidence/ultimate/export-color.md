@@ -1,6 +1,6 @@
 # Why exports came out darker
 
-Measured 2026-11-06 with Yamakan's vendored FFmpeg, on real AI video and test patterns. All figures are mean differences from the source, out of 255, per red, green and blue.
+Measured 2026-11-06 on real AI video and test patterns, with Yamakan's vendored FFmpeg 7.1.1, except the first three rows below, which used a system FFmpeg 8.1.1 and differ by at most 0.03 on the vendored one. All figures are mean differences from the source, out of 255, per red, green and blue.
 
 ## The cause
 
@@ -26,7 +26,7 @@ It showed on every kind of picture tried, from real video and gradients to flat 
 
 ## The fix
 
-`core/render.ts` uses both flags **only where a matrix or range conversion happens**, and where a LUT's reading converts. BT.709 limited-range sources and RGB stills showed no such shift, so they keep their speed and their bytes.
+`core/render.ts` uses both flags **only where a matrix or range conversion happens**, including a LUT's reading. BT.709 limited-range sources and RGB stills showed no such shift, so they keep their speed. The renderer's version rises, so a cached preview of a converted source is drawn again rather than staying darker than its export; that makes each preview draw once more.
 
 The same real 81-frame Wan video through the real pipeline, with and without the fix, measured the way `qualify:ai-video` does:
 
@@ -41,4 +41,4 @@ The same real 81-frame Wan video through the real pipeline, with and without the
 
 ## The test
 
-`tests/color-pipeline.test.ts`, "a detailed untagged picture keeps its average colour through export", fails without the fix: source 77.23, export 76.13. Its first version, on a test pattern, passed without the fix and so proved nothing, which is why it uses a gradient.
+`tests/color-pipeline.test.ts`, "a detailed untagged picture keeps its average colour through export", fails without the fix: it fell short by about 1 on a channel. Its first version, on a test pattern, passed without the fix and so proved nothing, which is why it uses a gradient.

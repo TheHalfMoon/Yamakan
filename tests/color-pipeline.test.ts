@@ -16,7 +16,7 @@ import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes, type Scope } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
-import { renderRevision } from "../core/render.ts";
+import { conversionFlags, renderRevision } from "../core/render.ts";
 import { closePreviews, preview } from "../core/render/preview.ts";
 import type { Project } from "../core/project.ts";
 import {
@@ -318,7 +318,7 @@ test("a detailed untagged picture keeps its average colour through export", asyn
     "-f",
     "lavfi",
     "-i",
-    "gradients=s=704x480:c0=0x60C0F0:c1=0x40A060:x0=0:y0=0:x1=0:y1=480:rate=30:duration=1",
+    "gradients=s=704x480:c0=0x60C0F0:c1=0x40A060:x0=0:y0=0:x1=0:y1=479:rate=30:duration=1",
     "-pix_fmt",
     "yuv420p",
     "-c:v",
@@ -352,6 +352,17 @@ test("a detailed untagged picture keeps its average colour through export", asyn
       `channel ${ch}: source ${v.toFixed(2)}, export ${result[ch]!.toFixed(2)}`,
     ),
   );
+});
+
+test("accurate conversion is used only where colour is converted", () => {
+  for (const color of [null, undefined, { matrix: "bt709", range: "tv" }])
+    assert.equal(conversionFlags(color), "");
+  for (const color of [
+    { matrix: "bt601", range: "tv" },
+    { matrix: "bt601", range: "pc" },
+    { matrix: "bt709", range: "pc" },
+  ])
+    assert.match(conversionFlags(color), /accurate_rnd\+full_chroma_int/);
 });
 
 test("HDR and BT.2020 sources are refused at import; the policy is recorded per layer", async () => {
