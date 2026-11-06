@@ -26,6 +26,14 @@ export type GenerateModel = {
   notebook: string;
 };
 
+export type MadeAsset = {
+  id: string;
+  kind: string;
+  name: string;
+  hash: string;
+  bytes: number;
+};
+
 export type GenerationApi = {
   start: (request: {
     recipeId: string;
@@ -41,8 +49,8 @@ export type GenerationApi = {
     imported: unknown;
   }>;
   stop: (generationId: string) => Promise<unknown>;
-  // Under the editor's busy state. The output's hash, or null if it did not come in.
-  bringIn: (generationId: string) => Promise<string | null>;
+  // Under the editor's busy state. The new asset, or null if it did not come in.
+  bringIn: (generationId: string) => Promise<MadeAsset | null>;
 };
 
 type Run = {
@@ -92,7 +100,7 @@ export function GeneratePanel(props: {
   busy: boolean;
   t: Translate;
   api: GenerationApi;
-  onMade: (receipt: RunReceipt) => void;
+  onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<void>;
 }) {
   const { model, prompt, seed, seedValid, t, api } = props;
   const [run, setRunState] = useState<Run | null>(() => {
@@ -209,21 +217,25 @@ export function GeneratePanel(props: {
     if (!run) return;
     setProblem("");
     setWorking(true);
-    const hash = await api.bringIn(run.generationId).catch(() => null);
-    setWorking(false);
-    if (!hash) {
+    const asset = await api.bringIn(run.generationId).catch(() => null);
+    if (!asset) {
+      setWorking(false);
       setProblem(t("create.bringInFailed"));
       return;
     }
-    props.onMade({
-      model: runModel.model,
-      revision: runModel.revision,
-      prompt: run.prompt,
-      seed: run.seed,
-      steps: runModel.steps,
-      sha256: hash,
-      licence: runModel.licence,
-    });
+    await props.onMade(
+      {
+        model: runModel.model,
+        revision: runModel.revision,
+        prompt: run.prompt,
+        seed: run.seed,
+        steps: runModel.steps,
+        sha256: asset.hash,
+        licence: runModel.licence,
+      },
+      asset,
+    );
+    setWorking(false);
     finishedWith();
   };
 

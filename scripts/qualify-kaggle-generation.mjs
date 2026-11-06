@@ -176,6 +176,22 @@ try {
   assert.ok(facts.includes(PROMPT), `its prompt: ${facts}`);
   assert.ok(facts.includes(`seed ${SEED}`), `its seed: ${facts}`);
   step("it came into the project, with this prompt and seed");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => location.hash === "");
+  await page
+    .getByRole("button", { name: /revision/i })
+    .first()
+    .click();
+  await page.getByRole("tab", { name: "Create", exact: true }).click();
+  await page.getByTestId("create-video").first().waitFor();
+  await page
+    .getByText(PROMPT, { exact: true })
+    .first()
+    .waitFor({ timeout: 30_000 });
+  step(
+    "its record stays with the project, with this browser's storage cleared",
+  );
   await page.waitForTimeout(2000);
   await shot("5-brought-in");
 

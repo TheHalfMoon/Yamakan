@@ -2261,21 +2261,23 @@ function App() {
                         call("yamakan.generation.cancel", { generationId }),
                       bringIn: (generationId) =>
                         new Promise((resolve) => {
-                          let hash: string | null = null;
+                          let asset: any = null;
                           run(async () => {
                             await save();
                             const made = await call(
                               "yamakan.generation.import",
                               { generationId },
                             );
-                            accept(
-                              await call("yamakan.project.open", {
-                                projectId: p.id,
-                              }),
-                            );
+                            const opened = await call("yamakan.project.open", {
+                              projectId: p.id,
+                            });
+                            accept(opened);
                             await refresh();
-                            hash = made.lineage.outputHash;
-                          }).finally(() => resolve(hash));
+                            asset =
+                              opened.assets.find(
+                                (a: { id: string }) => a.id === made.assetId,
+                              ) ?? null;
+                          }).finally(() => resolve(asset));
                         }),
                     }}
                     importVideo={(file, check) => {

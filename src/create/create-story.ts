@@ -1,12 +1,13 @@
 // A made video's record in the project: one shot with one take, in a story of its
 // own. So what a receipt showed stays with the project, in backups too, and Story's
 // take tools can use it. The shot being written stays a draft in this browser.
+import { STORY_LIMITS } from "../../core/story.ts";
 import type { RunReceipt } from "./create-model.ts";
 
-export const CREATE_STORY_TITLE = "Create";
+// Distinct, so that a person's own story is not taken for this one.
+export const CREATE_STORY_TITLE = "Made in Create";
 const NAME_LIMIT = 120;
 const NOTE_LIMIT = 2000;
-const SHOTS_PER_SCENE = 200;
 
 type Take = {
   id: string;
@@ -44,12 +45,22 @@ export type MadeRecord = {
 
 const CONVERTED = " (converted copy)";
 
-const shotName = (prompt: string) => {
-  const line = prompt.trim().split(/\r?\n/)[0] || "Shot";
-  return line.length > NAME_LIMIT ? `${line.slice(0, NAME_LIMIT - 1)}…` : line;
+// By whole characters, so that no emoji is cut in half and stored.
+const upTo = (text: string, limit: number) => {
+  let out = "";
+  for (const point of text) {
+    if (out.length + point.length > limit) break;
+    out += point;
+  }
+  return out;
 };
 
-// The story with this video added, or null if it is already there or has no room.
+const shotName = (prompt: string) => {
+  const line = prompt.trim().split(/\r?\n/)[0] || "Shot";
+  return line.length > NAME_LIMIT ? `${upTo(line, NAME_LIMIT - 1)}…` : line;
+};
+
+// The story with this video added, or why not.
 export function addMadeVideo(
   story: CreateStory | null,
   video: {
@@ -59,26 +70,30 @@ export function addMadeVideo(
     receipt: RunReceipt;
   },
   newId: () => string,
-): CreateStory | null {
+): CreateStory | "already-there" | "full" {
   const current: CreateStory = story ?? {
     format: "yamakan.story",
     formatVersion: 1,
     title: CREATE_STORY_TITLE,
-    scenes: [{ id: newId(), name: CREATE_STORY_TITLE, shots: [] }],
+    scenes: [],
   };
   const shots = current.scenes.flatMap((s) => s.shots);
   if (shots.some((s) => s.takes.some((t) => t.assetId === video.assetId)))
-    return null;
-  const scene = current.scenes[0];
-  if (!scene || shots.length >= SHOTS_PER_SCENE) return null;
+    return "already-there";
+  if (shots.length >= STORY_LIMITS.shots) return "full";
+  const last = current.scenes.at(-1);
+  const room = last && last.shots.length < STORY_LIMITS.shotsPerScene;
+  if (!room && current.scenes.length >= STORY_LIMITS.scenes) return "full";
   const { receipt } = video;
-  const label = `${receipt.model}, seed ${receipt.seed}, steps ${receipt.steps}`;
+  const tail = video.assetHash === receipt.sha256 ? "" : CONVERTED;
+  // What matters first, so that a long name cannot push it out.
+  const label = `seed ${receipt.seed}, steps ${receipt.steps}, ${receipt.model}`;
   const takeId = newId();
   const shot: Shot = {
     id: newId(),
     name: shotName(receipt.prompt),
     durationTicks: video.durationTicks,
-    notes: receipt.prompt.slice(0, NOTE_LIMIT),
+    notes: upTo(receipt.prompt, NOTE_LIMIT),
     referencePacks: [],
     takes: [
       {
@@ -86,9 +101,7 @@ export function addMadeVideo(
         assetId: video.assetId,
         sourceStartTicks: 0,
         lineage: {
-          label: `${label.slice(0, NAME_LIMIT - CONVERTED.length)}${
-            video.assetHash === receipt.sha256 ? "" : CONVERTED
-          }`,
+          label: `${upTo(label, NAME_LIMIT - tail.length)}${tail}`,
           outputHash: video.assetHash,
           inputs: [],
         },
@@ -98,10 +111,15 @@ export function addMadeVideo(
   };
   return {
     ...current,
-    scenes: [
-      { ...scene, shots: [...scene.shots, shot] },
-      ...current.scenes.slice(1),
-    ],
+    scenes: room
+      ? [
+          ...current.scenes.slice(0, -1),
+          { ...last, shots: [...last.shots, shot] },
+        ]
+      : [
+          ...current.scenes,
+          { id: newId(), name: CREATE_STORY_TITLE, shots: [shot] },
+        ],
   };
 }
 

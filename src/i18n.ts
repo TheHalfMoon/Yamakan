@@ -14,6 +14,8 @@ const en = {
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
   "workspace.create": "Create",
+  "create.storyFull":
+    "The video is in the project, but this project's record of made videos is full, so what its receipt says was not saved.",
   "create.storyUnread":
     "What this project's videos were made from could not be read.",
   "create.kaggleSetup":
@@ -78,9 +80,9 @@ const en = {
   "create.broughtInCopy":
     "Brought in {name}. The file matched its receipt, and was then converted to a constant frame rate.",
   "create.receiptMatched":
-    "This file's hash matched its receipt when it came in.",
+    "This project's record says this file's hash matched its receipt when it came in.",
   "create.receiptMatchedOriginal":
-    "The original file's hash matched its receipt when it came in. This is a converted copy.",
+    "This project's record says the original file's hash matched its receipt when it came in. This is a converted copy.",
   "create.receiptSays": "The receipt says:",
   "create.prompt": "Describe the shot",
   "create.promptHint": "A paper boat floats slowly along a calm stream.",
@@ -461,6 +463,8 @@ const ar: Record<MessageKey, string> = {
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
   "workspace.create": "إنشاء",
+  "create.storyFull":
+    "الفيديو في المشروع، لكن سجل الفيديوهات المنتجة ممتلئ، فلم يُحفظ ما يذكره إيصاله.",
   "create.storyUnread": "تعذرت قراءة مصدر فيديوهات هذا المشروع.",
   "create.kaggleSetup":
     "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
@@ -518,9 +522,10 @@ const ar: Record<MessageKey, string> = {
   "create.broughtInChecked": "أُحضر {name}. وهو يطابق إيصاله.",
   "create.broughtInCopy":
     "أُحضر {name}. طابق الملف إيصاله، ثم حُوّل إلى معدل إطارات ثابت.",
-  "create.receiptMatched": "طابقت بصمة هذا الملف إيصاله عند إحضاره.",
+  "create.receiptMatched":
+    "يذكر سجل هذا المشروع أن بصمة هذا الملف طابقت إيصاله عند إحضاره.",
   "create.receiptMatchedOriginal":
-    "طابقت بصمة الملف الأصلي إيصاله عند إحضاره. هذه نسخة محوّلة.",
+    "يذكر سجل هذا المشروع أن بصمة الملف الأصلي طابقت إيصاله عند إحضاره. هذه نسخة محوّلة.",
   "create.receiptSays": "يذكر الإيصال:",
   "create.prompt": "صف اللقطة",
   "create.promptHint": "قارب ورقي يطفو ببطء على جدول هادئ.",
