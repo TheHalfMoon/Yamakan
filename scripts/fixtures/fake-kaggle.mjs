@@ -50,8 +50,6 @@ if (command === "list") {
   }
   // Never arrived: the answer is lost, and Kaggle has nothing of it.
   if (now.push === "lost-before") refuse("Remote end closed connection", 1);
-  // Never arrived: the answer is lost, and Kaggle has nothing of it.
-  if (now.push === "lost-before") refuse("Remote end closed connection", 1);
   change({ pushes: [...now.pushes, brief] });
   if (now.push === "lost") refuse("Remote end closed connection", 1);
   say("Kernel version 1 successfully pushed.");

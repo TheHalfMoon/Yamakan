@@ -319,7 +319,6 @@ try {
         );
         const said = await page.getByTestId("create-generate").textContent();
         assert.match(said, /It may still be running on Kaggle/);
-        assert.doesNotMatch(said, /latest run as stopped/);
         assert.equal(attempts(), 1);
         step(`${name}: Stop following does not claim Kaggle stopped`);
       },

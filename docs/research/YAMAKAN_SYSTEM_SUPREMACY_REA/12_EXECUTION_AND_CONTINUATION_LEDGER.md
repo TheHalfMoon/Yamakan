@@ -286,7 +286,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Already in main, for the founder to confirm or refuse:** since PR #212, media whose consent was revoked can be kept and shown as a place, prop, wardrobe or style. Placing and generating from those exact bytes stay refused. The founder's decision of 2026-11-05, as `docs/evidence/ultimate/consent-gate.md` describes it, asks that a revoked photo not be placed or used, and whether keeping it counts as use was not decided.
 
-**Next that needs no GPU:** a stand-in Kaggle CLI to drive the panel's failure, Stop following and restart screens in a browser, which have never been run there.
+**Next:** what remains of the brief waits on the GPU quota or on the founder's decisions above. Elements cannot yet reach a model, and no engine is enabled.
 
 **Open findings added:**
 
