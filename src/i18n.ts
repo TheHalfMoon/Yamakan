@@ -14,6 +14,10 @@ const en = {
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
   "workspace.create": "Create",
+  "create.runUncertain":
+    "It is not known whether this reached Kaggle. It is being checked, and will not be sent again.",
+  "create.runHeld":
+    "This workspace is a restored copy, and this run belongs to the original. It is not followed here.",
   "create.recordRetry": "Try saving it again",
   "create.storyFull":
     "The video is in the project, but this project's record of made videos is full, so what its receipt says was not saved.",
@@ -37,7 +41,7 @@ const en = {
   "create.runCancelled": "This run was stopped on Kaggle.",
   "create.runUnknown": "Kaggle is not answering. The run may still be going.",
   "create.runStopped": "No longer following this run.",
-  "create.runLost": "Yamakan restarted, so it no longer knows this run.",
+  "create.runLost": "Yamakan has no record of this run.",
   "create.runClock": "{elapsed} so far, of about {minutes} minutes",
   "create.runStop": "Stop following",
   "create.runStopNote":
@@ -464,6 +468,10 @@ const ar: Record<MessageKey, string> = {
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
   "workspace.create": "إنشاء",
+  "create.runUncertain":
+    "لا يُعرف هل وصل هذا إلى Kaggle. يجري التحقق، ولن يُرسل مرة أخرى.",
+  "create.runHeld":
+    "مساحة العمل هذه نسخة مستعادة، وهذا التشغيل يخص الأصل. لا تتم متابعته هنا.",
   "create.recordRetry": "حاول الحفظ مرة أخرى",
   "create.storyFull":
     "الفيديو في المشروع، لكن سجل الفيديوهات المنتجة ممتلئ، فلم يُحفظ ما يذكره إيصاله.",
@@ -485,7 +493,7 @@ const ar: Record<MessageKey, string> = {
   "create.runCancelled": "أُوقف هذا التشغيل على Kaggle.",
   "create.runUnknown": "لا يجيب Kaggle. قد يكون التشغيل مستمرًا.",
   "create.runStopped": "توقفت متابعة هذا التشغيل.",
-  "create.runLost": "أعيد تشغيل Yamakan، فلم يعد يعرف هذا التشغيل.",
+  "create.runLost": "لا يوجد لدى Yamakan سجل لهذا التشغيل.",
   "create.runClock": "{elapsed} حتى الآن، من نحو {minutes} دقيقة",
   "create.runStop": "إيقاف المتابعة",
   "create.runStopNote":

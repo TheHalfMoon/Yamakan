@@ -1,7 +1,8 @@
 // A generation a person asked for: started explicitly, followed, cancelled, and
 // its output brought into the project as an ordinary asset. It holds no model and
-// no graph; an engine adapter decides whether anything can run. In-process: a
-// restart forgets a generation, whose output stays in the engine, unimported.
+// no graph; an engine adapter decides whether anything can run. What it knows is in
+// a ledger, recorded before anything is sent: the job table for a run elsewhere, so
+// that a restart can follow it, and never send it again. See core/jobs.ts.
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
@@ -19,6 +20,7 @@ import {
   type AssetRef,
   type EngineAdapterV2,
   type EngineRequestV2,
+  type ExecutionStatus,
   type Operation,
 } from "./contract-v2.ts";
 import { engineReasonMessage } from "./reasons.ts";
@@ -55,17 +57,78 @@ export type GenerationLineage = {
   promptHash: string | null;
 };
 
-type Tracked = {
+export type GenerationRecord = {
+  generationId: string;
   projectId: string;
-  executionRef: string;
-  request: GenerationRequest;
+  recipe: GenerationRecipe;
+  prompt: string | null;
+  seed: number | null;
+  width: number;
+  height: number;
+  durationFrames: number;
+  firstFrameAssetId: string | null;
   inputs: GenerationLineage["inputs"];
-  imported?: { assetId: string; lineage: GenerationLineage };
-  importing?: Promise<{ assetId: string; lineage: GenerationLineage }>;
+  // The engine's name for it, once known. Before that, the attempt key is.
+  executionRef: string | null;
+  // "sending": recorded, and not known to have reached the engine. After a crash it
+  // may or may not have; it is checked, and never sent again.
+  phase: "sending" | "sent";
+  startedAt: number;
+  state: ExecutionStatus["state"];
+  diagnostic: string | null;
+  videoSha256: string | null;
+  imported: { assetId: string; lineage: GenerationLineage } | null;
   // Asked to stop: whatever the engine then does, this is not imported, unless
   // that import had already reached the store.
-  cancelled?: boolean;
+  cancelled: boolean;
+  dismissed: boolean;
+  // A restored copy of a workspace: the run belongs to the original.
+  held?: boolean;
 };
+
+export type GenerationLedger = {
+  begin(record: GenerationRecord): void;
+  update(id: string, change: Partial<GenerationRecord>): void;
+  read(id: string): GenerationRecord | null;
+  list(projectId: string): GenerationRecord[];
+  // Whether another run of this recipe may have reached the engine.
+  hasSent(recipeId: string, except: string): boolean;
+};
+
+// Refused before anything left: it never reached the engine.
+export const wasSent = (
+  r: GenerationRecord,
+  recipeId: string,
+  except: string,
+) =>
+  r.recipe?.id === recipeId &&
+  r.generationId !== except &&
+  !(r.phase === "sending" && r.state === "failed");
+
+// For an engine on this machine, whose runs do not outlive this service anyway.
+export function memoryLedger(): GenerationLedger {
+  const records = new Map<string, GenerationRecord>();
+  return {
+    begin: (r) => void records.set(r.generationId, r),
+    update: (id, change) => {
+      const r = records.get(id);
+      if (r) records.set(id, { ...r, ...change });
+    },
+    read: (id) => records.get(id) ?? null,
+    list: (projectId) =>
+      [...records.values()].filter((r) => r.projectId === projectId).reverse(),
+    hasSent: (recipeId, except) =>
+      [...records.values()].some((r) => wasSent(r, recipeId, except)),
+  };
+}
+
+const ENDED: ReadonlySet<ExecutionStatus["state"]> = new Set([
+  "succeeded",
+  "failed",
+  "cancelled",
+]);
+const HELD =
+  "This workspace was restored from a backup, and the run belongs to the workspace it was copied from. It is not followed here, and was not sent again.";
 
 const MEDIA_TYPES: Record<string, AssetRef["mediaType"]> = {
   png: "image/png",
@@ -77,23 +140,31 @@ export function createGenerationService(options: {
   adapter: EngineAdapterV2;
   store: ProjectStore;
   resourcePolicyHash: string;
+  ledger?: GenerationLedger;
   // Tests only.
   now?: () => number;
 }) {
   const { adapter, store, resourcePolicyHash } = options;
-  const generations = new Map<string, Tracked>();
+  const ledger = options.ledger ?? memoryLedger();
+  const importing = new Map<
+    string,
+    Promise<{ assetId: string; lineage: GenerationLineage }>
+  >();
+  const clock = options.now ?? Date.now;
   const permitted = (hashes: string[]) =>
     store.read((db) =>
       assertLinkedMediaGeneratable(db, hashes, (options.now ?? Date.now)()),
     );
 
   const tracked = (id: string) => {
-    const g = generations.get(id);
+    const g = ledger.read(id);
     if (!g) throw new CommandError("NOT_FOUND", "Generation not found.");
     return g;
   };
+  const refOf = (g: GenerationRecord) => g.executionRef ?? g.generationId;
 
-  async function bringIn(id: string, g: Tracked) {
+  async function bringIn(id: string, g: GenerationRecord) {
+    if (g.held) throw new CommandError("VALIDATION", HELD);
     if (g.cancelled)
       throw new CommandError(
         "VALIDATION",
@@ -102,13 +173,13 @@ export function createGenerationService(options: {
     // No longer allowed since it started: what was made from it does not join.
     const inputs = g.inputs.map((i) => i.assetHash);
     permitted(inputs);
-    const { state } = await adapter.status(g.executionRef);
+    const { state } = await adapter.status(refOf(g));
     if (state !== "succeeded")
       throw new CommandError(
         "VALIDATION",
         "Only a finished generation can be imported.",
       );
-    const artifacts = (await adapter.enumerateArtifacts(g.executionRef)).filter(
+    const artifacts = (await adapter.enumerateArtifacts(refOf(g))).filter(
       (a) => a.mediaType === "video/mp4",
     );
     if (artifacts.length !== 1)
@@ -117,6 +188,32 @@ export function createGenerationService(options: {
         "A generation must leave exactly one video to import.",
       );
     const [artifact] = artifacts;
+    const finish = (assetId: string, outputHash: string) => {
+      const imported = {
+        assetId,
+        lineage: {
+          outputHash,
+          inputs: g.inputs,
+          recipeId: g.recipe.id,
+          recipeHash: g.recipe.hash,
+          modelManifestHash: g.recipe.modelManifestHash,
+          seed: g.seed,
+          promptHash:
+            g.prompt === null
+              ? null
+              : createHash("sha256").update(g.prompt).digest("hex"),
+        },
+      };
+      ledger.update(id, { imported, phase: "sent", state: "succeeded" });
+      return imported;
+    };
+    // Brought in already, and the answer was lost or the service stopped before
+    // recording it: it is the same video, so the same asset.
+    const held = (await store.exportProject(g.projectId)).assets.find(
+      (a: { hash: string; kind: string }) =>
+        a.hash === artifact.sha256 && a.kind === "video",
+    ) as { id: string } | undefined;
+    if (held) return finish(held.id, artifact.sha256);
     const folder = await mkdtemp(path.join(tmpdir(), "yamakan-generation-"));
     try {
       const file = path.join(folder, "output.mp4");
@@ -124,7 +221,7 @@ export function createGenerationService(options: {
       let bytes = 0;
       const checked = async function* () {
         for await (const chunk of adapter.readArtifact(
-          g.executionRef,
+          refOf(g),
           artifact.handle,
         )) {
           bytes += chunk.byteLength;
@@ -150,7 +247,7 @@ export function createGenerationService(options: {
           "VALIDATION",
           "The generated video does not match what the engine reported.",
         );
-      if (g.cancelled)
+      if (ledger.read(id)?.cancelled)
         throw new CommandError(
           "VALIDATION",
           "A cancelled generation cannot be imported.",
@@ -167,23 +264,7 @@ export function createGenerationService(options: {
           source,
           bytes,
         );
-        const { recipe, seed, prompt } = g.request;
-        g.imported = {
-          assetId: asset.id,
-          lineage: {
-            outputHash: asset.hash,
-            inputs: g.inputs,
-            recipeId: recipe.id,
-            recipeHash: recipe.hash,
-            modelManifestHash: recipe.modelManifestHash,
-            seed: seed ?? null,
-            promptHash:
-              prompt === undefined
-                ? null
-                : createHash("sha256").update(prompt).digest("hex"),
-          },
-        };
-        return g.imported;
+        return finish(asset.id, asset.hash);
       } finally {
         source.destroy();
       }
@@ -232,43 +313,85 @@ export function createGenerationService(options: {
           "A text-to-video does not start from a still.",
         );
       const id = randomUUID();
-      const answer = await adapter.submit(
-        {
-          contract: ENGINE_CONTRACT_V2,
-          operation: request.recipe.operation,
-          recipeId: request.recipe.id,
-          recipeHash: request.recipe.hash,
-          modelManifestHash: request.recipe.modelManifestHash,
-          attemptKey: id,
-          leaseGeneration: 1,
-          deadlineMs: ENGINE_V2_LIMITS.deadlineMs,
-          resourcePolicyHash,
-          ...(request.prompt === undefined ? {} : { prompt: request.prompt }),
-          ...(request.seed === undefined ? {} : { seed: request.seed }),
-          inputs,
-          output: {
-            kind: "video",
-            width: request.width,
-            height: request.height,
-            fps,
-            durationTicks: framesToTicks(
-              request.durationFrames,
-              rational(num, den),
-            ),
-            audio: false,
-          },
-        } as EngineRequestV2,
-        {
-          openAsset: (asset) => {
-            const file = held.get(asset.assetVersionId);
-            if (!file) throw new Error("An input is not this request's.");
-            // Checked again as it is about to be read for the engine.
-            permitted([asset.sha256]);
-            return createReadStream(file);
-          },
-        },
+      const inputPins = (inputs as unknown as { asset: AssetRef }[]).map(
+        ({ asset }) => ({
+          assetId: asset.assetVersionId,
+          assetHash: asset.sha256,
+        }),
       );
+      // Recorded before anything leaves: a crash from here on leaves a record.
+      ledger.begin({
+        generationId: id,
+        projectId: request.projectId,
+        recipe: request.recipe,
+        prompt: request.prompt ?? null,
+        seed: request.seed ?? null,
+        width: request.width,
+        height: request.height,
+        durationFrames: request.durationFrames,
+        firstFrameAssetId: request.firstFrameAssetId ?? null,
+        inputs: inputPins,
+        executionRef: null,
+        phase: "sending",
+        startedAt: clock(),
+        state: "queued",
+        diagnostic: null,
+        videoSha256: null,
+        imported: null,
+        cancelled: false,
+        dismissed: false,
+      });
+      const answer = await adapter
+        .submit(
+          {
+            contract: ENGINE_CONTRACT_V2,
+            operation: request.recipe.operation,
+            recipeId: request.recipe.id,
+            recipeHash: request.recipe.hash,
+            modelManifestHash: request.recipe.modelManifestHash,
+            attemptKey: id,
+            leaseGeneration: 1,
+            deadlineMs: ENGINE_V2_LIMITS.deadlineMs,
+            resourcePolicyHash,
+            ...(request.prompt === undefined ? {} : { prompt: request.prompt }),
+            ...(request.seed === undefined ? {} : { seed: request.seed }),
+            inputs,
+            output: {
+              kind: "video",
+              width: request.width,
+              height: request.height,
+              fps,
+              durationTicks: framesToTicks(
+                request.durationFrames,
+                rational(num, den),
+              ),
+              audio: false,
+            },
+          } as EngineRequestV2,
+          {
+            openAsset: (asset) => {
+              const file = held.get(asset.assetVersionId);
+              if (!file) throw new Error("An input is not this request's.");
+              // Checked again as it is about to be read for the engine.
+              permitted([asset.sha256]);
+              return createReadStream(file);
+            },
+          },
+        )
+        .catch((e: unknown) => {
+          // Refused before anything was sent: it did not happen.
+          ledger.update(id, {
+            state: "failed",
+            diagnostic:
+              e instanceof Error ? e.message : "It could not be started.",
+          });
+          throw e;
+        });
       if ("refused" in answer) {
+        ledger.update(id, {
+          state: "failed",
+          diagnostic: engineReasonMessage(answer.refused),
+        });
         // An upload refused because consent ended says that, not a general reason.
         permitted(
           (inputs as unknown as { asset: AssetRef }[]).map(
@@ -280,38 +403,69 @@ export function createGenerationService(options: {
           engineReasonMessage(answer.refused),
         );
       }
-      generations.set(id, {
-        projectId: request.projectId,
+      // Not knowing whether it arrived stays "sending": it is followed, not resent.
+      ledger.update(id, {
         executionRef: answer.executionRef,
-        request,
-        inputs: (inputs as unknown as { asset: AssetRef }[]).map(
-          ({ asset }) => ({
-            assetId: asset.assetVersionId,
-            assetHash: asset.sha256,
-          }),
-        ),
+        phase: answer.uncertain ? "sending" : "sent",
+        diagnostic: answer.uncertain ?? null,
       });
       return { generationId: id };
     },
 
     async status(id: string) {
       const g = tracked(id);
-      const { state, progress, diagnostic } = await adapter.status(
-        g.executionRef,
-      );
+      if (g.held)
+        return {
+          generationId: id,
+          state: "unknown" as const,
+          diagnostic: HELD,
+          imported: g.imported,
+        };
+      if (ENDED.has(g.state) || g.cancelled)
+        return {
+          generationId: id,
+          state: g.state,
+          ...(g.diagnostic ? { diagnostic: g.diagnostic } : {}),
+          imported: g.imported,
+        };
+      const { state, progress, diagnostic } = await adapter.status(refOf(g));
+      const change: Partial<GenerationRecord> = {
+        state,
+        diagnostic: diagnostic ?? null,
+      };
+      // Seen on the engine: it did arrive, whatever the send's answer was.
+      if (state !== "unknown") change.phase = "sent";
+      if (state === "succeeded") {
+        const [video] = (await adapter.enumerateArtifacts(refOf(g))).filter(
+          (a) => a.mediaType === "video/mp4",
+        );
+        change.videoSha256 = video?.sha256 ?? null;
+      }
+      ledger.update(id, change);
       return {
         generationId: id,
         state,
         ...(progress === undefined ? {} : { progress }),
         ...(diagnostic === undefined ? {} : { diagnostic }),
-        imported: g.imported ?? null,
+        imported: g.imported,
       };
     },
 
     async cancel(id: string) {
       const g = tracked(id);
-      g.cancelled = true;
-      return adapter.requestCancel(g.executionRef);
+      ledger.update(id, { cancelled: true, phase: "sent" });
+      return adapter.requestCancel(refOf(g));
+    },
+
+    // What this project has had generated, newest first: enough to pick up after a
+    // restart, and to finish recording what came in.
+    list(projectId: string) {
+      return ledger.list(projectId).filter((g) => !g.dismissed);
+    },
+
+    dismiss(id: string) {
+      tracked(id);
+      ledger.update(id, { dismissed: true });
     },
 
     // The finished video joins the project as an asset, checked by its declared
@@ -320,10 +474,12 @@ export function createGenerationService(options: {
       const g = tracked(id);
       if (g.imported) return g.imported;
       // Asked twice at once, it is still one asset.
-      g.importing ??= bringIn(id, g).finally(() => {
-        g.importing = undefined;
-      });
-      return g.importing;
+      let pending = importing.get(id);
+      if (!pending) {
+        pending = bringIn(id, g).finally(() => importing.delete(id));
+        importing.set(id, pending);
+      }
+      return pending;
     },
   };
 }

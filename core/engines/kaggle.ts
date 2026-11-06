@@ -4,11 +4,10 @@
 // weights come here. A push replaces what "latest" means on Kaggle, so a result
 // counts only if its receipt names this run.
 import { execFile } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import {
   mkdir,
-  mkdtemp,
   readFile,
   readdir,
   rm,
@@ -202,10 +201,14 @@ export function kaggleCli(file: string): KaggleCli {
 
 const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
 // Kaggle's words for a notebook that does not exist, or a pull of one, as tried.
+// A send whose outcome is unknown, as opposed to one Kaggle refused.
+const LOST_ANSWER =
+  /timed? ?out|ETIMEDOUT|ECONNRESET|ECONNABORTED|EPIPE|EAI_AGAIN|connection|stopped\)/i;
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
+const EXPIRY_GRACE_SECONDS = 10 * 60;
 // All the log can show: the process was killed. Memory is the likely reason, not a
 // known one, and only a flag leaves the log, which can hold the prompt.
 const WAS_KILLED =
@@ -270,6 +273,14 @@ export function createKaggleEngine(options: {
   download?: (recipe: KaggleRecipe, folder: string) => Promise<void>;
   now?: () => number;
   folderRoot?: string;
+  // What a run was, from the record kept before it was sent: so that one started before
+  // a restart is followed again. Without it, a run is known only to this service.
+  recorded?: (ref: string) => {
+    recipeId: string;
+    startedAt: number;
+    videoSha256: string | null;
+  } | null;
+  sentBefore?: (recipeId: string, except: string) => boolean;
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
@@ -282,6 +293,8 @@ export function createKaggleEngine(options: {
   const pushing = new Set<string>();
   // Notebooks this service knows exist, whatever Kaggle says about them now.
   const pushed = new Set<string>();
+  const everPushed = (id: string, except: string) =>
+    pushed.has(id) || options.sentBefore?.(id, except) === true;
   const scriptFor =
     options.scriptFor ?? ((r: KaggleRecipe) => readFile(scriptOf(r), "utf8"));
   const remote = (r: KaggleRecipe) => `${username}/${r.slug}`;
@@ -398,9 +411,23 @@ export function createKaggleEngine(options: {
   const ask = async (run: Run): Promise<ExecutionStatus> => {
     try {
       const state = await remoteState(run.recipe);
-      if (state === "QUEUED" || state === "NEW_SCRIPT") return waiting(run);
-      if (state === "RUNNING")
-        return { executionRef: run.runId, state: "running" };
+      const expired =
+        now() - run.startedAt >
+        (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
+      if (state === "QUEUED" || state === "NEW_SCRIPT" || state === "RUNNING") {
+        // Past its own limit, Kaggle's latest is not this run, or says nothing true of it.
+        if (expired) {
+          await keepOnly(run);
+          return end(
+            run,
+            "failed",
+            "This run has gone past its time limit with no result from Kaggle. Anything still running there is another run.",
+          );
+        }
+        return state === "RUNNING"
+          ? { executionRef: run.runId, state: "running" }
+          : waiting(run);
+      }
       if (state === "COMPLETE") {
         try {
           return await finish(run);
@@ -468,10 +495,43 @@ export function createKaggleEngine(options: {
     };
   };
 
-  const runOf = (ref: string) => {
-    const run = runs.get(ref);
-    if (!run)
+  const folderOf = (runId: string) =>
+    path.join(folderRoot, `${FOLDER_PREFIX}${runId}`);
+
+  const runOf = async (ref: string) => {
+    const known = runs.get(ref);
+    if (known) return known;
+    const record = options.recorded?.(ref);
+    const recipe = KAGGLE_RECIPES.find((r) => r.id === record?.recipeId);
+    if (!record || !recipe)
       throw new CommandError("NOT_FOUND", "That run is not known here.");
+    const run: Run = {
+      recipe,
+      runId: ref,
+      startedAt: record.startedAt,
+      folder: folderOf(ref),
+    };
+    // Its video from before the restart, if it is still the one recorded.
+    const file = path.join(run.folder, "output", recipe.output);
+    if (record.videoSha256) {
+      const size = await stat(file).then(
+        (found) => found.size,
+        () => 0,
+      );
+      if (size > 0 && (await hashOf(file)) === record.videoSha256) {
+        run.video = {
+          file,
+          artifact: {
+            handle: recipe.output.toLowerCase(),
+            mediaType: "video/mp4",
+            byteLength: size,
+            sha256: record.videoSha256,
+          },
+        };
+        run.ended = "succeeded";
+      }
+    }
+    runs.set(ref, run);
     return run;
   };
 
@@ -498,7 +558,11 @@ export function createKaggleEngine(options: {
 
   // Whether its notebook can take this prompt: nothing goes to one that is running,
   // or that Kaggle does not report as private.
-  async function assertFree(recipe: KaggleRecipe, folder: string) {
+  async function assertFree(
+    recipe: KaggleRecipe,
+    folder: string,
+    attemptKey: string,
+  ) {
     const busy = () =>
       new CommandError(
         "CAPABILITY_UNAVAILABLE",
@@ -513,7 +577,10 @@ export function createKaggleEngine(options: {
     } catch (e) {
       // The CLI says this of any refusal, so it means new only if nothing here says
       // otherwise. Kaggle's words cannot tell these apart after a restart.
-      if (NO_SUCH_NOTEBOOK.test((e as Error).message) && !pushed.has(recipe.id))
+      if (
+        NO_SUCH_NOTEBOOK.test((e as Error).message) &&
+        !everPushed(recipe.id, attemptKey)
+      )
         return;
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
@@ -562,11 +629,15 @@ export function createKaggleEngine(options: {
         );
       pushing.add(recipe.id);
       let folder: string | null = null;
+      let sending = false;
+      let sent = false;
       try {
-        folder = await mkdtemp(path.join(folderRoot, FOLDER_PREFIX));
+        folder = folderOf(request.attemptKey);
+        await mkdir(folder, { recursive: true });
         // Its notebook has one latest run: another would hide this one's result.
-        await assertFree(recipe, folder);
-        const runId = randomUUID();
+        await assertFree(recipe, folder, request.attemptKey);
+        // Recorded by the service before this: after a crash it is how the run is found.
+        const runId = request.attemptKey;
         const push = path.join(folder, "push");
         await mkdir(push);
         await writeFile(
@@ -594,12 +665,14 @@ export function createKaggleEngine(options: {
             kernel_sources: [],
           }),
         );
+        sending = true;
         const { stdout } = await cli(
           ["kernels", "push", "-p", push, "-t", String(recipe.timeoutSeconds)],
           3 * 60 * 1000,
         );
         if (!/successfully pushed/i.test(stdout))
           throw new Error(stdout.slice(0, ENGINE_V2_LIMITS.diagnosticChars));
+        sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
         await rm(push, { recursive: true, force: true });
         pushed.add(recipe.id);
@@ -617,6 +690,27 @@ export function createKaggleEngine(options: {
           });
         return { executionRef: runId };
       } catch (e) {
+        // No answer is not a refusal: it may have arrived, and a second push would
+        // replace it. It is followed like any other, and said to be uncertain.
+        if (sending && !sent && LOST_ANSWER.test((e as Error).message)) {
+          if (folder)
+            await rm(path.join(folder, "push"), {
+              recursive: true,
+              force: true,
+            }).catch(() => {});
+          pushed.add(recipe.id);
+          runs.set(request.attemptKey, {
+            recipe,
+            runId: request.attemptKey,
+            startedAt: now(),
+            folder: folder!,
+          });
+          return {
+            executionRef: request.attemptKey,
+            uncertain:
+              "No answer came from Kaggle, so this may or may not have reached it. It will not be sent again automatically.",
+          };
+        }
         if (folder)
           await rm(folder, { recursive: true, force: true }).catch(() => {});
         if (e instanceof CommandError) throw e;
@@ -629,12 +723,12 @@ export function createKaggleEngine(options: {
         pushing.delete(recipe.id);
       }
     },
-    status: async (ref) => check(runOf(ref)),
-    reconcile: async (ref) => check(runOf(ref)),
+    status: async (ref) => check(await runOf(ref)),
+    reconcile: async (ref) => check(await runOf(ref)),
     // Kaggle's public interface offers no way to stop a run. This stops following it,
     // and says so: it goes on until it ends or reaches its time limit.
     async requestCancel(ref) {
-      runOf(ref);
+      await runOf(ref);
       return {
         requested: true,
         localProcessExited: true,
@@ -644,11 +738,11 @@ export function createKaggleEngine(options: {
       };
     },
     async enumerateArtifacts(ref) {
-      const { video } = runOf(ref);
+      const { video } = await runOf(ref);
       return video ? [video.artifact] : [];
     },
     async *readArtifact(ref, handle) {
-      const { video } = runOf(ref);
+      const { video } = await runOf(ref);
       if (!video || video.artifact.handle !== handle)
         throw new CommandError("NOT_FOUND", "That output is not known here.");
       for await (const chunk of createReadStream(video.file, {

@@ -364,7 +364,10 @@ export type EngineAdapterV2 = {
   submit(
     request: EngineRequestV2,
     context: EngineContextV2,
-  ): Promise<{ executionRef: string } | { refused: RefusalReason }>;
+    // `uncertain`: the send's answer was lost, so it may have arrived. Said, not resent.
+  ): Promise<
+    { executionRef: string; uncertain?: string } | { refused: RefusalReason }
+  >;
   status(executionRef: string): Promise<ExecutionStatus>;
   requestCancel(executionRef: string): Promise<Cancellation>;
   enumerateArtifacts(executionRef: string): Promise<Artifact[]>;

@@ -7,6 +7,11 @@
 // so they are marked failed and their jobs re-queued (local work only, never
 // a paid resubmission). Partial outputs are never registered.
 import {
+  wasSent,
+  type GenerationLedger,
+  type GenerationRecord,
+} from "./engines/generation.ts";
+import {
   mkdir,
   open,
   rename,
@@ -30,6 +35,7 @@ import { CommandError, toCommandError } from "./command/errors.ts";
 import { RESOURCE_POLICY } from "./command/policy.ts";
 import { IllegalTransition } from "./jobs/rules/jobs.ts";
 import {
+  YAMAKAN_LEGAL_TRANSITIONS,
   transitionYamakanJob,
   type YamakanJobState,
 } from "./jobs/rules/yamakan-transitions.ts";
@@ -69,6 +75,17 @@ export type JobState =
   | "failed"
   | "reconciliationRequired";
 const TERMINAL = ["succeeded", "cancelled", "failed", "reconciliationRequired"];
+// A generation running somewhere else, recorded here so that it outlives a restart.
+// It enters at "preparing" and is never "queued", so the pump can never claim it, and
+// start() leaves it alone: it is followed, and never sent again without a person.
+export const REMOTE_GENERATION = "remote-generation";
+const generationJobState = (r: GenerationRecord): YamakanJobState => {
+  if (r.imported) return "succeeded";
+  if (r.cancelled || r.state === "cancelled") return "cancelled";
+  if (r.state === "failed") return "failed";
+  if (r.state === "succeeded") return "validating";
+  return r.phase === "sending" ? "preparing" : "running";
+};
 const terminalSql = TERMINAL.map((s) => `'${s}'`).join(", ");
 // Attempts interrupted by a crash (not a graceful stop) are retried locally
 // at most this many times; the job is then set aside for reconciliation.
@@ -192,7 +209,7 @@ export class JobSupervisor {
       ).generation;
       const stale = db
         .prepare(
-          "SELECT a.job_id, a.attempt_no, j.kind, j.project_id, j.cancel_requested FROM attempts a JOIN jobs j ON j.job_id = a.job_id WHERE a.state IN ('preparing', 'running', 'validating') AND a.generation < ?",
+          "SELECT a.job_id, a.attempt_no, j.kind, j.project_id, j.cancel_requested FROM attempts a JOIN jobs j ON j.job_id = a.job_id WHERE a.state IN ('preparing', 'running', 'validating') AND a.generation < ? AND j.kind != 'remote-generation'",
         )
         .all(this.#generation) as {
         job_id: string;
@@ -232,6 +249,120 @@ export class JobSupervisor {
       await this.#release(a.job_id);
     }
     this.#pump();
+  }
+
+  // The generation service's record of its runs, in the jobs table.
+  generationLedger(): GenerationLedger {
+    const parse = (row: Row): GenerationRecord => ({
+      ...(safeJson(row.payload) as GenerationRecord),
+      held: row.state === "reconciliationRequired",
+    });
+    const read = (db: DatabaseSync, id: string) =>
+      db
+        .prepare("SELECT * FROM jobs WHERE job_id = ? AND kind = ?")
+        .get(id, REMOTE_GENERATION) as Row | undefined;
+    return {
+      begin: (record) =>
+        this.store.transaction((db) => {
+          const active = (
+            db
+              .prepare(
+                `SELECT count(*) AS n FROM jobs WHERE state NOT IN (${terminalSql})`,
+              )
+              .get() as { n: number }
+          ).n;
+          if (active >= RESOURCE_POLICY.enforced.activeJobs)
+            throw new CommandError("LIMIT_EXCEEDED", "Too many active jobs.");
+          const head = (
+            db
+              .prepare("SELECT revision FROM projects WHERE project_id = ?")
+              .get(record.projectId) as { revision: number } | undefined
+          )?.revision;
+          db.prepare(
+            "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, ?, ?, ?, ?, ?, 'preparing')",
+          ).run(
+            record.generationId,
+            REMOTE_GENERATION,
+            record.projectId,
+            head ?? 0,
+            record.generationId,
+            JSON.stringify(record),
+          );
+        }),
+      update: (id, change) =>
+        this.store.transaction((db) => {
+          const row = read(db, id);
+          if (!row)
+            throw new CommandError("NOT_FOUND", "Generation not found.");
+          const next: GenerationRecord = {
+            ...(safeJson(row.payload) as GenerationRecord),
+            ...change,
+          };
+          db.prepare(
+            "UPDATE jobs SET payload = ?, error = ?, artifact = ? WHERE job_id = ?",
+          ).run(
+            JSON.stringify(next),
+            next.diagnostic ?? null,
+            next.imported ? `asset:${next.imported.assetId}` : null,
+            id,
+          );
+          // Through each legal step. A held copy stays held, and an ended job stays as
+          // it ended: neither has a way out to these states.
+          const target = generationJobState(next);
+          const path: YamakanJobState[] = [
+            "preparing",
+            "running",
+            "validating",
+            "succeeded",
+          ];
+          let at = row.state as YamakanJobState;
+          while (at !== target) {
+            const along = path[path.indexOf(at) + 1];
+            const step = YAMAKAN_LEGAL_TRANSITIONS[at]?.has(target)
+              ? target
+              : path.indexOf(at) >= 0 && path.indexOf(target) > path.indexOf(at)
+                ? along
+                : null;
+            if (!step) break;
+            assertAndApplyJobState(db, id, step, () => {
+              db.prepare("UPDATE jobs SET state = ? WHERE job_id = ?").run(
+                step,
+                id,
+              );
+            });
+            at = step;
+          }
+        }),
+      read: (id) =>
+        this.store.read((db) => {
+          const row = read(db, id);
+          return row ? parse(row) : null;
+        }),
+      list: (projectId) =>
+        this.store.read((db) =>
+          (
+            db
+              .prepare(
+                "SELECT * FROM jobs WHERE kind = ? AND project_id = ? ORDER BY rowid DESC LIMIT 50",
+              )
+              .all(REMOTE_GENERATION, projectId) as Row[]
+          ).map(parse),
+        ),
+      hasSent: (recipeId, except) =>
+        this.store.read((db) =>
+          (
+            db
+              .prepare("SELECT payload FROM jobs WHERE kind = ?")
+              .all(REMOTE_GENERATION) as { payload: string }[]
+          ).some((row) =>
+            wasSent(
+              safeJson(row.payload) as GenerationRecord,
+              recipeId,
+              except,
+            ),
+          ),
+        ),
+    };
   }
 
   #view(row: Row): RenderJob & { detail: JobState } {
@@ -533,6 +664,12 @@ export class JobSupervisor {
           "VALIDATION",
           "Only jobs awaiting reconciliation can be retried.",
         );
+      // It may have reached the engine: only a person can decide to send it again.
+      if (row.kind === REMOTE_GENERATION)
+        throw new CommandError(
+          "VALIDATION",
+          "A generation is never sent again automatically. Start a new one if it is wanted.",
+        );
       assertAndApplyJobState(db, jobId, "queued", () => {
         db.prepare(
           "UPDATE jobs SET state = 'queued', error = NULL, progress = 0 WHERE job_id = ? AND state = 'reconciliationRequired'",
@@ -579,6 +716,11 @@ export class JobSupervisor {
     const row = this.store.transaction((db) => {
       const row = this.#row(db, jobId);
       if (!row) throw new Error("Job not found.");
+      if (row.kind === REMOTE_GENERATION)
+        throw new CommandError(
+          "VALIDATION",
+          "A generation is followed with yamakan.generation.cancel, which says what it can and cannot stop.",
+        );
       // Already being cancelled: a retry asks for what is already under way.
       if (TERMINAL.includes(row.state) || row.state === "cancelRequested")
         return row;

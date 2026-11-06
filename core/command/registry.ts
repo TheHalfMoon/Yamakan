@@ -279,14 +279,27 @@ function generationOf(ctx: CommandContext): Generation {
   if (ctx.kaggle) {
     let held = kaggleGenerations.get(ctx.store);
     if (!held) {
+      const ledger = ctx.queue.generationLedger();
       held = {
         service: createGenerationService({
           adapter: createKaggleEngine({
             cli: kaggleCli(ctx.kaggle.cli),
             username: ctx.kaggle.username,
+            recorded: (ref) => {
+              const r = ledger.read(ref);
+              return r && !r.held
+                ? {
+                    recipeId: r.recipe.id,
+                    startedAt: r.startedAt,
+                    videoSha256: r.videoSha256,
+                  }
+                : null;
+            },
+            sentBefore: ledger.hasSent,
           }),
           store: ctx.store,
           resourcePolicyHash: RESOURCE_POLICY_HASH,
+          ledger,
         }),
         recipes: kaggleRecipes(),
       };
@@ -2219,6 +2232,42 @@ export const commands = {
             }))
           : [],
       };
+    },
+  }),
+  "yamakan.generation.list": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "List a project's generations that a person has not finished with, newest first, including one started before the service restarted. Their prompts are part of the project's own record.",
+    input: z.object({ projectId: Id }).strict(),
+    run: (ctx, a) =>
+      generationOf(ctx)
+        .service.list(a.projectId)
+        .map((g) => ({
+          generationId: g.generationId,
+          recipeId: g.recipe.id,
+          prompt: g.prompt,
+          seed: g.seed,
+          startedAt: g.startedAt,
+          state: g.state,
+          uncertain: g.phase === "sending",
+          stopped: g.cancelled,
+          held: g.held === true,
+          diagnostic: g.diagnostic,
+          imported: g.imported,
+        })),
+  }),
+  "yamakan.generation.dismiss": define({
+    scope: "project:write",
+    mutation: true,
+    humanOnly: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Stop showing a generation a person has finished with. It says nothing to the engine, and what it made stays.",
+    input: z.object({ generationId: Id }).strict(),
+    run: (ctx, a) => {
+      generationOf(ctx).service.dismiss(a.generationId);
+      return { dismissed: true };
     },
   }),
   "yamakan.generation.status": define({
