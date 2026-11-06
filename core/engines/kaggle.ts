@@ -190,7 +190,10 @@ export function kaggleCli(file: string): KaggleCli {
           if (error)
             reject(
               new Error(
-                stderr || `The Kaggle CLI failed (${error.code ?? "stopped"}).`,
+                `${error.killed ? "Timed out. " : ""}${
+                  stderr ||
+                  `The Kaggle CLI failed (${error.code ?? "stopped"}).`
+                }`,
               ),
             );
           else resolve({ stdout });
@@ -201,9 +204,10 @@ export function kaggleCli(file: string): KaggleCli {
 
 const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
 // Kaggle's words for a notebook that does not exist, or a pull of one, as tried.
-// A send whose outcome is unknown, as opposed to one Kaggle refused.
-const LOST_ANSWER =
-  /timed? ?out|ETIMEDOUT|ECONNRESET|ECONNABORTED|EPIPE|EAI_AGAIN|connection|stopped\)/i;
+// After a push is tried, only these say it did not arrive. Anything else may have
+// reached Kaggle, and a second push would replace it: so it is uncertain, not failed.
+const REFUSED_PUSH =
+  /\b(?:400|401|403|404|409|413|422|429)\b|quota|maximum|forbidden|unauthorized|too many/i;
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
@@ -250,11 +254,19 @@ export function notebookUrl(username: string, recipe: KaggleRecipe) {
 }
 
 // Folders from earlier sessions: a run's video, or a failed push's script.
-async function sweepOldFolders(root: string, now: number) {
+async function sweepOldFolders(
+  root: string,
+  now: number,
+  keep: (runId: string) => boolean,
+) {
   const entries = await readdir(root).catch(() => [] as string[]);
   await Promise.all(
     entries
-      .filter((name) => name.startsWith(FOLDER_PREFIX))
+      .filter(
+        (name) =>
+          name.startsWith(FOLDER_PREFIX) &&
+          !keep(name.slice(FOLDER_PREFIX.length)),
+      )
       .map(async (name) => {
         const folder = path.join(root, name);
         const { mtimeMs } = await stat(folder);
@@ -281,13 +293,20 @@ export function createKaggleEngine(options: {
     videoSha256: string | null;
   } | null;
   sentBefore?: (recipeId: string, except: string) => boolean;
+  // When another run of this recipe was last sent: Kaggle may not yet show it.
+  lastSentAt?: (recipeId: string, except: string) => number | undefined;
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
     throw new Error("That is not a Kaggle username.");
   const now = options.now ?? Date.now;
   const folderRoot = options.folderRoot ?? tmpdir();
-  void sweepOldFolders(folderRoot, now());
+  // After a start, and tidying only: if the store has gone by then, it can wait.
+  void sweepOldFolders(
+    folderRoot,
+    now(),
+    (runId) => options.recorded?.(runId)?.videoSha256 != null,
+  ).catch(() => {});
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
@@ -469,7 +488,16 @@ export function createKaggleEngine(options: {
         diagnostic: diagnostic(`Kaggle says ${state}.`),
       };
     } catch (e) {
-      // Being unable to ask is not the run failing: it may well still be going.
+      // Being unable to ask is not the run failing, unless it is long past its limit.
+      if (
+        now() - run.startedAt >
+        (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000
+      )
+        return end(
+          run,
+          "failed",
+          "This run has gone past its time limit, and Kaggle has not answered. Its result, if any, is on its notebook.",
+        );
       return {
         executionRef: run.runId,
         state: "unknown",
@@ -571,6 +599,8 @@ export function createKaggleEngine(options: {
     // Kaggle may not yet show a run just pushed.
     for (const run of runs.values())
       if (run.recipe === recipe && !run.ended && settling(run)) throw busy();
+    const sent = options.lastSentAt?.(recipe.id, attemptKey);
+    if (sent !== undefined && now() - sent < PUSH_SETTLE_MS) throw busy();
     let state: string;
     try {
       state = await remoteState(recipe);
@@ -674,7 +704,7 @@ export function createKaggleEngine(options: {
           throw new Error(stdout.slice(0, ENGINE_V2_LIMITS.diagnosticChars));
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
-        await rm(push, { recursive: true, force: true });
+        await rm(push, { recursive: true, force: true }).catch(() => {});
         pushed.add(recipe.id);
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
@@ -692,13 +722,12 @@ export function createKaggleEngine(options: {
       } catch (e) {
         // No answer is not a refusal: it may have arrived, and a second push would
         // replace it. It is followed like any other, and said to be uncertain.
-        if (sending && !sent && LOST_ANSWER.test((e as Error).message)) {
+        if (sending && !sent && !REFUSED_PUSH.test((e as Error).message)) {
           if (folder)
             await rm(path.join(folder, "push"), {
               recursive: true,
               force: true,
             }).catch(() => {});
-          pushed.add(recipe.id);
           runs.set(request.attemptKey, {
             recipe,
             runId: request.attemptKey,

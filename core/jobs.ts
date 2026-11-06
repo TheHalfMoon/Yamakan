@@ -77,8 +77,17 @@ export type JobState =
 const TERMINAL = ["succeeded", "cancelled", "failed", "reconciliationRequired"];
 // A generation running somewhere else, recorded here so that it outlives a restart.
 // It enters at "preparing" and is never "queued", so the pump can never claim it, and
-// start() leaves it alone: it is followed, and never sent again without a person.
+// has no attempts, so start() has nothing to requeue: it is followed, and never sent
+// again without a person.
 export const REMOTE_GENERATION = "remote-generation";
+const generationPayloads = (db: DatabaseSync) =>
+  (
+    db
+      .prepare("SELECT payload FROM jobs WHERE kind = ?")
+      .all(REMOTE_GENERATION) as {
+      payload: string;
+    }[]
+  ).map((row) => safeJson(row.payload) as GenerationRecord);
 const generationJobState = (r: GenerationRecord): YamakanJobState => {
   if (r.imported) return "succeeded";
   if (r.cancelled || r.state === "cancelled") return "cancelled";
@@ -209,7 +218,7 @@ export class JobSupervisor {
       ).generation;
       const stale = db
         .prepare(
-          "SELECT a.job_id, a.attempt_no, j.kind, j.project_id, j.cancel_requested FROM attempts a JOIN jobs j ON j.job_id = a.job_id WHERE a.state IN ('preparing', 'running', 'validating') AND a.generation < ? AND j.kind != 'remote-generation'",
+          "SELECT a.job_id, a.attempt_no, j.kind, j.project_id, j.cancel_requested FROM attempts a JOIN jobs j ON j.job_id = a.job_id WHERE a.state IN ('preparing', 'running', 'validating') AND a.generation < ?",
         )
         .all(this.#generation) as {
         job_id: string;
@@ -350,18 +359,16 @@ export class JobSupervisor {
         ),
       hasSent: (recipeId, except) =>
         this.store.read((db) =>
-          (
-            db
-              .prepare("SELECT payload FROM jobs WHERE kind = ?")
-              .all(REMOTE_GENERATION) as { payload: string }[]
-          ).some((row) =>
-            wasSent(
-              safeJson(row.payload) as GenerationRecord,
-              recipeId,
-              except,
-            ),
-          ),
+          generationPayloads(db).some((r) => wasSent(r, recipeId, except)),
         ),
+      lastSentAt: (recipeId, except) =>
+        this.store.read((db) => {
+          const times = generationPayloads(db)
+            .filter((r) => wasSent(r, recipeId, except))
+            .map((r) => r.startedAt);
+          return times.length ? Math.max(...times) : undefined;
+        }),
+      remembersEnded: true,
     };
   }
 
@@ -699,6 +706,12 @@ export class JobSupervisor {
         throw new CommandError(
           "VALIDATION",
           "Only jobs awaiting reconciliation can be discarded.",
+        );
+      // Held means the run belongs to the workspace this was restored from.
+      if (row.kind === REMOTE_GENERATION)
+        throw new CommandError(
+          "VALIDATION",
+          "A generation held in a restored copy stays as it is: its run belongs to the original.",
         );
       assertAndApplyJobState(db, jobId, "cancelled", () => {
         db.prepare(

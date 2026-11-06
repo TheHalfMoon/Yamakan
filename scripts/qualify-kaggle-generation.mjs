@@ -203,6 +203,8 @@ try {
       });
       child = spawnService();
       await running(child);
+      // A link differing only by its fragment would not load the page again.
+      await page.goto("about:blank");
       await page.goto(await signInLink());
       await page.waitForFunction(() => location.hash === "");
       await page

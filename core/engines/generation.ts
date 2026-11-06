@@ -44,8 +44,8 @@ export type GenerationRequest = {
   firstFrameAssetId?: string;
 };
 
-// Where an imported video came from. Returned to the caller and stored nowhere: a
-// story's take can hold its output and inputs, not the recipe, seed or prompt hash.
+// Where an imported video came from. A story's take can hold its output and inputs,
+// not the recipe, seed or prompt hash; a run elsewhere keeps these in its job record.
 export type GenerationLineage = {
   outputHash: string;
   inputs: { assetId: string; assetHash: string }[];
@@ -93,9 +93,13 @@ export type GenerationLedger = {
   list(projectId: string): GenerationRecord[];
   // Whether another run of this recipe may have reached the engine.
   hasSent(recipeId: string, except: string): boolean;
+  lastSentAt(recipeId: string, except: string): number | undefined;
+  // Runs on this machine are not kept past this service, so an ended one is asked again.
+  remembersEnded: boolean;
 };
 
-// Refused before anything left: it never reached the engine.
+// Whether a run may have reached the engine. Refused before leaving, or uncertain and
+// given up on, it says nothing about whether a notebook exists.
 export const wasSent = (
   r: GenerationRecord,
   recipeId: string,
@@ -103,7 +107,7 @@ export const wasSent = (
 ) =>
   r.recipe?.id === recipeId &&
   r.generationId !== except &&
-  !(r.phase === "sending" && r.state === "failed");
+  (r.phase === "sent" || (r.state !== "failed" && !r.cancelled));
 
 // For an engine on this machine, whose runs do not outlive this service anyway.
 export function memoryLedger(): GenerationLedger {
@@ -119,6 +123,10 @@ export function memoryLedger(): GenerationLedger {
       [...records.values()].filter((r) => r.projectId === projectId).reverse(),
     hasSent: (recipeId, except) =>
       [...records.values()].some((r) => wasSent(r, recipeId, except)),
+    lastSentAt: (recipeId, except) =>
+      [...records.values()].filter((r) => wasSent(r, recipeId, except)).at(-1)
+        ?.startedAt,
+    remembersEnded: false,
   };
 }
 
@@ -409,7 +417,10 @@ export function createGenerationService(options: {
         phase: answer.uncertain ? "sending" : "sent",
         diagnostic: answer.uncertain ?? null,
       });
-      return { generationId: id };
+      return {
+        generationId: id,
+        ...(answer.uncertain ? { uncertain: answer.uncertain } : {}),
+      };
     },
 
     async status(id: string) {
@@ -421,7 +432,7 @@ export function createGenerationService(options: {
           diagnostic: HELD,
           imported: g.imported,
         };
-      if (ENDED.has(g.state) || g.cancelled)
+      if (ledger.remembersEnded && (ENDED.has(g.state) || g.cancelled))
         return {
           generationId: id,
           state: g.state,
@@ -433,14 +444,17 @@ export function createGenerationService(options: {
         state,
         diagnostic: diagnostic ?? null,
       };
-      // Seen on the engine: it did arrive, whatever the send's answer was.
-      if (state !== "unknown") change.phase = "sent";
+      // Its own result proves it arrived. A notebook's state does not: that could be
+      // another run's, so an uncertain send stays uncertain until then.
       if (state === "succeeded") {
-        const [video] = (await adapter.enumerateArtifacts(refOf(g))).filter(
-          (a) => a.mediaType === "video/mp4",
-        );
+        change.phase = "sent";
+        const [video] = (
+          await adapter.enumerateArtifacts(refOf(g)).catch(() => [])
+        ).filter((a) => a.mediaType === "video/mp4");
         change.videoSha256 = video?.sha256 ?? null;
       }
+      if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
+        change.diagnostic = diagnostic ?? g.diagnostic;
       ledger.update(id, change);
       return {
         generationId: id,
@@ -453,7 +467,15 @@ export function createGenerationService(options: {
 
     async cancel(id: string) {
       const g = tracked(id);
-      ledger.update(id, { cancelled: true, phase: "sent" });
+      if (g.held)
+        return {
+          requested: false,
+          localProcessExited: true,
+          remoteAcknowledged: false,
+          remoteOutcome: "unknown" as const,
+          billingOutcome: "notApplicable" as const,
+        };
+      ledger.update(id, { cancelled: true });
       return adapter.requestCancel(refOf(g));
     },
 
@@ -463,9 +485,13 @@ export function createGenerationService(options: {
       return ledger.list(projectId).filter((g) => !g.dismissed);
     },
 
+    // Finished with here: it says nothing to the engine, and stops counting as work.
     dismiss(id: string) {
-      tracked(id);
-      ledger.update(id, { dismissed: true });
+      const g = tracked(id);
+      ledger.update(id, {
+        dismissed: true,
+        ...(g.imported || g.state === "failed" ? {} : { cancelled: true }),
+      });
     },
 
     // The finished video joins the project as an asset, checked by its declared

@@ -56,7 +56,7 @@ export type GenerationApi = {
     width: number;
     height: number;
     durationFrames: number;
-  }) => Promise<{ generationId: string }>;
+  }) => Promise<{ generationId: string; uncertain?: string }>;
   status: (generationId: string) => Promise<{
     state: string;
     diagnostic?: string;
@@ -197,8 +197,8 @@ export function GeneratePanel(props: {
         if (!current) return;
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
-        // Seen on Kaggle: it arrived, whatever the send's answer was.
-        if (answer.state !== "unknown")
+        // Its own result proves it arrived; a notebook's state does not.
+        if (answer.state === "succeeded" || answer.state === "failed")
           setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
       } catch (e) {
         if (!current) return;
@@ -229,7 +229,7 @@ export function GeneratePanel(props: {
     setProblem("");
     setWorking(true);
     try {
-      const { generationId } = await api.start({
+      const { generationId, uncertain } = await api.start({
         recipeId: model.recipeId,
         prompt,
         seed,
@@ -250,8 +250,10 @@ export function GeneratePanel(props: {
         prompt,
         seed,
         startedAt: Date.now(),
+        uncertain: Boolean(uncertain),
       });
     } catch (e) {
+      setAgreed(false);
       setProblem(e instanceof Error ? e.message : t("create.startFailed"));
     } finally {
       setWorking(false);
@@ -389,7 +391,7 @@ export function GeneratePanel(props: {
         </p>
       )}
       <div className="create-video-actions">
-        {state === "succeeded" && !run.stopped && !lost && (
+        {state === "succeeded" && !run.stopped && !run.held && !lost && (
           <button
             type="button"
             className="create-primary"

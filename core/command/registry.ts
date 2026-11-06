@@ -296,6 +296,7 @@ function generationOf(ctx: CommandContext): Generation {
                 : null;
             },
             sentBefore: ledger.hasSent,
+            lastSentAt: ledger.lastSentAt,
           }),
           store: ctx.store,
           resourcePolicyHash: RESOURCE_POLICY_HASH,
