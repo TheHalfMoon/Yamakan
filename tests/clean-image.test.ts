@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
+import { deflateSync, inflateSync } from "node:zlib";
 import { mediaTools } from "../core/process/workers.ts";
 import { closeWorkers } from "../core/process/workers.ts";
 import { cleanImage } from "../core/engines/clean-image.ts";
@@ -88,7 +89,44 @@ const chunk = (type: string, body: Buffer) => {
 const afterHeader = (extra: Buffer) =>
   Buffer.concat([PNG.subarray(0, 33), extra, PNG.subarray(33)]);
 
+// As a colour profile really travels, which is what FFmpeg's own PNG writer carried across.
+const profile = Buffer.concat([text, Buffer.alloc(200, 7)]);
+const pngProfile = chunk(
+  "iCCP",
+  Buffer.concat([Buffer.from("My Phone\0\0", "latin1"), deflateSync(profile)]),
+);
+const jpegProfile = segment(
+  0xe2,
+  Buffer.concat([
+    Buffer.from("ICC_PROFILE\0", "latin1"),
+    Buffer.from([1, 1]),
+    profile,
+  ]),
+);
+
 const HIDING: readonly (readonly [string, Buffer, string])[] = [
+  ["a JPEG's colour profile", beforeScan(jpegProfile), "image/jpeg"],
+  ["a PNG's colour profile", afterHeader(pngProfile), "image/png"],
+  [
+    "a PNG's mastering display",
+    afterHeader(chunk("mDCv", Buffer.concat([text.subarray(0, 24)]))),
+    "image/png",
+  ],
+  [
+    "a PNG's light level",
+    afterHeader(chunk("cLLi", text.subarray(0, 8))),
+    "image/png",
+  ],
+  [
+    "a PNG's stereo mode",
+    afterHeader(chunk("sTER", Buffer.from([1]))),
+    "image/png",
+  ],
+  [
+    "a PNG's colour code",
+    afterHeader(chunk("cICP", Buffer.from([9, 16, 0, 1]))),
+    "image/png",
+  ],
   ["Exif", beforeScan(segment(0xe1, exif(1))), "image/jpeg"],
   [
     "XMP",
@@ -156,6 +194,8 @@ const HIDING: readonly (readonly [string, Buffer, string])[] = [
   ["after a PNG's end", Buffer.concat([PNG, text]), "image/png"],
 ];
 
+const REFUSED_ANYWAY = new Set<string>([]);
+
 // Every chunk of the result, by name.
 const chunksOf = (png: Buffer) => {
   const names: string[] = [];
@@ -167,44 +207,30 @@ const chunksOf = (png: Buffer) => {
   return names;
 };
 
-const physOf = (png: Buffer) => {
-  let at = 8;
-  while (at + 8 <= png.length) {
-    const length = png.readUInt32BE(at);
-    if (png.toString("latin1", at + 4, at + 8) === "pHYs")
-      return [...png.subarray(at + 8, at + 8 + length)];
-    at += 12 + length;
-  }
-  return null;
-};
-const SQUARE = [0, 0, 0, 1, 0, 0, 0, 1, 0];
-
-test("a number in the source's pixel shape does not survive", async () => {
-  const odd = Buffer.from(JPEG);
-  const jfif = odd.indexOf(Buffer.from("JFIF\0", "latin1"));
-  assert.ok(jfif > 0, "this real file has the field");
-  odd[jfif + 7] = 0;
-  odd.writeUInt16BE(123, jfif + 8);
-  odd.writeUInt16BE(45, jfif + 10);
-  assert.deepEqual(physOf(await clean(odd, "image/jpeg")), SQUARE);
-});
+// Exactly the three chunks that hold a picture, and exactly its pixels inside: the secret
+// could not hide compressed, as a colour profile's did.
+function assertOnlyPixels(made: Buffer) {
+  assert.deepEqual(chunksOf(made), ["IHDR", "IDAT", "IEND"]);
+  const length = made.readUInt32BE(33);
+  const rows = inflateSync(made.subarray(41, 41 + length));
+  assert.equal(rows.length, (704 * 3 + 1) * 480);
+  assert.ok(!rows.includes(text));
+  assert.ok(!made.includes(text));
+}
 
 for (const [name, data, type] of HIDING)
   test(`text hidden in ${name} does not go`, async () => {
-    assert.ok(data.includes(text), "the file really holds it");
-    // Refusing is fine too: what matters is that it does not leave.
+    // A profile's text is compressed, and a short chunk holds none: the rest hold it plainly.
+    if (!/profile|display|light level|stereo|colour code/.test(name))
+      assert.ok(data.includes(text), "the file really holds it");
+    // A file the decoder refuses cannot leave either, but that must not hide a test that does
+    // nothing: the list below says which of these come through as pictures.
     const made = await clean(data, type).catch(() => null);
-    if (!made) return;
-    assert.ok(!made.includes(text));
-    assert.ok(!made.toString("latin1").includes("My Phone"));
-    // The one chunk beyond the picture says square pixels, whatever the source said.
-    assert.deepEqual([...new Set(chunksOf(made))].sort(), [
-      "IDAT",
-      "IEND",
-      "IHDR",
-      "pHYs",
-    ]);
-    assert.deepEqual(physOf(made), SQUARE);
+    if (!made) {
+      assert.ok(REFUSED_ANYWAY.has(name), `${name} was refused, not cleaned`);
+      return;
+    }
+    assertOnlyPixels(made);
   });
 
 test("a real picture comes through, at the size the model takes", async () => {
@@ -212,6 +238,7 @@ test("a real picture comes through, at the size the model takes", async () => {
   const file = path.join(root, "out.png");
   writeFileSync(file, made);
   assert.deepEqual(rgbAt(file, 352, 240).length, 3);
+  assertOnlyPixels(made);
   assert.equal(made.readUInt32BE(16), 704);
   assert.equal(made.readUInt32BE(20), 480);
 });
@@ -276,16 +303,39 @@ for (const [name, data, type] of [
   ["a PNG called a JPEG", PNG, "image/jpeg"],
   ["an empty file", Buffer.alloc(0), "image/jpeg"],
   ["another kind of image", PNG, "image/webp"],
+  ["a kind named after an object's own property", PNG, "constructor"],
+  [
+    "a JPEG cut short",
+    JPEG.subarray(0, Math.floor(JPEG.length / 2)),
+    "image/jpeg",
+  ],
+  ["a PNG cut short", PNG.subarray(0, Math.floor(PNG.length / 2)), "image/png"],
 ] as const)
   test(`${name} is refused, in words that name no path`, async () => {
     await assert.rejects(clean(data, type), (e: Error) => {
       assert.equal(
         e.message,
-        "That image could not be read, so nothing was sent.",
+        "That image could not be prepared, so nothing was sent.",
       );
       return true;
     });
   });
+
+test("a failure of the worker itself is refused the same way, naming no path", async () => {
+  // Its folder cannot be made: a file stands where it would go.
+  const blocked = path.join(root, "a-file");
+  writeFileSync(blocked, "x");
+  await assert.rejects(
+    cleanImage(JPEG, "image/jpeg", SIZE, path.join(blocked, "under")),
+    (e: Error) => {
+      assert.equal(
+        e.message,
+        "That image could not be prepared, so nothing was sent.",
+      );
+      return true;
+    },
+  );
+});
 
 test("the photo's own copy does not stay in the working folder", async () => {
   const folder = path.join(root, "kept");
