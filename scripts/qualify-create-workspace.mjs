@@ -171,12 +171,19 @@ try {
     );
     const now = await locator.screenshot();
     const kept = join(BASELINES, `${name}.png`);
-    if (process.env.YAMAKAN_UPDATE_BASELINES) {
+    if (process.env.YAMAKAN_UPDATE_BASELINES === "1") {
       mkdirSync(BASELINES, { recursive: true });
       writeFileSync(kept, now);
-      return `replaced ${name}`;
+      step(`replaced ${name}`);
+      return;
     }
-    if (!existsSync(kept)) return `no ${process.platform} picture of ${name}`;
+    // A system with no pictures at all is not compared, and says so without a pass. One
+    // that has them must have this one: losing a picture must not turn the check off.
+    if (!existsSync(BASELINES)) {
+      console.log(`skip - no ${process.platform} pictures to compare ${name}`);
+      return;
+    }
+    assert.ok(existsSync(kept), `no picture of ${name}`);
     const { different, total, sameSize } = await page.evaluate(
       async ([a, b]) => {
         const read = async (base64) => {
@@ -196,9 +203,9 @@ try {
         let count = 0;
         for (let i = 0; i < one.data.length; i += 4)
           if (
-            Math.abs(one.data[i] - two.data[i]) > 16 ||
-            Math.abs(one.data[i + 1] - two.data[i + 1]) > 16 ||
-            Math.abs(one.data[i + 2] - two.data[i + 2]) > 16
+            Math.abs(one.data[i] - two.data[i]) > 8 ||
+            Math.abs(one.data[i + 1] - two.data[i + 1]) > 8 ||
+            Math.abs(one.data[i + 2] - two.data[i + 2]) > 8
           )
             count++;
         return {
@@ -210,13 +217,14 @@ try {
       [readFileSync(kept).toString("base64"), now.toString("base64")],
     );
     const share = sameSize ? different / total : 1;
-    if (share > 0.002) {
+    // Runs here match to the pixel, so this can be tight: a changed word must show.
+    if (share > 0.0001) {
       if (out) writeFileSync(join(out, `${name}-now.png`), now);
       assert.fail(
         `${name} has moved from its picture: ${sameSize ? `${different} of ${total} pixels` : "another size"}`,
       );
     }
-    return `${name} matches its picture, ${different} of ${total} pixels apart`;
+    step(`${name} matches its picture, ${different} of ${total} pixels apart`);
   };
 
   const noSideways = async (where) => {
@@ -637,7 +645,7 @@ try {
   );
   assert.equal(await page.getByTestId("create-element-older").count(), 0);
   step("it comes off a shot, and pinned again holds the newest version");
-  step(await matchesBaseline("create-elements-1440", elements));
+  await matchesBaseline("create-elements-1440", elements);
   const unnamedHere = await elements.evaluate((panel) =>
     [...panel.querySelectorAll(":is(input,select)")]
       .filter(
@@ -659,7 +667,7 @@ try {
   await page.locator("button.language").click();
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl");
   await noSideways("Arabic");
-  step(await matchesBaseline("create-elements-1440-arabic", elements));
+  await matchesBaseline("create-elements-1440-arabic", elements);
   await shot("create-1440-arabic");
   step("in Arabic it lays out right to left");
 
