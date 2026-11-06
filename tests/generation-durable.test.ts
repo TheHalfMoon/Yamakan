@@ -1205,6 +1205,21 @@ test("stopping following a refused run does not hold up the next start", async (
   await f.s.close();
 });
 
+test("a stop on a finished run asks nothing, and it is not brought in", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.k.world.state = "COMPLETE";
+  assert.equal((await f.s.service.status(id)).state, "succeeded");
+  const calls = f.k.world.calls;
+  const stopped = await f.s.service.cancel(id);
+  assert.equal(stopped.requested, false);
+  assert.equal(stopped.remoteOutcome, "unknown");
+  assert.equal(f.k.world.calls, calls);
+  assert.equal(row(f, id).state, "cancelled");
+  await assert.rejects(f.s.service.importResult(id), /cancelled/);
+  await f.s.close();
+});
+
 test("two questions at once after a restart are one question", async () => {
   const f = await fixture();
   const { generationId: id } = await f.start();
