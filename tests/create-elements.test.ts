@@ -236,9 +236,9 @@ test("a pack this cannot show or add to is not offered as an element", () => {
   assert.equal(asElement(mixed), null);
 });
 
-// Text, on purpose: it stops the first step of sending these anywhere, which nothing else
-// would notice, since a model's input is otherwise free to take them.
-test("nothing that starts a generation reads an element or a pin", () => {
+// Text, in these files only: it catches the plain first step of sending one, not an
+// indirect read. The consent check on a first frame does read every pack, and forwards none.
+test("the code that starts a generation does not name an element or a pin", () => {
   for (const file of [
     "core/engines/generation.ts",
     "core/engines/kaggle.ts",

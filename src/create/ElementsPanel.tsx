@@ -66,15 +66,18 @@ export function ElementsPanel<S extends PinnableStory>(props: {
   const [working, setWorking] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
+  // A load begun before a save knows less than that save does.
+  const loads = useRef(0);
   const shots = story?.scenes.flatMap((scene) => scene.shots) ?? [];
 
   // A restore or undo can change what the project holds.
   useEffect(() => {
     let current = true;
+    const started = ++loads.current;
     api
       .load()
       .then((found) => {
-        if (!current) return;
+        if (!current || started !== loads.current) return;
         setElements(found);
         setProblem((was) => (was === "create.elementsUnread" ? null : was));
       })
@@ -93,6 +96,11 @@ export function ElementsPanel<S extends PinnableStory>(props: {
       return;
     }
     const existing = elements.find((e) => e.documentId === adding);
+    // It went while the picker was open: this image was not meant for a new one.
+    if (adding && !existing) {
+      setProblem("create.elementGone");
+      return;
+    }
     // Before the image comes in: it would stay in the project with nowhere to go.
     if (existing && elementIsFull(existing.pack)) {
       setProblem("create.elementFull");
@@ -130,6 +138,7 @@ export function ElementsPanel<S extends PinnableStory>(props: {
         setProblem("create.elementImageOnly");
         return;
       }
+      loads.current++;
       setElements((all) => [
         ...all.filter((e) => e.documentId !== kept.documentId),
         kept,

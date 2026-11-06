@@ -2243,10 +2243,7 @@ function App() {
                             expectedRevision: head.current!.revision,
                             ...next,
                           } as any)) as any;
-                          const opened = await call("yamakan.project.open", {
-                            projectId: p.id,
-                          });
-                          accept(opened);
+                          // Kept from here, whatever reopening the project then says.
                           kept = {
                             documentId: next.documentId,
                             contentHash:
@@ -2255,6 +2252,11 @@ function App() {
                               null,
                             story: next.story,
                           };
+                          accept(
+                            await call("yamakan.project.open", {
+                              projectId: p.id,
+                            }),
+                          );
                         }).finally(() => resolve(kept));
                       })
                     }
