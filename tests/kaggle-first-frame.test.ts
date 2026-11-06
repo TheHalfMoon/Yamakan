@@ -77,7 +77,10 @@ function briefOf(folder: string) {
   );
 }
 
-async function fixture(alsoOffered: readonly string[] = [recipe.id]) {
+async function fixture(
+  alsoOffered: readonly string[] = [recipe.id],
+  world: { exists?: boolean; push?: "ok" | "lost" | "refused" } = {},
+) {
   const root = mkdtempSync(path.join(tmpdir(), "first-frame-"));
   roots.push(root);
   mkdirSync(path.join(root, "tmp"));
@@ -92,6 +95,8 @@ async function fixture(alsoOffered: readonly string[] = [recipe.id]) {
     asked.push(args[1]);
     if (args[1] === "list") return { stdout: "Not found\n" };
     if (args[1] === "status") {
+      if (world.exists)
+        return { stdout: 'has status "KernelWorkerStatus.COMPLETE"' };
       if (pushes.length === 0)
         throw new Error(
           "Cannot access kernel (Permission 'kernels.get' was denied).",
@@ -106,6 +111,9 @@ async function fixture(alsoOffered: readonly string[] = [recipe.id]) {
       return { stdout: "" };
     }
     if (args[1] === "push") {
+      if (world.push === "refused")
+        throw new Error("Kernel push error: Maximum weekly GPU quota");
+      if (world.push === "lost") throw new Error("Connection reset");
       pushes.push({
         brief: briefOf(args[3]),
         metadata: JSON.parse(
@@ -218,7 +226,10 @@ test("the ledger holds the image's hash, not the image", async () => {
         .get(generationId) as { payload: string },
   );
   assert.ok(row.payload.includes(STILL_HASH));
-  assert.ok(!row.payload.includes(STILL.toString("base64").slice(0, 40)));
+  const once = STILL.toString("base64");
+  const twice = Buffer.from(JSON.stringify({ data: once })).toString("base64");
+  assert.ok(!row.payload.includes(once.slice(0, 40)));
+  assert.ok(!row.payload.includes(twice.slice(8, 48)));
   await f.close();
 });
 
@@ -265,6 +276,30 @@ test("a last frame is refused, since this model would ignore it without saying",
   await f.close();
 });
 
+test("a single last frame is refused too", async () => {
+  const f = await fixture();
+  const answer = await f.adapter.submit(
+    adapterRequest(f, [{ role: "lastFrame", asset: frameRef }]),
+    opening(STILL),
+  );
+  assert.deepEqual(answer, { refused: "INPUT_UNSUPPORTED" });
+  assert.equal(f.pushes.length, 0);
+  await f.close();
+});
+
+for (const push of ["lost", "refused"] as const)
+  test(`after a ${push} push, the image's copy does not stay on this computer`, async () => {
+    const f = await fixture([recipe.id], { push });
+    await f.service.start(f.request).catch(() => {});
+    const left = readdirSync(path.join(f.root, "tmp"), {
+      recursive: true,
+      withFileTypes: true,
+    }).filter((e) => e.isFile());
+    assert.deepEqual(left, []);
+    assert.equal(f.pushes.length, 0);
+    await f.close();
+  });
+
 test("no frame at all is refused", async () => {
   const f = await fixture();
   const answer = await f.adapter.submit(adapterRequest(f, []), opening(STILL));
@@ -298,8 +333,10 @@ test("an image over the limit is refused, before anything is sent", async () => 
   await f.close();
 });
 
-test("consent that ends is found as the image is read, after the notebook is checked", async () => {
-  const f = await fixture();
+// That the read is where consent is checked is shown in generation-service.test.ts. This
+// shows that read comes after the questions about the notebook, which can take minutes.
+test("the image is read only after the notebook has been checked, privacy included", async () => {
+  const f = await fixture([recipe.id], { exists: true });
   let askedBeforeRead: string[] = [];
   const context = {
     openAsset: () => {
@@ -312,10 +349,8 @@ test("consent that ends is found as the image is read, after the notebook is che
     context,
   );
   await assert.rejects(answer, /Consent has ended/);
-  assert.ok(
-    askedBeforeRead.includes("status"),
-    "the notebook was checked first",
-  );
+  assert.ok(askedBeforeRead.includes("status"), "the notebook was checked");
+  assert.ok(askedBeforeRead.includes("pull"), "and its privacy read");
   assert.equal(f.pushes.length, 0);
   await f.close();
 });
@@ -373,10 +408,12 @@ asked = {}
 class Part:
     def to(self, _): return self
     def enable_tiling(self): pass
+    def register_forward_pre_hook(self, hook): asked["hooked"] = True
     def enable_slicing(self): pass
 class Pipe:
     text_encoder = Part()
     vae = Part()
+    transformer = Part()
     @classmethod
     def from_pretrained(cls, *a, **k): return cls()
     def encode_prompt(self, **k):
@@ -412,6 +449,10 @@ def fit(picture, size, method):
     asked["fit"] = list(size)
     return "the fitted frame"
 ops.fit = fit
+def upright(picture):
+    asked["upright"] = True
+    return picture
+ops.exif_transpose = upright
 pil.Image = image
 pil.ImageOps = ops
 sys.modules["PIL"] = pil
@@ -468,12 +509,17 @@ test(
   "the script gives the pipeline the frame it was sent, fitted, and keeps only its hash",
   { skip: python ? false : "no Python here" },
   () => {
-    const { status, stderr, asked, receipt, out } = runScript("right");
+    const { status, stderr, stdout, asked, receipt, out } = runScript("right");
+    const sent = Buffer.from("the bytes of a still").toString("base64");
+    assert.ok(!stdout.includes(sent), "nor in what it prints");
+    assert.ok(!stderr.includes(sent), "nor in what it prints");
     assert.equal(status, 0, stderr);
     assert.equal(asked.opened, true);
     assert.deepEqual(asked.fit, [recipe.width, recipe.height]);
     assert.equal(asked.image, "the fitted frame");
     assert.equal(asked.encode, 512);
+    assert.equal(asked.upright, true);
+    assert.equal(asked.hooked, true, "the VAE leaves the GPU for the steps");
     assert.ok(!asked.call.includes("last_image"));
     const kept = JSON.parse(receipt);
     assert.equal(kept.stage, "done");

@@ -109,8 +109,11 @@ try:
         raise ValueError("The first frame is not the one this run was sent.")
     with Image.open(io.BytesIO(frame_bytes)) as opened:
         receipt["firstFrameSize"] = list(opened.size)
+        # Upright first, as a phone's photo is only by its metadata.
         first_frame = ImageOps.fit(
-            opened.convert("RGB"), (WIDTH, HEIGHT), Image.LANCZOS
+            ImageOps.exif_transpose(opened).convert("RGB"),
+            (WIDTH, HEIGHT),
+            Image.LANCZOS,
         )
     receipt["stage"] = "loading"
     save()
@@ -137,6 +140,9 @@ try:
     gc.collect()
     torch.cuda.empty_cache()
     pipe.enable_model_cpu_offload(gpu_id=0)
+    # Encoding the frame brings the VAE to the GPU, and with the text encoder gone nothing
+    # would send it back: it would sit there through every step. Decoding fetches it again.
+    pipe.transformer.register_forward_pre_hook(lambda *_: pipe.vae.to("cpu"))
     pipe.vae.enable_tiling()
     pipe.vae.enable_slicing()
     receipt["loadSeconds"] = round(time.time() - started, 1)
