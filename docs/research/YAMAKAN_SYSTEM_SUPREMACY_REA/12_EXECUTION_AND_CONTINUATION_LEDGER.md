@@ -276,7 +276,17 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 2. A few controlled runs on the `Killed` failure, kept few. At one kill in about ten runs, a handful of good runs does not show it solved.
 3. Real qualification of image-to-video and CogVideoX. Each engine stays off until its own real run passes.
 
-**Next that needs no GPU:** reference images and reusable elements in Create; image-to-video's path, disabled until qualified; visual baseline tests. Arabic human review and UX acceptance stay separate from automated checks.
+**Places and props, and the first visual baseline:** [PR #212](https://github.com/TheHalfMoon/Yamakan/pull/212) keeps a place, prop, wardrobe or style with the project and pins it to a shot. These are records only: no model receives them. `npm run qualify:create` compares that panel with pictures in `docs/evidence/baselines/win32/`, which is not in CI, and shows only that it is within a tight tolerance of them. Arabic human review and UX acceptance stay separate from automated checks.
+
+**Needs a founder decision before it can go further:**
+
+1. How a fictional or drawn character is stored. The `character` role requires a usable consent, so it cannot be kept without recording one for it, and the page offers neither. Filing it as a prop works, and mislabels it.
+2. Whether `likeness-generate` consent covers sending an image to Kaggle. It does not separate use on this computer from leaving it.
+3. How an image reaches the notebook. Embedding it in the run's brief needs no new Kaggle object, and it stays in the notebook's history as the prompt does. A private dataset arguably goes beyond the recorded permission, which names a private notebook.
+
+**Already in main, for the founder to confirm or refuse:** since PR #212, media whose consent was revoked can be kept and shown as a place, prop, wardrobe or style. Placing and generating from those exact bytes stay refused. The founder's decision of 2026-11-05, as `docs/evidence/ultimate/consent-gate.md` describes it, asks that a revoked photo not be placed or used, and whether keeping it counts as use was not decided.
+
+**Next that needs no GPU:** a stand-in Kaggle CLI to drive the panel's failure, Stop following and restart screens in a browser, which have never been run there.
 
 **Open findings added:**
 
