@@ -174,11 +174,14 @@ export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {
   return env;
 }
 
-// Its authentication help goes to stdout, beside whatever warning went to stderr.
-export const cliWords = (stderr: string, stdout: string) =>
-  [stderr, stdout]
-    .map((words) => words.trim())
-    .filter(Boolean)
+// Its authentication help goes to stdout, beside whatever warning went to stderr. Its
+// advice to upgrade comes first, and would take the room of what Kaggle really said.
+export const cliWords = (...streams: string[]) =>
+  streams
+    .join("\n")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("Warning: Looks like you're"))
     .join(" ");
 
 export function kaggleCli(file: string): KaggleCli {
@@ -839,7 +842,9 @@ export function createKaggleEngine(options: {
           3 * 60 * 1000,
         );
         if (!/successfully pushed/i.test(stdout))
-          throw new Error(stdout.slice(0, ENGINE_V2_LIMITS.diagnosticChars));
+          throw new Error(
+            cliWords(stdout).slice(0, ENGINE_V2_LIMITS.diagnosticChars),
+          );
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
         await rm(push, { recursive: true, force: true }).catch(() => {});

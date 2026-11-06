@@ -1051,6 +1051,24 @@ test("the CLI's words are all kept, not only those on stderr", () => {
   assert.equal(cliWords("", ""), "");
 });
 
+// As real Kaggle answered, with the weekly quota used up.
+test("Kaggle's real answer on quota reaches the person, past the CLI's advice", async () => {
+  const f = await fixture();
+  f.k.world.pushStdout =
+    "Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)\r\nKernel push error: Maximum weekly GPU quota of 30.00 hours reached.\r\n";
+  await assert.rejects(
+    f.start(),
+    /did not take the run: Kernel push error: Maximum weekly GPU quota/,
+  );
+  assert.deepEqual(f.s.service.list(f.project.id), []);
+  assert.equal(
+    f.k.world.pushes.length,
+    1,
+    "what the stand-in records of a try",
+  );
+  await f.s.close();
+});
+
 test("Kaggle's own refusal printed with a clean exit is a refusal", async () => {
   const f = await fixture();
   f.k.world.pushStdout = "Kernel push error: this notebook cannot be saved";
