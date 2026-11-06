@@ -235,6 +235,33 @@ const PAST_LIMIT =
 // known one, and only a flag leaves the log, which can hold the prompt.
 const WAS_KILLED =
   "Kaggle killed the run before it finished, most likely because it ran out of memory. The same settings have also worked, so trying again may too.";
+// What a run recorded of itself before it was killed: figures only, none of its words.
+const GIB = 1024 ** 3;
+const gib = (bytes: number) => (bytes / GIB).toFixed(1);
+export function killedAt(receipt: {
+  stage?: unknown;
+  hostMemory?: {
+    lowestAvailableBytes?: unknown;
+    totalBytes?: unknown;
+    cgroupOomKills?: unknown;
+  };
+}) {
+  const said: string[] = [];
+  if (receipt.stage === "generating" || receipt.stage === "decoding")
+    said.push(`It had reached ${receipt.stage}.`);
+  const { lowestAvailableBytes: low, totalBytes: total } =
+    receipt.hostMemory ?? {};
+  if (typeof low === "number" && typeof total === "number")
+    said.push(
+      `At its lowest, ${gib(low)} GiB of ${gib(total)} GiB of memory was free, as last sampled.`,
+    );
+  if (typeof receipt.hostMemory?.cgroupOomKills === "number")
+    said.push(
+      `The host counted ${receipt.hostMemory.cgroupOomKills} out-of-memory kills.`,
+    );
+  return said.join(" ");
+}
+
 const LOG_TAIL_BYTES = 8 * 1024 * 1024;
 // A whole output line, as a real killed run's log has it: a word in a prompt is not.
 const KILLED_LINE = /"data":"Killed\\n"/;
@@ -570,7 +597,7 @@ export function createKaggleEngine(options: {
           ours && typeof left.receipt.error === "string"
             ? left.receipt.error
             : killed
-              ? WAS_KILLED
+              ? [WAS_KILLED, killedAt(left.receipt)].filter(Boolean).join(" ")
               : "The run failed on Kaggle.",
         );
       }

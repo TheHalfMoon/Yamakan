@@ -19,6 +19,7 @@ import {
   KAGGLE_RECIPES,
   createKaggleEngine,
   kaggleCliEnvironment,
+  killedAt,
   kaggleRecipes,
   offeredKaggleRecipes,
   scriptWithBrief,
@@ -658,6 +659,50 @@ test("a killed run says so, from its log, without the log's words", async () => 
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /killed the run/);
   assert.ok(!answer.diagnostic!.includes("the prompt"));
+});
+
+test("a killed run says how far it got, and how much memory was left", async () => {
+  const k = kaggle(["ERROR"], (runId, folder) => {
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({
+        runId,
+        stage: "decoding",
+        error: null,
+        prompt: "the prompt",
+        hostMemory: {
+          lowestAvailableBytes: 2 * 1024 ** 3,
+          totalBytes: 31 * 1024 ** 3,
+          cgroupOomKills: 1,
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(folder, "run.log"),
+      '[{"stream_name":"stderr","time":2,"data":"Killed\\n"}]',
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.match(answer.diagnostic!, /killed the run/);
+  assert.match(answer.diagnostic!, /reached decoding/);
+  assert.match(answer.diagnostic!, /2\.0 GiB of 31\.0 GiB/);
+  assert.match(answer.diagnostic!, /1 out-of-memory kills/);
+  assert.ok(!answer.diagnostic!.includes("the prompt"));
+});
+
+test("what a killed run says of itself takes only what it should", () => {
+  assert.equal(killedAt({}), "");
+  assert.equal(killedAt({ stage: "the prompt" }), "");
+  assert.equal(
+    killedAt({
+      hostMemory: { lowestAvailableBytes: "many", totalBytes: 1 },
+    }),
+    "",
+  );
 });
 
 test("a run that failed otherwise is not said to be killed", async () => {

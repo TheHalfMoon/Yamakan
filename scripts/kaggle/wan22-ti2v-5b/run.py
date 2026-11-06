@@ -13,6 +13,7 @@ import os
 import resource
 import subprocess
 import sys
+import threading
 import time
 import traceback
 
@@ -29,6 +30,7 @@ FPS = 24
 WIDTH = 704
 HEIGHT = 480
 OUT = "/kaggle/working"
+MEMORY_SAMPLE_SECONDS = 5
 PACKAGES = [
     "diffusers==0.36.0",
     "transformers==4.57.1",
@@ -58,9 +60,80 @@ receipt = {
 }
 
 
+saving = threading.Lock()
+
+
+# Whole or not at all: a kill can come at any moment, and what is left must read.
 def save():
-    with open(os.path.join(OUT, "receipt.json"), "w") as f:
-        json.dump(receipt, f, indent=2)
+    target = os.path.join(OUT, "receipt.json")
+    with saving:
+        with open(target + ".part", "w") as f:
+            json.dump(receipt, f, indent=2)
+        os.replace(target + ".part", target)
+
+
+def read_kb(path, field):
+    with open(path) as f:
+        for line in f:
+            if line.startswith(field + ":"):
+                return int(line.split()[1]) * 1024
+    return None
+
+
+def read_number(path):
+    with open(path) as f:
+        return int(f.read().strip())
+
+
+def read_oom_kills():
+    with open("/sys/fs/cgroup/memory.events") as f:
+        for line in f:
+            if line.startswith("oom_kill "):
+                return int(line.split()[1])
+    return None
+
+
+# Each is what this host happens to offer: one it lacks is left out, not guessed.
+def sample(read, *args):
+    try:
+        return read(*args)
+    except (OSError, ValueError):
+        return None
+
+
+# A killed process cannot report its own end, and the peak read after the pipeline
+# returns never happens if it dies decoding. So this writes as it goes: how far the run
+# got, and how much memory was left when it was lowest. Reading it changes no output.
+def watch_memory():
+    seen = {"samples": 0}
+    while True:
+        available = sample(read_kb, "/proc/meminfo", "MemAvailable")
+        rss = sample(read_kb, "/proc/self/status", "VmRSS")
+        if available is not None and available < seen.get(
+            "lowestAvailableBytes", float("inf")
+        ):
+            seen["lowestAvailableBytes"] = available
+            seen["stageAtLowest"] = receipt["stage"]
+        if rss is not None and rss > seen.get("highestRssBytes", 0):
+            seen["highestRssBytes"] = rss
+            seen["stageAtHighest"] = receipt["stage"]
+        seen["samples"] += 1
+        seen.update(
+            {
+                name: value
+                for name, value in {
+                    "totalBytes": sample(read_kb, "/proc/meminfo", "MemTotal"),
+                    "cgroupPeakBytes": sample(
+                        read_number, "/sys/fs/cgroup/memory.peak"
+                    ),
+                    "cgroupOomKills": sample(read_oom_kills),
+                }.items()
+                if value is not None
+            }
+        )
+        receipt["hostMemory"] = dict(seen)
+        save()
+        time.sleep(MEMORY_SAMPLE_SECONDS)
 
 
 def sh(*args):
@@ -68,6 +141,7 @@ def sh(*args):
 
 
 save()
+threading.Thread(target=watch_memory, daemon=True).start()
 receipt["gpus"] = sh(
     "nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"
 ).splitlines()
@@ -125,6 +199,13 @@ try:
     receipt["stage"] = "generating"
     save()
 
+    # The last step's end is where decoding begins, with nothing else changed.
+    def at_step_end(_pipe, step, _timestep, _inputs):
+        if step == STEPS - 1:
+            receipt["stage"] = "decoding"
+            save()
+        return {}
+
     started = time.time()
     video = pipe(
         prompt_embeds=prompt_embeds,
@@ -135,6 +216,7 @@ try:
         num_inference_steps=STEPS,
         guidance_scale=5.0,
         generator=torch.Generator(device="cpu").manual_seed(SEED),
+        callback_on_step_end=at_step_end,
     ).frames[0]
     receipt["generateSeconds"] = round(time.time() - started, 1)
     receipt["peakHostBytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024

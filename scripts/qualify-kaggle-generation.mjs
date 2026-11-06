@@ -40,6 +40,8 @@ if (
 const PROMPT =
   givenPrompt ?? "A red kite flies above a green hill under a clear blue sky.";
 const SEED = 7;
+const WAN_EXACT_OUTPUT =
+  "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c";
 const READY_ONLY = Boolean(process.env.YAMAKAN_QUALIFY_READY_ONLY);
 const MAX_WAIT_MS = 45 * 60 * 1000;
 execFileSync("npm", ["run", "build"], {
@@ -347,6 +349,10 @@ try {
   assert.equal(Number(probe.nb_read_frames), asset.durationFrames);
   copyFileSync(file, join(out, "export.mp4"));
   const generated = project.assets.find((a) => a.kind === "video");
+  // The same prompt and seed have made these same bytes on real Kaggle since 7b04dbf. A
+  // change here means something changed the video, whatever else still passes.
+  if (modelIndex === "0" && !givenPrompt)
+    assert.equal(generated.hash, WAN_EXACT_OUTPUT, "the same video as before");
   step("exported from the toolbar, every frame", {
     width: probe.width,
     height: probe.height,
