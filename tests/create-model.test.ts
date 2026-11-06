@@ -7,6 +7,7 @@ import {
   emptyBrief,
   parseReceipt,
   readBrief,
+  readCopies,
   readReceipts,
   sha256Of,
   validSeed,
@@ -15,6 +16,7 @@ import {
 const receipt = {
   format: "yamakan.generation-receipt/v1",
   stage: "done",
+  verified: true,
   model: "zai-org/CogVideoX-2b",
   revision: "1137dac",
   prompt: "A boat.",
@@ -94,10 +96,17 @@ test("anything else is refused, and says why", () => {
     () => parseReceipt(JSON.stringify({ ...receipt, stage: "failed" })),
     /not-finished/,
   );
+  // A run can finish and fail its own checks.
+  assert.throws(
+    () => parseReceipt(JSON.stringify({ ...receipt, verified: false })),
+    /not-finished/,
+  );
   for (const change of [
     { sha256: "short" },
     { sha256: "A".repeat(64) },
     { seed: "42" },
+    { seed: -1 },
+    { steps: 0 },
     { prompt: 7 },
   ])
     assert.throws(
@@ -117,6 +126,21 @@ test("kept receipts count only under the hash they name", () => {
     {},
   );
   assert.deepEqual(readReceipts("nope"), {});
+  // One bad entry loses only itself.
+  assert.deepEqual(
+    Object.keys(
+      readReceipts(JSON.stringify({ x: { seed: "no" }, [read.sha256]: read })),
+    ),
+    [read.sha256],
+  );
+});
+
+test("kept copies are pairs of hashes", () => {
+  const a = "a".repeat(64);
+  const b = "b".repeat(64);
+  assert.deepEqual(readCopies(JSON.stringify({ [a]: b })), { [a]: b });
+  assert.deepEqual(readCopies(JSON.stringify({ [a]: "no", no: b })), {});
+  assert.deepEqual(readCopies("nope"), {});
 });
 
 test("a hash is of the bytes", async () => {

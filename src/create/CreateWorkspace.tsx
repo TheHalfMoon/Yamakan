@@ -10,9 +10,12 @@ import {
   DIRECTIONS,
   DIRECTION_KINDS,
   PROMPT_LIMIT,
+  RECEIPT_BYTE_LIMIT,
+  VIDEO_CHECK_BYTE_LIMIT,
   composePrompt,
   parseReceipt,
   readBrief,
+  readCopies,
   readReceipts,
   sha256Of,
   validSeed,
@@ -34,16 +37,27 @@ type Asset = {
   bytes: number;
 };
 
-export type GenerationAnswer = {
+export type EngineAnswer = {
   available: boolean;
-  message: string;
-} | null;
+  reason: string | null;
+};
+type EngineState = "checking" | "unknown" | EngineAnswer;
+
+type Said = { key: MessageKey; vars?: Record<string, string | number> };
+
+const REASONS: Record<string, MessageKey> = {
+  ENGINE_DISABLED: "engine.reason.ENGINE_DISABLED",
+  WEIGHTS_ABSENT: "engine.reason.WEIGHTS_ABSENT",
+  HARDWARE_UNQUALIFIED: "engine.reason.HARDWARE_UNQUALIFIED",
+  RIGHTS_UNQUALIFIED: "engine.reason.RIGHTS_UNQUALIFIED",
+};
 
 const keep = (key: string, value: unknown) => {
   try {
     globalThis.localStorage?.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // Not kept: it lasts for this page only.
+    return false;
   }
 };
 const kept = (key: string) => {
@@ -60,52 +74,55 @@ export function CreateWorkspace(props: {
   placedAssetIds: ReadonlySet<string>;
   busy: boolean;
   t: Translate;
-  // Reports whether a generation could run here, from the service.
-  checkEngine: () => Promise<GenerationAnswer>;
-  // Runs under the editor's busy state; resolves to the new asset.
-  importVideo: (file: File) => Promise<Asset | null>;
-  place: (assetId: string) => void;
+  // Whether a generation could run here, from the service.
+  checkEngine: () => Promise<EngineAnswer | null>;
+  // Under the editor's busy state: `check` runs first and can stop the import.
+  // Resolves to the new asset, or null, or "busy" if nothing could start.
+  importVideo: (
+    file: File,
+    check: () => Promise<boolean>,
+  ) => Promise<Asset | null | "busy">;
+  // The whole video, at the end of the track. A reason if it cannot be placed.
+  place: (assetId: string) => string | null;
   openEdit: () => void;
 }) {
   const { projectId, assets, placedAssetIds, busy, t } = props;
   const briefKey = `yamakan.create.brief.${projectId}`;
   const receiptsKey = `yamakan.create.receipts.${projectId}`;
+  const copiesKey = `yamakan.create.copies.${projectId}`;
   const [brief, setBrief] = useState(() => readBrief(kept(briefKey)));
   const [receipts, setReceipts] = useState(() =>
     readReceipts(kept(receiptsKey)),
   );
-  const [engine, setEngine] = useState<GenerationAnswer>(null);
-  const [notice, setNotice] = useState("");
-  const [problem, setProblem] = useState("");
+  const [copies, setCopies] = useState(() => readCopies(kept(copiesKey)));
+  const [engine, setEngine] = useState<EngineState>("checking");
+  const [notice, setNotice] = useState<Said | null>(null);
+  const [problem, setProblem] = useState<Said | string | null>(null);
   const [copied, setCopied] = useState(false);
   const videoInput = useRef<HTMLInputElement>(null);
   const receiptInput = useRef<HTMLInputElement>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
-  // Another project's brief is its own.
-  const loaded = useRef(projectId);
   useEffect(() => {
-    if (loaded.current === projectId) return;
-    loaded.current = projectId;
-    setBrief(readBrief(kept(briefKey)));
-    setReceipts(readReceipts(kept(receiptsKey)));
-  }, [projectId, briefKey, receiptsKey]);
-  useEffect(() => {
-    if (loaded.current === projectId) keep(briefKey, brief);
-  }, [brief, briefKey, projectId]);
+    keep(briefKey, validSeed(brief.seed) ? brief : { ...brief, seed: 42 });
+  }, [brief, briefKey]);
 
   useEffect(() => {
     let current = true;
     props
       .checkEngine()
-      .then((answer) => current && setEngine(answer))
-      .catch(() => current && setEngine(null));
+      .then((answer) => {
+        if (current) setEngine(answer ?? "unknown");
+      })
+      .catch(() => {
+        if (current) setEngine("unknown");
+      });
     return () => {
       current = false;
     };
-    // Once for each project shown.
+    // Once for this project: the panel is keyed by it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, []);
 
   const model =
     CREATE_MODELS.find((m) => m.id === brief.modelId) ?? CREATE_MODELS[0];
@@ -114,55 +131,105 @@ export function CreateWorkspace(props: {
   const composed = composePrompt(brief);
   const videos = assets.filter((a) => a.kind === "video");
 
-  const receiptProblem = (error: unknown) => {
-    const code = error instanceof Error ? error.message : "";
-    return code === "not-finished"
-      ? t("create.receiptNotFinished")
-      : t("create.receiptInvalid");
+  // Read and compared under the import's busy state; the file then goes in.
+  const receiptChecker = (file: File, found: { receipt?: RunReceipt }) => {
+    return async () => {
+      if (!receiptFile) return true;
+      if (receiptFile.size > RECEIPT_BYTE_LIMIT) {
+        setProblem({ key: "create.receiptInvalid" });
+        return false;
+      }
+      if (file.size > VIDEO_CHECK_BYTE_LIMIT) {
+        setProblem({ key: "create.tooLargeToCheck" });
+        return false;
+      }
+      try {
+        found.receipt = parseReceipt(await receiptFile.text());
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "";
+        setProblem({
+          key:
+            code === "not-finished"
+              ? "create.receiptNotFinished"
+              : "create.receiptInvalid",
+        });
+        return false;
+      }
+      try {
+        if (
+          (await sha256Of(await file.arrayBuffer())) !== found.receipt.sha256
+        ) {
+          setProblem({ key: "create.receiptMismatch" });
+          return false;
+        }
+      } catch {
+        setProblem({ key: "create.checkFailed" });
+        return false;
+      }
+      return true;
+    };
   };
 
   const bringIn = async (file: File) => {
-    setProblem("");
-    setNotice("");
-    let receipt: RunReceipt | null = null;
-    if (receiptFile) {
-      try {
-        receipt = parseReceipt(await receiptFile.text());
-      } catch (error) {
-        setProblem(receiptProblem(error));
-        return;
-      }
-      const hash = await sha256Of(await file.arrayBuffer());
-      if (hash !== receipt.sha256) {
-        setProblem(t("create.receiptMismatch"));
-        return;
-      }
+    setProblem(null);
+    setNotice(null);
+    const found: { receipt?: RunReceipt } = {};
+    const asset = await props.importVideo(file, receiptChecker(file, found));
+    if (asset === "busy") {
+      setProblem({ key: "create.busy" });
+      return;
     }
-    const asset = await props.importVideo(file);
-    if (!asset) return;
-    if (receipt) {
-      // The stored file may be a converted copy; the receipt names what was checked.
-      const next = { ...receipts, [asset.hash]: receipt };
-      if (asset.hash !== receipt.sha256) next[receipt.sha256] = receipt;
-      setReceipts(next);
-      keep(receiptsKey, next);
+    if (!asset) {
+      // A refused receipt has said why; otherwise the import failed.
+      setProblem((said) => said ?? { key: "create.importFailed" });
+      return;
+    }
+    const { receipt } = found;
+    if (!receipt) {
+      setNotice({ key: "create.broughtIn", vars: { name: asset.name } });
+      return;
+    }
+    const nextReceipts = { ...receipts, [receipt.sha256]: receipt };
+    setReceipts(nextReceipts);
+    let saved = keep(receiptsKey, nextReceipts);
+    const copy = asset.hash !== receipt.sha256;
+    if (copy) {
+      // Converted when it came in: what is stored is not the file that was checked.
+      const nextCopies = { ...copies, [asset.hash]: receipt.sha256 };
+      setCopies(nextCopies);
+      saved = keep(copiesKey, nextCopies) && saved;
     }
     setReceiptFile(null);
     if (receiptInput.current) receiptInput.current.value = "";
-    setNotice(
-      receipt
-        ? t("create.broughtInChecked", { name: asset.name })
-        : t("create.broughtIn", { name: asset.name }),
-    );
+    setNotice({
+      key: copy ? "create.broughtInCopy" : "create.broughtInChecked",
+      vars: { name: asset.name },
+    });
+    if (!saved) setProblem({ key: "create.notKept" });
   };
+
+  const engineLine: MessageKey =
+    engine === "checking"
+      ? "create.engineChecking"
+      : engine === "unknown"
+        ? "create.engineUnknown"
+        : engine.available
+          ? "create.engineFound"
+          : "create.engineOff";
+  const reasonKey =
+    typeof engine === "object" && !engine.available && engine.reason
+      ? REASONS[engine.reason]
+      : undefined;
+  const seedValid = validSeed(brief.seed);
 
   return (
     <section className="create" data-testid="create-panel">
       <div className="create-composer">
         <h2>{t("workspace.create")}</h2>
-        <label className="create-field">
-          {t("create.prompt")}
+        <div className="create-field">
+          <label htmlFor="create-prompt">{t("create.prompt")}</label>
           <textarea
+            id="create-prompt"
             dir="auto"
             rows={4}
             maxLength={PROMPT_LIMIT}
@@ -177,7 +244,7 @@ export function CreateWorkspace(props: {
               limit: PROMPT_LIMIT,
             })}
           </small>
-        </label>
+        </div>
 
         <fieldset className="create-direction">
           <legend>{t("create.direction")}</legend>
@@ -230,13 +297,19 @@ export function CreateWorkspace(props: {
               min={0}
               max={2 ** 32 - 1}
               step={1}
-              value={brief.seed}
+              value={Number.isNaN(brief.seed) ? "" : brief.seed}
               data-testid="create-seed"
-              aria-invalid={!validSeed(brief.seed)}
-              onChange={(e) => update({ seed: Number(e.target.value) })}
+              aria-invalid={!seedValid}
+              aria-describedby={seedValid ? undefined : "create-seed-problem"}
+              onChange={(e) => update({ seed: e.target.valueAsNumber })}
             />
           </label>
         </div>
+        {!seedValid && (
+          <p id="create-seed-problem" className="create-problem">
+            {t("create.seedInvalid")}
+          </p>
+        )}
         <p className="note" data-testid="create-model-facts">
           {t("create.modelFacts", {
             width: model.width,
@@ -254,17 +327,23 @@ export function CreateWorkspace(props: {
           <p dir="auto" data-testid="create-final-prompt">
             {composed || t("create.finalPromptEmpty")}
           </p>
+          {model.negativePrompt && (
+            <p className="note" data-testid="create-negative-prompt">
+              {t("create.negativePrompt", { words: model.negativePrompt })}
+            </p>
+          )}
           <button
             type="button"
             disabled={!composed}
             data-testid="create-copy"
             onClick={async () => {
+              setProblem(null);
               try {
                 await navigator.clipboard.writeText(composed);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               } catch {
-                setProblem(t("create.copyFailed"));
+                setProblem({ key: "create.copyFailed" });
               }
             }}
           >
@@ -274,16 +353,8 @@ export function CreateWorkspace(props: {
 
         <div className="create-engine" data-testid="create-engine">
           <h3>{t("create.engineTitle")}</h3>
-          <p>
-            {engine?.available
-              ? t("create.engineReady")
-              : t("create.engineOff")}
-          </p>
-          {engine && !engine.available && (
-            <p className="note" dir="auto">
-              {engine.message}
-            </p>
-          )}
+          <p>{t(engineLine)}</p>
+          {reasonKey && <p className="note">{t(reasonKey)}</p>}
           <p className="note">
             {t("create.outside", { folder: model.folder })}
           </p>
@@ -328,7 +399,7 @@ export function CreateWorkspace(props: {
           className="create-notice"
           data-testid="create-notice"
         >
-          {notice}
+          {notice && t(notice.key, notice.vars)}
         </div>
         {problem && (
           <div
@@ -336,7 +407,9 @@ export function CreateWorkspace(props: {
             className="create-problem"
             data-testid="create-problem"
           >
-            {problem}
+            {typeof problem === "string"
+              ? problem
+              : t(problem.key, problem.vars)}
           </div>
         )}
 
@@ -346,13 +419,15 @@ export function CreateWorkspace(props: {
         ) : (
           <ul className="create-videos">
             {videos.map((video) => {
-              const receipt = receipts[video.hash];
+              const original = copies[video.hash];
+              const receipt = receipts[original ?? video.hash];
               const placed = placedAssetIds.has(video.id);
               return (
                 <li key={video.id} data-testid="create-video">
                   <video
                     controls
                     preload="metadata"
+                    aria-label={video.name}
                     src={mediaUrl(
                       `/api/v1/projects/${projectId}/assets/${video.id}`,
                     )}
@@ -361,14 +436,20 @@ export function CreateWorkspace(props: {
                     <bdi>{video.name}</bdi>
                   </strong>
                   {receipt ? (
-                    <small dir="auto" data-testid="create-receipt-facts">
-                      {t("create.receiptFacts", {
-                        model: receipt.model,
+                    <small data-testid="create-receipt-facts">
+                      {t(
+                        original
+                          ? "create.receiptMatchedOriginal"
+                          : "create.receiptMatched",
+                      )}{" "}
+                      {t("create.receiptSays", {
                         seed: receipt.seed,
                         steps: receipt.steps,
                       })}
                       <br />
-                      {receipt.prompt}
+                      <bdi>{receipt.model}</bdi>
+                      <br />
+                      <bdi>{receipt.prompt}</bdi>
                     </small>
                   ) : (
                     <small>{t("create.noReceipt")}</small>
@@ -379,8 +460,16 @@ export function CreateWorkspace(props: {
                       disabled={busy}
                       data-testid="create-place"
                       onClick={() => {
-                        props.place(video.id);
-                        setNotice(t("create.placed", { name: video.name }));
+                        setProblem(null);
+                        const refused = props.place(video.id);
+                        if (refused) {
+                          setNotice(null);
+                          setProblem(refused);
+                        } else
+                          setNotice({
+                            key: "create.placed",
+                            vars: { name: video.name },
+                          });
                       }}
                     >
                       {placed ? t("create.placeAgain") : t("create.place")}

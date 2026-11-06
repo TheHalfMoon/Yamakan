@@ -12,7 +12,10 @@ export type CreateModel = {
   frames: number;
   fps: number;
   steps: number;
+  // Loading and generating, from its run. Loading was the first on that disk.
   secondsToMake: number;
+  // What its notebook always asks to avoid, or null.
+  negativePrompt: string | null;
   folder: string;
 };
 
@@ -26,7 +29,8 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     frames: 49,
     fps: 8,
     steps: 50,
-    secondsToMake: 1051,
+    secondsToMake: 1125,
+    negativePrompt: null,
     folder: "scripts/kaggle/cogvideox-2b",
   },
   {
@@ -38,7 +42,8 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     frames: 41,
     fps: 24,
     steps: 30,
-    secondsToMake: 353,
+    secondsToMake: 639,
+    negativePrompt: "blurry, low quality, distorted, static",
     folder: "scripts/kaggle/wan22-ti2v-5b",
   },
 ]);
@@ -84,6 +89,9 @@ export type CreateBrief = {
 };
 
 export const PROMPT_LIMIT = 2000;
+export const RECEIPT_BYTE_LIMIT = 1024 * 1024;
+// Checking reads the whole video into this page's memory.
+export const VIDEO_CHECK_BYTE_LIMIT = 512 * 1024 * 1024;
 
 export const emptyBrief = (): CreateBrief => ({
   prompt: "",
@@ -156,15 +164,18 @@ export function parseReceipt(text: string): RunReceipt {
   }
   if (r?.format !== "yamakan.generation-receipt/v1")
     throw new Error("not-receipt");
-  if (r.stage !== "done") throw new Error("not-finished");
+  if (r.stage !== "done" || r.verified !== true)
+    throw new Error("not-finished");
   if (
     typeof r.sha256 !== "string" ||
     !/^[a-f0-9]{64}$/.test(r.sha256) ||
     typeof r.model !== "string" ||
     typeof r.revision !== "string" ||
     typeof r.prompt !== "string" ||
-    !Number.isInteger(r.seed) ||
-    !Number.isInteger(r.steps)
+    !validSeed(r.seed) ||
+    !Number.isInteger(r.steps) ||
+    r.steps < 1 ||
+    r.steps > 100_000
   )
     throw new Error("not-receipt");
   return {
@@ -185,25 +196,50 @@ export async function sha256Of(data: ArrayBuffer) {
   ).join("");
 }
 
-// Kept receipts, by the hash of the video they describe.
+// Kept receipts, by the hash of the video they describe. One bad entry loses only
+// itself.
 export function readReceipts(raw: string | null): Record<string, RunReceipt> {
   const kept: Record<string, RunReceipt> = {};
   if (!raw) return kept;
+  let all: unknown;
   try {
-    const all = JSON.parse(raw);
-    for (const [hash, value] of Object.entries(all ?? {})) {
+    all = JSON.parse(raw);
+  } catch {
+    return kept;
+  }
+  for (const [hash, value] of Object.entries(all ?? {})) {
+    try {
       const receipt = parseReceipt(
         JSON.stringify({
           ...(value as object),
           format: "yamakan.generation-receipt/v1",
           stage: "done",
+          verified: true,
           license: (value as RunReceipt).licence,
         }),
       );
       if (receipt.sha256 === hash) kept[hash] = receipt;
+    } catch {
+      // Not a receipt.
     }
+  }
+  return kept;
+}
+
+// A stored video's hash and the hash of the file it was converted from.
+export function readCopies(raw: string | null): Record<string, string> {
+  const kept: Record<string, string> = {};
+  if (!raw) return kept;
+  try {
+    for (const [copy, original] of Object.entries(JSON.parse(raw) ?? {}))
+      if (
+        /^[a-f0-9]{64}$/.test(copy) &&
+        typeof original === "string" &&
+        /^[a-f0-9]{64}$/.test(original)
+      )
+        kept[copy] = original;
   } catch {
-    // Not receipts: none kept.
+    // Not copies: none kept.
   }
   return kept;
 }

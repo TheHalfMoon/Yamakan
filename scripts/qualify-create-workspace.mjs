@@ -92,6 +92,7 @@ else
       seed: 1,
       steps: 1,
       sha256: sha,
+      verified: true,
     }),
   );
 const wrongPath = join(root, "wrong.json");
@@ -187,7 +188,7 @@ try {
   await engine.getByText("cannot run a model").waitFor();
   const offers = await page
     .locator("button, a, [role=button], [role=menuitem]")
-    .filter({ hasText: /generate/i })
+    .filter({ hasText: /generate|توليد|إنشاء فيديو/i })
     .count();
   assert.equal(offers, 0, "nothing offers to generate");
   step("while nothing can run, it says so and nothing offers to");
@@ -265,6 +266,20 @@ try {
       [operation, parameters],
     );
 
+  // What a receipt says stays after a reload, with what it does and does not show.
+  await page.reload();
+  await page.waitForFunction(() => location.hash === "");
+  await page
+    .getByRole("button", { name: /revision/i })
+    .first()
+    .click();
+  await page.getByTestId("create-video").first().waitFor();
+  assert.match(
+    await page.getByTestId("create-receipt-facts").textContent(),
+    /hash matched this receipt, in this browser/,
+  );
+  step("what the receipt showed is still there after a reload");
+
   await page.getByTestId("create-place").click();
   await page.getByTestId("create-open-edit").click();
   assert.equal(
@@ -327,11 +342,63 @@ try {
     frames: Number(probe.nb_read_frames),
   });
 
+  // A file that is converted on the way in: the stored copy is not what was checked.
+  const vfr = join(root, "variable.mp4");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=320x240:rate=30:duration=1",
+      "-vf",
+      "select='not(mod(n,5))+gt(n,20)',setpts='if(lt(N,5),N*6,N*2)/30/TB'",
+      "-fps_mode",
+      "vfr",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:v",
+      "libx264",
+      vfr,
+    ],
+    { windowsHide: true },
+  );
+  const vfrReceipt = join(root, "variable.json");
+  writeFileSync(
+    vfrReceipt,
+    JSON.stringify({
+      format: "yamakan.generation-receipt/v1",
+      stage: "done",
+      verified: true,
+      model: "test-pattern",
+      revision: "none",
+      prompt: "A variable-rate test pattern.",
+      seed: 2,
+      steps: 1,
+      sha256: createHash("sha256").update(readFileSync(vfr)).digest("hex"),
+    }),
+  );
+  await page.getByRole("tab", { name: "Create", exact: true }).click();
+  await page.getByTestId("create-receipt").setInputFiles(vfrReceipt);
+  await page.getByTestId("create-video-file").setInputFiles(vfr);
+  await page
+    .getByTestId("create-notice")
+    .getByText("was then converted")
+    .waitFor({ timeout: 120_000 });
+  const cards = page.getByTestId("create-video");
+  assert.equal(await cards.count(), 2);
+  const converted = cards.filter({ hasText: "variable.mp4" });
+  assert.match(await converted.textContent(), /This is a converted copy/);
+  step("a converted file says the original matched, not that this copy did");
+
   // Everything in the panel can be reached by keyboard, in a sensible order.
   await page.getByRole("tab", { name: "Create", exact: true }).click();
   await page.getByTestId("create-prompt").focus();
   const reached = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 16; i++) {
     await page.keyboard.press("Tab");
     reached.push(
       await page.evaluate(() => document.activeElement?.dataset?.testid ?? ""),
@@ -339,6 +406,8 @@ try {
   }
   for (const id of [
     "create-direction-shot",
+    "create-direction-movement",
+    "create-direction-lens",
     "create-direction-light",
     "create-model",
     "create-seed",
@@ -395,7 +464,8 @@ try {
       `${JSON.stringify(
         {
           task: "create-workspace",
-          aiGenerated: Boolean(givenVideo),
+          suppliedVideo: Boolean(givenVideo),
+          aiGenerated: false,
           head: execFileSync("git", ["rev-parse", "HEAD"], {
             encoding: "utf8",
           }).trim(),

@@ -290,7 +290,6 @@ function App() {
   };
   // A file joins the project; its new asset, or null if it made none.
   const importMedia = async (p: Project, file: File) => {
-    const before = new Set(p.assets.map((a) => a.id));
     let made: any = null;
     await save();
     const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
@@ -326,7 +325,9 @@ function App() {
       });
       accept(opened);
       made =
-        opened.assets.find((a: { id: string }) => !before.has(a.id)) ?? null;
+        opened.assets.find(
+          (a: { id: string }) => `asset:${a.id}` === job.artifact,
+        ) ?? null;
       setMessage(msg("import.converted", { name: file.name }));
     } else {
       accept(v.project);
@@ -614,53 +615,74 @@ function App() {
   // What the canvas preview shows only approximately (YU-018), once per
   // project value (the playhead re-renders this component every frame).
   const parity = useMemo(() => (p ? previewParity(p) : null), [p]);
-  const addAsset = (assetId: string, trackId?: string, time?: number) =>
-    edit((p) => {
-      const a = p.assets.find((a) => a.id === assetId);
-      if (!a) throw new Error(t("error.assetMissing"));
-      const kind = a.kind === "audio" ? "audio" : "video";
-      const track = trackId
-        ? p.tracks.find((x) => x.id === trackId)
-        : p.tracks.find(
-            (x) => x.id === activeTrack && x.kind === kind && !x.locked,
-          ) ||
-          p.tracks.find((x) => x.targeted && x.kind === kind && !x.locked) ||
-          p.tracks.find((x) => x.kind === kind && !x.locked);
-      if (!track || track.locked || track.kind !== kind)
-        throw new Error(t("error.track"));
-      const start =
-        time === undefined
-          ? Math.max(
-              0,
-              ...p.clips
-                .filter((c) => c.trackId === track.id)
-                .map((c) => c.startFrame + c.durationFrames),
-            )
-          : Math.round(time * fps);
-      const clip = {
-        id: crypto.randomUUID(),
-        trackId: track.id,
-        assetId: a.id,
-        startFrame: start,
-        durationFrames:
-          a.kind === "image"
-            ? Math.round(3 * fps)
+  const withAsset = (
+    p: Project,
+    assetId: string,
+    trackId?: string,
+    time?: number,
+    whole = false,
+  ): Project => {
+    const a = p.assets.find((a) => a.id === assetId);
+    if (!a) throw new Error(t("error.assetMissing"));
+    const kind = a.kind === "audio" ? "audio" : "video";
+    const track = trackId
+      ? p.tracks.find((x) => x.id === trackId)
+      : p.tracks.find(
+          (x) => x.id === activeTrack && x.kind === kind && !x.locked,
+        ) ||
+        p.tracks.find((x) => x.targeted && x.kind === kind && !x.locked) ||
+        p.tracks.find((x) => x.kind === kind && !x.locked);
+    if (!track || track.locked || track.kind !== kind)
+      throw new Error(t("error.track"));
+    const start =
+      time === undefined
+        ? Math.max(
+            0,
+            ...p.clips
+              .filter((c) => c.trackId === track.id)
+              .map((c) => c.startFrame + c.durationFrames),
+          )
+        : Math.round(time * fps);
+    const clip = {
+      id: crypto.randomUUID(),
+      trackId: track.id,
+      assetId: a.id,
+      startFrame: start,
+      durationFrames:
+        a.kind === "image"
+          ? Math.round(3 * fps)
+          : whole
+            ? a.durationFrames
             : Math.min(a.durationFrames, Math.round(5 * fps)),
-        sourceFrame: 0,
-        title: null as string | null,
-        ...(a.kind === "video"
-          ? {
-              sound: {
-                enabled: a.hasAudio === true,
-                gainDb: 0,
-                fadeInFrames: 0,
-                fadeOutFrames: 0,
-              },
-            }
-          : {}),
-      };
-      return { ...p, clips: [...p.clips, clip] };
-    });
+      sourceFrame: 0,
+      title: null as string | null,
+      ...(a.kind === "video"
+        ? {
+            sound: {
+              enabled: a.hasAudio === true,
+              gainDb: 0,
+              fadeInFrames: 0,
+              fadeOutFrames: 0,
+            },
+          }
+        : {}),
+    };
+    return { ...p, clips: [...p.clips, clip] };
+  };
+  const addAsset = (assetId: string, trackId?: string, time?: number) =>
+    edit((p) => withAsset(p, assetId, trackId, time));
+  // A whole generated video, or the reason it cannot be placed: tried first, since
+  // an edit only reports to the status line.
+  const placeWhole = (p: Project, assetId: string) => {
+    if (busy) return t("status.working");
+    try {
+      ProjectSchema.parse(withAsset(p, assetId, undefined, undefined, true));
+    } catch (e) {
+      return e instanceof Error ? e.message : t("error.edit");
+    }
+    edit((now) => withAsset(now, assetId, undefined, undefined, true));
+    return null;
+  };
   const updateClips = (updates: TimelineClip[]) =>
     edit((p) => applyClipUpdates(p, updates));
   // The editor's parts, shared by the workspace shell (YU-030) and the
@@ -2167,18 +2189,19 @@ function App() {
                           o.operation === "textToVideo",
                       );
                       return video
-                        ? { available: video.available, message: video.message }
+                        ? { available: video.available, reason: video.reason }
                         : null;
                     }}
-                    importVideo={(file) =>
-                      new Promise((resolve) => {
+                    importVideo={(file, check) => {
+                      if (busy) return Promise.resolve("busy" as const);
+                      return new Promise((resolve) => {
                         let made: any = null;
                         run(async () => {
-                          made = await importMedia(p, file);
+                          if (await check()) made = await importMedia(p, file);
                         }).finally(() => resolve(made));
-                      })
-                    }
-                    place={(assetId) => addAsset(assetId)}
+                      });
+                    }}
+                    place={(assetId) => placeWhole(p, assetId)}
                     openEdit={() => openWorkspace("edit")}
                   />
                 ) : (
