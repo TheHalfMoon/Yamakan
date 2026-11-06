@@ -68,7 +68,7 @@ if (!givenVideo)
       "-f",
       "lavfi",
       "-i",
-      "testsrc2=size=704x480:rate=24:duration=1.7",
+      "testsrc2=size=704x480:rate=24:duration=6",
       "-pix_fmt",
       "yuv420p",
       "-c:v",
@@ -188,7 +188,7 @@ try {
   await engine.getByText("cannot run a model").waitFor();
   const offers = await page
     .locator("button, a, [role=button], [role=menuitem]")
-    .filter({ hasText: /generate|توليد|إنشاء فيديو/i })
+    .filter({ hasText: /generate/i })
     .count();
   assert.equal(offers, 0, "nothing offers to generate");
   step("while nothing can run, it says so and nothing offers to");
@@ -223,6 +223,9 @@ try {
   await bringIn(wrongPath);
   await page.getByRole("alert").getByText("not the file").waitFor();
   assert.equal(await videoCount(), 0);
+  await page.getByTestId("create-receipt-clear").click();
+  assert.equal(await page.getByRole("alert").count(), 0, "cleared with it");
+  assert.equal(await page.getByTestId("create-receipt").inputValue(), "");
   step("a video that is not the receipt's file is refused");
   await bringIn(failedPath);
   await page.getByRole("alert").getByText("did not finish").waitFor();
@@ -300,6 +303,11 @@ try {
     await new Promise((r) => setTimeout(r, 200));
   }
   assert.equal(project.clips.length, 1, "the clip is saved in the project");
+  // Placed whole: a clip placed from the media list stops at 5 seconds.
+  const source = project.assets.find((a) => a.id === project.clips[0].assetId);
+  assert.equal(project.clips[0].durationFrames, source.durationFrames);
+  if (!givenVideo) assert.ok(source.durationFrames > 150, "longer than 5 s");
+  step("the whole video is placed", { frames: source.durationFrames });
   await page
     .getByRole("button", { name: /^Export/ })
     .first()
@@ -393,6 +401,21 @@ try {
   const converted = cards.filter({ hasText: "variable.mp4" });
   assert.match(await converted.textContent(), /This is a converted copy/);
   step("a converted file says the original matched, not that this copy did");
+  await page.reload();
+  await page.waitForFunction(() => location.hash === "");
+  await page
+    .getByRole("button", { name: /revision/i })
+    .first()
+    .click();
+  await page.getByTestId("create-video").first().waitFor();
+  assert.match(
+    await page
+      .getByTestId("create-video")
+      .filter({ hasText: "variable.mp4" })
+      .textContent(),
+    /This is a converted copy/,
+  );
+  step("that stays true after a reload");
 
   // Everything in the panel can be reached by keyboard, in a sensible order.
   await page.getByRole("tab", { name: "Create", exact: true }).click();
@@ -420,7 +443,7 @@ try {
     reached.indexOf("create-model") < reached.indexOf("create-bring-in"),
     "reading order",
   );
-  step("every control is reached by keyboard, in order");
+  step("the main controls are reached by keyboard, in order");
 
   const unnamed = await page.evaluate(() =>
     [
@@ -464,8 +487,7 @@ try {
       `${JSON.stringify(
         {
           task: "create-workspace",
-          suppliedVideo: Boolean(givenVideo),
-          aiGenerated: false,
+          videoSource: givenVideo ? "supplied" : "test pattern",
           head: execFileSync("git", ["rev-parse", "HEAD"], {
             encoding: "utf8",
           }).trim(),
