@@ -22,6 +22,7 @@ import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor, REMOTE_GENERATION } from "../core/jobs.ts";
 import {
   KAGGLE_RECIPES,
+  cliWords,
   createKaggleEngine,
   kaggleRecipes,
   ledgerOptions,
@@ -97,6 +98,7 @@ function kaggle() {
     // Kaggle refuses any question about the notebook, though it exists.
     denied: false,
     listFails: false,
+    listOutput: null as null | string,
     privateAnswer: true,
     pushStdout: "successfully pushed",
     beforeStatus: null as null | (() => Promise<void>),
@@ -109,9 +111,10 @@ function kaggle() {
       if (world.listFails) throw new Error("Authentication required");
       return {
         stdout:
-          world.pushes.length || world.denied
+          world.listOutput ??
+          (world.pushes.length || world.denied
             ? `ref,title\nsomeone/${wan.slug},${wan.slug}\n`
-            : "Not found\n",
+            : "Not found\n"),
       };
     }
     if (args[1] === "status") {
@@ -753,6 +756,8 @@ for (const message of [
   "403 Client Error: Forbidden for url: https://www.kaggle.com/api/v1/kernels/push",
   "429 Too Many Requests",
   "Maximum batch GPU session count of 2 reached",
+  "Permission 'kernels.save' was denied",
+  "Authentication required to call the Kaggle API.",
 ])
   test(`after a push is tried, "${message}" is a refusal`, async () => {
     const f = await fixture();
@@ -863,6 +868,36 @@ test("a notebook deleted on Kaggle can be made again", async () => {
   await f.s.close();
 });
 
+for (const [what, output] of [
+  [
+    "more pages than were read",
+    `ref,title\nsomeone/other,o\nNext Page Token = abc\n`,
+  ],
+  ["no list at all", "Something else entirely\n"],
+] as const)
+  test(`a refusal is not read as a new notebook with ${what}`, async () => {
+    const f = await fixture();
+    f.k.world.listOutput = output;
+    await assert.rejects(f.start(), /Could not ask Kaggle/);
+    assert.equal(f.k.world.pushes.length, 0);
+    await f.s.close();
+  });
+
+test("the list is asked for enough of a search to hold the notebook", async () => {
+  const f = await fixture();
+  const asked: string[][] = [];
+  const { cli } = f.k;
+  f.k.cli = (async (args: string[], ms: number) => {
+    asked.push(args);
+    return cli(args, ms);
+  }) as typeof cli;
+  await f.restart();
+  await f.start();
+  const list = asked.find((a) => a[1] === "list")!;
+  assert.equal(list[list.indexOf("--page-size") + 1], "100");
+  await f.s.close();
+});
+
 test("with no working credentials, nothing is sent on a first run", async () => {
   const f = await fixture();
   f.k.world.listFails = true;
@@ -927,6 +962,94 @@ for (const garble of ["video", "receipt"] as const)
     assert.equal((await f.s.service.status(id)).state, "succeeded");
     await f.s.close();
   });
+
+test("a result that never comes readable ends, and says so", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.k.world.state = "COMPLETE";
+  f.clock.pass(10 * 60 * 1000);
+  f.k.world.garble = "receipt";
+  let answer = await f.s.service.status(id);
+  for (let i = 0; i < 3; i++) {
+    assert.equal(answer.state, "unknown");
+    f.clock.pass(6 * 60 * 1000);
+    answer = await f.s.service.status(id);
+  }
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /missing or cannot be read/);
+  assert.match(answer.diagnostic!, /still on its notebook/);
+  await f.s.close();
+});
+
+test("a stop pressed during the send outlasts the send's answer", async () => {
+  const f = await fixture();
+  let id = "";
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start();
+  await atPush;
+  [{ generationId: id }] = f.s.service.list(f.project.id);
+  await f.s.service.cancel(id).catch(() => {});
+  release();
+  await first;
+  assert.equal(row(f, id).state, "cancelled");
+  assert.match(row(f, id).error!, /not told to stop/);
+  await f.s.close();
+});
+
+test("an earlier run's answer, read while settling, does not stay on disk", async () => {
+  const f = await fixture();
+  f.k.world.pushes.push({ runId: "older", prompt: "A SECRET older one." });
+  f.k.world.state = "COMPLETE";
+  f.k.world.pushMode = "lost-before-landing";
+  const { generationId: id } = await f.start();
+  f.k.world.state = "ERROR";
+  assert.equal((await f.s.service.status(id)).state, "queued");
+  assert.deepEqual(
+    readdirSync(path.join(f.root, "tmp"), {
+      recursive: true,
+      withFileTypes: true,
+    }).filter((e) => e.isFile()),
+    [],
+  );
+  await f.s.close();
+});
+
+test("a run from another account does not hold this account's notebook", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.s.ledger.update(id, { remote: `another/${wan.slug}` });
+  f.clock.pass(10 * 60 * 1000);
+  await f.restart();
+  f.k.world.state = "COMPLETE";
+  await f.start("From this account.");
+  assert.equal(f.k.world.pushes.length, 2);
+  await f.s.close();
+});
+
+test("past its limit, stopping following does not say it is still running", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.clock.pass(PAST_LIMIT_MS);
+  assert.equal((await f.s.service.cancel(id)).remoteOutcome, "unknown");
+  await f.s.close();
+});
+
+test("the CLI's words are all kept, not only those on stderr", () => {
+  assert.equal(
+    cliWords("A version warning.\n", "Authentication required.\n"),
+    "A version warning. Authentication required.",
+  );
+  assert.equal(cliWords("", ""), "");
+});
 
 test("Kaggle's own refusal printed with a clean exit is a refusal", async () => {
   const f = await fixture();

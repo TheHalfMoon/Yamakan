@@ -391,10 +391,16 @@ export function createGenerationService(options: {
         );
       // A notebook keeps one latest result, and another run would replace it. Asking
       // collects a run nobody has been watching, if it has finished.
-      for (const other of ledger.following(request.recipe.id, ""))
+      // A run sent from another account is on another notebook.
+      const here = adapter.location?.(request.recipe.id) ?? null;
+      const others = () =>
+        ledger
+          .following(request.recipe.id, "")
+          .filter((other) => (tracked(other).remote ?? null) === here);
+      for (const other of others())
         if (!sending.has(other)) await statusOf(other).catch(() => {});
       // Still going, or not collected: pushing now would lose its result for good.
-      const [still] = ledger.following(request.recipe.id, "");
+      const [still] = others();
       if (still) {
         const holder = tracked(still).projectId;
         const name = await store
@@ -427,7 +433,7 @@ export function createGenerationService(options: {
         inputs: inputPins,
         executionRef: null,
         phase: "sending",
-        remote: adapter.location?.(request.recipe.id) ?? null,
+        remote: here,
         startedAt: clock(),
         state: "queued",
         diagnostic: null,
@@ -506,7 +512,14 @@ export function createGenerationService(options: {
       ledger.update(id, {
         executionRef: answer.executionRef,
         phase: answer.uncertain ? "sending" : "sent",
-        diagnostic: answer.uncertain ?? answer.notice ?? null,
+        // Stopped while it went: what that said still stands, and goes first.
+        diagnostic:
+          [
+            tracked(id).cancelled ? tracked(id).diagnostic : null,
+            answer.uncertain ?? answer.notice,
+          ]
+            .filter(Boolean)
+            .join(" ") || null,
         notice: answer.notice ?? null,
       });
       return {

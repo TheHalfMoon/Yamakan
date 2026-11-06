@@ -505,7 +505,12 @@ test("a notebook Kaggle does not know is a new one", async () => {
     "executionRef" in (await k.engine.submit(request(), context as never)),
   );
   assert.ok(
-    !k.calls.slice(0, 1).some((c) => c[1] === "pull"),
+    !k.calls
+      .slice(
+        0,
+        k.calls.findIndex((c) => c[1] === "push"),
+      )
+      .some((c) => c[1] === "pull"),
     "nothing to read yet",
   );
 });

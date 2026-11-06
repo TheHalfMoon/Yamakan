@@ -153,7 +153,18 @@ try {
   if (READY_ONLY) throw new Error("Stopped before sending anything, as asked.");
   await start.click();
   const state = page.getByTestId("create-run-state");
-  await state.waitFor({ timeout: 300_000 });
+  // A refused start shows no run, only why: that is what this run failed on.
+  await page
+    .locator('[data-testid="create-run-state"], .create-problem')
+    .first()
+    .waitFor({ timeout: 300_000 });
+  const refused = page.locator(".create-problem");
+  if (await refused.count()) {
+    await shot("2-refused");
+    throw new Error(
+      `The start was refused: ${await refused.first().textContent()}`,
+    );
+  }
   step("started from the page, after agreeing the prompt leaves this computer");
   await shot("2-started");
 

@@ -258,6 +258,7 @@ export function GeneratePanel(props: {
       const [latest] = await api.list().catch(() => [] as RunRecord[]);
       if (
         latest &&
+        !latest.stopped &&
         !["succeeded", "failed", "cancelled"].includes(latest.state)
       ) {
         setRun(asRun(latest));

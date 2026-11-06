@@ -174,6 +174,13 @@ export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {
   return env;
 }
 
+// Its authentication help goes to stdout, beside whatever warning went to stderr.
+export const cliWords = (stderr: string, stdout: string) =>
+  [stderr, stdout]
+    .map((words) => words.trim())
+    .filter(Boolean)
+    .join(" ");
+
 export function kaggleCli(file: string): KaggleCli {
   return (args, timeout) =>
     new Promise((resolve, reject) => {
@@ -191,8 +198,7 @@ export function kaggleCli(file: string): KaggleCli {
             reject(
               new Error(
                 `${error.killed ? "Timed out. " : ""}${
-                  stderr ||
-                  stdout ||
+                  cliWords(stderr, stdout) ||
                   `The Kaggle CLI failed (${error.code ?? "stopped"}).`
                 }`,
               ),
@@ -247,6 +253,9 @@ class Unreadable extends Error {}
 // asked for, and exits as if all were well. Fetched again, but not on every poll.
 class Garbled extends Error {}
 const REFETCH_MS = 5 * 60 * 1000;
+// Fetched this many times, a quarter of an hour apart in all: past that it is what the
+// run left, not a bad moment, and is said to be so.
+const FETCH_TRIES = 4;
 
 type Run = {
   recipe: KaggleRecipe;
@@ -263,6 +272,7 @@ type Run = {
   // Sent from another Kaggle account: its notebook is not this one's to ask about.
   foreign?: string;
   refetchAt?: number;
+  fetchTries?: number;
   refetchNote?: string;
   // One question at a time: a slow one must not undo the answer to another.
   asking?: Promise<ExecutionStatus>;
@@ -408,9 +418,10 @@ export function createKaggleEngine(options: {
         throw new Unreadable("That is not a receipt.");
       return { folder, receipt };
     } catch (e) {
-      if (e instanceof Unreadable) throw e;
+      // Any of it can hold the prompt, or the answer of another run.
       await rm(folder, { recursive: true, force: true });
-      throw new Garbled((e as Error).message);
+      if (e instanceof Unreadable) throw e;
+      throw new Garbled("The run's receipt is missing or cannot be read.");
     }
   }
 
@@ -515,7 +526,10 @@ export function createKaggleEngine(options: {
         const left = await collect(run).catch(() => null);
         const ours = left?.receipt.runId === run.runId;
         // Just after a push, this may still be what an earlier run came to.
-        if (!ours && settling(run)) return waiting(run);
+        if (!ours && settling(run)) {
+          if (left) await rm(left.folder, { recursive: true, force: true });
+          return waiting(run);
+        }
         // Read before the folder goes. A kill leaves no error of its own in a receipt.
         const killed = ours && (await logSaysKilled(left.folder));
         await keepOnly(run);
@@ -558,6 +572,15 @@ export function createKaggleEngine(options: {
       // Being unable to ask is not the run failing, however late: it is asked again,
       // and a person can stop following it. A finished video may be waiting.
       if (e instanceof Garbled) {
+        run.fetchTries = (run.fetchTries ?? 0) + 1;
+        if (run.fetchTries >= FETCH_TRIES) {
+          await keepOnly(run);
+          return end(
+            run,
+            "failed",
+            `${e.message} It was fetched ${FETCH_TRIES} times, and came no differently. Any result is still on its notebook, until a later run replaces it.`,
+          );
+        }
         run.refetchAt = now() + REFETCH_MS;
         run.refetchNote = `What came down from Kaggle could not be used: ${e.message} It will be fetched again.`;
         return {
@@ -657,14 +680,27 @@ export function createKaggleEngine(options: {
   }
   const listed = async (recipe: KaggleRecipe) => {
     const { stdout } = await cli(
-      ["kernels", "list", "--mine", "-s", recipe.slug, "--csv"],
+      [
+        "kernels",
+        "list",
+        "--mine",
+        "-s",
+        recipe.slug,
+        "--page-size",
+        "100",
+        "--csv",
+      ],
       90_000,
     );
     const lines = stdout.split(/\r?\n/);
     if (!lines.some((l) => l.startsWith("ref,") || l.startsWith("Not found")))
       throw new Error("Kaggle gave no list.");
     const name = `${remote(recipe).toLowerCase()},`;
-    return lines.some((l) => l.toLowerCase().startsWith(name));
+    if (lines.some((l) => l.toLowerCase().startsWith(name))) return true;
+    // It is a search, in no order of use: with more pages, it could be on one of them.
+    if (lines.some((l) => l.startsWith("Next Page Token")))
+      throw new Error("Kaggle's list goes on past what was read.");
+    return false;
   };
 
   const NOT_PRIVATE =
