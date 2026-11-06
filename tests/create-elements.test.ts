@@ -2,6 +2,7 @@
 // accepts, and must never be a person's likeness, which needs consent this does not ask.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ReferencePackSchema,
@@ -166,8 +167,20 @@ test("a shot holds no more elements than it can, and an older pin still moves", 
 });
 
 test("an element comes off a shot, and other shots keep theirs", () => {
-  const start = story();
+  const second = addMadeVideo(
+    story(),
+    {
+      assetId: randomUUID(),
+      assetHash: other,
+      durationTicks: 1000,
+      receipt: { ...(receipt as object), sha256: other } as never,
+    },
+    randomUUID,
+  );
+  assert.equal(typeof second, "object");
+  const start = second as ReturnType<typeof story>;
   const shot = start.scenes[0].shots[0];
+  const elsewhere = start.scenes[0].shots[1];
   const documentId = randomUUID();
   const keep = randomUUID();
   let held = pinElement(start, shot.id, {
@@ -178,11 +191,64 @@ test("an element comes off a shot, and other shots keep theirs", () => {
     documentId: keep,
     contentHash: hash,
   }) as typeof start;
+  held = pinElement(held, elsewhere.id, {
+    documentId,
+    contentHash: hash,
+  }) as typeof start;
   const off = unpinElement(held, shot.id, documentId);
+  assert.deepEqual(off.scenes[0].shots[1].referencePacks, [
+    { documentId, contentHash: hash },
+  ]);
   assert.deepEqual(off.scenes[0].shots[0].referencePacks, [
     { documentId: keep, contentHash: hash },
   ]);
   assert.doesNotThrow(() => StoryDocumentSchema.parse(off));
+});
+
+test("a later video leaves a shot's pins as they were", () => {
+  const start = story();
+  const documentId = randomUUID();
+  const pinned = pinElement(start, start.scenes[0].shots[0].id, {
+    documentId,
+    contentHash: hash,
+  }) as typeof start;
+  const later = addMadeVideo(
+    pinned,
+    {
+      assetId: randomUUID(),
+      assetHash: other,
+      durationTicks: 1000,
+      receipt: { ...(receipt as object), sha256: other } as never,
+    },
+    randomUUID,
+  ) as typeof start;
+  assert.deepEqual(later.scenes[0].shots[0].referencePacks, [
+    { documentId, contentHash: hash },
+  ]);
+  assert.deepEqual(later.scenes[0].shots[1].referencePacks, []);
+  assert.doesNotThrow(() => StoryDocumentSchema.parse(later));
+});
+
+test("a pack this cannot show or add to is not offered as an element", () => {
+  const made = newElementPack("A", "prop", image, randomUUID);
+  assert.equal(asElement({ ...made, entries: [] }), null);
+  const mixed = withImage(made, "style", image, randomUUID);
+  assert.equal(asElement(mixed), null);
+});
+
+// Text, on purpose: it stops the first step of sending these anywhere, which nothing else
+// would notice, since a model's input is otherwise free to take them.
+test("nothing that starts a generation reads an element or a pin", () => {
+  for (const file of [
+    "core/engines/generation.ts",
+    "core/engines/kaggle.ts",
+    "src/create/GeneratePanel.tsx",
+    "src/create/create-model.ts",
+  ]) {
+    const source = readFileSync(file, "utf8");
+    for (const word of ["referencePack", "create-elements", "ElementPack"])
+      assert.ok(!source.includes(word), `${file} reads ${word}`);
+  }
 });
 
 test("a shot not in the story changes nothing", () => {

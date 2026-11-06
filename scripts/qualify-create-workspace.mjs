@@ -495,12 +495,21 @@ try {
   await page.getByTestId("create-element-name").fill("The harbour");
   const notAnImage = join(root, "not-an-image.txt");
   writeFileSync(notAnImage, "words");
-  await page.getByTestId("create-element-file").setInputFiles(notAnImage);
-  await elements.getByRole("alert").waitFor();
+  // Through the button a person presses, then the picker.
+  const pick = async (control, file) => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      control.click(),
+    ]);
+    await chooser.setFiles(file);
+  };
+  await pick(page.getByTestId("create-element-add"), notAnImage);
+  assert.match(await elements.getByRole("alert").textContent(), /PNG or JPEG/);
   assert.equal(await page.getByTestId("create-element").count(), 0);
-  await page
-    .getByTestId("create-element-file")
-    .setInputFiles(stillOf("harbour.png", "navy"));
+  await pick(
+    page.getByTestId("create-element-add"),
+    stillOf("harbour.png", "navy"),
+  );
   const element = page.getByTestId("create-element").first();
   await element.waitFor({ timeout: 60_000 });
   assert.match(await element.textContent(), /The harbour/);
@@ -534,13 +543,10 @@ try {
   });
   step("it and its pin on a shot stay after a reload, with its image shown");
 
-  await page
-    .getByTestId("create-element-more")
-    .first()
-    .evaluate((button) => button.click());
-  await page
-    .getByTestId("create-element-file")
-    .setInputFiles(stillOf("harbour-2.jpg", "teal"));
+  await pick(
+    page.getByTestId("create-element-more").first(),
+    stillOf("harbour-2.jpg", "teal"),
+  );
   await page
     .getByTestId("create-element-older")
     .first()
@@ -564,6 +570,15 @@ try {
   );
   assert.equal(await page.getByTestId("create-element-older").count(), 0);
   step("it comes off a shot, and pinned again holds the newest version");
+  const unnamedHere = await elements.evaluate((panel) =>
+    [...panel.querySelectorAll(":is(input,select)")]
+      .filter(
+        (el) =>
+          !el.hidden && !el.labels?.length && !el.getAttribute("aria-label"),
+      )
+      .map((el) => el.dataset.testid),
+  );
+  assert.deepEqual(unnamedHere, [], "every field here has a name");
   await shot("create-elements");
 
   await page.setViewportSize({ width: 390, height: 844 });

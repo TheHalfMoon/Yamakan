@@ -29,7 +29,7 @@ const en = {
     "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer, and Kaggle keeps it in the notebook's history. The video comes back here; the model stays on Kaggle.",
   "create.elementsTitle": "Places and props",
   "create.elementsNote":
-    "Kept with this project as a record, and pinned to a shot if you wish. They are not sent to a model and do not change what is generated. A person's likeness cannot be kept here.",
+    "Kept with this project as a record, and pinned to a shot if you wish. They are not sent to a model and do not change what is generated. Saving one, or a pin, ends undo for what came before, as saving any document does. Do not keep a person's likeness here: that needs consent this does not ask for.",
   "create.elementName": "Name",
   "create.elementRole": "Kind",
   "create.elementRole.environment": "Place",
@@ -41,7 +41,9 @@ const en = {
   "create.elementOnShots": "On these shots",
   "create.elementOlder": "An older version",
   "create.elementImageType": "This takes a PNG or JPEG image.",
-  "create.elementNotKept": "That could not be kept. Nothing changed.",
+  "create.elementNotKept": "That image could not come in. Nothing changed.",
+  "create.elementImageOnly":
+    "The image came into the project's assets, and this could not be saved with it.",
   "create.elementNotPinned":
     "That could not be saved on the shot. Nothing changed.",
   "create.elementsUnread": "What this project keeps here could not be read.",
@@ -502,7 +504,7 @@ const ar: Record<MessageKey, string> = {
     "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب، ويحتفظ به Kaggle في سجل الدفتر. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
   "create.elementsTitle": "الأماكن والأغراض",
   "create.elementsNote":
-    "تُحفظ مع هذا المشروع كسجل، ويمكن تثبيتها على لقطة إن شئت. لا تُرسل إلى أي نموذج ولا تغيّر ما يُولَّد. ولا يمكن حفظ صورة شخص هنا.",
+    "تُحفظ مع هذا المشروع كسجل، ويمكن تثبيتها على لقطة إن شئت. لا تُرسل إلى أي نموذج ولا تغيّر ما يُولَّد. وحفظ أي منها أو تثبيته يُنهي التراجع عمّا سبقه، كما يفعل حفظ أي مستند. لا تحفظ هنا صورة شخص: فذلك يحتاج إلى موافقة لا يطلبها هذا القسم.",
   "create.elementName": "الاسم",
   "create.elementRole": "النوع",
   "create.elementRole.environment": "مكان",
@@ -514,7 +516,9 @@ const ar: Record<MessageKey, string> = {
   "create.elementOnShots": "في هذه اللقطات",
   "create.elementOlder": "نسخة أقدم",
   "create.elementImageType": "يقبل هذا صور PNG أو JPEG.",
-  "create.elementNotKept": "تعذّر حفظ ذلك. لم يتغيّر شيء.",
+  "create.elementNotKept": "تعذّر إدخال تلك الصورة. لم يتغيّر شيء.",
+  "create.elementImageOnly":
+    "دخلت الصورة إلى ملفات المشروع، وتعذّر حفظ هذا معها.",
   "create.elementNotPinned": "تعذّر حفظ ذلك على اللقطة. لم يتغيّر شيء.",
   "create.elementsUnread": "تعذّرت قراءة ما يحفظه هذا المشروع هنا.",
   "create.elementFull": "يضم هذا كل ما يتسع له من صور.",

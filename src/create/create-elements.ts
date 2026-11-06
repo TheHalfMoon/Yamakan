@@ -70,23 +70,29 @@ export function newElementPack(
 }
 
 // Another image of the same element. "full" if it holds all it can.
+export const elementIsFull = (pack: ElementPack) =>
+  pack.entries.length >= STORY_LIMITS.entriesPerPack;
+
 export function withImage(
   pack: ElementPack,
   role: ElementRole,
   image: ElementImage,
   newId: () => string,
 ): ElementPack | "full" {
-  if (pack.entries.length >= STORY_LIMITS.entriesPerPack) return "full";
+  if (elementIsFull(pack)) return "full";
   return { ...pack, entries: [...pack.entries, entryOf(role, image, newId)] };
 }
 
-// Only what this panel made and can show: another pack, say with a likeness, is not one.
+// Only what this panel can show and add to, whoever made it: one kind, with no likeness.
 export function asElement(content: unknown): ElementPack | null {
   const pack = content as Partial<ElementPack> | null;
   if (pack?.format !== "yamakan.reference-pack" || !Array.isArray(pack.entries))
     return null;
   const fits = pack.entries.every(
-    (e) => ELEMENT_ROLES.includes(e.role) && e.consentId === null,
+    (e) =>
+      ELEMENT_ROLES.includes(e.role) &&
+      e.consentId === null &&
+      e.role === pack.entries?.[0].role,
   );
   return fits && pack.entries.length > 0 ? (pack as ElementPack) : null;
 }

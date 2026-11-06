@@ -6,6 +6,7 @@ import { mediaUrl } from "../session.ts";
 import {
   ELEMENT_IMAGE_TYPES,
   ELEMENT_ROLES,
+  elementIsFull,
   newElementPack,
   pinElement,
   unpinElement,
@@ -73,7 +74,9 @@ export function ElementsPanel<S extends PinnableStory>(props: {
     api
       .load()
       .then((found) => {
-        if (current) setElements(found);
+        if (!current) return;
+        setElements(found);
+        setProblem((was) => (was === "create.elementsUnread" ? null : was));
       })
       .catch(() => {
         if (current) setProblem("create.elementsUnread");
@@ -89,6 +92,12 @@ export function ElementsPanel<S extends PinnableStory>(props: {
       setProblem("create.elementImageType");
       return;
     }
+    const existing = elements.find((e) => e.documentId === adding);
+    // Before the image comes in: it would stay in the project with nowhere to go.
+    if (existing && elementIsFull(existing.pack)) {
+      setProblem("create.elementFull");
+      return;
+    }
     setProblem(null);
     setWorking(true);
     try {
@@ -102,7 +111,6 @@ export function ElementsPanel<S extends PinnableStory>(props: {
         assetHash: asset.hash,
         name: asset.name,
       };
-      const existing = elements.find((e) => e.documentId === adding);
       const pack = existing
         ? withImage(existing.pack, existing.pack.entries[0].role, image, () =>
             crypto.randomUUID(),
@@ -118,7 +126,8 @@ export function ElementsPanel<S extends PinnableStory>(props: {
         pack,
       });
       if (!kept) {
-        setProblem("create.elementNotKept");
+        // The image did come in, and it stays in the project's assets.
+        setProblem("create.elementImageOnly");
         return;
       }
       setElements((all) => [
@@ -229,6 +238,7 @@ export function ElementsPanel<S extends PinnableStory>(props: {
               <button
                 type="button"
                 data-testid="create-element-more"
+                aria-label={`${t("create.elementAddImage")}: ${element.pack.name}`}
                 disabled={off}
                 onClick={() => {
                   setAdding(element.documentId);
@@ -238,7 +248,10 @@ export function ElementsPanel<S extends PinnableStory>(props: {
                 {t("create.elementAddImage")}
               </button>
               {shots.length > 0 && story && (
-                <fieldset className="create-element-shots">
+                <fieldset
+                  className="create-element-shots"
+                  aria-label={`${t("create.elementOnShots")}: ${element.pack.name}`}
+                >
                   <legend>{t("create.elementOnShots")}</legend>
                   {shots.map((shot) => {
                     const pin = shot.referencePacks.find(

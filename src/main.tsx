@@ -2274,7 +2274,14 @@ function App() {
                               documentId: ref.id,
                             })) as any;
                             const pack = asElement(read.content);
-                            if (pack)
+                            // A pack can hold footage too, which this cannot show.
+                            const stills = pack?.entries.every(
+                              (e) =>
+                                head.current?.assets.find(
+                                  (a) => a.id === e.assetId,
+                                )?.kind === "image",
+                            );
+                            if (pack && stills)
                               found.push({
                                 documentId: ref.id,
                                 contentHash: read.contentHash,
@@ -2293,15 +2300,17 @@ function App() {
                               expectedRevision: head.current!.revision,
                               ...next,
                             } as any)) as any;
-                            const opened = await call("yamakan.project.open", {
-                              projectId: p.id,
-                            });
-                            accept(opened);
+                            // Kept from here, whatever reopening the project then says.
                             kept = {
                               documentId: next.documentId,
                               contentHash: answer.document.contentHash,
                               pack: next.pack,
                             };
+                            accept(
+                              await call("yamakan.project.open", {
+                                projectId: p.id,
+                              }),
+                            );
                           }).finally(() => resolve(kept));
                         }),
                       importImage: (file) => {
