@@ -22,8 +22,8 @@ jobs:
         timeout-minutes: 14
         run: |
           for attempt in 1 2 3; do
-            if timeout 240 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update &&
-              timeout 240 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y ffmpeg fonts-dejavu-core; then
+            if timeout 60 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update &&
+              timeout 180 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y ffmpeg fonts-dejavu-core; then
               exit 0
             fi
             echo "Package install attempt $attempt did not finish."
