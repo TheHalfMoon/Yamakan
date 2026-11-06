@@ -70,17 +70,6 @@ execFileSync(
 const STILL = readFileSync(STILL_FILE);
 const STILL_HASH = createHash("sha256").update(STILL).digest("hex");
 
-// The picture's decoded bytes, by hash, whatever its file holds beside them.
-function pixelsOf(data: Buffer, extension: string) {
-  const file = path.join(stillRoot, `decode-${randomUUID()}.${extension}`);
-  writeFileSync(file, data);
-  return execFileSync(
-    mediaTools().ffmpeg,
-    ["-hide_banner", "-loglevel", "error", "-i", file, "-f", "md5", "-"],
-    { windowsHide: true, encoding: "utf8" },
-  ).trim();
-}
-
 function briefOf(folder: string) {
   const script = readFileSync(path.join(folder, "run.py"), "utf8");
   return JSON.parse(
@@ -217,8 +206,13 @@ test("the image travels inside the brief, and is the one started with", async ()
     createHash("sha256").update(sent).digest("hex"),
   );
   assert.equal(brief.firstFrame.mediaType, "image/png");
-  assert.equal(brief.firstFrame.orientation, 1);
-  assert.deepEqual(pixelsOf(sent, "png"), pixelsOf(STILL, "png"));
+  assert.notEqual(
+    brief.firstFrame.sha256,
+    STILL_HASH,
+    "a new file, not the original",
+  );
+  assert.equal(sent.readUInt32BE(16), recipe.width);
+  assert.equal(sent.readUInt32BE(20), recipe.height);
   assert.equal(brief.prompt, "The boat drifts.");
   // Nothing else goes to Kaggle: no dataset, and the notebook is asked to be private.
   assert.deepEqual(metadata.dataset_sources, []);
@@ -284,7 +278,7 @@ const opening = (data: Uint8Array) =>
     openAsset: () => Readable.from([data]),
   }) as never;
 
-test("a phone's photo goes without its metadata, with its direction beside it", async () => {
+test("a phone's photo goes made anew, with nothing of its file", async () => {
   const file = path.join(stillRoot, "photo.jpg");
   execFileSync(
     mediaTools().ffmpeg,
@@ -341,11 +335,15 @@ test("a phone's photo goes without its metadata, with its direction beside it", 
     opening(photo),
   );
   const { firstFrame } = f.pushes[0].brief;
-  assert.equal(firstFrame.orientation, 6);
   const sent = Buffer.from(firstFrame.data, "base64");
+  assert.equal(firstFrame.mediaType, "image/png");
   assert.ok(!sent.includes(SECRET));
   assert.ok(!JSON.stringify(f.pushes[0]).includes(SECRET));
-  assert.equal(pixelsOf(sent, "jpg"), pixelsOf(jpeg, "jpg"));
+  assert.equal(
+    firstFrame.orientation,
+    undefined,
+    "no word of its file comes beside it",
+  );
   await f.close();
 });
 
@@ -460,7 +458,6 @@ brief = {"prompt": "A SECRET boat", "seed": 7, "runId": "r", "firstFrame": {
     "data": base64.b64encode(frame).decode(),
     "mediaType": "image/png",
     "sha256": digest if mode != "wrong-hash" else "0" * 64,
-    "orientation": 6,
 }}
 line = "BRIEF = {}  # yamakan:brief"
 assert source.count(line) == 1 and source.count('OUT = "/kaggle/working"') == 1
@@ -531,15 +528,9 @@ class Opened:
     def __enter__(self): return self
     def __exit__(self, *a): return False
     def convert(self, mode): return self
-    def transpose(self, how):
-        asked["turned"] = how
-        return self
 pil = types.ModuleType("PIL")
 image = types.ModuleType("PIL.Image")
 image.LANCZOS = 1
-image.Transpose = types.SimpleNamespace(
-    FLIP_LEFT_RIGHT="flip", ROTATE_180="r180", FLIP_TOP_BOTTOM="flipv",
-    TRANSPOSE="transpose", ROTATE_270="r270", TRANSVERSE="transverse", ROTATE_90="r90")
 def opening(stream):
     asked["opened"] = stream.getvalue() == frame
     return Opened()
@@ -614,7 +605,6 @@ test(
     assert.deepEqual(asked.fit, [recipe.width, recipe.height]);
     assert.equal(asked.image, "the fitted frame");
     assert.equal(asked.encode, 512);
-    assert.equal(asked.turned, "r270", "the sideways photo is turned upright");
     assert.equal(asked.vaeMovedTo, "cpu", "the VAE is sent off the GPU");
     assert.equal(
       asked.hookReturned,

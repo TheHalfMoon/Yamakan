@@ -113,8 +113,8 @@
       "reason": "Yamakan-authored generation service over the engine contract; no donor copy."
     },
     {
-      "path": "core/engines/strip-image.ts",
-      "reason": "Yamakan-authored removal of an image's metadata before it is sent, as the founder chose; no donor copy."
+      "path": "core/engines/clean-image.ts",
+      "reason": "Yamakan-authored remaking of an image from its pixels before it is sent, as the founder chose; its only process is the pinned FFmpeg through the media worker, with fixed arguments and one readable file; no donor copy."
     },
     {
       "path": "core/engines/comfyui.ts",
