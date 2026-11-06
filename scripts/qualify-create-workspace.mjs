@@ -238,7 +238,7 @@ try {
   assert.equal(await page.getByRole("alert").count(), 0, "the refusal cleared");
   assert.match(
     await page.getByTestId("create-receipt-facts").textContent(),
-    /Matched its receipt/,
+    /hash matched this receipt, in this browser/,
   );
   step("the right video comes in, with what its receipt says", {
     file: basename(video),
