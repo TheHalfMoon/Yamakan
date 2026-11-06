@@ -273,7 +273,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Blocked by the GPU quota:** on 2026-11-06 real Kaggle answered `Maximum weekly GPU quota of 30.00 hours reached.` The reset time was not read from Kaggle. Until it resets, none of these can happen, and none is to be claimed:
 
 1. One real run through the page at PR #210's head, with the kite prompt. It must make the same bytes, `8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c`, and reach export. That also finishes the restart test end to end: run it with `YAMAKAN_QUALIFY_RESTART=1`. Then PR #210 can leave draft.
-2. A few controlled runs on the `Killed` failure, kept few. At about one kill in seven runs, a handful of good runs does not show it solved.
+2. A few controlled runs on the `Killed` failure, kept few. At one kill in about ten runs, a handful of good runs does not show it solved.
 3. Real qualification of image-to-video and CogVideoX. Each engine stays off until its own real run passes.
 
 **Next that needs no GPU:** reference images and reusable elements in Create; image-to-video's path, disabled until qualified; visual baseline tests. Arabic human review and UX acceptance stay separate from automated checks.
