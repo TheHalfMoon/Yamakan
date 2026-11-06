@@ -246,7 +246,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Open findings added:**
 
 - Exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in RGB. Cause not looked at.
-- One of five 81-frame runs was killed while decoding, most likely out of host memory: a later run peaked at 26.5 GB of 31 with the text encoder freed. More runs are needed to know if that change fixes it.
+- One of five 81-frame runs was killed while decoding, most likely out of host memory: a later run peaked at 24.6 GiB of 31 with the text encoder freed. More runs are needed to know if that change fixes it.
 - Wan at 41 frames snapped to a different picture for its last 3 frames, and its frame changes were the same with tiling off. 81 frames did not, on one prompt and seed. Why was not worked out.
 - Kaggle's public interface cannot stop a run, and a restart loses a run in progress.
 - `qualify:create` and `qualify:kaggle` are not in CI. Unit tests of the engine are.

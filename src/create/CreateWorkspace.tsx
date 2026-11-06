@@ -95,6 +95,8 @@ export function CreateWorkspace(props: {
   loadModels: () => Promise<readonly GenerateModel[]>;
   generation: GenerationApi;
   projectFps: number;
+  // A restore or undo can change what the project holds, with the same videos.
+  revision: number;
   // Under the editor's busy state: `check` runs first and can stop the import.
   // Resolves to the new asset, or null, or "busy" if nothing could start.
   importVideo: (
@@ -159,7 +161,7 @@ export function CreateWorkspace(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // What the project holds now, whenever its videos change.
+  // What the project holds now, whenever it changes.
   const videoHashes = assets
     .filter((a) => a.kind === "video")
     .map((a) => a.hash)
@@ -180,7 +182,7 @@ export function CreateWorkspace(props: {
       current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoHashes]);
+  }, [videoHashes, props.revision]);
 
   const model =
     CREATE_MODELS.find((m) => m.id === brief.modelId) ?? CREATE_MODELS[0];
@@ -274,28 +276,35 @@ export function CreateWorkspace(props: {
         },
         () => crypto.randomUUID(),
       );
-      if (next === "already-there") return;
+      if (next === "already-there") return true;
       if (next === "full") {
         setProblem({ key: "create.storyFull" });
-        return;
+        return false;
       }
       const saved = await props.saveStory({
         documentId: latest?.documentId ?? crypto.randomUUID(),
         expectedContentHash: latest?.contentHash ?? null,
         story: next,
       });
-      if (saved) setKeptStory(saved);
-      else setProblem({ key: "create.notKept" });
+      if (saved) {
+        setKeptStory(saved);
+        return true;
+      }
+      setProblem({ key: "create.notKept" });
+      return false;
     } catch {
       setProblem({ key: "create.notKept" });
+      return false;
     }
   };
 
   const startable = models.find((m) => m.model === brief.modelId);
   // Awaited by the panel, under nothing else: the video has come in by now.
   const remember = async (receipt: RunReceipt, asset: Asset) => {
-    await record(asset, receipt);
-    setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
+    const saved = await record(asset, receipt);
+    if (saved)
+      setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
+    return saved;
   };
   const engineLine: MessageKey =
     engine === "checking"

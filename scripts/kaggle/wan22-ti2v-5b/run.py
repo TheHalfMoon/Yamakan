@@ -112,6 +112,8 @@ try:
             negative_prompt=NEGATIVE,
             do_classifier_free_guidance=True,
             device="cuda:0",
+            # What the pipeline itself uses: the default here would cut a long prompt.
+            max_sequence_length=512,
         )
     pipe.text_encoder = None
     gc.collect()

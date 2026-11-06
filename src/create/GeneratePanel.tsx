@@ -100,7 +100,8 @@ export function GeneratePanel(props: {
   busy: boolean;
   t: Translate;
   api: GenerationApi;
-  onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<void>;
+  // Whether its record was saved. Bringing it in again is safe, and tries again.
+  onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<boolean>;
 }) {
   const { model, prompt, seed, seedValid, t, api } = props;
   const [run, setRunState] = useState<Run | null>(() => {
@@ -223,7 +224,7 @@ export function GeneratePanel(props: {
       setProblem(t("create.bringInFailed"));
       return;
     }
-    await props.onMade(
+    const saved = await props.onMade(
       {
         model: runModel.model,
         revision: runModel.revision,
@@ -236,7 +237,7 @@ export function GeneratePanel(props: {
       asset,
     );
     setWorking(false);
-    finishedWith();
+    if (saved) finishedWith();
   };
 
   const blocked = !prompt

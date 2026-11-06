@@ -74,7 +74,7 @@ const en = {
   "create.busy":
     "Yamakan is busy, so nothing was brought in. Try again in a moment.",
   "create.notKept":
-    "The video is in the project, but what its receipt says could not be saved with it.",
+    "The video is in the project, but what its receipt says could not be saved with it. Bringing it in again tries again.",
   "create.broughtIn": "Brought in {name}, with no receipt checked.",
   "create.broughtInChecked": "Brought in {name}. It matches its receipt.",
   "create.broughtInCopy":
@@ -517,7 +517,8 @@ const ar: Record<MessageKey, string> = {
   "create.checkFailed": "تعذرت قراءة هذا الفيديو للتحقق منه، فلم يُحضر شيء.",
   "create.importFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
   "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
-  "create.notKept": "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه.",
+  "create.notKept":
+    "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه. إحضاره مرة أخرى يعيد المحاولة.",
   "create.broughtIn": "أُحضر {name} دون التحقق من إيصال.",
   "create.broughtInChecked": "أُحضر {name}. وهو يطابق إيصاله.",
   "create.broughtInCopy":

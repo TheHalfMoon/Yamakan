@@ -2198,6 +2198,7 @@ function App() {
                         : null;
                     }}
                     projectFps={fps}
+                    revision={p.revision}
                     ticksOf={(asset) =>
                       (asset as unknown as { durationFrames: number })
                         .durationFrames * frameTicks
