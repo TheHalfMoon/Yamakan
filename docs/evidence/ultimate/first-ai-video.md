@@ -87,3 +87,17 @@ Generation from inside Yamakan; a start control; a check of the notebook's priva
 **Not a comparison of the two models.** One prompt and seed each, different sizes, steps and lengths: 6.1 s of CogVideoX against 1.7 s of Wan. Wan's 24 fps also has no matching project rate: a source frame lasts 1.25 project frames, so some repeat.
 
 Not tried: longer or larger Wan clips, including the 1280x704 and 121 frames its own card uses; quantization; a second GPU. This run says only that this small clip fits one T4.
+
+## Wan2.2 from Yamakan's own page
+
+**A real generation started from the page, 2026-11-06.** `npm run qualify:kaggle`: a person's steps in real Edge against the real service, on a private Kaggle notebook. See `create-workspace.md`.
+
+**41 frames had a defect, so the page offers 81.** With the prompt "A red kite flies above a green hill under a clear blue sky." and seed 7, frame-to-frame change at 64x36:
+
+|                           | Largest change | Where                 | Picture, by the builder's look at sampled frames                                                   |
+| ------------------------- | -------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
+| 41 frames, VAE tiling on  | 54.9 of 255    | Frames 37 to 38 of 41 | A bird-like red shape over hills, then a sudden snap to a different picture for the last 3 frames  |
+| 41 frames, VAE tiling off | 54.9 of 255    | The same frames       | Not looked at: its frame changes match the row above almost exactly. So tiling is not the cause    |
+| **81 frames, tiling on**  | **1.8 of 255** | **Frame 44 of 81**    | **A red kite-like shape over a green hill under blue sky, with no snap, and very little movement** |
+
+The earlier paper-boat clip, at 41 frames, had a smaller jump between frames 25 and 26. Why a short clip does this was not worked out. **This is one prompt and one seed at each length,** so it says 81 frames avoided this here, not that it always does. The GPU peak was 13,619,549,184 bytes in all three: that figure may not reflect decoding, which was not measured separately.

@@ -1,6 +1,22 @@
 # The Create workspace
 
-First slice of issue #203. **It does not start a model.** Generation inside Yamakan is still off, and while it is off this workspace says so and nothing in it offers to generate.
+Part of issue #203.
+
+**Without Kaggle set up it does not start a model:** the page says so and nothing in it offers to generate. **With `YAMAKAN_KAGGLE_CLI` and `YAMAKAN_KAGGLE_USERNAME` set, a person can start a real run from the page,** on their own private notebook, by the founder's decision "Yamakan drives Kaggle" (`docs/FOUNDER_DECISION_RECORD.md`). `ENGINE_ENABLED` and local recipes are unchanged: this route does not turn on any engine on this machine.
+
+## Starting a real run
+
+- Text to video only: the prompt and seed leave this computer, no media does. A person ticks that they agree, every run, and presses the button.
+- The Kaggle CLI uses its own token. Yamakan never reads it, and passes the CLI fixed arguments; the prompt travels inside a file, as base64 of JSON, so it cannot become Python or a command.
+- The notebook is private and has a 60-minute limit. A notebook still running is not replaced.
+- Kaggle's latest output could be another run's, so a result counts only if its receipt names this run, passed its own checks, and matches the video's hash.
+- **Yamakan cannot stop a run on Kaggle.** The CLI has no such command, and the SDK's call needs a session ID the public interface does not give, tried on 2026-11-06. So the page offers Stop following, says the run goes on using quota, and links to its notebook.
+- **A restart loses a run in progress.** The page says so and links to the notebook, but that run's video cannot then be brought in from here.
+- A status is what Kaggle says. There is no percentage, because it gives none; only the time so far.
+
+`npm run qualify:kaggle` ran this for real at the commit in its receipt, through export. Its failure, stop and restart paths are covered by `tests/kaggle-engine.test.ts` with a stand-in for Kaggle, and were **not** run against real Kaggle in the browser.
+
+## Before that
 
 ## What works now
 
@@ -17,7 +33,7 @@ The check's default video is a test pattern with a receipt written by the check,
 
 ## Not done
 
-Starting, following or cancelling a generation from here; image-to-video; reference images and reusable elements in this workspace; a receipt kept with the project rather than in this browser, and it is not recorded as lineage; refusing a placement on a locked track is written but not exercised by the check; a person's check of how this reads and feels.
+Image-to-video; stopping a run on Kaggle; following a run across a restart; CogVideoX started from the page, whose script took the same change but was not run this way; reference images and reusable elements in this workspace; a receipt kept with the project rather than in this browser, and it is not recorded as lineage; refusing a placement on a locked track is written but not exercised by the check; a person's check of how this reads and feels.
 
 Model facts on the page are what has been run, from `first-ai-video.md`: sizes, frames, rates and times, not everything each model can do.
 
