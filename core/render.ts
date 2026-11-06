@@ -549,10 +549,20 @@ export async function renderPlan(
       let graded = "";
       if (layer.lut) {
         const name = await lutFile(layer.lut);
-        graded = `${reading ? `scale=${reading}:out_range=pc,` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
+        graded = `${reading ? `scale=${reading}:out_range=pc:flags=bicubic+accurate_rnd+full_chroma_int,` : ""}format=gbrap,lut3d=file=luts/${name}:interp=tetrahedral,`;
       }
       const sourceReading = !layer.lut && reading ? `:${reading}` : "";
-      const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease${sourceReading}:out_color_matrix=bt709:out_range=tv,setsar=1,format=yuva420p`;
+      // Converting colour with the scaler's default flags left pictures about 2 of 255
+      // darker on average, measured on real video. They cost about half as much again,
+      // so only where there is a conversion: BT.709 limited range shows no such shift.
+      const converts =
+        layer.color &&
+        (layer.color.matrix !== "bt709" || layer.color.range !== "tv");
+      const accurate =
+        !layer.lut && converts
+          ? ":flags=bicubic+accurate_rnd+full_chroma_int"
+          : "";
+      const fit = `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease${sourceReading}:out_color_matrix=bt709:out_range=tv${accurate},setsar=1,format=yuva420p`;
       const shaped = layer.transform
         ? transformFilters(layer.transform, fit)
         : null;

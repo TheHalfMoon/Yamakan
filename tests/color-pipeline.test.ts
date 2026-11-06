@@ -308,6 +308,52 @@ test("a color chart round-trips from every SDR source form within the frozen tol
   }
 });
 
+// A chart's flat patches hide this: the matrix conversion once left detailed pictures
+// about 2 of 255 darker on average, within the chart's tolerance. Found on real AI
+// video, whose receipts are untagged 704x480, and traced to the scaler's default flags.
+test("a detailed untagged picture keeps its average colour through export", async () => {
+  const c = await workspace();
+  const file = path.join(c.root, "detailed.mp4");
+  ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "gradients=s=704x480:c0=0x60C0F0:c1=0x40A060:x0=0:y0=0:x1=0:y1=480:rate=30:duration=1",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "ultrafast",
+    "-qp",
+    "0",
+    file,
+  ]);
+  await place(c, file, "detailed.mp4");
+  const { output: out } = await exported(c);
+  const mean = (frame: Buffer) => {
+    const sum = [0, 0, 0];
+    for (let i = 0; i < frame.length; i++) sum[i % 3]! += frame[i]!;
+    return sum.map((v) => (v * 3) / frame.length);
+  };
+  const size = "scale=264:180:flags=area+accurate_rnd+full_chroma_int";
+  const source = mean(
+    rgb(file, ["-vf", `${size}:in_color_matrix=bt601:in_range=tv`]),
+  );
+  const result = mean(
+    rgb(out, [
+      "-vf",
+      `crop=1056:720:112:0,${size}:in_color_matrix=bt709:in_range=tv`,
+    ]),
+  );
+  source.forEach((v, ch) =>
+    assert.ok(
+      Math.abs(result[ch]! - v) < 0.7,
+      `channel ${ch}: source ${v.toFixed(2)}, export ${result[ch]!.toFixed(2)}`,
+    ),
+  );
+});
+
 test("HDR and BT.2020 sources are refused at import; the policy is recorded per layer", async () => {
   const c = await workspace();
   for (const [name, tags, pattern] of [
