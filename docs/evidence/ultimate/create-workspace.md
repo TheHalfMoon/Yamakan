@@ -24,7 +24,7 @@ Part of issue #203.
 `npm run qualify:create`, real Edge against the real service, by the interface unless noted:
 
 - Write a shot and choose a model and seed. Shot, movement, lens and light add words to the prompt, and the exact text a model would be given is shown. The page says these are only words: neither model has camera settings, and it may not follow them.
-- The shot stays across a reload, per project. **It is kept in this browser's storage, not in the project,** so it does not move with a backup and is lost if site data is cleared.
+- A shot being written stays across a reload, per project, in this browser's storage: it does not move with a backup and is lost if site data is cleared. **A made video's record is kept in the project,** as a shot and take in a story titled Create, so it survives a cleared browser and goes with a backup. It holds what the receipt said, as the receipt's claims.
 - Bring a video in, with its run receipt. A video that is not the receipt's file, a receipt from a run that did not finish or did not pass its own checks, and a video over 512 MiB with a receipt, are refused and nothing is imported. **A match shows only that the file is the one the receipt describes.** Anyone can write a receipt, so its model, seed and prompt are its claims.
 - Add it to the timeline, open it in Edit, and export with the toolbar's button: a decodable H.264 file.
 - A file converted to a constant frame rate on the way in says its original matched the receipt, not this copy. A placed video keeps its whole length, where a clip placed from the media list stops at 5 seconds.
@@ -34,7 +34,7 @@ The check's default video is a test pattern with a receipt written by the check,
 
 ## Not done
 
-Image-to-video; stopping a run on Kaggle; following a run across a restart; CogVideoX started from the page, whose script took the same change but was not run this way; reference images and reusable elements in this workspace; a receipt kept with the project rather than in this browser, and it is not recorded as lineage; refusing a placement on a locked track is written but not exercised by the check; a person's check of how this reads and feels.
+Image-to-video; stopping a run on Kaggle; following a run across a restart; CogVideoX started from the page, whose script took the same change but was not run this way; reference images and reusable elements in this workspace; refusing a placement on a locked track is written but not exercised by the check; a person's check of how this reads and feels.
 
 Model facts on the page are what has been run: sizes, frames, rates and times, not everything each model can do. CogVideoX's are from `first-ai-video.md`; Wan's 19 minutes is a real run from the page; the runs took 19 to 20.
 

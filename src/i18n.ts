@@ -14,6 +14,8 @@ const en = {
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
   "workspace.create": "Create",
+  "create.storyUnread":
+    "What this project's videos were made from could not be read.",
   "create.kaggleSetup":
     "To run it from here, start Yamakan with YAMAKAN_KAGGLE_CLI set to your Kaggle CLI's full path and YAMAKAN_KAGGLE_USERNAME to your username.",
   "create.agree":
@@ -70,16 +72,16 @@ const en = {
   "create.busy":
     "Yamakan is busy, so nothing was brought in. Try again in a moment.",
   "create.notKept":
-    "This browser could not keep the receipt, so it will be gone after a reload.",
+    "The video is in the project, but what its receipt says could not be saved with it.",
   "create.broughtIn": "Brought in {name}, with no receipt checked.",
   "create.broughtInChecked": "Brought in {name}. It matches its receipt.",
   "create.broughtInCopy":
     "Brought in {name}. The file matched its receipt, and was then converted to a constant frame rate.",
   "create.receiptMatched":
-    "This file's hash matched this receipt, in this browser.",
+    "This file's hash matched its receipt when it came in.",
   "create.receiptMatchedOriginal":
-    "The original file's hash matched this receipt, in this browser. This is a converted copy.",
-  "create.receiptSays": "The receipt says seed {seed}, steps {steps}:",
+    "The original file's hash matched its receipt when it came in. This is a converted copy.",
+  "create.receiptSays": "The receipt says:",
   "create.prompt": "Describe the shot",
   "create.promptHint": "A paper boat floats slowly along a calm stream.",
   "create.promptCount": "{count} of {limit} characters",
@@ -459,6 +461,7 @@ const ar: Record<MessageKey, string> = {
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
   "workspace.create": "إنشاء",
+  "create.storyUnread": "تعذرت قراءة مصدر فيديوهات هذا المشروع.",
   "create.kaggleSetup":
     "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
   "create.agree":
@@ -510,16 +513,15 @@ const ar: Record<MessageKey, string> = {
   "create.checkFailed": "تعذرت قراءة هذا الفيديو للتحقق منه، فلم يُحضر شيء.",
   "create.importFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
   "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
-  "create.notKept":
-    "تعذر على هذا المتصفح حفظ الإيصال، وسيختفي بعد إعادة التحميل.",
+  "create.notKept": "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه.",
   "create.broughtIn": "أُحضر {name} دون التحقق من إيصال.",
   "create.broughtInChecked": "أُحضر {name}. وهو يطابق إيصاله.",
   "create.broughtInCopy":
     "أُحضر {name}. طابق الملف إيصاله، ثم حُوّل إلى معدل إطارات ثابت.",
-  "create.receiptMatched": "طابقت بصمة هذا الملف هذا الإيصال، في هذا المتصفح.",
+  "create.receiptMatched": "طابقت بصمة هذا الملف إيصاله عند إحضاره.",
   "create.receiptMatchedOriginal":
-    "طابقت بصمة الملف الأصلي هذا الإيصال، في هذا المتصفح. هذه نسخة محوّلة.",
-  "create.receiptSays": "يذكر الإيصال البذرة {seed}، الخطوات {steps}:",
+    "طابقت بصمة الملف الأصلي إيصاله عند إحضاره. هذه نسخة محوّلة.",
+  "create.receiptSays": "يذكر الإيصال:",
   "create.prompt": "صف اللقطة",
   "create.promptHint": "قارب ورقي يطفو ببطء على جدول هادئ.",
   "create.promptCount": "{count} من {limit} حرفًا",

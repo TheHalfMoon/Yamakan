@@ -241,7 +241,7 @@ try {
   assert.equal(await page.getByRole("alert").count(), 0, "the refusal cleared");
   assert.match(
     await page.getByTestId("create-receipt-facts").textContent(),
-    /hash matched this receipt, in this browser/,
+    /hash matched its receipt when it came in/,
   );
   step("the right video comes in, with what its receipt says", {
     file: basename(video),
@@ -269,19 +269,24 @@ try {
       [operation, parameters],
     );
 
-  // What a receipt says stays after a reload, with what it does and does not show.
+  // What a receipt says is in the project, not this browser.
+  await page.waitForTimeout(1000);
+  await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForFunction(() => location.hash === "");
   await page
     .getByRole("button", { name: /revision/i })
     .first()
     .click();
+  await page.getByRole("tab", { name: "Create", exact: true }).click();
   await page.getByTestId("create-video").first().waitFor();
   assert.match(
     await page.getByTestId("create-receipt-facts").textContent(),
-    /hash matched this receipt, in this browser/,
+    /hash matched its receipt when it came in/,
   );
-  step("what the receipt showed is still there after a reload");
+  step(
+    "what the receipt showed stays with the project, with this browser's storage cleared",
+  );
 
   await page.getByTestId("create-place").click();
   await page.getByTestId("create-open-edit").click();
@@ -399,7 +404,7 @@ try {
   const cards = page.getByTestId("create-video");
   assert.equal(await cards.count(), 2);
   const converted = cards.filter({ hasText: "variable.mp4" });
-  assert.match(await converted.textContent(), /This is a converted copy/);
+  await converted.getByText("This is a converted copy").waitFor();
   step("a converted file says the original matched, not that this copy did");
   await page.reload();
   await page.waitForFunction(() => location.hash === "");
@@ -408,17 +413,17 @@ try {
     .first()
     .click();
   await page.getByTestId("create-video").first().waitFor();
-  assert.match(
-    await page
-      .getByTestId("create-video")
-      .filter({ hasText: "variable.mp4" })
-      .textContent(),
-    /This is a converted copy/,
-  );
+  await page
+    .getByTestId("create-video")
+    .filter({ hasText: "variable.mp4" })
+    .getByText("This is a converted copy")
+    .waitFor({ timeout: 30_000 });
   step("that stays true after a reload");
 
   // Everything in the panel can be reached by keyboard, in a sensible order.
   await page.getByRole("tab", { name: "Create", exact: true }).click();
+  // The draft went with this browser's storage, and Copy needs something to copy.
+  await page.getByTestId("create-prompt").fill("A paper boat.");
   await page.getByTestId("create-prompt").focus();
   const reached = [];
   for (let i = 0; i < 16; i++) {

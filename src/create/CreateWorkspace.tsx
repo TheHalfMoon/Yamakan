@@ -5,6 +5,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
+  addMadeVideo,
+  madeRecords,
+  type CreateStory,
+  type MadeRecord,
+} from "./create-story.ts";
+import {
   GeneratePanel,
   type GenerateModel,
   type GenerationApi,
@@ -20,8 +26,6 @@ import {
   composePrompt,
   parseReceipt,
   readBrief,
-  readCopies,
-  readReceipts,
   sha256Of,
   validSeed,
   type CreateBrief,
@@ -73,6 +77,12 @@ const kept = (key: string) => {
   }
 };
 
+export type KeptStory = {
+  documentId: string;
+  contentHash: string;
+  story: CreateStory;
+};
+
 export function CreateWorkspace(props: {
   projectId: string;
   assets: readonly Asset[];
@@ -91,19 +101,25 @@ export function CreateWorkspace(props: {
     file: File,
     check: () => Promise<boolean>,
   ) => Promise<Asset | null | "busy">;
+  // The project's Create story, and saving a new version of it.
+  loadStory: () => Promise<KeptStory | null>;
+  saveStory: (next: {
+    documentId: string;
+    expectedContentHash: string | null;
+    story: CreateStory;
+  }) => Promise<KeptStory | null>;
+  ticksOf: (asset: Asset) => number;
   // The whole video, at the end of the track. A reason if it cannot be placed.
   place: (assetId: string) => string | null;
   openEdit: () => void;
 }) {
   const { projectId, assets, placedAssetIds, busy, t } = props;
   const briefKey = `yamakan.create.brief.${projectId}`;
-  const receiptsKey = `yamakan.create.receipts.${projectId}`;
-  const copiesKey = `yamakan.create.copies.${projectId}`;
   const [brief, setBrief] = useState(() => readBrief(kept(briefKey)));
-  const [receipts, setReceipts] = useState(() =>
-    readReceipts(kept(receiptsKey)),
-  );
-  const [copies, setCopies] = useState(() => readCopies(kept(copiesKey)));
+  const [keptStory, setKeptStory] = useState<KeptStory | null>(null);
+  const records: Record<string, MadeRecord> = keptStory
+    ? madeRecords(keptStory.story)
+    : {};
   const [engine, setEngine] = useState<EngineState>("checking");
   const [models, setModels] = useState<readonly GenerateModel[]>([]);
   const [notice, setNotice] = useState<Said | null>(null);
@@ -112,6 +128,7 @@ export function CreateWorkspace(props: {
   const videoInput = useRef<HTMLInputElement>(null);
   const receiptInput = useRef<HTMLInputElement>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const pendingRecord = useRef<RunReceipt | null>(null);
 
   useEffect(() => {
     keep(briefKey, validSeed(brief.seed) ? brief : { ...brief, seed: 42 });
@@ -126,6 +143,14 @@ export function CreateWorkspace(props: {
       })
       .catch(() => {
         if (current) setEngine("unknown");
+      });
+    props
+      .loadStory()
+      .then((found) => {
+        if (current) setKeptStory(found);
+      })
+      .catch(() => {
+        if (current) setProblem({ key: "create.storyUnread" });
       });
     props
       .loadModels()
@@ -205,32 +230,63 @@ export function CreateWorkspace(props: {
       setNotice({ key: "create.broughtIn", vars: { name: asset.name } });
       return;
     }
-    const nextReceipts = { ...receipts, [receipt.sha256]: receipt };
-    setReceipts(nextReceipts);
-    let saved = keep(receiptsKey, nextReceipts);
-    const copy = asset.hash !== receipt.sha256;
-    if (copy) {
-      // Converted when it came in: what is stored is not the file that was checked.
-      const nextCopies = { ...copies, [asset.hash]: receipt.sha256 };
-      setCopies(nextCopies);
-      saved = keep(copiesKey, nextCopies) && saved;
-    }
     setReceiptFile(null);
     if (receiptInput.current) receiptInput.current.value = "";
+    // Said once what it says is saved, so the card below already shows it.
+    await record(asset, receipt);
     setNotice({
-      key: copy ? "create.broughtInCopy" : "create.broughtInChecked",
+      key:
+        asset.hash === receipt.sha256
+          ? "create.broughtInChecked"
+          : "create.broughtInCopy",
       vars: { name: asset.name },
     });
-    if (!saved) setProblem({ key: "create.notKept" });
+  };
+
+  // Kept with the project. The video is in either way, so failing here says so.
+  const record = async (asset: Asset, receipt: RunReceipt) => {
+    try {
+      const latest = await props.loadStory();
+      const next = addMadeVideo(
+        latest?.story ?? null,
+        {
+          assetId: asset.id,
+          assetHash: asset.hash,
+          durationTicks: props.ticksOf(asset),
+          receipt,
+        },
+        () => crypto.randomUUID(),
+      );
+      if (!next) return;
+      const saved = await props.saveStory({
+        documentId: latest?.documentId ?? crypto.randomUUID(),
+        expectedContentHash: latest?.contentHash ?? null,
+        story: next,
+      });
+      if (saved) setKeptStory(saved);
+      else setProblem({ key: "create.notKept" });
+    } catch {
+      setProblem({ key: "create.notKept" });
+    }
   };
 
   const startable = models.find((m) => m.model === brief.modelId);
   const remember = (receipt: RunReceipt) => {
     setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
-    const next = { ...receipts, [receipt.sha256]: receipt };
-    setReceipts(next);
-    if (!keep(receiptsKey, next)) setProblem({ key: "create.notKept" });
+    const asset = assets.find((a) => a.hash === receipt.sha256);
+    pendingRecord.current = asset ? null : receipt;
+    if (asset) void record(asset, receipt);
   };
+  // A generated video reaches `assets` a render after it comes in.
+  useEffect(() => {
+    const receipt = pendingRecord.current;
+    if (!receipt) return;
+    const asset = assets.find((a) => a.hash === receipt.sha256);
+    if (!asset) return;
+    pendingRecord.current = null;
+    void record(asset, receipt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets]);
   const engineLine: MessageKey =
     engine === "checking"
       ? "create.engineChecking"
@@ -473,8 +529,7 @@ export function CreateWorkspace(props: {
         ) : (
           <ul className="create-videos">
             {videos.map((video) => {
-              const original = copies[video.hash];
-              const receipt = receipts[original ?? video.hash];
+              const made = records[video.hash];
               const placed = placedAssetIds.has(video.id);
               return (
                 <li key={video.id} data-testid="create-video">
@@ -489,21 +544,18 @@ export function CreateWorkspace(props: {
                   <strong>
                     <bdi>{video.name}</bdi>
                   </strong>
-                  {receipt ? (
+                  {made ? (
                     <small data-testid="create-receipt-facts">
                       {t(
-                        original
+                        made.converted
                           ? "create.receiptMatchedOriginal"
                           : "create.receiptMatched",
                       )}{" "}
-                      {t("create.receiptSays", {
-                        seed: receipt.seed,
-                        steps: receipt.steps,
-                      })}
+                      {t("create.receiptSays")}
                       <br />
-                      <bdi>{receipt.model}</bdi>
+                      <bdi>{made.label}</bdi>
                       <br />
-                      <bdi>{receipt.prompt}</bdi>
+                      <bdi>{made.prompt}</bdi>
                     </small>
                   ) : (
                     <small>{t("create.noReceipt")}</small>
