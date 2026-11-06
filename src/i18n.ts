@@ -17,8 +17,10 @@ const en = {
   "create.kaggleSetup":
     "To run it from here, start Yamakan with YAMAKAN_KAGGLE_CLI set to your Kaggle CLI's full path and YAMAKAN_KAGGLE_USERNAME to your username.",
   "create.agree":
-    "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer. The video comes back here; the model stays on Kaggle.",
+    "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer, and Kaggle keeps it in the notebook's history. The video comes back here; the model stays on Kaggle.",
   "create.needPrompt": "Describe the shot first.",
+  "create.notFromHere":
+    "This model has not yet been tested from this page, so it cannot be started here.",
   "create.generate": "Generate on Kaggle",
   "create.starting": "Sending it to Kaggle",
   "create.startFailed": "The run could not be started.",
@@ -40,7 +42,7 @@ const en = {
   "create.openNotebook": "open its notebook",
   "create.runBringIn": "Bring it into this project",
   "create.bringInFailed":
-    "The video could not be brought in. The status line above says why.",
+    "The video could not be brought in. The line at the top of the page says why; try again.",
   "create.runBroughtIn": "{name} made this video. It is in the list here.",
   "create.runRetry": "Try again",
   "create.runDismiss": "Done",
@@ -460,8 +462,10 @@ const ar: Record<MessageKey, string> = {
   "create.kaggleSetup":
     "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
   "create.agree":
-    "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
+    "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب، ويحتفظ به Kaggle في سجل الدفتر. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
   "create.needPrompt": "صف اللقطة أولًا.",
+  "create.notFromHere":
+    "لم يُختبر هذا النموذج من هذه الصفحة بعد، فلا يمكن تشغيله من هنا.",
   "create.generate": "إنتاج على Kaggle",
   "create.starting": "جارٍ الإرسال إلى Kaggle",
   "create.startFailed": "تعذر بدء التشغيل.",
@@ -481,7 +485,8 @@ const ar: Record<MessageKey, string> = {
     "قد يكون ما زال يعمل على Kaggle، حتى حد {minutes} دقيقة، مستخدمًا حصتك. لرؤيته أو إيقافه:",
   "create.openNotebook": "افتح دفتره",
   "create.runBringIn": "إحضاره إلى هذا المشروع",
-  "create.bringInFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
+  "create.bringInFailed":
+    "تعذر إحضار الفيديو. يوضح السطر أعلى الصفحة السبب؛ حاول مرة أخرى.",
   "create.runBroughtIn": "أنتج {name} هذا الفيديو. وهو في القائمة هنا.",
   "create.runRetry": "حاول مرة أخرى",
   "create.runDismiss": "تم",

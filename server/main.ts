@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createReadStream, existsSync } from "node:fs";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { readFile, unlink, writeFile } from "node:fs/promises";
@@ -161,12 +161,14 @@ if (kaggleCliPath && kaggleUsername) {
   if (
     path.isAbsolute(kaggleCliPath) &&
     existsSync(kaggleCliPath) &&
+    statSync(kaggleCliPath).isFile() &&
+    !/\.(?:cmd|bat)$/i.test(kaggleCliPath) &&
     /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(kaggleUsername)
   )
     kaggle = { cli: kaggleCliPath, username: kaggleUsername };
   else
     console.warn(
-      "YAMAKAN_KAGGLE_CLI and YAMAKAN_KAGGLE_USERNAME were not used: a full path to the CLI and a Kaggle username are needed.",
+      "YAMAKAN_KAGGLE_CLI and YAMAKAN_KAGGLE_USERNAME were not used: a full path to the CLI program and a Kaggle username are needed.",
     );
 }
 const api = new CreativeAPI(store, { recoveryHome, comfyUrl, kaggle });

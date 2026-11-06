@@ -1,7 +1,7 @@
 // Starting a model on the person's own Kaggle GPU, and following it. Nothing runs
 // until they tick that their prompt may leave this machine and press the button, each
 // time. There is no percentage because Kaggle gives none: only a state and the time.
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import type { RunReceipt } from "./create-model.ts";
 
@@ -122,7 +122,6 @@ export function GeneratePanel(props: {
   const [problem, setProblem] = useState("");
   const [working, setWorking] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const answered = useRef(false);
 
   const finished = FINISHED.has(state);
   const following = Boolean(run) && !run?.stopped && !finished && !lost;
@@ -136,7 +135,6 @@ export function GeneratePanel(props: {
       try {
         const answer = await api.status(run.generationId);
         if (!current) return;
-        answered.current = true;
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
       } catch (e) {
@@ -180,7 +178,6 @@ export function GeneratePanel(props: {
           Math.floor((model.frames / model.fps) * props.projectFps),
         ),
       });
-      answered.current = false;
       setState("queued");
       setNote("");
       setLost(false);
@@ -307,7 +304,12 @@ export function GeneratePanel(props: {
         </>
       )}
       {note && (
-        <p className="note" dir="auto" data-testid="create-run-note">
+        <p
+          role="status"
+          className="note"
+          dir="auto"
+          data-testid="create-run-note"
+        >
           {note}
         </p>
       )}
@@ -350,7 +352,7 @@ export function GeneratePanel(props: {
           </button>
         )}
       </div>
-      {(following || run.stopped || lost) && (
+      {(following || run.stopped || lost || state === "cancelled") && (
         <p className="note">
           {run.stopped || lost
             ? t("create.runGoesOn", {

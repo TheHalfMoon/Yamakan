@@ -1,0 +1,61 @@
+{
+  "task": "generation-from-yamakan-on-kaggle",
+  "prompt": "A red kite flies above a green hill under a clear blue sky.",
+  "seed": 7,
+  "head": "1710e88ccee5b633c8bc67843f653438483488f5",
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "the agreement is readable in its place",
+      "at": "2026-11-06T01:12:29.605Z"
+    },
+    {
+      "name": "started from the page, after agreeing the prompt leaves this computer",
+      "at": "2026-11-06T01:12:37.129Z"
+    },
+    {
+      "name": "Kaggle says queued",
+      "afterSeconds": 0.009,
+      "at": "2026-11-06T01:12:37.367Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 10.018,
+      "at": "2026-11-06T01:12:47.376Z"
+    },
+    {
+      "name": "Kaggle says succeeded",
+      "afterSeconds": 1131.727,
+      "at": "2026-11-06T01:31:29.085Z"
+    },
+    {
+      "name": "the run finished, and its video passed its receipt",
+      "seconds": 1131.953,
+      "at": "2026-11-06T01:31:29.311Z"
+    },
+    {
+      "name": "it came into the project, with this prompt and seed",
+      "at": "2026-11-06T01:31:31.256Z"
+    },
+    {
+      "name": "placed whole on the Edit timeline",
+      "frames": 101,
+      "at": "2026-11-06T01:31:34.232Z"
+    },
+    {
+      "name": "exported from the toolbar, every frame",
+      "width": 1280,
+      "height": 720,
+      "frames": 101,
+      "assetHash": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
+      "exportHash": "cde2fa6ca5d1b248c94f2927ddabe08ac906a1217f05bd2aaa238a26fb563e4d",
+      "at": "2026-11-06T01:31:36.580Z"
+    },
+    {
+      "name": "no page errors",
+      "at": "2026-11-06T01:31:36.637Z"
+    }
+  ]
+}

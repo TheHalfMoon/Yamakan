@@ -21,6 +21,19 @@ export type CreateModel = {
 
 export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
   {
+    id: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    name: "Wan2.2-TI2V-5B",
+    licence: "Apache-2.0",
+    width: 704,
+    height: 480,
+    frames: 81,
+    fps: 24,
+    steps: 30,
+    secondsToMake: 1132,
+    negativePrompt: "blurry, low quality, distorted, static",
+    folder: "scripts/kaggle/wan22-ti2v-5b",
+  },
+  {
     id: "zai-org/CogVideoX-2b",
     name: "CogVideoX-2b",
     licence: "Apache-2.0",
@@ -32,19 +45,6 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     secondsToMake: 1125,
     negativePrompt: null,
     folder: "scripts/kaggle/cogvideox-2b",
-  },
-  {
-    id: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
-    name: "Wan2.2-TI2V-5B",
-    licence: "Apache-2.0",
-    width: 704,
-    height: 480,
-    frames: 81,
-    fps: 24,
-    steps: 30,
-    secondsToMake: 1007,
-    negativePrompt: "blurry, low quality, distorted, static",
-    folder: "scripts/kaggle/wan22-ti2v-5b",
   },
 ]);
 

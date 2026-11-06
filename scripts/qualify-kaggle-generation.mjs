@@ -40,6 +40,7 @@ if (
 const PROMPT =
   givenPrompt ?? "A red kite flies above a green hill under a clear blue sky.";
 const SEED = 7;
+const READY_ONLY = Boolean(process.env.YAMAKAN_QUALIFY_READY_ONLY);
 const MAX_WAIT_MS = 45 * 60 * 1000;
 execFileSync("npm", ["run", "build"], {
   stdio: "inherit",
@@ -114,7 +115,7 @@ try {
   await page.getByTestId("create-prompt").fill(PROMPT);
   await page
     .getByTestId("create-model")
-    .selectOption({ index: 1 - Number(modelIndex) });
+    .selectOption({ index: Number(modelIndex) });
   await page.getByTestId("create-seed").fill(String(SEED));
 
   const start = page.getByTestId("create-generate-start");
@@ -137,10 +138,7 @@ try {
   });
   assert.ok(fits.inside && fits.share > 0.5, JSON.stringify(fits));
   step("the agreement is readable in its place");
-  if (process.env.YAMAKAN_QUALIFY_READY_ONLY) {
-    passed = true;
-    throw new Error("Stopped before sending anything, as asked.");
-  }
+  if (READY_ONLY) throw new Error("Stopped before sending anything, as asked.");
   await start.click();
   const state = page.getByTestId("create-run-state");
   await state.waitFor({ timeout: 300_000 });
@@ -273,7 +271,9 @@ try {
     join(out, "receipt.json"),
     `${JSON.stringify(
       {
-        task: "generation-from-yamakan-on-kaggle",
+        task: READY_ONLY
+          ? "the-page-before-a-run-only"
+          : "generation-from-yamakan-on-kaggle",
         prompt: PROMPT,
         seed: SEED,
         head: execFileSync("git", ["rev-parse", "HEAD"], {
@@ -307,5 +307,11 @@ try {
     console.log(`note - left behind: ${root} (${e.code})`);
   }
 }
-console.log(passed ? "KAGGLE GENERATION PASS" : "KAGGLE GENERATION FAIL");
+console.log(
+  READY_ONLY
+    ? "NOTHING SENT: only the page before a run was looked at"
+    : passed
+      ? "KAGGLE GENERATION PASS"
+      : "KAGGLE GENERATION FAIL",
+);
 process.exit(passed ? 0 : 1);

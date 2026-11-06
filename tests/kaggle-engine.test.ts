@@ -1,17 +1,21 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
   KAGGLE_RECIPES,
   createKaggleEngine,
+  kaggleCliEnvironment,
+  kaggleRecipes,
+  offeredKaggleRecipes,
   scriptWithBrief,
   type KaggleCli,
 } from "../core/engines/kaggle.ts";
 import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
+import { CREATE_MODELS } from "../src/create/create-model.ts";
 
 const wan = KAGGLE_RECIPES[0];
 const SCRIPT = 'import os\nBRIEF = {}  # yamakan:brief\nprint("x")\n';
@@ -47,9 +51,13 @@ const request = (changes: Record<string, unknown> = {}) =>
 function kaggle(
   states: string[],
   leave?: (runId: string, folder: string) => void,
+  {
+    privateAnswer = true,
+    clock,
+  }: { privateAnswer?: boolean; clock?: () => number } = {},
 ) {
   const calls: string[][] = [];
-  const pushed: { metadata?: any; script?: string } = {};
+  const pushed: { metadata?: any; script?: string; was?: string[] } = {};
   let pushes = 0;
   let runId = "";
   const cli: KaggleCli = async (args) => {
@@ -67,9 +75,17 @@ function kaggle(
         readFileSync(path.join(folder, "kernel-metadata.json"), "utf8"),
       );
       pushed.script = readFileSync(path.join(folder, "run.py"), "utf8");
+      pushed.was = readdirSync(folder);
       const encoded = /b64decode\("([^"]+)"\)/.exec(pushed.script)![1];
       runId = JSON.parse(Buffer.from(encoded, "base64").toString()).runId;
       return { stdout: "Kernel version 1 successfully pushed." };
+    }
+    if (args[1] === "pull") {
+      writeFileSync(
+        path.join(args[4], "kernel-metadata.json"),
+        JSON.stringify({ is_private: privateAnswer }),
+      );
+      return { stdout: "" };
     }
     throw new Error(`unexpected ${args}`);
   };
@@ -78,6 +94,7 @@ function kaggle(
     username: "someone",
     scriptFor: async () => SCRIPT,
     download: async (_r, folder) => leave?.(runId, folder),
+    ...(clock ? { now: clock } : {}),
   });
   return { engine, calls, pushed, runIdOf: () => runId };
 }
@@ -85,7 +102,13 @@ const good = (runId: string, folder: string) => {
   writeFileSync(path.join(folder, wan.output), VIDEO);
   writeFileSync(
     path.join(folder, "receipt.json"),
-    JSON.stringify({ runId, stage: "done", verified: true, sha256: hash }),
+    JSON.stringify({
+      runId,
+      stage: "done",
+      verified: true,
+      frames: wan.frames,
+      sha256: hash,
+    }),
   );
 };
 const context = { openAsset: () => (async function* () {})() };
@@ -238,7 +261,14 @@ test("after a while, another run's result is a failure", async () => {
         pushes++;
         return { stdout: "successfully pushed" };
       }
-      if (!pushes) throw new Error("none");
+      if (args[1] === "pull") {
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: true }),
+        );
+        return { stdout: "" };
+      }
+      if (!pushes) throw new Error("404 none");
       return { stdout: "KernelWorkerStatus.COMPLETE" };
     },
     username: "someone",
@@ -334,7 +364,7 @@ test("a push Kaggle did not take is an error, and nothing is tracked", async () 
     cli: async (args) => {
       if (args[1] === "push")
         throw new Error("Maximum batch GPU quota reached");
-      throw new Error("none");
+      throw new Error("404 none");
     },
     username: "someone",
     scriptFor: async () => SCRIPT,
@@ -343,4 +373,204 @@ test("a push Kaggle did not take is an error, and nothing is tracked", async () 
     engine.submit(request(), context as never),
     /did not take the run: Maximum batch GPU/,
   );
+});
+
+test("only a model with its own tested run from the page is offered", async () => {
+  assert.deepEqual(
+    offeredKaggleRecipes().map((r) => r.id),
+    ["kaggle-wan22-ti2v-5b"],
+  );
+  assert.deepEqual(
+    kaggleRecipes().map((r) => r.id),
+    ["kaggle-wan22-ti2v-5b"],
+  );
+  const k = kaggle(["QUEUED"]);
+  assert.deepEqual(
+    await k.engine.submit(
+      request({ recipeId: "kaggle-cogvideox-2b" }),
+      context as never,
+    ),
+    { refused: "ENGINE_DISABLED" },
+  );
+  assert.equal(k.calls.length, 0);
+});
+
+for (const state of ["ERROR", "CANCEL_ACKNOWLEDGED", "CANCEL_REQUESTED"]) {
+  test(`just after a push, ${state} may be an earlier run's`, async () => {
+    let time = 0;
+    const k = kaggle([state], undefined, { clock: () => time });
+    const { executionRef } = (await k.engine.submit(
+      request(),
+      context as never,
+    )) as any;
+    assert.equal((await k.engine.status(executionRef)).state, "queued");
+    time = 10 * 60 * 1000;
+    assert.notEqual((await k.engine.status(executionRef)).state, "queued");
+  });
+}
+
+test("two starts at once make one push", async () => {
+  const k = kaggle(["COMPLETE"]);
+  const both = await Promise.allSettled([
+    k.engine.submit(request(), context as never),
+    k.engine.submit(request(), context as never),
+  ]);
+  assert.equal(both.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(k.calls.filter((c) => c[1] === "push").length, 1);
+});
+
+test("a run still going here is not replaced, even if Kaggle says it ended", async () => {
+  const k = kaggle(["COMPLETE"]);
+  await k.engine.submit(request(), context as never);
+  await assert.rejects(
+    k.engine.submit(request(), context as never),
+    /still running/,
+  );
+});
+
+test("not being able to ask stops a push", async () => {
+  const calls: string[] = [];
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      calls.push(args[1]);
+      throw new Error("network down");
+    },
+    username: "someone",
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(
+    engine.submit(request(), context as never),
+    /Could not ask Kaggle/,
+  );
+  assert.deepEqual(calls, ["status"]);
+});
+
+test("questions at once share one answer", async () => {
+  let downloads = 0;
+  let release = () => {};
+  const held = new Promise<void>((r) => (release = r));
+  let pushes = 0;
+  let runId = "";
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      if (args[1] === "push") {
+        pushes++;
+        const script = readFileSync(path.join(args[3], "run.py"), "utf8");
+        runId = JSON.parse(
+          Buffer.from(
+            /b64decode\("([^"]+)"\)/.exec(script)![1],
+            "base64",
+          ).toString(),
+        ).runId;
+        return { stdout: "successfully pushed" };
+      }
+      if (args[1] === "pull") {
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: true }),
+        );
+        return { stdout: "" };
+      }
+      if (!pushes) throw new Error("404");
+      return { stdout: "KernelWorkerStatus.COMPLETE" };
+    },
+    username: "someone",
+    scriptFor: async () => SCRIPT,
+    download: async (_r, folder) => {
+      downloads++;
+      await held;
+      good(runId, folder);
+    },
+  });
+  const { executionRef } = (await engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const first = engine.status(executionRef);
+  const second = engine.status(executionRef);
+  release();
+  assert.equal((await first).state, "succeeded");
+  assert.equal((await second).state, "succeeded");
+  assert.equal(downloads, 1);
+});
+
+test("a notebook Kaggle does not report as private ends the run", async () => {
+  const k = kaggle(["RUNNING"], undefined, { privateAnswer: false });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /private/);
+});
+
+test("the prompt does not stay on this computer", async () => {
+  const k = kaggle(["COMPLETE"], good);
+  const { executionRef } = (await k.engine.submit(
+    request({ prompt: "NEEDLE-PROMPT" }),
+    context as never,
+  )) as any;
+  await k.engine.status(executionRef);
+  const [artifact] = await k.engine.enumerateArtifacts(executionRef);
+  assert.ok(artifact, "the video stays");
+  assert.deepEqual(k.pushed.was!.sort(), ["kernel-metadata.json", "run.py"]);
+});
+
+test("a video of the wrong length is refused", async () => {
+  const k = kaggle(["COMPLETE"], (runId, folder) => {
+    good(runId, folder);
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({
+        runId,
+        stage: "done",
+        verified: true,
+        frames: 41,
+        sha256: hash,
+      }),
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  assert.equal((await k.engine.status(executionRef)).state, "failed");
+});
+
+test("the CLI gets its settings, not this service's environment", () => {
+  const env = kaggleCliEnvironment({
+    PATH: "p",
+    USERPROFILE: "u",
+    KAGGLE_CONFIG_DIR: "k",
+    YAMAKAN_SECRET: "no",
+    GITHUB_TOKEN: "no",
+    AWS_SECRET_ACCESS_KEY: "no",
+  });
+  assert.deepEqual(env, {
+    PYTHONUTF8: "1",
+    PATH: "p",
+    USERPROFILE: "u",
+    KAGGLE_CONFIG_DIR: "k",
+  });
+});
+
+test("an unknown run says so, the way a restart leaves it", async () => {
+  const k = kaggle(["RUNNING"]);
+  await assert.rejects(k.engine.status("not-known"), /not known here/);
+});
+
+test("the page's facts and the recipe say the same", () => {
+  for (const r of KAGGLE_RECIPES) {
+    const made = CREATE_MODELS.find((m) => m.id === r.model)!;
+    assert.deepEqual(
+      [made.width, made.height, made.frames, made.fps, made.steps],
+      [r.width, r.height, r.frames, r.fps, r.steps],
+    );
+    assert.equal(made.secondsToMake, r.expectedSeconds);
+    const script = readFileSync(`scripts/kaggle/${r.folder}/run.py`, "utf8");
+    assert.match(script, new RegExp(`^FRAMES = ${r.frames}\\b`, "m"));
+    assert.match(script, new RegExp(`^FPS = ${r.fps}\\b`, "m"));
+    assert.match(script, new RegExp(`^STEPS = ${r.steps}\\b`, "m"));
+  }
 });

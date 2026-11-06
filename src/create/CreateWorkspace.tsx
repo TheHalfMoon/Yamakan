@@ -396,7 +396,11 @@ export function CreateWorkspace(props: {
             <p className="note">
               {t("create.outside", { folder: model.folder })}
             </p>
-            <p className="note">{t("create.kaggleSetup")}</p>
+            <p className="note">
+              {models.length > 0
+                ? t("create.notFromHere")
+                : t("create.kaggleSetup")}
+            </p>
           </div>
         )}
       </div>

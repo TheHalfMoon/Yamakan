@@ -8,15 +8,18 @@ Part of issue #203.
 
 - Text to video only: the prompt and seed leave this computer, no media does. A person ticks that they agree, every run, and presses the button.
 - The Kaggle CLI uses its own token. Yamakan never reads it, and passes the CLI fixed arguments; the prompt travels inside a file, as base64 of JSON, so it cannot become Python or a command.
-- The notebook is private and has a 60-minute limit. A notebook still running is not replaced.
+- The notebook is asked to be private, with a 60-minute limit, and Kaggle's own answer on privacy is read back after each push: if it does not say private, the run is reported as failed. That run may already have started. A notebook still running is not replaced. Kaggle keeps each prompt in the notebook's history, and the page says so.
 - Kaggle's latest output could be another run's, so a result counts only if its receipt names this run, passed its own checks, and matches the video's hash.
 - **Yamakan cannot stop a run on Kaggle.** The CLI has no such command, and the SDK's call needs a session ID the public interface does not give, tried on 2026-11-06. So the page offers Stop following, says the run goes on using quota, and links to its notebook.
 - **A restart loses a run in progress.** The page says so and links to the notebook, but that run's video cannot then be brought in from here.
 - A status is what Kaggle says. There is no percentage, because it gives none; only the time so far.
 
-`npm run qualify:kaggle` ran this for real at the commit in its receipt, through export. Its failure, stop and restart paths are covered by `tests/kaggle-engine.test.ts` with a stand-in for Kaggle, and were **not** run against real Kaggle in the browser.
+- After a run, only its video stays on this computer, in a temporary folder removed a day later; its script is removed once pushed.
+- Only a model with its own tested run from the page is offered: Wan2.2-TI2V-5B. CogVideoX-2b says it has not been tested from this page.
 
-## Before that
+`npm run qualify:kaggle` ran this for real, through export. Its receipt, `kaggle-page-run-receipt.json`, names the commit it ran at; the commit that changed the engine after review was run again, as reported on its pull request. The engine's failure, wrong-run, privacy and unknown-run paths are tested with a stand-in for Kaggle in `tests/kaggle-engine.test.ts`. **The panel itself is exercised only by that one successful real run:** its failure, Stop following and restart screens have not been run in a browser. How long a stale status lasts on Kaggle is assumed to be under three minutes, not measured.
+
+## Without Kaggle
 
 ## What works now
 

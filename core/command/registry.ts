@@ -78,11 +78,11 @@ import {
   type GenerationRecipe,
 } from "../engines/generation.ts";
 import {
-  KAGGLE_RECIPES,
   createKaggleEngine,
   kaggleCli,
   kaggleRecipes,
   notebookUrl,
+  offeredKaggleRecipes,
 } from "../engines/kaggle.ts";
 import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
 import {
@@ -2156,15 +2156,15 @@ export const commands = {
         : { configured: false as const, ...answer };
     },
   }),
-  // A person's generation. Nothing can run in this build: engines are off and no
-  // recipe is pinned, so each refuses with the reason. An agent cannot start one.
+  // A person's generation. It runs only where this service was told to use their
+  // Kaggle CLI: otherwise each refuses with the reason. An agent cannot start one.
   "yamakan.generation.start": define({
     scope: "project:write",
     mutation: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Start a generation with a qualified recipe, at the person's request, from a browser session only. Refused while this build has none, as it does now.",
+      "Start a generation with a qualified recipe, at the person's request, from a browser session only.",
     input: z
       .object({
         projectId: Id,
@@ -2202,7 +2202,7 @@ export const commands = {
       return {
         route: kaggle ? ("kaggle" as const) : null,
         models: kaggle
-          ? KAGGLE_RECIPES.map((r) => ({
+          ? offeredKaggleRecipes().map((r) => ({
               recipeId: r.id,
               name: r.name,
               model: r.model,
@@ -2225,7 +2225,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Report a generation's state and, where the engine gives it, its progress. Refused while this build can generate nothing, as it does now.",
+      "Report a generation's state and, where the engine gives it, its progress.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.status(a.generationId),
   }),
@@ -2235,7 +2235,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Ask the engine to stop a generation, from a browser session only. Refused while this build can generate nothing, as it does now.",
+      "Ask the engine to stop a generation, from a browser session only.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.cancel(a.generationId),
   }),
@@ -2245,7 +2245,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it. Refused while this build can generate nothing, as it does now.",
+      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
   }),
