@@ -4,6 +4,11 @@
 // says so, and how a tested model has been run.
 import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
+import {
+  GeneratePanel,
+  type GenerateModel,
+  type GenerationApi,
+} from "./GeneratePanel.tsx";
 import { mediaUrl } from "../session.ts";
 import {
   CREATE_MODELS,
@@ -76,6 +81,10 @@ export function CreateWorkspace(props: {
   t: Translate;
   // Whether a generation could run here, from the service.
   checkEngine: () => Promise<EngineAnswer | null>;
+  // What can be started from here, and how.
+  loadModels: () => Promise<readonly GenerateModel[]>;
+  generation: GenerationApi;
+  projectFps: number;
   // Under the editor's busy state: `check` runs first and can stop the import.
   // Resolves to the new asset, or null, or "busy" if nothing could start.
   importVideo: (
@@ -96,6 +105,7 @@ export function CreateWorkspace(props: {
   );
   const [copies, setCopies] = useState(() => readCopies(kept(copiesKey)));
   const [engine, setEngine] = useState<EngineState>("checking");
+  const [models, setModels] = useState<readonly GenerateModel[]>([]);
   const [notice, setNotice] = useState<Said | null>(null);
   const [problem, setProblem] = useState<Said | string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -117,6 +127,12 @@ export function CreateWorkspace(props: {
       .catch(() => {
         if (current) setEngine("unknown");
       });
+    props
+      .loadModels()
+      .then((list) => {
+        if (current) setModels(list);
+      })
+      .catch(() => {});
     return () => {
       current = false;
     };
@@ -208,6 +224,13 @@ export function CreateWorkspace(props: {
     if (!saved) setProblem({ key: "create.notKept" });
   };
 
+  const startable = models.find((m) => m.model === brief.modelId);
+  const remember = (receipt: RunReceipt) => {
+    setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
+    const next = { ...receipts, [receipt.sha256]: receipt };
+    setReceipts(next);
+    if (!keep(receiptsKey, next)) setProblem({ key: "create.notKept" });
+  };
   const engineLine: MessageKey =
     engine === "checking"
       ? "create.engineChecking"
@@ -351,14 +374,31 @@ export function CreateWorkspace(props: {
           </button>
         </div>
 
-        <div className="create-engine" data-testid="create-engine">
-          <h3>{t("create.engineTitle")}</h3>
-          <p>{t(engineLine)}</p>
-          {reasonKey && <p className="note">{t(reasonKey)}</p>}
-          <p className="note">
-            {t("create.outside", { folder: model.folder })}
-          </p>
-        </div>
+        {startable ? (
+          <GeneratePanel
+            storageKey={`yamakan.create.run.${projectId}`}
+            model={startable}
+            models={models}
+            prompt={composed}
+            seed={brief.seed}
+            seedValid={seedValid}
+            projectFps={props.projectFps}
+            busy={busy}
+            t={t}
+            api={props.generation}
+            onMade={remember}
+          />
+        ) : (
+          <div className="create-engine" data-testid="create-engine">
+            <h3>{t("create.engineTitle")}</h3>
+            <p>{t(engineLine)}</p>
+            {reasonKey && <p className="note">{t(reasonKey)}</p>}
+            <p className="note">
+              {t("create.outside", { folder: model.folder })}
+            </p>
+            <p className="note">{t("create.kaggleSetup")}</p>
+          </div>
+        )}
       </div>
 
       <div className="create-results">

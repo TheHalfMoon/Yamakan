@@ -77,6 +77,13 @@ import {
   createGenerationService,
   type GenerationRecipe,
 } from "../engines/generation.ts";
+import {
+  KAGGLE_RECIPES,
+  createKaggleEngine,
+  kaggleCli,
+  kaggleRecipes,
+  notebookUrl,
+} from "../engines/kaggle.ts";
 import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
 import {
   StudioDocumentSchema,
@@ -234,6 +241,8 @@ export type CommandContext = {
   modelRoot?: string;
   // A person-started ComfyUI the service was told to look at (unset: none).
   comfyUrl?: string;
+  // The person's Kaggle CLI and username, for runs they start (unset: none).
+  kaggle?: { cli: string; username: string };
   // Tests only: a generation service, since this build can build none.
   generation?: {
     service: ReturnType<typeof createGenerationService>;
@@ -264,8 +273,27 @@ type Generation = {
   recipes: readonly GenerationRecipe[];
 };
 const generations = new WeakMap<ProjectStore, Generation>();
+const kaggleGenerations = new WeakMap<ProjectStore, Generation>();
 function generationOf(ctx: CommandContext): Generation {
   if (ctx.generation) return ctx.generation;
+  if (ctx.kaggle) {
+    let held = kaggleGenerations.get(ctx.store);
+    if (!held) {
+      held = {
+        service: createGenerationService({
+          adapter: createKaggleEngine({
+            cli: kaggleCli(ctx.kaggle.cli),
+            username: ctx.kaggle.username,
+          }),
+          store: ctx.store,
+          resourcePolicyHash: RESOURCE_POLICY_HASH,
+        }),
+        recipes: kaggleRecipes(),
+      };
+      kaggleGenerations.set(ctx.store, held);
+    }
+    return held;
+  }
   const { available, reason } = comfyGeneration();
   if (!available || !ctx.comfyUrl)
     throw new CommandError(
@@ -2160,6 +2188,37 @@ export const commands = {
       if (!recipe)
         throw new CommandError("NOT_FOUND", "That recipe is not available.");
       return generation.service.start({ ...request, recipe });
+    },
+  }),
+  // What a person can start here, if anything, and where it would run.
+  "yamakan.generation.options": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report the models a person can start from here and where they run. Empty unless this service was told to use the person's Kaggle CLI.",
+    input: z.object({}).strict(),
+    run: (ctx) => {
+      const { kaggle } = ctx;
+      return {
+        route: kaggle ? ("kaggle" as const) : null,
+        models: kaggle
+          ? KAGGLE_RECIPES.map((r) => ({
+              recipeId: r.id,
+              name: r.name,
+              model: r.model,
+              revision: r.revision,
+              licence: r.licence,
+              width: r.width,
+              height: r.height,
+              frames: r.frames,
+              fps: r.fps,
+              steps: r.steps,
+              expectedSeconds: r.expectedSeconds,
+              timeoutSeconds: r.timeoutSeconds,
+              notebook: notebookUrl(kaggle.username, r),
+            }))
+          : [],
+      };
     },
   }),
   "yamakan.generation.status": define({

@@ -152,7 +152,24 @@ try {
 } catch (e) {
   console.warn(`YAMAKAN_COMFYUI_URL was not used: ${(e as Error).message}`);
 }
-const api = new CreativeAPI(store, { recoveryHome, comfyUrl });
+// The person's own Kaggle CLI, for runs they start: never its token. Both are
+// needed, and neither is guessed.
+const kaggleCliPath = env("KAGGLE_CLI");
+const kaggleUsername = env("KAGGLE_USERNAME");
+let kaggle: { cli: string; username: string } | undefined;
+if (kaggleCliPath && kaggleUsername) {
+  if (
+    path.isAbsolute(kaggleCliPath) &&
+    existsSync(kaggleCliPath) &&
+    /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(kaggleUsername)
+  )
+    kaggle = { cli: kaggleCliPath, username: kaggleUsername };
+  else
+    console.warn(
+      "YAMAKAN_KAGGLE_CLI and YAMAKAN_KAGGLE_USERNAME were not used: a full path to the CLI and a Kaggle username are needed.",
+    );
+}
+const api = new CreativeAPI(store, { recoveryHome, comfyUrl, kaggle });
 // Durable jobs: reconcile any interrupted attempts and resume queued work.
 await api.queue.start();
 // Crash leftovers from an earlier run (older than the grace period), then
