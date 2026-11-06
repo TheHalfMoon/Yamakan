@@ -198,7 +198,11 @@ export function GeneratePanel(props: {
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
         // Its own result proves it arrived; a notebook's state does not.
-        if (answer.state === "succeeded" || answer.state === "failed")
+        if (
+          answer.state === "succeeded" ||
+          answer.state === "failed" ||
+          answer.state === "cancelled"
+        )
           setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
       } catch (e) {
         if (!current) return;

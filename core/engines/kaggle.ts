@@ -26,7 +26,7 @@ import {
   type EngineAdapterV2,
   type ExecutionStatus,
 } from "./contract-v2.ts";
-import type { GenerationRecipe } from "./generation.ts";
+import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -203,16 +203,24 @@ export function kaggleCli(file: string): KaggleCli {
 }
 
 const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
-// Kaggle's words for a notebook that does not exist, or a pull of one, as tried.
-// After a push is tried, only these say it did not arrive. Anything else may have
-// reached Kaggle, and a second push would replace it: so it is uncertain, not failed.
+// After a push is tried, only Kaggle's own refusal says it did not arrive: a status
+// with its words, or a quota. Anything else may have reached Kaggle, and a second push
+// would replace it: so it is uncertain, not failed. A bare number is not a refusal: a
+// traceback's line numbers are in this text too.
 const REFUSED_PUSH =
-  /\b(?:400|401|403|404|409|413|422|429)\b|quota|maximum|forbidden|unauthorized|too many/i;
+  /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)/i;
+const wasRefused = (message: string) =>
+  !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
+// The longest a start can take to reach Kaggle, from when it was recorded: two questions,
+// then the push. After a restart that record is all there is of when it was sent.
+const SEND_BOUND_MS = (90 + 90 + 180) * 1000;
 const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
 const EXPIRY_GRACE_SECONDS = 10 * 60;
+const PAST_LIMIT =
+  "This run has gone past its time limit. What Kaggle shows may be another run's, so only a result naming this run is taken.";
 // All the log can show: the process was killed. Memory is the likely reason, not a
 // known one, and only a flag leaves the log, which can hold the prompt.
 const WAS_KILLED =
@@ -245,6 +253,8 @@ type Run = {
   warning?: string;
   endedWith?: string;
   video?: { file: string; artifact: Artifact };
+  // Sent with no answer: nothing says it is running at all.
+  uncertain?: boolean;
   // One question at a time: a slow one must not undo the answer to another.
   asking?: Promise<ExecutionStatus>;
 };
@@ -277,6 +287,24 @@ async function sweepOldFolders(
   );
 }
 
+// What the engine asks of the job table's record of its runs.
+export const ledgerOptions = (ledger: GenerationLedger) => ({
+  recorded: (ref: string) => {
+    const r = ledger.read(ref);
+    return r && !r.held
+      ? {
+          recipeId: r.recipe.id,
+          startedAt: r.startedAt,
+          videoSha256: r.videoSha256,
+          sent: r.phase === "sent",
+          finished: r.imported !== null || r.dismissed,
+        }
+      : null;
+  },
+  sentBefore: ledger.hasSent,
+  lastSentAt: ledger.lastSentAt,
+});
+
 export function createKaggleEngine(options: {
   cli: KaggleCli;
   username: string;
@@ -291,9 +319,13 @@ export function createKaggleEngine(options: {
     recipeId: string;
     startedAt: number;
     videoSha256: string | null;
+    sent: boolean;
+    // Brought in or dismissed: its video has no further use here.
+    finished: boolean;
   } | null;
   sentBefore?: (recipeId: string, except: string) => boolean;
-  // When another run of this recipe was last sent: Kaggle may not yet show it.
+  // When another run of this recipe, even one given up on, was last recorded as sent:
+  // Kaggle may not yet show it.
   lastSentAt?: (recipeId: string, except: string) => number | undefined;
 }): EngineAdapterV2 {
   const { cli, username } = options;
@@ -302,11 +334,10 @@ export function createKaggleEngine(options: {
   const now = options.now ?? Date.now;
   const folderRoot = options.folderRoot ?? tmpdir();
   // After a start, and tidying only: if the store has gone by then, it can wait.
-  void sweepOldFolders(
-    folderRoot,
-    now(),
-    (runId) => options.recorded?.(runId)?.videoSha256 != null,
-  ).catch(() => {});
+  void sweepOldFolders(folderRoot, now(), (runId) => {
+    const record = options.recorded?.(runId);
+    return record?.videoSha256 != null && !record.finished;
+  }).catch(() => {});
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
@@ -343,6 +374,9 @@ export function createKaggleEngine(options: {
     return status(run);
   };
   const settling = (run: Run) => now() - run.startedAt < PUSH_SETTLE_MS;
+  const pastLimit = (run: Run) =>
+    now() - run.startedAt >
+    (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
   const waiting = (run: Run): ExecutionStatus => ({
     executionRef: run.runId,
     state: "queued",
@@ -353,7 +387,11 @@ export function createKaggleEngine(options: {
     const folder = path.join(run.folder, "output");
     await rm(folder, { recursive: true, force: true });
     await mkdir(folder, { recursive: true });
-    await download(run.recipe, folder);
+    await download(run.recipe, folder).catch(async (e) => {
+      // A part of a download can hold the prompt.
+      await rm(folder, { recursive: true, force: true });
+      throw e;
+    });
     const file = path.join(folder, "receipt.json");
     try {
       if ((await stat(file)).size > RECEIPT_BYTES)
@@ -430,23 +468,15 @@ export function createKaggleEngine(options: {
   const ask = async (run: Run): Promise<ExecutionStatus> => {
     try {
       const state = await remoteState(run.recipe);
-      const expired =
-        now() - run.startedAt >
-        (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
-      if (state === "QUEUED" || state === "NEW_SCRIPT" || state === "RUNNING") {
-        // Past its own limit, Kaggle's latest is not this run, or says nothing true of it.
-        if (expired) {
-          await keepOnly(run);
-          return end(
-            run,
-            "failed",
-            "This run has gone past its time limit with no result from Kaggle. Anything still running there is another run.",
-          );
-        }
-        return state === "RUNNING"
-          ? { executionRef: run.runId, state: "running" }
-          : waiting(run);
-      }
+      if (state === "QUEUED" || state === "NEW_SCRIPT" || state === "RUNNING")
+        // The clock alone ends nothing. Whether time in a queue counts toward the limit
+        // is not known, and what comes next says whose run this was.
+        return {
+          ...(state === "RUNNING"
+            ? { executionRef: run.runId, state: "running" as const }
+            : waiting(run)),
+          ...(pastLimit(run) ? { diagnostic: diagnostic(PAST_LIMIT) } : {}),
+        };
       if (state === "COMPLETE") {
         try {
           return await finish(run);
@@ -480,7 +510,11 @@ export function createKaggleEngine(options: {
         // Likewise: someone stopping an earlier run on Kaggle is not this one.
         if (settling(run)) return waiting(run);
         await keepOnly(run);
-        return end(run, "cancelled", "The run was stopped on Kaggle.");
+        return end(
+          run,
+          "cancelled",
+          "Kaggle's latest run on this notebook was stopped there.",
+        );
       }
       return {
         executionRef: run.runId,
@@ -488,21 +522,13 @@ export function createKaggleEngine(options: {
         diagnostic: diagnostic(`Kaggle says ${state}.`),
       };
     } catch (e) {
-      // Being unable to ask is not the run failing, unless it is long past its limit.
-      if (
-        now() - run.startedAt >
-        (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000
-      )
-        return end(
-          run,
-          "failed",
-          "This run has gone past its time limit, and Kaggle has not answered. Its result, if any, is on its notebook.",
-        );
+      // Being unable to ask is not the run failing, however late: it is asked again,
+      // and a person can stop following it. A finished video may be waiting.
       return {
         executionRef: run.runId,
         state: "unknown",
         diagnostic: diagnostic(
-          `Could not get an answer from Kaggle: ${(e as Error).message}`,
+          `${pastLimit(run) ? `${PAST_LIMIT} ` : ""}Could not get an answer from Kaggle: ${(e as Error).message}`,
         ),
       };
     }
@@ -536,8 +562,10 @@ export function createKaggleEngine(options: {
     const run: Run = {
       recipe,
       runId: ref,
-      startedAt: record.startedAt,
+      // Sent no later than this: an earlier run may answer for it until then.
+      startedAt: record.startedAt + SEND_BOUND_MS,
       folder: folderOf(ref),
+      uncertain: !record.sent,
     };
     // Its video from before the restart, if it is still the one recorded.
     const file = path.join(run.folder, "output", recipe.output);
@@ -600,16 +628,23 @@ export function createKaggleEngine(options: {
     for (const run of runs.values())
       if (run.recipe === recipe && !run.ended && settling(run)) throw busy();
     const sent = options.lastSentAt?.(recipe.id, attemptKey);
-    if (sent !== undefined && now() - sent < PUSH_SETTLE_MS) throw busy();
+    if (sent !== undefined && now() - sent < SEND_BOUND_MS + PUSH_SETTLE_MS)
+      throw busy();
     let state: string;
     try {
       state = await remoteState(recipe);
     } catch (e) {
       // The CLI says this of any refusal, so it means new only if nothing here says
-      // otherwise. Kaggle's words cannot tell these apart after a restart.
+      // otherwise. Kaggle's words cannot tell these apart after a restart. A run given up
+      // on says nothing once it would be over, or a lost first push would block for good.
+      const mayBeThere =
+        sent !== undefined &&
+        now() - sent <
+          SEND_BOUND_MS + (recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
       if (
         NO_SUCH_NOTEBOOK.test((e as Error).message) &&
-        !everPushed(recipe.id, attemptKey)
+        !everPushed(recipe.id, attemptKey) &&
+        !mayBeThere
       )
         return;
       throw new CommandError(
@@ -619,7 +654,12 @@ export function createKaggleEngine(options: {
         ) ?? "Could not ask Kaggle whether this notebook is free.",
       );
     }
-    if (state === "RUNNING" || state === "QUEUED" || state === "NEW_SCRIPT")
+    if (
+      state === "RUNNING" ||
+      state === "QUEUED" ||
+      state === "NEW_SCRIPT" ||
+      state === "CANCEL_REQUESTED"
+    )
       throw busy();
     let answer: boolean;
     try {
@@ -722,7 +762,7 @@ export function createKaggleEngine(options: {
       } catch (e) {
         // No answer is not a refusal: it may have arrived, and a second push would
         // replace it. It is followed like any other, and said to be uncertain.
-        if (sending && !sent && !REFUSED_PUSH.test((e as Error).message)) {
+        if (sending && !sent && !wasRefused((e as Error).message)) {
           if (folder)
             await rm(path.join(folder, "push"), {
               recursive: true,
@@ -733,6 +773,7 @@ export function createKaggleEngine(options: {
             runId: request.attemptKey,
             startedAt: now(),
             folder: folder!,
+            uncertain: true,
           });
           return {
             executionRef: request.attemptKey,
@@ -757,12 +798,15 @@ export function createKaggleEngine(options: {
     // Kaggle's public interface offers no way to stop a run. This stops following it,
     // and says so: it goes on until it ends or reaches its time limit.
     async requestCancel(ref) {
-      await runOf(ref);
+      const run = await runOf(ref);
       return {
         requested: true,
         localProcessExited: true,
         remoteAcknowledged: false,
-        remoteOutcome: "continuing" as const,
+        remoteOutcome:
+          run.ended || run.uncertain
+            ? ("unknown" as const)
+            : ("continuing" as const),
         billingOutcome: "notApplicable" as const,
       };
     },

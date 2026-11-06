@@ -81,6 +81,7 @@ import {
   createKaggleEngine,
   kaggleCli,
   kaggleRecipes,
+  ledgerOptions,
   notebookUrl,
   offeredKaggleRecipes,
 } from "../engines/kaggle.ts";
@@ -285,18 +286,7 @@ function generationOf(ctx: CommandContext): Generation {
           adapter: createKaggleEngine({
             cli: kaggleCli(ctx.kaggle.cli),
             username: ctx.kaggle.username,
-            recorded: (ref) => {
-              const r = ledger.read(ref);
-              return r && !r.held
-                ? {
-                    recipeId: r.recipe.id,
-                    startedAt: r.startedAt,
-                    videoSha256: r.videoSha256,
-                  }
-                : null;
-            },
-            sentBefore: ledger.hasSent,
-            lastSentAt: ledger.lastSentAt,
+            ...ledgerOptions(ledger),
           }),
           store: ctx.store,
           resourcePolicyHash: RESOURCE_POLICY_HASH,

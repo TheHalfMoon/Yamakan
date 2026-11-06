@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -23,6 +24,7 @@ import {
   KAGGLE_RECIPES,
   createKaggleEngine,
   kaggleRecipes,
+  ledgerOptions,
   type KaggleCli,
 } from "../core/engines/kaggle.ts";
 import {
@@ -88,8 +90,11 @@ function kaggle() {
     down: false,
     onPush: null as null | ((runId: string) => void),
     pushError: "Timed out waiting for an answer",
+    calls: 0,
+    downloadFails: false,
   };
   const cli: KaggleCli = async (args) => {
+    world.calls++;
     if (world.down) throw new Error("connection reset");
     if (args[1] === "status") {
       if (world.pushes.length === 0) throw new Error(MISSING);
@@ -123,7 +128,12 @@ function kaggle() {
   };
   const download = async (_r: unknown, folder: string) => {
     world.downloads++;
+    world.calls++;
     const last = world.pushes.at(-1)!;
+    if (world.downloadFails) {
+      writeFileSync(path.join(folder, "part.log"), last.prompt);
+      throw new Error("connection reset");
+    }
     writeFileSync(path.join(folder, wan.output), VIDEO);
     writeFileSync(
       path.join(folder, "receipt.json"),
@@ -168,18 +178,7 @@ async function openAt(
       scriptFor: async () => SCRIPT,
       download: k.download as never,
       now,
-      recorded: (ref) => {
-        const r = ledger.read(ref);
-        return r && !r.held
-          ? {
-              recipeId: r.recipe.id,
-              startedAt: r.startedAt,
-              videoSha256: r.videoSha256,
-            }
-          : null;
-      },
-      sentBefore: ledger.hasSent,
-      lastSentAt: ledger.lastSentAt,
+      ...ledgerOptions(ledger),
     }),
     store,
     resourcePolicyHash: "c".repeat(64),
@@ -203,7 +202,7 @@ async function fixture() {
   roots.push(root);
   mkdirSync(path.join(root, "tmp"));
   const k = kaggle();
-  let time = 1_000_000;
+  let time = Date.now();
   const clock = {
     now: () => time,
     pass: (ms: number) => {
@@ -242,8 +241,15 @@ const row = (f: Awaited<ReturnType<typeof fixture>>, id: string) =>
   f.s.store.read(
     (db) =>
       db
-        .prepare("SELECT kind, state, artifact FROM jobs WHERE job_id = ?")
-        .get(id) as { kind: string; state: string; artifact: string | null },
+        .prepare(
+          "SELECT kind, state, artifact, error FROM jobs WHERE job_id = ?",
+        )
+        .get(id) as {
+        kind: string;
+        state: string;
+        artifact: string | null;
+        error: string | null;
+      },
   );
 
 test("a run is recorded before anything leaves, in the job table", async () => {
@@ -415,26 +421,77 @@ test("a push Kaggle refused is a failure with nothing to follow", async () => {
   const f = await fixture();
   f.k.world.pushMode = "refused";
   await assert.rejects(f.start(), /did not take the run: Maximum GPU quota/);
-  const [record] = f.s.service.list(f.project.id);
-  assert.equal(record.state, "failed");
-  assert.equal(row(f, record.generationId).state, "failed");
+  // Nothing was sent, so it is not offered to the page as a run that failed there.
+  assert.deepEqual(f.s.service.list(f.project.id), []);
+  const failed = f.s.store.read(
+    (db) =>
+      db
+        .prepare("SELECT state FROM jobs WHERE kind = ?")
+        .all(REMOTE_GENERATION) as { state: string }[],
+  );
+  assert.deepEqual(
+    failed.map((r) => r.state),
+    ["failed"],
+  );
   await f.s.close();
 });
 
-test("a run past its limit ends, rather than being followed forever", async () => {
+const PAST_LIMIT_MS = (wan.timeoutSeconds + 21 * 60) * 1000;
+
+test("past its limit, a run still shown running is not ended by the clock", async () => {
   const f = await fixture();
   const { generationId: id } = await f.start();
   await f.restart();
-  f.clock.pass((wan.timeoutSeconds + 11 * 60) * 1000);
+  f.clock.pass(PAST_LIMIT_MS);
   const answer = await f.s.service.status(id);
-  assert.equal(answer.state, "failed");
+  assert.equal(answer.state, "running");
   assert.match(answer.diagnostic!, /past its time limit/);
-  assert.equal(row(f, id).state, "failed");
-  await f.restart();
-  assert.equal((await f.s.service.status(id)).state, "failed", "and stays so");
+  // Its own result still counts: the queue may have taken the time.
+  f.k.world.state = "COMPLETE";
+  assert.equal((await f.s.service.status(id)).state, "succeeded");
+  const made = await f.s.service.importResult(id);
+  assert.equal(made.lineage.outputHash, HASH);
   assert.equal(f.k.world.pushes.length, 1);
   await f.s.close();
 });
+
+test("past its limit, another run's result ends it plainly", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.k.world.state = "COMPLETE";
+  f.clock.pass(PAST_LIMIT_MS);
+  // Started elsewhere: this service had no part in it.
+  f.k.world.pushes.push({ runId: "someone-else", prompt: "Theirs." });
+  const answer = await f.s.service.status(id);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /not this one/);
+  await f.s.close();
+});
+
+for (const trouble of ["down", "downloadFails"] as const)
+  test(`past its limit, ${trouble} does not lose a finished video`, async () => {
+    const f = await fixture();
+    const { generationId: id } = await f.start("A SECRET kite.");
+    f.k.world.state = "COMPLETE";
+    await f.restart();
+    f.clock.pass(PAST_LIMIT_MS);
+    f.k.world[trouble] = true;
+    const answer = await f.s.service.status(id);
+    assert.equal(answer.state, "unknown");
+    assert.match(answer.diagnostic!, /past its time limit/);
+    assert.match(answer.diagnostic!, /Could not get an answer/);
+    assert.equal(row(f, id).state, "running");
+    // No part of a failed download stays, with the prompt in it.
+    const left = readdirSync(path.join(f.root, "tmp"), {
+      recursive: true,
+      withFileTypes: true,
+    }).filter((e) => e.isFile());
+    assert.deepEqual(left, []);
+    f.k.world[trouble] = false;
+    assert.equal((await f.s.service.status(id)).state, "succeeded");
+    assert.equal((await f.s.service.importResult(id)).lineage.outputHash, HASH);
+    await f.s.close();
+  });
 
 test("a failure stays a failure across a restart, with its reason", async () => {
   const f = await fixture();
@@ -447,6 +504,13 @@ test("a failure stays a failure across a restart, with its reason", async () => 
   const again = await f.s.service.status(id);
   assert.equal(again.state, "failed");
   assert.equal(again.diagnostic, first.diagnostic);
+  // A later answer about the notebook is not about this run.
+  f.k.world.state = "COMPLETE";
+  await f.restart();
+  const downloads = f.k.world.downloads;
+  assert.equal((await f.s.service.status(id)).state, "failed");
+  await assert.rejects(f.s.service.importResult(id), /Only a finished/);
+  assert.equal(f.k.world.downloads, downloads, "and it was not asked");
   await f.s.close();
 });
 
@@ -471,6 +535,11 @@ test("stopping following says the run goes on, across a restart, and does not im
   assert.equal(stopped.remoteOutcome, "continuing");
   assert.equal(stopped.remoteAcknowledged, false);
   assert.equal(row(f, id).state, "cancelled");
+  assert.match(
+    row(f, id).error!,
+    /not told to stop/,
+    "what the job list shows",
+  );
   await f.restart();
   assert.equal(f.s.ledger.read(id)!.cancelled, true);
   f.k.world.state = "COMPLETE";
@@ -505,10 +574,11 @@ test("a really restored copy does not follow, import, cancel or resend the origi
   try {
     assert.equal(c.ledger.read(id)!.held, true);
     f.k.world.state = "COMPLETE";
+    const calls = f.k.world.calls;
     const answer = await c.service.status(id);
     assert.equal(answer.state, "unknown");
     assert.match(answer.diagnostic!, /restored from a backup/);
-    assert.equal(f.k.world.downloads, 0, "Kaggle was not asked");
+    assert.equal(f.k.world.calls, calls, "Kaggle was not asked");
     await assert.rejects(c.service.importResult(id), /restored from a backup/);
     const stop = await c.service.cancel(id);
     assert.equal(stop.requested, false);
@@ -516,6 +586,26 @@ test("a really restored copy does not follow, import, cancel or resend the origi
     assert.throws(() => c.queue.discard(id), /belongs to the original/);
     assert.equal(c.ledger.read(id)!.held, true, "and it stays held");
     assert.equal(f.k.world.pushes.length, 1);
+  } finally {
+    await c.close();
+  }
+});
+
+test("a restored copy does not import the original's run that had failed", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.k.world.state = "ERROR";
+  f.clock.pass(10 * 60 * 1000);
+  assert.equal((await f.s.service.status(id)).state, "failed");
+  const home = path.join(f.root, "home");
+  const backup = await backupWorkspace(f.s.store, home);
+  await f.s.close();
+  const copy = path.join(f.root, "copy");
+  await restoreWorkspace(path.join(home, "backups", backup.backupId), copy);
+  const c = await openAt(copy, f.root, f.k, f.clock.now);
+  try {
+    f.k.world.state = "COMPLETE";
+    await assert.rejects(c.service.importResult(id), /Only a finished/);
   } finally {
     await c.close();
   }
@@ -529,9 +619,85 @@ test("just after a restart, a run just sent still blocks another", async () => {
   // Kaggle may not show it yet, and this service has no memory of having sent it.
   await assert.rejects(f.start("Another."), /still running/);
   assert.equal(f.k.world.pushes.length, 1);
-  f.clock.pass(4 * 60 * 1000);
+  // Its push may have taken six minutes to land, and three more to show.
+  f.clock.pass(8 * 60 * 1000);
+  await assert.rejects(f.start("Another."), /still running/);
+  f.clock.pass(2 * 60 * 1000);
   await f.start("Another.");
   assert.equal(f.k.world.pushes.length, 2, "once settled");
+  await f.s.close();
+});
+
+test("after a restart, an earlier run does not answer for one that may still be landing", async () => {
+  const f = await fixture();
+  const earlier = await f.start("An earlier run.");
+  f.k.world.state = "COMPLETE";
+  await f.s.service.status(earlier.generationId);
+  f.clock.pass(10 * 60 * 1000);
+  f.k.world.pushMode = "lost-before-landing";
+  const { generationId: id } = await f.start("Sent, with no answer.");
+  await f.restart();
+  // Its push may have landed as late as six minutes on, with three more to show.
+  f.clock.pass(5 * 60 * 1000);
+  assert.equal((await f.s.service.status(id)).state, "queued");
+  f.clock.pass(5 * 60 * 1000);
+  const answer = await f.s.service.status(id);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /not this one/);
+  await f.s.close();
+});
+
+test("stopping following does not lift the wait for a run just sent", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "lost-after-landing";
+  const { generationId: id } = await f.start();
+  f.k.world.state = "COMPLETE";
+  await f.s.service.cancel(id);
+  await f.restart();
+  f.k.world.pushMode = "ok";
+  await assert.rejects(f.start("Another."), /still running/);
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
+test("a run another project left unwatched is collected before a new one replaces it", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start("Left behind.");
+  f.k.world.state = "COMPLETE";
+  f.clock.pass(10 * 60 * 1000);
+  await f.restart();
+  const other = await f.s.store.create("Elsewhere");
+  await f.s.service.start({
+    projectId: other.id,
+    recipe: recipe(),
+    prompt: "The new one.",
+    seed: 8,
+    width: wan.width,
+    height: wan.height,
+    durationFrames: 100,
+  });
+  assert.equal(f.k.world.pushes.length, 2);
+  assert.equal(f.s.ledger.read(id)!.videoSha256, HASH);
+  f.k.world.down = true;
+  assert.equal((await f.s.service.importResult(id)).lineage.outputHash, HASH);
+  await f.s.close();
+});
+
+test("a stop still being carried out on Kaggle counts as busy", async () => {
+  const f = await fixture();
+  await f.start();
+  f.k.world.state = "CANCEL_REQUESTED";
+  f.clock.pass(10 * 60 * 1000);
+  await assert.rejects(f.start("Another."), /still running/);
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
+test("stopping following an uncertain send does not say it is running", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "lost-before-landing";
+  const { generationId: id } = await f.start();
+  assert.equal((await f.s.service.cancel(id)).remoteOutcome, "unknown");
   await f.s.close();
 });
 
@@ -540,6 +706,9 @@ for (const message of [
   "500 Internal Server Error",
   "The Kaggle CLI failed (1).",
   "SSL: UNEXPECTED_EOF_WHILE_READING",
+  'File "kaggle/api.py", line 404, in push\nConnectionResetError',
+  "Timed out. 403 Forbidden",
+  "Maximum retries in urllib3",
 ]) {
   test(`after a push is tried, "${message}" is uncertain, not a refusal`, async () => {
     const f = await fixture();
@@ -552,6 +721,19 @@ for (const message of [
   });
 }
 
+for (const message of [
+  "403 Client Error: Forbidden for url: https://www.kaggle.com/api/v1/kernels/push",
+  "429 Too Many Requests",
+  "Maximum batch GPU session count of 2 reached",
+])
+  test(`after a push is tried, "${message}" is a refusal`, async () => {
+    const f = await fixture();
+    f.k.world.pushMode = "lost-before-landing";
+    f.k.world.pushError = message;
+    await assert.rejects(f.start(), /did not take the run/);
+    await f.s.close();
+  });
+
 test("an uncertain send that never landed can be given up on, and then started again", async () => {
   const f = await fixture();
   f.k.world.pushMode = "lost-before-landing";
@@ -562,22 +744,13 @@ test("an uncertain send that never landed can be given up on, and then started a
   assert.equal((await f.s.service.status(id)).state, "unknown");
   await assert.rejects(f.start("Too soon."), /still running/);
   await f.s.service.cancel(id);
-  f.clock.pass(4 * 60 * 1000);
+  // It could yet be running, so Kaggle's refusal is not taken to mean a new notebook.
+  f.clock.pass(10 * 60 * 1000);
+  await assert.rejects(f.start("Still too soon."), /Could not ask Kaggle/);
+  f.clock.pass(PAST_LIMIT_MS);
   f.k.world.pushMode = "ok";
   await f.start("Started again by a person.");
   assert.equal(f.k.world.pushes.length, 1);
-  await f.s.close();
-});
-
-test("a run past its limit ends even if Kaggle cannot be asked", async () => {
-  const f = await fixture();
-  const { generationId: id } = await f.start();
-  await f.restart();
-  f.k.world.down = true;
-  f.clock.pass((wan.timeoutSeconds + 11 * 60) * 1000);
-  const answer = await f.s.service.status(id);
-  assert.equal(answer.state, "failed");
-  assert.match(answer.diagnostic!, /past its time limit/);
   await f.s.close();
 });
 
@@ -587,7 +760,9 @@ test("a dismissed run stops counting as work, and says nothing to Kaggle", async
   f.k.world.state = "COMPLETE";
   await f.s.service.status(id);
   assert.equal(row(f, id).state, "validating");
+  const calls = f.k.world.calls;
   f.s.service.dismiss(id);
+  assert.equal(f.k.world.calls, calls);
   assert.equal(row(f, id).state, "cancelled");
   assert.deepEqual(f.s.service.list(f.project.id), []);
   await f.s.close();
@@ -619,14 +794,28 @@ test("a video waiting to come in survives the sweep of old folders", async () =>
   await f.s.close();
 });
 
+for (const end of ["imported", "dismissed"] as const)
+  test(`a video ${end} leaves with the sweep of old folders`, async () => {
+    const f = await fixture();
+    const { generationId: id } = await f.start();
+    f.k.world.state = "COMPLETE";
+    await f.s.service.status(id);
+    if (end === "imported") await f.s.service.importResult(id);
+    else f.s.service.dismiss(id);
+    const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const folder = path.join(f.root, "tmp", `yamakan-kaggle-work-${id}`);
+    utimesSync(folder, old, old);
+    await f.restart();
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(existsSync(folder), false);
+    await f.s.close();
+  });
+
 test("a new notebook is not assumed once this workspace has sent to it", async () => {
   const f = await fixture();
   await f.start();
   await f.restart();
-  f.k.world.down = false;
-  const before = f.k.cli;
-  void before;
-  f.clock.pass(4 * 60 * 1000);
+  f.clock.pass(10 * 60 * 1000);
   // After a restart, Kaggle's refusal must not read as a missing notebook.
   const pushes = f.k.world.pushes;
   f.k.world.pushes = [];

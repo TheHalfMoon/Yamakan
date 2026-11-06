@@ -94,6 +94,8 @@ export type GenerationLedger = {
   // Whether another run of this recipe may have reached the engine.
   hasSent(recipeId: string, except: string): boolean;
   lastSentAt(recipeId: string, except: string): number | undefined;
+  // Other runs of this recipe still being followed, in any project of this workspace.
+  following(recipeId: string, except: string): string[];
   // Runs on this machine are not kept past this service, so an ended one is asked again.
   remembersEnded: boolean;
 };
@@ -108,6 +110,17 @@ export const wasSent = (
   r.recipe?.id === recipeId &&
   r.generationId !== except &&
   (r.phase === "sent" || (r.state !== "failed" && !r.cancelled));
+
+// Whether a run may yet appear on the engine, even if a person has stopped following it.
+// Only a refusal before it left, which fails it unsent, rules that out.
+export const mayHaveLeft = (
+  r: GenerationRecord,
+  recipeId: string,
+  except: string,
+) =>
+  r.recipe?.id === recipeId &&
+  r.generationId !== except &&
+  (r.phase === "sent" || r.state !== "failed");
 
 // For an engine on this machine, whose runs do not outlive this service anyway.
 export function memoryLedger(): GenerationLedger {
@@ -124,8 +137,10 @@ export function memoryLedger(): GenerationLedger {
     hasSent: (recipeId, except) =>
       [...records.values()].some((r) => wasSent(r, recipeId, except)),
     lastSentAt: (recipeId, except) =>
-      [...records.values()].filter((r) => wasSent(r, recipeId, except)).at(-1)
-        ?.startedAt,
+      [...records.values()]
+        .filter((r) => mayHaveLeft(r, recipeId, except))
+        .at(-1)?.startedAt,
+    following: () => [],
     remembersEnded: false,
   };
 }
@@ -135,6 +150,8 @@ const ENDED: ReadonlySet<ExecutionStatus["state"]> = new Set([
   "failed",
   "cancelled",
 ]);
+const NOT_STOPPED =
+  "No longer followed here. The engine was not told to stop, and anything running there goes on until it ends.";
 const HELD =
   "This workspace was restored from a backup, and the run belongs to the workspace it was copied from. It is not followed here, and was not sent again.";
 
@@ -177,6 +194,11 @@ export function createGenerationService(options: {
       throw new CommandError(
         "VALIDATION",
         "A cancelled generation cannot be imported.",
+      );
+    if (ledger.remembersEnded && g.state !== "succeeded" && ENDED.has(g.state))
+      throw new CommandError(
+        "VALIDATION",
+        "Only a finished generation can be imported.",
       );
     // No longer allowed since it started: what was made from it does not join.
     const inputs = g.inputs.map((i) => i.assetHash);
@@ -284,6 +306,48 @@ export function createGenerationService(options: {
     }
   }
 
+  async function statusOf(id: string) {
+    const g = tracked(id);
+    if (g.held)
+      return {
+        generationId: id,
+        state: "unknown" as const,
+        diagnostic: HELD,
+        imported: g.imported,
+      };
+    if (ledger.remembersEnded && (ENDED.has(g.state) || g.cancelled))
+      return {
+        generationId: id,
+        state: g.state,
+        ...(g.diagnostic ? { diagnostic: g.diagnostic } : {}),
+        imported: g.imported,
+      };
+    const { state, progress, diagnostic } = await adapter.status(refOf(g));
+    const change: Partial<GenerationRecord> = {
+      state,
+      diagnostic: diagnostic ?? null,
+    };
+    // Its own result proves it arrived. A notebook's state does not: that could be
+    // another run's, so an uncertain send stays uncertain until then.
+    if (state === "succeeded") {
+      change.phase = "sent";
+      const [video] = (
+        await adapter.enumerateArtifacts(refOf(g)).catch(() => [])
+      ).filter((a) => a.mediaType === "video/mp4");
+      change.videoSha256 = video?.sha256 ?? null;
+    }
+    if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
+      change.diagnostic = diagnostic ?? g.diagnostic;
+    ledger.update(id, change);
+    return {
+      generationId: id,
+      state,
+      ...(progress === undefined ? {} : { progress }),
+      ...(diagnostic === undefined ? {} : { diagnostic }),
+      imported: g.imported,
+    };
+  }
+
   return {
     // The person's own request: nothing here runs on any other trigger.
     async start(request: GenerationRequest) {
@@ -320,6 +384,10 @@ export function createGenerationService(options: {
           "VALIDATION",
           "A text-to-video does not start from a still.",
         );
+      // A notebook keeps one latest result, and another run would replace it. Asking
+      // collects a run nobody has been watching, if it has finished.
+      for (const other of ledger.following(request.recipe.id, ""))
+        await statusOf(other).catch(() => {});
       const id = randomUUID();
       const inputPins = (inputs as unknown as { asset: AssetRef }[]).map(
         ({ asset }) => ({
@@ -387,9 +455,10 @@ export function createGenerationService(options: {
           },
         )
         .catch((e: unknown) => {
-          // Refused before anything was sent: it did not happen.
+          // Refused before anything was sent: it did not happen, so nothing is listed.
           ledger.update(id, {
             state: "failed",
+            dismissed: true,
             diagnostic:
               e instanceof Error ? e.message : "It could not be started.",
           });
@@ -398,6 +467,7 @@ export function createGenerationService(options: {
       if ("refused" in answer) {
         ledger.update(id, {
           state: "failed",
+          dismissed: true,
           diagnostic: engineReasonMessage(answer.refused),
         });
         // An upload refused because consent ended says that, not a general reason.
@@ -423,47 +493,7 @@ export function createGenerationService(options: {
       };
     },
 
-    async status(id: string) {
-      const g = tracked(id);
-      if (g.held)
-        return {
-          generationId: id,
-          state: "unknown" as const,
-          diagnostic: HELD,
-          imported: g.imported,
-        };
-      if (ledger.remembersEnded && (ENDED.has(g.state) || g.cancelled))
-        return {
-          generationId: id,
-          state: g.state,
-          ...(g.diagnostic ? { diagnostic: g.diagnostic } : {}),
-          imported: g.imported,
-        };
-      const { state, progress, diagnostic } = await adapter.status(refOf(g));
-      const change: Partial<GenerationRecord> = {
-        state,
-        diagnostic: diagnostic ?? null,
-      };
-      // Its own result proves it arrived. A notebook's state does not: that could be
-      // another run's, so an uncertain send stays uncertain until then.
-      if (state === "succeeded") {
-        change.phase = "sent";
-        const [video] = (
-          await adapter.enumerateArtifacts(refOf(g)).catch(() => [])
-        ).filter((a) => a.mediaType === "video/mp4");
-        change.videoSha256 = video?.sha256 ?? null;
-      }
-      if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
-        change.diagnostic = diagnostic ?? g.diagnostic;
-      ledger.update(id, change);
-      return {
-        generationId: id,
-        state,
-        ...(progress === undefined ? {} : { progress }),
-        ...(diagnostic === undefined ? {} : { diagnostic }),
-        imported: g.imported,
-      };
-    },
+    status: statusOf,
 
     async cancel(id: string) {
       const g = tracked(id);
@@ -476,7 +506,11 @@ export function createGenerationService(options: {
           billingOutcome: "notApplicable" as const,
         };
       ledger.update(id, { cancelled: true });
-      return adapter.requestCancel(refOf(g));
+      const answer = await adapter.requestCancel(refOf(g));
+      // The job list reads this: a cancelled job there must not read as a stopped run.
+      if (answer.remoteOutcome !== "stopped" && !ENDED.has(g.state))
+        ledger.update(id, { diagnostic: NOT_STOPPED });
+      return answer;
     },
 
     // What this project has had generated, newest first: enough to pick up after a
@@ -491,6 +525,9 @@ export function createGenerationService(options: {
       ledger.update(id, {
         dismissed: true,
         ...(g.imported || g.state === "failed" ? {} : { cancelled: true }),
+        ...(g.imported || ENDED.has(g.state)
+          ? {}
+          : { diagnostic: NOT_STOPPED }),
       });
     },
 

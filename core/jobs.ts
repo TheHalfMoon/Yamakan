@@ -7,6 +7,7 @@
 // so they are marked failed and their jobs re-queued (local work only, never
 // a paid resubmission). Partial outputs are never registered.
 import {
+  mayHaveLeft,
   wasSent,
   type GenerationLedger,
   type GenerationRecord,
@@ -364,10 +365,26 @@ export class JobSupervisor {
       lastSentAt: (recipeId, except) =>
         this.store.read((db) => {
           const times = generationPayloads(db)
-            .filter((r) => wasSent(r, recipeId, except))
+            .filter((r) => mayHaveLeft(r, recipeId, except))
             .map((r) => r.startedAt);
           return times.length ? Math.max(...times) : undefined;
         }),
+      // A held copy's run is the original's, and an ended one has nothing to collect.
+      following: (recipeId, except) =>
+        this.store.read((db) =>
+          (
+            db
+              .prepare(
+                "SELECT job_id, payload FROM jobs WHERE kind = ? AND state IN ('preparing', 'running')",
+              )
+              .all(REMOTE_GENERATION) as { job_id: string; payload: string }[]
+          )
+            .filter((row) => {
+              const r = safeJson(row.payload) as GenerationRecord;
+              return r.recipe?.id === recipeId && row.job_id !== except;
+            })
+            .map((row) => row.job_id),
+        ),
       remembersEnded: true,
     };
   }
