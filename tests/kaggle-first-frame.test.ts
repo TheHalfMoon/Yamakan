@@ -408,7 +408,7 @@ asked = {}
 class Part:
     def to(self, _): return self
     def enable_tiling(self): pass
-    def register_forward_pre_hook(self, hook): asked["hooked"] = True
+    def register_forward_pre_hook(self, hook): asked["hook"] = hook
     def enable_slicing(self): pass
 class Pipe:
     text_encoder = Part()
@@ -423,6 +423,12 @@ class Pipe:
     def __call__(self, **k):
         asked["call"] = sorted(k)
         asked["image"] = k["image"]
+        # As torch does: whatever a pre-hook returns replaces the model's inputs.
+        before = dict(moved=None)
+        Part.to = lambda part, where: (before.update(moved=where), part)[1]
+        hook = asked.pop("hook")
+        asked["hookReturned"] = repr(hook(self.transformer, ()))
+        asked["vaeMovedTo"] = before["moved"]
         return types.SimpleNamespace(frames=[["frame"]])
 diffusers = types.ModuleType("diffusers")
 diffusers.AutoencoderKLWan = Pipe
@@ -519,7 +525,12 @@ test(
     assert.equal(asked.image, "the fitted frame");
     assert.equal(asked.encode, 512);
     assert.equal(asked.upright, true);
-    assert.equal(asked.hooked, true, "the VAE leaves the GPU for the steps");
+    assert.equal(asked.vaeMovedTo, "cpu", "the VAE is sent off the GPU");
+    assert.equal(
+      asked.hookReturned,
+      "None",
+      "and the model's inputs are left alone",
+    );
     assert.ok(!asked.call.includes("last_image"));
     const kept = JSON.parse(receipt);
     assert.equal(kept.stage, "done");

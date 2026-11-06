@@ -142,7 +142,11 @@ try:
     pipe.enable_model_cpu_offload(gpu_id=0)
     # Encoding the frame brings the VAE to the GPU, and with the text encoder gone nothing
     # would send it back: it would sit there through every step. Decoding fetches it again.
-    pipe.transformer.register_forward_pre_hook(lambda *_: pipe.vae.to("cpu"))
+    # It returns nothing: whatever a forward pre-hook returns replaces the model's inputs.
+    def park_vae(*_):
+        pipe.vae.to("cpu")
+
+    pipe.transformer.register_forward_pre_hook(park_vae)
     pipe.vae.enable_tiling()
     pipe.vae.enable_slicing()
     receipt["loadSeconds"] = round(time.time() - started, 1)
