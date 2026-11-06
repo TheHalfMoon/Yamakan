@@ -198,11 +198,7 @@ export function GeneratePanel(props: {
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
         // Its own result proves it arrived; a notebook's state does not.
-        if (
-          answer.state === "succeeded" ||
-          answer.state === "failed" ||
-          answer.state === "cancelled"
-        )
+        if (answer.state === "succeeded" || answer.state === "failed")
           setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
       } catch (e) {
         if (!current) return;
@@ -258,6 +254,17 @@ export function GeneratePanel(props: {
       });
     } catch (e) {
       setAgreed(false);
+      // The answer can be lost with the run on its way. A refused one is not listed.
+      const [latest] = await api.list().catch(() => [] as RunRecord[]);
+      if (
+        latest &&
+        !["succeeded", "failed", "cancelled"].includes(latest.state)
+      ) {
+        setRun(asRun(latest));
+        setState(latest.state);
+        setNote(latest.diagnostic ?? "");
+        return;
+      }
       setProblem(e instanceof Error ? e.message : t("create.startFailed"));
     } finally {
       setWorking(false);

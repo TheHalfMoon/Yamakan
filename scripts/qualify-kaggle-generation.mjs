@@ -302,7 +302,10 @@ try {
   let job;
   for (let i = 0; i < 1200; i++) {
     const jobs = await service("yamakan.job.list", {});
-    job = (jobs.jobs ?? jobs).find((j) => j.projectId === projectId);
+    // The run's own job is in this list too, naming its asset rather than a file.
+    job = (jobs.jobs ?? jobs).find(
+      (j) => j.projectId === projectId && !j.artifact?.startsWith("asset:"),
+    );
     if (job && ["COMPLETED", "FAILED"].includes(job.state)) break;
     await page.waitForTimeout(200);
   }

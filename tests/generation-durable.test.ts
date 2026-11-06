@@ -76,6 +76,7 @@ execFileSync(
 const VIDEO = readFileSync(VIDEO_FILE);
 const HASH = createHash("sha256").update(VIDEO).digest("hex");
 
+const BLOCKED = /still being followed|few minutes ago/;
 const MISSING = "Cannot access kernel (Permission 'kernels.get' was denied).";
 
 // Kaggle: outlives the service, and remembers every push.
@@ -92,22 +93,41 @@ function kaggle() {
     pushError: "Timed out waiting for an answer",
     calls: 0,
     downloadFails: false,
+    garble: null as null | "video" | "receipt",
+    // Kaggle refuses any question about the notebook, though it exists.
+    denied: false,
+    listFails: false,
+    privateAnswer: true,
+    pushStdout: "successfully pushed",
+    beforeStatus: null as null | (() => Promise<void>),
+    beforePush: null as null | (() => Promise<void>),
   };
   const cli: KaggleCli = async (args) => {
     world.calls++;
     if (world.down) throw new Error("connection reset");
+    if (args[1] === "list") {
+      if (world.listFails) throw new Error("Authentication required");
+      return {
+        stdout:
+          world.pushes.length || world.denied
+            ? `ref,title\nsomeone/${wan.slug},${wan.slug}\n`
+            : "Not found\n",
+      };
+    }
     if (args[1] === "status") {
-      if (world.pushes.length === 0) throw new Error(MISSING);
+      await world.beforeStatus?.();
+      if (world.denied || world.pushes.length === 0) throw new Error(MISSING);
       return { stdout: `has status "KernelWorkerStatus.${world.state}"` };
     }
     if (args[1] === "pull") {
       writeFileSync(
         path.join(args[4], "kernel-metadata.json"),
-        JSON.stringify({ is_private: true }),
+        JSON.stringify({ is_private: world.privateAnswer }),
       );
       return { stdout: "" };
     }
     if (args[1] === "push") {
+      await world.beforePush?.();
       if (world.pushMode === "refused") throw new Error("Maximum GPU quota");
       if (world.pushMode === "lost-before-landing")
         throw new Error(world.pushError);
@@ -122,7 +142,7 @@ function kaggle() {
       world.pushes.push({ runId: brief.runId, prompt: brief.prompt });
       if (world.pushMode === "lost-after-landing")
         throw new Error(world.pushError);
-      return { stdout: "successfully pushed" };
+      return { stdout: world.pushStdout };
     }
     throw new Error(`unexpected ${args}`);
   };
@@ -134,7 +154,14 @@ function kaggle() {
       writeFileSync(path.join(folder, "part.log"), last.prompt);
       throw new Error("connection reset");
     }
-    writeFileSync(path.join(folder, wan.output), VIDEO);
+    writeFileSync(
+      path.join(folder, wan.output),
+      world.garble === "video" ? "<html>503</html>" : VIDEO,
+    );
+    if (world.garble === "receipt") {
+      writeFileSync(path.join(folder, "receipt.json"), "<html>503</html>");
+      return;
+    }
     writeFileSync(
       path.join(folder, "receipt.json"),
       JSON.stringify({
@@ -412,7 +439,7 @@ test("a lost answer to a push is uncertain, not failed, and is not sent twice", 
     "a notebook's state could be another run's",
   );
   assert.match(f.s.ledger.read(id)!.diagnostic!, /may or may not/);
-  await assert.rejects(f.start("Another."), /still running/);
+  await assert.rejects(f.start("Another."), BLOCKED);
   assert.equal(f.k.world.pushes.length, 1);
   await f.s.close();
 });
@@ -532,6 +559,7 @@ test("stopping following says the run goes on, across a restart, and does not im
   const f = await fixture();
   const { generationId: id } = await f.start();
   const stopped = await f.s.service.cancel(id);
+  assert.equal(stopped.requested, false, "Kaggle has no way to be asked");
   assert.equal(stopped.remoteOutcome, "continuing");
   assert.equal(stopped.remoteAcknowledged, false);
   assert.equal(row(f, id).state, "cancelled");
@@ -617,11 +645,11 @@ test("just after a restart, a run just sent still blocks another", async () => {
   f.k.world.state = "COMPLETE";
   await f.restart();
   // Kaggle may not show it yet, and this service has no memory of having sent it.
-  await assert.rejects(f.start("Another."), /still running/);
+  await assert.rejects(f.start("Another."), BLOCKED);
   assert.equal(f.k.world.pushes.length, 1);
   // Its push may have taken six minutes to land, and three more to show.
   f.clock.pass(8 * 60 * 1000);
-  await assert.rejects(f.start("Another."), /still running/);
+  await assert.rejects(f.start("Another."), BLOCKED);
   f.clock.pass(2 * 60 * 1000);
   await f.start("Another.");
   assert.equal(f.k.world.pushes.length, 2, "once settled");
@@ -655,7 +683,7 @@ test("stopping following does not lift the wait for a run just sent", async () =
   await f.s.service.cancel(id);
   await f.restart();
   f.k.world.pushMode = "ok";
-  await assert.rejects(f.start("Another."), /still running/);
+  await assert.rejects(f.start("Another."), BLOCKED);
   assert.equal(f.k.world.pushes.length, 1);
   await f.s.close();
 });
@@ -742,12 +770,10 @@ test("an uncertain send that never landed can be given up on, and then started a
   assert.equal(f.s.ledger.read(id)!.phase, "sending");
   // Kaggle says what it says of a notebook that does not exist.
   assert.equal((await f.s.service.status(id)).state, "unknown");
-  await assert.rejects(f.start("Too soon."), /still running/);
+  await assert.rejects(f.start("Too soon."), BLOCKED);
   await f.s.service.cancel(id);
-  // It could yet be running, so Kaggle's refusal is not taken to mean a new notebook.
+  await assert.rejects(f.start("Still too soon."), /few minutes ago/);
   f.clock.pass(10 * 60 * 1000);
-  await assert.rejects(f.start("Still too soon."), /Could not ask Kaggle/);
-  f.clock.pass(PAST_LIMIT_MS);
   f.k.world.pushMode = "ok";
   await f.start("Started again by a person.");
   assert.equal(f.k.world.pushes.length, 1);
@@ -811,18 +837,229 @@ for (const end of ["imported", "dismissed"] as const)
     await f.s.close();
   });
 
-test("a new notebook is not assumed once this workspace has sent to it", async () => {
+test("a refusal is not read as a new notebook while the account lists it", async () => {
   const f = await fixture();
-  await f.start();
+  const { generationId: id } = await f.start();
+  f.s.service.dismiss(id);
   await f.restart();
   f.clock.pass(10 * 60 * 1000);
-  // After a restart, Kaggle's refusal must not read as a missing notebook.
-  const pushes = f.k.world.pushes;
-  f.k.world.pushes = [];
+  f.k.world.denied = true;
   await assert.rejects(f.start("Another."), /Could not ask Kaggle/);
-  f.k.world.pushes = pushes;
-  assert.equal(pushes.length, 1);
+  assert.equal(f.k.world.pushes.length, 1);
   await f.s.close();
+});
+
+test("a notebook deleted on Kaggle can be made again", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.s.service.dismiss(id);
+  await f.restart();
+  f.clock.pass(10 * 60 * 1000);
+  const before = f.k.world.pushes;
+  f.k.world.pushes = [];
+  await f.start("Made again.");
+  assert.equal(f.k.world.pushes.length, 1);
+  assert.equal(before.length, 1);
+  await f.s.close();
+});
+
+test("with no working credentials, nothing is sent on a first run", async () => {
+  const f = await fixture();
+  f.k.world.listFails = true;
+  await assert.rejects(f.start(), /Could not ask Kaggle/);
+  assert.equal(f.k.world.pushes.length, 0);
+  assert.deepEqual(f.s.service.list(f.project.id), []);
+  await f.s.close();
+});
+
+for (const trouble of ["a failed download", "a run still going"] as const)
+  test(`with ${trouble}, a new run does not replace an uncollected one`, async () => {
+    const f = await fixture();
+    const { generationId: id } = await f.start("Left behind.");
+    f.clock.pass(10 * 60 * 1000);
+    await f.restart();
+    if (trouble === "a failed download") {
+      f.k.world.state = "COMPLETE";
+      f.k.world.downloadFails = true;
+    }
+    const other = await f.s.store.create("Elsewhere");
+    await assert.rejects(
+      f.s.service.start({
+        projectId: other.id,
+        recipe: recipe(),
+        prompt: "The new one.",
+        seed: 8,
+        width: wan.width,
+        height: wan.height,
+        durationFrames: 100,
+      }),
+      /still being followed in "Durable"/,
+    );
+    assert.equal(f.k.world.pushes.length, 1);
+    f.k.world.downloadFails = false;
+    f.k.world.state = "COMPLETE";
+    assert.equal((await f.s.service.status(id)).state, "succeeded");
+    await f.s.close();
+  });
+
+for (const garble of ["video", "receipt"] as const)
+  test(`an error page saved as the ${garble} is fetched again, not the run's end`, async () => {
+    const f = await fixture();
+    const { generationId: id } = await f.start("A SECRET kite.");
+    f.k.world.state = "COMPLETE";
+    f.clock.pass(10 * 60 * 1000);
+    f.k.world.garble = garble;
+    const answer = await f.s.service.status(id);
+    assert.equal(answer.state, "unknown");
+    assert.match(answer.diagnostic!, /fetched again/);
+    assert.deepEqual(
+      readdirSync(path.join(f.root, "tmp"), {
+        recursive: true,
+        withFileTypes: true,
+      }).filter((e) => e.isFile()),
+      [],
+    );
+    f.k.world.garble = null;
+    const downloads = f.k.world.downloads;
+    assert.equal((await f.s.service.status(id)).state, "unknown");
+    assert.equal(f.k.world.downloads, downloads, "not on every poll");
+    f.clock.pass(6 * 60 * 1000);
+    assert.equal((await f.s.service.status(id)).state, "succeeded");
+    await f.s.close();
+  });
+
+test("Kaggle's own refusal printed with a clean exit is a refusal", async () => {
+  const f = await fixture();
+  f.k.world.pushStdout = "Kernel push error: this notebook cannot be saved";
+  await assert.rejects(f.start(), /did not take the run/);
+  await f.s.close();
+});
+
+test("the tool's words stay beside an uncertain send", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "lost-before-landing";
+  f.k.world.pushError = "Server said no such thing";
+  const { generationId: id } = await f.start();
+  assert.match(f.s.ledger.read(id)!.diagnostic!, /Server said no such thing/);
+  await f.s.close();
+});
+
+test("a second start does not ask about a run still being sent, or send", async () => {
+  const f = await fixture();
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start("The first.");
+  await atPush;
+  let asked = 0;
+  f.k.world.beforeStatus = async () => {
+    asked++;
+  };
+  await assert.rejects(f.start("The second."), BLOCKED);
+  assert.equal(asked, 0);
+  release();
+  await first;
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
+test("a stop pressed while a status is being asked stands", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  let release = () => {};
+  f.k.world.beforeStatus = () =>
+    new Promise<void>((done) => {
+      release = done;
+    });
+  const asked = f.s.service.status(id);
+  await new Promise((r) => setTimeout(r, 20));
+  await f.s.service.cancel(id);
+  release();
+  f.k.world.beforeStatus = null;
+  assert.equal((await asked).state, f.s.ledger.read(id)!.state);
+  assert.match(row(f, id).error!, /not told to stop/);
+  assert.equal(row(f, id).state, "cancelled");
+  await f.s.close();
+});
+
+test("a privacy warning outlasts a restart, and a stop", async () => {
+  const f = await fixture();
+  f.k.world.privateAnswer = false;
+  const { generationId: id } = await f.start();
+  await f.restart();
+  assert.match((await f.s.service.status(id)).diagnostic!, /private/);
+  assert.match(f.s.ledger.read(id)!.diagnostic!, /private/);
+  await f.s.service.cancel(id);
+  assert.match(row(f, id).error!, /private/);
+  assert.match(row(f, id).error!, /not told to stop/);
+  await f.s.close();
+});
+
+test("a run sent from another account is not asked about from this one", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  assert.equal(f.s.ledger.read(id)!.remote, `someone/${wan.slug}`);
+  f.s.ledger.update(id, { remote: `another/${wan.slug}` });
+  await f.restart();
+  const calls = f.k.world.calls;
+  const answer = await f.s.service.status(id);
+  assert.equal(answer.state, "unknown");
+  assert.match(answer.diagnostic!, /another Kaggle account/);
+  assert.equal(f.k.world.calls, calls);
+  assert.equal((await f.s.service.cancel(id)).remoteOutcome, "unknown");
+  await f.s.close();
+});
+
+test("an uncertain send does not take on another run's stop", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "lost-before-landing";
+  const earlier = f.k.world.pushes;
+  earlier.push({ runId: "older", prompt: "Older." });
+  f.k.world.state = "COMPLETE";
+  const { generationId: id } = await f.start();
+  f.k.world.state = "CANCEL_ACKNOWLEDGED";
+  f.clock.pass(10 * 60 * 1000);
+  const answer = await f.s.service.status(id);
+  assert.equal(answer.state, "unknown");
+  assert.match(answer.diagnostic!, /may or may not/);
+  await f.s.close();
+});
+
+test("dismissing a held run leaves it held", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  const home = path.join(f.root, "home");
+  const backup = await backupWorkspace(f.s.store, home);
+  await f.s.close();
+  const copy = path.join(f.root, "copy");
+  await restoreWorkspace(path.join(home, "backups", backup.backupId), copy);
+  const c = await openAt(copy, f.root, f.k, f.clock.now);
+  try {
+    const held = () =>
+      c.store.read(
+        (db) =>
+          db
+            .prepare("SELECT state, error FROM jobs WHERE job_id = ?")
+            .get(id) as {
+            state: string;
+            error: string;
+          },
+      );
+    const error = held().error;
+    c.service.dismiss(id);
+    assert.equal(held().state, "reconciliationRequired");
+    assert.equal(held().error, error);
+    assert.deepEqual(c.service.list(f.project.id), []);
+  } finally {
+    await c.close();
+  }
 });
 
 test("no folder is left with a prompt in it", async () => {

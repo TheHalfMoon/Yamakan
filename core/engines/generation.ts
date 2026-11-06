@@ -78,6 +78,10 @@ export type GenerationRecord = {
   diagnostic: string | null;
   videoSha256: string | null;
   imported: { assetId: string; lineage: GenerationLineage } | null;
+  // Where the engine has it, as this workspace was set up when it left.
+  remote?: string | null;
+  // Said beside every later answer, across a restart.
+  notice?: string | null;
   // Asked to stop: whatever the engine then does, this is not imported, unless
   // that import had already reached the store.
   cancelled: boolean;
@@ -91,25 +95,12 @@ export type GenerationLedger = {
   update(id: string, change: Partial<GenerationRecord>): void;
   read(id: string): GenerationRecord | null;
   list(projectId: string): GenerationRecord[];
-  // Whether another run of this recipe may have reached the engine.
-  hasSent(recipeId: string, except: string): boolean;
   lastSentAt(recipeId: string, except: string): number | undefined;
   // Other runs of this recipe still being followed, in any project of this workspace.
   following(recipeId: string, except: string): string[];
   // Runs on this machine are not kept past this service, so an ended one is asked again.
   remembersEnded: boolean;
 };
-
-// Whether a run may have reached the engine. Refused before leaving, or uncertain and
-// given up on, it says nothing about whether a notebook exists.
-export const wasSent = (
-  r: GenerationRecord,
-  recipeId: string,
-  except: string,
-) =>
-  r.recipe?.id === recipeId &&
-  r.generationId !== except &&
-  (r.phase === "sent" || (r.state !== "failed" && !r.cancelled));
 
 // Whether a run may yet appear on the engine, even if a person has stopped following it.
 // Only a refusal before it left, which fails it unsent, rules that out.
@@ -134,8 +125,6 @@ export function memoryLedger(): GenerationLedger {
     read: (id) => records.get(id) ?? null,
     list: (projectId) =>
       [...records.values()].filter((r) => r.projectId === projectId).reverse(),
-    hasSent: (recipeId, except) =>
-      [...records.values()].some((r) => wasSent(r, recipeId, except)),
     lastSentAt: (recipeId, except) =>
       [...records.values()]
         .filter((r) => mayHaveLeft(r, recipeId, except))
@@ -187,6 +176,10 @@ export function createGenerationService(options: {
     return g;
   };
   const refOf = (g: GenerationRecord) => g.executionRef ?? g.generationId;
+  const stopNote = (g: GenerationRecord) =>
+    [g.diagnostic, NOT_STOPPED].filter(Boolean).join(" ");
+  // Being sent by this service now: asking about one would only race its answer.
+  const sending = new Set<string>();
 
   async function bringIn(id: string, g: GenerationRecord) {
     if (g.held) throw new CommandError("VALIDATION", HELD);
@@ -338,6 +331,18 @@ export function createGenerationService(options: {
     }
     if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
       change.diagnostic = diagnostic ?? g.diagnostic;
+    // While that was asked it may have been stopped, refused or dismissed, and that stands.
+    const latest = tracked(id);
+    if (
+      ledger.remembersEnded &&
+      (ENDED.has(latest.state) || latest.cancelled || latest.dismissed)
+    )
+      return {
+        generationId: id,
+        state: latest.state,
+        ...(latest.diagnostic ? { diagnostic: latest.diagnostic } : {}),
+        imported: latest.imported,
+      };
     ledger.update(id, change);
     return {
       generationId: id,
@@ -387,7 +392,20 @@ export function createGenerationService(options: {
       // A notebook keeps one latest result, and another run would replace it. Asking
       // collects a run nobody has been watching, if it has finished.
       for (const other of ledger.following(request.recipe.id, ""))
-        await statusOf(other).catch(() => {});
+        if (!sending.has(other)) await statusOf(other).catch(() => {});
+      // Still going, or not collected: pushing now would lose its result for good.
+      const [still] = ledger.following(request.recipe.id, "");
+      if (still) {
+        const holder = tracked(still).projectId;
+        const name = await store
+          .exportProject(holder)
+          .then((p) => p.name as string)
+          .catch(() => "another project");
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          `A run of this model is still being followed in "${name}". Wait for it, or stop following it there, which does not stop it on Kaggle.`,
+        );
+      }
       const id = randomUUID();
       const inputPins = (inputs as unknown as { asset: AssetRef }[]).map(
         ({ asset }) => ({
@@ -409,6 +427,7 @@ export function createGenerationService(options: {
         inputs: inputPins,
         executionRef: null,
         phase: "sending",
+        remote: adapter.location?.(request.recipe.id) ?? null,
         startedAt: clock(),
         state: "queued",
         diagnostic: null,
@@ -417,6 +436,7 @@ export function createGenerationService(options: {
         cancelled: false,
         dismissed: false,
       });
+      sending.add(id);
       const answer = await adapter
         .submit(
           {
@@ -463,7 +483,8 @@ export function createGenerationService(options: {
               e instanceof Error ? e.message : "It could not be started.",
           });
           throw e;
-        });
+        })
+        .finally(() => sending.delete(id));
       if ("refused" in answer) {
         ledger.update(id, {
           state: "failed",
@@ -485,7 +506,8 @@ export function createGenerationService(options: {
       ledger.update(id, {
         executionRef: answer.executionRef,
         phase: answer.uncertain ? "sending" : "sent",
-        diagnostic: answer.uncertain ?? null,
+        diagnostic: answer.uncertain ?? answer.notice ?? null,
+        notice: answer.notice ?? null,
       });
       return {
         generationId: id,
@@ -509,7 +531,7 @@ export function createGenerationService(options: {
       const answer = await adapter.requestCancel(refOf(g));
       // The job list reads this: a cancelled job there must not read as a stopped run.
       if (answer.remoteOutcome !== "stopped" && !ENDED.has(g.state))
-        ledger.update(id, { diagnostic: NOT_STOPPED });
+        ledger.update(id, { diagnostic: stopNote(tracked(id)) });
       return answer;
     },
 
@@ -522,12 +544,14 @@ export function createGenerationService(options: {
     // Finished with here: it says nothing to the engine, and stops counting as work.
     dismiss(id: string) {
       const g = tracked(id);
+      // A held copy's run stays held: this only takes it off the page.
+      if (g.held) return ledger.update(id, { dismissed: true });
       ledger.update(id, {
         dismissed: true,
         ...(g.imported || g.state === "failed" ? {} : { cancelled: true }),
-        ...(g.imported || ENDED.has(g.state)
+        ...(g.imported || g.cancelled || ENDED.has(g.state)
           ? {}
-          : { diagnostic: NOT_STOPPED }),
+          : { diagnostic: stopNote(g) }),
       });
     },
 

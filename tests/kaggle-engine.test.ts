@@ -82,6 +82,7 @@ function kaggle(
   let runId = "";
   const cli: KaggleCli = async (args) => {
     calls.push(args);
+    if (args[1] === "list") return { stdout: "Not found\n" };
     if (args[1] === "status") {
       if (pushes === 0) throw new Error(MISSING);
       const state = states.length > 1 ? states.shift() : states[0];
@@ -216,8 +217,10 @@ test("a run goes to a private notebook, with a time limit", async () => {
 });
 
 test("a notebook still running is not replaced", async () => {
-  const k = kaggle(["RUNNING"]);
+  let time = 0;
+  const k = kaggle(["RUNNING"], undefined, { clock: () => time });
   await k.engine.submit(request(), context as never); // First, none is known.
+  time = 4 * 60 * 1000;
   await assert.rejects(
     k.engine.submit(request(), context as never),
     /still running/,
@@ -279,6 +282,7 @@ test("after a while, another run's result is a failure", async () => {
   let pushes = 0;
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       calls.push(args);
       if (args[1] === "push") {
         pushes++;
@@ -310,7 +314,7 @@ test("after a while, another run's result is a failure", async () => {
   assert.match(answer.diagnostic!, /not this one/);
 });
 
-test("a video that is not its receipt's is refused", async () => {
+test("a video that is not its receipt's is not taken, and is fetched again", async () => {
   const k = kaggle(["COMPLETE"], (runId, folder) => {
     good(runId, folder);
     writeFileSync(path.join(folder, wan.output), "something else");
@@ -320,8 +324,9 @@ test("a video that is not its receipt's is refused", async () => {
     context as never,
   )) as any;
   const answer = await k.engine.status(executionRef);
-  assert.equal(answer.state, "failed");
+  assert.equal(answer.state, "unknown");
   assert.match(answer.diagnostic!, /not the one/);
+  assert.match(answer.diagnostic!, /fetched again/);
   assert.deepEqual(await k.engine.enumerateArtifacts(executionRef), []);
 });
 
@@ -386,6 +391,7 @@ test("stopping says plainly that the run goes on", async () => {
 test("a push Kaggle did not take is an error, and nothing is tracked", async () => {
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       if (args[1] === "push")
         throw new Error("Maximum batch GPU quota reached");
       throw new Error(MISSING);
@@ -449,7 +455,7 @@ test("just after a push, a notebook is busy even if Kaggle says it ended", async
   await k.engine.submit(request(), context as never);
   await assert.rejects(
     k.engine.submit(request(), context as never),
-    /still running/,
+    /few minutes ago/,
   );
 });
 
@@ -477,6 +483,7 @@ for (const state of ["QUEUED", "NEW_SCRIPT"]) {
     let pushes = 0;
     const engine = createKaggleEngine({
       cli: async (args) => {
+        if (args[1] === "list") return { stdout: "Not found\n" };
         if (args[1] === "push") pushes++;
         return { stdout: `KernelWorkerStatus.${state}` };
       },
@@ -507,6 +514,7 @@ test("nothing goes to a notebook not reported as private", async () => {
   const calls: string[] = [];
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       calls.push(args[1]);
       if (args[1] === "pull") {
         writeFileSync(
@@ -532,6 +540,7 @@ test("nothing goes if privacy cannot be read", async () => {
   const calls: string[] = [];
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       calls.push(args[1]);
       if (args[1] === "pull") throw new Error("network down");
       return { stdout: "KernelWorkerStatus.COMPLETE" };
@@ -551,6 +560,7 @@ test("a permission problem that is not a missing notebook stops a push", async (
   const calls: string[] = [];
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       calls.push(args[1]);
       throw new Error("403 Client Error: Forbidden 404");
     },
@@ -744,6 +754,10 @@ test("a refusal from a notebook this service made is not a new notebook", async 
   let pushes = 0;
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list")
+        return {
+          stdout: pushes ? `ref,title\nsomeone/${wan.slug},t\n` : "Not found\n",
+        };
       calls.push(args[1]);
       if (args[1] === "push") {
         pushes++;
@@ -776,6 +790,7 @@ test("if privacy cannot be read after the push, the run goes on and says so", as
   let pushes = 0;
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       if (args[1] === "push") {
         pushes++;
         return { stdout: "successfully pushed" };
@@ -855,6 +870,7 @@ test("not being able to ask stops a push", async () => {
   const calls: string[] = [];
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       calls.push(args[1]);
       throw new Error("network down");
     },
@@ -877,6 +893,7 @@ test("questions at once share one answer", async () => {
   let runId = "";
   const engine = createKaggleEngine({
     cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
       if (args[1] === "push") {
         pushes++;
         const script = readFileSync(path.join(args[3], "run.py"), "utf8");

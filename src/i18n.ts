@@ -37,7 +37,7 @@ const en = {
   "create.runRunning": "{name} is running on Kaggle.",
   "create.runDone":
     "{name} finished. Its video was checked against its receipt.",
-  "create.runFailed": "{name} failed on Kaggle. No video came of it.",
+  "create.runFailed": "No video came of this {name} run.",
   "create.runCancelled": "This run was stopped on Kaggle.",
   "create.runUnknown": "Kaggle is not answering. The run may still be going.",
   "create.runStopped": "No longer following this run.",
@@ -489,7 +489,7 @@ const ar: Record<MessageKey, string> = {
   "create.runQueued": "ينتظر {name} وحدة GPU على Kaggle.",
   "create.runRunning": "يعمل {name} على Kaggle.",
   "create.runDone": "انتهى {name}. جرى التحقق من الفيديو مقابل إيصاله.",
-  "create.runFailed": "فشل {name} على Kaggle. لم ينتج فيديو.",
+  "create.runFailed": "لم ينتج فيديو عن تشغيل {name} هذا.",
   "create.runCancelled": "أُوقف هذا التشغيل على Kaggle.",
   "create.runUnknown": "لا يجيب Kaggle. قد يكون التشغيل مستمرًا.",
   "create.runStopped": "توقفت متابعة هذا التشغيل.",

@@ -192,6 +192,7 @@ export function kaggleCli(file: string): KaggleCli {
               new Error(
                 `${error.killed ? "Timed out. " : ""}${
                   stderr ||
+                  stdout ||
                   `The Kaggle CLI failed (${error.code ?? "stopped"}).`
                 }`,
               ),
@@ -208,7 +209,7 @@ const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
 // would replace it: so it is uncertain, not failed. A bare number is not a refusal: a
 // traceback's line numbers are in this text too.
 const REFUSED_PUSH =
-  /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)/i;
+  /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)|Kernel push error|Permission '[^']+' was denied|Authentication required to call the Kaggle API/i;
 const wasRefused = (message: string) =>
   !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
@@ -242,6 +243,10 @@ async function logSaysKilled(folder: string) {
 // What a finished run left cannot be read. Failing to fetch it is not this: that
 // can be tried again.
 class Unreadable extends Error {}
+// What came down is not what the run made: the CLI saves an error page as the file it
+// asked for, and exits as if all were well. Fetched again, but not on every poll.
+class Garbled extends Error {}
+const REFETCH_MS = 5 * 60 * 1000;
 
 type Run = {
   recipe: KaggleRecipe;
@@ -255,6 +260,10 @@ type Run = {
   video?: { file: string; artifact: Artifact };
   // Sent with no answer: nothing says it is running at all.
   uncertain?: boolean;
+  // Sent from another Kaggle account: its notebook is not this one's to ask about.
+  foreign?: string;
+  refetchAt?: number;
+  refetchNote?: string;
   // One question at a time: a slow one must not undo the answer to another.
   asking?: Promise<ExecutionStatus>;
 };
@@ -297,11 +306,12 @@ export const ledgerOptions = (ledger: GenerationLedger) => ({
           startedAt: r.startedAt,
           videoSha256: r.videoSha256,
           sent: r.phase === "sent",
+          remote: r.remote ?? null,
+          notice: r.notice ?? null,
           finished: r.imported !== null || r.dismissed,
         }
       : null;
   },
-  sentBefore: ledger.hasSent,
   lastSentAt: ledger.lastSentAt,
 });
 
@@ -320,10 +330,11 @@ export function createKaggleEngine(options: {
     startedAt: number;
     videoSha256: string | null;
     sent: boolean;
+    remote: string | null;
+    notice: string | null;
     // Brought in or dismissed: its video has no further use here.
     finished: boolean;
   } | null;
-  sentBefore?: (recipeId: string, except: string) => boolean;
   // When another run of this recipe, even one given up on, was last recorded as sent:
   // Kaggle may not yet show it.
   lastSentAt?: (recipeId: string, except: string) => number | undefined;
@@ -341,10 +352,6 @@ export function createKaggleEngine(options: {
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
-  // Notebooks this service knows exist, whatever Kaggle says about them now.
-  const pushed = new Set<string>();
-  const everPushed = (id: string, except: string) =>
-    pushed.has(id) || options.sentBefore?.(id, except) === true;
   const scriptFor =
     options.scriptFor ?? ((r: KaggleRecipe) => readFile(scriptOf(r), "utf8"));
   const remote = (r: KaggleRecipe) => `${username}/${r.slug}`;
@@ -395,13 +402,15 @@ export function createKaggleEngine(options: {
     const file = path.join(folder, "receipt.json");
     try {
       if ((await stat(file)).size > RECEIPT_BYTES)
-        throw new Error("That receipt is too large to be one.");
+        throw new Unreadable("That receipt is too large to be one.");
       const receipt = JSON.parse(await readFile(file, "utf8"));
       if (receipt === null || typeof receipt !== "object")
-        throw new Error("That is not a receipt.");
+        throw new Unreadable("That is not a receipt.");
       return { folder, receipt };
     } catch (e) {
-      throw new Unreadable((e as Error).message);
+      if (e instanceof Unreadable) throw e;
+      await rm(folder, { recursive: true, force: true });
+      throw new Garbled((e as Error).message);
     }
   }
 
@@ -450,8 +459,10 @@ export function createKaggleEngine(options: {
     if (size < 1 || size > ENGINE_V2_LIMITS.artifactBytes)
       return failed("The video is not a size this can take.");
     const hash = await hashOf(file);
-    if (hash !== receipt.sha256)
-      return failed("The video is not the one its receipt names.");
+    if (hash !== receipt.sha256) {
+      await rm(folder, { recursive: true, force: true });
+      throw new Garbled("The video is not the one its receipt names.");
+    }
     await keepOnly(run, file);
     run.video = {
       file,
@@ -466,6 +477,20 @@ export function createKaggleEngine(options: {
   }
 
   const ask = async (run: Run): Promise<ExecutionStatus> => {
+    if (run.foreign)
+      return {
+        executionRef: run.runId,
+        state: "unknown",
+        diagnostic: diagnostic(
+          `This run was sent from another Kaggle account, as ${run.foreign}. It is not asked about from this one.`,
+        ),
+      };
+    if (run.refetchAt !== undefined && now() < run.refetchAt)
+      return {
+        executionRef: run.runId,
+        state: "unknown",
+        diagnostic: diagnostic(run.refetchNote ?? ""),
+      };
     try {
       const state = await remoteState(run.recipe);
       if (state === "QUEUED" || state === "NEW_SCRIPT" || state === "RUNNING")
@@ -509,6 +534,14 @@ export function createKaggleEngine(options: {
       if (state === "CANCEL_REQUESTED" || state === "CANCEL_ACKNOWLEDGED") {
         // Likewise: someone stopping an earlier run on Kaggle is not this one.
         if (settling(run)) return waiting(run);
+        if (run.uncertain)
+          return {
+            executionRef: run.runId,
+            state: "unknown",
+            diagnostic: diagnostic(
+              "Kaggle's latest run on this notebook was stopped there. It may or may not have been this one.",
+            ),
+          };
         await keepOnly(run);
         return end(
           run,
@@ -524,6 +557,15 @@ export function createKaggleEngine(options: {
     } catch (e) {
       // Being unable to ask is not the run failing, however late: it is asked again,
       // and a person can stop following it. A finished video may be waiting.
+      if (e instanceof Garbled) {
+        run.refetchAt = now() + REFETCH_MS;
+        run.refetchNote = `What came down from Kaggle could not be used: ${e.message} It will be fetched again.`;
+        return {
+          executionRef: run.runId,
+          state: "unknown",
+          diagnostic: diagnostic(run.refetchNote),
+        };
+      }
       return {
         executionRef: run.runId,
         state: "unknown",
@@ -566,6 +608,10 @@ export function createKaggleEngine(options: {
       startedAt: record.startedAt + SEND_BOUND_MS,
       folder: folderOf(ref),
       uncertain: !record.sent,
+      ...(record.notice ? { warning: record.notice } : {}),
+      ...(record.remote && record.remote !== remote(recipe)
+        ? { foreign: record.remote }
+        : {}),
     };
     // Its video from before the restart, if it is still the one recorded.
     const file = path.join(run.folder, "output", recipe.output);
@@ -609,6 +655,18 @@ export function createKaggleEngine(options: {
       await rm(pulled, { recursive: true, force: true });
     }
   }
+  const listed = async (recipe: KaggleRecipe) => {
+    const { stdout } = await cli(
+      ["kernels", "list", "--mine", "-s", recipe.slug, "--csv"],
+      90_000,
+    );
+    const lines = stdout.split(/\r?\n/);
+    if (!lines.some((l) => l.startsWith("ref,") || l.startsWith("Not found")))
+      throw new Error("Kaggle gave no list.");
+    const name = `${remote(recipe).toLowerCase()},`;
+    return lines.some((l) => l.toLowerCase().startsWith(name));
+  };
+
   const NOT_PRIVATE =
     "Kaggle does not report this notebook as private. Check it on Kaggle before running again.";
 
@@ -625,26 +683,26 @@ export function createKaggleEngine(options: {
         "This model's notebook is still running. Wait for it to finish, or stop it on Kaggle.",
       );
     // Kaggle may not yet show a run just pushed.
+    const justSent = () =>
+      new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        "A run of this model was sent a few minutes ago, and Kaggle may not show it yet. Try again shortly.",
+      );
     for (const run of runs.values())
-      if (run.recipe === recipe && !run.ended && settling(run)) throw busy();
+      if (run.recipe === recipe && !run.ended && settling(run))
+        throw justSent();
     const sent = options.lastSentAt?.(recipe.id, attemptKey);
     if (sent !== undefined && now() - sent < SEND_BOUND_MS + PUSH_SETTLE_MS)
-      throw busy();
+      throw justSent();
     let state: string;
     try {
       state = await remoteState(recipe);
     } catch (e) {
-      // The CLI says this of any refusal, so it means new only if nothing here says
-      // otherwise. Kaggle's words cannot tell these apart after a restart. A run given up
-      // on says nothing once it would be over, or a lost first push would block for good.
-      const mayBeThere =
-        sent !== undefined &&
-        now() - sent <
-          SEND_BOUND_MS + (recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
+      // The CLI says this of any refusal, so it means new only when the account's own
+      // list, which needs working credentials, does not hold it.
       if (
         NO_SUCH_NOTEBOOK.test((e as Error).message) &&
-        !everPushed(recipe.id, attemptKey) &&
-        !mayBeThere
+        (await listed(recipe).catch(() => true)) === false
       )
         return;
       throw new CommandError(
@@ -676,6 +734,10 @@ export function createKaggleEngine(options: {
   return {
     contract: ENGINE_CONTRACT_V2,
     capabilities: () => [],
+    location: (recipeId) => {
+      const recipe = KAGGLE_RECIPES.find((r) => r.id === recipeId);
+      return recipe ? remote(recipe) : null;
+    },
     async submit(request) {
       const recipe = KAGGLE_RECIPES.find((r) => r.id === request.recipeId);
       if (!recipe?.offered || request.operation !== "textToVideo")
@@ -745,7 +807,6 @@ export function createKaggleEngine(options: {
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
         await rm(push, { recursive: true, force: true }).catch(() => {});
-        pushed.add(recipe.id);
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
         // It has gone and it is running, whatever this says: so this warns, it does
@@ -758,7 +819,10 @@ export function createKaggleEngine(options: {
             run.warning =
               "Could not confirm that this notebook is private. Check it on Kaggle.";
           });
-        return { executionRef: runId };
+        return {
+          executionRef: runId,
+          ...(run.warning ? { notice: run.warning } : {}),
+        };
       } catch (e) {
         // No answer is not a refusal: it may have arrived, and a second push would
         // replace it. It is followed like any other, and said to be uncertain.
@@ -777,8 +841,12 @@ export function createKaggleEngine(options: {
           });
           return {
             executionRef: request.attemptKey,
-            uncertain:
-              "No answer came from Kaggle, so this may or may not have reached it. It will not be sent again automatically.",
+            uncertain: [
+              "No clear answer came from Kaggle, so this may or may not have reached it. It will not be sent again automatically.",
+              diagnostic(`The Kaggle tool said: ${(e as Error).message}`),
+            ]
+              .filter(Boolean)
+              .join(" "),
           };
         }
         if (folder)
@@ -800,11 +868,12 @@ export function createKaggleEngine(options: {
     async requestCancel(ref) {
       const run = await runOf(ref);
       return {
-        requested: true,
+        // Nothing was asked of Kaggle: it has no way to be asked.
+        requested: false,
         localProcessExited: true,
         remoteAcknowledged: false,
         remoteOutcome:
-          run.ended || run.uncertain
+          run.ended || run.uncertain || run.foreign || pastLimit(run)
             ? ("unknown" as const)
             : ("continuing" as const),
         billingOutcome: "notApplicable" as const,

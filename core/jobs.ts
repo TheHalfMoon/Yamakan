@@ -8,7 +8,6 @@
 // a paid resubmission). Partial outputs are never registered.
 import {
   mayHaveLeft,
-  wasSent,
   type GenerationLedger,
   type GenerationRecord,
 } from "./engines/generation.ts";
@@ -312,7 +311,10 @@ export class JobSupervisor {
             "UPDATE jobs SET payload = ?, error = ?, artifact = ? WHERE job_id = ?",
           ).run(
             JSON.stringify(next),
-            next.diagnostic ?? null,
+            // A held copy keeps saying why it is held.
+            row.state === "reconciliationRequired"
+              ? row.error
+              : (next.diagnostic ?? null),
             next.imported ? `asset:${next.imported.assetId}` : null,
             id,
           );
@@ -326,7 +328,7 @@ export class JobSupervisor {
             "succeeded",
           ];
           let at = row.state as YamakanJobState;
-          while (at !== target) {
+          while (at !== target && at !== "reconciliationRequired") {
             const along = path[path.indexOf(at) + 1];
             const step = YAMAKAN_LEGAL_TRANSITIONS[at]?.has(target)
               ? target
@@ -357,10 +359,6 @@ export class JobSupervisor {
               )
               .all(REMOTE_GENERATION, projectId) as Row[]
           ).map(parse),
-        ),
-      hasSent: (recipeId, except) =>
-        this.store.read((db) =>
-          generationPayloads(db).some((r) => wasSent(r, recipeId, except)),
         ),
       lastSentAt: (recipeId, except) =>
         this.store.read((db) => {
