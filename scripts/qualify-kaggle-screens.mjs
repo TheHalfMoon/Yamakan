@@ -134,7 +134,15 @@ async function scene(name, initial, play) {
       }),
     );
   const read = () => JSON.parse(readFileSync(file, "utf8"));
+  const scratch = join(folder, "tmp");
+  mkdirSync(scratch);
   const thisPort = ++port;
+  // Every push tried, whatever became of it. The engine refuses a second before the
+  // stand-in could record it, so what it recorded could not show one being tried.
+  const attempts = () =>
+    readFileSync(`${file}.log`, "utf8")
+      .split("\n")
+      .filter((line) => line === "kernels push").length;
   const start = async () => {
     let log = "";
     child = fork(
@@ -143,6 +151,9 @@ async function scene(name, initial, play) {
       {
         env: {
           ...process.env,
+          // Its own temporary folder: a sweep of the real one could take a real video.
+          TEMP: scratch,
+          TMP: scratch,
           YAMAKAN_WORKSPACE: join(folder, "workspace"),
           YAMAKAN_PORT: String(thisPort),
           YAMAKAN_KAGGLE_CLI: program,
@@ -226,7 +237,17 @@ async function scene(name, initial, play) {
       state,
       { timeout: 90_000 },
     );
-  await play({ page, set, read, startRun, runState, restart, stateIs, reopen });
+  await play({
+    page,
+    set,
+    read,
+    attempts,
+    startRun,
+    runState,
+    restart,
+    stateIs,
+    reopen,
+  });
   if (out) await page.screenshot({ path: join(out, `${name}.png`) });
   assert.deepEqual(pageErrors, [], name);
   await page.close();
@@ -239,52 +260,106 @@ try {
     headless: true,
   });
 
-  await scene("quota", { push: "quota" }, async ({ page, read, startRun }) => {
-    await startRun();
-    const refusal = page.locator(".create-problem");
-    await refusal.waitFor({ timeout: 90_000 });
-    assert.match(
-      await refusal.textContent(),
-      /Maximum weekly GPU quota of 30\.00 hours reached/,
+  await scene(
+    "quota",
+    { push: "quota" },
+    async ({ page, read, attempts, startRun, reopen }) => {
+      await startRun();
+      const refusal = page.locator(".create-problem");
+      await refusal.waitFor({ timeout: 90_000 });
+      assert.match(
+        await refusal.textContent(),
+        /Maximum weekly GPU quota of 30\.00 hours reached/,
+      );
+      assert.doesNotMatch(await refusal.textContent(), /outdated/);
+      assert.equal(await page.getByTestId("create-run-state").count(), 0);
+      assert.equal(read().pushes.length, 0);
+      await reopen();
+      await page.getByTestId("create-agree").waitFor();
+      assert.equal(await page.getByTestId("create-run-state").count(), 0);
+      assert.equal(attempts(), 1);
+      step("a refusal shows Kaggle's own words, with nothing left to follow");
+    },
+  );
+
+  for (const [name, landed] of [
+    ["lost", 1],
+    ["lost-before", 0],
+  ])
+    await scene(
+      name,
+      { push: name },
+      async ({ page, read, attempts, runState, startRun, restart }) => {
+        const UNCERTAIN = /It is not known whether this reached Kaggle/;
+        await startRun();
+        await runState.waitFor({ timeout: 90_000 });
+        assert.match(await runState.textContent(), UNCERTAIN);
+        assert.equal(read().pushes.length, landed);
+        assert.equal(attempts(), 1);
+        step(
+          `${name}: no clear answer is said to be that, and is not sent again`,
+        );
+
+        await restart();
+        await runState.waitFor({ timeout: 60_000 });
+        assert.match(await runState.textContent(), UNCERTAIN);
+        // Long enough for the page to have asked again, and acted on what it heard.
+        await page.waitForTimeout(30_000);
+        assert.match(await runState.textContent(), UNCERTAIN);
+        assert.equal(attempts(), 1);
+        step(
+          `${name}: after a restart it says the same, and is not sent again`,
+        );
+
+        await page.getByTestId("create-run-stop").click();
+        await page.getByTestId("create-run-done").waitFor();
+        assert.match(
+          await runState.textContent(),
+          /No longer following this run/,
+        );
+        const said = await page.getByTestId("create-generate").textContent();
+        assert.match(said, /It may still be running on Kaggle/);
+        assert.doesNotMatch(said, /latest run as stopped/);
+        assert.equal(attempts(), 1);
+        step(`${name}: Stop following does not claim Kaggle stopped`);
+      },
     );
-    assert.doesNotMatch(await refusal.textContent(), /outdated/);
-    assert.equal(await page.getByTestId("create-run-state").count(), 0);
-    assert.equal(read().pushes.length, 0);
-    step("a refusal shows Kaggle's own words, with nothing left to follow");
-  });
 
   await scene(
-    "lost",
-    { push: "lost" },
-    async ({ page, read, runState, startRun, restart }) => {
+    "stop-running",
+    {},
+    async ({ page, attempts, startRun, stateIs, runState, reopen }) => {
       await startRun();
       await runState.waitFor({ timeout: 90_000 });
-      assert.match(await runState.textContent(), /checked|may or may not/i);
-      assert.equal(read().pushes.length, 1);
-      step("a send with no clear answer says so, and is not sent again");
-
-      await restart();
-      await runState.waitFor({ timeout: 60_000 });
-      assert.equal(read().pushes.length, 1);
-      step("after a restart it is found again, and still not sent again");
-
+      await stateIs("running");
       await page.getByTestId("create-run-stop").click();
-      const said = await page.getByTestId("create-generate").textContent();
-      assert.match(said, /still|goes on|may/i);
-      assert.doesNotMatch(said, /stopped on Kaggle/);
       await page.getByTestId("create-run-done").waitFor();
-      step("Stop following does not claim Kaggle stopped");
+      // What the service recorded, not only what this page remembers.
+      await page.waitForTimeout(1000);
+      await reopen();
+      await runState.waitFor({ timeout: 60_000 });
+      assert.match(
+        await runState.textContent(),
+        /No longer following this run/,
+      );
+      assert.match(
+        await page.getByTestId("create-generate").textContent(),
+        /It may still be running on Kaggle/,
+      );
+      assert.equal(attempts(), 1);
+      step(
+        "a stop on a run under way stays after a reload, and says it may go on",
+      );
     },
   );
 
   await scene(
     "failed",
     {},
-    async ({ page, set, read, startRun, stateIs, runState }) => {
+    async ({ page, set, attempts, startRun, stateIs, runState }) => {
       await startRun();
       await runState.waitFor({ timeout: 90_000 });
       await stateIs("running");
-      assert.equal(read().pushes.length, 1);
       assert.equal(await page.getByTestId("create-run-stop").count(), 1);
       step("a run shows as running, with a way to stop following it");
       set({ state: "ERROR" });
@@ -298,15 +373,19 @@ try {
         /No video came of this/,
       );
       assert.equal(await page.getByTestId("create-run-bring-in").count(), 0);
-      assert.ok(
-        await page.getByTestId("create-generate").getByRole("link").count(),
-        "the way to its notebook",
+      assert.equal(
+        await page
+          .getByTestId("create-generate")
+          .getByRole("link")
+          .getAttribute("href"),
+        `https://www.kaggle.com/code/${USERNAME}/${wan.slug}`,
       );
       await page.getByTestId("create-run-done").click();
       await page.getByTestId("create-generate-start").waitFor();
-      assert.equal(read().pushes.length, 1, "trying again is a person's to do");
+      await page.waitForTimeout(5000);
+      assert.equal(attempts(), 1, "trying again is a person's to do");
       step(
-        "a failed run says so, links its notebook, and sends nothing by itself",
+        "a failed run says so, links its notebook, and sends nothing itself",
       );
     },
   );
@@ -314,14 +393,14 @@ try {
   await scene(
     "finished",
     {},
-    async ({ page, set, read, startRun, runState, stateIs, restart }) => {
+    async ({ page, set, attempts, startRun, runState, stateIs, restart }) => {
       await startRun();
       await runState.waitFor({ timeout: 90_000 });
       await stateIs("running");
       await restart();
       await runState.waitFor({ timeout: 60_000 });
       await stateIs("running");
-      assert.equal(read().pushes.length, 1);
+      assert.equal(attempts(), 1);
       step("a run under way survives the service being killed");
       set({ state: "COMPLETE" });
       await stateIs("succeeded");
@@ -334,27 +413,34 @@ try {
         await page.getByTestId("create-receipt-facts").textContent(),
         /A red kite/,
       );
-      assert.equal(read().pushes.length, 1);
+      assert.equal(attempts(), 1);
       step("once finished, its video comes in with its prompt");
     },
   );
 
-  await scene("answer-lost", {}, async ({ page, read, startRun, runState }) => {
-    // The service answers, and the page never hears it.
-    await page.route("**/api/v1/call", async (route) => {
-      const body = route.request().postData() ?? "";
-      if (body.includes('"yamakan.generation.start"')) {
-        await route.fetch().catch(() => {});
-        await route.abort();
-      } else await route.continue();
-    });
-    await startRun();
-    await runState.waitFor({ timeout: 90_000 });
-    assert.equal(read().pushes.length, 1);
-    await page.unroute("**/api/v1/call");
-    assert.equal(await page.locator(".create-problem").count(), 0);
-    step("a start whose answer is lost finds its run, and shows no failure");
-  });
+  await scene(
+    "answer-lost",
+    {},
+    async ({ page, attempts, startRun, runState }) => {
+      // The service answers, and the page never hears it.
+      let lost = 0;
+      await page.route("**/api/v1/call", async (route) => {
+        const body = route.request().postData() ?? "";
+        if (body.includes('"yamakan.generation.start"')) {
+          lost++;
+          await route.fetch().catch(() => {});
+          await route.abort();
+        } else await route.continue();
+      });
+      await startRun();
+      await runState.waitFor({ timeout: 90_000 });
+      assert.equal(lost, 1, "its answer really was lost");
+      assert.equal(attempts(), 1);
+      await page.unroute("**/api/v1/call");
+      assert.equal(await page.locator(".create-problem").count(), 0);
+      step("a start whose answer is lost finds its run, and shows no failure");
+    },
+  );
 
   passed = true;
 } catch (e) {
@@ -362,7 +448,11 @@ try {
 } finally {
   await browser?.close().catch(() => {});
   await stopService();
-  rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    // Windows can still hold a folder: tidying up is not what this tests.
+  }
 }
 console.log(passed ? "SCREENS PASS" : "SCREENS FAIL");
 process.exit(passed ? 0 : 1);

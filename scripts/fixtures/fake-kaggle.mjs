@@ -48,6 +48,10 @@ if (command === "list") {
     say("Kernel push error: Maximum weekly GPU quota of 30.00 hours reached.");
     process.exit(0);
   }
+  // Never arrived: the answer is lost, and Kaggle has nothing of it.
+  if (now.push === "lost-before") refuse("Remote end closed connection", 1);
+  // Never arrived: the answer is lost, and Kaggle has nothing of it.
+  if (now.push === "lost-before") refuse("Remote end closed connection", 1);
   change({ pushes: [...now.pushes, brief] });
   if (now.push === "lost") refuse("Remote end closed connection", 1);
   say("Kernel version 1 successfully pushed.");
