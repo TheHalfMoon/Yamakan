@@ -627,10 +627,12 @@ test("a killed run says so, from its log, without the log's words", async () => 
       path.join(folder, "receipt.json"),
       JSON.stringify({ runId, stage: "generating", error: null }),
     );
-    // As Kaggle's log has it: a JSON line, with the line ending escaped.
+    // Exactly as a real killed run's log has it, with its output after.
     writeFileSync(
       path.join(folder, "run.log"),
-      JSON.stringify([{ data: "100%|##| 30/30 the prompt\nKilled\n" }]),
+      '[{"stream_name":"stderr","time":1,"data":"30/30 the prompt\\n"}\r\n' +
+        ',{"stream_name":"stderr","time":2,"data":"Killed\\n"}\r\n' +
+        `,{"stream_name":"stderr","time":3,"data":"${"x".repeat(100_000)}"}\r\n]`,
     );
   });
   const { executionRef } = (await k.engine.submit(
@@ -651,7 +653,7 @@ test("a run that failed otherwise is not said to be killed", async () => {
     );
     writeFileSync(
       path.join(folder, "run.log"),
-      "Killed by nothing, a word in a prompt",
+      '[{"stream_name":"stdout","time":1,"data":"Killed by a word\\nKilled\\nprompt\\n"}]',
     );
   });
   const { executionRef } = (await k.engine.submit(

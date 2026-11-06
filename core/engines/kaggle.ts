@@ -210,15 +210,16 @@ const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
 // known one, and only a flag leaves the log, which can hold the prompt.
 const WAS_KILLED =
   "Kaggle killed the run before it finished, most likely because it ran out of memory. The same settings have also worked, so trying again may too.";
-const LOG_TAIL_BYTES = 64 * 1024;
+const LOG_TAIL_BYTES = 8 * 1024 * 1024;
+// A whole output line, as a real killed run's log has it: a word in a prompt is not.
+const KILLED_LINE = /"data":"Killed\\n"/;
 async function logSaysKilled(folder: string) {
   const names = await readdir(folder).catch(() => [] as string[]);
   for (const name of names.filter((n) => n.endsWith(".log"))) {
     const text = await readFile(path.join(folder, name), "utf8").catch(
       () => "",
     );
-    if (/(^|\\n|\n)Killed(\\n|\n|$)/.test(text.slice(-LOG_TAIL_BYTES)))
-      return true;
+    if (KILLED_LINE.test(text.slice(-LOG_TAIL_BYTES))) return true;
   }
   return false;
 }
