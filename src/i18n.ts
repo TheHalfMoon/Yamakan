@@ -38,7 +38,7 @@ const en = {
   "create.runDone":
     "{name} finished. Its video was checked against its receipt.",
   "create.runFailed": "No video came of this {name} run.",
-  "create.runCancelled": "This run was stopped on Kaggle.",
+  "create.runCancelled": "Kaggle shows this notebook's latest run as stopped.",
   "create.runUnknown": "Kaggle is not answering. The run may still be going.",
   "create.runStopped": "No longer following this run.",
   "create.runLost": "Yamakan has no record of this run.",
@@ -490,7 +490,7 @@ const ar: Record<MessageKey, string> = {
   "create.runRunning": "يعمل {name} على Kaggle.",
   "create.runDone": "انتهى {name}. جرى التحقق من الفيديو مقابل إيصاله.",
   "create.runFailed": "لم ينتج فيديو عن تشغيل {name} هذا.",
-  "create.runCancelled": "أُوقف هذا التشغيل على Kaggle.",
+  "create.runCancelled": "يُظهر Kaggle أن آخر تشغيل لهذا الدفتر قد أُوقف.",
   "create.runUnknown": "لا يجيب Kaggle. قد يكون التشغيل مستمرًا.",
   "create.runStopped": "توقفت متابعة هذا التشغيل.",
   "create.runLost": "لا يوجد لدى Yamakan سجل لهذا التشغيل.",

@@ -406,7 +406,7 @@ export function createKaggleEngine(options: {
   async function collect(run: Run) {
     const folder = path.join(run.folder, "output");
     await rm(folder, { recursive: true, force: true });
-    await mkdir(folder, { recursive: true });
+    await mkdir(folder, { recursive: true, mode: 0o700 });
     await download(run.recipe, folder).catch(async (e) => {
       // A part of a download can hold the prompt.
       await rm(folder, { recursive: true, force: true });
@@ -419,6 +419,8 @@ export function createKaggleEngine(options: {
       const receipt = JSON.parse(await readFile(file, "utf8"));
       if (receipt === null || typeof receipt !== "object")
         throw new Unreadable("That is not a receipt.");
+      // A saved error body reads as JSON too, and names no run.
+      if (typeof receipt.runId !== "string") throw new Error("No run named.");
       return { folder, receipt };
     } catch (e) {
       // Any of it can hold the prompt, or the answer of another run.
@@ -434,9 +436,18 @@ export function createKaggleEngine(options: {
     return hash.digest("hex");
   };
 
+  // A kill during a send can leave its script, or a pull of an earlier run's.
+  const clearLeftovers = (run: Run) =>
+    Promise.all(
+      ["push", "pulled"].map((name) =>
+        rm(path.join(run.folder, name), { recursive: true, force: true }),
+      ),
+    ).catch(() => {});
+
   // The prompt is in the receipt and the log: once read, only the video stays.
   const keepOnly = async (run: Run, kept?: string) => {
     if (!kept) return rm(run.folder, { recursive: true, force: true });
+    await clearLeftovers(run);
     const folder = path.dirname(kept);
     for (const name of await readdir(folder))
       if (path.join(folder, name) !== kept)
@@ -470,7 +481,12 @@ export function createKaggleEngine(options: {
       (found) => found.size,
       () => 0,
     );
-    if (size < 1 || size > ENGINE_V2_LIMITS.artifactBytes)
+    // Empty or missing is what a bad download leaves, as well as a bad run.
+    if (size < 1) {
+      await rm(folder, { recursive: true, force: true });
+      throw new Garbled("The run's video did not come down.");
+    }
+    if (size > ENGINE_V2_LIMITS.artifactBytes)
       return failed("The video is not a size this can take.");
     const hash = await hashOf(file);
     if (hash !== receipt.sha256) {
@@ -577,7 +593,7 @@ export function createKaggleEngine(options: {
       if (e instanceof Garbled) {
         run.fetchTries = (run.fetchTries ?? 0) + 1;
         if (run.fetchTries >= FETCH_TRIES) {
-          await keepOnly(run);
+          await keepOnly(run).catch(() => {});
           return end(
             run,
             "failed",
@@ -635,10 +651,12 @@ export function createKaggleEngine(options: {
       folder: folderOf(ref),
       uncertain: !record.sent,
       ...(record.notice ? { warning: record.notice } : {}),
-      ...(record.remote && record.remote !== remote(recipe)
+      ...(record.remote &&
+      record.remote.toLowerCase() !== remote(recipe).toLowerCase()
         ? { foreign: record.remote }
         : {}),
     };
+    await clearLeftovers(run);
     // Its video from before the restart, if it is still the one recorded.
     const file = path.join(run.folder, "output", recipe.output);
     if (record.videoSha256) {
@@ -646,7 +664,8 @@ export function createKaggleEngine(options: {
         (found) => found.size,
         () => 0,
       );
-      if (size > 0 && (await hashOf(file)) === record.videoSha256) {
+      const hash = size > 0 ? await hashOf(file).catch(() => "") : "";
+      if (hash === record.videoSha256) {
         run.video = {
           file,
           artifact: {
@@ -775,7 +794,7 @@ export function createKaggleEngine(options: {
     capabilities: () => [],
     location: (recipeId) => {
       const recipe = KAGGLE_RECIPES.find((r) => r.id === recipeId);
-      return recipe ? remote(recipe) : null;
+      return recipe ? remote(recipe).toLowerCase() : null;
     },
     async submit(request) {
       const recipe = KAGGLE_RECIPES.find((r) => r.id === request.recipeId);
@@ -804,7 +823,7 @@ export function createKaggleEngine(options: {
       let sent = false;
       try {
         folder = folderOf(request.attemptKey);
-        await mkdir(folder, { recursive: true });
+        await mkdir(folder, { recursive: true, mode: 0o700 });
         // Its notebook has one latest run: another would hide this one's result.
         await assertFree(recipe, folder, request.attemptKey);
         // Recorded by the service before this: after a crash it is how the run is found.

@@ -94,7 +94,7 @@ function kaggle() {
     pushError: "Timed out waiting for an answer",
     calls: 0,
     downloadFails: false,
-    garble: null as null | "video" | "receipt",
+    garble: null as null | "video" | "receipt" | "error-body" | "empty-video",
     // Kaggle refuses any question about the notebook, though it exists.
     denied: false,
     listFails: false,
@@ -165,6 +165,15 @@ function kaggle() {
       writeFileSync(path.join(folder, "receipt.json"), "<html>503</html>");
       return;
     }
+    if (world.garble === "error-body") {
+      writeFileSync(
+        path.join(folder, "receipt.json"),
+        '{"code":403,"message":"Forbidden"}',
+      );
+      return;
+    }
+    if (world.garble === "empty-video")
+      writeFileSync(path.join(folder, wan.output), "");
     writeFileSync(
       path.join(folder, "receipt.json"),
       JSON.stringify({
@@ -937,7 +946,7 @@ for (const trouble of ["a failed download", "a run still going"] as const)
     await f.s.close();
   });
 
-for (const garble of ["video", "receipt"] as const)
+for (const garble of ["video", "receipt", "error-body", "empty-video"] as const)
   test(`an error page saved as the ${garble} is fetched again, not the run's end`, async () => {
     const f = await fixture();
     const { generationId: id } = await f.start("A SECRET kite.");
@@ -978,6 +987,7 @@ test("a result that never comes readable ends, and says so", async () => {
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /missing or cannot be read/);
   assert.match(answer.diagnostic!, /still on its notebook/);
+  await assert.rejects(f.s.service.importResult(id), /Only a finished/);
   await f.s.close();
 });
 
@@ -1066,6 +1076,34 @@ test("Kaggle's real answer on quota reaches the person, past the CLI's advice", 
     1,
     "what the stand-in records of a try",
   );
+  await f.s.close();
+});
+
+test("a kill during a send leaves no script behind, once the run is found again", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start("A SECRET kite.");
+  const folder = path.join(f.root, "tmp", `yamakan-kaggle-work-${id}`);
+  for (const name of ["push", "pulled"]) {
+    mkdirSync(path.join(folder, name), { recursive: true });
+    writeFileSync(path.join(folder, name, "run.py"), "A SECRET kite.");
+  }
+  await f.restart();
+  f.k.world.state = "COMPLETE";
+  assert.equal((await f.s.service.status(id)).state, "succeeded");
+  const left = readdirSync(folder, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile())
+    .map((e) => e.name);
+  assert.deepEqual(left, [wan.output]);
+  await f.s.close();
+});
+
+test("a name differing only by case is the same account", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  assert.equal(f.s.ledger.read(id)!.remote, `someone/${wan.slug}`);
+  f.s.ledger.update(id, { remote: `SomeOne/${wan.slug}` });
+  await f.restart();
+  assert.equal((await f.s.service.status(id)).state, "running");
   await f.s.close();
 });
 

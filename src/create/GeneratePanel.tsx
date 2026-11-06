@@ -436,6 +436,9 @@ export function GeneratePanel(props: {
           </button>
         )}
       </div>
+      {state === "failed" && !run.stopped && !lost && (
+        <p className="note">{notebookLink}</p>
+      )}
       {(following || run.stopped || lost) && (
         <p className="note">
           {run.stopped || lost

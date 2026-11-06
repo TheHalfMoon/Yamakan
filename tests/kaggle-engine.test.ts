@@ -696,18 +696,29 @@ test("a receipt that reads as nothing ends the run, once settled", async () => {
   assert.match(answer.diagnostic!, /readable result/);
 });
 
-test("a finished run with no video is a failure", async () => {
-  const k = kaggle(["COMPLETE"], (runId, folder) => {
-    good(runId, folder);
-    rmSync(path.join(folder, wan.output));
-  });
+test("a finished run with no video is fetched again, then ends", async () => {
+  let time = 0;
+  const k = kaggle(
+    ["COMPLETE"],
+    (runId, folder) => {
+      good(runId, folder);
+      rmSync(path.join(folder, wan.output));
+    },
+    { clock: () => time },
+  );
   const { executionRef } = (await k.engine.submit(
     request(),
     context as never,
   )) as any;
-  const answer = await k.engine.status(executionRef);
+  let answer = await k.engine.status(executionRef);
+  for (let i = 0; i < 3; i++) {
+    assert.equal(answer.state, "unknown");
+    assert.match(answer.diagnostic!, /did not come down/);
+    time += 6 * 60 * 1000;
+    answer = await k.engine.status(executionRef);
+  }
   assert.equal(answer.state, "failed");
-  assert.match(answer.diagnostic!, /not a size/);
+  assert.match(answer.diagnostic!, /still on its notebook/);
 });
 
 test("a warning stays beside a failed answer", async () => {

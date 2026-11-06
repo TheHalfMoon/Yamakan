@@ -1,0 +1,13 @@
+{
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "head": "a7997378b01b355ca8c91f7ad09d1c8e8190fe0b",
+  "dirty": false,
+  "passed": false,
+  "failure": "The start was refused: Kaggle did not take the run: Warning: Looks like you're using an outdated `kaggle` version (installed: 2.2.4), please consider upgrading to the latest version (2.2.5)\r\nKernel push error: Maximum weekly GPU quota of 30.00 hours reached.\r\n",
+  "steps": [
+    {
+      "name": "the agreement is readable in its place",
+      "at": "2026-11-06T16:00:36.404Z"
+    }
+  ]
+}
