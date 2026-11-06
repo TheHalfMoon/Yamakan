@@ -621,6 +621,47 @@ test("a receipt too large to be one is refused, though it reads", async () => {
   assert.match(answer.diagnostic!, /readable result/);
 });
 
+test("a killed run says so, from its log, without the log's words", async () => {
+  const k = kaggle(["ERROR"], (runId, folder) => {
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({ runId, stage: "generating", error: null }),
+    );
+    // As Kaggle's log has it: a JSON line, with the line ending escaped.
+    writeFileSync(
+      path.join(folder, "run.log"),
+      JSON.stringify([{ data: "100%|##| 30/30 the prompt\nKilled\n" }]),
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /killed the run/);
+  assert.ok(!answer.diagnostic!.includes("the prompt"));
+});
+
+test("a run that failed otherwise is not said to be killed", async () => {
+  const k = kaggle(["ERROR"], (runId, folder) => {
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({ runId, stage: "generating", error: null }),
+    );
+    writeFileSync(
+      path.join(folder, "run.log"),
+      "Killed by nothing, a word in a prompt",
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.diagnostic, "The run failed on Kaggle.");
+});
+
 test("a receipt that reads as nothing ends the run, once settled", async () => {
   let time = 0;
   const k = kaggle(

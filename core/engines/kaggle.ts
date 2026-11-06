@@ -206,6 +206,22 @@ const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
+// All the log can show: the process was killed. Memory is the likely reason, not a
+// known one, and only a flag leaves the log, which can hold the prompt.
+const WAS_KILLED =
+  "Kaggle killed the run before it finished, most likely because it ran out of memory. The same settings have also worked, so trying again may too.";
+const LOG_TAIL_BYTES = 64 * 1024;
+async function logSaysKilled(folder: string) {
+  const names = await readdir(folder).catch(() => [] as string[]);
+  for (const name of names.filter((n) => n.endsWith(".log"))) {
+    const text = await readFile(path.join(folder, name), "utf8").catch(
+      () => "",
+    );
+    if (/(^|\\n|\n)Killed(\\n|\n|$)/.test(text.slice(-LOG_TAIL_BYTES)))
+      return true;
+  }
+  return false;
+}
 
 // What a finished run left cannot be read. Failing to fetch it is not this: that
 // can be tried again.
@@ -398,6 +414,8 @@ export function createKaggleEngine(options: {
         const ours = left?.receipt.runId === run.runId;
         // Just after a push, this may still be what an earlier run came to.
         if (!ours && settling(run)) return waiting(run);
+        // Read before the folder goes. A kill leaves no error of its own in a receipt.
+        const killed = ours && (await logSaysKilled(left.folder));
         await keepOnly(run);
         if (left && !ours)
           return end(run, "failed", "Kaggle's latest run is not this one.");
@@ -406,7 +424,9 @@ export function createKaggleEngine(options: {
           "failed",
           ours && typeof left.receipt.error === "string"
             ? left.receipt.error
-            : "The run failed on Kaggle.",
+            : killed
+              ? WAS_KILLED
+              : "The run failed on Kaggle.",
         );
       }
       if (state === "CANCEL_REQUESTED" || state === "CANCEL_ACKNOWLEDGED") {
