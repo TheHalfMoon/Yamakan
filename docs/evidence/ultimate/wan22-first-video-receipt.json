@@ -1,0 +1,40 @@
+{
+  "format": "yamakan.generation-receipt/v1",
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "revision": "b8fff7315c768468a5333511427288870b2e9635",
+  "license": "apache-2.0",
+  "prompt": "A paper boat floats slowly along a calm stream in soft morning light.",
+  "negativePrompt": "blurry, low quality, distorted, static",
+  "seed": 42,
+  "steps": 30,
+  "frames": 41,
+  "fps": 24,
+  "size": [704, 480],
+  "packages": [
+    "diffusers==0.36.0",
+    "transformers==4.57.1",
+    "accelerate==1.10.1",
+    "sentencepiece==0.2.1",
+    "ftfy==6.3.1",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0"
+  ],
+  "verified": true,
+  "stage": "done",
+  "gpus": ["Tesla T4, 15360 MiB", "Tesla T4, 15360 MiB"],
+  "memory": [
+    "Mem:              31           1          26           0           4          30"
+  ],
+  "disk": ["/dev/loop2       20G  116K   20G   1% /kaggle/working"],
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "loadSeconds": 286.8,
+  "generateSeconds": 352.5,
+  "peakGpuBytes": 13619549184,
+  "sha256": "4946b41cfc1ec709abd0b0a0c308289cfce3488201126d4a17e1e58d7e9e6f4e",
+  "bytes": 123592,
+  "decodedFrames": 41,
+  "decodedSize": [704, 480],
+  "spatialStd": 47.31,
+  "temporalDiff": 1.016
+}

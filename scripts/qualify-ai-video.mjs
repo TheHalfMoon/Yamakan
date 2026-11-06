@@ -23,6 +23,7 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { mediaTools } from "../core/process/workers.ts";
+import { FRAME, compareFrames } from "./ai-video-frames.mjs";
 
 const [video, expected, receipt] = process.argv.slice(2);
 if (!video || !expected) {
@@ -80,13 +81,35 @@ const small = (file, filter = "scale=64:36") =>
     ],
     { windowsHide: true, maxBuffer: 1 << 28 },
   );
-const FRAME = 64 * 36 * 3;
-const difference = (a, b) => {
-  let total = 0;
-  for (let i = 0; i < FRAME; i++) total += Math.abs(a[i] - b[i]);
-  return total / FRAME;
+// What a file holds: its frames counted by decoding, the rest from its stream.
+const probe = (file) => {
+  const stream = JSON.parse(
+    execFileSync(
+      mediaTools().ffprobe,
+      [
+        "-v",
+        "error",
+        "-count_frames",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=codec_name,width,height,r_frame_rate,nb_read_frames",
+        "-of",
+        "json",
+        file,
+      ],
+      { windowsHide: true, encoding: "utf8" },
+    ),
+  ).streams[0];
+  const [top, bottom] = stream.r_frame_rate.split("/").map(Number);
+  return {
+    codec: stream.codec_name,
+    width: stream.width,
+    height: stream.height,
+    fps: top / bottom,
+    frames: Number(stream.nb_read_frames),
+  };
 };
-const frameOf = (raw, n) => raw.subarray(n * FRAME, (n + 1) * FRAME);
 
 let browser;
 let passed = false;
@@ -152,8 +175,8 @@ try {
 
   const project = await service("yamakan.project.create", {
     name: "First AI video",
-    // Projects do not offer the 8 fps this model makes, so this is a 30 fps project,
-    // the default, where a source frame lasts 3.75 of its frames.
+    // The default 30 fps project, whatever the model's rate: projects offer neither
+    // CogVideoX's 8 fps nor Wan's 24, so a source frame lasts 30/fps of its frames.
   });
   const uploaded = await page.evaluate(
     async ([projectId, base64, name]) => {
@@ -181,9 +204,15 @@ try {
   const open = await service("yamakan.project.open", { projectId: project.id });
   const track = open.tracks.find((t) => t.kind === "video").id;
   const clipId = crypto.randomUUID();
-  const sourceFrames = 49;
-  const frames = Math.floor((sourceFrames * 30) / 8);
+  const made = probe(video);
+  const sourceFrames = made.frames;
+  const perSource = 30 / made.fps;
+  const frames = Math.floor(sourceFrames * perSource);
   const tick = FLICKS / 30;
+  // A video narrower than 16:9 sits between black bars, on an even width.
+  const pictureWidth = 2 * Math.round((720 * made.width) / made.height / 2);
+  assert.ok(pictureWidth < 1280, `this expects bars, not ${pictureWidth}`);
+  const bar = (1280 - pictureWidth) / 2;
   await service("yamakan.project.applyBatch", {
     projectId: project.id,
     expectedRevision: open.revision,
@@ -223,44 +252,54 @@ try {
     await new Promise((r) => setTimeout(r, 200));
   }
   assert.equal(done.state, "COMPLETED", done.error ?? "");
-  const exported = readdirSync(join(root, "workspace"), { recursive: true })
-    .map(String)
-    .find((f) => f.replaceAll("\\", "/").endsWith(done.artifact));
+  // A preview's temporary folder can vanish while this looks: look again.
+  let exported;
+  for (let attempt = 0; !exported && attempt < 10; attempt++)
+    try {
+      exported = readdirSync(join(root, "workspace"), { recursive: true })
+        .map(String)
+        .find((f) => f.replaceAll("\\", "/").endsWith(done.artifact));
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      await new Promise((r) => setTimeout(r, 200));
+    }
   assert.ok(exported, "the export is in the workspace");
   const out = join(root, "workspace", exported);
   if (receipt) copyFileSync(out, `${receipt}.export.mp4`);
   const source = small(video);
-  // A 3:2 video in a 16:9 project: 1080x720 of picture between black bars.
-  const result = small(out, "crop=1080:720:100:0,scale=64:36");
+  const delivered = probe(out);
+  assert.deepEqual(
+    [delivered.codec, delivered.width, delivered.height, delivered.fps],
+    ["h264", 1280, 720, 30],
+    "the export is H.264, 1280x720, 30 fps",
+  );
+  const result = small(out, `crop=${pictureWidth}:720:${bar}:0,scale=64:36`);
   let brightest = 0;
-  for (const x of [0, 1180])
-    for (const value of small(out, `crop=100:720:${x}:0`))
+  for (const x of [0, 1280 - bar])
+    for (const value of small(out, `crop=${bar}:720:${x}:0`))
       brightest = Math.max(brightest, value);
   assert.ok(brightest < 24, `the bars reach ${brightest}`);
   const count = result.length / FRAME;
   assert.equal(count, frames, "every frame came through");
-  const differences = [];
-  // Each source frame against an export frame from the middle of where it shows.
-  for (let n = 0; n < sourceFrames; n++)
-    differences.push(
-      difference(
-        frameOf(source, n),
-        frameOf(result, Math.floor(((n + 0.5) * 30) / 8)),
-      ),
-    );
-  const worst = Math.max(...differences);
-  // Against a frame elsewhere in the clip, so that closeness means something.
-  const apart = difference(frameOf(source, 0), frameOf(result, frames - 1));
-  assert.ok(worst < 8, `worst frame differs by ${worst}`);
-  assert.ok(apart > worst, `frames ${apart} apart, worst match ${worst}`);
+  const compared = compareFrames(source, result, perSource);
+  assert.equal(compared.problem, null, compared.problem);
+  const { worst } = compared;
+  console.log(
+    `note - order rule reached ${compared.orderedFrames} of ${sourceFrames} source frames`,
+  );
   step(
     "the export has every frame at 30 fps, and matches its source frame by frame",
     {
+      source: made,
       frames: count,
-      size: "1280x720, picture 1080x720",
+      size: `1280x720, picture ${pictureWidth}x720`,
       brightestBar: brightest,
       worstDifference: Number(worst.toFixed(2)),
-      firstToLast: Number(apart.toFixed(2)),
+      steadyOffset: compared.offset.map((v) => Number(v.toFixed(2))),
+      sourceFramesShown: compared.shown,
+      orderChecks: compared.orderChecks,
+      orderPairs: compared.pairs,
+      sourceFramesOrderReached: compared.orderedFrames,
     },
   );
   assert.deepEqual(pageErrors, []);
@@ -287,13 +326,23 @@ try {
         2,
       )}\n`,
     );
-  await new Promise((r) => setTimeout(r, 1000));
-  rmSync(root, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 300,
+  // The service must be gone before its folder can be. A folder Windows still holds
+  // is left behind and said so: tidying up does not change what was found above.
+  await new Promise((r) => {
+    if (child.exitCode !== null) return r();
+    child.once("exit", r);
+    setTimeout(r, 10_000);
   });
+  try {
+    rmSync(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 300,
+    });
+  } catch (e) {
+    console.log(`note - left behind: ${root} (${e.code})`);
+  }
 }
 console.log(passed ? "AI VIDEO PASS" : "AI VIDEO FAIL");
 process.exit(passed ? 0 : 1);
