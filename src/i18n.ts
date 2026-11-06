@@ -14,6 +14,7 @@ const en = {
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
   "workspace.create": "Create",
+  "create.recordRetry": "Try saving it again",
   "create.storyFull":
     "The video is in the project, but this project's record of made videos is full, so what its receipt says was not saved.",
   "create.storyUnread":
@@ -74,7 +75,7 @@ const en = {
   "create.busy":
     "Yamakan is busy, so nothing was brought in. Try again in a moment.",
   "create.notKept":
-    "The video is in the project, but what its receipt says could not be saved with it. Bringing it in again tries again.",
+    "The video is in the project, but what its receipt says could not be saved with it.",
   "create.broughtIn": "Brought in {name}, with no receipt checked.",
   "create.broughtInChecked": "Brought in {name}. It matches its receipt.",
   "create.broughtInCopy":
@@ -463,6 +464,7 @@ const ar: Record<MessageKey, string> = {
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
   "workspace.create": "إنشاء",
+  "create.recordRetry": "حاول الحفظ مرة أخرى",
   "create.storyFull":
     "الفيديو في المشروع، لكن سجل الفيديوهات المنتجة ممتلئ، فلم يُحفظ ما يذكره إيصاله.",
   "create.storyUnread": "تعذرت قراءة مصدر فيديوهات هذا المشروع.",
@@ -517,8 +519,7 @@ const ar: Record<MessageKey, string> = {
   "create.checkFailed": "تعذرت قراءة هذا الفيديو للتحقق منه، فلم يُحضر شيء.",
   "create.importFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
   "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
-  "create.notKept":
-    "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه. إحضاره مرة أخرى يعيد المحاولة.",
+  "create.notKept": "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه.",
   "create.broughtIn": "أُحضر {name} دون التحقق من إيصال.",
   "create.broughtInChecked": "أُحضر {name}. وهو يطابق إيصاله.",
   "create.broughtInCopy":

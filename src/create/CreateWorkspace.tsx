@@ -133,6 +133,12 @@ export function CreateWorkspace(props: {
   const videoInput = useRef<HTMLInputElement>(null);
   const receiptInput = useRef<HTMLInputElement>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  // A video that came in, whose record could not be saved: trying again needs only
+  // the record, since bringing the file in again would make a second asset.
+  const [unsaved, setUnsaved] = useState<{
+    asset: Asset;
+    receipt: RunReceipt;
+  } | null>(null);
 
   useEffect(() => {
     keep(briefKey, validSeed(brief.seed) ? brief : { ...brief, seed: 42 });
@@ -252,7 +258,10 @@ export function CreateWorkspace(props: {
     setReceiptFile(null);
     if (receiptInput.current) receiptInput.current.value = "";
     // Said once what it says is saved, so the card below already shows it.
-    await record(asset, receipt);
+    if (await record(asset, receipt)) announce(asset, receipt);
+  };
+
+  const announce = (asset: Asset, receipt: RunReceipt) =>
     setNotice({
       key:
         asset.hash === receipt.sha256
@@ -260,10 +269,10 @@ export function CreateWorkspace(props: {
           : "create.broughtInCopy",
       vars: { name: asset.name },
     });
-  };
 
   // Kept with the project. The video is in either way, so failing here says so.
   const record = async (asset: Asset, receipt: RunReceipt) => {
+    setUnsaved(null);
     try {
       const latest = await props.loadStory();
       const next = addMadeVideo(
@@ -290,9 +299,11 @@ export function CreateWorkspace(props: {
         setKeptStory(saved);
         return true;
       }
+      setUnsaved({ asset, receipt });
       setProblem({ key: "create.notKept" });
       return false;
     } catch {
+      setUnsaved({ asset, receipt });
       setProblem({ key: "create.notKept" });
       return false;
     }
@@ -542,6 +553,20 @@ export function CreateWorkspace(props: {
               ? problem
               : t(problem.key, problem.vars)}
           </div>
+        )}
+        {unsaved && (
+          <button
+            type="button"
+            disabled={busy}
+            data-testid="create-record-retry"
+            onClick={async () => {
+              const { asset, receipt } = unsaved;
+              setProblem(null);
+              if (await record(asset, receipt)) announce(asset, receipt);
+            }}
+          >
+            {t("create.recordRetry")}
+          </button>
         )}
 
         <h3>{t("create.videos")}</h3>
