@@ -2222,6 +2222,16 @@ function App() {
                         }
                       return null;
                     }}
+                    reopenProject={() =>
+                      run(async () => {
+                        await save();
+                        accept(
+                          await call("yamakan.project.open", {
+                            projectId: p.id,
+                          }),
+                        );
+                      })
+                    }
                     saveStory={(next) =>
                       new Promise((resolve) => {
                         let kept: any = null;

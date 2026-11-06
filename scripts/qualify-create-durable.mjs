@@ -317,6 +317,21 @@ try {
   now = await held(projectId);
   assert.equal(now.project.assets.length, 2, "no third asset");
   assert.equal(now.shots.length, 2, "no third shot");
+  // The editor must have caught up, or its next change would be refused.
+  await page
+    .getByText(`Revision ${now.project.revision}`, { exact: true })
+    .first()
+    .waitFor({ timeout: 30_000 });
+  await page.getByTestId("create-place").first().click();
+  await page.getByTestId("create-open-edit").first().click();
+  await page.locator("[data-clip-id]").first().waitFor({ timeout: 30_000 });
+  for (let i = 0; i < 50 && now.project.clips.length === 0; i++) {
+    await page.waitForTimeout(200);
+    now = await held(projectId);
+  }
+  assert.equal(now.project.clips.length, 1, "its next change is accepted");
+  await page.getByRole("tab", { name: "Create", exact: true }).click();
+  now = await held(projectId);
   step(
     "a save whose answer was lost is found on trying again, not added twice",
   );
@@ -382,8 +397,7 @@ try {
     [sha, secondHash].sort(),
     "the same videos",
   );
-  await page.getByTestId("create-place").first().click();
-  await page.getByTestId("create-open-edit").click();
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
   await page.locator("[data-clip-id]").first().waitFor({ timeout: 30_000 });
   step("Yamakan on the restored folder has the record and can use the video");
 

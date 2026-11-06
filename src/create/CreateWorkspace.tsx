@@ -111,6 +111,7 @@ export function CreateWorkspace(props: {
     story: CreateStory;
   }) => Promise<KeptStory | null>;
   ticksOf: (asset: Asset) => number;
+  reopenProject: () => Promise<void>;
   // The whole video, at the end of the track. A reason if it cannot be placed.
   place: (assetId: string) => string | null;
   openEdit: () => void;
@@ -304,6 +305,8 @@ export function CreateWorkspace(props: {
       // A save whose answer was lost got through, so this is what the card shows.
       if (next === "already-there") {
         if (latest) setKeptStory(latest);
+        // That save moved the project on, unseen by the editor.
+        await props.reopenProject();
         return saved();
       }
       if (next === "full") {
