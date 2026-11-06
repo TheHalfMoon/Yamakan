@@ -1177,6 +1177,34 @@ test("a status during a send that is refused does not hold up the next start", a
   await f.s.close();
 });
 
+test("stopping following a refused run does not hold up the next start", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "refused";
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start();
+  await atPush;
+  const [{ generationId: id }] = f.s.service.list(f.project.id);
+  release();
+  await assert.rejects(first, /Maximum GPU quota/);
+  const stopped = await f.s.service.cancel(id);
+  assert.equal(stopped.requested, false);
+  assert.equal(stopped.remoteOutcome, "unknown");
+  f.k.world.beforePush = null;
+  f.k.world.pushMode = "ok";
+  await f.start("Started again by a person.");
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
 test("two questions at once after a restart are one question", async () => {
   const f = await fixture();
   const { generationId: id } = await f.start();

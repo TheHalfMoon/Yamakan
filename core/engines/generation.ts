@@ -544,6 +544,15 @@ export function createGenerationService(options: {
           remoteOutcome: "unknown" as const,
           billingOutcome: "notApplicable" as const,
         };
+      // Already over: there is nothing to ask of the engine, and a refused run never left.
+      if (ledger.remembersEnded && ENDED.has(g.state))
+        return {
+          requested: false,
+          localProcessExited: true,
+          remoteAcknowledged: false,
+          remoteOutcome: "unknown" as const,
+          billingOutcome: "notApplicable" as const,
+        };
       ledger.update(id, { cancelled: true });
       const answer = await adapter.requestCancel(refOf(g));
       // The job list reads this: a cancelled job there must not read as a stopped run.
