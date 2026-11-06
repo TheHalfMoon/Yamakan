@@ -443,10 +443,10 @@ function assertMaySend(db: DatabaseSync, characterId: string, nowMs: number) {
   if (!grants.length)
     throw new CommandError(
       "VALIDATION",
-      "This image shows a person, and they have not consented to it leaving this computer.",
+      "No consent to send is recorded for the character this image is linked to, so it cannot leave this computer.",
     );
   const latest = Math.max(...grants.map((g) => g.granted_at));
-  // On a tie every one must pass, so a clock cannot free the media.
+  // On an exact tie every one must pass.
   for (const { id, granted_at } of grants)
     if (granted_at === latest)
       assertConsentUsable(db, id, {

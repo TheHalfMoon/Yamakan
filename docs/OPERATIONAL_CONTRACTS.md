@@ -478,7 +478,7 @@ A project has one frame rate. Every frame field of its editing view counts frame
   - **attempt** (before a generation is submitted) and **attach**: as record, and also:
     - the entry's pinned media version is still in the project;
     - every consent the references rely on is usable now, covering purpose, expiry, revocation and the restore epoch. A character reference uses its `likeness-generate` consent, a voice reference its `voice-clone` consent, and an encoding the consent it was recorded under, for that consent's purpose.
-    - for an engine that sends a run elsewhere, a person's linked image also needs their newest `likeness-send` consent, usable now
+    - when a generation starts on an engine that says it sends elsewhere, a person's linked image also needs the newest `likeness-send` consent for that character, usable now. The generation service checks this. `yamakan.continuity.check` does not, so its `consentChecked` does not cover it.
   - **Attach paths:** `yamakan.take.apply` checks the take it puts on the timeline, and `yamakan.story.assemble` checks each shot's selected take.
   - **Every timeline commit (YU-051b).** The store's one commit point checks every newly presented medium, for every commit except creating a project. That covers batch edits, undo, redo, a restore, a relink, a take replacement and an assembly.
     - **Presented** means seen (a video-track clip of a still or footage) or heard (an audio-track clip, or a video clip's embedded sound). Either way the track must play by the render's own rule: mute removes a track, and solo on any track of a kind keeps only the soloed tracks of that kind. It is keyed by content hash.

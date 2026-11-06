@@ -2076,7 +2076,8 @@ export const commands = {
     input: z
       .object({
         characterId: z.string().min(1).max(80),
-        purpose: ConsentPurposeSchema,
+        // Consent to send is about where an image goes, not an encoding of anyone.
+        purpose: ConsentPurposeSchema.exclude(["likeness-send"]),
         consentId: Id,
         provider: z.string().min(1).max(64),
         method: z.string().min(1).max(64),

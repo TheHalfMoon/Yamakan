@@ -595,7 +595,7 @@ test("a person's image goes elsewhere only with consent to send", async () => {
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
     );
-  await assert.rejects(start(), /not consented to it leaving this computer/);
+  await assert.rejects(start(), /No consent to send is recorded/);
   assert.equal(state.inputRead, null, "no byte was read for the engine");
   assert.equal(submitted, 0, "the engine was not even asked");
   await grantSend(f);
@@ -619,7 +619,9 @@ test("the same image needs no consent to send on an engine on this computer", as
   assert.notEqual(state.inputRead, null);
 });
 
-test("another person's consent to send does not count", async () => {
+// By name: a character's id is all this has. Two people given one name in a workspace would
+// share it, which must be closed before anything is offered. See the ledger.
+test("consent to send under another character's name does not count", async () => {
   const f = await fixture();
   const { state, g } = sending(f);
   const { asset: still } = await f.store.importAsset(
@@ -633,7 +635,7 @@ test("another person's consent to send does not count", async () => {
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
     ),
-    /not consented/,
+    /No consent to send is recorded/,
   );
   assert.equal(state.inputRead, null);
 });
@@ -703,8 +705,80 @@ test("consent to send alone is not consent to generate", async () => {
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
     ),
+    /revoked/,
   );
   assert.equal(state.inputRead, null);
+});
+
+test("consent to send is good for nothing else", async () => {
+  const f = await fixture();
+  const send = await grantSend(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  // Not the consent a pack's character rests on.
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: crypto.randomUUID(),
+      expectedContentHash: null,
+      pack: {
+        format: "yamakan.reference-pack",
+        formatVersion: 1,
+        name: "Cast",
+        entries: [
+          {
+            id: crypto.randomUUID(),
+            role: "character",
+            label: "Lead",
+            assetId: still.id,
+            assetHash: still.hash,
+            characterId: "lead",
+            consentId: send,
+          },
+        ],
+      },
+    }),
+  );
+  // Nor an encoding of anyone.
+  await assert.rejects(
+    execute(f.ctx, "yamakan.identity.encode", {
+      characterId: "lead",
+      purpose: "likeness-send",
+      consentId: send,
+      provider: "p",
+      method: "m",
+      payloadHash: "a".repeat(64),
+    }),
+  );
+});
+
+test("an upload the engine refuses says why, when consent to send has ended", async () => {
+  const f = await fixture();
+  const { adapter, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const send = await grantSend(f);
+  adapter.submit = async () => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId: send });
+    return { refused: "INPUT_UNSUPPORTED" as const };
+  };
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /revoked/,
+  );
 });
 
 // Stated, since it is why the page must not treat this as knowing who a picture shows.

@@ -182,6 +182,12 @@ test("no image-to-video recipe is offered until its own real run has passed", ()
   assert.ok(!kaggleRecipes().some((r) => r.operation === "imageToVideo"));
 });
 
+test("the engine says where a run goes, which is what makes consent to send apply", async () => {
+  const f = await fixture();
+  assert.equal(f.adapter.location?.(recipe.id), `someone/${recipe.slug}`);
+  await f.close();
+});
+
 test("a recipe not offered refuses a first frame, and sends nothing", async () => {
   const f = await fixture([]);
   await assert.rejects(f.service.start(f.request));

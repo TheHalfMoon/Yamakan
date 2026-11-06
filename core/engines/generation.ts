@@ -509,7 +509,7 @@ export function createGenerationService(options: {
           diagnostic: engineReasonMessage(answer.refused),
         });
         // An upload refused because consent ended says that, not a general reason.
-        permitted(
+        permittedToSend(
           (inputs as unknown as { asset: AssetRef }[]).map(
             (i) => i.asset.sha256,
           ),
