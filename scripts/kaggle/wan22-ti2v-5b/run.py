@@ -8,7 +8,9 @@ It uses no token or secret, and its weights never leave Kaggle.
 """
 import hashlib
 import json
+import gc
 import os
+import resource
 import subprocess
 import sys
 import time
@@ -101,6 +103,21 @@ try:
     pipe = WanPipeline.from_pretrained(
         MODEL, vae=vae, revision=REVISION, torch_dtype=torch.float16
     )
+    # The text encoder is about 10 GB and is only needed once. One run in five was
+    # killed while decoding, so it goes before the rest is loaded onto the GPU.
+    pipe.text_encoder.to("cuda:0")
+    with torch.no_grad():
+        prompt_embeds, negative_embeds = pipe.encode_prompt(
+            prompt=PROMPT,
+            negative_prompt=NEGATIVE,
+            do_classifier_free_guidance=True,
+            device="cuda:0",
+            # What the pipeline itself uses: the default here would cut a long prompt.
+            max_sequence_length=512,
+        )
+    pipe.text_encoder = None
+    gc.collect()
+    torch.cuda.empty_cache()
     pipe.enable_model_cpu_offload(gpu_id=0)
     pipe.vae.enable_tiling()
     pipe.vae.enable_slicing()
@@ -110,8 +127,8 @@ try:
 
     started = time.time()
     video = pipe(
-        prompt=PROMPT,
-        negative_prompt=NEGATIVE,
+        prompt_embeds=prompt_embeds,
+        negative_prompt_embeds=negative_embeds,
         height=HEIGHT,
         width=WIDTH,
         num_frames=FRAMES,
@@ -120,6 +137,7 @@ try:
         generator=torch.Generator(device="cpu").manual_seed(SEED),
     ).frames[0]
     receipt["generateSeconds"] = round(time.time() - started, 1)
+    receipt["peakHostBytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
     receipt["peakGpuBytes"] = torch.cuda.max_memory_allocated(0)
     path = os.path.join(OUT, "wan-video.mp4")
     export_to_video(video, path, fps=FPS)

@@ -24,6 +24,7 @@ import { editorView } from "./adapter";
 import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
 import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
+import { CREATE_STORY_TITLE } from "./create/create-story.ts";
 import {
   WorkspacePanel,
   WorkspaceTabs,
@@ -2197,6 +2198,65 @@ function App() {
                         : null;
                     }}
                     projectFps={fps}
+                    revision={p.revision}
+                    ticksOf={(asset) =>
+                      (asset as unknown as { durationFrames: number })
+                        .durationFrames * frameTicks
+                    }
+                    loadStory={async () => {
+                      const documents = (await call("yamakan.document.list", {
+                        projectId: p.id,
+                      })) as unknown as { id: string; kind: string }[];
+                      for (const ref of documents)
+                        if (ref.kind === "story") {
+                          const found = (await call("yamakan.document.get", {
+                            projectId: p.id,
+                            documentId: ref.id,
+                          })) as any;
+                          if (found.content?.title === CREATE_STORY_TITLE)
+                            return {
+                              documentId: ref.id,
+                              contentHash: found.contentHash,
+                              story: found.content,
+                            };
+                        }
+                      return null;
+                    }}
+                    reopenProject={() =>
+                      run(async () => {
+                        await save();
+                        accept(
+                          await call("yamakan.project.open", {
+                            projectId: p.id,
+                          }),
+                        );
+                      })
+                    }
+                    saveStory={(next) =>
+                      new Promise((resolve) => {
+                        let kept: any = null;
+                        run(async () => {
+                          await save();
+                          const answer = (await call("yamakan.story.save", {
+                            projectId: p.id,
+                            expectedRevision: head.current!.revision,
+                            ...next,
+                          } as any)) as any;
+                          const opened = await call("yamakan.project.open", {
+                            projectId: p.id,
+                          });
+                          accept(opened);
+                          kept = {
+                            documentId: next.documentId,
+                            contentHash:
+                              answer.contentHash ??
+                              answer.document?.contentHash ??
+                              null,
+                            story: next.story,
+                          };
+                        }).finally(() => resolve(kept));
+                      })
+                    }
                     loadModels={async () =>
                       (await call("yamakan.generation.options", {})).models
                     }
@@ -2212,21 +2272,23 @@ function App() {
                         call("yamakan.generation.cancel", { generationId }),
                       bringIn: (generationId) =>
                         new Promise((resolve) => {
-                          let hash: string | null = null;
+                          let asset: any = null;
                           run(async () => {
                             await save();
                             const made = await call(
                               "yamakan.generation.import",
                               { generationId },
                             );
-                            accept(
-                              await call("yamakan.project.open", {
-                                projectId: p.id,
-                              }),
-                            );
+                            const opened = await call("yamakan.project.open", {
+                              projectId: p.id,
+                            });
+                            accept(opened);
                             await refresh();
-                            hash = made.lineage.outputHash;
-                          }).finally(() => resolve(hash));
+                            asset =
+                              opened.assets.find(
+                                (a: { id: string }) => a.id === made.assetId,
+                              ) ?? null;
+                          }).finally(() => resolve(asset));
                         }),
                     }}
                     importVideo={(file, check) => {

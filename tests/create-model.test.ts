@@ -7,8 +7,6 @@ import {
   emptyBrief,
   parseReceipt,
   readBrief,
-  readCopies,
-  readReceipts,
   sha256Of,
   validSeed,
 } from "../src/create/create-model.ts";
@@ -113,34 +111,6 @@ test("anything else is refused, and says why", () => {
       () => parseReceipt(JSON.stringify({ ...receipt, ...change })),
       /not-receipt/,
     );
-});
-
-test("kept receipts count only under the hash they name", () => {
-  const read = parseReceipt(JSON.stringify(receipt));
-  assert.deepEqual(
-    Object.keys(readReceipts(JSON.stringify({ [read.sha256]: read }))),
-    [read.sha256],
-  );
-  assert.deepEqual(
-    readReceipts(JSON.stringify({ ["b".repeat(64)]: read })),
-    {},
-  );
-  assert.deepEqual(readReceipts("nope"), {});
-  // One bad entry loses only itself.
-  assert.deepEqual(
-    Object.keys(
-      readReceipts(JSON.stringify({ x: { seed: "no" }, [read.sha256]: read })),
-    ),
-    [read.sha256],
-  );
-});
-
-test("kept copies are pairs of hashes", () => {
-  const a = "a".repeat(64);
-  const b = "b".repeat(64);
-  assert.deepEqual(readCopies(JSON.stringify({ [a]: b })), { [a]: b });
-  assert.deepEqual(readCopies(JSON.stringify({ [a]: "no", no: b })), {});
-  assert.deepEqual(readCopies("nope"), {});
 });
 
 test("a hash is of the bytes", async () => {

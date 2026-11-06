@@ -60,6 +60,7 @@
     "qualify:ai-video": "node scripts/qualify-ai-video.mjs",
     "qualify:create": "node scripts/qualify-create-workspace.mjs",
     "qualify:kaggle": "node scripts/qualify-kaggle-generation.mjs",
+    "qualify:create-durable": "node scripts/qualify-create-durable.mjs",
     "qualify:comfyui": "node scripts/qualify-comfyui.mjs",
     "qualify:browser-restore": "node scripts/qualify-browser-restore.mjs",
     "qualify:crossfade": "node scripts/qualify-crossfade.mjs",

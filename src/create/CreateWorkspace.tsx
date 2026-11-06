@@ -5,6 +5,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
+  addMadeVideo,
+  madeRecords,
+  type CreateStory,
+  type MadeRecord,
+} from "./create-story.ts";
+import {
   GeneratePanel,
   type GenerateModel,
   type GenerationApi,
@@ -20,8 +26,6 @@ import {
   composePrompt,
   parseReceipt,
   readBrief,
-  readCopies,
-  readReceipts,
   sha256Of,
   validSeed,
   type CreateBrief,
@@ -73,6 +77,12 @@ const kept = (key: string) => {
   }
 };
 
+export type KeptStory = {
+  documentId: string;
+  contentHash: string;
+  story: CreateStory;
+};
+
 export function CreateWorkspace(props: {
   projectId: string;
   assets: readonly Asset[];
@@ -85,25 +95,37 @@ export function CreateWorkspace(props: {
   loadModels: () => Promise<readonly GenerateModel[]>;
   generation: GenerationApi;
   projectFps: number;
+  // A restore or undo can change what the project holds, with the same videos.
+  revision: number;
   // Under the editor's busy state: `check` runs first and can stop the import.
   // Resolves to the new asset, or null, or "busy" if nothing could start.
   importVideo: (
     file: File,
     check: () => Promise<boolean>,
   ) => Promise<Asset | null | "busy">;
+  // The project's Create story, and saving a new version of it.
+  loadStory: () => Promise<KeptStory | null>;
+  saveStory: (next: {
+    documentId: string;
+    expectedContentHash: string | null;
+    story: CreateStory;
+  }) => Promise<KeptStory | null>;
+  ticksOf: (asset: Asset) => number;
+  reopenProject: () => Promise<void>;
   // The whole video, at the end of the track. A reason if it cannot be placed.
   place: (assetId: string) => string | null;
   openEdit: () => void;
 }) {
   const { projectId, assets, placedAssetIds, busy, t } = props;
   const briefKey = `yamakan.create.brief.${projectId}`;
-  const receiptsKey = `yamakan.create.receipts.${projectId}`;
-  const copiesKey = `yamakan.create.copies.${projectId}`;
   const [brief, setBrief] = useState(() => readBrief(kept(briefKey)));
-  const [receipts, setReceipts] = useState(() =>
-    readReceipts(kept(receiptsKey)),
+  const [keptStory, setKeptStory] = useState<KeptStory | null>(null);
+  const [storyRead, setStoryRead] = useState<"reading" | "read" | "failed">(
+    "reading",
   );
-  const [copies, setCopies] = useState(() => readCopies(kept(copiesKey)));
+  const records: Record<string, MadeRecord> = keptStory
+    ? madeRecords(keptStory.story)
+    : {};
   const [engine, setEngine] = useState<EngineState>("checking");
   const [models, setModels] = useState<readonly GenerateModel[]>([]);
   const [notice, setNotice] = useState<Said | null>(null);
@@ -112,6 +134,11 @@ export function CreateWorkspace(props: {
   const videoInput = useRef<HTMLInputElement>(null);
   const receiptInput = useRef<HTMLInputElement>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  // A video that came in, whose record could not be saved: trying again needs only
+  // the record, since bringing the file in again would make a second asset.
+  const [unsaved, setUnsaved] = useState<
+    { asset: Asset; receipt: RunReceipt }[]
+  >([]);
 
   useEffect(() => {
     keep(briefKey, validSeed(brief.seed) ? brief : { ...brief, seed: 42 });
@@ -139,6 +166,29 @@ export function CreateWorkspace(props: {
     // Once for this project: the panel is keyed by it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // What the project holds now, whenever it changes.
+  const videoHashes = assets
+    .filter((a) => a.kind === "video")
+    .map((a) => a.hash)
+    .join();
+  useEffect(() => {
+    let current = true;
+    props
+      .loadStory()
+      .then((found) => {
+        if (!current) return;
+        setKeptStory(found);
+        setStoryRead("read");
+      })
+      .catch(() => {
+        if (current) setStoryRead("failed");
+      });
+    return () => {
+      current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoHashes, props.revision]);
 
   const model =
     CREATE_MODELS.find((m) => m.id === brief.modelId) ?? CREATE_MODELS[0];
@@ -205,31 +255,86 @@ export function CreateWorkspace(props: {
       setNotice({ key: "create.broughtIn", vars: { name: asset.name } });
       return;
     }
-    const nextReceipts = { ...receipts, [receipt.sha256]: receipt };
-    setReceipts(nextReceipts);
-    let saved = keep(receiptsKey, nextReceipts);
-    const copy = asset.hash !== receipt.sha256;
-    if (copy) {
-      // Converted when it came in: what is stored is not the file that was checked.
-      const nextCopies = { ...copies, [asset.hash]: receipt.sha256 };
-      setCopies(nextCopies);
-      saved = keep(copiesKey, nextCopies) && saved;
-    }
     setReceiptFile(null);
     if (receiptInput.current) receiptInput.current.value = "";
+    // Said once what it says is saved, so the card below already shows it.
+    if (await record(asset, receipt)) announce(asset, receipt);
+  };
+
+  const announce = (asset: Asset, receipt: RunReceipt) =>
     setNotice({
-      key: copy ? "create.broughtInCopy" : "create.broughtInChecked",
+      key:
+        asset.hash === receipt.sha256
+          ? "create.broughtInChecked"
+          : "create.broughtInCopy",
       vars: { name: asset.name },
     });
-    if (!saved) setProblem({ key: "create.notKept" });
+
+  // Kept with the project. The video is in either way, so failing here says so.
+  const record = async (
+    asset: Asset,
+    receipt: RunReceipt,
+    // A generated video's panel has its own way to try again.
+    offerRetry = true,
+  ) => {
+    const missed = () => {
+      if (offerRetry)
+        setUnsaved((all) => [
+          ...all.filter((u) => u.asset.id !== asset.id),
+          { asset, receipt },
+        ]);
+      setProblem({ key: "create.notKept" });
+      return false;
+    };
+    const saved = () => {
+      setUnsaved((all) => all.filter((u) => u.asset.id !== asset.id));
+      return true;
+    };
+    try {
+      const latest = await props.loadStory();
+      const next = addMadeVideo(
+        latest?.story ?? null,
+        {
+          assetId: asset.id,
+          assetHash: asset.hash,
+          durationTicks: props.ticksOf(asset),
+          receipt,
+        },
+        () => crypto.randomUUID(),
+      );
+      // A save whose answer was lost got through, so this is what the card shows.
+      if (next === "already-there") {
+        if (latest) setKeptStory(latest);
+        // That save moved the project on, unseen by the editor.
+        await props.reopenProject();
+        return saved();
+      }
+      if (next === "full") {
+        setProblem({ key: "create.storyFull" });
+        return false;
+      }
+      const kept = await props.saveStory({
+        documentId: latest?.documentId ?? crypto.randomUUID(),
+        expectedContentHash: latest?.contentHash ?? null,
+        story: next,
+      });
+      if (!kept) return missed();
+      setKeptStory(kept);
+      return saved();
+    } catch {
+      return missed();
+    }
   };
 
   const startable = models.find((m) => m.model === brief.modelId);
-  const remember = (receipt: RunReceipt) => {
-    setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
-    const next = { ...receipts, [receipt.sha256]: receipt };
-    setReceipts(next);
-    if (!keep(receiptsKey, next)) setProblem({ key: "create.notKept" });
+  // Awaited by the panel, under nothing else: the video has come in by now.
+  const remember = async (receipt: RunReceipt, asset: Asset) => {
+    // A retry: an earlier failure to save is no longer true.
+    setProblem(null);
+    const saved = await record(asset, receipt, false);
+    if (saved)
+      setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
+    return saved;
   };
   const engineLine: MessageKey =
     engine === "checking"
@@ -466,6 +571,20 @@ export function CreateWorkspace(props: {
               : t(problem.key, problem.vars)}
           </div>
         )}
+        {unsaved.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            data-testid="create-record-retry"
+            onClick={async () => {
+              setProblem(null);
+              for (const { asset, receipt } of unsaved)
+                if (await record(asset, receipt)) announce(asset, receipt);
+            }}
+          >
+            {t("create.recordRetry")}
+          </button>
+        )}
 
         <h3>{t("create.videos")}</h3>
         {videos.length === 0 ? (
@@ -473,8 +592,7 @@ export function CreateWorkspace(props: {
         ) : (
           <ul className="create-videos">
             {videos.map((video) => {
-              const original = copies[video.hash];
-              const receipt = receipts[original ?? video.hash];
+              const made = records[video.hash];
               const placed = placedAssetIds.has(video.id);
               return (
                 <li key={video.id} data-testid="create-video">
@@ -489,24 +607,27 @@ export function CreateWorkspace(props: {
                   <strong>
                     <bdi>{video.name}</bdi>
                   </strong>
-                  {receipt ? (
+                  {made ? (
                     <small data-testid="create-receipt-facts">
                       {t(
-                        original
+                        made.converted
                           ? "create.receiptMatchedOriginal"
                           : "create.receiptMatched",
                       )}{" "}
-                      {t("create.receiptSays", {
-                        seed: receipt.seed,
-                        steps: receipt.steps,
-                      })}
+                      {t("create.receiptSays")}
                       <br />
-                      <bdi>{receipt.model}</bdi>
+                      <bdi>{made.label}</bdi>
                       <br />
-                      <bdi>{receipt.prompt}</bdi>
+                      <bdi>{made.prompt}</bdi>
                     </small>
                   ) : (
-                    <small>{t("create.noReceipt")}</small>
+                    <small data-testid="create-no-record">
+                      {storyRead === "read"
+                        ? t("create.noReceipt")
+                        : storyRead === "failed"
+                          ? t("create.storyUnread")
+                          : ""}
+                    </small>
                   )}
                   <div className="create-video-actions">
                     <button

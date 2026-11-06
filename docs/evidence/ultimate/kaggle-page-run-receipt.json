@@ -3,47 +3,51 @@
   "task": "generation-from-yamakan-on-kaggle",
   "prompt": "A red kite flies above a green hill under a clear blue sky.",
   "seed": 7,
-  "head": "734923f5d017b040c40c9a6df5ed6a29161f7d54",
+  "head": "7b04dbfe560d0aa4c44258d6f951df0bb22608be",
   "dirty": false,
   "passed": true,
   "failure": null,
   "steps": [
     {
       "name": "the agreement is readable in its place",
-      "at": "2026-11-06T02:00:59.446Z"
+      "at": "2026-11-06T04:11:35.454Z"
     },
     {
       "name": "started from the page, after agreeing the prompt leaves this computer",
-      "at": "2026-11-06T02:01:12.627Z"
+      "at": "2026-11-06T04:11:48.547Z"
     },
     {
       "name": "Kaggle says queued",
-      "afterSeconds": 0.006,
-      "at": "2026-11-06T02:01:12.866Z"
+      "afterSeconds": 0.004,
+      "at": "2026-11-06T04:11:48.726Z"
     },
     {
       "name": "Kaggle says running",
-      "afterSeconds": 10.027,
-      "at": "2026-11-06T02:01:22.887Z"
+      "afterSeconds": 10.009,
+      "at": "2026-11-06T04:11:58.731Z"
     },
     {
       "name": "Kaggle says succeeded",
-      "afterSeconds": 1151.854,
-      "at": "2026-11-06T02:20:24.717Z"
+      "afterSeconds": 1171.647,
+      "at": "2026-11-06T04:31:20.371Z"
     },
     {
       "name": "the run finished, and its video passed its receipt",
-      "seconds": 1152.245,
-      "at": "2026-11-06T02:20:25.105Z"
+      "seconds": 1171.843,
+      "at": "2026-11-06T04:31:20.565Z"
     },
     {
       "name": "it came into the project, with this prompt and seed",
-      "at": "2026-11-06T02:20:27.694Z"
+      "at": "2026-11-06T04:31:22.543Z"
+    },
+    {
+      "name": "its record stays with the project, with this browser's storage cleared",
+      "at": "2026-11-06T04:31:23.953Z"
     },
     {
       "name": "placed whole on the Edit timeline",
       "frames": 101,
-      "at": "2026-11-06T02:20:30.568Z"
+      "at": "2026-11-06T04:31:26.711Z"
     },
     {
       "name": "exported from the toolbar, every frame",
@@ -52,11 +56,11 @@
       "frames": 101,
       "assetHash": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
       "exportHash": "cde2fa6ca5d1b248c94f2927ddabe08ac906a1217f05bd2aaa238a26fb563e4d",
-      "at": "2026-11-06T02:20:34.723Z"
+      "at": "2026-11-06T04:31:28.980Z"
     },
     {
       "name": "no page errors",
-      "at": "2026-11-06T02:20:34.832Z"
+      "at": "2026-11-06T04:31:29.011Z"
     }
   ]
 }
