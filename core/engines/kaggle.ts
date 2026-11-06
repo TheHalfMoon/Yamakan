@@ -431,14 +431,22 @@ export function createKaggleEngine(options: {
   async function assertPrivate(recipe: KaggleRecipe, folder: string) {
     const pulled = path.join(folder, "pulled");
     await mkdir(pulled);
-    await cli(["kernels", "pull", remote(recipe), "-p", pulled, "-m"], 90_000);
-    const metadata = JSON.parse(
-      await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
-    );
-    if (metadata.is_private !== true)
-      throw new Error(
-        "Kaggle does not report this notebook as private. Check it on Kaggle before running again.",
+    try {
+      await cli(
+        ["kernels", "pull", remote(recipe), "-p", pulled, "-m"],
+        90_000,
       );
+      const metadata = JSON.parse(
+        await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
+      );
+      if (metadata.is_private !== true)
+        throw new Error(
+          "Kaggle does not report this notebook as private. Check it on Kaggle before running again.",
+        );
+    } finally {
+      // A pull brings the script too, with its prompt.
+      await rm(pulled, { recursive: true, force: true });
+    }
   }
 
   return {

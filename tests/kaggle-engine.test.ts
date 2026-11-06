@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -57,7 +63,12 @@ function kaggle(
   }: { privateAnswer?: boolean; clock?: () => number } = {},
 ) {
   const calls: string[][] = [];
-  const pushed: { metadata?: any; script?: string; was?: string[] } = {};
+  const pushed: {
+    metadata?: any;
+    script?: string;
+    was?: string[];
+    pulledScript?: string;
+  } = {};
   let pushes = 0;
   let runId = "";
   const cli: KaggleCli = async (args) => {
@@ -85,6 +96,8 @@ function kaggle(
         path.join(args[4], "kernel-metadata.json"),
         JSON.stringify({ is_private: privateAnswer }),
       );
+      pushed.pulledScript = path.join(args[4], "script.py");
+      writeFileSync(pushed.pulledScript, "the prompt");
       return { stdout: "" };
     }
     throw new Error(`unexpected ${args}`);
@@ -515,6 +528,7 @@ test("the prompt does not stay on this computer", async () => {
   const [artifact] = await k.engine.enumerateArtifacts(executionRef);
   assert.ok(artifact, "the video stays");
   assert.deepEqual(k.pushed.was!.sort(), ["kernel-metadata.json", "run.py"]);
+  assert.ok(!existsSync(k.pushed.pulledScript!), "nor what the check pulled");
 });
 
 test("a video of the wrong length is refused", async () => {
