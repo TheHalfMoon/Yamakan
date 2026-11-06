@@ -301,6 +301,8 @@ export function CreateWorkspace(props: {
   const startable = models.find((m) => m.model === brief.modelId);
   // Awaited by the panel, under nothing else: the video has come in by now.
   const remember = async (receipt: RunReceipt, asset: Asset) => {
+    // A retry: an earlier failure to save is no longer true.
+    setProblem(null);
     const saved = await record(asset, receipt);
     if (saved)
       setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
