@@ -286,14 +286,14 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Already in main, for the founder to confirm or refuse:** since PR #212, media whose consent was revoked can be kept and shown as a place, prop, wardrobe or style. Placing and generating from those exact bytes stay refused. The founder's decision of 2026-11-05, as `docs/evidence/ultimate/consent-gate.md` describes it, asks that a revoked photo not be placed or used, and whether keeping it counts as use was not decided.
 
-**Next that needs no GPU:** a stand-in Kaggle CLI to drive the panel's failure, Stop following and restart screens in a browser, which have never been run there.
+**Next:** what remains of the brief waits on the GPU quota or on the founder's decisions above. Elements cannot yet reach a model, and no engine is enabled.
 
 **Open findings added:**
 
 - Low, from the last review of PR #209, with no asset or video lost: a stop from a stale tab during an import can leave the job row cancelled while the run is listed as imported; a finished or imported run stopped from a stale tab can read as possibly still running on the page; one test's "asks nothing" assertions would pass without the check they name.
 - A person's new start can replace an uncollected result, with no warning, in three cases: the local copy of its video has gone, from a restored copy, and from another workspace on the same account.
 - If a Kaggle CLI never returned, that model could not start again until Yamakan was restarted, and nothing would say so. Whether a timed-out CLI really stops on Windows is assumed.
-- The page's Stop following and failure screens, and finding a run after a start's answer is lost, have not been run in a browser. A stand-in CLI could drive these with no GPU.
+- The page's Stop following and failure screens, and finding a run after a start's answer is lost, have run in a browser only with a stand-in CLI, `npm run qualify:kaggle-screens`, which is not in CI.
 - `create.runFailed` and `create.runCancelled` changed in Arabic: X-01 covers them too.
 
 **Do not repeat:** nine reviews of PR #209 in a row each found real defects after green local runs, including one fix that broke a real send and a failure only the full `npm test` shows. Run all of `npm test` before pushing a new command. Deliberately break each fix and see a test fail: 58 breaks on PR #209 found 3 tests that needed adding or tightening and one pair of overlapping guards. A review agent ran `python -c "import kaggle"` once, which may load the credentials file: tell reviewers never to import that package. No token was read or printed.
