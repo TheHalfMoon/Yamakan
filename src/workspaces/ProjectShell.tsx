@@ -1,5 +1,6 @@
-// The project shell (YU-030): three workspaces over one open project, its
-// selection, revision history and job tray. Story holds the brief, scene
+// The project shell (YU-030): four workspaces over one open project, its
+// selection, revision history and job tray. Create starts a shot from a prompt;
+// Story holds the brief, scene
 // and shot cards, Director and the Cinema previs; Edit holds the preview,
 // timeline and inspector, with Studio as a panel opened from it; Finish
 // holds output, the job and agent tools. A workspace, once shown, stays
@@ -9,7 +10,7 @@
 import React, { useRef, useState, type ReactNode } from "react";
 import type { MessageKey } from "../i18n.ts";
 
-export const WORKSPACES = ["story", "edit", "finish"] as const;
+export const WORKSPACES = ["create", "story", "edit", "finish"] as const;
 export type Workspace = (typeof WORKSPACES)[number];
 
 const PREFERENCE = "yamakan.workspace";

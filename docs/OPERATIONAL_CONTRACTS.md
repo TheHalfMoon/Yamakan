@@ -397,10 +397,11 @@ The editor has two previews. The canvas preview is fast and interactive. The ref
   - Frame rate was no lower than the previous merge's, measured back to back: 27.1 and 27.4 fps sustained against 26.9 and 26.9. The frame-rate thresholds are unchanged.
 - **Rollback.** Revert the notice and the reference fetch: the reference view goes back to a plain image, and the cache is unchanged.
 
-## Project shell: Story, Edit and Finish (YU-030)
+## Project shell: Create, Story, Edit and Finish (YU-030)
 
-One project shell (`src/workspaces/ProjectShell.tsx`) holds three workspaces over the one open project. They share its asset library, selection, revision history (the toolbar's undo, redo and save) and its job tray.
+One project shell (`src/workspaces/ProjectShell.tsx`) holds four workspaces over the one open project. They share its asset library, selection, revision history (the toolbar's undo, redo and save) and its job tray.
 
+- **Create:** write a shot, see what a model would be given and what can run here, bring a video in with its run receipt and place it (`docs/evidence/ultimate/create-workspace.md`)
 - **Story:** scene and shot cards (camera intent per scene), and the Cinema previs, which draws only while Story is open. Director is collapsed under its own heading: its manual stages and raw results are for checking pipelines. It starts afresh for each project.
 - **Edit:** the canvas and reference previews, timeline and inspector (clip sound, animation, titles). Studio is a panel opened from Edit ("Open Studio"): its engine loads then, and it stays open.
 - **Finish:** the output summary and, collapsed, the agent tools (tool catalog and CLI), even with no project open. These are kept out of the editing flow.

@@ -13,6 +13,75 @@ const en = {
   "nav.production": "Production",
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
+  "workspace.create": "Create",
+  "create.seedInvalid": "A seed is a whole number from 0 to 4294967295.",
+  "create.modelFacts":
+    "Run so far at {width}x{height}, {frames} frames at {fps} fps ({seconds} s), about {minutes} minutes in all on a free Kaggle T4, the first load included. {licence}.",
+  "create.negativePrompt": "Its notebook also asks it to avoid: {words}.",
+  "create.engineChecking": "Checking what can run here.",
+  "create.engineUnknown": "What can run here could not be checked.",
+  "create.engineFound":
+    "An engine was found on this machine, but Yamakan cannot start it from here yet.",
+  "create.engineOff": "Yamakan cannot run a model on this machine yet.",
+  "create.outside":
+    "This model has been run in a private Kaggle notebook: {folder}. Its prompt and seed are set in that script, not from this page. Its video and receipt can then be brought in here.",
+  "create.bringInNote":
+    "Add its receipt to check that this is the file it describes. A match does not show that its model, seed or prompt are true: anyone can write a receipt.",
+  "create.receiptNotFinished":
+    "That receipt is from a run that did not finish or did not pass its own checks, so nothing was brought in.",
+  "create.tooLargeToCheck":
+    "This video is too large to check against a receipt here, so nothing was brought in. Remove the receipt to bring it in without one.",
+  "create.checkFailed":
+    "This video could not be read to check it, so nothing was brought in.",
+  "create.importFailed":
+    "The video could not be brought in. The status line above says why.",
+  "create.busy":
+    "Yamakan is busy, so nothing was brought in. Try again in a moment.",
+  "create.notKept":
+    "This browser could not keep the receipt, so it will be gone after a reload.",
+  "create.broughtIn": "Brought in {name}, with no receipt checked.",
+  "create.broughtInChecked": "Brought in {name}. It matches its receipt.",
+  "create.broughtInCopy":
+    "Brought in {name}. The file matched its receipt, and was then converted to a constant frame rate.",
+  "create.receiptMatched":
+    "This file's hash matched this receipt, in this browser.",
+  "create.receiptMatchedOriginal":
+    "The original file's hash matched this receipt, in this browser. This is a converted copy.",
+  "create.receiptSays": "The receipt says seed {seed}, steps {steps}:",
+  "create.prompt": "Describe the shot",
+  "create.promptHint": "A paper boat floats slowly along a calm stream.",
+  "create.promptCount": "{count} of {limit} characters",
+  "create.direction": "Direction",
+  "create.direction.shot": "Shot",
+  "create.direction.movement": "Movement",
+  "create.direction.lens": "Lens",
+  "create.direction.light": "Light",
+  "create.direction.none": "Not set",
+  "create.directionNote":
+    "These only add words to the prompt. Neither model has camera settings, and it may not follow them.",
+  "create.model": "Model",
+  "create.seed": "Seed",
+  "create.finalPrompt": "What the model would be given",
+  "create.finalPromptEmpty": "Nothing yet.",
+  "create.copy": "Copy the prompt",
+  "create.copied": "Copied",
+  "create.copyFailed": "The prompt could not be copied.",
+  "create.engineTitle": "Making it",
+  "create.bringInTitle": "Bring a video in",
+  "create.receipt": "Receipt (optional)",
+  "create.receiptClear": "Remove the receipt",
+  "create.bringIn": "Choose a video",
+  "create.receiptInvalid":
+    "That file is not a run receipt, so nothing was brought in.",
+  "create.receiptMismatch":
+    "This video is not the file that receipt describes, so nothing was brought in.",
+  "create.videos": "Videos in this project",
+  "create.noVideos": "No videos yet.",
+  "create.noReceipt": "No receipt",
+  "create.place": "Add to timeline",
+  "create.placeAgain": "Add again",
+  "create.placed": "Added {name} to the timeline.",
+  "create.openEdit": "Open in Edit",
   "workspace.story": "Story",
   "workspace.edit": "Edit",
   "workspace.finish": "Finish",
@@ -357,6 +426,70 @@ const ar: Record<MessageKey, string> = {
   "nav.production": "الإنتاج",
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
+  "workspace.create": "إنشاء",
+  "create.seedInvalid": "البذرة عدد صحيح من 0 إلى 4294967295.",
+  "create.modelFacts":
+    "شُغّل حتى الآن بدقة {width}x{height}، {frames} إطارًا بمعدل {fps} إطارًا في الثانية ({seconds} ث)، نحو {minutes} دقيقة إجمالًا على T4 مجاني في Kaggle، شاملة التحميل الأول. {licence}.",
+  "create.negativePrompt": "يطلب دفتره أيضًا تجنّب: {words}.",
+  "create.engineChecking": "جارٍ التحقق مما يمكن تشغيله هنا.",
+  "create.engineUnknown": "تعذر التحقق مما يمكن تشغيله هنا.",
+  "create.engineFound":
+    "عُثر على محرك في هذا الجهاز، لكن Yamakan لا يستطيع تشغيله من هنا بعد.",
+  "create.engineOff": "لا يستطيع Yamakan تشغيل نموذج على هذا الجهاز بعد.",
+  "create.outside":
+    "شُغّل هذا النموذج في دفتر Kaggle خاص: {folder}. يُضبط وصفه وبذرته في ذلك الملف، لا من هذه الصفحة. يمكن بعدها إحضار الفيديو وإيصاله إلى هنا.",
+  "create.bringInNote":
+    "أضف الإيصال للتحقق من أن هذا هو الملف الذي يصفه. لا تثبت المطابقة صحة نموذجه أو بذرته أو وصفه: يمكن لأي شخص كتابة إيصال.",
+  "create.receiptNotFinished":
+    "هذا الإيصال من تشغيل لم يكتمل أو لم يجتز فحوصه، فلم يُحضر شيء.",
+  "create.tooLargeToCheck":
+    "هذا الفيديو أكبر من أن يُطابق مع إيصال هنا، فلم يُحضر شيء. أزل الإيصال لإحضاره دونه.",
+  "create.checkFailed": "تعذرت قراءة هذا الفيديو للتحقق منه، فلم يُحضر شيء.",
+  "create.importFailed": "تعذر إحضار الفيديو. يوضح سطر الحالة أعلاه السبب.",
+  "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
+  "create.notKept":
+    "تعذر على هذا المتصفح حفظ الإيصال، وسيختفي بعد إعادة التحميل.",
+  "create.broughtIn": "أُحضر {name} دون التحقق من إيصال.",
+  "create.broughtInChecked": "أُحضر {name}. وهو يطابق إيصاله.",
+  "create.broughtInCopy":
+    "أُحضر {name}. طابق الملف إيصاله، ثم حُوّل إلى معدل إطارات ثابت.",
+  "create.receiptMatched": "طابقت بصمة هذا الملف هذا الإيصال، في هذا المتصفح.",
+  "create.receiptMatchedOriginal":
+    "طابقت بصمة الملف الأصلي هذا الإيصال، في هذا المتصفح. هذه نسخة محوّلة.",
+  "create.receiptSays": "يذكر الإيصال البذرة {seed}، الخطوات {steps}:",
+  "create.prompt": "صف اللقطة",
+  "create.promptHint": "قارب ورقي يطفو ببطء على جدول هادئ.",
+  "create.promptCount": "{count} من {limit} حرفًا",
+  "create.direction": "الإخراج",
+  "create.direction.shot": "اللقطة",
+  "create.direction.movement": "الحركة",
+  "create.direction.lens": "العدسة",
+  "create.direction.light": "الإضاءة",
+  "create.direction.none": "غير محدد",
+  "create.directionNote":
+    "تضيف هذه الخيارات كلمات إلى الوصف فقط. لا يملك أي من النموذجين إعدادات للكاميرا، وقد لا يتبعها.",
+  "create.model": "النموذج",
+  "create.seed": "البذرة",
+  "create.finalPrompt": "ما سيتلقاه النموذج",
+  "create.finalPromptEmpty": "لا شيء بعد.",
+  "create.copy": "نسخ الوصف",
+  "create.copied": "نُسخ",
+  "create.copyFailed": "تعذر نسخ الوصف.",
+  "create.engineTitle": "الإنتاج",
+  "create.bringInTitle": "إحضار فيديو",
+  "create.receipt": "الإيصال (اختياري)",
+  "create.receiptClear": "إزالة الإيصال",
+  "create.bringIn": "اختيار فيديو",
+  "create.receiptInvalid": "هذا الملف ليس إيصال تشغيل، فلم يُحضر شيء.",
+  "create.receiptMismatch":
+    "هذا الفيديو ليس الملف الذي يصفه الإيصال، فلم يُحضر شيء.",
+  "create.videos": "الفيديوهات في هذا المشروع",
+  "create.noVideos": "لا توجد فيديوهات بعد.",
+  "create.noReceipt": "لا يوجد إيصال",
+  "create.place": "إضافة إلى المخطط الزمني",
+  "create.placeAgain": "إضافة مرة أخرى",
+  "create.placed": "أُضيف {name} إلى المخطط الزمني.",
+  "create.openEdit": "فتح في التحرير",
   "workspace.story": "القصة",
   "workspace.edit": "التحرير",
   "workspace.finish": "الإنهاء",

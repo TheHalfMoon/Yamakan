@@ -23,6 +23,7 @@ import {
 import { editorView } from "./adapter";
 import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
+import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
 import {
   WorkspacePanel,
   WorkspaceTabs,
@@ -286,6 +287,55 @@ function App() {
         return h;
       }
     });
+  };
+  // A file joins the project; its new asset, or null if it made none.
+  const importMedia = async (p: Project, file: File) => {
+    let made: any = null;
+    await save();
+    const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
+      method: "POST",
+      headers: {
+        ...sessionHeaders(),
+        "X-Asset-Name": encodeURIComponent(file.name),
+      },
+      body: file,
+    });
+    const v = await r.json();
+    if (!r.ok) throw new Error(v.error?.message || t("import.failed"));
+    if (v.job) {
+      // Variable-frame-rate video: wait for its constant-rate version.
+      setMessage(msg("import.converting", { name: file.name }));
+      let job = v.job;
+      // Stop waiting (the job continues) after twice the
+      // conversion time limit, queueing included.
+      const deadline =
+        Date.now() + 2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
+      while (job.state === "QUEUED" || job.state === "RUNNING") {
+        if (Date.now() > deadline)
+          throw new Error(t("import.stillConverting", { name: file.name }));
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        job = await call("yamakan.job.status", {
+          jobId: job.id,
+        });
+      }
+      if (job.state !== "COMPLETED")
+        throw new Error(job.error || t("import.incomplete"));
+      const opened = await call("yamakan.project.open", {
+        projectId: p.id,
+      });
+      accept(opened);
+      made =
+        opened.assets.find(
+          (a: { id: string }) => `asset:${a.id}` === job.artifact,
+        ) ?? null;
+      setMessage(msg("import.converted", { name: file.name }));
+    } else {
+      accept(v.project);
+      made = v.asset;
+      setMessage(msg("import.done", { name: v.asset.name }));
+    }
+    await refresh();
+    return made;
   };
   const accept = (project: Project) => {
     const opened = ProjectSchema.parse(project);
@@ -565,53 +615,78 @@ function App() {
   // What the canvas preview shows only approximately (YU-018), once per
   // project value (the playhead re-renders this component every frame).
   const parity = useMemo(() => (p ? previewParity(p) : null), [p]);
-  const addAsset = (assetId: string, trackId?: string, time?: number) =>
-    edit((p) => {
-      const a = p.assets.find((a) => a.id === assetId);
-      if (!a) throw new Error(t("error.assetMissing"));
-      const kind = a.kind === "audio" ? "audio" : "video";
-      const track = trackId
-        ? p.tracks.find((x) => x.id === trackId)
-        : p.tracks.find(
-            (x) => x.id === activeTrack && x.kind === kind && !x.locked,
-          ) ||
-          p.tracks.find((x) => x.targeted && x.kind === kind && !x.locked) ||
-          p.tracks.find((x) => x.kind === kind && !x.locked);
-      if (!track || track.locked || track.kind !== kind)
-        throw new Error(t("error.track"));
-      const start =
-        time === undefined
-          ? Math.max(
-              0,
-              ...p.clips
-                .filter((c) => c.trackId === track.id)
-                .map((c) => c.startFrame + c.durationFrames),
-            )
-          : Math.round(time * fps);
-      const clip = {
-        id: crypto.randomUUID(),
-        trackId: track.id,
-        assetId: a.id,
-        startFrame: start,
-        durationFrames:
-          a.kind === "image"
-            ? Math.round(3 * fps)
+  const withAsset = (
+    p: Project,
+    assetId: string,
+    trackId?: string,
+    time?: number,
+    whole = false,
+  ): Project => {
+    const a = p.assets.find((a) => a.id === assetId);
+    if (!a) throw new Error(t("error.assetMissing"));
+    const kind = a.kind === "audio" ? "audio" : "video";
+    const track = trackId
+      ? p.tracks.find((x) => x.id === trackId)
+      : p.tracks.find(
+          (x) => x.id === activeTrack && x.kind === kind && !x.locked,
+        ) ||
+        p.tracks.find((x) => x.targeted && x.kind === kind && !x.locked) ||
+        p.tracks.find((x) => x.kind === kind && !x.locked);
+    if (!track || track.locked || track.kind !== kind)
+      throw new Error(t("error.track"));
+    const start =
+      time === undefined
+        ? Math.max(
+            0,
+            ...p.clips
+              .filter((c) => c.trackId === track.id)
+              .map((c) => c.startFrame + c.durationFrames),
+          )
+        : Math.round(time * fps);
+    const clip = {
+      id: crypto.randomUUID(),
+      trackId: track.id,
+      assetId: a.id,
+      startFrame: start,
+      durationFrames:
+        a.kind === "image"
+          ? Math.round(3 * fps)
+          : whole
+            ? a.durationFrames
             : Math.min(a.durationFrames, Math.round(5 * fps)),
-        sourceFrame: 0,
-        title: null as string | null,
-        ...(a.kind === "video"
-          ? {
-              sound: {
-                enabled: a.hasAudio === true,
-                gainDb: 0,
-                fadeInFrames: 0,
-                fadeOutFrames: 0,
-              },
-            }
-          : {}),
-      };
-      return { ...p, clips: [...p.clips, clip] };
-    });
+      sourceFrame: 0,
+      title: null as string | null,
+      ...(a.kind === "video"
+        ? {
+            sound: {
+              enabled: a.hasAudio === true,
+              gainDb: 0,
+              fadeInFrames: 0,
+              fadeOutFrames: 0,
+            },
+          }
+        : {}),
+    };
+    return { ...p, clips: [...p.clips, clip] };
+  };
+  const addAsset = (assetId: string, trackId?: string, time?: number) =>
+    edit((p) => withAsset(p, assetId, trackId, time));
+  // A whole generated video, or the reason it cannot be placed: tried first, since
+  // an edit only reports to the status line.
+  const placeWhole = (p: Project, assetId: string) => {
+    if (busy) return t("status.working");
+    try {
+      ProjectSchema.parse(withAsset(p, assetId, undefined, undefined, true));
+    } catch (e) {
+      // A schema's message is all its issues, as JSON: the first says enough.
+      const first = (e as { issues?: { message?: string }[] }).issues?.[0];
+      return (
+        first?.message ?? (e instanceof Error ? e.message : t("error.edit"))
+      );
+    }
+    edit((now) => withAsset(now, assetId, undefined, undefined, true));
+    return null;
+  };
   const updateClips = (updates: TimelineClip[]) =>
     edit((p) => applyClipUpdates(p, updates));
   // The editor's parts, shared by the workspace shell (YU-030) and the
@@ -1954,59 +2029,7 @@ function App() {
                     e.target.value = "";
                     if (!file) return;
                     run(async () => {
-                      await save();
-                      const r = await fetch(`/api/v1/projects/${p.id}/assets`, {
-                        method: "POST",
-                        headers: {
-                          ...sessionHeaders(),
-                          "X-Asset-Name": encodeURIComponent(file.name),
-                        },
-                        body: file,
-                      });
-                      const v = await r.json();
-                      if (!r.ok)
-                        throw new Error(v.error?.message || t("import.failed"));
-                      if (v.job) {
-                        // Variable-frame-rate video: wait for its constant-rate version.
-                        setMessage(
-                          msg("import.converting", { name: file.name }),
-                        );
-                        let job = v.job;
-                        // Stop waiting (the job continues) after twice the
-                        // conversion time limit, queueing included.
-                        const deadline =
-                          Date.now() +
-                          2000 * RESOURCE_POLICY.enforced.conversionWallSeconds;
-                        while (
-                          job.state === "QUEUED" ||
-                          job.state === "RUNNING"
-                        ) {
-                          if (Date.now() > deadline)
-                            throw new Error(
-                              t("import.stillConverting", { name: file.name }),
-                            );
-                          await new Promise((resolve) =>
-                            setTimeout(resolve, 500),
-                          );
-                          job = await call("yamakan.job.status", {
-                            jobId: job.id,
-                          });
-                        }
-                        if (job.state !== "COMPLETED")
-                          throw new Error(job.error || t("import.incomplete"));
-                        accept(
-                          await call("yamakan.project.open", {
-                            projectId: p.id,
-                          }),
-                        );
-                        setMessage(
-                          msg("import.converted", { name: file.name }),
-                        );
-                      } else {
-                        accept(v.project);
-                        setMessage(msg("import.done", { name: v.asset.name }));
-                      }
-                      await refresh();
+                      await importMedia(p, file);
                     });
                   }}
                 />
@@ -2145,6 +2168,50 @@ function App() {
               {p ? topBar(p) : null}
               {/* The job tray: one export job, seen in every workspace. */}
               {p ? jobPanel() : null}
+              <WorkspacePanel
+                id="create"
+                workspace={workspace}
+                visited={visited}
+              >
+                {p ? (
+                  <CreateWorkspace
+                    key={p.id}
+                    projectId={p.id}
+                    assets={p.assets}
+                    placedAssetIds={
+                      new Set(p.clips.map((c) => c.assetId ?? ""))
+                    }
+                    busy={busy}
+                    t={t}
+                    checkEngine={async () => {
+                      const { operations } = await call(
+                        "yamakan.engines.capabilities",
+                        {},
+                      );
+                      const video = operations.find(
+                        (o: { operation: string }) =>
+                          o.operation === "textToVideo",
+                      );
+                      return video
+                        ? { available: video.available, reason: video.reason }
+                        : null;
+                    }}
+                    importVideo={(file, check) => {
+                      if (busy) return Promise.resolve("busy" as const);
+                      return new Promise((resolve) => {
+                        let made: any = null;
+                        run(async () => {
+                          if (await check()) made = await importMedia(p, file);
+                        }).finally(() => resolve(made));
+                      });
+                    }}
+                    place={(assetId) => placeWhole(p, assetId)}
+                    openEdit={() => openWorkspace("edit")}
+                  />
+                ) : (
+                  emptyPanel()
+                )}
+              </WorkspacePanel>
               <WorkspacePanel
                 id="story"
                 workspace={workspace}
