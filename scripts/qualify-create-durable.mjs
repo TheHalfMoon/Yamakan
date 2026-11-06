@@ -254,9 +254,74 @@ try {
   assert.equal(now.shots[0].takes[0].assetId, now.project.assets[0].id);
   assert.equal(now.shots[0].takes[0].lineage.outputHash, sha);
   const documentId = now.stories[0].id;
-  const storyHash = now.stories[0].contentHash;
   step("trying again saves it once, with no duplicate", { documentId });
   await page.unroute("**/api/v1/call");
+
+  // The save gets through and its answer is lost: the record exists, the page has not
+  // heard, and trying again must find it rather than add it.
+  const second = join(root, "second.mp4");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=704x480:rate=24:duration=1",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:v",
+      "libx264",
+      second,
+    ],
+    { windowsHide: true },
+  );
+  const secondHash = createHash("sha256")
+    .update(readFileSync(second))
+    .digest("hex");
+  const secondReceipt = join(root, "second.json");
+  const SECOND_PROMPT = "A second test pattern.";
+  writeFileSync(
+    secondReceipt,
+    JSON.stringify({
+      ...JSON.parse(readFileSync(runReceipt, "utf8")),
+      prompt: SECOND_PROMPT,
+      sha256: secondHash,
+    }),
+  );
+  let lost = 0;
+  await page.route("**/api/v1/call", async (route) => {
+    const body = route.request().postDataJSON();
+    if (body?.operation === "yamakan.story.save" && lost === 0) {
+      lost++;
+      await route.fetch();
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByTestId("create-receipt").setInputFiles(secondReceipt);
+  await page.getByTestId("create-video-file").setInputFiles(second);
+  await page.getByTestId("create-record-retry").waitFor({ timeout: 60_000 });
+  assert.equal(lost, 1);
+  now = await held(projectId);
+  assert.equal(now.shots.length, 2, "the save did get through");
+  await page.getByTestId("create-record-retry").click();
+  await page
+    .getByTestId("create-video")
+    .getByText(SECOND_PROMPT, { exact: true })
+    .waitFor({ timeout: 30_000 });
+  await page.getByTestId("create-record-retry").waitFor({ state: "detached" });
+  now = await held(projectId);
+  assert.equal(now.project.assets.length, 2, "no third asset");
+  assert.equal(now.shots.length, 2, "no third shot");
+  step(
+    "a save whose answer was lost is found on trying again, not added twice",
+  );
+  await page.unroute("**/api/v1/call");
+  const storyHashAfter = now.stories[0].contentHash;
 
   // A new browser profile: nothing of this one's storage at all.
   await context.close();
@@ -278,8 +343,8 @@ try {
   await openCreate();
   await recordShows();
   now = await held(projectId);
-  assert.equal(now.stories[0].contentHash, storyHash, "the same record");
-  assert.equal(now.project.assets.length, 1);
+  assert.equal(now.stories[0].contentHash, storyHashAfter, "the same record");
+  assert.equal(now.project.assets.length, 2);
   step("the record is the same after the service restarts");
 
   await page.getByRole("button", { name: "Back up now" }).click();
@@ -298,6 +363,7 @@ try {
     said,
   )?.[1];
   assert.ok(restoredRoot && existsSync(restoredRoot), said.slice(0, 300));
+  assert.notEqual(restoredRoot, workspace, "a different folder");
   step("a backup is made and restored, with the browser's controls");
 
   await server.stop();
@@ -310,9 +376,13 @@ try {
   now = await held(projectId);
   assert.equal(now.stories.length, 1);
   assert.equal(now.stories[0].id, documentId, "the same story");
-  assert.equal(now.stories[0].contentHash, storyHash, "the same bytes");
-  assert.equal(now.project.assets[0].hash, sha, "the same video");
-  await page.getByTestId("create-place").click();
+  assert.equal(now.stories[0].contentHash, storyHashAfter, "the same bytes");
+  assert.deepEqual(
+    now.project.assets.map((a) => a.hash).sort(),
+    [sha, secondHash].sort(),
+    "the same videos",
+  );
+  await page.getByTestId("create-place").first().click();
   await page.getByTestId("create-open-edit").click();
   await page.locator("[data-clip-id]").first().waitFor({ timeout: 30_000 });
   step("Yamakan on the restored folder has the record and can use the video");

@@ -135,10 +135,9 @@ export function CreateWorkspace(props: {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   // A video that came in, whose record could not be saved: trying again needs only
   // the record, since bringing the file in again would make a second asset.
-  const [unsaved, setUnsaved] = useState<{
-    asset: Asset;
-    receipt: RunReceipt;
-  } | null>(null);
+  const [unsaved, setUnsaved] = useState<
+    { asset: Asset; receipt: RunReceipt }[]
+  >([]);
 
   useEffect(() => {
     keep(briefKey, validSeed(brief.seed) ? brief : { ...brief, seed: 42 });
@@ -271,8 +270,25 @@ export function CreateWorkspace(props: {
     });
 
   // Kept with the project. The video is in either way, so failing here says so.
-  const record = async (asset: Asset, receipt: RunReceipt) => {
-    setUnsaved(null);
+  const record = async (
+    asset: Asset,
+    receipt: RunReceipt,
+    // A generated video's panel has its own way to try again.
+    offerRetry = true,
+  ) => {
+    const missed = () => {
+      if (offerRetry)
+        setUnsaved((all) => [
+          ...all.filter((u) => u.asset.id !== asset.id),
+          { asset, receipt },
+        ]);
+      setProblem({ key: "create.notKept" });
+      return false;
+    };
+    const saved = () => {
+      setUnsaved((all) => all.filter((u) => u.asset.id !== asset.id));
+      return true;
+    };
     try {
       const latest = await props.loadStory();
       const next = addMadeVideo(
@@ -285,27 +301,25 @@ export function CreateWorkspace(props: {
         },
         () => crypto.randomUUID(),
       );
-      if (next === "already-there") return true;
+      // A save whose answer was lost got through, so this is what the card shows.
+      if (next === "already-there") {
+        if (latest) setKeptStory(latest);
+        return saved();
+      }
       if (next === "full") {
         setProblem({ key: "create.storyFull" });
         return false;
       }
-      const saved = await props.saveStory({
+      const kept = await props.saveStory({
         documentId: latest?.documentId ?? crypto.randomUUID(),
         expectedContentHash: latest?.contentHash ?? null,
         story: next,
       });
-      if (saved) {
-        setKeptStory(saved);
-        return true;
-      }
-      setUnsaved({ asset, receipt });
-      setProblem({ key: "create.notKept" });
-      return false;
+      if (!kept) return missed();
+      setKeptStory(kept);
+      return saved();
     } catch {
-      setUnsaved({ asset, receipt });
-      setProblem({ key: "create.notKept" });
-      return false;
+      return missed();
     }
   };
 
@@ -314,7 +328,7 @@ export function CreateWorkspace(props: {
   const remember = async (receipt: RunReceipt, asset: Asset) => {
     // A retry: an earlier failure to save is no longer true.
     setProblem(null);
-    const saved = await record(asset, receipt);
+    const saved = await record(asset, receipt, false);
     if (saved)
       setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
     return saved;
@@ -554,15 +568,15 @@ export function CreateWorkspace(props: {
               : t(problem.key, problem.vars)}
           </div>
         )}
-        {unsaved && (
+        {unsaved.length > 0 && (
           <button
             type="button"
             disabled={busy}
             data-testid="create-record-retry"
             onClick={async () => {
-              const { asset, receipt } = unsaved;
               setProblem(null);
-              if (await record(asset, receipt)) announce(asset, receipt);
+              for (const { asset, receipt } of unsaved)
+                if (await record(asset, receipt)) announce(asset, receipt);
             }}
           >
             {t("create.recordRetry")}
