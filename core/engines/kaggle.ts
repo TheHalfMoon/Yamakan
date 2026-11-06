@@ -30,6 +30,7 @@ import {
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import { cleanImage } from "./clean-image.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -481,7 +482,7 @@ export function createKaggleEngine(options: {
   const clearLeftovers = async (run: Run) => {
     if (sendingNow.has(run.runId)) return;
     await Promise.all(
-      ["push", "pulled"].map((name) =>
+      ["push", "pulled", "clean"].map((name) =>
         rm(path.join(run.folder, name), { recursive: true, force: true }),
       ),
     ).catch(() => {});
@@ -845,7 +846,12 @@ export function createKaggleEngine(options: {
     if (!answer) throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
   }
 
-  async function readFirstFrame(asset: AssetRef, context: EngineContextV2) {
+  async function readFirstFrame(
+    asset: AssetRef,
+    context: EngineContextV2,
+    recipe: KaggleRecipe,
+    folder: string,
+  ) {
     const parts: Uint8Array[] = [];
     let bytes = 0;
     for await (const chunk of context.openAsset(asset)) {
@@ -863,10 +869,17 @@ export function createKaggleEngine(options: {
         "VALIDATION",
         "That image is not the version this run was started with.",
       );
+    // The founder chose that a photo's metadata does not go, so what goes is made anew.
+    let clean: Buffer;
+    try {
+      clean = await cleanImage(image, asset.mediaType, recipe, folder);
+    } catch (e) {
+      throw new CommandError("VALIDATION", (e as Error).message);
+    }
     return {
-      data: image.toString("base64"),
-      mediaType: asset.mediaType,
-      sha256: asset.sha256,
+      data: clean.toString("base64"),
+      mediaType: "image/png",
+      sha256: sha256(clean),
     };
   }
 
@@ -927,7 +940,12 @@ export function createKaggleEngine(options: {
         await mkdir(push);
         // Read last: opening it is where consent is checked, so that answer is this moment's.
         const firstFrame = frame
-          ? await readFirstFrame(frame.asset, context)
+          ? await readFirstFrame(
+              frame.asset,
+              context,
+              recipe,
+              path.join(folder, "clean"),
+            )
           : null;
         await writeFile(
           path.join(push, "run.py"),

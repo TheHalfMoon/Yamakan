@@ -200,9 +200,19 @@ test("the image travels inside the brief, and is the one started with", async ()
   await f.service.start(f.request);
   assert.equal(f.pushes.length, 1);
   const { brief, metadata } = f.pushes[0];
-  assert.equal(brief.firstFrame.sha256, STILL_HASH);
+  const sent = Buffer.from(brief.firstFrame.data, "base64");
+  assert.equal(
+    brief.firstFrame.sha256,
+    createHash("sha256").update(sent).digest("hex"),
+  );
   assert.equal(brief.firstFrame.mediaType, "image/png");
-  assert.deepEqual(Buffer.from(brief.firstFrame.data, "base64"), STILL);
+  assert.notEqual(
+    brief.firstFrame.sha256,
+    STILL_HASH,
+    "a new file, not the original",
+  );
+  assert.equal(sent.readUInt32BE(16), recipe.width);
+  assert.equal(sent.readUInt32BE(20), recipe.height);
   assert.equal(brief.prompt, "The boat drifts.");
   // Nothing else goes to Kaggle: no dataset, and the notebook is asked to be private.
   assert.deepEqual(metadata.dataset_sources, []);
@@ -267,6 +277,75 @@ const opening = (data: Uint8Array) =>
   ({
     openAsset: () => Readable.from([data]),
   }) as never;
+
+test("a phone's photo goes made anew, with nothing of its file", async () => {
+  const file = path.join(stillRoot, "photo.jpg");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=teal:s=64x48",
+      "-frames:v",
+      "1",
+      file,
+    ],
+    { windowsHide: true },
+  );
+  const jpeg = readFileSync(file);
+  const SECRET = "24.7136N 46.6753E";
+  const tiff = Buffer.alloc(26);
+  tiff.write("II", 0, "latin1");
+  tiff.writeUInt16LE(42, 2);
+  tiff.writeUInt32LE(8, 4);
+  tiff.writeUInt16LE(1, 8);
+  tiff.writeUInt16LE(0x0112, 10);
+  tiff.writeUInt16LE(3, 12);
+  tiff.writeUInt32LE(1, 14);
+  tiff.writeUInt16LE(6, 18);
+  const body = Buffer.concat([
+    Buffer.from("Exif\0\0", "latin1"),
+    tiff,
+    Buffer.from(SECRET, "latin1"),
+  ]);
+  const head = Buffer.from([0xff, 0xe1, 0, 0]);
+  head.writeUInt16BE(body.length + 2, 2);
+  const photo = Buffer.concat([
+    jpeg.subarray(0, 2),
+    head,
+    body,
+    jpeg.subarray(2),
+  ]);
+  const f = await fixture();
+  await f.adapter.submit(
+    adapterRequest(f, [
+      {
+        role: "firstFrame",
+        asset: {
+          assetVersionId: randomUUID(),
+          sha256: createHash("sha256").update(photo).digest("hex"),
+          mediaType: "image/jpeg",
+        },
+      },
+    ]),
+    opening(photo),
+  );
+  const { firstFrame } = f.pushes[0].brief;
+  const sent = Buffer.from(firstFrame.data, "base64");
+  assert.equal(firstFrame.mediaType, "image/png");
+  assert.ok(!sent.includes(SECRET));
+  assert.ok(!JSON.stringify(f.pushes[0]).includes(SECRET));
+  assert.equal(
+    firstFrame.orientation,
+    undefined,
+    "no word of its file comes beside it",
+  );
+  await f.close();
+});
 
 test("a last frame is refused, since this model would ignore it without saying", async () => {
   const f = await fixture();
@@ -461,10 +540,6 @@ def fit(picture, size, method):
     asked["fit"] = list(size)
     return "the fitted frame"
 ops.fit = fit
-def upright(picture):
-    asked["upright"] = True
-    return picture
-ops.exif_transpose = upright
 pil.Image = image
 pil.ImageOps = ops
 sys.modules["PIL"] = pil
@@ -530,7 +605,6 @@ test(
     assert.deepEqual(asked.fit, [recipe.width, recipe.height]);
     assert.equal(asked.image, "the fitted frame");
     assert.equal(asked.encode, 512);
-    assert.equal(asked.upright, true);
     assert.equal(asked.vaeMovedTo, "cpu", "the VAE is sent off the GPU");
     assert.equal(
       asked.hookReturned,

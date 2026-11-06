@@ -109,11 +109,9 @@ try:
         raise ValueError("The first frame is not the one this run was sent.")
     with Image.open(io.BytesIO(frame_bytes)) as opened:
         receipt["firstFrameSize"] = list(opened.size)
-        # Upright first, as a phone's photo is only by its metadata.
+        # Made upright and to size before it was sent, so this only guards the size.
         first_frame = ImageOps.fit(
-            ImageOps.exif_transpose(opened).convert("RGB"),
-            (WIDTH, HEIGHT),
-            Image.LANCZOS,
+            opened.convert("RGB"), (WIDTH, HEIGHT), Image.LANCZOS
         )
     receipt["stage"] = "loading"
     save()
