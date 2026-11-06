@@ -241,12 +241,12 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Founder's decisions on 2026-11-06:** "Yes, follow it" to the Craft Anything × Higgsfield brief (issue #203), and "Yamakan drives Kaggle". See `docs/FOUNDER_DECISION_RECORD.md`.
 
-**Still to do for issue #203:** keep the shot and receipt in the project, not this browser; reference images and reusable elements; image-to-video; CogVideoX from the page, which also tests a first run on a new notebook; the panel's failure, stop and restart screens in a browser; pixel comparison against a baseline. [Draft PR #204](https://github.com/TheHalfMoon/Yamakan/pull/204), the lens preview, is someone else's and untouched.
+**Still to do for issue #203:** reference images and reusable elements; image-to-video; CogVideoX from the page, which also tests a first run on a new notebook; the panel's failure, stop and restart screens in a browser; pixel comparison against a baseline. [Draft PR #204](https://github.com/TheHalfMoon/Yamakan/pull/204), the lens preview, was not touched by this work.
 
 **Open findings added:**
 
 - Exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in RGB. Cause not looked at.
-- Wan at 41 frames snapped to a different picture for its last 3 frames, with tiling on or off. 81 frames did not, on one prompt and seed. Why was not worked out.
+- Wan at 41 frames snapped to a different picture for its last 3 frames, and its frame changes were the same with tiling off. 81 frames did not, on one prompt and seed. Why was not worked out.
 - Kaggle's public interface cannot stop a run, and a restart loses a run in progress.
 - `qualify:create` and `qualify:kaggle` are not in CI. Unit tests of the engine are.
 - `apt-get` hanging in `qualify` cancels whole CI runs, and a cancelled main run says nothing either way. Check main's conclusion after every merge.

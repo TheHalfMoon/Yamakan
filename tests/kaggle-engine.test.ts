@@ -621,6 +621,57 @@ test("a receipt too large to be one is refused, though it reads", async () => {
   assert.match(answer.diagnostic!, /readable result/);
 });
 
+test("a receipt that reads as nothing ends the run, once settled", async () => {
+  let time = 0;
+  const k = kaggle(
+    ["COMPLETE"],
+    (_id, folder) => writeFileSync(path.join(folder, "receipt.json"), "null"),
+    { clock: () => time },
+  );
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  time = 10 * 60 * 1000;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /readable result/);
+});
+
+test("a finished run with no video is a failure", async () => {
+  const k = kaggle(["COMPLETE"], (runId, folder) => {
+    good(runId, folder);
+    rmSync(path.join(folder, wan.output));
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /not a size/);
+});
+
+test("a warning stays beside a failed answer", async () => {
+  const k = kaggle(
+    ["COMPLETE"],
+    (runId, folder) =>
+      writeFileSync(
+        path.join(folder, "receipt.json"),
+        JSON.stringify({ runId, stage: "failed", error: "out of memory" }),
+      ),
+    { privateAnswer: false },
+  );
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /private/);
+  assert.match(answer.diagnostic!, /out of memory/);
+});
+
 test("failing to fetch a result is tried again, however late", async () => {
   let time = 0;
   let tries = 0;

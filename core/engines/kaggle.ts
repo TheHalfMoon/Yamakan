@@ -309,7 +309,10 @@ export function createKaggleEngine(options: {
     try {
       if ((await stat(file)).size > RECEIPT_BYTES)
         throw new Error("That receipt is too large to be one.");
-      return { folder, receipt: JSON.parse(await readFile(file, "utf8")) };
+      const receipt = JSON.parse(await readFile(file, "utf8"));
+      if (receipt === null || typeof receipt !== "object")
+        throw new Error("That is not a receipt.");
+      return { folder, receipt };
     } catch (e) {
       throw new Unreadable((e as Error).message);
     }
