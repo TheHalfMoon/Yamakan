@@ -2235,7 +2235,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Ask the engine to stop a generation, from a browser session only.",
+      "Stop following a generation, and ask the engine to stop it where it can, from a browser session only.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.cancel(a.generationId),
   }),

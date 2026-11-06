@@ -82,6 +82,8 @@ export function readRun(raw: string | null): Run | null {
 export function GeneratePanel(props: {
   storageKey: string;
   model: GenerateModel;
+  // Whether the model chosen on the page is one that can start from here.
+  offered: boolean;
   models: readonly GenerateModel[];
   prompt: string;
   seed: number;
@@ -236,6 +238,16 @@ export function GeneratePanel(props: {
     </a>
   );
 
+  if (!run && !props.offered)
+    return (
+      <div className="create-generate" data-testid="create-generate">
+        <h3>{t("create.engineTitle")}</h3>
+        <p className="note" data-testid="create-not-from-here">
+          {t("create.notFromHere")}
+        </p>
+      </div>
+    );
+
   if (!run)
     return (
       <div className="create-generate" data-testid="create-generate">
@@ -352,7 +364,7 @@ export function GeneratePanel(props: {
           </button>
         )}
       </div>
-      {(following || run.stopped || lost || state === "cancelled") && (
+      {(following || run.stopped || lost) && (
         <p className="note">
           {run.stopped || lost
             ? t("create.runGoesOn", {

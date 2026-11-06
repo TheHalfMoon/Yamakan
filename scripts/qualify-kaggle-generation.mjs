@@ -72,6 +72,7 @@ let log = "";
 child.stderr.on("data", (c) => (log += String(c)));
 
 let browser;
+let modelChosen = null;
 let passed = false;
 let failure = null;
 try {
@@ -116,6 +117,7 @@ try {
   await page
     .getByTestId("create-model")
     .selectOption({ index: Number(modelIndex) });
+  modelChosen = await page.getByTestId("create-model").inputValue();
   await page.getByTestId("create-seed").fill(String(SEED));
 
   const start = page.getByTestId("create-generate-start");
@@ -271,6 +273,7 @@ try {
     join(out, "receipt.json"),
     `${JSON.stringify(
       {
+        model: await modelChosen,
         task: READY_ONLY
           ? "the-page-before-a-run-only"
           : "generation-from-yamakan-on-kaggle",
@@ -308,7 +311,7 @@ try {
   }
 }
 console.log(
-  READY_ONLY
+  READY_ONLY && failure?.startsWith("Stopped before sending")
     ? "NOTHING SENT: only the page before a run was looked at"
     : passed
       ? "KAGGLE GENERATION PASS"

@@ -8,18 +8,16 @@ Part of issue #203.
 
 - Text to video only: the prompt and seed leave this computer, no media does. A person ticks that they agree, every run, and presses the button.
 - The Kaggle CLI uses its own token. Yamakan never reads it, and passes the CLI fixed arguments; the prompt travels inside a file, as base64 of JSON, so it cannot become Python or a command.
-- The notebook is asked to be private, with a 60-minute limit, and Kaggle's own answer on privacy is read back after each push: if it does not say private, the run is reported as failed. That run may already have started. A notebook still running is not replaced. Kaggle keeps each prompt in the notebook's history, and the page says so.
+- The notebook is asked to be private, with a 60-minute limit. Kaggle's own answer on privacy is read before a push to an existing notebook, and nothing is sent if it does not say private or cannot be read. A new notebook has no answer to read. After a push it is read again, and because the run is then already going, a bad answer warns beside the run rather than ending it. A notebook still running is not replaced. Kaggle keeps each prompt in the notebook's history, and the page says so.
 - Kaggle's latest output could be another run's, so a result counts only if its receipt names this run, passed its own checks, and matches the video's hash.
 - **Yamakan cannot stop a run on Kaggle.** The CLI has no such command, and the SDK's call needs a session ID the public interface does not give, tried on 2026-11-06. So the page offers Stop following, says the run goes on using quota, and links to its notebook.
 - **A restart loses a run in progress.** The page says so and links to the notebook, but that run's video cannot then be brought in from here.
 - A status is what Kaggle says. There is no percentage, because it gives none; only the time so far.
 
-- After a run, only its video stays on this computer, in a temporary folder removed a day later; its script is removed once pushed.
+- After a run, only its video stays on this computer, in a temporary folder; its script is removed once pushed. Folders over a day old are removed the next time a service first uses Kaggle, not on a timer.
 - Only a model with its own tested run from the page is offered: Wan2.2-TI2V-5B. CogVideoX-2b says it has not been tested from this page.
 
-`npm run qualify:kaggle` ran this for real, through export. Its receipt, `kaggle-page-run-receipt.json`, names the commit it ran at; the commit that changed the engine after review was run again, as reported on its pull request. The engine's failure, wrong-run, privacy and unknown-run paths are tested with a stand-in for Kaggle in `tests/kaggle-engine.test.ts`. **The panel itself is exercised only by that one successful real run:** its failure, Stop following and restart screens have not been run in a browser. How long a stale status lasts on Kaggle is assumed to be under three minutes, not measured.
-
-## Without Kaggle
+`npm run qualify:kaggle` ran this for real, through export. Its receipt, `kaggle-page-run-receipt.json`, names the commit it ran at. The engine's failure, wrong-run, privacy and unknown-run paths are tested with a stand-in for Kaggle in `tests/kaggle-engine.test.ts`. **The panel itself is exercised only by that one successful real run:** its failure, Stop following and restart screens have not been run in a browser. How long a stale status lasts on Kaggle is assumed to be under three minutes, not measured. After Stop following, a new run is refused until Kaggle says the old one ended: up to its 60-minute limit, about 19 minutes for a normal run. A first run on a new notebook was not exercised on real Kaggle; what Kaggle says of a missing notebook was.
 
 ## What works now
 
@@ -38,7 +36,7 @@ The check's default video is a test pattern with a receipt written by the check,
 
 Image-to-video; stopping a run on Kaggle; following a run across a restart; CogVideoX started from the page, whose script took the same change but was not run this way; reference images and reusable elements in this workspace; a receipt kept with the project rather than in this browser, and it is not recorded as lineage; refusing a placement on a locked track is written but not exercised by the check; a person's check of how this reads and feels.
 
-Model facts on the page are what has been run, from `first-ai-video.md`: sizes, frames, rates and times, not everything each model can do.
+Model facts on the page are what has been run: sizes, frames, rates and times, not everything each model can do. CogVideoX's are from `first-ai-video.md`; Wan's 19 minutes is the real run from the page, in `kaggle-page-run-receipt.json`.
 
 ## What was studied
 

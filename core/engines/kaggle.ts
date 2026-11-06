@@ -97,7 +97,7 @@ const SCRIPTS = fileURLToPath(
 const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 // The one line of a script that a run's prompt and seed replace.
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
-const FOLDER_PREFIX = "yamakan-kaggle-";
+const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
 
 const sha256 = (data: string | Uint8Array) =>
@@ -153,6 +153,19 @@ const CLI_ENVIRONMENT = [
   "APPDATA",
   "LOCALAPPDATA",
   "XDG_CONFIG_HOME",
+  "windir",
+  // A network the CLI works on in the person's terminal must work here too.
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "ALL_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "all_proxy",
+  "no_proxy",
+  "REQUESTS_CA_BUNDLE",
+  "CURL_CA_BUNDLE",
+  "SSL_CERT_FILE",
 ];
 export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {
   const env: NodeJS.ProcessEnv = { PYTHONUTF8: "1" };
@@ -175,7 +188,12 @@ export function kaggleCli(file: string): KaggleCli {
           env: kaggleCliEnvironment(process.env),
         },
         (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr || error.message));
+          if (error)
+            reject(
+              new Error(
+                stderr || `The Kaggle CLI failed (${error.code ?? "stopped"}).`,
+              ),
+            );
           else resolve({ stdout });
         },
       );
@@ -183,6 +201,8 @@ export function kaggleCli(file: string): KaggleCli {
 }
 
 const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
+// Kaggle's words for a notebook that does not exist, or a pull of one, as tried.
+const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
@@ -193,6 +213,8 @@ type Run = {
   startedAt: number;
   folder: string;
   ended?: ExecutionStatus["state"];
+  // Said beside every answer: the run goes on whatever this says.
+  warning?: string;
   endedWith?: string;
   video?: { file: string; artifact: Artifact };
   // One question at a time: a slow one must not undo the answer to another.
@@ -204,13 +226,13 @@ export function notebookUrl(username: string, recipe: KaggleRecipe) {
 }
 
 // Folders from earlier sessions: a run's video, or a failed push's script.
-async function sweepOldFolders(now: number) {
-  const entries = await readdir(tmpdir()).catch(() => [] as string[]);
+async function sweepOldFolders(root: string, now: number) {
+  const entries = await readdir(root).catch(() => [] as string[]);
   await Promise.all(
     entries
       .filter((name) => name.startsWith(FOLDER_PREFIX))
       .map(async (name) => {
-        const folder = path.join(tmpdir(), name);
+        const folder = path.join(root, name);
         const { mtimeMs } = await stat(folder);
         if (now - mtimeMs > FOLDER_KEEP_MS)
           await rm(folder, { recursive: true, force: true });
@@ -226,12 +248,14 @@ export function createKaggleEngine(options: {
   scriptFor?: (recipe: KaggleRecipe) => Promise<string>;
   download?: (recipe: KaggleRecipe, folder: string) => Promise<void>;
   now?: () => number;
+  folderRoot?: string;
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
     throw new Error("That is not a Kaggle username.");
   const now = options.now ?? Date.now;
-  void sweepOldFolders(now());
+  const folderRoot = options.folderRoot ?? tmpdir();
+  void sweepOldFolders(folderRoot, now());
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
@@ -299,7 +323,9 @@ export function createKaggleEngine(options: {
   async function finish(run: Run): Promise<ExecutionStatus> {
     const { folder, receipt } = await collect(run);
     if (receipt.runId !== run.runId) {
-      // An earlier run's answer, before this one's has replaced it.
+      // An earlier run's answer, before this one's has replaced it. Its receipt holds
+      // that run's prompt, so it does not stay.
+      await rm(folder, { recursive: true, force: true });
       if (settling(run)) return waiting(run);
       await keepOnly(run);
       return end(run, "failed", "Kaggle's latest run is not this one.");
@@ -342,7 +368,15 @@ export function createKaggleEngine(options: {
       if (state === "QUEUED" || state === "NEW_SCRIPT") return waiting(run);
       if (state === "RUNNING")
         return { executionRef: run.runId, state: "running" };
-      if (state === "COMPLETE") return await finish(run);
+      if (state === "COMPLETE") {
+        try {
+          return await finish(run);
+        } catch (e) {
+          if (settling(run)) throw e;
+          await keepOnly(run);
+          return end(run, "failed", "The run ended without a readable result.");
+        }
+      }
       if (state === "ERROR") {
         const left = await collect(run).catch(() => null);
         const ours = left?.receipt.runId === run.runId;
@@ -382,12 +416,15 @@ export function createKaggleEngine(options: {
     }
   };
 
-  const check = (run: Run): Promise<ExecutionStatus> => {
-    if (run.ended) return Promise.resolve(status(run));
-    run.asking ??= ask(run).finally(() => {
-      run.asking = undefined;
-    });
-    return run.asking;
+  const check = async (run: Run): Promise<ExecutionStatus> => {
+    if (!run.ended)
+      run.asking ??= ask(run).finally(() => {
+        run.asking = undefined;
+      });
+    const answer = run.ended ? status(run) : await run.asking!;
+    return run.warning && !answer.diagnostic
+      ? { ...answer, diagnostic: run.warning }
+      : answer;
   };
 
   const runOf = (ref: string) => {
@@ -397,38 +434,9 @@ export function createKaggleEngine(options: {
     return run;
   };
 
-  // Whether its notebook can take a run. Kaggle not knowing it means it is new.
-  async function assertFree(recipe: KaggleRecipe) {
-    const busy = () =>
-      new CommandError(
-        "CAPABILITY_UNAVAILABLE",
-        "This model's notebook is still running. Wait for it to finish, or stop it on Kaggle.",
-      );
-    for (const run of runs.values())
-      if (
-        run.recipe === recipe &&
-        !run.ended &&
-        now() - run.startedAt < recipe.timeoutSeconds * 1000
-      )
-        throw busy();
-    let state: string | null = null;
-    try {
-      state = await remoteState(recipe);
-    } catch (e) {
-      if (!/404|not found/i.test((e as Error).message))
-        throw new CommandError(
-          "CAPABILITY_UNAVAILABLE",
-          diagnostic(
-            `Could not ask Kaggle whether this notebook is free: ${(e as Error).message}`,
-          ) ?? "Could not ask Kaggle whether this notebook is free.",
-        );
-    }
-    if (state === "RUNNING" || state === "QUEUED" || state === "NEW_SCRIPT")
-      throw busy();
-  }
-
-  // Kaggle's own answer on this notebook, not what was asked of it.
-  async function assertPrivate(recipe: KaggleRecipe, folder: string) {
+  // Kaggle's own answer on a notebook's privacy, not what was asked of it. A pull
+  // brings the script too, with its prompt, so nothing of it stays.
+  async function reportedPrivate(recipe: KaggleRecipe, folder: string) {
     const pulled = path.join(folder, "pulled");
     await mkdir(pulled);
     try {
@@ -439,14 +447,49 @@ export function createKaggleEngine(options: {
       const metadata = JSON.parse(
         await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
       );
-      if (metadata.is_private !== true)
-        throw new Error(
-          "Kaggle does not report this notebook as private. Check it on Kaggle before running again.",
-        );
+      return metadata.is_private === true;
     } finally {
-      // A pull brings the script too, with its prompt.
       await rm(pulled, { recursive: true, force: true });
     }
+  }
+  const NOT_PRIVATE =
+    "Kaggle does not report this notebook as private. Check it on Kaggle before running again.";
+
+  // Whether its notebook can take this prompt: nothing goes to one that is running,
+  // or that Kaggle does not report as private.
+  async function assertFree(recipe: KaggleRecipe, folder: string) {
+    const busy = () =>
+      new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        "This model's notebook is still running. Wait for it to finish, or stop it on Kaggle.",
+      );
+    // Kaggle may not yet show a run just pushed.
+    for (const run of runs.values())
+      if (run.recipe === recipe && !run.ended && settling(run)) throw busy();
+    let state: string;
+    try {
+      state = await remoteState(recipe);
+    } catch (e) {
+      if (NO_SUCH_NOTEBOOK.test((e as Error).message)) return;
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        diagnostic(
+          `Could not ask Kaggle whether this notebook is free: ${(e as Error).message}`,
+        ) ?? "Could not ask Kaggle whether this notebook is free.",
+      );
+    }
+    if (state === "RUNNING" || state === "QUEUED" || state === "NEW_SCRIPT")
+      throw busy();
+    let answer: boolean;
+    try {
+      answer = await reportedPrivate(recipe, folder);
+    } catch (e) {
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        "Could not confirm that this notebook is private, so nothing was sent.",
+      );
+    }
+    if (!answer) throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
   }
 
   return {
@@ -476,10 +519,10 @@ export function createKaggleEngine(options: {
       pushing.add(recipe.id);
       let folder: string | null = null;
       try {
+        folder = await mkdtemp(path.join(folderRoot, FOLDER_PREFIX));
         // Its notebook has one latest run: another would hide this one's result.
-        await assertFree(recipe);
+        await assertFree(recipe, folder);
         const runId = randomUUID();
-        folder = await mkdtemp(path.join(tmpdir(), FOLDER_PREFIX));
         const push = path.join(folder, "push");
         await mkdir(push);
         await writeFile(
@@ -517,15 +560,16 @@ export function createKaggleEngine(options: {
         await rm(push, { recursive: true, force: true });
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
-        await assertPrivate(recipe, folder).catch((e) => {
-          end(
-            run,
-            "failed",
-            /private/i.test((e as Error).message)
-              ? (e as Error).message
-              : "Could not confirm that this notebook is private. Check it on Kaggle.",
-          );
-        });
+        // It has gone and it is running, whatever this says: so this warns, it does
+        // not end what is still happening.
+        await reportedPrivate(recipe, folder)
+          .then((answer) => {
+            if (!answer) run.warning = NOT_PRIVATE;
+          })
+          .catch(() => {
+            run.warning =
+              "Could not confirm that this notebook is private. Check it on Kaggle.";
+          });
         return { executionRef: runId };
       } catch (e) {
         if (folder)

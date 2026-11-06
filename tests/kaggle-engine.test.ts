@@ -6,6 +6,10 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  mkdirSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,7 +27,12 @@ import {
 import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
 import { CREATE_MODELS } from "../src/create/create-model.ts";
 
+const folderRoot = mkdtempSync(path.join(tmpdir(), "kaggle-engine-test-"));
+test.after(() => rmSync(folderRoot, { recursive: true, force: true }));
 const wan = KAGGLE_RECIPES[0];
+// What the real CLI says of a notebook that does not exist, as tried on 2026-11-06.
+const MISSING =
+  "Cannot access kernel 'someone/x' (Permission 'kernels.get' was denied). The most likely cause is a wrong kernel slug.";
 const SCRIPT = 'import os\nBRIEF = {}  # yamakan:brief\nprint("x")\n';
 const VIDEO = Buffer.from("not really a video, for the test");
 const hash = createHash("sha256").update(VIDEO).digest("hex");
@@ -74,7 +83,7 @@ function kaggle(
   const cli: KaggleCli = async (args) => {
     calls.push(args);
     if (args[1] === "status") {
-      if (pushes === 0) throw new Error("404 no such notebook");
+      if (pushes === 0) throw new Error(MISSING);
       const state = states.length > 1 ? states.shift() : states[0];
       if (state === "FAIL") throw new Error("network down");
       return { stdout: `has status "KernelWorkerStatus.${state}"` };
@@ -105,6 +114,7 @@ function kaggle(
   const engine = createKaggleEngine({
     cli,
     username: "someone",
+    folderRoot,
     scriptFor: async () => SCRIPT,
     download: async (_r, folder) => leave?.(runId, folder),
     ...(clock ? { now: clock } : {}),
@@ -281,10 +291,11 @@ test("after a while, another run's result is a failure", async () => {
         );
         return { stdout: "" };
       }
-      if (!pushes) throw new Error("404 none");
+      if (!pushes) throw new Error(MISSING);
       return { stdout: "KernelWorkerStatus.COMPLETE" };
     },
     username: "someone",
+    folderRoot,
     scriptFor: async () => SCRIPT,
     download: async (_r, folder) => good("someone-else", folder),
     now: () => time,
@@ -377,9 +388,10 @@ test("a push Kaggle did not take is an error, and nothing is tracked", async () 
     cli: async (args) => {
       if (args[1] === "push")
         throw new Error("Maximum batch GPU quota reached");
-      throw new Error("404 none");
+      throw new Error(MISSING);
     },
     username: "someone",
+    folderRoot,
     scriptFor: async () => SCRIPT,
   });
   await assert.rejects(
@@ -432,13 +444,199 @@ test("two starts at once make one push", async () => {
   assert.equal(k.calls.filter((c) => c[1] === "push").length, 1);
 });
 
-test("a run still going here is not replaced, even if Kaggle says it ended", async () => {
+test("just after a push, a notebook is busy even if Kaggle says it ended", async () => {
   const k = kaggle(["COMPLETE"]);
   await k.engine.submit(request(), context as never);
   await assert.rejects(
     k.engine.submit(request(), context as never),
     /still running/,
   );
+});
+
+test("after Stop following, Kaggle decides whether the notebook is free", async () => {
+  let time = 0;
+  const k = kaggle(["RUNNING", "COMPLETE"], undefined, {
+    clock: () => time,
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  await k.engine.requestCancel(executionRef);
+  time = 5 * 60 * 1000;
+  await assert.rejects(
+    k.engine.submit(request(), context as never),
+    /still running/,
+  );
+  const again = await k.engine.submit(request(), context as never);
+  assert.ok("executionRef" in again, "once Kaggle says it ended");
+});
+
+for (const state of ["QUEUED", "NEW_SCRIPT"]) {
+  test(`a notebook Kaggle says is ${state} is not replaced`, async () => {
+    let pushes = 0;
+    const engine = createKaggleEngine({
+      cli: async (args) => {
+        if (args[1] === "push") pushes++;
+        return { stdout: `KernelWorkerStatus.${state}` };
+      },
+      username: "someone",
+      folderRoot,
+      scriptFor: async () => SCRIPT,
+    });
+    await assert.rejects(
+      engine.submit(request(), context as never),
+      /still running/,
+    );
+    assert.equal(pushes, 0);
+  });
+}
+
+test("a notebook Kaggle does not know is a new one", async () => {
+  const k = kaggle(["QUEUED"]);
+  assert.ok(
+    "executionRef" in (await k.engine.submit(request(), context as never)),
+  );
+  assert.ok(
+    !k.calls.slice(0, 1).some((c) => c[1] === "pull"),
+    "nothing to read yet",
+  );
+});
+
+test("nothing goes to a notebook not reported as private", async () => {
+  const calls: string[] = [];
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      calls.push(args[1]);
+      if (args[1] === "pull") {
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: false }),
+        );
+        return { stdout: "" };
+      }
+      return { stdout: "KernelWorkerStatus.COMPLETE" };
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(
+    engine.submit(request(), context as never),
+    /does not report this notebook as private/,
+  );
+  assert.ok(!calls.includes("push"));
+});
+
+test("nothing goes if privacy cannot be read", async () => {
+  const calls: string[] = [];
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      calls.push(args[1]);
+      if (args[1] === "pull") throw new Error("network down");
+      return { stdout: "KernelWorkerStatus.COMPLETE" };
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(
+    engine.submit(request(), context as never),
+    /Could not confirm/,
+  );
+  assert.ok(!calls.includes("push"));
+});
+
+test("a permission problem that is not a missing notebook stops a push", async () => {
+  const calls: string[] = [];
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      calls.push(args[1]);
+      throw new Error("403 Client Error: Forbidden 404");
+    },
+    username: "abc404",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(engine.submit(request(), context as never));
+  assert.deepEqual(calls, ["status"]);
+});
+
+test("a finished run keeps only its video", async () => {
+  let where = "";
+  const k = kaggle(["COMPLETE"], (runId, folder) => {
+    where = folder;
+    good(runId, folder);
+    writeFileSync(path.join(folder, "run.log"), "the prompt");
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  assert.equal((await k.engine.status(executionRef)).state, "succeeded");
+  assert.deepEqual(readdirSync(where), [wan.output]);
+  assert.deepEqual(readdirSync(path.dirname(where)), ["output"], "no script");
+});
+
+test("an earlier run's receipt does not stay either", async () => {
+  let where = "";
+  const k = kaggle(["COMPLETE"], (_id, folder) => {
+    where = folder;
+    good("someone-else", folder);
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  await k.engine.status(executionRef);
+  assert.ok(!existsSync(where));
+});
+
+test("a receipt too large to be one is refused", async () => {
+  let time = 0;
+  const k = kaggle(
+    ["COMPLETE"],
+    (_id, folder) =>
+      writeFileSync(
+        path.join(folder, "receipt.json"),
+        "x".repeat(2 * 1024 * 1024),
+      ),
+    { clock: () => time },
+  );
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  assert.equal((await k.engine.status(executionRef)).state, "unknown");
+  time = 10 * 60 * 1000;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, /readable result/);
+});
+
+test("old folders are swept, and only this engine's", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "kaggle-sweep-test-"));
+  try {
+    const old = path.join(root, "yamakan-kaggle-work-old");
+    const recent = path.join(root, "yamakan-kaggle-work-recent");
+    const other = path.join(root, "yamakan-kaggle-run-other");
+    for (const f of [old, recent, other]) mkdirSync(f);
+    const long = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    utimesSync(old, long, long);
+    utimesSync(other, long, long);
+    createKaggleEngine({
+      cli: async () => ({ stdout: "" }),
+      username: "someone",
+      folderRoot: root,
+    });
+    await new Promise((r) => setTimeout(r, 200));
+    assert.ok(!existsSync(old));
+    assert.ok(existsSync(recent));
+    assert.ok(existsSync(other));
+    assert.ok(statSync(recent).isDirectory());
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("not being able to ask stops a push", async () => {
@@ -449,6 +647,7 @@ test("not being able to ask stops a push", async () => {
       throw new Error("network down");
     },
     username: "someone",
+    folderRoot,
     scriptFor: async () => SCRIPT,
   });
   await assert.rejects(
@@ -484,10 +683,11 @@ test("questions at once share one answer", async () => {
         );
         return { stdout: "" };
       }
-      if (!pushes) throw new Error("404");
+      if (!pushes) throw new Error(MISSING);
       return { stdout: "KernelWorkerStatus.COMPLETE" };
     },
     username: "someone",
+    folderRoot,
     scriptFor: async () => SCRIPT,
     download: async (_r, folder) => {
       downloads++;
@@ -507,15 +707,15 @@ test("questions at once share one answer", async () => {
   assert.equal(downloads, 1);
 });
 
-test("a notebook Kaggle does not report as private ends the run", async () => {
+test("if Kaggle does not report it private after the push, the run goes on and says so", async () => {
   const k = kaggle(["RUNNING"], undefined, { privateAnswer: false });
   const { executionRef } = (await k.engine.submit(
     request(),
     context as never,
   )) as any;
   const answer = await k.engine.status(executionRef);
-  assert.equal(answer.state, "failed");
-  assert.match(answer.diagnostic!, /private/);
+  assert.equal(answer.state, "running");
+  assert.match(answer.diagnostic!, /does not report this notebook as private/);
 });
 
 test("the prompt does not stay on this computer", async () => {
@@ -557,6 +757,8 @@ test("the CLI gets its settings, not this service's environment", () => {
     PATH: "p",
     USERPROFILE: "u",
     KAGGLE_CONFIG_DIR: "k",
+    HTTPS_PROXY: "x",
+    https_proxy: "y",
     YAMAKAN_SECRET: "no",
     GITHUB_TOKEN: "no",
     AWS_SECRET_ACCESS_KEY: "no",
@@ -566,6 +768,8 @@ test("the CLI gets its settings, not this service's environment", () => {
     PATH: "p",
     USERPROFILE: "u",
     KAGGLE_CONFIG_DIR: "k",
+    HTTPS_PROXY: "x",
+    https_proxy: "y",
   });
 });
 
