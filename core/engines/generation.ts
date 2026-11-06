@@ -169,6 +169,13 @@ export function createGenerationService(options: {
     store.read((db) =>
       assertLinkedMediaGeneratable(db, hashes, (options.now ?? Date.now)()),
     );
+  // An engine that says where a run goes is sending it there.
+  const permittedToSend = (hashes: string[]) =>
+    store.read((db) =>
+      assertLinkedMediaGeneratable(db, hashes, (options.now ?? Date.now)(), {
+        leavesThisComputer: Boolean(adapter.location),
+      }),
+    );
 
   const tracked = (id: string) => {
     const g = ledger.read(id);
@@ -372,7 +379,7 @@ export function createGenerationService(options: {
           request.firstFrameAssetId,
         );
         // A person's media goes to an engine only while their consent allows it.
-        permitted([asset.hash]);
+        permittedToSend([asset.hash]);
         const mediaType = MEDIA_TYPES[asset.extension];
         if (!mediaType)
           throw new CommandError(
@@ -479,7 +486,7 @@ export function createGenerationService(options: {
               const file = held.get(asset.assetVersionId);
               if (!file) throw new Error("An input is not this request's.");
               // Checked again as it is about to be read for the engine.
-              permitted([asset.sha256]);
+              permittedToSend([asset.sha256]);
               return createReadStream(file);
             },
           },
