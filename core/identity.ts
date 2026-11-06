@@ -104,6 +104,9 @@ export type IdentityApplication = z.infer<typeof IdentityApplicationSchema>;
 export const ConsentPurposeSchema = z.enum([
   "identity-encode",
   "likeness-generate",
+  // That a person's image may leave this computer for an engine elsewhere. The founder
+  // chose this to be separate: consent to generate does not say where.
+  "likeness-send",
   "voice-clone",
 ]);
 export type ConsentPurpose = z.infer<typeof ConsentPurposeSchema>;

@@ -381,11 +381,15 @@ export function assertLinkedMediaNotRevoked(
  * person's image media reaches this: a voice entry's purpose differs, and would
  * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
+ *
+ * For an engine elsewhere, each of those characters also needs consent to send: their
+ * newest, usable now. An older grant does not outlive a newer one being revoked.
  */
 export function assertLinkedMediaGeneratable(
   db: DatabaseSync,
   hashes: readonly string[],
   nowMs: number,
+  options: { leavesThisComputer?: boolean } = {},
 ) {
   if (!hashes.length) return;
   const wanted = new Set(hashes);
@@ -426,7 +430,30 @@ export function assertLinkedMediaGeneratable(
           purpose: REFERENCE_CONSENT_PURPOSE,
           nowMs,
         });
+    if (options.leavesThisComputer) assertMaySend(db, characterId, nowMs);
   }
+}
+
+function assertMaySend(db: DatabaseSync, characterId: string, nowMs: number) {
+  const grants = db
+    .prepare(
+      "SELECT id, granted_at FROM likeness_consents WHERE character_id = ? AND purpose = ?",
+    )
+    .all(characterId, "likeness-send") as { id: string; granted_at: number }[];
+  if (!grants.length)
+    throw new CommandError(
+      "VALIDATION",
+      "No consent to send is recorded for the character this image is linked to, so it cannot leave this computer.",
+    );
+  const latest = Math.max(...grants.map((g) => g.granted_at));
+  // On an exact tie every one must pass.
+  for (const { id, granted_at } of grants)
+    if (granted_at === latest)
+      assertConsentUsable(db, id, {
+        characterId,
+        purpose: "likeness-send",
+        nowMs,
+      });
 }
 
 // How long each medium plays on each channel, whatever its clips' arrangement.
