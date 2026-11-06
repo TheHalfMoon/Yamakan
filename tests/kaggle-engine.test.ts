@@ -592,15 +592,22 @@ test("an earlier run's receipt does not stay either", async () => {
   assert.ok(!existsSync(where));
 });
 
-test("a receipt too large to be one is refused", async () => {
+test("a receipt too large to be one is refused, though it reads", async () => {
   let time = 0;
   const k = kaggle(
     ["COMPLETE"],
-    (_id, folder) =>
-      writeFileSync(
-        path.join(folder, "receipt.json"),
-        "x".repeat(2 * 1024 * 1024),
-      ),
+    (runId, folder) => {
+      good(runId, folder);
+      const big = {
+        runId,
+        stage: "done",
+        verified: true,
+        frames: wan.frames,
+        sha256: hash,
+        padding: "x".repeat(2 * 1024 * 1024),
+      };
+      writeFileSync(path.join(folder, "receipt.json"), JSON.stringify(big));
+    },
     { clock: () => time },
   );
   const { executionRef } = (await k.engine.submit(
@@ -612,6 +619,117 @@ test("a receipt too large to be one is refused", async () => {
   const answer = await k.engine.status(executionRef);
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /readable result/);
+});
+
+test("failing to fetch a result is tried again, however late", async () => {
+  let time = 0;
+  let tries = 0;
+  const k = kaggle(
+    ["COMPLETE"],
+    (runId, folder) => {
+      tries++;
+      if (tries === 1) throw new Error("connection reset");
+      good(runId, folder);
+    },
+    { clock: () => time },
+  );
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  time = 10 * 60 * 1000;
+  const first = await k.engine.status(executionRef);
+  assert.equal(first.state, "unknown");
+  assert.match(first.diagnostic!, /connection reset/);
+  assert.equal((await k.engine.status(executionRef)).state, "succeeded");
+});
+
+test("a refusal from a notebook this service made is not a new notebook", async () => {
+  let time = 0;
+  const calls: string[] = [];
+  let pushes = 0;
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      calls.push(args[1]);
+      if (args[1] === "push") {
+        pushes++;
+        return { stdout: "successfully pushed" };
+      }
+      if (args[1] === "pull") {
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: true }),
+        );
+        return { stdout: "" };
+      }
+      throw new Error(MISSING);
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+    now: () => time,
+  });
+  await engine.submit(request(), context as never);
+  time = 5 * 60 * 1000;
+  await assert.rejects(
+    engine.submit(request(), context as never),
+    /Could not ask Kaggle/,
+  );
+  assert.equal(pushes, 1);
+});
+
+test("if privacy cannot be read after the push, the run goes on and says so", async () => {
+  let pushes = 0;
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      if (args[1] === "push") {
+        pushes++;
+        return { stdout: "successfully pushed" };
+      }
+      if (args[1] === "pull") throw new Error("network down");
+      if (!pushes) throw new Error(MISSING);
+      return { stdout: "KernelWorkerStatus.RUNNING" };
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  const { executionRef } = (await engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await engine.status(executionRef);
+  assert.equal(answer.state, "running");
+  assert.match(answer.diagnostic!, /Could not confirm/);
+});
+
+test("a failed run leaves nothing here", async () => {
+  let where = "";
+  const k = kaggle(["COMPLETE"], (runId, folder) => {
+    where = folder;
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({ runId, stage: "done", verified: false, prompt: "x" }),
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  assert.equal((await k.engine.status(executionRef)).state, "failed");
+  assert.ok(!existsSync(path.dirname(where)));
+});
+
+test("a refused start leaves no folder", async () => {
+  const before = readdirSync(folderRoot).length;
+  const engine = createKaggleEngine({
+    cli: async () => ({ stdout: "KernelWorkerStatus.RUNNING" }),
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(engine.submit(request(), context as never));
+  assert.equal(readdirSync(folderRoot).length, before);
 });
 
 test("old folders are swept, and only this engine's", async () => {

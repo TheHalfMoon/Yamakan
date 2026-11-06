@@ -227,3 +227,29 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - A chained command pushed past a failed brand check once, to a draft branch. Gates are now read before committing.
 
 **Next, independent of a model:** SS-015's remaining items, SS-017's launch error, SS-005b and SS-009's remaining items. **With a model:** a pinned recipe, connecting the setup check, and a start control.
+
+## Checkpoint: real AI video from Yamakan's own page
+
+| Work                                             | State                                                      | Evidence                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First real AI video, CogVideoX-2b on Kaggle      | Merged                                                     | [PR #200](https://github.com/TheHalfMoon/Yamakan/pull/200), [PR #201](https://github.com/TheHalfMoon/Yamakan/pull/201), merge `e35babb86b8026f076b4957cdb87e80dcaacfdd7`. **#201 was merged before its independent review, against `AGENTS.md`.** The review ran afterwards and its corrections are in #202 |
+| Wan2.2 on Kaggle, stronger AI video check        | Merged                                                     | [PR #202](https://github.com/TheHalfMoon/Yamakan/pull/202), merge `6e224b322d29270f834f848460017a7605715a2b`                                                                                                                                                                                                |
+| Create workspace                                 | Merged                                                     | [PR #205](https://github.com/TheHalfMoon/Yamakan/pull/205), merge `620a0f5a703c7c9a4d18133dcc8bee7a00b59b02`. Main's CI passed on a re-run: the first attempt was cancelled when `apt-get` hung for 35 minutes, before any test                                                                             |
+| Generating from the page, on the person's Kaggle | [PR #206](https://github.com/TheHalfMoon/Yamakan/pull/206) | `npm run qualify:kaggle`: receipt in `docs/evidence/ultimate/kaggle-page-run-receipt.json`                                                                                                                                                                                                                  |
+
+**True now:** with `YAMAKAN_KAGGLE_CLI` and `YAMAKAN_KAGGLE_USERNAME` set, a person can write a shot, agree that its prompt leaves the computer, generate with Wan2.2-TI2V-5B on their private Kaggle notebook, bring the video in, place it, and export. Local generation is still off: `ENGINE_ENABLED` is false and no local recipe is pinned. Release is NO-GO.
+
+**Founder's decisions on 2026-11-06:** "Yes, follow it" to the Craft Anything × Higgsfield brief (issue #203), and "Yamakan drives Kaggle". See `docs/FOUNDER_DECISION_RECORD.md`.
+
+**Still to do for issue #203:** keep the shot and receipt in the project, not this browser; reference images and reusable elements; image-to-video; CogVideoX from the page, which also tests a first run on a new notebook; the panel's failure, stop and restart screens in a browser; pixel comparison against a baseline. [Draft PR #204](https://github.com/TheHalfMoon/Yamakan/pull/204), the lens preview, is someone else's and untouched.
+
+**Open findings added:**
+
+- Exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in RGB. Cause not looked at.
+- Wan at 41 frames snapped to a different picture for its last 3 frames, with tiling on or off. 81 frames did not, on one prompt and seed. Why was not worked out.
+- Kaggle's public interface cannot stop a run, and a restart loses a run in progress.
+- `qualify:create` and `qualify:kaggle` are not in CI. Unit tests of the engine are.
+- `apt-get` hanging in `qualify` cancels whole CI runs, and a cancelled main run says nothing either way. Check main's conclusion after every merge.
+- Native Arabic review, X-01, is still open for the new text.
+
+**Do not repeat:** several reviews of the frame check and of the Kaggle engine each found real defects after green runs, including false claims of the builder's. Keep the delta review. This PC runs short of memory with several browsers or reviewers at once: one at a time, and no short `timeout` around a build.

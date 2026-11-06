@@ -207,6 +207,10 @@ const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 const FOLDER_KEEP_MS = 24 * 60 * 60 * 1000;
 
+// What a finished run left cannot be read. Failing to fetch it is not this: that
+// can be tried again.
+class Unreadable extends Error {}
+
 type Run = {
   recipe: KaggleRecipe;
   runId: string;
@@ -259,6 +263,8 @@ export function createKaggleEngine(options: {
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
+  // Notebooks this service knows exist, whatever Kaggle says about them now.
+  const pushed = new Set<string>();
   const scriptFor =
     options.scriptFor ?? ((r: KaggleRecipe) => readFile(scriptOf(r), "utf8"));
   const remote = (r: KaggleRecipe) => `${username}/${r.slug}`;
@@ -300,9 +306,13 @@ export function createKaggleEngine(options: {
     await mkdir(folder, { recursive: true });
     await download(run.recipe, folder);
     const file = path.join(folder, "receipt.json");
-    if ((await stat(file)).size > RECEIPT_BYTES)
-      throw new Error("That receipt is too large to be one.");
-    return { folder, receipt: JSON.parse(await readFile(file, "utf8")) };
+    try {
+      if ((await stat(file)).size > RECEIPT_BYTES)
+        throw new Error("That receipt is too large to be one.");
+      return { folder, receipt: JSON.parse(await readFile(file, "utf8")) };
+    } catch (e) {
+      throw new Unreadable((e as Error).message);
+    }
   }
 
   const hashOf = async (file: string) => {
@@ -343,7 +353,10 @@ export function createKaggleEngine(options: {
     if (receipt.frames !== run.recipe.frames)
       return failed("The run made a different length from the one asked for.");
     const file = path.join(folder, run.recipe.output);
-    const { size } = await stat(file);
+    const size = await stat(file).then(
+      (found) => found.size,
+      () => 0,
+    );
     if (size < 1 || size > ENGINE_V2_LIMITS.artifactBytes)
       return failed("The video is not a size this can take.");
     const hash = await hashOf(file);
@@ -372,7 +385,7 @@ export function createKaggleEngine(options: {
         try {
           return await finish(run);
         } catch (e) {
-          if (settling(run)) throw e;
+          if (!(e instanceof Unreadable) || settling(run)) throw e;
           await keepOnly(run);
           return end(run, "failed", "The run ended without a readable result.");
         }
@@ -422,9 +435,13 @@ export function createKaggleEngine(options: {
         run.asking = undefined;
       });
     const answer = run.ended ? status(run) : await run.asking!;
-    return run.warning && !answer.diagnostic
-      ? { ...answer, diagnostic: run.warning }
-      : answer;
+    if (!run.warning) return answer;
+    return {
+      ...answer,
+      diagnostic: diagnostic(
+        answer.diagnostic ? `${run.warning} ${answer.diagnostic}` : run.warning,
+      ),
+    };
   };
 
   const runOf = (ref: string) => {
@@ -470,7 +487,10 @@ export function createKaggleEngine(options: {
     try {
       state = await remoteState(recipe);
     } catch (e) {
-      if (NO_SUCH_NOTEBOOK.test((e as Error).message)) return;
+      // The CLI says this of any refusal, so it means new only if nothing here says
+      // otherwise. Kaggle's words cannot tell these apart after a restart.
+      if (NO_SUCH_NOTEBOOK.test((e as Error).message) && !pushed.has(recipe.id))
+        return;
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         diagnostic(
@@ -558,6 +578,7 @@ export function createKaggleEngine(options: {
           throw new Error(stdout.slice(0, ENGINE_V2_LIMITS.diagnosticChars));
         // It has gone: from here a problem is this run's, reported by this run.
         await rm(push, { recursive: true, force: true });
+        pushed.add(recipe.id);
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
         // It has gone and it is running, whatever this says: so this warns, it does
