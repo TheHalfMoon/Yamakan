@@ -157,3 +157,11 @@ Approval line in the packet's format:
 - **Shown with that choice:** a prompt, and any reference image, leaves this PC for the founder's private Kaggle notebook. Each run states this and a person starts it. It uses the founder's free quota, about 6 to 20 minutes a clip. It was said to change the earlier "cloud off" decision for this one route.
 - **Built so far, within that:** text to video only, so no media leaves. No token is read by Yamakan: the person's own Kaggle CLI uses it. No weights come to this PC.
 - **Unchanged:** commercial providers stay off, spending zero, frozen resource limits, release NO-GO, consent rules for a person's media. Each model is offered only after its own run from Yamakan is tested.
+
+## 2026-11-06: A reference image travels inside the run's brief
+
+- **Source and form:** chat to Claude Opus in Claude Code. Asked "Should a reference image travel to Kaggle inside the run's brief?", the founder answered "Yes, in the brief".
+- **Shown with that question:** this needs no new Kaggle object, and the image stays in the notebook's history, as prompts already do. A private dataset was said arguably to go beyond the recorded permission, which names a private notebook.
+- **Built within that:** the path, with its recipe not offered. No image has left this PC.
+- **Not decided by this:** whether `likeness-generate` consent covers sending an image to Kaggle; how a fictional character is stored; whether media with revoked consent may be kept as a place or prop.
+- **Unchanged:** each run states what leaves and a person starts it, each model is offered only after its own run from Yamakan is tested, commercial providers stay off, spending zero, frozen resource limits, release NO-GO.

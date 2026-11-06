@@ -282,9 +282,10 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 1. How a fictional or drawn character is stored. The `character` role requires a usable consent, so it cannot be kept without recording one for it, and the page offers neither. Filing it as a prop works, and mislabels it.
 2. Whether `likeness-generate` consent covers sending an image to Kaggle. It does not separate use on this computer from leaving it.
-3. How an image reaches the notebook. Embedding it in the run's brief needs no new Kaggle object, and it stays in the notebook's history as the prompt does. A private dataset arguably goes beyond the recorded permission, which names a private notebook.
 
 **Already in main, for the founder to confirm or refuse:** since PR #212, media whose consent was revoked can be kept and shown as a place, prop, wardrobe or style. Placing and generating from those exact bytes stay refused. The founder's decision of 2026-11-05, as `docs/evidence/ultimate/consent-gate.md` describes it, asks that a revoked photo not be placed or used, and whether keeping it counts as use was not decided.
+
+**Image-to-video, not offered:** the founder chose that an image travels inside the run's brief. The recipe `kaggle-wan22-ti2v-5b-first-frame` and its own script exist with `offered: false`, so no page or command reaches them, and no image has left this PC. They are tested with stand-ins only. diffusers 0.36.0's pipeline was read for this; it has never been run. Whether Kaggle accepts a script carrying an image of up to 4 MB, its memory use, and its time are all unknown. Before it is offered: one real run, the page's control for choosing a frame, the agreement's words saying the image leaves, and the founder's answer on consent above.
 
 **Next:** what remains of the brief waits on the GPU quota or on the founder's decisions above. Elements cannot yet reach a model, and no engine is enabled.
 
