@@ -3,60 +3,64 @@
   "task": "generation-from-yamakan-on-kaggle",
   "prompt": "A red kite flies above a green hill under a clear blue sky.",
   "seed": 7,
-  "head": "734923f5d017b040c40c9a6df5ed6a29161f7d54",
+  "head": "257a21ccb5c8d1e7eb9057d0201cbd32d98b1bea",
   "dirty": false,
   "passed": true,
   "failure": null,
   "steps": [
     {
       "name": "the agreement is readable in its place",
-      "at": "2026-11-06T02:00:59.446Z"
+      "at": "2026-11-06T03:39:58.787Z"
     },
     {
       "name": "started from the page, after agreeing the prompt leaves this computer",
-      "at": "2026-11-06T02:01:12.627Z"
+      "at": "2026-11-06T03:40:12.869Z"
     },
     {
       "name": "Kaggle says queued",
-      "afterSeconds": 0.006,
-      "at": "2026-11-06T02:01:12.866Z"
+      "afterSeconds": 0.004,
+      "at": "2026-11-06T03:40:13.031Z"
     },
     {
       "name": "Kaggle says running",
-      "afterSeconds": 10.027,
-      "at": "2026-11-06T02:01:22.887Z"
+      "afterSeconds": 10.016,
+      "at": "2026-11-06T03:40:23.042Z"
     },
     {
       "name": "Kaggle says succeeded",
-      "afterSeconds": 1151.854,
-      "at": "2026-11-06T02:20:24.717Z"
+      "afterSeconds": 1091.648,
+      "at": "2026-11-06T03:58:24.676Z"
     },
     {
       "name": "the run finished, and its video passed its receipt",
-      "seconds": 1152.245,
-      "at": "2026-11-06T02:20:25.105Z"
+      "seconds": 1091.861,
+      "at": "2026-11-06T03:58:24.887Z"
     },
     {
       "name": "it came into the project, with this prompt and seed",
-      "at": "2026-11-06T02:20:27.694Z"
+      "at": "2026-11-06T03:58:28.909Z"
+    },
+    {
+      "name": "its record stays with the project, with this browser's storage cleared",
+      "at": "2026-11-06T03:58:29.790Z"
     },
     {
       "name": "placed whole on the Edit timeline",
       "frames": 101,
-      "at": "2026-11-06T02:20:30.568Z"
+      "at": "2026-11-06T03:58:32.559Z"
     },
     {
       "name": "exported from the toolbar, every frame",
       "width": 1280,
       "height": 720,
       "frames": 101,
-      "assetHash": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
-      "exportHash": "cde2fa6ca5d1b248c94f2927ddabe08ac906a1217f05bd2aaa238a26fb563e4d",
-      "at": "2026-11-06T02:20:34.723Z"
+      "assetHash": "7d9e66abce6fcd29b82927b68327c4463f8f984c1c365e25835607e1fea4714d",
+      "exportHash": "75761a1a88d01998b28eb1b689e000f8cdc94f5cc21c8e1e7e5aa054d321c1ae",
+      "at": "2026-11-06T03:58:34.593Z"
     },
     {
       "name": "no page errors",
-      "at": "2026-11-06T02:20:34.832Z"
+      "at": "2026-11-06T03:58:34.636Z"
     }
   ]
 }
