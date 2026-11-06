@@ -1121,6 +1121,62 @@ test("a status asked during a send leaves what the send is using", async () => {
   await f.s.close();
 });
 
+test("however long a send takes, a status during it asks Kaggle nothing", async () => {
+  const f = await fixture();
+  f.k.world.pushes.push({ runId: "older", prompt: "Older." });
+  f.k.world.state = "COMPLETE";
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start();
+  await atPush;
+  const [{ generationId: id }] = f.s.service.list(f.project.id);
+  // As if the laptop had slept: the record is long past the wait for a send.
+  f.clock.pass(10 * 60 * 1000);
+  const calls = f.k.world.calls;
+  assert.equal((await f.s.service.status(id)).state, "queued");
+  assert.equal(f.k.world.calls, calls);
+  release();
+  await first;
+  assert.equal(f.s.ledger.read(id)!.phase, "sent");
+  assert.notEqual(f.s.ledger.read(id)!.state, "failed");
+  assert.equal(f.k.world.pushes.at(-1)!.runId, id);
+  await f.s.close();
+});
+
+test("a status during a send that is refused does not hold up the next start", async () => {
+  const f = await fixture();
+  f.k.world.pushMode = "refused";
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start();
+  await atPush;
+  const [{ generationId: id }] = f.s.service.list(f.project.id);
+  await f.s.service.status(id);
+  release();
+  await assert.rejects(first, /Maximum GPU quota/);
+  f.k.world.beforePush = null;
+  f.k.world.pushMode = "ok";
+  await f.start("Started again by a person.");
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
 test("two questions at once after a restart are one question", async () => {
   const f = await fixture();
   const { generationId: id } = await f.start();

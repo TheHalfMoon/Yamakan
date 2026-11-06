@@ -514,6 +514,9 @@ export function createKaggleEngine(options: {
   }
 
   const ask = async (run: Run): Promise<ExecutionStatus> => {
+    // Anything Kaggle says now is of an earlier run, and acting on it could end this one
+    // or take the files it is being sent from. A question begun here ends with the send.
+    if (sendingNow.has(run.runId)) return waiting(run);
     if (run.foreign)
       return {
         executionRef: run.runId,
@@ -694,7 +697,8 @@ export function createKaggleEngine(options: {
         run.ended = "succeeded";
       }
     }
-    runs.set(ref, run);
+    // Being sent, it is the send's to record: if refused, it never was.
+    if (!sendingNow.has(ref)) runs.set(ref, run);
     return run;
   };
 

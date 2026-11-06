@@ -22,6 +22,7 @@ const validInput: Record<string, unknown> = {
     durationFrames: 24,
   },
   "yamakan.generation.cancel": { generationId: id },
+  "yamakan.generation.dismiss": { generationId: id },
   "yamakan.generation.import": { generationId: id },
   "yamakan.workspace.collectGarbage": {},
   "yamakan.asset.repair": { projectId: id, assetId: id },
