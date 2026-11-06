@@ -14,6 +14,38 @@ const en = {
   "nav.tools": "Agent tools",
   "workspace.label": "Workspaces",
   "workspace.create": "Create",
+  "create.kaggleSetup":
+    "To run it from here, start Yamakan with YAMAKAN_KAGGLE_CLI set to your Kaggle CLI's full path and YAMAKAN_KAGGLE_USERNAME to your username.",
+  "create.agree":
+    "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer, and Kaggle keeps it in the notebook's history. The video comes back here; the model stays on Kaggle.",
+  "create.needPrompt": "Describe the shot first.",
+  "create.notFromHere":
+    "This model has not yet been tested from this page, so it cannot be started here.",
+  "create.generate": "Generate on Kaggle",
+  "create.starting": "Sending it to Kaggle",
+  "create.startFailed": "The run could not be started.",
+  "create.runQueued": "{name} is waiting for a GPU on Kaggle.",
+  "create.runRunning": "{name} is running on Kaggle.",
+  "create.runDone":
+    "{name} finished. Its video was checked against its receipt.",
+  "create.runFailed": "{name} failed on Kaggle. No video came of it.",
+  "create.runCancelled": "This run was stopped on Kaggle.",
+  "create.runUnknown": "Kaggle is not answering. The run may still be going.",
+  "create.runStopped": "No longer following this run.",
+  "create.runLost": "Yamakan restarted, so it no longer knows this run.",
+  "create.runClock": "{elapsed} so far, of about {minutes} minutes",
+  "create.runStop": "Stop following",
+  "create.runStopNote":
+    "Yamakan cannot stop a run on Kaggle. Stop following leaves it running, up to its {minutes} minute limit, using your quota. To stop it there:",
+  "create.runGoesOn":
+    "It may still be running on Kaggle, up to its {minutes} minute limit, using your quota. To see or stop it:",
+  "create.openNotebook": "open its notebook",
+  "create.runBringIn": "Bring it into this project",
+  "create.bringInFailed":
+    "The video could not be brought in. The line at the top of the page says why; try again.",
+  "create.runBroughtIn": "{name} made this video. It is in the list here.",
+  "create.runRetry": "Try again",
+  "create.runDismiss": "Done",
   "create.seedInvalid": "A seed is a whole number from 0 to 4294967295.",
   "create.modelFacts":
     "Run so far at {width}x{height}, {frames} frames at {fps} fps ({seconds} s), about {minutes} minutes in all on a free Kaggle T4, the first load included. {licence}.",
@@ -427,6 +459,37 @@ const ar: Record<MessageKey, string> = {
   "nav.tools": "أدوات الوكلاء",
   "workspace.label": "مساحات العمل",
   "workspace.create": "إنشاء",
+  "create.kaggleSetup":
+    "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
+  "create.agree":
+    "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب، ويحتفظ به Kaggle في سجل الدفتر. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
+  "create.needPrompt": "صف اللقطة أولًا.",
+  "create.notFromHere":
+    "لم يُختبر هذا النموذج من هذه الصفحة بعد، فلا يمكن تشغيله من هنا.",
+  "create.generate": "إنتاج على Kaggle",
+  "create.starting": "جارٍ الإرسال إلى Kaggle",
+  "create.startFailed": "تعذر بدء التشغيل.",
+  "create.runQueued": "ينتظر {name} وحدة GPU على Kaggle.",
+  "create.runRunning": "يعمل {name} على Kaggle.",
+  "create.runDone": "انتهى {name}. جرى التحقق من الفيديو مقابل إيصاله.",
+  "create.runFailed": "فشل {name} على Kaggle. لم ينتج فيديو.",
+  "create.runCancelled": "أُوقف هذا التشغيل على Kaggle.",
+  "create.runUnknown": "لا يجيب Kaggle. قد يكون التشغيل مستمرًا.",
+  "create.runStopped": "توقفت متابعة هذا التشغيل.",
+  "create.runLost": "أعيد تشغيل Yamakan، فلم يعد يعرف هذا التشغيل.",
+  "create.runClock": "{elapsed} حتى الآن، من نحو {minutes} دقيقة",
+  "create.runStop": "إيقاف المتابعة",
+  "create.runStopNote":
+    "لا يستطيع Yamakan إيقاف تشغيل على Kaggle. إيقاف المتابعة يتركه يعمل، حتى حد {minutes} دقيقة، مستخدمًا حصتك. لإيقافه هناك:",
+  "create.runGoesOn":
+    "قد يكون ما زال يعمل على Kaggle، حتى حد {minutes} دقيقة، مستخدمًا حصتك. لرؤيته أو إيقافه:",
+  "create.openNotebook": "افتح دفتره",
+  "create.runBringIn": "إحضاره إلى هذا المشروع",
+  "create.bringInFailed":
+    "تعذر إحضار الفيديو. يوضح السطر أعلى الصفحة السبب؛ حاول مرة أخرى.",
+  "create.runBroughtIn": "أنتج {name} هذا الفيديو. وهو في القائمة هنا.",
+  "create.runRetry": "حاول مرة أخرى",
+  "create.runDismiss": "تم",
   "create.seedInvalid": "البذرة عدد صحيح من 0 إلى 4294967295.",
   "create.modelFacts":
     "شُغّل حتى الآن بدقة {width}x{height}، {frames} إطارًا بمعدل {fps} إطارًا في الثانية ({seconds} ث)، نحو {minutes} دقيقة إجمالًا على T4 مجاني في Kaggle، شاملة التحميل الأول. {licence}.",

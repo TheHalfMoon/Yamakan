@@ -150,3 +150,10 @@ Approval line in the packet's format:
 - **Authorized:** the existing Kaggle CLI and credentials, for private Yamakan notebooks on free GPUs, within quota.
 - **Limits from those instructions:** no model weights on the founder's PC; no credentials, weights or large generated files in the repository; no interference with other notebooks on that account; paid services stay off; no claim of generation until real inference and export are verified.
 - **Unchanged:** nothing here enables a model in Yamakan.
+
+## 2026-11-06: The Create workspace, and Yamakan drives Kaggle
+
+- **Source and form:** chat to Claude Opus in Claude Code. A pasted brief, "Craft Anything × Higgsfield", had no words of the founder's own. Asked whether to take it on, the founder answered "Yes, follow it". Shown that this PC cannot run the models, and two routes for running them from the app, the founder chose "Yamakan drives Kaggle".
+- **Shown with that choice:** a prompt, and any reference image, leaves this PC for the founder's private Kaggle notebook. Each run states this and a person starts it. It uses the founder's free quota, about 6 to 20 minutes a clip. It was said to change the earlier "cloud off" decision for this one route.
+- **Built so far, within that:** text to video only, so no media leaves. No token is read by Yamakan: the person's own Kaggle CLI uses it. No weights come to this PC.
+- **Unchanged:** commercial providers stay off, spending zero, frozen resource limits, release NO-GO, consent rules for a person's media. Each model is offered only after its own run from Yamakan is tested.

@@ -170,7 +170,7 @@ try {
   await prompt.fill("A paper boat floats slowly along a calm stream.");
   await page.getByTestId("create-direction-shot").selectOption("wide");
   await page.getByTestId("create-direction-movement").selectOption("pan");
-  await page.getByTestId("create-model").selectOption({ index: 1 });
+  await page.getByTestId("create-model").selectOption("zai-org/CogVideoX-2b");
   await page.getByTestId("create-seed").fill("7");
   const final = page.getByTestId("create-final-prompt");
   assert.equal(
@@ -179,7 +179,7 @@ try {
   );
   assert.match(
     await page.getByTestId("create-model-facts").textContent(),
-    /704x480, 41 frames at 24 fps/,
+    /720x480, 49 frames at 8 fps/,
   );
   assert.match(await panel.textContent(), /only add words to the prompt/);
   step("what a model would be given is shown, with what direction really does");

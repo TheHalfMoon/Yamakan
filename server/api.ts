@@ -22,14 +22,20 @@ export class CreativeAPI {
   readonly queue: JobSupervisor;
   readonly recoveryHome: string | undefined;
   readonly comfyUrl: string | undefined;
+  readonly kaggle: { cli: string; username: string } | undefined;
   constructor(
     store: ProjectStore,
-    options: { recoveryHome?: string; comfyUrl?: string } = {},
+    options: {
+      recoveryHome?: string;
+      comfyUrl?: string;
+      kaggle?: { cli: string; username: string };
+    } = {},
   ) {
     this.store = store;
     this.queue = new JobSupervisor(store);
     this.recoveryHome = options.recoveryHome;
     this.comfyUrl = options.comfyUrl;
+    this.kaggle = options.kaggle;
   }
   catalog() {
     return {
@@ -67,6 +73,7 @@ export class CreativeAPI {
         requestId,
         recoveryHome: this.recoveryHome,
         comfyUrl: this.comfyUrl,
+        kaggle: this.kaggle,
       },
       name,
       args,

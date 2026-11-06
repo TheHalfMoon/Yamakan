@@ -77,6 +77,13 @@ import {
   createGenerationService,
   type GenerationRecipe,
 } from "../engines/generation.ts";
+import {
+  createKaggleEngine,
+  kaggleCli,
+  kaggleRecipes,
+  notebookUrl,
+  offeredKaggleRecipes,
+} from "../engines/kaggle.ts";
 import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
 import {
   StudioDocumentSchema,
@@ -234,6 +241,8 @@ export type CommandContext = {
   modelRoot?: string;
   // A person-started ComfyUI the service was told to look at (unset: none).
   comfyUrl?: string;
+  // The person's Kaggle CLI and username, for runs they start (unset: none).
+  kaggle?: { cli: string; username: string };
   // Tests only: a generation service, since this build can build none.
   generation?: {
     service: ReturnType<typeof createGenerationService>;
@@ -264,8 +273,27 @@ type Generation = {
   recipes: readonly GenerationRecipe[];
 };
 const generations = new WeakMap<ProjectStore, Generation>();
+const kaggleGenerations = new WeakMap<ProjectStore, Generation>();
 function generationOf(ctx: CommandContext): Generation {
   if (ctx.generation) return ctx.generation;
+  if (ctx.kaggle) {
+    let held = kaggleGenerations.get(ctx.store);
+    if (!held) {
+      held = {
+        service: createGenerationService({
+          adapter: createKaggleEngine({
+            cli: kaggleCli(ctx.kaggle.cli),
+            username: ctx.kaggle.username,
+          }),
+          store: ctx.store,
+          resourcePolicyHash: RESOURCE_POLICY_HASH,
+        }),
+        recipes: kaggleRecipes(),
+      };
+      kaggleGenerations.set(ctx.store, held);
+    }
+    return held;
+  }
   const { available, reason } = comfyGeneration();
   if (!available || !ctx.comfyUrl)
     throw new CommandError(
@@ -2128,15 +2156,15 @@ export const commands = {
         : { configured: false as const, ...answer };
     },
   }),
-  // A person's generation. Nothing can run in this build: engines are off and no
-  // recipe is pinned, so each refuses with the reason. An agent cannot start one.
+  // A person's generation. It runs only where this service was told to use their
+  // Kaggle CLI: otherwise each refuses with the reason. An agent cannot start one.
   "yamakan.generation.start": define({
     scope: "project:write",
     mutation: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Start a generation with a qualified recipe, at the person's request, from a browser session only. Refused while this build has none, as it does now.",
+      "Start a generation with a qualified recipe, at the person's request, from a browser session only.",
     input: z
       .object({
         projectId: Id,
@@ -2162,11 +2190,42 @@ export const commands = {
       return generation.service.start({ ...request, recipe });
     },
   }),
+  // What a person can start here, if anything, and where it would run.
+  "yamakan.generation.options": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Report the models a person can start from here and where they run. Empty unless this service was told to use the person's Kaggle CLI.",
+    input: z.object({}).strict(),
+    run: (ctx) => {
+      const { kaggle } = ctx;
+      return {
+        route: kaggle ? ("kaggle" as const) : null,
+        models: kaggle
+          ? offeredKaggleRecipes().map((r) => ({
+              recipeId: r.id,
+              name: r.name,
+              model: r.model,
+              revision: r.revision,
+              licence: r.licence,
+              width: r.width,
+              height: r.height,
+              frames: r.frames,
+              fps: r.fps,
+              steps: r.steps,
+              expectedSeconds: r.expectedSeconds,
+              timeoutSeconds: r.timeoutSeconds,
+              notebook: notebookUrl(kaggle.username, r),
+            }))
+          : [],
+      };
+    },
+  }),
   "yamakan.generation.status": define({
     scope: "project:read",
     mutation: false,
     summary:
-      "Report a generation's state and, where the engine gives it, its progress. Refused while this build can generate nothing, as it does now.",
+      "Report a generation's state and, where the engine gives it, its progress.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.status(a.generationId),
   }),
@@ -2176,7 +2235,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Ask the engine to stop a generation, from a browser session only. Refused while this build can generate nothing, as it does now.",
+      "Stop following a generation, and ask the engine to stop it where it can, from a browser session only.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.cancel(a.generationId),
   }),
@@ -2186,7 +2245,7 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it. Refused while this build can generate nothing, as it does now.",
+      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
   }),

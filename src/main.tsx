@@ -2196,6 +2196,39 @@ function App() {
                         ? { available: video.available, reason: video.reason }
                         : null;
                     }}
+                    projectFps={fps}
+                    loadModels={async () =>
+                      (await call("yamakan.generation.options", {})).models
+                    }
+                    generation={{
+                      start: (request) =>
+                        call("yamakan.generation.start", {
+                          projectId: p.id,
+                          ...request,
+                        }),
+                      status: (generationId) =>
+                        call("yamakan.generation.status", { generationId }),
+                      stop: (generationId) =>
+                        call("yamakan.generation.cancel", { generationId }),
+                      bringIn: (generationId) =>
+                        new Promise((resolve) => {
+                          let hash: string | null = null;
+                          run(async () => {
+                            await save();
+                            const made = await call(
+                              "yamakan.generation.import",
+                              { generationId },
+                            );
+                            accept(
+                              await call("yamakan.project.open", {
+                                projectId: p.id,
+                              }),
+                            );
+                            await refresh();
+                            hash = made.lineage.outputHash;
+                          }).finally(() => resolve(hash));
+                        }),
+                    }}
                     importVideo={(file, check) => {
                       if (busy) return Promise.resolve("busy" as const);
                       return new Promise((resolve) => {

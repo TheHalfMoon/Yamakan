@@ -17,8 +17,9 @@ import time
 MODEL = "zai-org/CogVideoX-2b"
 REVISION = "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01"
 LICENSE = "apache-2.0"
-PROMPT = "A paper boat floats slowly along a calm stream in soft morning light."
-SEED = 42
+BRIEF = {}  # yamakan:brief
+PROMPT = BRIEF.get("prompt", "A paper boat floats slowly along a calm stream in soft morning light.")
+SEED = BRIEF.get("seed", 42)
 STEPS = 50
 FRAMES = 49
 FPS = 8
@@ -34,6 +35,7 @@ PACKAGES = [
 
 receipt = {
     "format": "yamakan.generation-receipt/v1",
+    "runId": BRIEF.get("runId"),
     "model": MODEL,
     "revision": REVISION,
     "license": LICENSE,

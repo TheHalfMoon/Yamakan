@@ -2,7 +2,7 @@
 
 Run 2026-11-05 by Claude Opus. The founder approved using their Kaggle account directly: "Yes, use Kaggle".
 
-**What this shows:** a real model made a real video in which a paper boat on water is visible, on a free Kaggle GPU, and Yamakan imported, placed and exported it. **What it does not show:** generation inside Yamakan, which is still off. The video was made elsewhere and brought in as a file. Nothing here enables a model in Yamakan.
+**What this shows:** a real model made a real video in which a paper boat on water is visible, on a free Kaggle GPU, and Yamakan imported, placed and exported it. **What it does not show:** generation from inside Yamakan. These videos were made elsewhere and brought in as files. Wan2.2 started from Yamakan's own page came later: see the end of this file.
 
 ## The generation
 
@@ -63,7 +63,7 @@ The rule that a source frame starts at the project frame nearest its time matche
 
 ## Not done
 
-Generation from inside Yamakan; a start control; a check of the notebook's privacy other than its metadata; audio; a person making this choice in the browser rather than a script.
+For these runs: generation from inside Yamakan, which came later and is at the end of this file; a check of the notebook's privacy other than its metadata; audio; a person making this choice in the browser rather than a script.
 
 ## Wan2.2-TI2V-5B
 
@@ -86,4 +86,18 @@ Generation from inside Yamakan; a start control; a check of the notebook's priva
 
 **Not a comparison of the two models.** One prompt and seed each, different sizes, steps and lengths: 6.1 s of CogVideoX against 1.7 s of Wan. Wan's 24 fps also has no matching project rate: a source frame lasts 1.25 project frames, so some repeat.
 
-Not tried: longer or larger Wan clips, including the 1280x704 and 121 frames its own card uses; quantization; a second GPU. This run says only that this small clip fits one T4.
+Not tried then: longer or larger Wan clips. 81 frames came later; the 1280x704 and 121 frames its own card uses are still not tried, and neither are quantization or a second GPU. These runs say only that clips this small fit one T4.
+
+## Wan2.2 from Yamakan's own page
+
+**A real generation started from the page, 2026-11-06.** `npm run qualify:kaggle`: a person's steps in real Edge against the real service, on a private Kaggle notebook. See `create-workspace.md`.
+
+**41 frames had a defect, so the page offers 81.** With the prompt "A red kite flies above a green hill under a clear blue sky." and seed 7, frame-to-frame change at 64x36:
+
+|                           | Largest change | Where                 | Picture, by the builder's look at sampled frames                                                   |
+| ------------------------- | -------------- | --------------------- | -------------------------------------------------------------------------------------------------- |
+| 41 frames, VAE tiling on  | 54.9 of 255    | Frames 37 to 38 of 41 | A bird-like red shape over hills, then a sudden snap to a different picture for the last 3 frames  |
+| 41 frames, VAE tiling off | 54.9 of 255    | The same frames       | Not looked at: its frame changes match the row above almost exactly. So tiling is not the cause    |
+| **81 frames, tiling on**  | **1.8 of 255** | **Frame 44 of 81**    | **A red kite-like shape over a green hill under blue sky, with no snap, and very little movement** |
+
+The earlier paper-boat clip, at 41 frames, had a smaller jump between frames 25 and 26. Why a short clip does this was not worked out. Two runs from the page with the same prompt and seed gave a byte-identical video, `8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c`, so a run repeats here. **This is one prompt and one seed at each length,** so it says 81 frames avoided this here, not that it always does. The GPU peak was 13,619,549,184 bytes in all three: that figure may not reflect decoding, which was not measured separately.

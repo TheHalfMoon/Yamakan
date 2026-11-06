@@ -17,11 +17,12 @@ import traceback
 MODEL = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
 REVISION = "b8fff7315c768468a5333511427288870b2e9635"
 LICENSE = "apache-2.0"
-PROMPT = "A paper boat floats slowly along a calm stream in soft morning light."
+BRIEF = {}  # yamakan:brief
+PROMPT = BRIEF.get("prompt", "A paper boat floats slowly along a calm stream in soft morning light.")
 NEGATIVE = "blurry, low quality, distorted, static"
-SEED = 42
+SEED = BRIEF.get("seed", 42)
 STEPS = 30
-FRAMES = 41
+FRAMES = 81
 FPS = 24
 WIDTH = 704
 HEIGHT = 480
@@ -38,6 +39,7 @@ PACKAGES = [
 
 receipt = {
     "format": "yamakan.generation-receipt/v1",
+    "runId": BRIEF.get("runId"),
     "model": MODEL,
     "revision": REVISION,
     "license": LICENSE,

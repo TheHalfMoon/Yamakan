@@ -105,6 +105,10 @@
   ],
   "localFilesInDonorRoots": [
     {
+      "path": "core/engines/kaggle.ts",
+      "reason": "Yamakan-authored Kaggle adapter. Its only process is the person's own Kaggle CLI, an absolute path they configure, by execFile with fixed arguments; a prompt travels in a file, never an argument."
+    },
+    {
       "path": "core/engines/generation.ts",
       "reason": "Yamakan-authored generation service over the engine contract; no donor copy."
     },
@@ -279,7 +283,8 @@
   "processSpawnAllowlist": [
     "core/process/owner.ts",
     "core/process/access.ts",
-    "core/render.ts"
+    "core/render.ts",
+    "core/engines/kaggle.ts"
   ],
   "productionRoots": [
     "core",

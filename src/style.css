@@ -673,6 +673,41 @@ footer {
   flex-wrap: wrap;
   gap: 8px;
 }
+.create .create-agree {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.create-agree input {
+  width: auto;
+  margin-top: 3px;
+  flex: none;
+}
+.create-agree span {
+  min-width: 0;
+  flex: 1;
+}
+.create-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--canvas);
+  font-weight: 600;
+}
+.create-primary:hover:not(:disabled) {
+  background: #c4dbff;
+}
+.create-generate progress {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.create-generate a {
+  color: var(--accent);
+}
 @media (max-width: 900px) {
   .create {
     grid-template-columns: minmax(0, 1fr);
