@@ -365,6 +365,10 @@ export function createKaggleEngine(options: {
   const runs = new Map<string, Run>();
   // Between asking whether a notebook is free and having pushed to it.
   const pushing = new Set<string>();
+  // Runs being sent by this service now, by their own names.
+  const sendingNow = new Set<string>();
+  // Asked about at once just after a restart, a run is still one run.
+  const adopting = new Map<string, Promise<Run>>();
   const scriptFor =
     options.scriptFor ?? ((r: KaggleRecipe) => readFile(scriptOf(r), "utf8"));
   const remote = (r: KaggleRecipe) => `${username}/${r.slug}`;
@@ -436,13 +440,16 @@ export function createKaggleEngine(options: {
     return hash.digest("hex");
   };
 
-  // A kill during a send can leave its script, or a pull of an earlier run's.
-  const clearLeftovers = (run: Run) =>
-    Promise.all(
+  // A kill during a send can leave its script, or a pull of an earlier run's. A send
+  // still going is using them.
+  const clearLeftovers = async (run: Run) => {
+    if (sendingNow.has(run.runId)) return;
+    await Promise.all(
       ["push", "pulled"].map((name) =>
         rm(path.join(run.folder, name), { recursive: true, force: true }),
       ),
     ).catch(() => {});
+  };
 
   // The prompt is in the receipt and the log: once read, only the video stays.
   const keepOnly = async (run: Run, kept?: string) => {
@@ -639,6 +646,15 @@ export function createKaggleEngine(options: {
   const runOf = async (ref: string) => {
     const known = runs.get(ref);
     if (known) return known;
+    let pending = adopting.get(ref);
+    if (!pending) {
+      pending = adopt(ref).finally(() => adopting.delete(ref));
+      adopting.set(ref, pending);
+    }
+    return pending;
+  };
+
+  const adopt = async (ref: string) => {
     const record = options.recorded?.(ref);
     const recipe = KAGGLE_RECIPES.find((r) => r.id === record?.recipeId);
     if (!record || !recipe)
@@ -818,6 +834,7 @@ export function createKaggleEngine(options: {
           "A run of this model is already being sent to Kaggle.",
         );
       pushing.add(recipe.id);
+      sendingNow.add(request.attemptKey);
       let folder: string | null = null;
       let sending = false;
       let sent = false;
@@ -919,6 +936,7 @@ export function createKaggleEngine(options: {
         );
       } finally {
         pushing.delete(recipe.id);
+        sendingNow.delete(request.attemptKey);
       }
     },
     status: async (ref) => check(await runOf(ref)),

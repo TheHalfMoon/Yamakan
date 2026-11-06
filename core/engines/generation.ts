@@ -396,7 +396,11 @@ export function createGenerationService(options: {
       const others = () =>
         ledger
           .following(request.recipe.id, "")
-          .filter((other) => (tracked(other).remote ?? null) === here);
+          .filter(
+            (other) =>
+              (tracked(other).remote ?? null)?.toLowerCase() ===
+              here?.toLowerCase(),
+          );
       for (const other of others())
         if (!sending.has(other)) await statusOf(other).catch(() => {});
       // Still going, or not collected: pushing now would lose its result for good.

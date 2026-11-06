@@ -1097,6 +1097,51 @@ test("a kill during a send leaves no script behind, once the run is found again"
   await f.s.close();
 });
 
+test("a status asked during a send leaves what the send is using", async () => {
+  const f = await fixture();
+  let release = () => {};
+  let reached = () => {};
+  const atPush = new Promise<void>((done) => {
+    reached = done;
+  });
+  f.k.world.beforePush = () =>
+    new Promise<void>((done) => {
+      reached();
+      release = done;
+    });
+  const first = f.start();
+  await atPush;
+  // As a reload does: it lists the run and asks about it at once.
+  const [{ generationId: id }] = f.s.service.list(f.project.id);
+  await f.s.service.status(id);
+  release();
+  await first;
+  assert.equal(f.k.world.pushes.length, 1);
+  assert.equal(f.s.ledger.read(id)!.phase, "sent");
+  await f.s.close();
+});
+
+test("two questions at once after a restart are one question", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  await f.restart();
+  const calls = f.k.world.calls;
+  await Promise.all([f.s.service.status(id), f.s.service.status(id)]);
+  assert.equal(f.k.world.calls, calls + 1);
+  await f.s.close();
+});
+
+test("a run recorded with its name's case still holds its notebook", async () => {
+  const f = await fixture();
+  const { generationId: id } = await f.start();
+  f.s.ledger.update(id, { remote: `SomeOne/${wan.slug}` });
+  f.clock.pass(10 * 60 * 1000);
+  await f.restart();
+  await assert.rejects(f.start("Another."), /still being followed/);
+  assert.equal(f.k.world.pushes.length, 1);
+  await f.s.close();
+});
+
 test("a name differing only by case is the same account", async () => {
   const f = await fixture();
   const { generationId: id } = await f.start();
