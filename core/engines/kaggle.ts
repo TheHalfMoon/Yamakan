@@ -483,7 +483,7 @@ export function createKaggleEngine(options: {
     let answer: boolean;
     try {
       answer = await reportedPrivate(recipe, folder);
-    } catch (e) {
+    } catch {
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         "Could not confirm that this notebook is private, so nothing was sent.",
