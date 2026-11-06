@@ -42,7 +42,7 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     frames: 41,
     fps: 24,
     steps: 30,
-    secondsToMake: 639,
+    secondsToMake: 811,
     negativePrompt: "blurry, low quality, distorted, static",
     folder: "scripts/kaggle/wan22-ti2v-5b",
   },

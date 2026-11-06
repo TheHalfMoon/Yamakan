@@ -673,8 +673,9 @@ footer {
   flex-wrap: wrap;
   gap: 8px;
 }
-.create-agree {
+.create .create-agree {
   display: flex;
+  flex-direction: row;
   gap: 8px;
   align-items: flex-start;
   margin-bottom: 8px;
@@ -682,8 +683,13 @@ footer {
   line-height: 1.45;
 }
 .create-agree input {
+  width: auto;
   margin-top: 3px;
   flex: none;
+}
+.create-agree span {
+  min-width: 0;
+  flex: 1;
 }
 .create-primary {
   background: var(--accent);

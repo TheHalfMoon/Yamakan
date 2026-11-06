@@ -5,6 +5,7 @@
  * quota and takes minutes. Set YAMAKAN_KAGGLE_CLI and YAMAKAN_KAGGLE_USERNAME.
  *
  * Usage: node scripts/qualify-kaggle-generation.mjs <out-folder> [model-index] [prompt]
+ * With YAMAKAN_QUALIFY_READY_ONLY=1 it stops before sending anything, for the page.
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
@@ -121,6 +122,25 @@ try {
   assert.ok(await start.isDisabled(), "nothing starts until it is agreed to");
   await page.getByTestId("create-agree").check();
   await shot("1-ready");
+  // The agreement is read in place: inside its panel, on more than a sliver of it.
+  const fits = await page.evaluate(() => {
+    const text = document
+      .querySelector(".create-agree span")
+      .getBoundingClientRect();
+    const panel = document
+      .querySelector(".create-composer")
+      .getBoundingClientRect();
+    return {
+      inside: text.left >= panel.left && text.right <= panel.right,
+      share: text.width / panel.width,
+    };
+  });
+  assert.ok(fits.inside && fits.share > 0.5, JSON.stringify(fits));
+  step("the agreement is readable in its place");
+  if (process.env.YAMAKAN_QUALIFY_READY_ONLY) {
+    passed = true;
+    throw new Error("Stopped before sending anything, as asked.");
+  }
   await start.click();
   const state = page.getByTestId("create-run-state");
   await state.waitFor({ timeout: 300_000 });

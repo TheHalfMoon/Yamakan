@@ -62,7 +62,7 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     fps: 24,
     steps: 30,
     timeoutSeconds: 3600,
-    expectedSeconds: 639,
+    expectedSeconds: 811,
     folder: "wan22-ti2v-5b",
     slug: "yamakan-run-wan22-ti2v-5b",
     output: "wan-video.mp4",
