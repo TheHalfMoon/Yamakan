@@ -238,26 +238,26 @@ const WAS_KILLED =
 // What a run recorded of itself before it was killed: figures only, none of its words.
 const GIB = 1024 ** 3;
 const gib = (bytes: number) => (bytes / GIB).toFixed(1);
+// The stage as the script names them, so that nothing else of a receipt's can pass.
+const STAGES = new Set([
+  "installed",
+  "loading",
+  "generating",
+  "decoding",
+  "exporting",
+]);
 export function killedAt(receipt: {
   stage?: unknown;
-  hostMemory?: {
-    lowestAvailableBytes?: unknown;
-    totalBytes?: unknown;
-    cgroupOomKills?: unknown;
-  };
+  hostMemory?: { lowestAvailableBytes?: unknown; totalBytes?: unknown };
 }) {
   const said: string[] = [];
-  if (receipt.stage === "generating" || receipt.stage === "decoding")
+  if (typeof receipt.stage === "string" && STAGES.has(receipt.stage))
     said.push(`It had reached ${receipt.stage}.`);
   const { lowestAvailableBytes: low, totalBytes: total } =
     receipt.hostMemory ?? {};
   if (typeof low === "number" && typeof total === "number")
     said.push(
       `At its lowest, ${gib(low)} GiB of ${gib(total)} GiB of memory was free, as last sampled.`,
-    );
-  if (typeof receipt.hostMemory?.cgroupOomKills === "number")
-    said.push(
-      `The host counted ${receipt.hostMemory.cgroupOomKills} out-of-memory kills.`,
     );
   return said.join(" ");
 }

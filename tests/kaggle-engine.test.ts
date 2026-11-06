@@ -673,7 +673,8 @@ test("a killed run says how far it got, and how much memory was left", async () 
         hostMemory: {
           lowestAvailableBytes: 2 * 1024 ** 3,
           totalBytes: 31 * 1024 ** 3,
-          cgroupOomKills: 1,
+          // Read before its own kill: it would say 0 of a run killed for memory.
+          cgroupOomKills: 0,
         },
       }),
     );
@@ -690,7 +691,7 @@ test("a killed run says how far it got, and how much memory was left", async () 
   assert.match(answer.diagnostic!, /killed the run/);
   assert.match(answer.diagnostic!, /reached decoding/);
   assert.match(answer.diagnostic!, /2\.0 GiB of 31\.0 GiB/);
-  assert.match(answer.diagnostic!, /1 out-of-memory kills/);
+  assert.ok(!answer.diagnostic!.includes("out-of-memory kills"));
   assert.ok(!answer.diagnostic!.includes("the prompt"));
 });
 

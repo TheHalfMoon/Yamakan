@@ -57,19 +57,29 @@ receipt = {
     "packages": PACKAGES,
     "verified": False,
     "stage": "start",
+    "hostMemory": {},
 }
 
 
 saving = threading.Lock()
 
 
-# Whole or not at all: a kill can come at any moment, and what is left must read.
-def save():
+# Whole or not at all: a kill can come at any moment, and what is left must read. Only
+# the last one has to land, and it tries harder: no other can be why a run fails.
+def save(attempts=1):
     target = os.path.join(OUT, "receipt.json")
-    with saving:
-        with open(target + ".part", "w") as f:
-            json.dump(receipt, f, indent=2)
-        os.replace(target + ".part", target)
+    for attempt in range(attempts):
+        try:
+            with saving:
+                with open(target + ".part", "w") as f:
+                    json.dump(receipt, f, indent=2)
+                os.replace(target + ".part", target)
+            return True
+        except Exception as error:
+            print(f"Could not write the receipt: {type(error).__name__}", file=sys.stderr)
+            if attempt + 1 < attempts:
+                time.sleep(2)
+    return False
 
 
 def read_kb(path, field):
@@ -97,7 +107,7 @@ def read_oom_kills():
 def sample(read, *args):
     try:
         return read(*args)
-    except (OSError, ValueError):
+    except Exception:
         return None
 
 
@@ -107,33 +117,42 @@ def sample(read, *args):
 def watch_memory():
     seen = {"samples": 0}
     while True:
-        available = sample(read_kb, "/proc/meminfo", "MemAvailable")
-        rss = sample(read_kb, "/proc/self/status", "VmRSS")
-        if available is not None and available < seen.get(
-            "lowestAvailableBytes", float("inf")
-        ):
-            seen["lowestAvailableBytes"] = available
-            seen["stageAtLowest"] = receipt["stage"]
-        if rss is not None and rss > seen.get("highestRssBytes", 0):
-            seen["highestRssBytes"] = rss
-            seen["stageAtHighest"] = receipt["stage"]
-        seen["samples"] += 1
-        seen.update(
-            {
-                name: value
-                for name, value in {
-                    "totalBytes": sample(read_kb, "/proc/meminfo", "MemTotal"),
-                    "cgroupPeakBytes": sample(
-                        read_number, "/sys/fs/cgroup/memory.peak"
-                    ),
-                    "cgroupOomKills": sample(read_oom_kills),
-                }.items()
-                if value is not None
-            }
-        )
-        receipt["hostMemory"] = dict(seen)
-        save()
+        # It has one job, and no failure of it may reach the run or stop it watching.
+        try:
+            take_sample(seen)
+        except Exception as error:
+            print(f"Could not sample memory: {type(error).__name__}", file=sys.stderr)
         time.sleep(MEMORY_SAMPLE_SECONDS)
+
+
+def take_sample(seen):
+    available = sample(read_kb, "/proc/meminfo", "MemAvailable")
+    rss = sample(read_kb, "/proc/self/status", "VmRSS")
+    if available is not None and available < seen.get(
+        "lowestAvailableBytes", float("inf")
+    ):
+        seen["lowestAvailableBytes"] = available
+        seen["stageAtLowest"] = receipt["stage"]
+    if rss is not None and rss > seen.get("highestRssBytes", 0):
+        seen["highestRssBytes"] = rss
+        seen["stageAtHighest"] = receipt["stage"]
+    seen["samples"] += 1
+    seen.update(
+        {
+            name: value
+            for name, value in {
+                "totalBytes": sample(read_kb, "/proc/meminfo", "MemTotal"),
+                "cgroupPeakBytes": sample(
+                    read_number, "/sys/fs/cgroup/memory.peak"
+                ),
+                "cgroupOomKills": sample(read_oom_kills),
+            }.items()
+            if value is not None
+        }
+    )
+    # Replaced, never added, so this cannot disturb a save in the other thread.
+    receipt["hostMemory"] = dict(seen)
+    save()
 
 
 def sh(*args):
@@ -221,6 +240,8 @@ try:
     receipt["generateSeconds"] = round(time.time() - started, 1)
     receipt["peakHostBytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
     receipt["peakGpuBytes"] = torch.cuda.max_memory_allocated(0)
+    receipt["stage"] = "exporting"
+    save()
     path = os.path.join(OUT, "wan-video.mp4")
     export_to_video(video, path, fps=FPS)
 except Exception as error:
@@ -250,7 +271,8 @@ receipt["verified"] = (
     and receipt["temporalDiff"] > 0.1
 )
 receipt["stage"] = "done"
-save()
+if not save(attempts=5):
+    sys.exit("The video was made, and its receipt could not be written.")
 print(json.dumps(receipt, indent=2))
 if not receipt["verified"]:
     sys.exit("The video did not pass its own checks.")

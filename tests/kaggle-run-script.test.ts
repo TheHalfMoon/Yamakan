@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
+import { killedAt } from "../core/engines/kaggle.ts";
 
 const SCRIPT = "scripts/kaggle/wan22-ti2v-5b/run.py";
 const source = readFileSync(SCRIPT, "utf8");
@@ -40,6 +41,14 @@ test("what makes the same video stays pinned", () => {
     "guidance_scale=5.0",
     '"diffusers==0.36.0"',
     "pipe.text_encoder = None",
+    "pipe.vae.enable_tiling()",
+    "pipe.vae.enable_slicing()",
+    'NEGATIVE = "blurry, low quality, distorted, static"',
+    "FPS = 24",
+    "torch_dtype=torch.float16",
+    "torch_dtype=torch.float32",
+    '"transformers==4.57.1"',
+    '"accelerate==1.10.1"',
     'torch.Generator(device="cpu").manual_seed(SEED)',
   ])
     assert.ok(source.includes(pin), pin);
@@ -54,6 +63,13 @@ source = open(script, encoding="utf-8").read()
 assert source.count('OUT = "/kaggle/working"') == 1
 source = source.replace('OUT = "/kaggle/working"', "OUT = " + repr(out))
 source = source.replace("MEMORY_SAMPLE_SECONDS = 5", "MEMORY_SAMPLE_SECONDS = 0.01")
+# What Kaggle's Linux host offers, in its own form, wherever this runs.
+fake = {"meminfo": "MemTotal:       32000000 kB\nMemAvailable:    2000000 kB\n",
+        "status": "Name:\tpython\nVmRSS:\t25000000 kB\n"}
+for name, text in fake.items():
+    open(os.path.join(out, "fake-" + name), "w").write(text)
+source = source.replace('"/proc/meminfo"', repr(os.path.join(out, "fake-meminfo")))
+source = source.replace('"/proc/self/status"', repr(os.path.join(out, "fake-status")))
 
 subprocess.check_call = lambda *a, **k: 0
 real_run = subprocess.run
@@ -102,12 +118,26 @@ class Pipe:
     def __call__(self, **k):
         asked["call"] = sorted(k)
         ending = k["callback_on_step_end"]
+        if mode == "save-fails":
+            real_replace = os.replace
+            def failing(a, b):
+                os.replace = real_replace
+                raise OSError(28, "No space left on device")
+            os.replace = failing
         for step in range(k["num_inference_steps"]):
             assert ending(self, step, 0, {}) == {}
-        stage = json.load(open(os.path.join(out, "receipt.json")))["stage"]
-        asked["stageAtDecode"] = stage
+        # Until the watcher has written with decoding under way, however busy this machine.
         import time
-        time.sleep(0.05)
+        for _ in range(3000):
+            try:
+                with open(os.path.join(out, "receipt.json")) as f:
+                    seen = json.load(f)
+            except (OSError, ValueError):
+                seen = {}
+            if seen.get("stage") == "decoding" and seen["hostMemory"].get("samples", 0) >= 1:
+                break
+            time.sleep(0.01)
+        asked["stageAtDecode"] = seen.get("stage")
         if mode == "kill":
             os._exit(137)
         return types.SimpleNamespace(frames=[["frame"]])
@@ -147,7 +177,7 @@ finally:
     print("ASKED " + json.dumps(asked))
 `;
 
-function run(mode: "finish" | "kill") {
+function run(mode: "finish" | "kill" | "save-fails") {
   const out = mkdtempSync(path.join(tmpdir(), "yamakan-run-script-"));
   roots.push(out);
   const harness = path.join(out, "harness.py");
@@ -176,7 +206,25 @@ test(
     assert.equal(receipt.stage, "decoding");
     assert.ok(!existsSync(path.join(out, "wan-video.mp4")));
     assert.ok(receipt.hostMemory.samples >= 1);
+    assert.equal(receipt.hostMemory.lowestAvailableBytes, 2000000 * 1024);
+    assert.equal(receipt.hostMemory.highestRssBytes, 25000000 * 1024);
     assert.equal(receipt.peakHostBytes, undefined);
+    assert.ok(!stderr.includes("Traceback"), stderr);
+    // What this writes is what the page reads.
+    assert.match(killedAt(receipt), /reached decoding/);
+    assert.match(killedAt(receipt), /1\.9 GiB of 30\.5 GiB/);
+  },
+);
+
+test(
+  "a receipt that cannot be written does not fail the run",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, stderr } = run("save-fails");
+    assert.equal(status, 0, stderr);
+    assert.match(stderr, /Could not write the receipt: OSError/);
+    assert.equal(receipt.stage, "done");
+    assert.equal(receipt.verified, true);
   },
 );
 
