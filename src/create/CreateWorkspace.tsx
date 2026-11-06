@@ -481,7 +481,6 @@ export function CreateWorkspace(props: {
 
         {models.length > 0 ? (
           <GeneratePanel
-            storageKey={`yamakan.create.run.${projectId}`}
             model={startable ?? models[0]}
             offered={Boolean(startable)}
             models={models}
@@ -493,6 +492,7 @@ export function CreateWorkspace(props: {
             t={t}
             api={props.generation}
             onMade={remember}
+            findAsset={(id) => assets.find((x) => x.id === id)}
           />
         ) : (
           <div className="create-engine" data-testid="create-engine">

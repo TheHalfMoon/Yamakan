@@ -34,6 +34,20 @@ export type MadeAsset = {
   bytes: number;
 };
 
+export type RunRecord = {
+  generationId: string;
+  recipeId: string;
+  prompt: string | null;
+  seed: number | null;
+  startedAt: number;
+  state: string;
+  uncertain: boolean;
+  stopped: boolean;
+  held: boolean;
+  diagnostic: string | null;
+  imported: { assetId: string } | null;
+};
+
 export type GenerationApi = {
   start: (request: {
     recipeId: string;
@@ -42,7 +56,7 @@ export type GenerationApi = {
     width: number;
     height: number;
     durationFrames: number;
-  }) => Promise<{ generationId: string }>;
+  }) => Promise<{ generationId: string; uncertain?: string }>;
   status: (generationId: string) => Promise<{
     state: string;
     diagnostic?: string;
@@ -51,6 +65,9 @@ export type GenerationApi = {
   stop: (generationId: string) => Promise<unknown>;
   // Under the editor's busy state. The new asset, or null if it did not come in.
   bringIn: (generationId: string) => Promise<MadeAsset | null>;
+  // What this project has under way, newest first, whatever has restarted since.
+  list: () => Promise<readonly RunRecord[]>;
+  dismiss: (generationId: string) => Promise<unknown>;
 };
 
 type Run = {
@@ -61,7 +78,22 @@ type Run = {
   startedAt: number;
   // Stopped following: Kaggle's public interface cannot stop the run itself.
   stopped?: boolean;
+  // Not known to have reached Kaggle, and never sent again.
+  uncertain?: boolean;
+  // A restored copy of a workspace: the run belongs to the original.
+  held?: boolean;
 };
+
+const asRun = (r: RunRecord): Run => ({
+  generationId: r.generationId,
+  recipeId: r.recipeId,
+  prompt: r.prompt ?? "",
+  seed: r.seed ?? 0,
+  startedAt: r.startedAt,
+  stopped: r.stopped,
+  uncertain: r.uncertain,
+  held: r.held,
+});
 
 const POLL_MS = 20_000;
 const FINISHED = new Set(["succeeded", "failed", "cancelled"]);
@@ -71,24 +103,7 @@ const clock = (ms: number) => {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 };
 
-export function readRun(raw: string | null): Run | null {
-  if (!raw) return null;
-  try {
-    const run = JSON.parse(raw);
-    return typeof run?.generationId === "string" &&
-      typeof run.recipeId === "string" &&
-      typeof run.prompt === "string" &&
-      Number.isInteger(run.seed) &&
-      Number.isFinite(run.startedAt)
-      ? run
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 export function GeneratePanel(props: {
-  storageKey: string;
   model: GenerateModel;
   // Whether the model chosen on the page is one that can start from here.
   offered: boolean;
@@ -102,30 +117,10 @@ export function GeneratePanel(props: {
   api: GenerationApi;
   // Whether its record was saved. Bringing it in again is safe, and tries again.
   onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<boolean>;
+  findAsset: (id: string) => MadeAsset | undefined;
 }) {
   const { model, prompt, seed, seedValid, t, api } = props;
-  const [run, setRunState] = useState<Run | null>(() => {
-    try {
-      return readRun(
-        globalThis.localStorage?.getItem(props.storageKey) ?? null,
-      );
-    } catch {
-      return null;
-    }
-  });
-  const setRun = (next: Run | null) => {
-    setRunState(next);
-    try {
-      if (next)
-        globalThis.localStorage?.setItem(
-          props.storageKey,
-          JSON.stringify(next),
-        );
-      else globalThis.localStorage?.removeItem(props.storageKey);
-    } catch {
-      // Not kept: this run is followed by this page only.
-    }
-  };
+  const [run, setRun] = useState<Run | null>(null);
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
   const [lost, setLost] = useState(false);
@@ -135,12 +130,66 @@ export function GeneratePanel(props: {
   const [now, setNow] = useState(() => Date.now());
 
   const finished = FINISHED.has(state);
-  const following = Boolean(run) && !run?.stopped && !finished && !lost;
+  const receiptOf = (
+    r: { recipeId: string; prompt: string | null; seed: number | null },
+    sha256: string,
+  ): RunReceipt => {
+    const m = props.models.find((x) => x.recipeId === r.recipeId) ?? model;
+    return {
+      model: m.model,
+      revision: m.revision,
+      prompt: r.prompt ?? "",
+      seed: r.seed ?? 0,
+      steps: m.steps,
+      sha256,
+      licence: m.licence,
+    };
+  };
+  const following =
+    Boolean(run) && !run?.stopped && !run?.held && !finished && !lost;
   const runModel =
     (run && props.models.find((m) => m.recipeId === run.recipeId)) ?? model;
 
+  // What this project has under way lives in the project: a run started before a
+  // restart comes back here, and one that came in unrecorded gets its record.
   useEffect(() => {
-    if (!run || run.stopped || lost) return;
+    let current = true;
+    api
+      .list()
+      .then(async (records) => {
+        if (!current) return;
+        const [latest] = records;
+        if (!latest) return;
+        const asset = latest.imported
+          ? props.findAsset(latest.imported.assetId)
+          : undefined;
+        if (asset && latest.prompt !== null && latest.seed !== null) {
+          const saved = await props.onMade(
+            receiptOf(latest, asset.hash),
+            asset,
+          );
+          if (saved) await api.dismiss(latest.generationId);
+          else if (current) setRun(asRun(latest));
+          return;
+        }
+        if (current) {
+          setRun(asRun(latest));
+          setState(latest.state);
+          setNote(latest.diagnostic ?? "");
+        }
+      })
+      .catch(() => {
+        // Nothing can be started here either, then: the page says so elsewhere.
+      });
+    return () => {
+      current = false;
+    };
+    // Once for this project: the panel is keyed by it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!run || run.stopped || run.held || lost) return;
     let current = true;
     const ask = async () => {
       try {
@@ -148,9 +197,11 @@ export function GeneratePanel(props: {
         if (!current) return;
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
+        // Its own result proves it arrived; a notebook's state does not.
+        if (answer.state === "succeeded" || answer.state === "failed")
+          setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
       } catch (e) {
         if (!current) return;
-        // The service restarted, and with it what it knew of this run.
         if ((e as { code?: string }).code === "NOT_FOUND") setLost(true);
         else setNote(e instanceof Error ? e.message : "");
       }
@@ -178,7 +229,7 @@ export function GeneratePanel(props: {
     setProblem("");
     setWorking(true);
     try {
-      const { generationId } = await api.start({
+      const { generationId, uncertain } = await api.start({
         recipeId: model.recipeId,
         prompt,
         seed,
@@ -199,8 +250,22 @@ export function GeneratePanel(props: {
         prompt,
         seed,
         startedAt: Date.now(),
+        uncertain: Boolean(uncertain),
       });
     } catch (e) {
+      setAgreed(false);
+      // The answer can be lost with the run on its way. A refused one is not listed.
+      const [latest] = await api.list().catch(() => [] as RunRecord[]);
+      if (
+        latest &&
+        !latest.stopped &&
+        !["succeeded", "failed", "cancelled"].includes(latest.state)
+      ) {
+        setRun(asRun(latest));
+        setState(latest.state);
+        setNote(latest.diagnostic ?? "");
+        return;
+      }
       setProblem(e instanceof Error ? e.message : t("create.startFailed"));
     } finally {
       setWorking(false);
@@ -208,6 +273,7 @@ export function GeneratePanel(props: {
   };
 
   const finishedWith = () => {
+    if (run) void api.dismiss(run.generationId).catch(() => {});
     setRun(null);
     setState("queued");
     setNote("");
@@ -224,18 +290,7 @@ export function GeneratePanel(props: {
       setProblem(t("create.bringInFailed"));
       return;
     }
-    const saved = await props.onMade(
-      {
-        model: runModel.model,
-        revision: runModel.revision,
-        prompt: run.prompt,
-        seed: run.seed,
-        steps: runModel.steps,
-        sha256: asset.hash,
-        licence: runModel.licence,
-      },
-      asset,
-    );
+    const saved = await props.onMade(receiptOf(run, asset.hash), asset);
     setWorking(false);
     if (saved) finishedWith();
   };
@@ -298,19 +353,23 @@ export function GeneratePanel(props: {
 
   const line: MessageKey = lost
     ? "create.runLost"
-    : run.stopped
-      ? "create.runStopped"
-      : state === "running"
-        ? "create.runRunning"
-        : state === "succeeded"
-          ? "create.runDone"
-          : state === "failed"
-            ? "create.runFailed"
-            : state === "cancelled"
-              ? "create.runCancelled"
-              : state === "unknown"
-                ? "create.runUnknown"
-                : "create.runQueued";
+    : run.held
+      ? "create.runHeld"
+      : run.stopped
+        ? "create.runStopped"
+        : run.uncertain
+          ? "create.runUncertain"
+          : state === "running"
+            ? "create.runRunning"
+            : state === "succeeded"
+              ? "create.runDone"
+              : state === "failed"
+                ? "create.runFailed"
+                : state === "cancelled"
+                  ? "create.runCancelled"
+                  : state === "unknown"
+                    ? "create.runUnknown"
+                    : "create.runQueued";
   return (
     <div className="create-generate" data-testid="create-generate">
       <h3>{t("create.engineTitle")}</h3>
@@ -344,7 +403,7 @@ export function GeneratePanel(props: {
         </p>
       )}
       <div className="create-video-actions">
-        {state === "succeeded" && !run.stopped && !lost && (
+        {state === "succeeded" && !run.stopped && !run.held && !lost && (
           <button
             type="button"
             className="create-primary"
@@ -367,7 +426,7 @@ export function GeneratePanel(props: {
             {t("create.runStop")}
           </button>
         )}
-        {(finished || run.stopped || lost) && (
+        {(finished || run.stopped || run.held || lost) && (
           <button
             type="button"
             data-testid="create-run-done"
@@ -377,6 +436,9 @@ export function GeneratePanel(props: {
           </button>
         )}
       </div>
+      {state === "failed" && !run.stopped && !lost && (
+        <p className="note">{notebookLink}</p>
+      )}
       {(following || run.stopped || lost) && (
         <p className="note">
           {run.stopped || lost

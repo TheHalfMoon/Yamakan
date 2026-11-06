@@ -55,45 +55,59 @@ const step = (name, detail = {}) => {
   steps.push({ name, ...detail, at: new Date().toISOString() });
   console.log(`ok - ${name}`);
 };
-const child = fork(
-  fileURLToPath(new URL("../server/main.ts", import.meta.url)),
-  [],
-  {
-    env: {
-      ...process.env,
-      YAMAKAN_WORKSPACE: join(root, "workspace"),
-      YAMAKAN_PORT: String(port),
-    },
-    silent: true,
-    windowsHide: true,
-  },
-);
+// With YAMAKAN_QUALIFY_RESTART=1 the service is killed while the run is on Kaggle.
+const RESTART = Boolean(process.env.YAMAKAN_QUALIFY_RESTART);
 let log = "";
-child.stderr.on("data", (c) => (log += String(c)));
-
-let browser;
-let modelChosen = null;
-let passed = false;
-let failure = null;
-try {
-  await new Promise((ready, reject) => {
+const spawnService = () => {
+  const made = fork(
+    fileURLToPath(new URL("../server/main.ts", import.meta.url)),
+    [],
+    {
+      env: {
+        ...process.env,
+        YAMAKAN_WORKSPACE: join(root, "workspace"),
+        YAMAKAN_PORT: String(port),
+      },
+      silent: true,
+      windowsHide: true,
+    },
+  );
+  made.stderr.on("data", (c) => (log += String(c)));
+  return made;
+};
+let child = spawnService();
+const running = (service) =>
+  new Promise((ready, reject) => {
     const timer = setTimeout(
       () => reject(new Error(`Timeout: ${log}`)),
       120_000,
     );
-    child.stdout.on("data", (chunk) => {
+    service.stdout.on("data", (chunk) => {
       if (String(chunk).includes("Yamakan is running")) {
         clearTimeout(timer);
         ready();
       }
     });
-    child.once("exit", (code) => {
+    service.once("exit", (code) => {
       clearTimeout(timer);
       reject(new Error(`Server exited ${code}: ${log}`));
     });
   });
+const signInLink = async () => {
   const { writeLaunchLink } = await import("../core/launch.ts");
   await writeLaunchLink(join(root, "workspace"), `http://127.0.0.1:${port}`);
+  return readFileSync(join(root, "workspace", "launch"), "utf8")
+    .split("\n")[0]
+    .trim();
+};
+
+let browser;
+let generationId = null;
+let modelChosen = null;
+let passed = false;
+let failure = null;
+try {
+  await running(child);
   browser = await chromium.launch({
     channel: process.env.YAMAKAN_BROWSER_CHANNEL || "msedge",
     headless: true,
@@ -104,11 +118,7 @@ try {
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
   const shot = (name) => page.screenshot({ path: join(out, `${name}.png`) });
-  await page.goto(
-    readFileSync(join(root, "workspace", "launch"), "utf8")
-      .split("\n")[0]
-      .trim(),
-  );
+  await page.goto(await signInLink());
   await page.waitForFunction(() => location.hash === "");
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("tab", { name: "Create", exact: true }).click();
@@ -143,18 +153,83 @@ try {
   if (READY_ONLY) throw new Error("Stopped before sending anything, as asked.");
   await start.click();
   const state = page.getByTestId("create-run-state");
-  await state.waitFor({ timeout: 300_000 });
+  // A refused start shows no run, only why: that is what this run failed on.
+  await page
+    .locator('[data-testid="create-run-state"], .create-problem')
+    .first()
+    .waitFor({ timeout: 300_000 });
+  const refused = page.locator(".create-problem");
+  if (await refused.count()) {
+    await shot("2-refused");
+    throw new Error(
+      `The start was refused: ${await refused.first().textContent()}`,
+    );
+  }
   step("started from the page, after agreeing the prompt leaves this computer");
   await shot("2-started");
 
   const began = Date.now();
   let last = "";
+  let restarted = false;
   for (;;) {
     const now = await state.getAttribute("data-state");
     if (now !== last) {
       step(`Kaggle says ${now}`, { afterSeconds: (Date.now() - began) / 1000 });
       if (now === "running") await shot("3-running");
       last = now;
+    }
+    if (RESTART && now === "running" && !restarted) {
+      restarted = true;
+      const ask = (operation, parameters) =>
+        page.evaluate(
+          async ([operation, parameters]) => {
+            const stored = JSON.parse(
+              sessionStorage.getItem("yamakan.session") ?? "null",
+            );
+            const headers = { "Content-Type": "application/json" };
+            if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+            const res = await fetch("/api/v1/call", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ apiVersion: 1, operation, parameters }),
+            });
+            const body = await res.json();
+            if (body.error) throw new Error(body.error.message);
+            return body.result;
+          },
+          [operation, parameters],
+        );
+      const projects = await ask("yamakan.project.list", {});
+      const projectId = (projects.projects ?? projects)[0].id;
+      const before = await ask("yamakan.generation.list", { projectId });
+      assert.equal(before.length, 1);
+      generationId = before[0].generationId;
+      // Killed outright, with the run under way on Kaggle.
+      await new Promise((done) => {
+        child.once("exit", done);
+        child.kill("SIGKILL");
+      });
+      step("the service is killed while the run is on Kaggle", {
+        generationId,
+      });
+      child = spawnService();
+      await running(child);
+      // A link differing only by its fragment would not load the page again.
+      await page.goto("about:blank");
+      await page.goto(await signInLink());
+      await page.waitForFunction(() => location.hash === "");
+      await page
+        .getByRole("button", { name: /revision/i })
+        .first()
+        .click();
+      await page.getByRole("tab", { name: "Create", exact: true }).click();
+      await state.waitFor({ timeout: 120_000 });
+      const after = await ask("yamakan.generation.list", { projectId });
+      assert.equal(after.length, 1, "no second run");
+      assert.equal(after[0].generationId, generationId, "the same run");
+      step("after the restart the page has the same run, and is following it");
+      await shot("3b-after-restart");
+      continue;
     }
     if (["succeeded", "failed", "cancelled"].includes(now)) break;
     assert.ok(Date.now() - began < MAX_WAIT_MS, "it took too long");
@@ -238,7 +313,10 @@ try {
   let job;
   for (let i = 0; i < 1200; i++) {
     const jobs = await service("yamakan.job.list", {});
-    job = (jobs.jobs ?? jobs).find((j) => j.projectId === projectId);
+    // The run's own job is in this list too, naming its asset rather than a file.
+    job = (jobs.jobs ?? jobs).find(
+      (j) => j.projectId === projectId && !j.artifact?.startsWith("asset:"),
+    );
     if (job && ["COMPLETED", "FAILED"].includes(job.state)) break;
     await page.waitForTimeout(200);
   }
@@ -290,6 +368,8 @@ try {
     `${JSON.stringify(
       {
         model: await modelChosen,
+        restarted: RESTART,
+        generationId,
         task: READY_ONLY
           ? "the-page-before-a-run-only"
           : "generation-from-yamakan-on-kaggle",

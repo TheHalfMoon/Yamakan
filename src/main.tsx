@@ -2268,6 +2268,12 @@ function App() {
                         }),
                       status: (generationId) =>
                         call("yamakan.generation.status", { generationId }),
+                      list: async () =>
+                        (await call("yamakan.generation.list", {
+                          projectId: p.id,
+                        })) as any,
+                      dismiss: (generationId) =>
+                        call("yamakan.generation.dismiss", { generationId }),
                       stop: (generationId) =>
                         call("yamakan.generation.cancel", { generationId }),
                       bringIn: (generationId) =>

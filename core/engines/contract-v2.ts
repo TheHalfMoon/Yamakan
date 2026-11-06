@@ -359,12 +359,18 @@ export type EngineContextV2 = {
 export type EngineAdapterV2 = {
   readonly contract: typeof ENGINE_CONTRACT_V2;
   capabilities(): CapabilityV2[];
+  // Where a run of this recipe goes, for an engine that sends it elsewhere.
+  location?(recipeId: string): string | null;
   // An external execution reference tied to the durable attempt, or the
   // reason it cannot run (decided before any worker exists).
   submit(
     request: EngineRequestV2,
     context: EngineContextV2,
-  ): Promise<{ executionRef: string } | { refused: RefusalReason }>;
+    // `uncertain`: the send's answer was lost, so it may have arrived. Said, not resent.
+  ): Promise<
+    | { executionRef: string; uncertain?: string; notice?: string }
+    | { refused: RefusalReason }
+  >;
   status(executionRef: string): Promise<ExecutionStatus>;
   requestCancel(executionRef: string): Promise<Cancellation>;
   enumerateArtifacts(executionRef: string): Promise<Artifact[]>;
