@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -19,6 +19,7 @@ import {
   KAGGLE_RECIPES,
   createKaggleEngine,
   kaggleCliEnvironment,
+  outputPattern,
   killedAt,
   kaggleRecipes,
   offeredKaggleRecipes,
@@ -265,6 +266,116 @@ test("a finished run gives its video, by its own hash", async () => {
   await k.engine.status(executionRef);
   assert.equal(k.calls.length, asked);
 });
+
+// The CLI's own download, as a real run uses it: only what this asks for can come down.
+async function fetchedBy(extra?: string) {
+  let asked: string[] = [];
+  let pushes = 0;
+  let runId = "";
+  let time = 0;
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
+      if (args[1] === "status") {
+        if (!pushes) throw new Error(MISSING);
+        return { stdout: 'has status "KernelWorkerStatus.COMPLETE"' };
+      }
+      if (args[1] === "push") {
+        pushes++;
+        const script = readFileSync(path.join(args[3], "run.py"), "utf8");
+        const encoded = /b64decode\("([^"]+)"\)/.exec(script)![1];
+        runId = JSON.parse(Buffer.from(encoded, "base64").toString()).runId;
+        return { stdout: "Kernel version 1 successfully pushed." };
+      }
+      if (args[1] === "pull") {
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: true }),
+        );
+        return { stdout: "" };
+      }
+      if (args[1] === "output") {
+        asked = args;
+        good(runId, args[4]);
+        writeFileSync(path.join(args[4], `${wan.slug}.log`), "[]");
+        if (extra) writeFileSync(path.join(args[4], extra), "@echo off");
+        return { stdout: "" };
+      }
+      throw new Error(`unexpected ${args}`);
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+    now: () => time,
+  });
+  const { executionRef } = (await engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  // Past the minutes when Kaggle may still answer for an earlier run.
+  time = 10 * 60 * 1000;
+  const answer = await engine.status(executionRef);
+  return { asked, answer };
+}
+
+test("a run's output is asked for by exact name, and anything else is not read", async () => {
+  const { asked, answer } = await fetchedBy();
+  assert.equal(answer.state, "succeeded", answer.diagnostic);
+  assert.deepEqual(asked.slice(5), ["--file-pattern", outputPattern(wan)]);
+  const extra = await fetchedBy("x.cmd");
+  assert.equal(extra.answer.state, "failed");
+  assert.match(extra.answer.diagnostic!, /without a readable result/);
+});
+
+test(
+  "the name filter lets through only the receipt and the video, as Python reads it",
+  {
+    skip: ["python3", "python"].some(
+      (p) => spawnSync(p, ["-c", "1"], { windowsHide: true }).status === 0,
+    )
+      ? false
+      : "no Python here",
+  },
+  () => {
+    const python = ["python3", "python"].find(
+      (p) => spawnSync(p, ["-c", "1"], { windowsHide: true }).status === 0,
+    )!;
+    for (const recipe of KAGGLE_RECIPES) {
+      const names = [
+        "receipt.json",
+        recipe.output,
+        "..\\..\\Startup\\x.cmd",
+        "C:\\Users\\x.cmd",
+        "receipt.json\\..\\..\\x.cmd",
+        "../receipt.json",
+        "sub/receipt.json",
+        "receipt.json.cmd",
+        "receipt.json\n",
+        "receiptxjson",
+        recipe.output + "x",
+        recipe.slug + ".log",
+      ];
+      // The CLI's own test: re.search of the pattern on the listed name.
+      const made = spawnSync(
+        python,
+        [
+          "-c",
+          "import json,re,sys; p=re.compile(sys.argv[1]); print(json.dumps([bool(p.search(n)) for n in json.loads(sys.argv[2])]))",
+          outputPattern(recipe),
+          JSON.stringify(names),
+        ],
+        { encoding: "utf8", windowsHide: true },
+      );
+      assert.equal(made.status, 0, made.stderr);
+      const passes = JSON.parse(made.stdout) as boolean[];
+      assert.deepEqual(
+        names.filter((_, i) => passes[i]),
+        ["receipt.json", recipe.output],
+        recipe.id,
+      );
+    }
+  },
+);
 
 test("an earlier run's result is never this run's", async () => {
   const k = kaggle(["COMPLETE"], (_id, folder) => good("someone-else", folder));
@@ -583,7 +694,7 @@ test("a finished run keeps only its video", async () => {
   const k = kaggle(["COMPLETE"], (runId, folder) => {
     where = folder;
     good(runId, folder);
-    writeFileSync(path.join(folder, "run.log"), "the prompt");
+    writeFileSync(path.join(folder, `${wan.slug}.log`), "the prompt");
   });
   const { executionRef } = (await k.engine.submit(
     request(),
@@ -645,7 +756,7 @@ test("a killed run says so, from its log, without the log's words", async () => 
     );
     // Exactly as a real killed run's log has it, with its output after.
     writeFileSync(
-      path.join(folder, "run.log"),
+      path.join(folder, `${wan.slug}.log`),
       '[{"stream_name":"stderr","time":1,"data":"30/30 the prompt\\n"}\r\n' +
         ',{"stream_name":"stderr","time":2,"data":"Killed\\n"}\r\n' +
         `,{"stream_name":"stderr","time":3,"data":"${"x".repeat(100_000)}"}\r\n]`,
@@ -679,7 +790,7 @@ test("a killed run says how far it got, and how much memory was left", async () 
       }),
     );
     writeFileSync(
-      path.join(folder, "run.log"),
+      path.join(folder, `${wan.slug}.log`),
       '[{"stream_name":"stderr","time":2,"data":"Killed\\n"}]',
     );
   });
@@ -784,7 +895,7 @@ test("a run that failed otherwise is not said to be killed", async () => {
       JSON.stringify({ runId, stage: "generating", error: null }),
     );
     writeFileSync(
-      path.join(folder, "run.log"),
+      path.join(folder, `${wan.slug}.log`),
       '[{"stream_name":"stdout","time":1,"data":"Killed by a word\\nKilled\\nprompt\\n"}]',
     );
   });
