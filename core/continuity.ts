@@ -378,6 +378,21 @@ export function assertLinkedMediaNotRevoked(
  * any pack version links to someone's consent, revoked or not, cannot be marked so, as the
  * founder chose. This goes by hash, so another copy of the picture is not recognised.
  */
+/**
+ * Media whose person's consent was revoked is not kept again as a place, prop or the like, as
+ * chosen on the founder's standing approval. An entry with its own consent is checked by that
+ * consent: a person who grants a new one can link their own image again.
+ */
+export function assertMayKeepWithoutConsent(
+  db: DatabaseSync,
+  pack: { entries: readonly { assetHash: string; consentId: string | null }[] },
+) {
+  assertLinkedMediaNotRevoked(
+    db,
+    pack.entries.filter((e) => e.consentId === null).map((e) => e.assetHash),
+  );
+}
+
 export function assertMayMarkFictional(
   db: DatabaseSync,
   pack: {

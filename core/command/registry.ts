@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { assertMayMarkFictional } from "../continuity.ts";
 import {
   OTIO_LIMITS,
   fromOtio,
@@ -109,6 +108,8 @@ import {
 import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
   CONTINUITY_STAGES,
+  assertMayKeepWithoutConsent,
+  assertMayMarkFictional,
   resolveContinuity,
   verifySelectedContinuity,
   verifyStoryContinuity,
@@ -632,6 +633,7 @@ export const commands = {
           verify: (c) => {
             verifyReferencePack(a.pack, c);
             assertMayMarkFictional(c.db, a.pack);
+            assertMayKeepWithoutConsent(c.db, a.pack);
           },
         },
         receipt,

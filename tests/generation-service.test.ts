@@ -952,6 +952,40 @@ test("marked first and linked later, it cannot be saved as made up again", async
   );
 });
 
+const propPack = (asset: { id: string; hash: string }) => ({
+  ...fictionalPack(asset),
+  name: "A chair",
+  entries: fictionalPack(asset).entries.map((e) => ({ ...e, role: "prop" })),
+});
+
+test("media whose consent was revoked is not kept again as a prop", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  // While the consent stands, it can be: nothing is being taken from anyone.
+  await savePack(f, propPack(still));
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await assert.rejects(savePack(f, propPack(still)), /consent was revoked/);
+});
+
+test("a person who consents again can link their own image again", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await consented(f, still.id, still.hash);
+  // And with that, it may be kept beside the person's link once more.
+  await savePack(f, propPack(still));
+});
+
 test("another image can still be marked, beside one linked to a consent", async () => {
   const f = await fixture();
   const { asset: linked } = await f.store.importAsset(
