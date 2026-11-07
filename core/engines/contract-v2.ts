@@ -359,7 +359,8 @@ export type EngineContextV2 = {
 export type EngineAdapterV2 = {
   readonly contract: typeof ENGINE_CONTRACT_V2;
   capabilities(): CapabilityV2[];
-  // Where a run of this recipe goes, for an engine that sends it elsewhere.
+  // Where a run of this recipe goes. An engine that sends a run off this computer must
+  // have this: without it a person's linked image needs no consent to send.
   location?(recipeId: string): string | null;
   // An external execution reference tied to the durable attempt, or the
   // reason it cannot run (decided before any worker exists).

@@ -24,7 +24,7 @@ type Shot = {
   name: string;
   durationTicks: number;
   notes: string;
-  referencePacks: never[];
+  referencePacks: { documentId: string; contentHash: string }[];
   takes: Take[];
   selectedTakeId: string | null;
 };

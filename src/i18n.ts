@@ -27,6 +27,32 @@ const en = {
     "To run it from here, start Yamakan with YAMAKAN_KAGGLE_CLI set to your Kaggle CLI's full path and YAMAKAN_KAGGLE_USERNAME to your username.",
   "create.agree":
     "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer, and Kaggle keeps it in the notebook's history. The video comes back here; the model stays on Kaggle.",
+  "create.elementsTitle": "Places and props",
+  "create.elementsNote":
+    "Kept with this project as a record, and pinned to a shot if you wish. They are not sent to a model and do not change what is generated. Saving one, or a pin, ends undo for what came before. Do not keep a real person's likeness here, even as a made-up character: that needs consent this does not ask for.",
+  "create.elementName": "Name",
+  "create.elementRole": "Kind",
+  "create.elementRole.environment": "Place",
+  "create.elementRole.prop": "Prop",
+  "create.elementRole.wardrobe": "Wardrobe",
+  "create.elementRole.style": "Style",
+  "create.elementRole.fictional": "Drawn or made-up character",
+  "create.elementAdd": "Choose an image",
+  "create.elementAddImage": "Add another image",
+  "create.elementOnShots": "On these shots",
+  "create.elementOlder": "An older version",
+  "create.elementImageType": "This takes a PNG or JPEG image.",
+  "create.elementNotKept":
+    "That image may not have come in. Check this project's assets before trying again.",
+  "create.elementImageOnly":
+    "The image came into the project's assets, and this could not be saved with it. The reason is at the top of the page.",
+  "create.elementNotPinned":
+    "That may not have been saved on the shot. Reopen the project to see.",
+  "create.elementsUnread": "What this project keeps here could not be read.",
+  "create.elementFull": "This holds all the images it can.",
+  "create.elementGone":
+    "That one is no longer in this project. Nothing was added.",
+  "create.elementShotFull": "That shot holds all it can.",
   "create.needPrompt": "Describe the shot first.",
   "create.notFromHere":
     "This model has not yet been tested from this page, so it cannot be started here.",
@@ -480,6 +506,31 @@ const ar: Record<MessageKey, string> = {
     "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
   "create.agree":
     "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب، ويحتفظ به Kaggle في سجل الدفتر. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
+  "create.elementsTitle": "الأماكن والأغراض",
+  "create.elementsNote":
+    "تُحفظ مع هذا المشروع كسجل، ويمكن تثبيتها على لقطة إن شئت. لا تُرسل إلى أي نموذج ولا تغيّر ما يُولَّد. وحفظ أي منها أو تثبيته يُنهي التراجع عمّا سبقه. لا تحفظ هنا صورة شخص حقيقي، ولو على أنها شخصية خيالية: فذلك يحتاج إلى موافقة لا يطلبها هذا القسم.",
+  "create.elementName": "الاسم",
+  "create.elementRole": "النوع",
+  "create.elementRole.environment": "مكان",
+  "create.elementRole.prop": "غرض",
+  "create.elementRole.wardrobe": "أزياء",
+  "create.elementRole.style": "أسلوب",
+  "create.elementRole.fictional": "شخصية مرسومة أو خيالية",
+  "create.elementAdd": "اختر صورة",
+  "create.elementAddImage": "أضف صورة أخرى",
+  "create.elementOnShots": "في هذه اللقطات",
+  "create.elementOlder": "نسخة أقدم",
+  "create.elementImageType": "يقبل هذا صور PNG أو JPEG.",
+  "create.elementNotKept":
+    "ربما لم تدخل تلك الصورة. تحقّق من ملفات هذا المشروع قبل المحاولة مجددًا.",
+  "create.elementImageOnly":
+    "دخلت الصورة إلى ملفات المشروع، وتعذّر حفظ هذا معها. السبب في أعلى الصفحة.",
+  "create.elementNotPinned":
+    "ربما لم يُحفظ ذلك على اللقطة. أعد فتح المشروع لترى.",
+  "create.elementsUnread": "تعذّرت قراءة ما يحفظه هذا المشروع هنا.",
+  "create.elementFull": "يضم هذا كل ما يتسع له من صور.",
+  "create.elementGone": "لم يعد ذلك في هذا المشروع. لم يُضَف شيء.",
+  "create.elementShotFull": "تضم تلك اللقطة كل ما تتسع له.",
   "create.needPrompt": "صف اللقطة أولًا.",
   "create.notFromHere":
     "لم يُختبر هذا النموذج من هذه الصفحة بعد، فلا يمكن تشغيله من هنا.",

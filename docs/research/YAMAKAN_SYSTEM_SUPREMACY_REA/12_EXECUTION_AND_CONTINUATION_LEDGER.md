@@ -245,12 +245,55 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Open findings added:**
 
-- Exports sit steadily darker than their sources, by about 1.5, 2.1 and 1.6 of 255 in RGB. Cause not looked at.
+- Exports sat steadily darker than their sources. Reduced, not removed, in PR #208: under 1 of 255 remains on the one real clip measured. See the next checkpoint.
 - One of five 81-frame runs was killed while decoding, most likely out of host memory: a later run peaked at 24.6 GiB of 31 with the text encoder freed. More runs are needed to know if that change fixes it.
 - Wan at 41 frames snapped to a different picture for its last 3 frames, and its frame changes were the same with tiling off. 81 frames did not, on one prompt and seed. Why was not worked out.
-- Kaggle's public interface cannot stop a run, and a restart loses a run in progress.
+- Kaggle's public interface cannot stop a run. A restart no longer loses one: see the next checkpoint.
 - `qualify:create` and `qualify:kaggle` are not in CI. Unit tests of the engine are.
 - `apt-get` hanging in `qualify` cancels whole CI runs, and a cancelled main run says nothing either way. Check main's conclusion after every merge.
 - Native Arabic review, X-01, is still open for the new text.
 
 **Do not repeat:** several reviews of the frame check and of the Kaggle engine each found real defects after green runs, including false claims of the builder's. Keep the delta review. This PC runs short of memory with several browsers or reviewers at once: one at a time, and no short `timeout` around a build.
+
+## Checkpoint: generation hardening, durable runs, and the GPU quota
+
+**Brief:** the founder answered "Yes, follow it" on 2026-11-06 to the pasted Generation Workflow Hardening brief. Order: close #207; durable Kaggle runs; export colour; reliability and memory; then reference images, elements, image-to-video and CogVideoX.
+
+| Work                             | State                                                                                                                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shots in the project, #207       | Merged: [PR #207](https://github.com/TheHalfMoon/Yamakan/pull/207), merge `418a4c0`                                                                                                                                                 |
+| Export colour                    | Merged: [PR #208](https://github.com/TheHalfMoon/Yamakan/pull/208), merge `5a04623`. On the same clip the export's offset went from -1.46, -2.17, -1.41 to -0.27, -0.60, -0.76 of 255. See `docs/evidence/ultimate/export-color.md` |
+| Durable Kaggle runs              | Merged: [PR #209](https://github.com/TheHalfMoon/Yamakan/pull/209), merge `160823e0c0a837b22f32a29000191d235c732690`                                                                                                                |
+| A killed run says how far it got | Draft: [PR #210](https://github.com/TheHalfMoon/Yamakan/pull/210). Waits for one real run                                                                                                                                           |
+
+**True now:** a Kaggle run is recorded in the job table before it is sent, followed across a restart, and never sent again by anything but a person. Past its time limit it says so and is still asked about: the clock alone ends nothing. It ends on its result, on Kaggle's answer, after four fetches that come no differently, or when a person stops following it. A new run first asks about any other of that model still being followed, which collects it if finished, and is refused if that leaves one going. Cancel on Kaggle is not supported: the page, the cancel answer and the job list do not claim otherwise. See `docs/evidence/ultimate/create-workspace.md` for what each of these does and does not cover.
+
+**Real Kaggle evidence for PR #209:** at `48623d7` a real run with the service killed partway was found again after the restart, and its video came in and was placed on the timeline. It stopped at the export step on a bug in the test script, since fixed. Later commits were tested with a stand-in only. Receipts: `kaggle-restart-run-receipt.json`, `kaggle-quota-refusal-receipt.json`.
+
+**Blocked by the GPU quota:** on 2026-11-06 real Kaggle answered `Maximum weekly GPU quota of 30.00 hours reached.` The reset time was not read from Kaggle. Until it resets, none of these can happen, and none is to be claimed:
+
+1. One real run through the page at PR #210's head, with the kite prompt. It must make the same bytes, `8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c`, and reach export. That also finishes the restart test end to end: run it with `YAMAKAN_QUALIFY_RESTART=1`. Then PR #210 can leave draft.
+2. A few controlled runs on the `Killed` failure, kept few. At one kill in about ten runs, a handful of good runs does not show it solved.
+3. Real qualification of image-to-video and CogVideoX. Each engine stays off until its own real run passes.
+
+**Places and props, and the first visual baseline:** [PR #212](https://github.com/TheHalfMoon/Yamakan/pull/212) keeps a place, prop, wardrobe or style with the project and pins it to a shot. These are records only: no model receives them. `npm run qualify:create` compares that panel with pictures in `docs/evidence/baselines/win32/`, which is not in CI, and shows only that it is within a tight tolerance of them. Arabic human review and UX acceptance stay separate from automated checks.
+
+**Fictional characters:** the founder chose that one marked as drawn or made up needs no consent. The role `fictional-character` is that mark, saved only from a browser session. It is a statement, not a gate: it changes no check, and it is refused on bytes already linked to a consent.
+
+**Decisions:** on 2026-11-07 the founder wrote "from now chose the best, you have my approval", so open product decisions are now decided by Claude and recorded in `docs/AGENT_DECISION_RECORD.md`, within the standing rules. Media with revoked consent is no longer kept again as a place, prop or the like.
+
+**Image-to-video, not offered:** the founder chose that an image travels inside the run's brief. The recipe `kaggle-wan22-ti2v-5b-first-frame` and its own script exist with `offered: false`, so no page or command reaches them, and no image has left this PC. They are tested with stand-ins only. diffusers 0.36.0's pipeline was read for this; it has never been run. Whether Kaggle accepts a script carrying an image of up to 4 MB, its memory use, and its time are all unknown. Before it is offered: one real run with a detailed image, since what is sent is now a 704×480 PNG, of up to about 1 MB, and the script about 1.4 MB; the page's control for choosing a frame; the agreement's words saying the image leaves; a page control to grant consent to send, since the page has none for any consent; tying that consent to the person rather than to a character's name, since `likeness-send` is found by name across the workspace, so two people given one name would share it; and, on each run, a person's tick that the image shows no real person unless their consent is recorded. An unlinked photo of a person passes the consent check, since no record says who it shows. Revoking consent after a run cannot reach the notebook's history.
+
+**Next:** what remains of the brief waits on the GPU quota, or on building that page work once a real run has passed. Elements cannot yet reach a model, and no engine is enabled.
+
+**Open findings added:**
+
+- Low, from the last review of PR #209, with no asset or video lost: a stop from a stale tab during an import can leave the job row cancelled while the run is listed as imported; a finished or imported run stopped from a stale tab can read as possibly still running on the page; one test's "asks nothing" assertions would pass without the check they name.
+- A person's new start can replace an uncollected result, with no warning, in three cases: the local copy of its video has gone, from a restored copy, and from another workspace on the same account.
+- If a Kaggle CLI never returned, that model could not start again until Yamakan was restarted, and nothing would say so. Whether a timed-out CLI really stops on Windows is assumed.
+- The page's Stop following and failure screens, and finding a run after a start's answer is lost, have run in a browser only with a stand-in CLI, `npm run qualify:kaggle-screens`, which is not in CI.
+- `create.runFailed` and `create.runCancelled` changed in Arabic: X-01 covers them too.
+
+**Open from the image work:** media worker memory peaked at about 3 GiB against its 2 GiB limit in crafted runs, on procd's reading, cause not found. **Flaky under load:** the test "no descendant outlives an exiting worker" in `tests/engine-worker-profile.test.ts` failed twice in full local runs, at "running before the budget", with little memory free. It has a 1.5-second budget, and passed each time alone.
+
+**Do not repeat:** nine reviews of PR #209 in a row each found real defects after green local runs, including one fix that broke a real send and a failure only the full `npm test` shows. Run all of `npm test` before pushing a new command. Deliberately break each fix and see a test fail: 58 breaks on PR #209 found 3 tests that needed adding or tightening and one pair of overlapping guards. A review agent ran `python -c "import kaggle"` once, which may load the credentials file: tell reviewers never to import that package. No token was read or printed.

@@ -108,6 +108,8 @@ import {
 import { ClipEffectsSchema } from "../effects/registry.ts";
 import {
   CONTINUITY_STAGES,
+  assertMayKeepWithoutConsent,
+  assertMayMarkFictional,
   resolveContinuity,
   verifySelectedContinuity,
   verifyStoryContinuity,
@@ -121,6 +123,7 @@ import {
   assembleOperations,
   assertOnFrames,
   linksConsent,
+  marksFictional,
   verifyReferencePack,
   verifyStory,
 } from "../story.ts";
@@ -611,6 +614,12 @@ export const commands = {
           "SCOPE_DENIED",
           "Linking a likeness consent requires the browser session.",
         );
+      // It stands in for consent, on nothing but a person's word.
+      if (marksFictional(a.pack) && principal.id !== "browser-ui")
+        throw new CommandError(
+          "SCOPE_DENIED",
+          "Saying a character is made up requires the browser session.",
+        );
       const project = await store.commitDocument(
         {
           projectId: a.projectId,
@@ -621,7 +630,11 @@ export const commands = {
           expectedContentHash: a.expectedContentHash,
           source: { bytes: Buffer.from(JSON.stringify(a.pack), "utf8") },
           principalId: principal.id,
-          verify: (c) => verifyReferencePack(a.pack, c),
+          verify: (c) => {
+            verifyReferencePack(a.pack, c);
+            assertMayMarkFictional(c.db, a.pack);
+            assertMayKeepWithoutConsent(c.db, a.pack);
+          },
         },
         receipt,
       );
@@ -2076,7 +2089,8 @@ export const commands = {
     input: z
       .object({
         characterId: z.string().min(1).max(80),
-        purpose: ConsentPurposeSchema,
+        // Consent to send is about where an image goes, not an encoding of anyone.
+        purpose: ConsentPurposeSchema.exclude(["likeness-send"]),
         consentId: Id,
         provider: z.string().min(1).max(64),
         method: z.string().min(1).max(64),

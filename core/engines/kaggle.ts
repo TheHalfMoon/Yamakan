@@ -1,6 +1,7 @@
-// Text-to-video on the person's own free Kaggle GPU, through the Kaggle CLI they
-// already set up. A person starts each run; only its prompt and seed leave this
-// machine, for their private notebook. Yamakan never reads their token, and no
+// Video on the person's own free Kaggle GPU, through the Kaggle CLI they already set
+// up. A person starts each run; only its prompt and seed leave this machine, and a first
+// frame where a qualified recipe takes one, for their private notebook, inside the run's
+// brief, where it stays in the notebook's history. Yamakan never reads their token, and no
 // weights come here. A push replaces what "latest" means on Kaggle, so a result
 // counts only if its receipt names this run.
 import { execFile } from "node:child_process";
@@ -23,10 +24,13 @@ import {
   ENGINE_V2_LIMITS,
   diagnostic,
   type Artifact,
+  type AssetRef,
   type EngineAdapterV2,
+  type EngineContextV2,
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import { cleanImage } from "./clean-image.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -36,6 +40,8 @@ export type KaggleRecipe = {
   licence: string;
   // Offered from the page only once its own run from the page has been tested.
   offered: boolean;
+  // Text to video unless it says otherwise.
+  operation?: "imageToVideo";
   // Fixed by its script, and what has really been run.
   width: number;
   height: number;
@@ -71,6 +77,27 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     output: "wan-video.mp4",
   },
   {
+    // Its own script and notebook, so that nothing here touches the text script's bytes.
+    // Its time is the text run's, for now: this has not been run for real.
+    id: "kaggle-wan22-ti2v-5b-first-frame",
+    name: "Wan2.2-TI2V-5B, from a first frame",
+    model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    revision: "b8fff7315c768468a5333511427288870b2e9635",
+    licence: "Apache-2.0",
+    offered: false,
+    operation: "imageToVideo",
+    width: 704,
+    height: 480,
+    frames: 81,
+    fps: 24,
+    steps: 30,
+    timeoutSeconds: 3600,
+    expectedSeconds: 1132,
+    folder: "wan22-ti2v-5b-first-frame",
+    slug: "yamakan-run-wan22-ti2v-5b-first-frame",
+    output: "wan-first-frame-video.mp4",
+  },
+  {
     id: "kaggle-cogvideox-2b",
     name: "CogVideoX-2b",
     model: "zai-org/CogVideoX-2b",
@@ -98,6 +125,9 @@ const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
 const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
+// A first frame travels inside the script. What Kaggle accepts in one is not known, so this
+// is a guess kept small, for a real run to test.
+export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
 
 const sha256 = (data: string | Uint8Array) =>
   createHash("sha256").update(data).digest("hex");
@@ -109,7 +139,7 @@ export function kaggleRecipes(): GenerationRecipe[] {
   return offeredKaggleRecipes().map((r) => ({
     id: r.id,
     hash: sha256(readFileSync(scriptOf(r))),
-    operation: "textToVideo" as const,
+    operation: r.operation ?? ("textToVideo" as const),
     modelManifestHash: sha256(`${r.model}@${r.revision}`),
   }));
 }
@@ -118,7 +148,12 @@ export function kaggleRecipes(): GenerationRecipe[] {
 // in a prompt can become Python.
 export function scriptWithBrief(
   script: string,
-  brief: { prompt: string; seed: number; runId: string },
+  brief: {
+    prompt: string;
+    seed: number;
+    runId: string;
+    firstFrame?: { data: string; mediaType: string; sha256: string };
+  },
 ) {
   const lines = script.split("\n");
   const at = lines.findIndex((l) => l.trimEnd() === BRIEF_LINE);
@@ -378,6 +413,8 @@ export function createKaggleEngine(options: {
   // When another run of this recipe, even one given up on, was last recorded as sent:
   // Kaggle may not yet show it.
   lastSentAt?: (recipeId: string, except: string) => number | undefined;
+  // Tests only: recipes to treat as offered.
+  alsoOffered?: readonly string[];
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
@@ -472,7 +509,7 @@ export function createKaggleEngine(options: {
   const clearLeftovers = async (run: Run) => {
     if (sendingNow.has(run.runId)) return;
     await Promise.all(
-      ["push", "pulled"].map((name) =>
+      ["push", "pulled", "clean"].map((name) =>
         rm(path.join(run.folder, name), { recursive: true, force: true }),
       ),
     ).catch(() => {});
@@ -836,6 +873,43 @@ export function createKaggleEngine(options: {
     if (!answer) throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
   }
 
+  async function readFirstFrame(
+    asset: AssetRef,
+    context: EngineContextV2,
+    recipe: KaggleRecipe,
+    folder: string,
+  ) {
+    const parts: Uint8Array[] = [];
+    let bytes = 0;
+    for await (const chunk of context.openAsset(asset)) {
+      bytes += chunk.byteLength;
+      if (bytes > FIRST_FRAME_BYTES)
+        throw new CommandError(
+          "VALIDATION",
+          `A first frame can be up to ${FIRST_FRAME_BYTES / (1024 * 1024)} MB.`,
+        );
+      parts.push(chunk);
+    }
+    const image = Buffer.concat(parts);
+    if (sha256(image) !== asset.sha256)
+      throw new CommandError(
+        "VALIDATION",
+        "That image is not the version this run was started with.",
+      );
+    // The founder chose that a photo's metadata does not go, so what goes is made anew.
+    let clean: Buffer;
+    try {
+      clean = await cleanImage(image, asset.mediaType, recipe, folder);
+    } catch (e) {
+      throw new CommandError("VALIDATION", (e as Error).message);
+    }
+    return {
+      data: clean.toString("base64"),
+      mediaType: "image/png",
+      sha256: sha256(clean),
+    };
+  }
+
   return {
     contract: ENGINE_CONTRACT_V2,
     capabilities: () => [],
@@ -843,11 +917,24 @@ export function createKaggleEngine(options: {
       const recipe = KAGGLE_RECIPES.find((r) => r.id === recipeId);
       return recipe ? remote(recipe).toLowerCase() : null;
     },
-    async submit(request) {
+    async submit(request, context) {
       const recipe = KAGGLE_RECIPES.find((r) => r.id === request.recipeId);
-      if (!recipe?.offered || request.operation !== "textToVideo")
+      if (
+        !recipe ||
+        !(recipe.offered || options.alsoOffered?.includes(recipe.id)) ||
+        request.operation !== (recipe.operation ?? "textToVideo")
+      )
         return { refused: "ENGINE_DISABLED" as const };
-      if (request.inputs.length > 0)
+      // One first frame, or none. This model ignores a last frame without saying so.
+      const [frame] = request.inputs as readonly {
+        role: string;
+        asset: AssetRef;
+      }[];
+      const wanted = recipe.operation === "imageToVideo" ? 1 : 0;
+      if (
+        request.inputs.length !== wanted ||
+        (wanted === 1 && frame.role !== "firstFrame")
+      )
         return { refused: "INPUT_UNSUPPORTED" as const };
       const out = request.output;
       if (
@@ -878,12 +965,22 @@ export function createKaggleEngine(options: {
         const runId = request.attemptKey;
         const push = path.join(folder, "push");
         await mkdir(push);
+        // Read last: opening it is where consent is checked, so that answer is this moment's.
+        const firstFrame = frame
+          ? await readFirstFrame(
+              frame.asset,
+              context,
+              recipe,
+              path.join(folder, "clean"),
+            )
+          : null;
         await writeFile(
           path.join(push, "run.py"),
           scriptWithBrief(await scriptFor(recipe), {
             prompt: request.prompt,
             seed: request.seed ?? 42,
             runId,
+            ...(firstFrame ? { firstFrame } : {}),
           }),
         );
         await writeFile(

@@ -33,6 +33,8 @@ import {
   type RunReceipt,
 } from "./create-model.ts";
 
+import { ElementsPanel, type ElementsApi } from "./ElementsPanel.tsx";
+
 type Translate = (
   key: MessageKey,
   vars?: Record<string, string | number>,
@@ -94,6 +96,7 @@ export function CreateWorkspace(props: {
   // What can be started from here, and how.
   loadModels: () => Promise<readonly GenerateModel[]>;
   generation: GenerationApi;
+  elements: ElementsApi;
   projectFps: number;
   // A restore or undo can change what the project holds, with the same videos.
   revision: number;
@@ -478,6 +481,25 @@ export function CreateWorkspace(props: {
             {copied ? t("create.copied") : t("create.copy")}
           </button>
         </div>
+
+        <ElementsPanel
+          projectId={projectId}
+          busy={busy}
+          revision={props.revision}
+          t={t}
+          api={props.elements}
+          story={keptStory?.story ?? null}
+          saveStory={async (story) => {
+            if (!keptStory) return false;
+            const kept = await props.saveStory({
+              documentId: keptStory.documentId,
+              expectedContentHash: keptStory.contentHash,
+              story,
+            });
+            if (kept) setKeptStory(kept);
+            return Boolean(kept);
+          }}
+        />
 
         {models.length > 0 ? (
           <GeneratePanel

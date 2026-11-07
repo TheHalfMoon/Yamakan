@@ -325,7 +325,23 @@ export function assertLinkedMediaNotRevoked(
   db: DatabaseSync,
   hashes: readonly string[],
 ) {
-  if (!hashes.length) return;
+  for (const newest of newestLinkedConsents(db, hashes)) {
+    if (newest.revokedAt !== null)
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+      );
+    if (!consentInCurrentEpoch(db, newest.id))
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
+      );
+  }
+}
+
+function newestLinkedConsents(db: DatabaseSync, hashes: readonly string[]) {
+  const found: { id: string; revokedAt: number | null }[] = [];
+  if (!hashes.length) return found;
   const linked = new Map<string, Set<string>>();
   const versions = db
     .prepare(
@@ -360,17 +376,65 @@ export function assertLinkedMediaNotRevoked(
         ? b
         : a,
     );
-    if (newest.row!.revoked_at !== null)
-      throw new CommandError(
-        "VALIDATION",
-        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
-      );
-    if (!consentInCurrentEpoch(db, newest.id))
-      throw new CommandError(
-        "VALIDATION",
-        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
-      );
+    found.push({ id: newest.id, revokedAt: newest.row!.revoked_at });
   }
+  return found;
+}
+
+/**
+ * Media whose person's consent was revoked is not kept again as a place, prop or the like.
+ * See the agent decision record. An entry with its own consent is checked by that consent, so
+ * a person who grants a new one can link their own image again. Only a revocation counts: a
+ * restore asks for revalidation before media is used, and keeping it is not using it.
+ */
+export function assertMayKeepWithoutConsent(
+  db: DatabaseSync,
+  pack: { entries: readonly { assetHash: string; consentId: string | null }[] },
+) {
+  const kept = pack.entries
+    .filter((e) => e.consentId === null)
+    .map((e) => e.assetHash);
+  if (newestLinkedConsents(db, kept).some((c) => c.revokedAt !== null))
+    throw new CommandError(
+      "VALIDATION",
+      "An image here is one whose person's consent was revoked, so this cannot be saved. Keep other images as a new element instead.",
+    );
+}
+
+/**
+ * A person's word that a character is made up does not stand against the record: media
+ * any pack version links to someone's consent, revoked or not, cannot be marked so, as the
+ * founder chose. This goes by hash, so another copy of the picture is not recognised.
+ */
+export function assertMayMarkFictional(
+  db: DatabaseSync,
+  pack: {
+    entries: readonly {
+      role: string;
+      assetHash: string;
+      consentId: string | null;
+    }[];
+  },
+) {
+  const marked = pack.entries
+    .filter((e) => e.role === "fictional-character")
+    .map((e) => e.assetHash);
+  if (!marked.length) return;
+  const refused = () =>
+    new CommandError(
+      "VALIDATION",
+      "An image here is linked to a person's consent, so this cannot be saved as made up. Keep it as a new element instead.",
+    );
+  if (pack.entries.some((e) => e.consentId && marked.includes(e.assetHash)))
+    throw refused();
+  const versions = db
+    .prepare(
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack'",
+    )
+    .all() as { hash: string }[];
+  for (const { hash } of versions)
+    if (linksOf(db, hash, marked).some((l) => marked.includes(l.assetHash)))
+      throw refused();
 }
 
 /**
@@ -381,11 +445,15 @@ export function assertLinkedMediaNotRevoked(
  * person's image media reaches this: a voice entry's purpose differs, and would
  * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
+ *
+ * For an engine elsewhere, each of those characters also needs consent to send: their
+ * newest, usable now. An older grant does not outlive a newer one being revoked.
  */
 export function assertLinkedMediaGeneratable(
   db: DatabaseSync,
   hashes: readonly string[],
   nowMs: number,
+  options: { leavesThisComputer?: boolean } = {},
 ) {
   if (!hashes.length) return;
   const wanted = new Set(hashes);
@@ -426,7 +494,30 @@ export function assertLinkedMediaGeneratable(
           purpose: REFERENCE_CONSENT_PURPOSE,
           nowMs,
         });
+    if (options.leavesThisComputer) assertMaySend(db, characterId, nowMs);
   }
+}
+
+function assertMaySend(db: DatabaseSync, characterId: string, nowMs: number) {
+  const grants = db
+    .prepare(
+      "SELECT id, granted_at FROM likeness_consents WHERE character_id = ? AND purpose = ?",
+    )
+    .all(characterId, "likeness-send") as { id: string; granted_at: number }[];
+  if (!grants.length)
+    throw new CommandError(
+      "VALIDATION",
+      "No consent to send is recorded for the character this image is linked to, so it cannot leave this computer.",
+    );
+  const latest = Math.max(...grants.map((g) => g.granted_at));
+  // On an exact tie every one must pass.
+  for (const { id, granted_at } of grants)
+    if (granted_at === latest)
+      assertConsentUsable(db, id, {
+        characterId,
+        purpose: "likeness-send",
+        nowMs,
+      });
 }
 
 // How long each medium plays on each channel, whatever its clips' arrangement.

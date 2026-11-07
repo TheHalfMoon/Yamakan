@@ -13,6 +13,7 @@ import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -152,6 +153,80 @@ try {
   const shot = async (name) => {
     if (out) await page.screenshot({ path: join(out, `${name}.png`) });
   };
+  // Pixels against a picture kept in the repository, one set per system since fonts draw
+  // differently. A check that it has not moved, not that it reads or looks right: only a
+  // person can say that. YAMAKAN_UPDATE_BASELINES=1 replaces the picture.
+  const BASELINES = fileURLToPath(
+    new URL(`../docs/evidence/baselines/${process.platform}/`, import.meta.url),
+  );
+  const matchesBaseline = async (name, locator) => {
+    await page.addStyleTag({
+      content:
+        "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
+    });
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.waitForFunction(() =>
+      [...document.images].every((image) => image.complete),
+    );
+    const now = await locator.screenshot();
+    const kept = join(BASELINES, `${name}.png`);
+    if (process.env.YAMAKAN_UPDATE_BASELINES === "1") {
+      mkdirSync(BASELINES, { recursive: true });
+      writeFileSync(kept, now);
+      step(`replaced ${name}`);
+      return;
+    }
+    // A system with no pictures at all is not compared, and says so without a pass. One
+    // that has them must have this one: losing a picture must not turn the check off.
+    if (!existsSync(BASELINES)) {
+      console.log(`skip - no ${process.platform} pictures to compare ${name}`);
+      return;
+    }
+    assert.ok(existsSync(kept), `no picture of ${name}`);
+    const { different, total, sameSize } = await page.evaluate(
+      async ([a, b]) => {
+        const read = async (base64) => {
+          const image = new Image();
+          image.src = `data:image/png;base64,${base64}`;
+          await image.decode();
+          const canvas = document.createElement("canvas");
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d");
+          context.drawImage(image, 0, 0);
+          return context.getImageData(0, 0, canvas.width, canvas.height);
+        };
+        const [one, two] = [await read(a), await read(b)];
+        if (one.width !== two.width || one.height !== two.height)
+          return { different: 0, total: 0, sameSize: false };
+        let count = 0;
+        for (let i = 0; i < one.data.length; i += 4)
+          if (
+            Math.abs(one.data[i] - two.data[i]) > 8 ||
+            Math.abs(one.data[i + 1] - two.data[i + 1]) > 8 ||
+            Math.abs(one.data[i + 2] - two.data[i + 2]) > 8
+          )
+            count++;
+        return {
+          different: count,
+          total: one.data.length / 4,
+          sameSize: true,
+        };
+      },
+      [readFileSync(kept).toString("base64"), now.toString("base64")],
+    );
+    const share = sameSize ? different / total : 1;
+    // Runs here match to the pixel, so this can be tight: a changed word must show.
+    if (share > 0.0001) {
+      if (out) writeFileSync(join(out, `${name}-now.png`), now);
+      assert.fail(
+        `${name} has moved from its picture: ${sameSize ? `${different} of ${total} pixels` : "another size"}`,
+      );
+    }
+    step(`${name} matches its picture, ${different} of ${total} pixels apart`);
+  };
+
   const noSideways = async (where) => {
     const { scroll, client } = await page.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
@@ -465,6 +540,131 @@ try {
   assert.deepEqual(unnamed, [], "every field has a name");
   step("every field has a name");
 
+  // Places and props: kept and pinned, and said not to reach a model.
+  const stillOf = (name, colour) => {
+    const file = join(root, name);
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `color=c=${colour}:s=320x200`,
+        "-frames:v",
+        "1",
+        file,
+      ],
+      { windowsHide: true },
+    );
+    return file;
+  };
+  const elements = page.getByTestId("create-elements");
+  // The kind a person chooses to say a character is made up.
+  assert.equal(
+    await page
+      .getByTestId("create-element-role")
+      .locator('option[value="fictional-character"]')
+      .textContent(),
+    "Drawn or made-up character",
+  );
+  assert.match(
+    await page.getByTestId("create-elements-note").textContent(),
+    /not sent to a model/,
+  );
+  assert.equal(await page.getByTestId("create-element-add").isDisabled(), true);
+  await page.getByTestId("create-element-name").fill("The harbour");
+  const notAnImage = join(root, "not-an-image.txt");
+  writeFileSync(notAnImage, "words");
+  // Through the button a person presses, then the picker.
+  const pick = async (control, file) => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      control.click(),
+    ]);
+    await chooser.setFiles(file);
+  };
+  await pick(page.getByTestId("create-element-add"), notAnImage);
+  assert.match(await elements.getByRole("alert").textContent(), /PNG or JPEG/);
+  assert.equal(await page.getByTestId("create-element").count(), 0);
+  await pick(
+    page.getByTestId("create-element-add"),
+    stillOf("harbour.png", "navy"),
+  );
+  const element = page.getByTestId("create-element").first();
+  await element.waitFor({ timeout: 60_000 });
+  assert.match(await element.textContent(), /The harbour/);
+  step("a place is kept from an image, and something else is refused");
+
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  const reopen = async () => {
+    await page.reload();
+    await page.waitForFunction(() => location.hash === "");
+    await page
+      .getByRole("button", { name: /revision/i })
+      .first()
+      .click();
+    await page.getByRole("tab", { name: "Create", exact: true }).click();
+    await element.waitFor({ timeout: 30_000 });
+  };
+  await reopen();
+  await page.getByTestId("create-element-pin").first().waitFor();
+  assert.equal(
+    await page.getByTestId("create-element-pin").first().isChecked(),
+    true,
+  );
+  await page.waitForFunction(() => {
+    const image = document.querySelector('[data-testid="create-element"] img');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  step("it and its pin on a shot stay after a reload, with its image shown");
+
+  await pick(
+    page.getByTestId("create-element-more").first(),
+    stillOf("harbour-2.jpg", "teal"),
+  );
+  await page
+    .getByTestId("create-element-older")
+    .first()
+    .waitFor({ timeout: 60_000 });
+  assert.equal(await element.locator("img").count(), 2);
+  step(
+    "another image makes a new version, and the shot says it holds an older one",
+  );
+
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      !document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  await page.getByTestId("create-element-pin").first().click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-element-pin"]')?.checked &&
+      !document.querySelector('[data-testid="create-element-pin"]')?.disabled,
+  );
+  assert.equal(await page.getByTestId("create-element-older").count(), 0);
+  step("it comes off a shot, and pinned again holds the newest version");
+  await matchesBaseline("create-elements-1440", elements);
+  const unnamedHere = await elements.evaluate((panel) =>
+    [...panel.querySelectorAll(":is(input,select)")]
+      .filter(
+        (el) =>
+          !el.hidden && !el.labels?.length && !el.getAttribute("aria-label"),
+      )
+      .map((el) => el.dataset.testid),
+  );
+  assert.deepEqual(unnamedHere, [], "every field here has a name");
+  await shot("create-elements");
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId("create-panel").waitFor();
   await noSideways("390");
@@ -475,6 +675,7 @@ try {
   await page.locator("button.language").click();
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl");
   await noSideways("Arabic");
+  await matchesBaseline("create-elements-1440-arabic", elements);
   await shot("create-1440-arabic");
   step("in Arabic it lays out right to left");
 

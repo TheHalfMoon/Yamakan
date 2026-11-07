@@ -554,6 +554,579 @@ test("consent revoked between the check and the read stops the upload", async ()
   assert.equal(state.inputRead, null, "no byte was read for the engine");
 });
 
+// Consent to generate does not say where: sending a person's image elsewhere needs its own.
+const sending = (f: Awaited<ReturnType<typeof fixture>>) => {
+  const { state, adapter } = engine(f.video);
+  adapter.location = () => "someone/notebook";
+  return { state, adapter, g: service(f, adapter) };
+};
+const grantSend = async (
+  f: Awaited<ReturnType<typeof fixture>>,
+  characterId = "lead",
+  ttlMs = 3_600_000,
+) =>
+  (
+    (
+      await execute(f.ctx, "yamakan.consent.grant", {
+        characterId,
+        purpose: "likeness-send",
+        version: "v1",
+        ttlMs,
+      })
+    ).result as { id: string }
+  ).id;
+
+test("a person's image goes elsewhere only with consent to send", async () => {
+  const f = await fixture();
+  const { state, adapter, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  let submitted = 0;
+  const submit = adapter.submit;
+  adapter.submit = (request, context) => {
+    submitted++;
+    return submit(request, context);
+  };
+  const start = () =>
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    );
+  await assert.rejects(start(), /No consent to send is recorded/);
+  assert.equal(state.inputRead, null, "no byte was read for the engine");
+  assert.equal(submitted, 0, "the engine was not even asked");
+  await grantSend(f);
+  await start();
+  assert.notEqual(state.inputRead, null);
+});
+
+test("the same image needs no consent to send on an engine on this computer", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+// By name: a character's id is all this has. Two people given one name in a workspace would
+// share it, which must be closed before anything is offered. See the ledger.
+test("consent to send under another character's name does not count", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  await grantSend(f, "someone-else");
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /No consent to send is recorded/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("consent to send revoked stops it, and an older grant does not outlive that", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  await grantSend(f);
+  await new Promise((r) => setTimeout(r, 5));
+  const newest = await grantSend(f);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: newest });
+  assert.equal(
+    await code(
+      g.start(
+        ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+      ),
+    ),
+    "VALIDATION",
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("consent to send revoked between the check and the read stops the upload", async () => {
+  const f = await fixture();
+  const { state, adapter, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const send = await grantSend(f);
+  const submit = adapter.submit;
+  adapter.submit = async (request, context) => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId: send });
+    return submit(request, context);
+  };
+  assert.equal(
+    await code(
+      g.start(
+        ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+      ),
+    ),
+    "VALIDATION",
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("consent to send alone is not consent to generate", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  await grantSend(f);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /revoked/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("consent to send is good for nothing else", async () => {
+  const f = await fixture();
+  const send = await grantSend(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  // Not the consent a pack's character rests on.
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: crypto.randomUUID(),
+      expectedContentHash: null,
+      pack: {
+        format: "yamakan.reference-pack",
+        formatVersion: 1,
+        name: "Cast",
+        entries: [
+          {
+            id: crypto.randomUUID(),
+            role: "character",
+            label: "Lead",
+            assetId: still.id,
+            assetHash: still.hash,
+            characterId: "lead",
+            consentId: send,
+          },
+        ],
+      },
+    }),
+  );
+  // Nor an encoding of anyone.
+  await assert.rejects(
+    execute(f.ctx, "yamakan.identity.encode", {
+      characterId: "lead",
+      purpose: "likeness-send",
+      consentId: send,
+      provider: "p",
+      method: "m",
+      payloadHash: "a".repeat(64),
+    }),
+  );
+});
+
+test("an upload the engine refuses says why, when consent to send has ended", async () => {
+  const f = await fixture();
+  const { adapter, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const send = await grantSend(f);
+  adapter.submit = async () => {
+    await execute(f.ctx, "yamakan.consent.revoke", { consentId: send });
+    return { refused: "INPUT_UNSUPPORTED" as const };
+  };
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /revoked/,
+  );
+});
+
+// Stated, since it is why the page must not treat this as knowing who a picture shows.
+test("an image no pack links needs no consent to send: this goes by hash", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+// A person's word that a character is made up stands in for consent, so only a person can
+// give it, and it cannot free an image someone's consent already holds.
+const fictionalPack = (asset: { id: string; hash: string }) => ({
+  format: "yamakan.reference-pack",
+  formatVersion: 1,
+  name: "A drawn fox",
+  entries: [
+    {
+      id: crypto.randomUUID(),
+      role: "fictional-character",
+      label: "Fox",
+      assetId: asset.id,
+      assetHash: asset.hash,
+      characterId: null,
+      consentId: null,
+    },
+  ],
+});
+const savePack = async (
+  f: Awaited<ReturnType<typeof fixture>>,
+  pack: unknown,
+  principal = f.ctx.principal,
+) => {
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  return execute({ ...f.ctx, principal }, "yamakan.pack.save", {
+    projectId: f.projectId,
+    expectedRevision: head.revision,
+    documentId: crypto.randomUUID(),
+    expectedContentHash: null,
+    pack,
+  });
+};
+
+test("a person can mark a character as made up, with no consent", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await savePack(f, fictionalPack(still));
+  const { state, g } = sending(f);
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+test("an agent cannot mark a character as made up", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const agent = {
+    id: `agent:${crypto.randomUUID()}`,
+    scopes: f.ctx.principal.scopes,
+  } as unknown as typeof f.ctx.principal;
+  await assert.rejects(savePack(f, fictionalPack(still), agent), (e: any) => {
+    assert.equal(e.code, "SCOPE_DENIED");
+    return true;
+  });
+});
+
+test("a made-up character cannot name a person or a consent", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  // The role itself saves, so these refusals are about what it was given.
+  await savePack(f, fictionalPack(still));
+  const named = fictionalPack(still);
+  (named.entries[0] as any).characterId = "lead";
+  await assert.rejects(savePack(f, named), /Only a character or voice/);
+  const linked = fictionalPack(still);
+  (linked.entries[0] as any).consentId = crypto.randomUUID();
+  await assert.rejects(savePack(f, linked), /Only a character or voice/);
+});
+
+for (const revoked of [false, true])
+  test(`an image linked to a ${revoked ? "revoked" : "usable"} consent cannot be marked made up`, async () => {
+    const f = await fixture();
+    const { asset: still } = await f.store.importAsset(
+      f.projectId,
+      "still.png",
+      f.still,
+    );
+    const consentId = await consented(f, still.id, still.hash);
+    if (revoked) await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    await assert.rejects(
+      savePack(f, fictionalPack(still)),
+      /is linked to a person's consent/,
+    );
+    const { assets } = await f.store.exportProject(f.projectId);
+    assert.equal(assets.length, 1, "the image itself stays");
+  });
+
+test("a character entry cannot become made up in a new version of its pack", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const [ref] = (
+    (await execute(f.ctx, "yamakan.document.list", { projectId: f.projectId }))
+      .result as { id: string; kind: string; contentHash: string }[]
+  ).filter((d) => d.kind === "referencePack");
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: ref.id,
+      expectedContentHash: ref.contentHash,
+      pack: fictionalPack(still),
+    }),
+    /is linked to a person's consent/,
+  );
+});
+
+test("marked first and linked later, it cannot be saved as made up again", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const saved = await savePack(f, fictionalPack(still));
+  await consented(f, still.id, still.hash);
+  const { document } = saved.result as {
+    document: { id: string; contentHash: string };
+  };
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: document.id,
+      expectedContentHash: document.contentHash,
+      pack: fictionalPack(still),
+    }),
+    /Keep it as a new element instead/,
+  );
+});
+
+const propPack = (asset: { id: string; hash: string }) => ({
+  ...fictionalPack(asset),
+  name: "A chair",
+  entries: fictionalPack(asset).entries.map((e) => ({ ...e, role: "prop" })),
+});
+
+test("media whose consent was revoked is not kept again as a prop", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  // While the consent stands, it can be: nothing is being taken from anyone.
+  await savePack(f, propPack(still));
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await assert.rejects(
+    savePack(f, propPack(still)),
+    /whose person's consent was revoked/,
+  );
+});
+
+test("after a restore, media nobody revoked can still be kept", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  // As a restore does: every consent now needs revalidating before media is used.
+  f.store.transaction((db) => {
+    db.prepare(
+      "UPDATE director_epoch SET value = value + 1 WHERE singleton = 1",
+    ).run();
+  });
+  await savePack(f, propPack(still));
+});
+
+test("a person who consents again can link their own image again", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  // A tie goes to the revoked one, so the new grant must come later.
+  await new Promise((r) => setTimeout(r, 5));
+  await consented(f, still.id, still.hash);
+  // And with that, it may be kept beside the person's link once more.
+  await savePack(f, propPack(still));
+});
+
+test("another image can still be marked, beside one linked to a consent", async () => {
+  const f = await fixture();
+  const { asset: linked } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, linked.id, linked.hash);
+  const other = await f.store.importAsset(
+    f.projectId,
+    "other.png",
+    Buffer.concat([f.still, Buffer.from([0])]),
+  );
+  await savePack(f, fictionalPack(other.asset));
+});
+
+test("one pack cannot both link an image to a consent and mark it made up", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consent = (
+    await execute(f.ctx, "yamakan.consent.grant", {
+      characterId: "lead",
+      purpose: "likeness-generate",
+      version: "v1",
+      ttlMs: 3_600_000,
+    })
+  ).result as { id: string };
+  const pack = fictionalPack(still);
+  pack.entries.push({
+    id: crypto.randomUUID(),
+    role: "character",
+    label: "Lead",
+    assetId: still.id,
+    assetHash: still.hash,
+    characterId: "lead" as never,
+    consentId: consent.id as never,
+  });
+  await assert.rejects(savePack(f, pack), /is linked to a person's consent/);
+});
+
+test("marking an image made up does not free it from a person's consent", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await savePack(f, fictionalPack(still));
+  const consentId = await consented(f, still.id, still.hash);
+  await grantSend(f);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /revoked/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("a marked image a person's consent holds cannot be placed on the timeline either", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await savePack(f, fictionalPack(still));
+  const consentId = await consented(f, still.id, still.hash);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  const open = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number; tracks: { id: string; kind: string }[] };
+  await assert.rejects(
+    execute(f.ctx, "yamakan.project.applyBatch", {
+      projectId: f.projectId,
+      expectedRevision: open.revision,
+      operations: [
+        {
+          type: "clip.add",
+          clipId: crypto.randomUUID(),
+          trackId: open.tracks.find((t) => t.kind === "video")!.id,
+          assetId: still.id,
+          title: null,
+          startTicks: 0,
+          // Whole frames at the project's 24000/1001.
+          durationTicks: 29_429_400 * 24,
+          sourceStartTicks: 0,
+        },
+      ],
+    }),
+    /revoked/,
+  );
+});
+
+test("marking an image made up does not stand in for consent to send it", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await savePack(f, fictionalPack(still));
+  await consented(f, still.id, still.hash);
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /No consent to send is recorded/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
 test("a still is refused once its consent is revoked", async () => {
   const f = await fixture();
   const { state, adapter } = engine(f.video);

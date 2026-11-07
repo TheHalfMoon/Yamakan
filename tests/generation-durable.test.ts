@@ -1083,7 +1083,7 @@ test("a kill during a send leaves no script behind, once the run is found again"
   const f = await fixture();
   const { generationId: id } = await f.start("A SECRET kite.");
   const folder = path.join(f.root, "tmp", `yamakan-kaggle-work-${id}`);
-  for (const name of ["push", "pulled"]) {
+  for (const name of ["push", "pulled", "clean"]) {
     mkdirSync(path.join(folder, name), { recursive: true });
     writeFileSync(path.join(folder, name, "run.py"), "A SECRET kite.");
   }
