@@ -514,6 +514,10 @@ class Pipe:
         hook = asked.pop("hook")
         asked["hookReturned"] = repr(hook(self.transformer, ()))
         asked["vaeMovedTo"] = before["moved"]
+        ending = k["callback_on_step_end"]
+        asked["stepEnds"] = [ending(self, step, 0, {}) for step in range(k["num_inference_steps"])][-1]
+        with open(os.path.join(out, "receipt.json")) as f:
+            asked["stageAtDecode"] = json.load(f)["stage"]
         return types.SimpleNamespace(frames=[["frame"]])
 diffusers = types.ModuleType("diffusers")
 diffusers.AutoencoderKLWan = Pipe
@@ -612,10 +616,13 @@ test(
       "and the model's inputs are left alone",
     );
     assert.ok(!asked.call.includes("last_image"));
+    assert.deepEqual(asked.stepEnds, {}, "the callback changes nothing");
+    assert.equal(asked.stageAtDecode, "decoding");
     const kept = JSON.parse(receipt);
     assert.equal(kept.stage, "done");
     assert.equal(kept.verified, true);
     assert.deepEqual(kept.firstFrameSize, [320, 200]);
+    assert.equal(typeof kept.decodingAfterSeconds, "number");
     assert.equal(
       kept.firstFrameSha256,
       createHash("sha256").update("the bytes of a still").digest("hex"),
