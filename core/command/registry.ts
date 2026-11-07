@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertMayMarkFictional } from "../continuity.ts";
 import {
   OTIO_LIMITS,
   fromOtio,
@@ -628,7 +629,10 @@ export const commands = {
           expectedContentHash: a.expectedContentHash,
           source: { bytes: Buffer.from(JSON.stringify(a.pack), "utf8") },
           principalId: principal.id,
-          verify: (c) => verifyReferencePack(a.pack, c),
+          verify: (c) => {
+            verifyReferencePack(a.pack, c);
+            assertMayMarkFictional(c.db, a.pack);
+          },
         },
         receipt,
       );
