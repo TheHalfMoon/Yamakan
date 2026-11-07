@@ -2,6 +2,15 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-11-07: a first frame within what Kaggle accepts
+
+- **Authority:** the founder's "from now chose the best, you have my approval" ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).
+- **Why it came up:** the founder chose that an image travels inside the run's brief. Real Kaggle refused a script of about 1.5 MB holding one, and took 1,000,000 bytes, so a photo's PNG often will not fit.
+- **Decision:** it still travels in the brief. A PNG that fits goes as it is, losing nothing. One that does not goes as a JPEG at the best quality that fits. Past that, the run is refused here with a reason. Any script over 1,000,000 bytes is refused before it is sent.
+- **The founder's choice on metadata stands:** the JPEG is made from a PNG holding only pixels, and is checked to hold only what a picture needs, or nothing is sent.
+- **Not chosen:** a private Kaggle dataset would carry a larger image, and would leave a second copy to manage, against what the founder chose.
+- **Change rule:** the founder can overturn this, and a new entry here records it.
+
 ## 2026-11-07: revoked media, and an unlinked photo of a person
 
 - **Authority:** the founder's "from now chose the best, you have my approval" ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).

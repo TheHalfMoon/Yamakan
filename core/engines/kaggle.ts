@@ -78,7 +78,8 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
   },
   {
     // Its own script and notebook, so that nothing here touches the text script's bytes.
-    // Its time is the text run's, for now: this has not been run for real.
+    // Its time is the text run's, since the page has one entry for this model. Its one real
+    // run took 1,162 seconds: see docs/evidence/ultimate/first-ai-video.md.
     id: "kaggle-wan22-ti2v-5b-first-frame",
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
@@ -125,8 +126,7 @@ const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
 const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
-// A first frame travels inside the script. What Kaggle accepts in one is not known, so this
-// is a guess kept small, for a real run to test.
+// The most of a person's picture this will read. What goes is made anew from it, to fit below.
 export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
 // The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
 // a bare 400. Kept to what was seen: nothing says the limit is any higher.
