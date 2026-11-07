@@ -261,7 +261,10 @@ const REFUSED_PUSH =
   /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)|Kernel push error|Permission '[^']+' was denied|Authentication required to call the Kaggle API/i;
 const wasRefused = (message: string) =>
   !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
-const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
+// What the real CLI says of a notebook that does not exist, and of the empty one a refused
+// first push leaves: seen on 2026-11-07, when a refused push turned the first into the second.
+const NO_SUCH_NOTEBOOK =
+  /Permission 'kernels\.get' was denied|\b404 Client Error: Not Found\b/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 // The longest a start can take to reach Kaggle, from when it was recorded: two questions,

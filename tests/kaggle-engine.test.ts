@@ -881,6 +881,36 @@ test("failing to fetch a result is tried again, however late", async () => {
   assert.equal((await k.engine.status(executionRef)).state, "succeeded");
 });
 
+test("the empty notebook a refused first push leaves does not lock the model out", async () => {
+  // As real Kaggle answered on 2026-11-07, after refusing a first push.
+  const EMPTY = "404 Client Error: Not Found for url: [url]";
+  const send = async (list: string) => {
+    let pushes = 0;
+    const engine = createKaggleEngine({
+      cli: async (args) => {
+        if (args[1] === "list") return { stdout: list };
+        if (args[1] === "push") {
+          pushes++;
+          return { stdout: "successfully pushed" };
+        }
+        if (args[1] === "status" && !pushes) throw new Error(EMPTY);
+        return { stdout: 'has status "KernelWorkerStatus.RUNNING"' };
+      },
+      username: "someone",
+      folderRoot,
+      scriptFor: async () => SCRIPT,
+    });
+    await engine.submit(request(), context as never);
+    return pushes;
+  };
+  assert.equal(await send("Not found\n"), 1);
+  // A notebook the account does hold is not new, whatever a status says of it.
+  await assert.rejects(
+    send(`ref,title\nsomeone/${wan.slug},t\n`),
+    /Could not ask Kaggle/,
+  );
+});
+
 test("a refusal from a notebook this service made is not a new notebook", async () => {
   let time = 0;
   const calls: string[] = [];
