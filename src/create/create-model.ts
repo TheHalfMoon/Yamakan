@@ -16,6 +16,10 @@ export type CreateModel = {
   secondsToMake: number;
   // What its notebook always asks to avoid, or null.
   negativePrompt: string | null;
+  // About how many words of a prompt it reads, when that is less than a prompt can hold: its
+  // text encoder stops there without saying so, and was trained on English. Null when it reads
+  // a whole prompt.
+  readsAboutWords: number | null;
   folder: string;
 };
 
@@ -31,6 +35,7 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     steps: 30,
     secondsToMake: 1132,
     negativePrompt: "blurry, low quality, distorted, static",
+    readsAboutWords: null,
     folder: "scripts/kaggle/wan22-ti2v-5b",
   },
   {
@@ -44,6 +49,8 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     steps: 50,
     secondsToMake: 1125,
     negativePrompt: null,
+    // 226 tokens of an English T5 encoder, which is the pipeline's default and its notebook's.
+    readsAboutWords: 150,
     folder: "scripts/kaggle/cogvideox-2b",
   },
 ]);
@@ -107,7 +114,7 @@ const directionWords = (kind: DirectionKind, choice: string | undefined) => {
     : null;
 };
 
-// The exact text a model would be given.
+// The exact text a model would be given. A model may not read all of it: see readsAboutWords.
 export function composePrompt(brief: CreateBrief) {
   const base = brief.prompt.trim();
   const words = DIRECTION_KINDS.map((kind) =>

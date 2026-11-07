@@ -463,6 +463,11 @@ export function CreateWorkspace(props: {
               {t("create.negativePrompt", { words: model.negativePrompt })}
             </p>
           )}
+          {model.readsAboutWords !== null && (
+            <p className="note" data-testid="create-reads-little">
+              {t("create.readsLittle", { words: model.readsAboutWords })}
+            </p>
+          )}
           <button
             type="button"
             disabled={!composed}

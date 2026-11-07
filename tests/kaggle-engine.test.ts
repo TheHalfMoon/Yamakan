@@ -416,11 +416,25 @@ test("only a model with its own tested run from Yamakan is offered", async () =>
     kaggleRecipes().map((r) => r.id),
     ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"],
   );
-  // Image-to-video has had real runs, but not the page work it needs first.
+  // Image-to-video has had real runs, but not the page work it needs first. This is the
+  // request it would take, so only its not being offered refuses it.
   const k = kaggle(["QUEUED"]);
   assert.deepEqual(
     await k.engine.submit(
-      request({ recipeId: "kaggle-wan22-ti2v-5b-first-frame" }),
+      request({
+        recipeId: "kaggle-wan22-ti2v-5b-first-frame",
+        operation: "imageToVideo",
+        inputs: [
+          {
+            role: "firstFrame",
+            asset: {
+              assetVersionId: "v",
+              sha256: "0".repeat(64),
+              mediaType: "image/png",
+            },
+          },
+        ],
+      }),
       context as never,
     ),
     { refused: "ENGINE_DISABLED" },

@@ -119,3 +119,13 @@ test("a hash is of the bytes", async () => {
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
   );
 });
+
+test("a model that reads only part of a prompt says so, in both languages", async () => {
+  const reads = Object.fromEntries(
+    CREATE_MODELS.map((m) => [m.name, m.readsAboutWords]),
+  );
+  assert.deepEqual(reads, { "Wan2.2-TI2V-5B": null, "CogVideoX-2b": 150 });
+  const { MESSAGES } = await import("../src/i18n.ts");
+  for (const language of Object.values(MESSAGES) as Record<string, string>[])
+    assert.match(language["create.readsLittle"], /\{words\}/);
+});
