@@ -969,7 +969,27 @@ test("media whose consent was revoked is not kept again as a prop", async () => 
   // While the consent stands, it can be: nothing is being taken from anyone.
   await savePack(f, propPack(still));
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
-  await assert.rejects(savePack(f, propPack(still)), /consent was revoked/);
+  await assert.rejects(
+    savePack(f, propPack(still)),
+    /whose person's consent was revoked/,
+  );
+});
+
+test("after a restore, media nobody revoked can still be kept", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  // As a restore does: every consent now needs revalidating before media is used.
+  f.store.transaction((db) => {
+    db.prepare(
+      "UPDATE director_epoch SET value = value + 1 WHERE singleton = 1",
+    ).run();
+  });
+  await savePack(f, propPack(still));
 });
 
 test("a person who consents again can link their own image again", async () => {
@@ -981,6 +1001,8 @@ test("a person who consents again can link their own image again", async () => {
   );
   const consentId = await consented(f, still.id, still.hash);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  // A tie goes to the revoked one, so the new grant must come later.
+  await new Promise((r) => setTimeout(r, 5));
   await consented(f, still.id, still.hash);
   // And with that, it may be kept beside the person's link once more.
   await savePack(f, propPack(still));
