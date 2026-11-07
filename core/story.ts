@@ -425,10 +425,10 @@ function verifyConsents(pack: ReferencePack, c: CommitContext) {
       });
 }
 
-/** Whether a pack links any likeness consent (agents cannot link one). */
 export const marksFictional = (pack: ReferencePack) =>
   pack.entries.some((entry) => entry.role === "fictional-character");
 
+/** Whether a pack links any likeness consent (agents cannot link one). */
 export const linksConsent = (pack: ReferencePack) =>
   pack.entries.some((e) => e.consentId !== null);
 
