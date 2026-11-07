@@ -61,7 +61,12 @@ const steps = [];
 const step = (name, detail = {}) => {
   steps.push({ name, ...detail, at: new Date().toISOString() });
   console.log(`ok - ${name}`);
-  writeReceipt();
+  // One that fails here must not end a good run: the last one below is the one that must land.
+  try {
+    writeReceipt();
+  } catch (e) {
+    console.error(`Could not write the receipt yet: ${e?.name}`);
+  }
 };
 const root = mkdtempSync(join(tmpdir(), "yamakan-first-frame-run-"));
 const git = (...args) => {
