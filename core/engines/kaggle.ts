@@ -99,12 +99,14 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     output: "wan-first-frame-video.mp4",
   },
   {
+    // Offered since its own run from Yamakan passed on 2026-11-07: see
+    // docs/evidence/ultimate/first-ai-video.md.
     id: "kaggle-cogvideox-2b",
     name: "CogVideoX-2b",
     model: "zai-org/CogVideoX-2b",
     revision: "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
     licence: "Apache-2.0",
-    offered: false,
+    offered: true,
     width: 720,
     height: 480,
     frames: 49,

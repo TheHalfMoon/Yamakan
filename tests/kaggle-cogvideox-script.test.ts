@@ -33,8 +33,8 @@ after(() => {
     }
 });
 
-test("its recipe stays off until its own real run has passed", () => {
-  assert.equal(recipe.offered, false);
+test("its recipe is offered, since its own run from Yamakan passed", () => {
+  assert.equal(recipe.offered, true);
 });
 
 // Stands in for pip, the GPU libraries and the video reader, then runs the real script.

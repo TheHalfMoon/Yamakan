@@ -407,19 +407,20 @@ test("a push Kaggle did not take is an error, and nothing is tracked", async () 
   );
 });
 
-test("only a model with its own tested run from the page is offered", async () => {
+test("only a model with its own tested run from Yamakan is offered", async () => {
   assert.deepEqual(
     offeredKaggleRecipes().map((r) => r.id),
-    ["kaggle-wan22-ti2v-5b"],
+    ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"],
   );
   assert.deepEqual(
     kaggleRecipes().map((r) => r.id),
-    ["kaggle-wan22-ti2v-5b"],
+    ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"],
   );
+  // Image-to-video has had real runs, but not the page work it needs first.
   const k = kaggle(["QUEUED"]);
   assert.deepEqual(
     await k.engine.submit(
-      request({ recipeId: "kaggle-cogvideox-2b" }),
+      request({ recipeId: "kaggle-wan22-ti2v-5b-first-frame" }),
       context as never,
     ),
     { refused: "ENGINE_DISABLED" },
