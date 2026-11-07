@@ -57,9 +57,11 @@ const ffmpeg = (...args) =>
 
 mkdirSync(out, { recursive: true });
 const steps = [];
+// Each step as it comes, since a closed terminal in the long wait runs no `finally`.
 const step = (name, detail = {}) => {
   steps.push({ name, ...detail, at: new Date().toISOString() });
   console.log(`ok - ${name}`);
+  writeReceipt();
 };
 const root = mkdtempSync(join(tmpdir(), "yamakan-first-frame-run-"));
 const git = (...args) => {
@@ -75,6 +77,27 @@ const started = Date.now();
 let passed = false;
 let failure = null;
 let generationId = null;
+function writeReceipt() {
+  writeFileSync(
+    join(out, "receipt.json"),
+    `${JSON.stringify(
+      {
+        task: "first-frame-from-yamakan-on-kaggle",
+        recipe: recipe.id,
+        generationId,
+        prompt: PROMPT,
+        seed: SEED,
+        head,
+        dirty: changes !== "",
+        passed,
+        failure,
+        steps,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
 let queue;
 let store;
 try {
@@ -233,10 +256,7 @@ try {
     } catch (e) {
       console.error(`Could not tidy up: ${e?.name}`);
     }
-  writeFileSync(
-    join(out, "receipt.json"),
-    `${JSON.stringify({ task: "first-frame-from-yamakan-on-kaggle", recipe: recipe.id, generationId, prompt: PROMPT, seed: SEED, head, dirty: changes !== "", passed, failure, steps }, null, 2)}\n`,
-  );
+  writeReceipt();
 }
 console.log(passed ? "FIRST FRAME RUN PASS" : "FIRST FRAME RUN FAIL");
 process.exit(passed ? 0 : 1);

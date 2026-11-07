@@ -68,6 +68,7 @@ export function jpegHoldsOnlyAPicture(
   if (b.length < 4 || b.readUInt16BE(0) !== 0xffd8) return false;
   let framed = false;
   const huffman = new Set<number>();
+  const quantisation = new Set<number>();
   for (let at = 2; at + 4 <= b.length;) {
     if (b[at] !== 0xff) return false;
     const marker = b[at + 1];
@@ -80,7 +81,11 @@ export function jpegHoldsOnlyAPicture(
     } else if (marker === 0xdb) {
       // Quantisation: each table one byte, then 64 of eight bits.
       if (length === 2 || (length - 2) % 65 !== 0) return false;
-      for (let t = at + 4; t < end; t += 65) if (b[t] >> 4 !== 0) return false;
+      // The two sets of tables, each at most once.
+      for (let t = at + 4; t < end; t += 65) {
+        if (b[t] > 1 || quantisation.has(b[t])) return false;
+        quantisation.add(b[t]);
+      }
     } else if (marker === 0xc0) {
       // The one frame: eight bits, this size, three components.
       if (framed || length !== 17 || b[at + 4] !== 8 || b[at + 9] !== 3)
@@ -107,7 +112,8 @@ export function jpegHoldsOnlyAPicture(
       if (t !== end) return false;
     } else if (marker === 0xda) {
       // The one scan, then its bytes to the end. Encoded bytes never hold a marker.
-      if (!framed || length !== 12) return false;
+      if (!framed || !quantisation.size || !huffman.size || length !== 12)
+        return false;
       if (!SCAN_HEADER.test(b.toString("hex", at + 4, end))) return false;
       const last = b.length - 2;
       if (end > last || b.readUInt16BE(last) !== 0xffd9) return false;

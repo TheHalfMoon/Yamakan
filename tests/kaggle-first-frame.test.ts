@@ -496,6 +496,37 @@ test("consent is asked again at the moment of sending, after the picture is prep
   await f.close();
 });
 
+test("a picture that cannot be prepared is refused before consent is asked again", async () => {
+  // So that second question comes after preparing it, which is what can take minutes.
+  const f = await fixture();
+  const bytes = Buffer.from("not a picture at all");
+  let opened = 0;
+  await assert.rejects(
+    f.adapter.submit(
+      adapterRequest(f, [
+        {
+          role: "firstFrame",
+          asset: {
+            assetVersionId: randomUUID(),
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+            mediaType: "image/png",
+          },
+        },
+      ]),
+      {
+        openAsset: () => {
+          opened++;
+          return Readable.from([bytes]);
+        },
+      } as never,
+    ),
+    /could not be prepared/,
+  );
+  assert.equal(opened, 1);
+  assert.equal(f.pushes.length, 0);
+  await f.close();
+});
+
 test("so is a prompt too long for a script, with no image", async () => {
   const f = await fixture();
   const text = KAGGLE_RECIPES.find(

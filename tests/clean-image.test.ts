@@ -477,6 +477,17 @@ test("a JPEG with anything but a picture in it is not taken for one", async () =
         ]),
       ),
     ),
+    // And a quantisation table of the same kind, under another number or the same one.
+    "an extra table, numbered 15": afterStart(
+      seg(0xdb, Buffer.concat([Buffer.from([15]), Buffer.alloc(64, 0x41)])),
+    ),
+    "the table again": afterStart(
+      seg(0xdb, Buffer.concat([Buffer.from([0]), Buffer.alloc(64, 0x41)])),
+    ),
+    "no tables at all": (() => {
+      const frame = real.indexOf(Buffer.from([0xff, 0xc0]));
+      return Buffer.concat([real.subarray(0, 2), real.subarray(frame)]);
+    })(),
     "words in the frame's header": (() => {
       const j = Buffer.from(real);
       const at = j.indexOf(Buffer.from([0xff, 0xc0]));
