@@ -711,6 +711,7 @@ test("what a killed run says of itself takes only what it should", () => {
     [2e9, 1e9],
     [0, 0],
     [1, 1e300],
+    [1, 1],
     [1, "1"],
   ])
     assert.equal(
@@ -718,6 +719,41 @@ test("what a killed run says of itself takes only what it should", () => {
       "",
     );
   assert.equal(killedAt({ hostMemory: "much" } as never), "");
+  // The stage it died in has its own figure, when that figure can be believed.
+  const memory = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 32 };
+  assert.match(
+    killedAt({
+      stage: "decoding",
+      hostMemory: {
+        ...memory,
+        stageAtLowest: "loading",
+        byStage: { decoding: { lowestAvailableBytes: 3 * 2 ** 30 } },
+      },
+    }),
+    /During decoding, the lowest was 3\.0 GiB\./,
+  );
+  // Nor does this let a receipt's own word for a stage through.
+  assert.ok(
+    !killedAt({
+      stage: "the prompt",
+      hostMemory: {
+        ...memory,
+        byStage: { "the prompt": { lowestAvailableBytes: 2 ** 30 } },
+      },
+    }).includes("the prompt"),
+  );
+  for (const byStage of [
+    { decoding: { lowestAvailableBytes: 2 ** 40 } },
+    { decoding: null },
+    "much",
+    null,
+  ])
+    assert.ok(
+      !killedAt({
+        stage: "decoding",
+        hostMemory: { ...memory, byStage } as never,
+      }).includes("During"),
+    );
   // Where it was lowest is named, and only by the script's own names.
   const figures = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 31 };
   assert.match(

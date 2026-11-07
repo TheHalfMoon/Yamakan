@@ -283,6 +283,13 @@ const STAGES = new Set([
 ]);
 // A receipt comes from elsewhere: past this, a figure on the page is a plausible one.
 const MOST_MEMORY_BYTES = 1024 * GIB;
+const plausibleFree = (low: unknown, total: unknown): low is number =>
+  typeof low === "number" &&
+  typeof total === "number" &&
+  low >= 0 &&
+  low <= total &&
+  total >= GIB &&
+  total <= MOST_MEMORY_BYTES;
 const isStage = (stage: unknown): stage is string =>
   typeof stage === "string" && STAGES.has(stage);
 export function killedAt(receipt: {
@@ -291,6 +298,7 @@ export function killedAt(receipt: {
     lowestAvailableBytes?: unknown;
     totalBytes?: unknown;
     stageAtLowest?: unknown;
+    byStage?: Record<string, { lowestAvailableBytes?: unknown } | null>;
   };
 }) {
   const said: string[] = [];
@@ -299,18 +307,22 @@ export function killedAt(receipt: {
     lowestAvailableBytes: low,
     totalBytes: total,
     stageAtLowest: where,
+    byStage,
   } = receipt.hostMemory ?? {};
-  if (
-    typeof low === "number" &&
-    typeof total === "number" &&
-    low >= 0 &&
-    low <= total &&
-    total > 0 &&
-    total <= MOST_MEMORY_BYTES
-  )
+  if (typeof total === "number" && plausibleFree(low, total)) {
     said.push(
-      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was free. That was sampled every few seconds, so a sudden rise would not show.`,
+      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was free.`,
     );
+    // The lowest of the whole run may be from long before the stage it died in.
+    const stage = receipt.stage;
+    const here =
+      isStage(stage) && stage !== where
+        ? byStage?.[stage]?.lowestAvailableBytes
+        : undefined;
+    if (plausibleFree(here, total))
+      said.push(`During ${stage}, the lowest was ${gib(here)} GiB.`);
+    said.push("That was sampled, so a sudden rise would not show.");
+  }
   return said.join(" ");
 }
 

@@ -68,10 +68,28 @@ assert source.count("time.sleep(2)") == 1
 source = source.replace("time.sleep(2)", "time.sleep(0.01)")
 assert source.count('"/proc/meminfo"') == 2 and source.count('"/proc/self/status"') == 1
 # What Kaggle's Linux host offers, in its own form, wherever this runs.
-fake = {"meminfo": "MemTotal:       32000000 kB\nMemAvailable:    2000000 kB\n",
-        "status": "Name:\tpython\nVmRSS:\t25000000 kB\n"}
-for name, text in fake.items():
-    open(os.path.join(out, "fake-" + name), "w").write(text)
+def set_memory(available_kb, rss_kb):
+    with open(os.path.join(out, "fake-meminfo"), "w") as f:
+        f.write(f"MemTotal:       32000000 kB\nMemAvailable:    {available_kb} kB\n")
+    with open(os.path.join(out, "fake-status"), "w") as f:
+        f.write(f"Name:\tpython\nVmRSS:\t{rss_kb} kB\n")
+set_memory(30000000, 1000000)
+# Until the sampling thread has written what is wanted, however busy this machine.
+def wait_for(check):
+    import time
+    seen = {}
+    for _ in range(3000):
+        try:
+            with open(os.path.join(out, "receipt.json")) as f:
+                seen = json.load(f)
+        except (OSError, ValueError):
+            seen = {}
+        if seen and check(seen):
+            break
+        time.sleep(0.01)
+    return seen
+def low_in(stage):
+    return lambda seen: seen["hostMemory"].get("byStage", {}).get(stage, {}).get("lowestAvailableBytes")
 source = source.replace('"/proc/meminfo"', repr(os.path.join(out, "fake-meminfo")))
 source = source.replace('"/proc/self/status"', repr(os.path.join(out, "fake-status")))
 
@@ -100,7 +118,8 @@ if mode == "kill-while-writing":
 subprocess.check_call = lambda *a, **k: 0
 real_run = subprocess.run
 def fake_run(args, **kwargs):
-    r = types.SimpleNamespace(stdout="T4, 15360 MiB\n" if args[0] == "nvidia-smi" else "a\nb\n")
+    gpu = "" if mode == "no-gpu" else "T4, 15360 MiB\n"
+    r = types.SimpleNamespace(stdout=gpu if args[0] == "nvidia-smi" else "a\nb\n")
     return r
 subprocess.run = fake_run
 
@@ -136,7 +155,10 @@ class Pipe:
     text_encoder = Part()
     vae = Part()
     @classmethod
-    def from_pretrained(cls, *a, **k): return cls()
+    def from_pretrained(cls, *a, **k):
+        set_memory(1000000, 28000000)
+        wait_for(lambda seen: low_in("loading")(seen) == 1000000 * 1024)
+        return cls()
     def encode_prompt(self, **k):
         asked["encode"] = k.get("max_sequence_length")
         return "p", "n"
@@ -145,6 +167,10 @@ class Pipe:
         asked["call"] = sorted(k)
         asked["values"] = {n: k[n] for n in ("height", "width", "num_frames", "num_inference_steps", "guidance_scale")}
         ending = k["callback_on_step_end"]
+        if mode == "pipeline-raises":
+            raise RuntimeError("words of the paper boat")
+        set_memory(20000000, 8000000)
+        wait_for(low_in("generating"))
         if mode == "save-fails":
             def failing(a, b):
                 os.replace = real_replace
@@ -152,17 +178,14 @@ class Pipe:
             os.replace = failing
         for step in range(k["num_inference_steps"]):
             assert ending(self, step, 0, {}) == {}
-        # Until the watcher has written with decoding under way, however busy this machine.
-        import time
-        for _ in range(3000):
-            try:
-                with open(os.path.join(out, "receipt.json")) as f:
-                    seen = json.load(f)
-            except (OSError, ValueError):
-                seen = {}
-            if seen.get("stage") == "decoding" and "decoding" in seen["hostMemory"].get("byStage", {}):
-                break
-            time.sleep(0.01)
+        # Memory that moves within the stage, so its lowest and highest are not just its last.
+        set_memory(6000000, 17000000)
+        wait_for(lambda seen: low_in("decoding")(seen) == 6000000 * 1024)
+        set_memory(5000000, 18000000)
+        seen = wait_for(lambda seen: low_in("decoding")(seen) == 5000000 * 1024)
+        set_memory(7000000, 16000000)
+        samples = seen.get("hostMemory", {}).get("samples", 0)
+        seen = wait_for(lambda seen: seen["hostMemory"].get("samples", 0) >= samples + 2)
         asked["stageAtDecode"] = seen.get("stage")
         if mode == "kill":
             os._exit(137)
@@ -202,6 +225,8 @@ sys.modules["imageio"] = imageio
 try:
     exec(compile(source, script, "exec"), {"__name__": "__main__"})
 finally:
+    if failed["last"]:
+        asked["failedWrites"] = failed["last"]
     print("ASKED " + json.dumps(asked))
 `;
 
@@ -211,6 +236,8 @@ function run(
     | "kill"
     | "kill-while-writing"
     | "kill-exporting"
+    | "pipeline-raises"
+    | "no-gpu"
     | "save-fails"
     | "first-save-fails"
     | "last-save-fails"
@@ -223,7 +250,7 @@ function run(
   const made = spawnSync(python!, [harness, out, SCRIPT, mode], {
     encoding: "utf8",
     windowsHide: true,
-    timeout: 60_000,
+    timeout: 240_000,
   });
   const asked = JSON.parse(/^ASKED (.*)$/m.exec(made.stdout)?.[1] ?? "null");
   return {
@@ -246,21 +273,24 @@ test(
     assert.equal(receipt.stage, "decoding");
     assert.ok(!existsSync(path.join(out, "wan-video.mp4")));
     assert.ok(receipt.hostMemory.samples >= 1);
-    assert.equal(receipt.hostMemory.lowestAvailableBytes, 2000000 * 1024);
-    assert.equal(receipt.hostMemory.highestRssBytes, 25000000 * 1024);
-    assert.equal(
-      receipt.hostMemory.byStage.decoding.highestRssBytes,
-      25000000 * 1024,
-    );
-    assert.equal(
-      receipt.hostMemory.byStage.decoding.lowestAvailableBytes,
-      2000000 * 1024,
-    );
+    assert.equal(receipt.hostMemory.lowestAvailableBytes, 1000000 * 1024);
+    assert.equal(receipt.hostMemory.stageAtLowest, "loading");
+    assert.equal(receipt.hostMemory.highestRssBytes, 28000000 * 1024);
+    assert.equal(receipt.hostMemory.stageAtHighest, "loading");
+    assert.deepEqual(receipt.hostMemory.byStage.loading, {
+      lowestAvailableBytes: 1000000 * 1024,
+      highestRssBytes: 28000000 * 1024,
+    });
+    assert.deepEqual(receipt.hostMemory.byStage.decoding, {
+      lowestAvailableBytes: 5000000 * 1024,
+      highestRssBytes: 18000000 * 1024,
+    });
     assert.equal(receipt.peakHostBytes, undefined);
     assert.ok(!stderr.includes("Traceback"), stderr);
     // What this writes is what the page reads.
     assert.match(killedAt(receipt), /reached decoding/);
-    assert.match(killedAt(receipt), /1\.9 GiB of 30\.5 GiB/);
+    assert.match(killedAt(receipt), /during loading, 1\.0 GiB of 30\.5 GiB/);
+    assert.match(killedAt(receipt), /During decoding, the lowest was 4\.8 GiB/);
   },
 );
 
@@ -292,14 +322,38 @@ test(
 );
 
 test(
-  "a run whose receipt cannot be written at the start costs no GPU time",
+  "a failure says what failed in its own fields, and only there",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, stderr } = run("pipeline-raises");
+    assert.equal(status, 1, stderr);
+    assert.equal(receipt.stage, "failed at generating");
+    assert.match(receipt.error, /words of the paper boat/);
+    assert.ok(!JSON.stringify(receipt.hostMemory).includes("words of"));
+  },
+);
+
+test(
+  "a notebook given no GPU says so, and loads nothing",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, asked, stderr } = run("no-gpu");
+    assert.equal(status, 1, stderr);
+    assert.match(stderr, /No GPU was given/);
+    assert.equal(receipt.stage, "no GPU");
+    assert.deepEqual(asked, {});
+  },
+);
+
+test(
+  "a run whose receipt cannot be written at the start stops before the model loads",
   { skip: python ? false : "no Python here" },
   () => {
     const { status, receipt, asked, stderr } = run("first-save-fails");
     assert.equal(status, 1, stderr);
     assert.match(stderr, /The receipt could not be written/);
     assert.equal(receipt, null);
-    assert.deepEqual(asked, {});
+    assert.deepEqual(asked, { failedWrites: 5 });
   },
 );
 
