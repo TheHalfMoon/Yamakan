@@ -158,7 +158,7 @@ This was the recipe's first run on its own notebook, `yamakan-run-cogvideox-2b`.
 
 **By looking:** a paper boat on calm water in warm low light, from the first frame to the last, turning a little as it drifts. That fits the prompt.
 
-**Memory,** of the 30.0 GiB container limit. Unlike Wan, the highest is while decoding:
+**Memory,** of the 30.0 GiB container limit. Free memory was lowest while decoding, by 2.8 GiB. Which stage held the highest resident memory is not shown: decoding's 17.92 GiB is only 0.51 GiB above generating's, and sampling missed more than that:
 
 | Stage      | Highest resident | Lowest free |
 | ---------- | ---------------- | ----------- |
@@ -166,7 +166,7 @@ This was the recipe's first run on its own notebook, `yamakan-run-cogvideox-2b`.
 | Generating | 17.41 GiB        | 15.67 GiB   |
 | Decoding   | 17.92 GiB        | 12.9 GiB    |
 
-The container's peak was 28.89 GiB, with 0 out-of-memory kills, and may count file cache. The peak read at the end was 19,851,956,224 bytes (about 18.49 GiB), above the sampled 17.92 GiB. **Only 93 samples were taken** in about 1,170 seconds, where one every 5 seconds would give over 200: sampling ran slower than set, by about half, for a reason not established. One run.
+The container's peak was 28.89 GiB, with 0 out-of-memory kills, and may count file cache. The peak read at the end was 19,851,956,224 bytes (about 18.49 GiB), above the sampled 17.92 GiB. **Only 93 samples were taken** in about 1,170 seconds, where one every 5 seconds would give about 234: one every 12.6 seconds, about 2.5 times slower than set, for a reason not established. Decoding, about 42 seconds, had only a few, and exporting none. One run.
 
 Decoding began 952.7 seconds into the 995.1 seconds of generating, so 50 steps of a 49-frame video take most of the time, and decoding about 42 seconds.
 

@@ -48,7 +48,9 @@ assert source.count(line) == 1 and source.count('OUT = "/kaggle/working"') == 1
 source = source.replace(line, "BRIEF = " + repr({"prompt": "A boat", "seed": 7, "runId": "r"}))
 source = source.replace('OUT = "/kaggle/working"', "OUT = " + repr(out))
 assert source.count("MEMORY_SAMPLE_SECONDS = 5") == 1
-source = source.replace("MEMORY_SAMPLE_SECONDS = 5", "MEMORY_SAMPLE_SECONDS = 0.01")
+# A failure's receipt must be its own save's, so then the watcher waits past the run.
+source = source.replace("MEMORY_SAMPLE_SECONDS = 5",
+    "MEMORY_SAMPLE_SECONDS = " + ("3600" if mode == "pipeline-raises" else "0.01"))
 # What Kaggle's Linux host offers, in its own form, wherever this runs.
 for name, text in {
     "meminfo": "MemTotal:       32000000 kB\nMemAvailable:    2000000 kB\n",

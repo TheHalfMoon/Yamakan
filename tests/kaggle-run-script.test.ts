@@ -63,7 +63,9 @@ source = open(script, encoding="utf-8").read()
 assert source.count('OUT = "/kaggle/working"') == 1
 source = source.replace('OUT = "/kaggle/working"', "OUT = " + repr(out))
 assert source.count("MEMORY_SAMPLE_SECONDS = 5") == 1
-source = source.replace("MEMORY_SAMPLE_SECONDS = 5", "MEMORY_SAMPLE_SECONDS = 0.01")
+# A failure's receipt must be its own save's, so then the watcher waits past the run.
+source = source.replace("MEMORY_SAMPLE_SECONDS = 5",
+    "MEMORY_SAMPLE_SECONDS = " + ("3600" if mode == "pipeline-raises" else "0.01"))
 assert source.count("time.sleep(2)") == 1
 source = source.replace("time.sleep(2)", "time.sleep(0.01)")
 assert source.count('"/proc/meminfo"') == 2 and source.count('"/proc/self/status"') == 1
@@ -83,6 +85,8 @@ def set_memory(available_kb, rss_kb):
 set_memory(30000000, 1000000)
 # Until the sampling thread has written what is wanted, however busy this machine.
 def wait_for(check):
+    if mode == "pipeline-raises":
+        return {}  # Nothing is sampled then: see above.
     import time
     seen = {}
     for _ in range(3000):
