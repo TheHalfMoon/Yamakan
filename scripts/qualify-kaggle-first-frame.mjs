@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { RESOURCE_POLICY_HASH } from "../core/command/policy.ts";
+import { RESOURCE_POLICY_HASH } from "../core/command/registry.ts";
 import { createGenerationService } from "../core/engines/generation.ts";
 import {
   KAGGLE_RECIPES,
@@ -202,8 +202,13 @@ try {
   failure = String(e?.message ?? e).slice(0, 1000);
   console.error(failure);
 } finally {
-  await queue?.close().catch(() => {});
-  await store?.close().catch(() => {});
+  // Whatever happens here, the receipt below must still be written.
+  try {
+    await queue?.close();
+    await store?.close();
+  } catch (e) {
+    console.error(`Could not close: ${e?.message}`);
+  }
   writeFileSync(
     join(out, "receipt.json"),
     `${JSON.stringify({ task: "first-frame-from-yamakan-on-kaggle", recipe: recipe.id, generationId, prompt: PROMPT, seed: SEED, head: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim() !== "", passed, failure, steps }, null, 2)}\n`,
