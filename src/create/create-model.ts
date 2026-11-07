@@ -17,8 +17,8 @@ export type CreateModel = {
   // What its notebook always asks to avoid, or null.
   negativePrompt: string | null;
   // About how many words of a prompt it reads, when that is less than a prompt can hold: its
-  // text encoder stops there without saying so, and was trained on English. Null when it reads
-  // a whole prompt.
+  // text encoder stops there, saying so only in the run's log, and was trained on English. Null
+  // when it reads a whole prompt.
   readsAboutWords: number | null;
   folder: string;
 };
