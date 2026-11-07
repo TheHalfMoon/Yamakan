@@ -1,0 +1,11 @@
+{
+  "role": "Advisory only; not security review",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"advisory_only\": true, \"result\": {\"model\": \"C:\\\\Users\\\\Shehr\\\\AppData\\\\Local\\\\D1Local\\\\models\\\\d1-omni-600M-Q8_0.gguf\", \"answers\": {\"prioritize_recovery\": {\"type\": \"noul\", \"noul\": 0.46465095287661556}}, \"usage\": {\"input_tokens\": 82, \"output_tokens\": 0}}}"
+      }
+    ]
+  }
+}

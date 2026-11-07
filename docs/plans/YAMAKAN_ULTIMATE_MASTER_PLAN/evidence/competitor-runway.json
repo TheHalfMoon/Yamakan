@@ -1,0 +1,1459 @@
+{
+  "schema": "yamakan.competitor-research-evidence/v1",
+  "researchDate": "2026-10-23",
+  "localTimezone": "Asia/Riyadh",
+  "scope": "Read-only public HTTP and free web discovery; no authenticated UI, account actions, paid generation, inference, installations or benchmark execution.",
+  "executionVerified": false,
+  "sourceCount": 31,
+  "sources": [
+    {
+      "id": "api-github-com-12b82b1762",
+      "url": "https://api.github.com/repos/runwayml/sdk-python",
+      "finalUrl": "https://api.github.com/repos/runwayml/sdk-python",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.694Z",
+      "sha256": "b91195c24e26ae07fa3595218c499ee5af7a989b3f06f9890c2a81a2d6436dde",
+      "bytes": 6230,
+      "rawFile": "api-github-com-12b82b1762.raw",
+      "textFile": "api-github-com-12b82b1762.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-12b82b1762.raw"
+    },
+    {
+      "id": "api-github-com-a9871e9930",
+      "url": "https://api.github.com/repos/runwayml/sdk-node",
+      "finalUrl": "https://api.github.com/repos/runwayml/sdk-node",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.693Z",
+      "sha256": "d7ae32c3118004fd48516331c8c6b3d4a5ed4de4b51b3cb182c98e47cdae4823",
+      "bytes": 6143,
+      "rawFile": "api-github-com-a9871e9930.raw",
+      "textFile": "api-github-com-a9871e9930.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/api-github-com-a9871e9930.raw"
+    },
+    {
+      "id": "dev-runwayml-com-369780db35",
+      "url": "https://dev.runwayml.com/models/catalog",
+      "finalUrl": "https://dev.runwayml.com/models/catalog",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.784Z",
+      "sha256": "268587a15103ed2a98f3a14a0816d757f2434a4590a06f7ddd2f063ae27f66ba",
+      "bytes": 147274,
+      "title": "AI Video, Image and Audio Model APIs | Runway",
+      "rawFile": "dev-runwayml-com-369780db35.raw",
+      "textFile": "dev-runwayml-com-369780db35.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/dev-runwayml-com-369780db35.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-26c0143405",
+      "url": "https://docs.dev.runwayml.com/guides/connect-dev-mcp.md",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/connect-dev-mcp.md",
+      "status": 404,
+      "fetchedAt": "2026-10-23T19:04:47.796Z",
+      "sha256": "65e07340d52661814ac201f1d0cb53cdf6158bde72983d677d428d8d5402aeb3",
+      "bytes": 20368,
+      "title": "Page not found | Runway Dev",
+      "rawFile": "docs-dev-runwayml-com-26c0143405.raw",
+      "textFile": "docs-dev-runwayml-com-26c0143405.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-26c0143405.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-4ebc367638",
+      "url": "https://docs.dev.runwayml.com/guides/models/",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/models/",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.296Z",
+      "sha256": "00c8e3c79ad2dcbcd961c65810807d31b98ab2cb8e44e0abcc0bda6b4d533d15",
+      "bytes": 173365,
+      "title": "Available AI Models | Runway Dev",
+      "rawFile": "docs-dev-runwayml-com-4ebc367638.raw",
+      "textFile": "docs-dev-runwayml-com-4ebc367638.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "aleph2 Video Runway 2026-06-02 $0.28/sec Output formats Guide Gen-4.5 gen4.5 Runway's state-of-the-art text to video and image to video model. Gen-4.5 gen4.5 Video Runway 2026-02-10 $0.12/sec Output formats Guide Gen-4 Turbo gen4_turbo Runway's fastest image to video model. Gen-4 Turbo gen4_ turbo Video Runway 2025-04-04 $0.05/sec Guide Kling 3.0 Pro kling3.0_pro 1080p text and image to video, 3–15 seconds, with optional audio and multishot prompts. Kling 3.0 Pro kling3.0_ pro Video Kling 2026-10-13 From $0.12/sec — Kling O3 Pro klingO3_pro 1080p text, image, and video to video with image references, optional audio, and multishot prompts. Kling O3 Pro klingO3_ pro Video Kling 2026-10-13 $0.17/sec Video to video MiniMax H3 hailuo3 Multimodal video generation with text, image, video, and audio references. MiniMax H3 hailuo3 Video MiniMax 2026-08-05 From $0.10/sec — MiniMax H3 Max h3_max Text-to-video and image-to-video with first and last frames, and native "
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-4ebc367638.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-5c9a34ee4c",
+      "url": "https://docs.dev.runwayml.com/guides/pricing.md",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/pricing.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.503Z",
+      "sha256": "3ec9dc2c20b6a9988117b787b3ddc81d1870bc5a4bdb7588c63289bf3f4effd7",
+      "bytes": 24230,
+      "rawFile": "docs-dev-runwayml-com-5c9a34ee4c.raw",
+      "textFile": "docs-dev-runwayml-com-5c9a34ee4c.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "eph2` | 28 credits per second (56 credit minimum per generation) | | `gen4.5` | 12 credits per second | | `gen4_turbo` | 5 credits per second | | `act_two` | 5 credits per second | | `veo3.1 (audio)` | 40 credits per second | | `veo3.1 (no audio)` | 20 credits per second | | `veo3.1_fast (audio)` | 15 credits per second | | `veo3.1_fast (no audio)` | 10 credits per second | | `happyhorse_1_0` (720p) | 15 credits per second | | `happyhorse_1_0` (1080p) | 30 credits per second | | `gemini_omni_flash` (text to video) | 10 credits per second | | `gemini_omni_flash` (image to video) | 10 credits per second, plus 1 credit for the first-frame image | | `gemini_omni_flash` (video to video) | 11 credits per second of input video (capped at 10 seconds), plus 1 credit per reference image | | `gemini_omni_flash_1.1` (360p) | 3.4 credits per second, plus 1 credit per reference image (including an image-to-video start frame) and 1 credit per second of input video | | `g"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-5c9a34ee4c.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-6df7fbe0c9",
+      "url": "https://docs.dev.runwayml.com/assets/outputs.md",
+      "finalUrl": "https://docs.dev.runwayml.com/assets/outputs.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:47.592Z",
+      "sha256": "bb0e42a8f3f788edfd9006bb4f8b12848f9c6cc48ad1a5ea20922e843a7681c3",
+      "bytes": 859,
+      "rawFile": "docs-dev-runwayml-com-6df7fbe0c9.raw",
+      "textFile": "docs-dev-runwayml-com-6df7fbe0c9.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-6df7fbe0c9.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-7acd4a4781",
+      "url": "https://docs.dev.runwayml.com/guides/mcp.md",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/mcp.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.493Z",
+      "sha256": "b142a8af55a894cfed4606c6667eefa69aa295fc502c0fa64cb520e4d101e247",
+      "bytes": 3387,
+      "rawFile": "docs-dev-runwayml-com-7acd4a4781.raw",
+      "textFile": "docs-dev-runwayml-com-7acd4a4781.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-7acd4a4781.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-7b994f0672",
+      "url": "https://docs.dev.runwayml.com/ai-context.md",
+      "finalUrl": "https://docs.dev.runwayml.com/ai-context.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.072Z",
+      "sha256": "133a7909fb6d801f0b1d3b27db2862afbbb50b641201f1ae165074fc78b52501",
+      "bytes": 12112,
+      "rawFile": "docs-dev-runwayml-com-7b994f0672.raw",
+      "textFile": "docs-dev-runwayml-com-7b994f0672.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "ayML(); try { const task = await client.textToVideo .create({ model: \"gen4.5\", promptText: \"A timelapse on a sunny day with clouds flying by\", ratio: \"1280:720\", duration: 5, }) .waitForTaskOutput(); console.log(task.output[0]); } catch (error) { if (error instanceof TaskFailedError) { console.error(error.taskDetails); } else { throw error; } } ``` Output URLs are temporary. Download and store anything you intend to keep. See . ## Request bodies are per-model, not per-endpoint The mistake that breaks most integrations: on generation endpoints the request body is almost always a discriminated union keyed on `model`. The valid `ratio` values, the allowed `duration` values, the prompt length limit, and which optional fields exist **all change depending on the model you pick**. For example, on `POST /v1/text_to_video`: - `gen4.5` accepts `ratio` of `1280:720` or `720:1280`, any integer `duration` from 2 to 10, and a 1,000 character prompt. Both `ratio` and `du"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-7b994f0672.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-9690fb71c9",
+      "url": "https://docs.dev.runwayml.com/_llms-txt/model-routers.txt",
+      "finalUrl": "https://docs.dev.runwayml.com/_llms-txt/model-routers.txt",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.324Z",
+      "sha256": "2797835a81084e60b29511494ef932c3696ca6fe5f2fe131bd8a1a06f2b1f60c",
+      "bytes": 19741,
+      "rawFile": "docs-dev-runwayml-com-9690fb71c9.raw",
+      "textFile": "docs-dev-runwayml-com-9690fb71c9.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-9690fb71c9.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-98f7e072e3",
+      "url": "https://docs.dev.runwayml.com/llms.txt",
+      "finalUrl": "https://docs.dev.runwayml.com/llms.txt",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:51.464Z",
+      "sha256": "b00e5810dedd60bff110225e90b069ee15eb1e28a9f8868555b19d89e05e1c58",
+      "bytes": 3079,
+      "rawFile": "docs-dev-runwayml-com-98f7e072e3.raw",
+      "textFile": "docs-dev-runwayml-com-98f7e072e3.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-98f7e072e3.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-9e10729a81",
+      "url": "https://docs.dev.runwayml.com/api.md",
+      "finalUrl": "https://docs.dev.runwayml.com/api.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.635Z",
+      "sha256": "da66e6fed051d956c60221ae4beaea92e08d9f42115fa8970867d281a35cc148",
+      "bytes": 245029,
+      "rawFile": "docs-dev-runwayml-com-9e10729a81.raw",
+      "textFile": "docs-dev-runwayml-com-9e10729a81.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "nder a given `model` are valid. #### POST /v1/image_to_video - model `gen4.5` - `promptText` (string, required) - max length 1000. A non-empty string up to 1000 characters (measured in UTF-16 code units). This should describe in detail what should appear in the output. - `promptImage` (string or array of object, required) - `uri` (string, required) - A HTTPS URL, Runway or data URI containing an encoded image. See [our docs](/assets/inputs#images) on image inputs for more information. - `position` (string, required) - one of `first`. The position of the image in the output video. \"first\" will use the image as the first frame of the video. - `seed` (integer) - 0-4294967295. If unspecified, a random number is chosen. Varying the seed integer is a way to get different results for the same other request parameters. Using the same seed integer for an identical request will produce similar re... - `ratio` (string, required) - one of `1280:720`, `720:1280`, `1104"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-9e10729a81.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-c5a13b8b93",
+      "url": "https://docs.dev.runwayml.com/guides/professional-outputs.md",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/professional-outputs.md",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.303Z",
+      "sha256": "69dbfb0ea853c18b0ea432b6225e2f942f2ba5c813455f2ee41a90fc365a1a98",
+      "bytes": 5101,
+      "rawFile": "docs-dev-runwayml-com-c5a13b8b93.raw",
+      "textFile": "docs-dev-runwayml-com-c5a13b8b93.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "e. Runway Dev covers both: [Gen-4.5](/guides/models?modality=video\\&q=gen4.5) and [Aleph 2.0](/guides/models?modality=video\\&q=aleph2) generate these formats natively. Additionally, we have post-production models that can upscale, change the frame rate, or convert SDR to HDR on a video you already have. # Editorial containers [Gen-4.5](/guides/models?modality=video\\&q=gen4.5) and [Aleph 2.0](/guides/models?modality=video\\&q=aleph2) can deliver ProRes, a PNG sequence, or the default H.264 `.mp4` on the generation request. These files stay in standard dynamic range. [HDR](#generate-hdr-video) is a separate delivery. To generate outputs in these formats, simply specify an `outputFormat` in your request: | `outputFormat` | Delivery | | -------------- | -------- | | `mp4` (default) | H.264 `.mp4` | | `prores` | ProRes `.mov` | | `png_sequence` | `.zip` of PNG frames (plus a separate `.wav` when the output has audio) | For `prores`, optionally set `proresProfile"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-c5a13b8b93.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-c670db9dd5",
+      "url": "https://docs.dev.runwayml.com/guides/pricing/",
+      "finalUrl": "https://docs.dev.runwayml.com/guides/pricing/",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.200Z",
+      "sha256": "be2f35a12222a1dd04265c11c850c454a158852e52c316e70a25e8a88fe641af",
+      "bytes": 88974,
+      "title": "API Pricing & Costs | Runway Dev",
+      "rawFile": "docs-dev-runwayml-com-c670db9dd5.raw",
+      "textFile": "docs-dev-runwayml-com-c670db9dd5.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "onds) aleph2 28 credits per second (56 credit minimum per generation) gen4.5 12 credits per second gen4_turbo 5 credits per second act_two 5 credits per second veo3.1 (audio) 40 credits per second veo3.1 (no audio) 20 credits per second veo3.1_fast (audio) 15 credits per second veo3.1_fast (no audio) 10 credits per second happyhorse_1_0 (720p) 15 credits per second happyhorse_1_0 (1080p) 30 credits per second gemini_omni_flash (text to video) 10 credits per second gemini_omni_flash (image to video) 10 credits per second, plus 1 credit for the first-frame image gemini_omni_flash (video to video) 11 credits per second of input video (capped at 10 seconds), plus 1 credit per reference image gemini_omni_flash_1.1 (360p) 3.4 credits per second, plus 1 credit per reference image (including an image-to-video start frame) and 1 credit per second of input video gemini_omni_flash_1.1 (720p) 10 credits per second, plus 1 credit per reference image (including an image"
+        }
+      ],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-c670db9dd5.raw"
+    },
+    {
+      "id": "docs-dev-runwayml-com-d2babb8132",
+      "url": "https://docs.dev.runwayml.com/_llms-txt/recipes.txt",
+      "finalUrl": "https://docs.dev.runwayml.com/_llms-txt/recipes.txt",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:03:36.160Z",
+      "sha256": "6f8674eeeca0ccae7b60e9603c89b066625f7d55e76172d2204b0636644c7d08",
+      "bytes": 44319,
+      "rawFile": "docs-dev-runwayml-com-d2babb8132.raw",
+      "textFile": "docs-dev-runwayml-com-d2babb8132.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/docs-dev-runwayml-com-d2babb8132.raw"
+    },
+    {
+      "id": "help-runwayml-com-b83eb49b85",
+      "url": "https://help.runwayml.com/",
+      "finalUrl": "https://help.runwayml.com/hc/en-us",
+      "status": 403,
+      "fetchedAt": "2026-10-23T19:02:40.816Z",
+      "sha256": "1e97c0dd8fb04a7a518ec4672e1def077d0451bc923886631646fe120c876fe4",
+      "bytes": 5442,
+      "title": "Just a moment...",
+      "rawFile": "help-runwayml-com-b83eb49b85.raw",
+      "textFile": "help-runwayml-com-b83eb49b85.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/help-runwayml-com-b83eb49b85.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-0898155491",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/LICENSE",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/LICENSE",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.143Z",
+      "sha256": "1a5c9329c34dcf66287ed48c1af0fd56b5389ab06d5e3a74a8dc3701f50f9a4d",
+      "bytes": 11338,
+      "rawFile": "raw-githubusercontent-com-0898155491.raw",
+      "textFile": "raw-githubusercontent-com-0898155491.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-0898155491.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-2789f7d759",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/workflows.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/workflows.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.486Z",
+      "sha256": "7df65b4923c3475df4cd26aa29e4f18240a366f4f7bd11e873ae28f331df3223",
+      "bytes": 5472,
+      "rawFile": "raw-githubusercontent-com-2789f7d759.raw",
+      "textFile": "raw-githubusercontent-com-2789f7d759.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-2789f7d759.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-2d9531c33e",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/package.json",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/package.json",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.118Z",
+      "sha256": "81f914492c0cc49d01bd1e255eec2b9c129fdb134e2ff2deb1130ee67ee9c188",
+      "bytes": 2165,
+      "rawFile": "raw-githubusercontent-com-2d9531c33e.raw",
+      "textFile": "raw-githubusercontent-com-2d9531c33e.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-2d9531c33e.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-6b71f91c93",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/lib/polling.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/lib/polling.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.135Z",
+      "sha256": "aab935a0e082f5d5aa070eb4a653c856af75ff5366a551236ed909a2dd42889c",
+      "bytes": 7143,
+      "rawFile": "raw-githubusercontent-com-6b71f91c93.raw",
+      "textFile": "raw-githubusercontent-com-6b71f91c93.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-6b71f91c93.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-876f4c98f0",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/recipes.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/recipes.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.485Z",
+      "sha256": "4cd937e58b94f5f03985a40349ba9be182a636fbcd1e078b7e9e183f9748f8b8",
+      "bytes": 24086,
+      "rawFile": "raw-githubusercontent-com-876f4c98f0.raw",
+      "textFile": "raw-githubusercontent-com-876f4c98f0.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-876f4c98f0.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-8d716506af",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/routers.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/routers.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.483Z",
+      "sha256": "beb53c9e79e4cc1de1dcc709b6269f2ba400d27b1675e69a08a43c908ca4929e",
+      "bytes": 26002,
+      "rawFile": "raw-githubusercontent-com-8d716506af.raw",
+      "textFile": "raw-githubusercontent-com-8d716506af.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-8d716506af.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-9b4170d8ee",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/text-to-video.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/text-to-video.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.140Z",
+      "sha256": "9c31aba7fa00ea8988b0d835b4fb847c636b85e3ff18338229336aa61e77c9e2",
+      "bytes": 47825,
+      "rawFile": "raw-githubusercontent-com-9b4170d8ee.raw",
+      "textFile": "raw-githubusercontent-com-9b4170d8ee.txt",
+      "excerpts": [
+        {
+          "match": "gen4\\.5",
+          "text": "ideo. Must be an integer from * 2 to 10. */ duration: number; model: 'gen4.5'; /** * A non-empty string up to 1000 characters (measured in UTF-16 code units). This * should describe in detail what should appear in the output. */ promptText: string; /** * The resolution of the output video. */ ratio: '1280:720' | '720:1280'; /** * Settings that affect the behavior of the content moderation system. */ contentModeration?: Gen4_5.ContentModeration; /** * The container/encoding of the output. `mp4` (default) returns an H.264 .mp4. * `prores` returns a ProRes .mov. `png_sequence` returns a .zip of PNG frames * (plus a separate .wav artifact when the output has audio). `hdr10` (HEVC Main * 10, BT.2020 + PQ) and `hlg` (HEVC Main 10, BT.2020 + HLG) return true-HDR 10-bit * .mp4s; `sdr_rec709_10bit` returns a 10-bit Rec.709 HEVC .mp4 for SDR grading * pipelines; `hdr_pq_12bit_master` returns a 12-bit 4:4:4 BT.2020 + PQ HEVC .mov * with measured HDR10 content-light m"
+        }
+      ],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-9b4170d8ee.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-9eeb4bc97c",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/client.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/client.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.486Z",
+      "sha256": "c8dc37216536ad04f80bafab7f61d4225d24dc832e2d163130fd95c26a61f10d",
+      "bytes": 44640,
+      "rawFile": "raw-githubusercontent-com-9eeb4bc97c.raw",
+      "textFile": "raw-githubusercontent-com-9eeb4bc97c.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-9eeb4bc97c.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-d4f46c68a8",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/bin/cli",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/bin/cli",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:45.458Z",
+      "sha256": "93421b1d4bbe656acf7295b320cbefc7cedce62dadbbd5b8414c95d2f11e49ab",
+      "bytes": 1212,
+      "rawFile": "raw-githubusercontent-com-d4f46c68a8.raw",
+      "textFile": "raw-githubusercontent-com-d4f46c68a8.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-d4f46c68a8.raw"
+    },
+    {
+      "id": "raw-githubusercontent-com-f4fb00c891",
+      "url": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/tasks.ts",
+      "finalUrl": "https://raw.githubusercontent.com/runwayml/sdk-node/2f1fe07317e430fdb07c7eba528eadf886f7eb19/src/resources/tasks.ts",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:14.129Z",
+      "sha256": "a7240d100f14aa7674beb68c2ec5a80dea3a12be544b30995f00fe26c0905176",
+      "bytes": 7416,
+      "rawFile": "raw-githubusercontent-com-f4fb00c891.raw",
+      "textFile": "raw-githubusercontent-com-f4fb00c891.txt",
+      "excerpts": [],
+      "classification": "SOURCE INSPECTED",
+      "captureLocation": "workspace work/web/raw-githubusercontent-com-f4fb00c891.raw"
+    },
+    {
+      "id": "runway-com-1a916faf4c",
+      "url": "https://runway.com/product/agent",
+      "finalUrl": "https://runway.com/product/agent",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:04:48.061Z",
+      "sha256": "d71b4acfef36a1fc198f8f39cdb1352a3f4e12c17eb07a2d23fd5e6be84fbf53",
+      "bytes": 647726,
+      "title": "Runway Agent | Marketing content that drives revenue",
+      "rawFile": "runway-com-1a916faf4c.raw",
+      "textFile": "runway-com-1a916faf4c.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/runway-com-1a916faf4c.raw"
+    },
+    {
+      "id": "runway-com-9398767c58",
+      "url": "https://runway.com/pricing",
+      "finalUrl": "https://runway.com/pricing",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.450Z",
+      "sha256": "1e7aa787b3047284abc83016cbf0d0782e23b0317d925e5645e2629b65c5f57e",
+      "bytes": 1228073,
+      "title": "AI Image and Video Pricing from $12/month | Runway AI",
+      "rawFile": "runway-com-9398767c58.raw",
+      "textFile": "runway-com-9398767c58.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/runway-com-9398767c58.raw"
+    },
+    {
+      "id": "runway-com-c5fce7aa4a",
+      "url": "https://runway.com/changelog",
+      "finalUrl": "https://runway.com/changelog",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:11:46.649Z",
+      "sha256": "dee635093c1673ead6e4b6ee11c4bf235e3bfdc327d9639ce2c27895962dc202",
+      "bytes": 806175,
+      "title": "Product Updates &amp; Changelog | Runway AI",
+      "rawFile": "runway-com-c5fce7aa4a.raw",
+      "textFile": "runway-com-c5fce7aa4a.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/runway-com-c5fce7aa4a.raw"
+    },
+    {
+      "id": "runway-com-c9159ab60a",
+      "url": "https://runway.com/product/workflows",
+      "finalUrl": "https://runway.com/product/workflows",
+      "status": 404,
+      "fetchedAt": "2026-10-23T19:04:49.588Z",
+      "sha256": "8ed12d65acfab14d5b335ff6a05b9341e73cbf2a5e3ab3fd93eebe425a4e545d",
+      "bytes": 352237,
+      "title": "404 | Runway",
+      "rawFile": "runway-com-c9159ab60a.raw",
+      "textFile": "runway-com-c9159ab60a.txt",
+      "excerpts": [],
+      "classification": "UNKNOWN",
+      "captureLocation": "workspace work/web/runway-com-c9159ab60a.raw"
+    },
+    {
+      "id": "www-cuty-ai-a5f0fbc22a",
+      "url": "https://www.cuty.ai/product/runway-ai",
+      "finalUrl": "https://www.cuty.ai/product/runway-ai",
+      "status": 200,
+      "fetchedAt": "2026-10-23T19:02:40.462Z",
+      "sha256": "96a16ea3ffa0a08078a6b6cdfe2010188670003cdfe72dc6c7748b51e3dddfc4",
+      "bytes": 210022,
+      "title": "Try Runway AI for free",
+      "rawFile": "www-cuty-ai-a5f0fbc22a.raw",
+      "textFile": "www-cuty-ai-a5f0fbc22a.txt",
+      "excerpts": [],
+      "classification": "OFFICIAL DOCUMENTATION",
+      "captureLocation": "workspace work/web/www-cuty-ai-a5f0fbc22a.raw"
+    }
+  ],
+  "sourceTrees": [
+    {
+      "repo": "runwayml/sdk-node",
+      "sha": "2f1fe07317e430fdb07c7eba528eadf886f7eb19",
+      "commitDate": "2026-10-23T15:06:28Z",
+      "sha256": "f3db39295791b6da0d9e593ca035c700e397b8c6967e324fd6ee8a178a54fc43",
+      "paths": [
+        {
+          "path": ".devcontainer",
+          "gitBlobSha": "c9c16f7952550fd063de5ee6bff0e65ebe59b8a8"
+        },
+        {
+          "path": ".devcontainer/devcontainer.json",
+          "gitBlobSha": "43fd5a73f89477832a4cd03b3e191672782ec83d",
+          "bytes": 468
+        },
+        {
+          "path": ".github",
+          "gitBlobSha": "2919826840da54e88f0ec3a854814d3952cf38fd"
+        },
+        {
+          "path": ".github/workflows",
+          "gitBlobSha": "7362134d82f7cd0dc391008b3044a352d6d34787"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "gitBlobSha": "ef043eaeacf97a7c9730b760b506f06bceb64c5c",
+          "bytes": 3088
+        },
+        {
+          "path": ".github/workflows/publish-npm.yml",
+          "gitBlobSha": "c32fef760a15f17a1f9bc854a3e6c800ab20ecd0",
+          "bytes": 930
+        },
+        {
+          "path": ".github/workflows/release-doctor.yml",
+          "gitBlobSha": "37a2ee0fd74739472b05bf1b673e943a245526d9",
+          "bytes": 566
+        },
+        {
+          "path": ".github/workflows/release-please.yml",
+          "gitBlobSha": "5cc24c72cf3ea3ed2345e4e19b615bbdd90eb523",
+          "bytes": 412
+        },
+        {
+          "path": ".github/workflows/stlc-promote.yml",
+          "gitBlobSha": "b42d2fcd2c8e3d37bb4e6f62061a81f856b95d8b",
+          "bytes": 4598
+        },
+        {
+          "path": ".github/workflows/stlc-sync.yml",
+          "gitBlobSha": "b0f915fafcc9297b0034286f254129d6ed1bcbb5",
+          "bytes": 11116
+        },
+        {
+          "path": ".gitignore",
+          "gitBlobSha": "9487e48a3c3104b70e28f895ffa34e179b403a67",
+          "bytes": 127
+        },
+        {
+          "path": ".prettierignore",
+          "gitBlobSha": "3548c5af9ccaf5a36f5b6fb937bc6d60cad8379f",
+          "bytes": 112
+        },
+        {
+          "path": ".prettierrc.json",
+          "gitBlobSha": "af75adaf6d06059844e582448ae18eae192aa705",
+          "bytes": 133
+        },
+        {
+          "path": ".release-please-manifest.json",
+          "gitBlobSha": "6d801fc26a1edf73e3886bf21ea8e5f780b8882e",
+          "bytes": 20
+        },
+        {
+          "path": ".stats.yml",
+          "gitBlobSha": "81914168f3d58609b193111163f50ae119bb0525",
+          "bytes": 25
+        },
+        {
+          "path": "Brewfile",
+          "gitBlobSha": "e4feee6014f28e94ba8eeebc0d696dc207041690",
+          "bytes": 12
+        },
+        {
+          "path": "CHANGELOG.md",
+          "gitBlobSha": "1264bbc26647f697e6acf1f56a8c500c208c9082",
+          "bytes": 52638
+        },
+        {
+          "path": "CONTRIBUTING.md",
+          "gitBlobSha": "a5f898d271593f1b45bc7f1a34642baaa26e4939",
+          "bytes": 2698
+        },
+        {
+          "path": "LICENSE",
+          "gitBlobSha": "b6e0cb5e0a8839777b4ad7cf6c4eadc2ec24b3f2",
+          "bytes": 11338
+        },
+        {
+          "path": "MIGRATION.md",
+          "gitBlobSha": "a3d8df770d9ceb38bd20ddda002beb4d92195155",
+          "bytes": 10362
+        },
+        {
+          "path": "README.md",
+          "gitBlobSha": "6e11a6697569a27e564ef398508fb934c0dde7e1",
+          "bytes": 13851
+        },
+        {
+          "path": "SECURITY.md",
+          "gitBlobSha": "7dde988ce56f5358864c61dcbab4e15dd215bd7d",
+          "bytes": 1206
+        },
+        {
+          "path": "api.md",
+          "gitBlobSha": "69b6debce84bdaddc3c677ac02c13143ace56778",
+          "bytes": 16720
+        },
+        {
+          "path": "bin",
+          "gitBlobSha": "a219d3837f1feea3540afab3fb5e63fd295a81b7"
+        },
+        {
+          "path": "bin/check-release-environment",
+          "gitBlobSha": "6b43775aba6b5298dbb334b033c2c872333eba09",
+          "bytes": 289
+        },
+        {
+          "path": "bin/cli",
+          "gitBlobSha": "d44623bb8e4360262ac1ad785648efce681b8dcd",
+          "bytes": 1212
+        },
+        {
+          "path": "bin/migration-config.json",
+          "gitBlobSha": "5cd6ba207af8fe34d7c996f9051ce6d02713ec68",
+          "bytes": 131
+        },
+        {
+          "path": "bin/publish-npm",
+          "gitBlobSha": "e6e52f71da7d4c8c6704980bcee1bb5a5e307982",
+          "bytes": 2233
+        },
+        {
+          "path": "eslint.config.mjs",
+          "gitBlobSha": "5d1be6320653a6f30557eff451bea6399958bda3",
+          "bytes": 948
+        },
+        {
+          "path": "examples",
+          "gitBlobSha": "a4249251bc0a6f45cbce6c9ef168dcaeaeec3a0e"
+        },
+        {
+          "path": "examples/.keep",
+          "gitBlobSha": "0651c89c0c6690f43c6c85da956f4c1713d793da",
+          "bytes": 240
+        },
+        {
+          "path": "examples/generateImage.ts",
+          "gitBlobSha": "18544a8ba68b3923de9debf03a118e1248658fbf",
+          "bytes": 578
+        },
+        {
+          "path": "examples/uploadFile.ts",
+          "gitBlobSha": "be848d0d367ab83536e72981af53a59768f4ce3d",
+          "bytes": 1816
+        },
+        {
+          "path": "jest.config.ts",
+          "gitBlobSha": "7ad22918239740891a4b51e9fe2e204da6d66374",
+          "bytes": 606
+        },
+        {
+          "path": "package.json",
+          "gitBlobSha": "6e0e70ba2c2f95bd6f8e6443dd42aaed321600fe",
+          "bytes": 2165
+        },
+        {
+          "path": "release-please-config.json",
+          "gitBlobSha": "c4d54287b7cb7d729671f1f3666ead19329128ce",
+          "bytes": 1348
+        },
+        {
+          "path": "scripts",
+          "gitBlobSha": "670a2d3bcbb2e2f126723f751d8c011c995ce56b"
+        },
+        {
+          "path": "scripts/bootstrap",
+          "gitBlobSha": "2e315f539e37bcfb454c61b78e55fe66254f8634",
+          "bytes": 556
+        },
+        {
+          "path": "scripts/build",
+          "gitBlobSha": "c068388d816f9ac84c5930e28d1da05c52c2233a",
+          "bytes": 1619
+        },
+        {
+          "path": "scripts/fast-format",
+          "gitBlobSha": "f1873aef8e5a32e57d7278185ccd121ed6b51142",
+          "bytes": 934
+        },
+        {
+          "path": "scripts/format",
+          "gitBlobSha": "b1b2c17a13551fa4aced9a592b89b45d08cf380e",
+          "bytes": 231
+        },
+        {
+          "path": "scripts/lint",
+          "gitBlobSha": "1f5325480e1830323927337759b34d0eef00b83e",
+          "bytes": 485
+        },
+        {
+          "path": "scripts/mock",
+          "gitBlobSha": "013df5d318f1dff09bf22113eb0de6f1928ebe5a",
+          "bytes": 99216
+        },
+        {
+          "path": "scripts/test",
+          "gitBlobSha": "da6c10a89da1f3e04799cf10c11fd97c20a68273",
+          "bytes": 1757
+        },
+        {
+          "path": "scripts/utils",
+          "gitBlobSha": "2c2caac8c62446f7b2046cc663b865485f3c4a1b"
+        },
+        {
+          "path": "scripts/utils/attw-report.cjs",
+          "gitBlobSha": "b3477c0ef50827ad84686503b6595503485eda3e",
+          "bytes": 1082
+        },
+        {
+          "path": "scripts/utils/check-is-in-git-install.sh",
+          "gitBlobSha": "1354eb4329a078332aaac419d6cba1e2371b3cc2",
+          "bytes": 477
+        },
+        {
+          "path": "scripts/utils/check-version.cjs",
+          "gitBlobSha": "86c56dfd36d8193231108e1d4342b05f68bc676a",
+          "bytes": 701
+        },
+        {
+          "path": "scripts/utils/fix-index-exports.cjs",
+          "gitBlobSha": "e5e10b3e7a61c4c34a4bb07a995c7cadabbf9f81",
+          "bytes": 534
+        },
+        {
+          "path": "scripts/utils/git-swap.sh",
+          "gitBlobSha": "79d1888eb2570a12bdf9695d3f0456b25deac8a7",
+          "bytes": 403
+        },
+        {
+          "path": "scripts/utils/make-dist-package-json.cjs",
+          "gitBlobSha": "7c24f56e288abaef9cdc2a73613aa33ec7ebca2b",
+          "bytes": 654
+        },
+        {
+          "path": "scripts/utils/postprocess-files.cjs",
+          "gitBlobSha": "a8cdeb7c883fbb859f27324f34fe05ad16faabed",
+          "bytes": 3225
+        },
+        {
+          "path": "scripts/utils/upload-artifact.sh",
+          "gitBlobSha": "073d55935c7c924010580bcf385056241a47441b",
+          "bytes": 774
+        },
+        {
+          "path": "src",
+          "gitBlobSha": "d33f7abcc73ce4ef87467e85fcd602778505932a"
+        },
+        {
+          "path": "src/api-promise.ts",
+          "gitBlobSha": "8c775ee697019eb33f8b2805251379155e89114c",
+          "bytes": 94
+        },
+        {
+          "path": "src/client.ts",
+          "gitBlobSha": "fb62a72839ba259f5a1be3c2dd17281dcbd19489",
+          "bytes": 44640
+        },
+        {
+          "path": "src/core",
+          "gitBlobSha": "58f82c3ab50cb459c40e996076905b11003c42b8"
+        },
+        {
+          "path": "src/core/README.md",
+          "gitBlobSha": "485fce8617c9df053f0bed2dd56873df0371b0d0",
+          "bytes": 100
+        },
+        {
+          "path": "src/core/api-promise.ts",
+          "gitBlobSha": "4b143224909255748b41acfa79d5d142f41eb55e",
+          "bytes": 3159
+        },
+        {
+          "path": "src/core/error.ts",
+          "gitBlobSha": "54c316fe1144de00e0742eadebae18cc6c7e06f6",
+          "bytes": 4004
+        },
+        {
+          "path": "src/core/pagination.ts",
+          "gitBlobSha": "c2f15a7e724837f81f1051d2912554aec8ce0da3",
+          "bytes": 4070
+        },
+        {
+          "path": "src/core/resource.ts",
+          "gitBlobSha": "bca7373635d4b78971591f91881ae20ed42c87d4",
+          "bytes": 267
+        },
+        {
+          "path": "src/core/uploads.ts",
+          "gitBlobSha": "2882ca6d18167e95dc8f204846ee798db6b131f1",
+          "bytes": 119
+        },
+        {
+          "path": "src/error.ts",
+          "gitBlobSha": "fc55f46c03ebe50da5ed012f61fe1a78478dbfc5",
+          "bytes": 82
+        },
+        {
+          "path": "src/index.ts",
+          "gitBlobSha": "46db8e59c7b3dbe665457d6b9366559bb7dd0556",
+          "bytes": 923
+        },
+        {
+          "path": "src/internal",
+          "gitBlobSha": "ba1f96a1c5d7a9baafbe66edc63bfd46a2331c40"
+        },
+        {
+          "path": "src/internal/README.md",
+          "gitBlobSha": "3ef5a25bac10eec3925c29eacbfa68a84517c726",
+          "bytes": 118
+        },
+        {
+          "path": "src/internal/builtin-types.ts",
+          "gitBlobSha": "c23d3bdedc13683a2ad7defc1515539ae2f1b32e",
+          "bytes": 2910
+        },
+        {
+          "path": "src/internal/detect-platform.ts",
+          "gitBlobSha": "e82d95c92f05cdc6a167aea50becedff88116adc",
+          "bytes": 6428
+        },
+        {
+          "path": "src/internal/errors.ts",
+          "gitBlobSha": "82c7b14d577cccf53e1719ea34c11d47351c5a63",
+          "bytes": 1179
+        },
+        {
+          "path": "src/internal/headers.ts",
+          "gitBlobSha": "c724a9d22507fd04ddc290f78b9fb80754773621",
+          "bytes": 3027
+        },
+        {
+          "path": "src/internal/parse.ts",
+          "gitBlobSha": "88d6d091968037b9667e8b1e81aa72ffd61cbd06",
+          "bytes": 1747
+        },
+        {
+          "path": "src/internal/request-options.ts",
+          "gitBlobSha": "2aabf9aa3d6e5d4d12f771fca504f266fc8734a5",
+          "bytes": 2400
+        },
+        {
+          "path": "src/internal/shim-types.ts",
+          "gitBlobSha": "8ddf7b0ad14b80bc73317cf34beae74991f906bb",
+          "bytes": 931
+        },
+        {
+          "path": "src/internal/shims.ts",
+          "gitBlobSha": "471e9d08d993931765ad0770d4500537f3eeb7df",
+          "bytes": 3539
+        },
+        {
+          "path": "src/internal/to-file.ts",
+          "gitBlobSha": "30eada32cc04fc470d7948622c972d1687a20013",
+          "bytes": 5189
+        },
+        {
+          "path": "src/internal/types.ts",
+          "gitBlobSha": "a050513a624c1dab6d9f0d6e67b1dcbff9484eb9",
+          "bytes": 6497
+        },
+        {
+          "path": "src/internal/uploads.ts",
+          "gitBlobSha": "64222d08e3134332b07b6ac16e15207782111635",
+          "bytes": 6746
+        },
+        {
+          "path": "src/internal/utils.ts",
+          "gitBlobSha": "c591353b720bbbac9778ab49880e1591e0d08263",
+          "bytes": 302
+        },
+        {
+          "path": "src/internal/utils",
+          "gitBlobSha": "76693098d750c55f1d98d68b3aa8648e901b1c69"
+        },
+        {
+          "path": "src/internal/utils/base64.ts",
+          "gitBlobSha": "468d44fd8e6d318aedd5e3530806de0baefdebf2",
+          "bytes": 1275
+        },
+        {
+          "path": "src/internal/utils/bytes.ts",
+          "gitBlobSha": "8da627abe133306f787a3d0c4d7182ab3170804b",
+          "bytes": 831
+        },
+        {
+          "path": "src/internal/utils/env.ts",
+          "gitBlobSha": "cc5fa0faca8cd9a12a02a2f64b5b9971d0c8fd3b",
+          "bytes": 625
+        },
+        {
+          "path": "src/internal/utils/log.ts",
+          "gitBlobSha": "520f125a14e2f397c34bc6649363a163568ac43a",
+          "bytes": 3377
+        },
+        {
+          "path": "src/internal/utils/path.ts",
+          "gitBlobSha": "2b621c7854745e3d5012aec36067e05fd9c0666f",
+          "bytes": 3211
+        },
+        {
+          "path": "src/internal/utils/query.ts",
+          "gitBlobSha": "a316c982744218e1ddc9d1da9fbc29c5a5d441b4",
+          "bytes": 1038
+        },
+        {
+          "path": "src/internal/utils/sleep.ts",
+          "gitBlobSha": "65e52962bbb288c4a2f19fbe14b7ffb9baba6487",
+          "bytes": 182
+        },
+        {
+          "path": "src/internal/utils/uuid.ts",
+          "gitBlobSha": "b0e53aaf7ef092c1bd64847211ab62b27bb18869",
+          "bytes": 594
+        },
+        {
+          "path": "src/internal/utils/values.ts",
+          "gitBlobSha": "e4fbf0945f810c395df4494b60906081f5653909",
+          "bytes": 3140
+        },
+        {
+          "path": "src/lib",
+          "gitBlobSha": "513e8ae187087d32ceff6c3dc7ad0d6ce207bccf"
+        },
+        {
+          "path": "src/lib/.keep",
+          "gitBlobSha": "7554f8b20ae58485df49010107f79349db1c5943",
+          "bytes": 225
+        },
+        {
+          "path": "src/lib/polling.ts",
+          "gitBlobSha": "288a8571c7b42367abb0691ca484f568b209b756",
+          "bytes": 7143
+        },
+        {
+          "path": "src/pagination.ts",
+          "gitBlobSha": "90bf015e124ad08b8f3a5fa818f0ab115d8e72f6",
+          "bytes": 92
+        },
+        {
+          "path": "src/resource.ts",
+          "gitBlobSha": "363e3516b1499158e04fab6c25c747f9c01f3a99",
+          "bytes": 88
+        },
+        {
+          "path": "src/resources.ts",
+          "gitBlobSha": "b283d5781de54a4df740f51ff11277e0787cb714",
+          "bytes": 35
+        },
+        {
+          "path": "src/resources",
+          "gitBlobSha": "ac6406cbcdcc4c87708a3a71f6ce600076bdcef6"
+        },
+        {
+          "path": "src/resources/avatar-conversations.ts",
+          "gitBlobSha": "8e2300f4c3386888bda01ebbda407ee2cecb6ab6",
+          "bytes": 18071
+        },
+        {
+          "path": "src/resources/avatar-videos.ts",
+          "gitBlobSha": "d9f8138797893590196e317ef8af9ecfd6811112",
+          "bytes": 3919
+        },
+        {
+          "path": "src/resources/avatars.ts",
+          "gitBlobSha": "1c3198df9f69a0b15d15896174f71af659a7e993",
+          "bytes": 45026
+        },
+        {
+          "path": "src/resources/character-performance.ts",
+          "gitBlobSha": "3b8e51a447640726ebd1874a3ea6bd4e8abec8d0",
+          "bytes": 5537
+        },
+        {
+          "path": "src/resources/documents.ts",
+          "gitBlobSha": "79e447ab889b38dfec1b7c8640a3cedf8eb74ea3",
+          "bytes": 6742
+        },
+        {
+          "path": "src/resources/generate.ts",
+          "gitBlobSha": "77825f8177d8afab0803041f442e1af2fd80b402",
+          "bytes": 122
+        },
+        {
+          "path": "src/resources/generate",
+          "gitBlobSha": "36813e9ab0693b39d783689bcc2e2eb9c1236e3f"
+        },
+        {
+          "path": "src/resources/generate/audio.ts",
+          "gitBlobSha": "0d887f79af3a8ef587cbbe586c9ea464d28a5397",
+          "bytes": 7855
+        },
+        {
+          "path": "src/resources/generate/generate.ts",
+          "gitBlobSha": "0fee125d77b749f99bc746b90bc9e4c653e52eef",
+          "bytes": 1342
+        },
+        {
+          "path": "src/resources/generate/image.ts",
+          "gitBlobSha": "a5d859a399fa949e33820e69475f29955010a7d0",
+          "bytes": 6610
+        },
+        {
+          "path": "src/resources/generate/index.ts",
+          "gitBlobSha": "d8df5eb8987a5adb4ccca69aa3ae21b2c03189a5",
+          "bytes": 429
+        },
+        {
+          "path": "src/resources/generate/video.ts",
+          "gitBlobSha": "0acca21bcee7a5e757e962522aa26dff9bf422d0",
+          "bytes": 9519
+        },
+        {
+          "path": "src/resources/image-to-video.ts",
+          "gitBlobSha": "5253085132cca30240bb1407ebbc3fd42605134d",
+          "bytes": 59870
+        },
+        {
+          "path": "src/resources/image-upscale.ts",
+          "gitBlobSha": "c32cfd63dfe838c8717c47ac92438600d9480e49",
+          "bytes": 2936
+        },
+        {
+          "path": "src/resources/index.ts",
+          "gitBlobSha": "5a43d700bffeac86176229cd020d22a9db0ed685",
+          "bytes": 4809
+        },
+        {
+          "path": "src/resources/organization.ts",
+          "gitBlobSha": "4e74c0d480fd0b1aee33dc6c758c07d613a278c4",
+          "bytes": 126
+        },
+        {
+          "path": "src/resources/organization",
+          "gitBlobSha": "acb8220a6d3dc2f4f8353248a37b375b0da2cef0"
+        },
+        {
+          "path": "src/resources/organization/index.ts",
+          "gitBlobSha": "239b70c21ec5d3206b62d35920f70823e6647f2e",
+          "bytes": 406
+        },
+        {
+          "path": "src/resources/organization/organization.ts",
+          "gitBlobSha": "1f828eddf302467e7f2dce5642645be8a413035a",
+          "bytes": 9225
+        },
+        {
+          "path": "src/resources/organization/webapp.ts",
+          "gitBlobSha": "b04d663f5e00265e2001c052e9febc6b903923e9",
+          "bytes": 120
+        },
+        {
+          "path": "src/resources/organization/webapp",
+          "gitBlobSha": "6b2d1ab5b3e639bdd7aefb462451e1ec7474f2ef"
+        },
+        {
+          "path": "src/resources/organization/webapp/audit-logs.ts",
+          "gitBlobSha": "6517b38e8d52f461f54a26c1b7f372491d7ecc16",
+          "bytes": 17737
+        },
+        {
+          "path": "src/resources/organization/webapp/index.ts",
+          "gitBlobSha": "0ea98eb82043913c8979d65953bc74907965345e",
+          "bytes": 436
+        },
+        {
+          "path": "src/resources/organization/webapp/webapp.ts",
+          "gitBlobSha": "553360afd479ce3f2e96c1137f27ace1cf7e02ea",
+          "bytes": 3454
+        },
+        {
+          "path": "src/resources/realtime-sessions.ts",
+          "gitBlobSha": "9f81a856c65e1af9548651db210128495b73a9e6",
+          "bytes": 15220
+        },
+        {
+          "path": "src/resources/recipes.ts",
+          "gitBlobSha": "f3c1c51a55aa07a85465a3612487570f3c0a6abc",
+          "bytes": 24086
+        },
+        {
+          "path": "src/resources/routers.ts",
+          "gitBlobSha": "42ce822d06fc0c8d1bc4c14e0ded6d9f252f4b70",
+          "bytes": 26002
+        },
+        {
+          "path": "src/resources/sound-effect.ts",
+          "gitBlobSha": "b63788e14006ad32f0125ee1090ef827deed9c2e",
+          "bytes": 4064
+        },
+        {
+          "path": "src/resources/speech-to-speech.ts",
+          "gitBlobSha": "0eec1ae278f0e4b9fc2d093f2f2cfdcd0c87021c",
+          "bytes": 3921
+        },
+        {
+          "path": "src/resources/tasks.ts",
+          "gitBlobSha": "5d9b55476dcf01057108fd7fb128e100affe0bac",
+          "bytes": 7416
+        },
+        {
+          "path": "src/resources/text-to-image.ts",
+          "gitBlobSha": "f7bcb6e15c73bba9e43d0a7224c06ebbc4d66bc9",
+          "bytes": 41965
+        },
+        {
+          "path": "src/resources/text-to-speech.ts",
+          "gitBlobSha": "46bcaa216fec1400a7b795726028170cd3bf1d32",
+          "bytes": 10237
+        },
+        {
+          "path": "src/resources/text-to-video.ts",
+          "gitBlobSha": "a47ccc7adadbc716f1c60aa214ff256a4010df87",
+          "bytes": 47825
+        },
+        {
+          "path": "src/resources/uploads.ts",
+          "gitBlobSha": "8739eb8a53d7d075ac4cb6aed6f352f5aa296826",
+          "bytes": 3942
+        },
+        {
+          "path": "src/resources/video-to-audio.ts",
+          "gitBlobSha": "1e3cabf79ba4a97f2ecbc2f0b84e1f2eff80898b",
+          "bytes": 2821
+        },
+        {
+          "path": "src/resources/video-to-hdr.ts",
+          "gitBlobSha": "3d83d37c41ab26575522ed69c9b3433d62998439",
+          "bytes": 5299
+        },
+        {
+          "path": "src/resources/video-to-video.ts",
+          "gitBlobSha": "fe45245d96b7e3298f0e259bd1b23a2b0fffa67a",
+          "bytes": 35831
+        },
+        {
+          "path": "src/resources/video-upscale.ts",
+          "gitBlobSha": "af9b66612becd886c903b8ab7f4a51c3f0d72984",
+          "bytes": 3506
+        },
+        {
+          "path": "src/resources/voice-dubbing.ts",
+          "gitBlobSha": "986e6ae2cf0278c5d60212f7d1afc48900ec78fc",
+          "bytes": 2975
+        },
+        {
+          "path": "src/resources/voice-isolation.ts",
+          "gitBlobSha": "1a2862c2cd12e7ae91e9788a47715bc1d977e0af",
+          "bytes": 2268
+        },
+        {
+          "path": "src/resources/voices.ts",
+          "gitBlobSha": "3fc7aa5cf7417833f755733833f0473fb0be642b",
+          "bytes": 10281
+        },
+        {
+          "path": "src/resources/workflow-invocations.ts",
+          "gitBlobSha": "c237d76ca7f2647751eb8448e1d374fb64cc74d1",
+          "bytes": 7849
+        },
+        {
+          "path": "src/resources/workflows.ts",
+          "gitBlobSha": "d140c14b9cd865963f67372af676171c36166a66",
+          "bytes": 5472
+        },
+        {
+          "path": "src/uploads.ts",
+          "gitBlobSha": "b2ef64710fb618f1115aaee5650edd3aaa82ec45",
+          "bytes": 86
+        },
+        {
+          "path": "src/version.ts",
+          "gitBlobSha": "a7fe7a1ba4c37b62b8c65b345d5fb3e2e8e0ce9a",
+          "bytes": 61
+        },
+        {
+          "path": "tests",
+          "gitBlobSha": "c6da9eee2ba3cce03ab9e8e6d2046266b2ee621e"
+        },
+        {
+          "path": "tests/api-resources",
+          "gitBlobSha": "f50163f3e00c9203f47ac78327e3e468732df4d7"
+        },
+        {
+          "path": "tests/api-resources/avatar-conversations.test.ts",
+          "gitBlobSha": "3aa2bc5e7727d0e03e3ed90e0fd4f58eff168573",
+          "bytes": 2169
+        },
+        {
+          "path": "tests/api-resources/avatar-videos.test.ts",
+          "gitBlobSha": "52ff1e3200b138bb00a52ef80c59b74375ccf499",
+          "bytes": 1278
+        },
+        {
+          "path": "tests/api-resources/avatars.test.ts",
+          "gitBlobSha": "ea04bed5df111e24aee1d01868ee617e5f089274",
+          "bytes": 5582
+        },
+        {
+          "path": "tests/api-resources/character-performance.test.ts",
+          "gitBlobSha": "922e4f89338786e4b1635c4a559f069e84417486",
+          "bytes": 1491
+        },
+        {
+          "path": "tests/api-resources/documents.test.ts",
+          "gitBlobSha": "2013668c60e6f55c2c1f0af45b46fbd2f8c63047",
+          "bytes": 3956
+        },
+        {
+          "path": "tests/api-resources/generate",
+          "gitBlobSha": "3d44577954bd42196bb7500a9b0a0a8c3d34a0d2"
+        },
+        {
+          "path": "tests/api-resources/generate/audio.test.ts",
+          "gitBlobSha": "44d24cd3b756e6fef08ecf06b5f97826696ba128",
+          "bytes": 1306
+        },
+        {
+          "path": "tests/api-resources/generate/image.test.ts",
+          "gitBlobSha": "aefcfc96939c20eae4855b0a61cce7ddcceed9a6",
+          "bytes": 1289
+        },
+        {
+          "path": "tests/api-resources/generate/video.test.ts",
+          "gitBlobSha": "0fb001466770e2c4d5169019772e621001e44983",
+          "bytes": 1690
+        },
+        {
+          "path": "tests/api-resources/image-to-video.test.ts",
+          "gitBlobSha": "39e6c3843c9be40b63fd634a69d05f8875b323d7",
+          "bytes": 1350
+        },
+        {
+          "path": "tests/api-resources/image-upscale.test.ts",
+          "gitBlobSha": "338715bb2052f54286defe396bf229391975b801",
+          "bytes": 1236
+        },
+        {
+          "path": "tests/api-resources/organization",
+          "gitBlobSha": "271e52122bdef0c9f293a938b10961d46b8b7729"
+        },
+        {
+          "path": "tests/api-resources/organization/organization.test.ts",
+          "gitBlobSha": "666a76982cbf6c21a7ed35ee6525292a17a5f43d",
+          "bytes": 1705
+        },
+        {
+          "path": "tests/api-resources/organization/webapp",
+          "gitBlobSha": "dead8e1149c21f0bfcfd619aa7fc7e819f522f86"
+        },
+        {
+          "path": "tests/api-resources/organization/webapp/audit-logs.test.ts",
+          "gitBlobSha": "c21257f8e16d2bc9e6324259a7e81fadcebd5d08",
+          "bytes": 2279
+        },
+        {
+          "path": "tests/api-resources/organization/webapp/webapp.test.ts",
+          "gitBlobSha": "3d341e4a3c45a666360993f910616a7f0d193db0",
+          "bytes": 1261
+        },
+        {
+          "path": "tests/api-resources/realtime-sessions.test.ts",
+          "gitBlobSha": "5a9c6cde03d4df09c3012e1b1e87438de3ad9bc6",
+          "bytes": 2671
+        },
+        {
+          "path": "tests/api-resources/recipes.test.ts",
+          "gitBlobSha": "489971f5fc141a08f59a093b3d0c9d0e2a5a2624",
+          "bytes": 7095
+        },
+        {
+          "path": "tests/api-resources/routers.test.ts",
+          "gitBlobSha": "28563ebf57de98f512a7472552dc76108ef0e239",
+          "bytes": 5037
+        },
+        {
+          "path": "tests/api-resources/sound-effect.test.ts",
+          "gitBlobSha": "08fbb6032e11191651d4811b64558e663518ce57",
+          "bytes": 1195
+        },
+        {
+          "path": "tests/api-resources/speech-to-speech.test.ts",
+          "gitBlobSha": "edc9abcd7ea4332766072b186b7cd7d94f52d2b2",
+          "bytes": 1319
+        },
+        {
+          "path": "tests/api-resources/tasks.test.ts",
+          "gitBlobSha": "ff2716539a77631061910531a1a7d67de2d5ad88",
+          "bytes": 1306
+        },
+        {
+          "path": "tests/api-resources/text-to-image.test.ts",
+          "gitBlobSha": "af7099288ed869ccb540cb236752dbeb5c70906a",
+          "bytes": 1318
+        },
+        {
+          "path": "tests/api-resources/text-to-speech.test.ts",
+          "gitBlobSha": "d9e46f0a77a881ea2070eccae0d6eb26297411b7",
+          "bytes": 1225
+        },
+        {
+          "path": "tests/api-resources/text-to-video.test.ts",
+          "gitBlobSha": "669027fdcd4ad54f9242cdc8f229dfca7e2e81f1",
+          "bytes": 1243
+        },
+        {
+          "path": "tests/api-resources/uploads.test.ts",
+          "gitBlobSha": "f1c21a95d1984796945b56bc9b69c7b34687354e",
+          "bytes": 3498
+        },
+        {
+          "path": "tests/api-resources/video-to-audio.test.ts",
+          "gitBlobSha": "d78da747fc2b1a5bae36e91d50e2d7dc0094467a",
+          "bytes": 1270
+        },
+        {
+          "path": "tests/api-resources/video-to-hdr.test.ts",
+          "gitBlobSha": "e2735067bb24fa777e0f8235ad72d91597c6fab3",
+          "bytes": 1127
+        },
+        {
+          "path": "tests/api-resources/video-to-video.test.ts",
+          "gitBlobSha": "be591b7d73ea24493629a7ad0e6a100fcf997710",
+          "bytes": 1462
+        },
+        {
+          "path": "tests/api-resources/video-upscale.test.ts",
+          "gitBlobSha": "876ee39f4fd38238bb52b7dfa2152ccc79e00ead",
+          "bytes": 1263
+        },
+        {
+          "path": "tests/api-resources/voice-dubbing.test.ts",
+          "gitBlobSha": "6a3b8a53272b5066f04293fdee40834e4822d075",
+          "bytes": 1244
+        },
+        {
+          "path": "tests/api-resources/voice-isolation.test.ts",
+          "gitBlobSha": "f50895d7969b5df53db89eda8b794776f8b0ab8d",
+          "bytes": 1118
+        },
+        {
+          "path": "tests/api-resources/voices.test.ts",
+          "gitBlobSha": "602437fc024559914dbf8ba795b63f924a4821b2",
+          "bytes": 4443
+        },
+        {
+          "path": "tests/api-resources/workflow-invocations.test.ts",
+          "gitBlobSha": "dac202e746d2bbe864ba0bf907692ceae1c300db",
+          "bytes": 5197
+        },
+        {
+          "path": "tests/api-resources/workflows.test.ts",
+          "gitBlobSha": "9807bfc3da6ac216a231aafbe0b6fcb2c241dcad",
+          "bytes": 2262
+        },
+        {
+          "path": "tests/base64.test.ts",
+          "gitBlobSha": "f6813500834caee164c2e572f532f97fd4f2602c",
+          "bytes": 2067
+        },
+        {
+          "path": "tests/buildHeaders.test.ts",
+          "gitBlobSha": "f2ad72cb7a84830a6be3aeb111695e116291794a",
+          "bytes": 2187
+        },
+        {
+          "path": "tests/form.test.ts",
+          "gitBlobSha": "05ec946c4c1f44d86119102c308a652ba8eed25f",
+          "bytes": 1898
+        },
+        {
+          "path": "tests/index.test.ts",
+          "gitBlobSha": "c3d60fd02f8bb3395ea77d96c6a5fb76f3116e7b",
+          "bytes": 23872
+        },
+        {
+          "path": "tests/path.test.ts",
+          "gitBlobSha": "9b9f0252838580806b9b8dce53ac6c6f4c1e9dbc",
+          "bytes": 17595
+        },
+        {
+          "path": "tests/stringifyQuery.test.ts",
+          "gitBlobSha": "7e7614b4cfdbd0d01e1fe7819d2114acbb8b8520",
+          "bytes": 948
+        },
+        {
+          "path": "tests/uploads.test.ts",
+          "gitBlobSha": "400d6c84ab983491a7015775a0c5d8ebcd41b1a5",
+          "bytes": 3453
+        },
+        {
+          "path": "tests/video-to-audio-polling.test.ts",
+          "gitBlobSha": "13bbaf703e90c2ce4ddc7319d833d644f46f3389",
+          "bytes": 1564
+        },
+        {
+          "path": "tsc-multi.json",
+          "gitBlobSha": "384ddac5bfa8e6a00e8c8b0dc68f713e19aac504",
+          "bytes": 275
+        },
+        {
+          "path": "tsconfig.build.json",
+          "gitBlobSha": "e129289e64b980a89600853176c55f4c3eeea1a4",
+          "bytes": 386
+        },
+        {
+          "path": "tsconfig.deno.json",
+          "gitBlobSha": "849e070dbc77b4ce04ac2ec7f3971356f394c96d",
+          "bytes": 310
+        },
+        {
+          "path": "tsconfig.dist-src.json",
+          "gitBlobSha": "c550e2996bc6f4af070fef8250f2a4ee8cdb5255",
+          "bytes": 348
+        },
+        {
+          "path": "tsconfig.json",
+          "gitBlobSha": "4f31e0d0f6dcb26a188bf73e94c02a45abaf3b06",
+          "bytes": 911
+        },
+        {
+          "path": "yarn.lock",
+          "gitBlobSha": "a3d6b14ebc3b1035a28f55f8709f7f05b1fae7f1",
+          "bytes": 157483
+        }
+      ],
+      "failure": null
+    }
+  ],
+  "webExtraction": [
+    {
+      "file": "workspace work/web/competitor-search-1.json",
+      "sha256": "5900401f5a66f587935ab25165fffe0bf3ab25a82becf1cdd4458099aee809e1",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Includes current official Agent/help extraction where direct HTTP help root returned403."
+    },
+    {
+      "file": "workspace work/web/competitor-search-2.json",
+      "sha256": "58e726425dcb9e238aa432855594eaf2d64dd0ef17e89893475851a2b9b1b95d",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Includes current official Agent/help extraction where direct HTTP help root returned403."
+    },
+    {
+      "file": "workspace work/web/competitor-open-3.json",
+      "sha256": "ced4ad2d0986bd52e08ccb242edd0cce131f9a608d38a3331c02c2ba6c94749b",
+      "method": "Free web search or open of official public sources; retrieved 2026-10-23; no authenticated product execution",
+      "note": "Includes current official Agent/help extraction where direct HTTP help root returned403."
+    }
+  ]
+}

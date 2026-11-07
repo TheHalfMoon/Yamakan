@@ -1,0 +1,711 @@
+{
+  "schema": "yamakan.donor-source-review/v1",
+  "retrievedDate": "2026-10-23",
+  "method": "Public GitHub immutable raw files; HEAD commit and recursive tree APIs; four later discovery pins from public git ls-remote after anonymous API quota exhausted. No clone/install/weights/inference.",
+  "selected": {
+    "opencut": {
+      "repo": "OpenCut-app/opencut-classic",
+      "sha": "cf5e79e919144200294fb9fed22a222592a0aeea",
+      "commitDate": "2026-05-17T16:07:21Z",
+      "retrievedUtc": "2026-10-23T19:02:31.300820+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "openvideostudio": {
+      "repo": "mne03005-png/OpenVideoStudio",
+      "sha": "175da9960411fbe740932b0a08d57e32a4a36a18",
+      "commitDate": "2026-09-09T02:54:12Z",
+      "retrievedUtc": "2026-10-23T19:02:31.307774+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "openmontage": {
+      "repo": "calesthio/OpenMontage",
+      "sha": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+      "commitDate": "2026-10-16T15:07:32Z",
+      "retrievedUtc": "2026-10-23T19:02:31.369782+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "ffmpeg": {
+      "repo": "FFmpeg/FFmpeg",
+      "sha": "1da057110ff19b7ea33273f9cf209b2c963cb3cf",
+      "commitDate": "2026-10-23T18:20:16Z",
+      "retrievedUtc": "2026-10-23T19:02:31.615213+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "otio": {
+      "repo": "AcademySoftwareFoundation/OpenTimelineIO",
+      "sha": "eee67fdcdce388696e39f4176d89a61ee9fdc790",
+      "commitDate": "2026-10-22T21:41:47Z",
+      "retrievedUtc": "2026-10-23T19:02:31.248869+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "mlt": {
+      "repo": "mltframework/mlt",
+      "sha": "8f605c9486d8c1d0f8283d9baf5e94592a10bd6c",
+      "commitDate": "2026-10-21T18:17:22Z",
+      "retrievedUtc": "2026-10-23T19:02:31.248131+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "comfyui": {
+      "repo": "Comfy-Org/ComfyUI",
+      "sha": "9fe7ef764d0452dcc9dcb925efd076d4e68eece1",
+      "commitDate": "2026-10-23T17:52:38Z",
+      "retrievedUtc": "2026-10-23T19:02:32.465054+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "diffusers": {
+      "repo": "huggingface/diffusers",
+      "sha": "48cdbaef5ee3d718aaee392b44f2099ae511c4a5",
+      "commitDate": "2026-10-22T13:16:58Z",
+      "retrievedUtc": "2026-10-23T19:02:32.859894+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "whispercpp": {
+      "repo": "ggml-org/whisper.cpp",
+      "sha": "231638a0717b7822784297e5980965ffcec05810",
+      "commitDate": "2026-10-19T14:14:00Z",
+      "retrievedUtc": "2026-10-23T19:02:32.499305+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "fasterwhisper": {
+      "repo": "SYSTRAN/faster-whisper",
+      "sha": "9e472ae9de8bb374552f531f752654554b76b2d6",
+      "commitDate": "2026-10-16T11:12:55Z",
+      "retrievedUtc": "2026-10-23T19:02:32.193519+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "realesrgan": {
+      "repo": "xinntao/Real-ESRGAN",
+      "sha": "a4abfb2979a7bbff3f69f58f58ae324608821e27",
+      "commitDate": "2024-04-02T16:39:11Z",
+      "retrievedUtc": "2026-10-23T19:02:32.384899+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "rife": {
+      "repo": "hzwer/ECCV2022-RIFE",
+      "sha": "5d8adbdd40e12c2c8f91930eff838aebe561c086",
+      "commitDate": "2025-09-10T06:32:03Z",
+      "retrievedUtc": "2026-10-23T19:02:32.449428+00:00",
+      "treeTruncated": false,
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "kdenlive": {
+      "donor": "kdenlive",
+      "repo": "KDE/kdenlive",
+      "retrievedUtc": "2026-10-23T19:05:08.231051+00:00",
+      "sha": "a1990cc80ddc5f8f28e79960968911f21475f7ef",
+      "commitDate": "2026-10-23T12:58:55Z",
+      "licenseUrl": "https://raw.githubusercontent.com/KDE/kdenlive/a1990cc80ddc5f8f28e79960968911f21475f7ef/COPYING",
+      "licenseSha256": "b6a8bf63ae2c95b0aa256ee774680d7bd18f21f457da75466f7610b3b16acc4e",
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    },
+    "shotcut": {
+      "donor": "shotcut",
+      "repo": "mltframework/shotcut",
+      "retrievedUtc": "2026-10-23T19:05:08.232366+00:00",
+      "sha": "34dde4fce394652c00d8f7af9ac2ce37dab1ed92",
+      "commitDate": "2026-10-22T15:28:05Z",
+      "licenseUrl": "https://raw.githubusercontent.com/mltframework/shotcut/34dde4fce394652c00d8f7af9ac2ce37dab1ed92/COPYING",
+      "licenseSha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "sourceImplementationReviewed": "bounded functions/ranges listed in master matrix; not complete repository"
+    }
+  },
+  "captures": [
+    {
+      "donor": "opencut",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/OpenCut-app/opencut-classic/cf5e79e919144200294fb9fed22a222592a0aeea/LICENSE",
+      "sha256": "8117f9bb64534f7530fc6139b014fd1c1465f7981f93d1871789150fa3f59d3d",
+      "bytes": 1067,
+      "status": "captured"
+    },
+    {
+      "donor": "opencut",
+      "path": "apps/web/src/timeline/snapping/resolve.ts",
+      "url": "https://raw.githubusercontent.com/OpenCut-app/opencut-classic/cf5e79e919144200294fb9fed22a222592a0aeea/apps/web/src/timeline/snapping/resolve.ts",
+      "sha256": "73f7865940cd914b09070ca3daa03325b03a31bd33ebb6766dc0975736c6fc0d",
+      "bytes": 744,
+      "status": "captured"
+    },
+    {
+      "donor": "opencut",
+      "path": "apps/web/src/ripple/shift.ts",
+      "url": "https://raw.githubusercontent.com/OpenCut-app/opencut-classic/cf5e79e919144200294fb9fed22a222592a0aeea/apps/web/src/ripple/shift.ts",
+      "sha256": "2648c4ea38ac51ece842656670e167623132f0aa7a5a4c8bec14a254a48528f5",
+      "bytes": 419,
+      "status": "captured"
+    },
+    {
+      "donor": "opencut",
+      "path": "apps/web/src/animation/interpolation.ts",
+      "url": "https://raw.githubusercontent.com/OpenCut-app/opencut-classic/cf5e79e919144200294fb9fed22a222592a0aeea/apps/web/src/animation/interpolation.ts",
+      "sha256": "20ca806fd989299c94b184b3c71889ee1c524667c55b0e2df42bedde0d391882",
+      "bytes": 8570,
+      "status": "captured"
+    },
+    {
+      "donor": "opencut",
+      "path": "apps/web/src/animation/__tests__/animated-params.test.ts",
+      "url": "https://raw.githubusercontent.com/OpenCut-app/opencut-classic/cf5e79e919144200294fb9fed22a222592a0aeea/apps/web/src/animation/__tests__/animated-params.test.ts",
+      "sha256": "f187198ae1982e506315f9777a440b9e4da6223ca2abc465d9b0879a8160acfd",
+      "bytes": 5489,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "studio/identity/models.py",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/studio/identity/models.py",
+      "sha256": "160268fce36d2dfc31a8454c4c474b487031005598a65ccea04a862f66435364",
+      "bytes": 1199,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "studio/identity/assets.py",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/studio/identity/assets.py",
+      "sha256": "c7a08f5520efea1053992e88a2465c10d654aab03fbab30bf5b26bcf4cc3d3bb",
+      "bytes": 2544,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "studio/creative/identity.py",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/studio/creative/identity.py",
+      "sha256": "f0d76b27f2072d7384c680f7925766c55fe308d9e47415859ca2f32abe9d4b56",
+      "bytes": 8779,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "studio/tests/test_identity.py",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/studio/tests/test_identity.py",
+      "sha256": "ddaae47e52871e7fcc5842f23bda8f0b6443ee4540c872ad1e95badbab1f8ef5",
+      "bytes": 8544,
+      "status": "captured"
+    },
+    {
+      "donor": "openvideostudio",
+      "path": "studio/core/pipeline.py",
+      "url": "https://raw.githubusercontent.com/mne03005-png/OpenVideoStudio/175da9960411fbe740932b0a08d57e32a4a36a18/studio/core/pipeline.py",
+      "sha256": "883fd2a48f813e5314608949edbd0c2aa1e0a142aa35786f5534042204157399",
+      "bytes": 11446,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/LICENSE",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "bytes": 34523,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "lib/checkpoint.py",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/lib/checkpoint.py",
+      "sha256": "fb33f7910d8e1e482ee8e4d326d5e94ba138ebc912fadf9ec560272644213ae4",
+      "bytes": 24181,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "lib/pipeline_loader.py",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/lib/pipeline_loader.py",
+      "sha256": "7e3eb9c266a9c49ab2b8501cf11b53e1758e672eaae011a30e20b74f5f11f7ef",
+      "bytes": 8031,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "schemas/pipelines/pipeline_manifest.schema.json",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/schemas/pipelines/pipeline_manifest.schema.json",
+      "sha256": "6d929fdb0a79e081b2c0fc06646acffb4c6060df4208a0bd4cdd693d0e3c65ec",
+      "bytes": 7490,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "tests/lib/test_checkpoint_resume_identity.py",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/tests/lib/test_checkpoint_resume_identity.py",
+      "sha256": "d9cb62e44615583184f0158ce01f070d5fbd907e3160570fde7d71afd88f8e09",
+      "bytes": 1567,
+      "status": "captured"
+    },
+    {
+      "donor": "openmontage",
+      "path": "tests/lib/test_checkpoint_decision_validation.py",
+      "url": "https://raw.githubusercontent.com/calesthio/OpenMontage/c8066452325cb57c8fc1ba8c2a71b6e8842e6b65/tests/lib/test_checkpoint_decision_validation.py",
+      "sha256": "69e56156b328344a68e7cf03b10021d8257d0688339304912c5122759ac9fd6c",
+      "bytes": 2331,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "COPYING.LGPLv2.1",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/COPYING.LGPLv2.1",
+      "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30",
+      "bytes": 26517,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "LICENSE.md",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/LICENSE.md",
+      "sha256": "e6dc72d5665a1ebd6dcc841de59278dad4ca77ecc47b03f1064a55c3e9ea8bb8",
+      "bytes": 4352,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "fftools/ffmpeg_filter.c",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/fftools/ffmpeg_filter.c",
+      "sha256": "029700bd1134b03fbeaecad1bd9079aff6dd2de8fe237c1d88b15a076d2bb0c6",
+      "bytes": 122391,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "libavfilter/af_loudnorm.c",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/libavfilter/af_loudnorm.c",
+      "sha256": "b754ec59c513206fa8cc9930150c0ad2b833bf8ccdd03be63bf0860ac298e93a",
+      "bytes": 33908,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "tests/fate/filter-audio.mak",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/tests/fate/filter-audio.mak",
+      "sha256": "ffb135a02e16b108668f00d5eff0a32d9a0fc95af6dd582c7dd8cf02b508d698",
+      "bytes": 32147,
+      "status": "captured"
+    },
+    {
+      "donor": "ffmpeg",
+      "path": "configure",
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/1da057110ff19b7ea33273f9cf209b2c963cb3cf/configure",
+      "sha256": "ddad66976275b9bcbc50421489aa3819aef78f09a3708383887aa7b9299248e8",
+      "bytes": 307740,
+      "status": "captured"
+    },
+    {
+      "donor": "otio",
+      "path": "LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/AcademySoftwareFoundation/OpenTimelineIO/eee67fdcdce388696e39f4176d89a61ee9fdc790/LICENSE.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357,
+      "status": "captured"
+    },
+    {
+      "donor": "otio",
+      "path": "src/opentime/rationalTime.h",
+      "url": "https://raw.githubusercontent.com/AcademySoftwareFoundation/OpenTimelineIO/eee67fdcdce388696e39f4176d89a61ee9fdc790/src/opentime/rationalTime.h",
+      "sha256": "1ee199836bd25acc56ec8c3fabe0a8dc76920d86e3bd76f3258bfec591e2249d",
+      "bytes": 14854,
+      "status": "captured"
+    },
+    {
+      "donor": "otio",
+      "path": "src/py-opentimelineio/opentimelineio/adapters/otio_json.py",
+      "url": "https://raw.githubusercontent.com/AcademySoftwareFoundation/OpenTimelineIO/eee67fdcdce388696e39f4176d89a61ee9fdc790/src/py-opentimelineio/opentimelineio/adapters/otio_json.py",
+      "sha256": "8cf2a7a73870c48a18c92103233f96922305263824897a8d42725710f06b6fed",
+      "bytes": 4528,
+      "status": "captured"
+    },
+    {
+      "donor": "otio",
+      "path": "src/py-opentimelineio/opentimelineio/adapters/__init__.py",
+      "url": "https://raw.githubusercontent.com/AcademySoftwareFoundation/OpenTimelineIO/eee67fdcdce388696e39f4176d89a61ee9fdc790/src/py-opentimelineio/opentimelineio/adapters/__init__.py",
+      "sha256": "a7b7764695feae14f0d056023be845c4e01d1f98f0d09293d223b7f7571f3248",
+      "bytes": 5982,
+      "status": "captured"
+    },
+    {
+      "donor": "otio",
+      "path": "tests/test_builtin_adapters.py",
+      "url": "https://raw.githubusercontent.com/AcademySoftwareFoundation/OpenTimelineIO/eee67fdcdce388696e39f4176d89a61ee9fdc790/tests/test_builtin_adapters.py",
+      "sha256": "9d9c5f6caae65d808bdafc4feade00097bf624f1471c3e31967890150b99a394",
+      "bytes": 3677,
+      "status": "captured"
+    },
+    {
+      "donor": "mlt",
+      "path": "COPYING",
+      "url": "https://raw.githubusercontent.com/mltframework/mlt/8f605c9486d8c1d0f8283d9baf5e94592a10bd6c/COPYING",
+      "sha256": "592987e8510228d546540b84a22444bde98e48d03078d3b2eefcd889bec5ce8c",
+      "bytes": 26521,
+      "status": "captured"
+    },
+    {
+      "donor": "mlt",
+      "path": "src/framework/mlt_consumer.c",
+      "url": "https://raw.githubusercontent.com/mltframework/mlt/8f605c9486d8c1d0f8283d9baf5e94592a10bd6c/src/framework/mlt_consumer.c",
+      "sha256": "3856053eb4ba05294823bd64619be6e7d9c22ea89186f2bd851f7e1b8e9098f1",
+      "bytes": 70016,
+      "status": "captured"
+    },
+    {
+      "donor": "mlt",
+      "path": "src/modules/avformat/producer_avformat.c",
+      "url": "https://raw.githubusercontent.com/mltframework/mlt/8f605c9486d8c1d0f8283d9baf5e94592a10bd6c/src/modules/avformat/producer_avformat.c",
+      "sha256": "de5ba894db8c689ffa8c9e8116d0027926b9e45796cd3f20a245ca2b5b33f7fe",
+      "bytes": 199094,
+      "status": "captured"
+    },
+    {
+      "donor": "mlt",
+      "path": "src/tests/test_mod_avformat/test_mod_avformat.cpp",
+      "url": "https://raw.githubusercontent.com/mltframework/mlt/8f605c9486d8c1d0f8283d9baf5e94592a10bd6c/src/tests/test_mod_avformat/test_mod_avformat.cpp",
+      "sha256": "5f9c636a99ecfc1035d05f41b982cb8e45b4534f556763acfdac04d7366bf79a",
+      "bytes": 5586,
+      "status": "captured"
+    },
+    {
+      "donor": "mlt",
+      "path": "CMakeLists.txt",
+      "url": "https://raw.githubusercontent.com/mltframework/mlt/8f605c9486d8c1d0f8283d9baf5e94592a10bd6c/CMakeLists.txt",
+      "sha256": "840637754bd26470d33c608064c3475a2976acb78cd8cddf329a206a4b2ee763",
+      "bytes": 22441,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "execution.py",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/execution.py",
+      "sha256": "40c5306bc8d032aea90b93a7e1ef4ca137e0cf372187132d32b99ae070ba3d87",
+      "bytes": 64697,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "nodes.py",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/nodes.py",
+      "sha256": "4cfd9be3754f9dc25213febdf96b690d6e32007c2e539d37e799d82226d758c5",
+      "bytes": 109650,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "folder_paths.py",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/folder_paths.py",
+      "sha256": "e48ed55f125cd75b5c22d61a6d86917eb2e9154fc7eb57d1f993b4e8e18e3be2",
+      "bytes": 23492,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "tests/execution/test_execution.py",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/tests/execution/test_execution.py",
+      "sha256": "c5a6414c8919595a4b07415beadd51ce07b2ebcc4d4f4a559a73bda3d32ab14f",
+      "bytes": 63620,
+      "status": "captured"
+    },
+    {
+      "donor": "comfyui",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/9fe7ef764d0452dcc9dcb925efd076d4e68eece1/requirements.txt",
+      "sha256": "e7a2166150f7624311e71d8d2115b3a079c9b79a4702b59a186f76587ccaa121",
+      "bytes": 528,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/LICENSE",
+      "sha256": "f9e2070c247517b1ddf65f7b11b393484a18da91a958fd18a97bd0f241c3125c",
+      "bytes": 11357,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "src/diffusers/pipelines/wan/pipeline_wan.py",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/src/diffusers/pipelines/wan/pipeline_wan.py",
+      "sha256": "e80e0bbb05db93a614e5c01733482ac56f0c426dc02abe3bb11383285fddd0a3",
+      "bytes": 32495,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "src/diffusers/pipelines/ltx/pipeline_ltx.py",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/src/diffusers/pipelines/ltx/pipeline_ltx.py",
+      "sha256": "47d2a0bc95c4332c66bda7541e9b54d0d037fc6187d95d7cce98876e5e14e328",
+      "bytes": 41351,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "src/diffusers/pipelines/pipeline_utils.py",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/src/diffusers/pipelines/pipeline_utils.py",
+      "sha256": "5e1129685f876d88397b3f2538400b365d967d0c3878ab502398392fc4c00a9a",
+      "bytes": 118259,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "tests/pipelines/wan/test_wan.py",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/tests/pipelines/wan/test_wan.py",
+      "sha256": "a41c503a0c35d38b2d982fae3fbc5000185972aeb5c5aed20a9ce9f30f937bbb",
+      "bytes": 6976,
+      "status": "captured"
+    },
+    {
+      "donor": "diffusers",
+      "path": "tests/pipelines/ltx/test_ltx.py",
+      "url": "https://raw.githubusercontent.com/huggingface/diffusers/48cdbaef5ee3d718aaee392b44f2099ae511c4a5/tests/pipelines/ltx/test_ltx.py",
+      "sha256": "8e6508a75e63760e0f74292c717986fe5656f381f6c38f57a9ad81fda4a3f749",
+      "bytes": 6033,
+      "status": "captured"
+    },
+    {
+      "donor": "whispercpp",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/231638a0717b7822784297e5980965ffcec05810/LICENSE",
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "bytes": 1078,
+      "status": "captured"
+    },
+    {
+      "donor": "whispercpp",
+      "path": "examples/cli/cli.cpp",
+      "url": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/231638a0717b7822784297e5980965ffcec05810/examples/cli/cli.cpp",
+      "sha256": "966eeb4cea73ad1de364823dcafac050491f0e5cc8ad4a1cea1bfd784bb1bd1e",
+      "bytes": 64715,
+      "status": "captured"
+    },
+    {
+      "donor": "whispercpp",
+      "path": "src/whisper.cpp",
+      "url": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/231638a0717b7822784297e5980965ffcec05810/src/whisper.cpp",
+      "sha256": "17bfbe6d1d7012491cecfa72e52f23613ac0f222f8d5e88b16d1ed7f14da16e7",
+      "bytes": 345028,
+      "status": "captured"
+    },
+    {
+      "donor": "whispercpp",
+      "path": "tests/CMakeLists.txt",
+      "url": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/231638a0717b7822784297e5980965ffcec05810/tests/CMakeLists.txt",
+      "sha256": "20ab35a2548a6e300b93710fe659df3cbd43309594c08a57521dfe8b06ac6bc2",
+      "bytes": 9867,
+      "status": "captured"
+    },
+    {
+      "donor": "whispercpp",
+      "path": "CMakeLists.txt",
+      "url": "https://raw.githubusercontent.com/ggml-org/whisper.cpp/231638a0717b7822784297e5980965ffcec05810/CMakeLists.txt",
+      "sha256": "f4494d2da1353158b8a33b935abe6bbe76b8cee95d503fb16088224dd4755dcc",
+      "bytes": 12772,
+      "status": "captured"
+    },
+    {
+      "donor": "fasterwhisper",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/9e472ae9de8bb374552f531f752654554b76b2d6/LICENSE",
+      "sha256": "af6798135e729f8aa6c853936d037dfdea449734d26b8ea6a89805fca758c0d5",
+      "bytes": 1064,
+      "status": "captured"
+    },
+    {
+      "donor": "fasterwhisper",
+      "path": "faster_whisper/transcribe.py",
+      "url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/9e472ae9de8bb374552f531f752654554b76b2d6/faster_whisper/transcribe.py",
+      "sha256": "d88c67a88a98a57d41b8b15ea419c8d2e95177b763156a008ac0173046da8159",
+      "bytes": 82457,
+      "status": "captured"
+    },
+    {
+      "donor": "fasterwhisper",
+      "path": "faster_whisper/audio.py",
+      "url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/9e472ae9de8bb374552f531f752654554b76b2d6/faster_whisper/audio.py",
+      "sha256": "af7d60c7e1abfb5b000ade4004679d5ff24e3e7beca0ad42a79b0d86d6d7e58e",
+      "bytes": 3719,
+      "status": "captured"
+    },
+    {
+      "donor": "fasterwhisper",
+      "path": "tests/test_transcribe.py",
+      "url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/9e472ae9de8bb374552f531f752654554b76b2d6/tests/test_transcribe.py",
+      "sha256": "e968389d54dbe974aadfd4101023cbd266b30b342fa3e5748f3ed8cd48ea5670",
+      "bytes": 11179,
+      "status": "captured"
+    },
+    {
+      "donor": "fasterwhisper",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/SYSTRAN/faster-whisper/9e472ae9de8bb374552f531f752654554b76b2d6/requirements.txt",
+      "sha256": "32896d8045e27cff269fa9005fb42bcf064b83d6d358544b8f7266ef6ea0e4a3",
+      "bytes": 96,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/LICENSE",
+      "sha256": "4a699ec4863d96a91fc265948a0c90033f7e8735d515524dcf3444736406e0c2",
+      "bytes": 1519,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "realesrgan/utils.py",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/realesrgan/utils.py",
+      "sha256": "185df0ef68f96891bdbb99280aac5b8b62fd4e4baac74bad37f53cf408668db1",
+      "bytes": 12605,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "inference_realesrgan.py",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/inference_realesrgan.py",
+      "sha256": "389af1172b8ae830dc940283a5e7197d05ab6d9ec15c673bb383c03d957f84bf",
+      "bytes": 7745,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "inference_realesrgan_video.py",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/inference_realesrgan_video.py",
+      "sha256": "e110f4fa34721551106df8f3cf096472da4e959f8264765816b54ca7e548d164",
+      "bytes": 16910,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "tests/test_utils.py",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/tests/test_utils.py",
+      "sha256": "301324cccb0759fdcae7258808c5f1062dbff052d72132892316e8a3f11bd152",
+      "bytes": 3089,
+      "status": "captured"
+    },
+    {
+      "donor": "realesrgan",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/a4abfb2979a7bbff3f69f58f58ae324608821e27/requirements.txt",
+      "sha256": "5944cac4c2c4d8ae27ccaa88435e870898d9859394f3a3fd80b88393dba30e9d",
+      "bytes": 100,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/LICENSE",
+      "sha256": "f629619f078e3ed699f1ea401248cb7796c36334e3b8ec0eb2c082eceaa5f084",
+      "bytes": 1066,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "inference_video.py",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/inference_video.py",
+      "sha256": "55de865c00768d07f048744cf4fc0b9751ae15cde1307bdd64fc2b75fcc42ba1",
+      "bytes": 11209,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "model/RIFE.py",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/model/RIFE.py",
+      "sha256": "ca9bec074a159624c9701ff748d169f022de7a654ebbf5a6f24886e69d3aba0b",
+      "bytes": 3537,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "model/IFNet.py",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/model/IFNet.py",
+      "sha256": "2c471c1d69ad8725a5752400ad14d49157039b601cbb781692030a567cc92973",
+      "bytes": 4504,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "benchmark/Vimeo90K.py",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/benchmark/Vimeo90K.py",
+      "sha256": "e92a465e947ec1c4b66fc595bbc8b550d85ce681dde4c653cb8249dd4a39694d",
+      "bytes": 1439,
+      "status": "captured"
+    },
+    {
+      "donor": "rife",
+      "path": "requirements.txt",
+      "url": "https://raw.githubusercontent.com/hzwer/ECCV2022-RIFE/5d8adbdd40e12c2c8f91930eff838aebe561c086/requirements.txt",
+      "sha256": "367487b035f580e163761c142fa2dc5fa9d599fb1a59812c075d6db0861b4ea7",
+      "bytes": 125,
+      "status": "captured"
+    },
+    {
+      "donor": "kdenlive",
+      "path": "src/mltcontroller/clipcontroller.cpp",
+      "url": "https://raw.githubusercontent.com/KDE/kdenlive/a1990cc80ddc5f8f28e79960968911f21475f7ef/src/mltcontroller/clipcontroller.cpp",
+      "sha256": "de4d77429ebccaeb73aee3ff6d7a4a7c70168cfd30592780ec211d3793b097c9",
+      "bytes": 48693,
+      "status": "captured"
+    },
+    {
+      "donor": "kdenlive",
+      "path": "src/timeline2/model/timelinemodel.cpp",
+      "url": "https://raw.githubusercontent.com/KDE/kdenlive/a1990cc80ddc5f8f28e79960968911f21475f7ef/src/timeline2/model/timelinemodel.cpp",
+      "sha256": "cb17c8d29dbf8f775a00f12ca6ccab7ac0b526a0afc3b29e9dd20d94039740fd",
+      "bytes": 341907,
+      "status": "captured"
+    },
+    {
+      "donor": "kdenlive",
+      "path": "tests/timelinemodeltest.cpp",
+      "url": "https://raw.githubusercontent.com/KDE/kdenlive/a1990cc80ddc5f8f28e79960968911f21475f7ef/tests/timelinemodeltest.cpp",
+      "status": "failed",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "donor": "shotcut",
+      "path": "src/mltcontroller.cpp",
+      "url": "https://raw.githubusercontent.com/mltframework/shotcut/34dde4fce394652c00d8f7af9ac2ce37dab1ed92/src/mltcontroller.cpp",
+      "sha256": "3a058906070e07e29f320a39b0cfa83b16de35f888d2a281f12759d3daacd1ea",
+      "bytes": 73895,
+      "status": "captured"
+    },
+    {
+      "donor": "shotcut",
+      "path": "src/jobs/encodejob.cpp",
+      "url": "https://raw.githubusercontent.com/mltframework/shotcut/34dde4fce394652c00d8f7af9ac2ce37dab1ed92/src/jobs/encodejob.cpp",
+      "sha256": "bb85faeb410777f56bde844b0540dffaa11e5863843d704fbaa08eebed400bad",
+      "bytes": 13613,
+      "status": "captured"
+    },
+    {
+      "donor": "shotcut",
+      "path": "src/jobs/ffmpegjob.cpp",
+      "url": "https://raw.githubusercontent.com/mltframework/shotcut/34dde4fce394652c00d8f7af9ac2ce37dab1ed92/src/jobs/ffmpegjob.cpp",
+      "sha256": "c67fb97b553028c4f36960d9955d1a35e7f0ed138932f8b974f994560a10ba9b",
+      "bytes": 3733,
+      "status": "captured"
+    }
+  ],
+  "testsExecuted": false,
+  "rawSourceCommitted": false,
+  "scopeWarning": "Capture does not mean every line reviewed. Specific reviewed functions and tests are in 08_SOURCE_DONOR_MASTER_MATRIX.md. Unlisted captured files are context only."
+}
