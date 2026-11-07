@@ -1,0 +1,52 @@
+{
+  "format": "yamakan.generation-receipt/v1",
+  "runId": "af370d3c-1c08-4610-b6a3-31d6c169dec4",
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "revision": "b8fff7315c768468a5333511427288870b2e9635",
+  "license": "apache-2.0",
+  "prompt": "A red kite flies above a green hill under a clear blue sky.",
+  "negativePrompt": "blurry, low quality, distorted, static",
+  "seed": 7,
+  "steps": 30,
+  "frames": 81,
+  "fps": 24,
+  "size": [704, 480],
+  "packages": [
+    "diffusers==0.36.0",
+    "transformers==4.57.1",
+    "accelerate==1.10.1",
+    "sentencepiece==0.2.1",
+    "ftfy==6.3.1",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0"
+  ],
+  "verified": true,
+  "stage": "done",
+  "hostMemory": {
+    "samples": 218,
+    "lowestAvailableBytes": 9023799296,
+    "stageAtLowest": "loading",
+    "highestRssBytes": 26464870400,
+    "stageAtHighest": "loading",
+    "totalBytes": 33658159104,
+    "cgroupPeakBytes": 31394344960,
+    "cgroupOomKills": 0
+  },
+  "gpus": ["Tesla T4, 15360 MiB", "Tesla T4, 15360 MiB"],
+  "memory": [
+    "Mem:              31           1          26           0           4          30"
+  ],
+  "disk": ["/dev/loop2       20G  124K   20G   1% /kaggle/working"],
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "loadSeconds": 291.3,
+  "generateSeconds": 738.5,
+  "peakHostBytes": 26500964352,
+  "peakGpuBytes": 13619549184,
+  "sha256": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
+  "bytes": 67660,
+  "decodedFrames": 81,
+  "decodedSize": [704, 480],
+  "spatialStd": 52.22,
+  "temporalDiff": 0.479
+}

@@ -349,10 +349,6 @@ try {
   assert.equal(Number(probe.nb_read_frames), asset.durationFrames);
   copyFileSync(file, join(out, "export.mp4"));
   const generated = project.assets.find((a) => a.kind === "video");
-  // The same prompt and seed have made these same bytes on real Kaggle since 7b04dbf. A
-  // change here means something changed the video, whatever else still passes.
-  if (modelIndex === "0" && !givenPrompt)
-    assert.equal(generated.hash, WAN_EXACT_OUTPUT, "the same video as before");
   step("exported from the toolbar, every frame", {
     width: probe.width,
     height: probe.height,
@@ -360,6 +356,10 @@ try {
     assetHash: generated.hash,
     exportHash: createHash("sha256").update(readFileSync(file)).digest("hex"),
   });
+  // The same prompt and seed have made these same bytes on real Kaggle since 7b04dbf. A
+  // change here means something changed the video, whatever else still passes.
+  if (modelIndex === "0" && !givenPrompt)
+    assert.equal(generated.hash, WAN_EXACT_OUTPUT, "the same video as before");
   assert.deepEqual(pageErrors, []);
   step("no page errors");
   passed = true;

@@ -281,18 +281,35 @@ const STAGES = new Set([
   "decoding",
   "exporting",
 ]);
+// A receipt comes from elsewhere: past this, a figure on the page is a plausible one.
+const MOST_MEMORY_BYTES = 1024 * GIB;
+const isStage = (stage: unknown): stage is string =>
+  typeof stage === "string" && STAGES.has(stage);
 export function killedAt(receipt: {
   stage?: unknown;
-  hostMemory?: { lowestAvailableBytes?: unknown; totalBytes?: unknown };
+  hostMemory?: {
+    lowestAvailableBytes?: unknown;
+    totalBytes?: unknown;
+    stageAtLowest?: unknown;
+  };
 }) {
   const said: string[] = [];
-  if (typeof receipt.stage === "string" && STAGES.has(receipt.stage))
-    said.push(`It had reached ${receipt.stage}.`);
-  const { lowestAvailableBytes: low, totalBytes: total } =
-    receipt.hostMemory ?? {};
-  if (typeof low === "number" && typeof total === "number")
+  if (isStage(receipt.stage)) said.push(`It had reached ${receipt.stage}.`);
+  const {
+    lowestAvailableBytes: low,
+    totalBytes: total,
+    stageAtLowest: where,
+  } = receipt.hostMemory ?? {};
+  if (
+    typeof low === "number" &&
+    typeof total === "number" &&
+    low >= 0 &&
+    low <= total &&
+    total > 0 &&
+    total <= MOST_MEMORY_BYTES
+  )
     said.push(
-      `At its lowest, ${gib(low)} GiB of ${gib(total)} GiB of memory was free, as last sampled.`,
+      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was free. That was sampled every few seconds, so a sudden rise would not show.`,
     );
   return said.join(" ");
 }

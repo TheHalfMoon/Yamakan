@@ -704,6 +704,30 @@ test("what a killed run says of itself takes only what it should", () => {
     }),
     "",
   );
+  // What JSON can say that no machine has.
+  for (const [lowestAvailableBytes, totalBytes] of [
+    [JSON.parse("1e999"), JSON.parse("1e999")],
+    [-5, 1e9],
+    [2e9, 1e9],
+    [0, 0],
+    [1, 1e300],
+    [1, "1"],
+  ])
+    assert.equal(
+      killedAt({ hostMemory: { lowestAvailableBytes, totalBytes } } as never),
+      "",
+    );
+  assert.equal(killedAt({ hostMemory: "much" } as never), "");
+  // Where it was lowest is named, and only by the script's own names.
+  const figures = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 31 };
+  assert.match(
+    killedAt({ hostMemory: { ...figures, stageAtLowest: "loading" } }),
+    /At its lowest, during loading, 1\.0 GiB of 2\.0 GiB .*sudden rise/,
+  );
+  assert.match(
+    killedAt({ hostMemory: { ...figures, stageAtLowest: "the prompt" } }),
+    /^At its lowest 1\.0 GiB of 2\.0 GiB/,
+  );
 });
 
 test("a run that failed otherwise is not said to be killed", async () => {

@@ -64,8 +64,16 @@ receipt = {
 saving = threading.Lock()
 
 
-# Whole or not at all: a kill can come at any moment, and what is left must read. Only
-# the last one has to land, and it tries harder: no other can be why a run fails.
+def note(text):
+    try:
+        print(text, file=sys.stderr)
+    except Exception:
+        pass
+
+
+# Whole or not at all: a kill can come at any moment, and what is left must read. Those
+# in between may fail. The first and the last may not, and they try harder: the first
+# stops the run before it costs any GPU time, and the last is the run's own result.
 def save(attempts=1):
     target = os.path.join(OUT, "receipt.json")
     for attempt in range(attempts):
@@ -76,7 +84,7 @@ def save(attempts=1):
                 os.replace(target + ".part", target)
             return True
         except Exception as error:
-            print(f"Could not write the receipt: {type(error).__name__}", file=sys.stderr)
+            note(f"Could not write the receipt: {type(error).__name__}")
             if attempt + 1 < attempts:
                 time.sleep(2)
     return False
@@ -113,15 +121,17 @@ def sample(read, *args):
 
 # A killed process cannot report its own end, and the peak read after the pipeline
 # returns never happens if it dies decoding. So this writes as it goes: how far the run
-# got, and how much memory was left when it was lowest. Reading it changes no output.
+# got, and how much memory was left when it was lowest, for the whole run and for each
+# stage, since a whole-run figure says nothing of a later stage. Reading it changes no
+# output.
 def watch_memory():
-    seen = {"samples": 0}
+    seen = {"samples": 0, "byStage": {}}
     while True:
         # It has one job, and no failure of it may reach the run or stop it watching.
         try:
             take_sample(seen)
         except Exception as error:
-            print(f"Could not sample memory: {type(error).__name__}", file=sys.stderr)
+            note(f"Could not sample memory: {type(error).__name__}")
         time.sleep(MEMORY_SAMPLE_SECONDS)
 
 
@@ -136,6 +146,13 @@ def take_sample(seen):
     if rss is not None and rss > seen.get("highestRssBytes", 0):
         seen["highestRssBytes"] = rss
         seen["stageAtHighest"] = receipt["stage"]
+    stage = seen["byStage"].setdefault(receipt["stage"], {})
+    if available is not None:
+        stage["lowestAvailableBytes"] = min(
+            available, stage.get("lowestAvailableBytes", available)
+        )
+    if rss is not None:
+        stage["highestRssBytes"] = max(rss, stage.get("highestRssBytes", rss))
     seen["samples"] += 1
     seen.update(
         {
@@ -150,8 +167,12 @@ def take_sample(seen):
             if value is not None
         }
     )
-    # Replaced, never added, so this cannot disturb a save in the other thread.
-    receipt["hostMemory"] = dict(seen)
+    # Replaced, never added, with nothing in it changed later, so this cannot disturb a
+    # save in the other thread.
+    receipt["hostMemory"] = {
+        **seen,
+        "byStage": {name: dict(s) for name, s in seen["byStage"].items()},
+    }
     save()
 
 
@@ -159,8 +180,12 @@ def sh(*args):
     return subprocess.run(args, capture_output=True, text=True).stdout.strip()
 
 
-save()
-threading.Thread(target=watch_memory, daemon=True).start()
+if not save(attempts=5):
+    sys.exit("The receipt could not be written, so the run did not start.")
+try:
+    threading.Thread(target=watch_memory, daemon=True).start()
+except Exception as error:
+    note(f"Could not start sampling memory: {type(error).__name__}")
 receipt["gpus"] = sh(
     "nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"
 ).splitlines()
@@ -168,7 +193,7 @@ receipt["memory"] = sh("free", "-g").splitlines()[1:2]
 receipt["disk"] = sh("df", "-h", "/kaggle/working").splitlines()[-1:]
 if not receipt["gpus"]:
     receipt["stage"] = "no GPU"
-    save()
+    save(attempts=5)
     sys.exit("No GPU was given to this notebook.")
 save()
 
@@ -221,6 +246,7 @@ try:
     # The last step's end is where decoding begins, with nothing else changed.
     def at_step_end(_pipe, step, _timestep, _inputs):
         if step == STEPS - 1:
+            receipt["decodingAfterSeconds"] = round(time.time() - started, 1)
             receipt["stage"] = "decoding"
             save()
         return {}
@@ -249,7 +275,7 @@ except Exception as error:
     receipt["error"] = f"{type(error).__name__}: {error}"[:1000]
     receipt["trace"] = traceback.format_exc()[-1500:]
     receipt["peakGpuBytes"] = torch.cuda.max_memory_allocated(0)
-    save()
+    save(attempts=5)
     sys.exit(f"Stopped: {receipt['error']}")
 
 with open(path, "rb") as f:

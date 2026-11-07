@@ -62,7 +62,11 @@ out, script, mode = sys.argv[1:4]
 source = open(script, encoding="utf-8").read()
 assert source.count('OUT = "/kaggle/working"') == 1
 source = source.replace('OUT = "/kaggle/working"', "OUT = " + repr(out))
+assert source.count("MEMORY_SAMPLE_SECONDS = 5") == 1
 source = source.replace("MEMORY_SAMPLE_SECONDS = 5", "MEMORY_SAMPLE_SECONDS = 0.01")
+assert source.count("time.sleep(2)") == 1
+source = source.replace("time.sleep(2)", "time.sleep(0.01)")
+assert source.count('"/proc/meminfo"') == 2 and source.count('"/proc/self/status"') == 1
 # What Kaggle's Linux host offers, in its own form, wherever this runs.
 fake = {"meminfo": "MemTotal:       32000000 kB\nMemAvailable:    2000000 kB\n",
         "status": "Name:\tpython\nVmRSS:\t25000000 kB\n"}
@@ -70,6 +74,28 @@ for name, text in fake.items():
     open(os.path.join(out, "fake-" + name), "w").write(text)
 source = source.replace('"/proc/meminfo"', repr(os.path.join(out, "fake-meminfo")))
 source = source.replace('"/proc/self/status"', repr(os.path.join(out, "fake-status")))
+
+real_replace = os.replace
+real_dump = json.dump
+failed = {"last": 0}
+# The last save is the one that says done: this has it fail, however often it asks.
+def failing_replace(a, b):
+    with open(a) as f:
+        if mode == "first-save-fails" or (mode.startswith("last-save") and json.load(f)["stage"] == "done"):
+            failed["last"] += 1
+            if mode != "last-save-fails-four" or failed["last"] <= 4:
+                raise OSError(28, "No space left on device")
+    real_replace(a, b)
+if mode == "first-save-fails" or mode.startswith("last-save"):
+    os.replace = failing_replace
+def dying_dump(obj, f, **k):
+    if obj.get("stage") == "decoding":
+        f.write('{"half')
+        f.flush()
+        os._exit(137)
+    real_dump(obj, f, **k)
+if mode == "kill-while-writing":
+    json.dump = dying_dump
 
 subprocess.check_call = lambda *a, **k: 0
 real_run = subprocess.run
@@ -117,9 +143,9 @@ class Pipe:
     def enable_model_cpu_offload(self, **k): pass
     def __call__(self, **k):
         asked["call"] = sorted(k)
+        asked["values"] = {n: k[n] for n in ("height", "width", "num_frames", "num_inference_steps", "guidance_scale")}
         ending = k["callback_on_step_end"]
         if mode == "save-fails":
-            real_replace = os.replace
             def failing(a, b):
                 os.replace = real_replace
                 raise OSError(28, "No space left on device")
@@ -134,7 +160,7 @@ class Pipe:
                     seen = json.load(f)
             except (OSError, ValueError):
                 seen = {}
-            if seen.get("stage") == "decoding" and seen["hostMemory"].get("samples", 0) >= 1:
+            if seen.get("stage") == "decoding" and "decoding" in seen["hostMemory"].get("byStage", {}):
                 break
             time.sleep(0.01)
         asked["stageAtDecode"] = seen.get("stage")
@@ -146,6 +172,8 @@ diffusers.AutoencoderKLWan = Pipe
 diffusers.WanPipeline = Pipe
 utils = types.ModuleType("diffusers.utils")
 def export(video, path, fps):
+    if mode == "kill-exporting":
+        os._exit(137)
     open(path, "wb").write(b"video")
 utils.export_to_video = export
 sys.modules["diffusers"] = diffusers
@@ -177,7 +205,17 @@ finally:
     print("ASKED " + json.dumps(asked))
 `;
 
-function run(mode: "finish" | "kill" | "save-fails") {
+function run(
+  mode:
+    | "finish"
+    | "kill"
+    | "kill-while-writing"
+    | "kill-exporting"
+    | "save-fails"
+    | "first-save-fails"
+    | "last-save-fails"
+    | "last-save-fails-four",
+) {
   const out = mkdtempSync(path.join(tmpdir(), "yamakan-run-script-"));
   roots.push(out);
   const harness = path.join(out, "harness.py");
@@ -192,7 +230,9 @@ function run(mode: "finish" | "kill" | "save-fails") {
     status: made.status,
     stderr: made.stderr,
     asked,
-    receipt: JSON.parse(readFileSync(path.join(out, "receipt.json"), "utf8")),
+    receipt: existsSync(path.join(out, "receipt.json"))
+      ? JSON.parse(readFileSync(path.join(out, "receipt.json"), "utf8"))
+      : null,
     out,
   };
 }
@@ -208,6 +248,14 @@ test(
     assert.ok(receipt.hostMemory.samples >= 1);
     assert.equal(receipt.hostMemory.lowestAvailableBytes, 2000000 * 1024);
     assert.equal(receipt.hostMemory.highestRssBytes, 25000000 * 1024);
+    assert.equal(
+      receipt.hostMemory.byStage.decoding.highestRssBytes,
+      25000000 * 1024,
+    );
+    assert.equal(
+      receipt.hostMemory.byStage.decoding.lowestAvailableBytes,
+      2000000 * 1024,
+    );
     assert.equal(receipt.peakHostBytes, undefined);
     assert.ok(!stderr.includes("Traceback"), stderr);
     // What this writes is what the page reads.
@@ -217,7 +265,60 @@ test(
 );
 
 test(
-  "a receipt that cannot be written does not fail the run",
+  "a kill in the middle of a write leaves the last whole receipt",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, stderr } = run("kill-while-writing");
+    assert.equal(status, 137, stderr);
+    // It read whole, or this would have thrown. The sampling thread may have finished one
+    // saying decoding just before the kill, which is just as true.
+    assert.ok(
+      ["generating", "decoding"].includes(receipt.stage),
+      receipt.stage,
+    );
+  },
+);
+
+test(
+  "a kill while exporting says so, with the peaks read by then",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, stderr } = run("kill-exporting");
+    assert.equal(status, 137, stderr);
+    assert.equal(receipt.stage, "exporting");
+    assert.equal(typeof receipt.peakHostBytes, "number");
+    assert.equal(typeof receipt.decodingAfterSeconds, "number");
+  },
+);
+
+test(
+  "a run whose receipt cannot be written at the start costs no GPU time",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, asked, stderr } = run("first-save-fails");
+    assert.equal(status, 1, stderr);
+    assert.match(stderr, /The receipt could not be written/);
+    assert.equal(receipt, null);
+    assert.deepEqual(asked, {});
+  },
+);
+
+test(
+  "the last receipt tries again, and a video it cannot record is not a success",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const again = run("last-save-fails-four");
+    assert.equal(again.status, 0, again.stderr);
+    assert.equal(again.receipt.stage, "done");
+    const never = run("last-save-fails");
+    assert.equal(never.status, 1, never.stderr);
+    assert.match(never.stderr, /its receipt could not be written/);
+    assert.notEqual(never.receipt.stage, "done");
+  },
+);
+
+test(
+  "a receipt that cannot be written partway does not fail the run",
   { skip: python ? false : "no Python here" },
   () => {
     const { status, receipt, stderr } = run("save-fails");
@@ -238,6 +339,14 @@ test(
     assert.equal(receipt.verified, true);
     assert.equal(asked.encode, 512);
     assert.equal(asked.stageAtDecode, "decoding");
+    assert.equal(typeof receipt.decodingAfterSeconds, "number");
+    assert.deepEqual(asked.values, {
+      height: 480,
+      width: 704,
+      num_frames: 81,
+      num_inference_steps: 30,
+      guidance_scale: 5,
+    });
     assert.deepEqual(asked.call, [
       "callback_on_step_end",
       "generator",
