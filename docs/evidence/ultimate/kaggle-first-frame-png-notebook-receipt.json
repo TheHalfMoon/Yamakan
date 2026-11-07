@@ -1,0 +1,78 @@
+{
+  "format": "yamakan.generation-receipt/v1",
+  "runId": "481f65e5-6856-410c-b4aa-10ed3ae8e7ba",
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "revision": "b8fff7315c768468a5333511427288870b2e9635",
+  "license": "apache-2.0",
+  "prompt": "The camera drifts slowly forward as the colours gently shift.",
+  "negativePrompt": "blurry, low quality, distorted, static",
+  "seed": 7,
+  "firstFrameSha256": "92c82d3f1d9d619eabbc32c10a22f864704f8faf580c1c969988bf3a7b80ad6e",
+  "steps": 30,
+  "frames": 81,
+  "fps": 24,
+  "size": [704, 480],
+  "packages": [
+    "diffusers==0.36.0",
+    "transformers==4.57.1",
+    "accelerate==1.10.1",
+    "sentencepiece==0.2.1",
+    "ftfy==6.3.1",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0"
+  ],
+  "verified": true,
+  "stage": "done",
+  "hostMemory": {
+    "samples": 220,
+    "byStage": {
+      "start": {
+        "lowestAvailableBytes": 32420777984,
+        "highestRssBytes": 23658496
+      },
+      "installed": {
+        "lowestAvailableBytes": 31635927040,
+        "highestRssBytes": 1516457984
+      },
+      "loading": {
+        "lowestAvailableBytes": 7977168896,
+        "highestRssBytes": 26554593280
+      },
+      "generating": {
+        "lowestAvailableBytes": 19613085696,
+        "highestRssBytes": 14585634816
+      },
+      "decoding": {
+        "lowestAvailableBytes": 13971763200,
+        "highestRssBytes": 18962456576
+      }
+    },
+    "lowestAvailableBytes": 7977168896,
+    "stageAtLowest": "loading",
+    "highestRssBytes": 26554593280,
+    "stageAtHighest": "loading",
+    "totalBytes": 33658150912,
+    "cgroupLimitBytes": 32212254720,
+    "cgroupPeakBytes": 31390900224,
+    "cgroupOomKills": 0
+  },
+  "gpus": ["Tesla T4, 15360 MiB", "Tesla T4, 15360 MiB"],
+  "memory": [
+    "Mem:              31           1          26           0           4          30"
+  ],
+  "disk": ["/dev/loop2       20G  1.6M   20G   1% /kaggle/working"],
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "firstFrameSize": [704, 480],
+  "loadSeconds": 299.1,
+  "decodingAfterSeconds": 390.5,
+  "generateSeconds": 724.3,
+  "peakHostBytes": 26890964992,
+  "peakGpuBytes": 13619549184,
+  "sha256": "ed0e4df47c0d51be9fde61511fcdb4230c2999a4ee7b0ba63a7748a501038f34",
+  "bytes": 648921,
+  "decodedFrames": 81,
+  "decodedSize": [704, 480],
+  "spatialStd": 81.51,
+  "temporalDiff": 17.352
+}

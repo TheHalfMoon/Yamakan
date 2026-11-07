@@ -120,7 +120,7 @@ Of 31.35 GiB, from 224 samples 5 seconds apart. Free memory here is the kernel's
 
 What this shows, in this one run: loading is the hardest moment overall, and at its sampled peak decoding is about 10 GiB above generating. The stage lasted about six minutes, and how long that peak lasted was not recorded. What it suggests, and does not show: the killed run came before the text encoder was freed, which the script's own comment puts at about 10 GB, not measured here. The first-frame run below read a container limit of 30.0 GiB from `/sys/fs/cgroup/memory.max`, not the 31.35 GiB reported. That was one session: the text runs and the killed run recorded no limit. If it held for that run too, holding that encoder through decoding would have made about 27.7 GiB resident at the sampled peak, about 2.3 GiB under that limit. That alone predicts no kill: it would take a spike between samples, or file cache that could not be given back. So this does not rule out running out of memory while decoding, and it is an inference from good runs, not a measurement of the killed one. **Why that run was killed is still not known, and the problem is still not shown to be solved.**
 
-## Image to video, first real run (2026-11-07)
+## Image to video, first real runs (2026-11-07)
 
 Run `a7d72d34-df87-4158-8ea4-a54e43e09629` at `5f51ad7`, from `npm run qualify:kaggle-first-frame`. **It is still not offered:** the command names the recipe in its own process, and no page or service command can reach it. Receipts: `kaggle-first-frame-run-receipt.json` and `kaggle-first-frame-notebook-receipt.json`.
 
@@ -145,3 +145,7 @@ The picture was made here from a fractal and noise, of no one. As a clean PNG it
 The container's peak was 29.47 GiB, close under that limit, with 0 out-of-memory kills. That peak may count file cache that could have been given back. The stages are not the text run's figures in another form: its generating was 7.49 GiB, this one 13.95. Why is not established, though this one also encodes the frame with the VAE. One run.
 
 Decoding began 405.0 seconds into the 742.3 seconds of generating.
+
+**A second run went as a PNG,** `481f65e5-6856-410c-b4aa-10ed3ae8e7ba` at `6ee67ee`, after a review tightened the picture path. Its receipts are `kaggle-first-frame-png-run-receipt.json` and `kaggle-first-frame-png-notebook-receipt.json`. The same picture without noise is a clean PNG of 417,786 bytes, in a script of about 0.75 MB by arithmetic, which was not read from what was sent. The notebook recorded `92c82d3f...`, the hash of that PNG rebuilt here, so it went as a PNG and arrived as it was. So real Kaggle has taken scripts of about 0.2 and 0.75 MB holding a picture, with 1,000,000 bytes seen only for padding. Its first frame is again plainly the picture, 27.07 dB apart at 88×60.
+
+The container's limit read 30.0 GiB again. Lowest free was 7.43 GiB and highest resident 24.73 GiB, both while loading. While decoding, 17.66 GiB resident and 13.01 GiB free. In the first run the decoding stage peaked at 15.19 GiB and its exporting stage at 17.51 GiB, so with samples 5 seconds apart, which stage holds a peak near the change between them is not exact.
