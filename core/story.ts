@@ -425,6 +425,7 @@ function verifyConsents(pack: ReferencePack, c: CommitContext) {
       });
 }
 
+/** Whether a pack says, on a person's word alone, that a character is made up. */
 export const marksFictional = (pack: ReferencePack) =>
   pack.entries.some((entry) => entry.role === "fictional-character");
 
