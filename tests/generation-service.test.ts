@@ -880,6 +880,68 @@ test("a made-up character cannot name a person or a consent", async () => {
   await assert.rejects(savePack(f, linked), /Only a character or voice/);
 });
 
+for (const revoked of [false, true])
+  test(`an image linked to a ${revoked ? "revoked" : "usable"} consent cannot be marked made up`, async () => {
+    const f = await fixture();
+    const { asset: still } = await f.store.importAsset(
+      f.projectId,
+      "still.png",
+      f.still,
+    );
+    const consentId = await consented(f, still.id, still.hash);
+    if (revoked) await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+    await assert.rejects(
+      savePack(f, fictionalPack(still)),
+      /linked to a person's consent/,
+    );
+    const { assets } = await f.store.exportProject(f.projectId);
+    assert.equal(assets.length, 1, "the image itself stays");
+  });
+
+test("another image can still be marked, beside one linked to a consent", async () => {
+  const f = await fixture();
+  const { asset: linked } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, linked.id, linked.hash);
+  const other = await f.store.importAsset(
+    f.projectId,
+    "other.png",
+    Buffer.concat([f.still, Buffer.from([0])]),
+  );
+  await savePack(f, fictionalPack(other.asset));
+});
+
+test("one pack cannot both link an image to a consent and mark it made up", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consent = (
+    await execute(f.ctx, "yamakan.consent.grant", {
+      characterId: "lead",
+      purpose: "likeness-generate",
+      version: "v1",
+      ttlMs: 3_600_000,
+    })
+  ).result as { id: string };
+  const pack = fictionalPack(still);
+  pack.entries.push({
+    id: crypto.randomUUID(),
+    role: "character",
+    label: "Lead",
+    assetId: still.id,
+    assetHash: still.hash,
+    characterId: "lead" as never,
+    consentId: consent.id as never,
+  });
+  await assert.rejects(savePack(f, pack), /linked to a person's consent/);
+});
+
 test("marking an image made up does not free it from a person's consent", async () => {
   const f = await fixture();
   const { state, g } = sending(f);
@@ -888,10 +950,10 @@ test("marking an image made up does not free it from a person's consent", async 
     "still.png",
     f.still,
   );
+  await savePack(f, fictionalPack(still));
   const consentId = await consented(f, still.id, still.hash);
   await grantSend(f);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
-  await savePack(f, fictionalPack(still));
   await assert.rejects(
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
@@ -908,9 +970,9 @@ test("a marked image a person's consent holds cannot be placed on the timeline e
     "still.png",
     f.still,
   );
+  await savePack(f, fictionalPack(still));
   const consentId = await consented(f, still.id, still.hash);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
-  await savePack(f, fictionalPack(still));
   const open = (
     await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
   ).result as { revision: number; tracks: { id: string; kind: string }[] };
@@ -944,8 +1006,8 @@ test("marking an image made up does not stand in for consent to send it", async 
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
   await savePack(f, fictionalPack(still));
+  await consented(f, still.id, still.hash);
   await assert.rejects(
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),

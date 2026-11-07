@@ -374,6 +374,42 @@ export function assertLinkedMediaNotRevoked(
 }
 
 /**
+ * A person's word that a character is made up does not stand against the record: media
+ * any pack version links to someone's consent, revoked or not, cannot be marked so, as the
+ * founder chose. This goes by hash, so another copy of the picture is not recognised.
+ */
+export function assertMayMarkFictional(
+  db: DatabaseSync,
+  pack: {
+    entries: readonly {
+      role: string;
+      assetHash: string;
+      consentId: string | null;
+    }[];
+  },
+) {
+  const marked = pack.entries
+    .filter((e) => e.role === "fictional-character")
+    .map((e) => e.assetHash);
+  if (!marked.length) return;
+  const refused = () =>
+    new CommandError(
+      "VALIDATION",
+      "This image is linked to a person's consent, so it cannot be marked as made up.",
+    );
+  if (pack.entries.some((e) => e.consentId && marked.includes(e.assetHash)))
+    throw refused();
+  const versions = db
+    .prepare(
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack'",
+    )
+    .all() as { hash: string }[];
+  for (const { hash } of versions)
+    if (linksOf(db, hash, marked).some((l) => marked.includes(l.assetHash)))
+      throw refused();
+}
+
+/**
  * Whether media a person's pack links may go to an engine now. Making something
  * new from a likeness needs more than placing what exists: every character's newest
  * linked consent must be usable now for generating (purpose, expiry, revocation,
