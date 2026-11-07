@@ -121,6 +121,7 @@ import {
   assembleOperations,
   assertOnFrames,
   linksConsent,
+  marksFictional,
   verifyReferencePack,
   verifyStory,
 } from "../story.ts";
@@ -610,6 +611,12 @@ export const commands = {
         throw new CommandError(
           "SCOPE_DENIED",
           "Linking a likeness consent requires the browser session.",
+        );
+      // It stands in for consent, on nothing but a person's word.
+      if (marksFictional(a.pack) && principal.id !== "browser-ui")
+        throw new CommandError(
+          "SCOPE_DENIED",
+          "Saying a character is made up requires the browser session.",
         );
       const project = await store.commitDocument(
         {

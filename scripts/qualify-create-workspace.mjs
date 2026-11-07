@@ -562,6 +562,14 @@ try {
     return file;
   };
   const elements = page.getByTestId("create-elements");
+  // The kind a person chooses to say a character is made up.
+  assert.equal(
+    await page
+      .getByTestId("create-element-role")
+      .locator('option[value="fictional-character"]')
+      .textContent(),
+    "Drawn or made-up character",
+  );
   assert.match(
     await page.getByTestId("create-elements-note").textContent(),
     /not sent to a model/,

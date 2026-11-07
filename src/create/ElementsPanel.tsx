@@ -1,4 +1,4 @@
-// Places, props, wardrobe and style kept with the project. They are records for now: no
+// Places, props, wardrobe, style and made-up characters kept with the project. They are records for now: no
 // model receives them, and this says so where they are made.
 import { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
@@ -47,6 +47,7 @@ const ROLE_NAMES: Record<ElementRole, MessageKey> = {
   prop: "create.elementRole.prop",
   wardrobe: "create.elementRole.wardrobe",
   style: "create.elementRole.style",
+  "fictional-character": "create.elementRole.fictional",
 };
 
 export function ElementsPanel<S extends PinnableStory>(props: {
@@ -143,7 +144,11 @@ export function ElementsPanel<S extends PinnableStory>(props: {
         ...all.filter((e) => e.documentId !== kept.documentId),
         kept,
       ]);
-      if (!existing) setName("");
+      // The next one is its own statement: saying one is made up does not carry over.
+      if (!existing) {
+        setName("");
+        setRole("environment");
+      }
     } finally {
       setAdding(null);
       setWorking(false);

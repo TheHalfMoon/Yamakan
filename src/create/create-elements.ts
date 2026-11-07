@@ -1,6 +1,7 @@
-// A reusable place, prop, wardrobe or style: one reference pack, whose versions a shot
-// pins by hash. A record in the project only. Nothing here reaches a model, and a person's
-// likeness is not one of these, since that needs consent this does not ask for.
+// A reusable place, prop, wardrobe, style or made-up character: one reference pack, whose
+// versions a shot pins by hash. A record in the project only. Nothing here reaches a model,
+// and a real person's likeness is not one of these, since that needs consent this does not
+// ask for.
 import { STORY_LIMITS } from "../../core/story.ts";
 
 export const ELEMENT_ROLES = [
@@ -8,6 +9,7 @@ export const ELEMENT_ROLES = [
   "prop",
   "wardrobe",
   "style",
+  "fictional-character",
 ] as const;
 export type ElementRole = (typeof ELEMENT_ROLES)[number];
 
