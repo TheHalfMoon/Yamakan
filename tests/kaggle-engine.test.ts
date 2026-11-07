@@ -19,6 +19,7 @@ import {
   KAGGLE_RECIPES,
   createKaggleEngine,
   kaggleCliEnvironment,
+  killedAt,
   kaggleRecipes,
   offeredKaggleRecipes,
   scriptWithBrief,
@@ -658,6 +659,122 @@ test("a killed run says so, from its log, without the log's words", async () => 
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /killed the run/);
   assert.ok(!answer.diagnostic!.includes("the prompt"));
+});
+
+test("a killed run says how far it got, and how much memory was left", async () => {
+  const k = kaggle(["ERROR"], (runId, folder) => {
+    writeFileSync(
+      path.join(folder, "receipt.json"),
+      JSON.stringify({
+        runId,
+        stage: "decoding",
+        error: null,
+        prompt: "the prompt",
+        hostMemory: {
+          lowestAvailableBytes: 2 * 1024 ** 3,
+          totalBytes: 31 * 1024 ** 3,
+          // Read before its own kill: it would say 0 of a run killed for memory.
+          cgroupOomKills: 0,
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(folder, "run.log"),
+      '[{"stream_name":"stderr","time":2,"data":"Killed\\n"}]',
+    );
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const answer = await k.engine.status(executionRef);
+  assert.match(answer.diagnostic!, /killed the run/);
+  assert.match(answer.diagnostic!, /reached decoding/);
+  assert.match(answer.diagnostic!, /2\.0 GiB of 31\.0 GiB/);
+  assert.ok(!answer.diagnostic!.includes("out-of-memory kills"));
+  assert.ok(!answer.diagnostic!.includes("the prompt"));
+});
+
+test("what a killed run says of itself takes only what it should", () => {
+  assert.equal(killedAt({}), "");
+  assert.equal(killedAt({ stage: "the prompt" }), "");
+  assert.equal(
+    killedAt({
+      hostMemory: { lowestAvailableBytes: "many", totalBytes: 1 },
+    }),
+    "",
+  );
+  // What JSON can say that no machine has.
+  for (const [lowestAvailableBytes, totalBytes] of [
+    [JSON.parse("1e999"), JSON.parse("1e999")],
+    [-5, 1e9],
+    [2e9, 1e9],
+    [0, 0],
+    [1, 1e300],
+    [1, 1],
+    [1, "1"],
+  ])
+    assert.equal(
+      killedAt({ hostMemory: { lowestAvailableBytes, totalBytes } } as never),
+      "",
+    );
+  assert.equal(killedAt({ hostMemory: "much" } as never), "");
+  // The stage it died in has its own figure, when that figure can be believed.
+  const memory = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 32 };
+  assert.match(
+    killedAt({
+      stage: "decoding",
+      hostMemory: {
+        ...memory,
+        stageAtLowest: "loading",
+        byStage: { decoding: { lowestAvailableBytes: 3 * 2 ** 30 } },
+      },
+    }),
+    /During decoding, the lowest was 3\.0 GiB\./,
+  );
+  // Nor one lower than the lowest of the whole run, which cannot be.
+  assert.ok(
+    !killedAt({
+      stage: "decoding",
+      hostMemory: {
+        lowestAvailableBytes: 2 ** 31,
+        totalBytes: 2 ** 32,
+        byStage: { decoding: { lowestAvailableBytes: 2 ** 30 } },
+      },
+    }).includes("During"),
+  );
+  // Nor does this let a receipt's own word for a stage through.
+  assert.ok(
+    !killedAt({
+      stage: "the prompt",
+      hostMemory: {
+        ...memory,
+        byStage: { "the prompt": { lowestAvailableBytes: 2 ** 30 } },
+      },
+    }).includes("the prompt"),
+  );
+  for (const byStage of [
+    { decoding: { lowestAvailableBytes: 2 ** 40 } },
+    { decoding: null },
+    "much",
+    null,
+  ])
+    assert.ok(
+      !killedAt({
+        stage: "decoding",
+        hostMemory: { ...memory, byStage } as never,
+      }).includes("During"),
+    );
+  // Where it was lowest is named, and only by the script's own names.
+  const figures = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 31 };
+  assert.match(
+    killedAt({ hostMemory: { ...figures, stageAtLowest: "loading" } }),
+    /At its lowest, during loading, 1\.0 GiB of 2\.0 GiB .*sudden drop/,
+  );
+  assert.match(
+    killedAt({ hostMemory: { ...figures, stageAtLowest: "the prompt" } }),
+    /^At its lowest 1\.0 GiB of 2\.0 GiB/,
+  );
 });
 
 test("a run that failed otherwise is not said to be killed", async () => {

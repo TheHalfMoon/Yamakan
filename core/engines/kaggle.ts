@@ -270,6 +270,64 @@ const PAST_LIMIT =
 // known one, and only a flag leaves the log, which can hold the prompt.
 const WAS_KILLED =
   "Kaggle killed the run before it finished, most likely because it ran out of memory. The same settings have also worked, so trying again may too.";
+// What a run recorded of itself before it was killed: figures only, none of its words.
+const GIB = 1024 ** 3;
+const gib = (bytes: number) => (bytes / GIB).toFixed(1);
+// The stage as the script names them, so that nothing else of a receipt's can pass.
+const STAGES = new Set([
+  "installed",
+  "loading",
+  "generating",
+  "decoding",
+  "exporting",
+]);
+// A receipt comes from elsewhere: past this, a figure on the page is a plausible one.
+const MOST_MEMORY_BYTES = 1024 * GIB;
+const plausibleFree = (low: unknown, total: unknown): low is number =>
+  typeof low === "number" &&
+  typeof total === "number" &&
+  low >= 0 &&
+  low <= total &&
+  total >= GIB &&
+  total <= MOST_MEMORY_BYTES;
+const isStage = (stage: unknown): stage is string =>
+  typeof stage === "string" && STAGES.has(stage);
+export function killedAt(receipt: {
+  stage?: unknown;
+  hostMemory?: {
+    lowestAvailableBytes?: unknown;
+    totalBytes?: unknown;
+    stageAtLowest?: unknown;
+    byStage?: Record<string, { lowestAvailableBytes?: unknown } | null>;
+  };
+}) {
+  const said: string[] = [];
+  if (isStage(receipt.stage)) said.push(`It had reached ${receipt.stage}.`);
+  const {
+    lowestAvailableBytes: low,
+    totalBytes: total,
+    stageAtLowest: where,
+    byStage,
+  } = receipt.hostMemory ?? {};
+  if (typeof total === "number" && plausibleFree(low, total)) {
+    said.push(
+      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was reported available.`,
+    );
+    // The lowest of the whole run may be from long before the stage it died in.
+    const stage = receipt.stage;
+    const here =
+      isStage(stage) && stage !== where
+        ? byStage?.[stage]?.lowestAvailableBytes
+        : undefined;
+    if (plausibleFree(here, total) && here >= low)
+      said.push(`During ${stage}, the lowest was ${gib(here)} GiB.`);
+    said.push(
+      "That was sampled, up to its last save, so a sudden drop would not show.",
+    );
+  }
+  return said.join(" ");
+}
+
 const LOG_TAIL_BYTES = 8 * 1024 * 1024;
 // A whole output line, as a real killed run's log has it: a word in a prompt is not.
 const KILLED_LINE = /"data":"Killed\\n"/;
@@ -607,7 +665,7 @@ export function createKaggleEngine(options: {
           ours && typeof left.receipt.error === "string"
             ? left.receipt.error
             : killed
-              ? WAS_KILLED
+              ? [WAS_KILLED, killedAt(left.receipt)].filter(Boolean).join(" ")
               : "The run failed on Kaggle.",
         );
       }

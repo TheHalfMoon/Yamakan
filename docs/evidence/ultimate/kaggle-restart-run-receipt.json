@@ -1,65 +1,77 @@
 {
   "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
   "restarted": true,
-  "generationId": "de4e034b-be99-4fb9-812d-88c2227af6b1",
+  "generationId": "fe025688-9f65-49f2-93a7-9d201b583efc",
   "task": "generation-from-yamakan-on-kaggle",
   "prompt": "A red kite flies above a green hill under a clear blue sky.",
   "seed": 7,
-  "head": "48623d78aac8c6c622e765c8f9c5a9cce9ba7406",
+  "head": "e2938b3f2de6dd325949bc8c16d1e31b3751b9af",
   "dirty": false,
-  "passed": false,
-  "failure": "The \"path\" argument must be of type string. Received undefined",
+  "passed": true,
+  "failure": null,
   "steps": [
     {
       "name": "the agreement is readable in its place",
-      "at": "2026-11-06T15:09:46.333Z"
+      "at": "2026-11-07T04:39:54.014Z"
     },
     {
       "name": "started from the page, after agreeing the prompt leaves this computer",
-      "at": "2026-11-06T15:09:59.538Z"
+      "at": "2026-11-07T04:40:12.616Z"
     },
     {
       "name": "Kaggle says queued",
-      "afterSeconds": 0.007,
-      "at": "2026-11-06T15:09:59.792Z"
+      "afterSeconds": 0.014,
+      "at": "2026-11-07T04:40:12.870Z"
     },
     {
       "name": "Kaggle says running",
-      "afterSeconds": 10.028,
-      "at": "2026-11-06T15:10:09.813Z"
+      "afterSeconds": 10.024,
+      "at": "2026-11-07T04:40:22.880Z"
     },
     {
       "name": "the service is killed while the run is on Kaggle",
-      "generationId": "de4e034b-be99-4fb9-812d-88c2227af6b1",
-      "at": "2026-11-06T15:10:10.117Z"
+      "generationId": "fe025688-9f65-49f2-93a7-9d201b583efc",
+      "at": "2026-11-07T04:40:23.178Z"
     },
     {
       "name": "after the restart the page has the same run, and is following it",
-      "at": "2026-11-06T15:10:11.935Z"
+      "at": "2026-11-07T04:40:25.492Z"
     },
     {
       "name": "Kaggle says succeeded",
-      "afterSeconds": 1184.177,
-      "at": "2026-11-06T15:29:43.963Z"
+      "afterSeconds": 1184.581,
+      "at": "2026-11-07T04:59:57.439Z"
     },
     {
       "name": "the run finished, and its video passed its receipt",
-      "seconds": 1184.478,
-      "at": "2026-11-06T15:29:44.263Z"
+      "seconds": 1184.883,
+      "at": "2026-11-07T04:59:57.739Z"
     },
     {
       "name": "it came into the project, with this prompt and seed",
-      "at": "2026-11-06T15:29:45.702Z"
+      "at": "2026-11-07T05:00:01.283Z"
     },
     {
       "name": "its record stays with the project, with this browser's storage cleared",
-      "at": "2026-11-06T15:29:47.036Z"
+      "at": "2026-11-07T05:00:02.518Z"
     },
     {
       "name": "placed whole on the Edit timeline",
       "frames": 101,
-      "at": "2026-11-06T15:29:49.990Z"
+      "at": "2026-11-07T05:00:05.478Z"
+    },
+    {
+      "name": "exported from the toolbar, every frame",
+      "width": 1280,
+      "height": 720,
+      "frames": 101,
+      "assetHash": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
+      "exportHash": "456b72a18fb390948a9824d451569c755d7f185eb68aaee5e7a6d8d6ae440b8a",
+      "at": "2026-11-07T05:00:08.507Z"
+    },
+    {
+      "name": "no page errors",
+      "at": "2026-11-07T05:00:08.517Z"
     }
-  ],
-  "note": "Stopped at the export step by a bug in the test script, which took the run's own job for the export's. Everything before that passed. The script is fixed; it has not run again on real Kaggle because the weekly GPU quota ran out."
+  ]
 }
