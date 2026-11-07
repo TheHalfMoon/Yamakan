@@ -2,8 +2,8 @@
 // metadata does not go. Neither filtering a file nor having FFmpeg write a new one can promise
 // that: a file has many places to hide text in, and FFmpeg carries a colour profile across.
 // So FFmpeg, in its worker, only decodes: it turns the picture upright by what a JPEG says, fits
-// it to the size the model takes, and gives back bare pixels, which have nowhere to hold
-// anything else. This writes those into a PNG of the three chunks that hold a picture.
+// it to the size the model takes, and gives back bare pixels, with nothing beside them. This
+// writes those into a PNG of the three chunks that hold a picture.
 // This cannot remove what the picture itself shows, such as a street sign or a face.
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -103,6 +103,12 @@ export async function cleanImage(
   } catch {
     throw new Error(REFUSED);
   } finally {
-    await rm(folder, { recursive: true, force: true }).catch(() => {});
+    // A virus scanner can hold it for a moment, and this is the person's own photo.
+    await rm(folder, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    }).catch(() => {});
   }
 }
