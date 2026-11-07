@@ -45,7 +45,7 @@ const en = {
   "create.elementNotKept":
     "That image may not have come in. Check this project's assets before trying again.",
   "create.elementImageOnly":
-    "The image came into the project's assets, and this could not be saved with it.",
+    "The image came into the project's assets, and this could not be saved with it. The reason is at the top of the page.",
   "create.elementNotPinned":
     "That may not have been saved on the shot. Reopen the project to see.",
   "create.elementsUnread": "What this project keeps here could not be read.",
@@ -524,7 +524,7 @@ const ar: Record<MessageKey, string> = {
   "create.elementNotKept":
     "ربما لم تدخل تلك الصورة. تحقّق من ملفات هذا المشروع قبل المحاولة مجددًا.",
   "create.elementImageOnly":
-    "دخلت الصورة إلى ملفات المشروع، وتعذّر حفظ هذا معها.",
+    "دخلت الصورة إلى ملفات المشروع، وتعذّر حفظ هذا معها. السبب في أعلى الصفحة.",
   "create.elementNotPinned":
     "ربما لم يُحفظ ذلك على اللقطة. أعد فتح المشروع لترى.",
   "create.elementsUnread": "تعذّرت قراءة ما يحفظه هذا المشروع هنا.",

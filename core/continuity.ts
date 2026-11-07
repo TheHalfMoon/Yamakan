@@ -395,7 +395,7 @@ export function assertMayMarkFictional(
   const refused = () =>
     new CommandError(
       "VALIDATION",
-      "This image is linked to a person's consent, so it cannot be marked as made up.",
+      "An image here is linked to a person's consent, so this cannot be saved as made up. Keep it as a new element instead.",
     );
   if (pack.entries.some((e) => e.consentId && marked.includes(e.assetHash)))
     throw refused();

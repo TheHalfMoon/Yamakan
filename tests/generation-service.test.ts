@@ -892,11 +892,65 @@ for (const revoked of [false, true])
     if (revoked) await execute(f.ctx, "yamakan.consent.revoke", { consentId });
     await assert.rejects(
       savePack(f, fictionalPack(still)),
-      /linked to a person's consent/,
+      /is linked to a person's consent/,
     );
     const { assets } = await f.store.exportProject(f.projectId);
     assert.equal(assets.length, 1, "the image itself stays");
   });
+
+test("a character entry cannot become made up in a new version of its pack", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  const [ref] = (
+    (await execute(f.ctx, "yamakan.document.list", { projectId: f.projectId }))
+      .result as { id: string; kind: string; contentHash: string }[]
+  ).filter((d) => d.kind === "referencePack");
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: ref.id,
+      expectedContentHash: ref.contentHash,
+      pack: fictionalPack(still),
+    }),
+    /is linked to a person's consent/,
+  );
+});
+
+test("marked first and linked later, it cannot be saved as made up again", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const saved = await savePack(f, fictionalPack(still));
+  await consented(f, still.id, still.hash);
+  const { document } = saved.result as {
+    document: { id: string; contentHash: string };
+  };
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  await assert.rejects(
+    execute(f.ctx, "yamakan.pack.save", {
+      projectId: f.projectId,
+      expectedRevision: head.revision,
+      documentId: document.id,
+      expectedContentHash: document.contentHash,
+      pack: fictionalPack(still),
+    }),
+    /Keep it as a new element instead/,
+  );
+});
 
 test("another image can still be marked, beside one linked to a consent", async () => {
   const f = await fixture();
@@ -939,7 +993,7 @@ test("one pack cannot both link an image to a consent and mark it made up", asyn
     characterId: "lead" as never,
     consentId: consent.id as never,
   });
-  await assert.rejects(savePack(f, pack), /linked to a person's consent/);
+  await assert.rejects(savePack(f, pack), /is linked to a person's consent/);
 });
 
 test("marking an image made up does not free it from a person's consent", async () => {
