@@ -2,6 +2,14 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-11-08: CogVideoX is offered
+
+- **Authority:** the founder's "from now chose the best, you have my approval", within their standing rule that each model is offered only after its own run from Yamakan is tested ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).
+- **Decision:** CogVideoX-2b is offered on the Create page beside Wan2.2-TI2V-5B.
+- **Why now:** its own run from Yamakan passed on 2026-11-07, and its video fit its prompt by looking. A run from the page then passed through export, at the commit that offers it.
+- **Not decided by this:** image-to-video stays off until its page work is built.
+- **Change rule:** the founder can overturn this, and a new entry here records it.
+
 ## 2026-11-07: a first frame within what Kaggle accepts
 
 - **Authority:** the founder's "from now chose the best, you have my approval" ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).

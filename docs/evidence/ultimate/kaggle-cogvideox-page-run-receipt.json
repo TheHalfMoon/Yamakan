@@ -1,0 +1,88 @@
+{
+  "model": "zai-org/CogVideoX-2b",
+  "restarted": false,
+  "generationId": null,
+  "task": "generation-from-yamakan-on-kaggle",
+  "prompt": "A red kite flies above a green hill under a clear blue sky.",
+  "seed": 7,
+  "head": "74aacc59c94077b8ebaafea87fbef4394079f000",
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "the agreement is readable in its place",
+      "at": "2026-11-07T21:39:07.548Z"
+    },
+    {
+      "name": "started from the page, after agreeing the prompt leaves this computer",
+      "at": "2026-11-07T21:39:24.422Z"
+    },
+    {
+      "name": "Kaggle says queued",
+      "afterSeconds": 0.004,
+      "at": "2026-11-07T21:39:24.604Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 10.014,
+      "at": "2026-11-07T21:39:34.614Z"
+    },
+    {
+      "name": "Kaggle says unknown",
+      "afterSeconds": 150.425,
+      "at": "2026-11-07T21:41:55.025Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 170.456,
+      "at": "2026-11-07T21:42:15.056Z"
+    },
+    {
+      "name": "Kaggle says unknown",
+      "afterSeconds": 1002.579,
+      "at": "2026-11-07T21:56:07.186Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 1032.669,
+      "at": "2026-11-07T21:56:37.269Z"
+    },
+    {
+      "name": "Kaggle says succeeded",
+      "afterSeconds": 1213.251,
+      "at": "2026-11-07T21:59:37.851Z"
+    },
+    {
+      "name": "the run finished, and its video passed its receipt",
+      "seconds": 1213.401,
+      "at": "2026-11-07T21:59:38.001Z"
+    },
+    {
+      "name": "it came into the project, with this prompt and seed",
+      "at": "2026-11-07T21:59:41.034Z"
+    },
+    {
+      "name": "its record stays with the project, with this browser's storage cleared",
+      "at": "2026-11-07T21:59:42.097Z"
+    },
+    {
+      "name": "placed whole on the Edit timeline",
+      "frames": 183,
+      "at": "2026-11-07T21:59:44.892Z"
+    },
+    {
+      "name": "exported from the toolbar, every frame",
+      "width": 1280,
+      "height": 720,
+      "frames": 183,
+      "assetHash": "7fab3f69bccc5b937028e327e3fec271eef225eeb17c8e99d703e2049f725871",
+      "exportHash": "8ef0f812176582197c634eaa9b7dcb2d8eb84ef4c0621bca709b7accacb3ba03",
+      "at": "2026-11-07T21:59:47.181Z"
+    },
+    {
+      "name": "no page errors",
+      "at": "2026-11-07T21:59:47.184Z"
+    }
+  ]
+}
