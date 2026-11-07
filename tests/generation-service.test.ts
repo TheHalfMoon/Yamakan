@@ -796,6 +796,126 @@ test("an image no pack links needs no consent to send: this goes by hash", async
   assert.notEqual(state.inputRead, null);
 });
 
+// A person's word that a character is made up stands in for consent, so only a person can
+// give it, and it cannot free an image someone's consent already holds.
+const fictionalPack = (asset: { id: string; hash: string }) => ({
+  format: "yamakan.reference-pack",
+  formatVersion: 1,
+  name: "A drawn fox",
+  entries: [
+    {
+      id: crypto.randomUUID(),
+      role: "fictional-character",
+      label: "Fox",
+      assetId: asset.id,
+      assetHash: asset.hash,
+      characterId: null,
+      consentId: null,
+    },
+  ],
+});
+const savePack = async (
+  f: Awaited<ReturnType<typeof fixture>>,
+  pack: unknown,
+  principal = f.ctx.principal,
+) => {
+  const head = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number };
+  return execute({ ...f.ctx, principal }, "yamakan.pack.save", {
+    projectId: f.projectId,
+    expectedRevision: head.revision,
+    documentId: crypto.randomUUID(),
+    expectedContentHash: null,
+    pack,
+  });
+};
+
+test("a person can mark a character as made up, with no consent", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await savePack(f, fictionalPack(still));
+  const { state, g } = sending(f);
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+test("an agent cannot mark a character as made up", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const agent = {
+    id: `agent:${crypto.randomUUID()}`,
+    scopes: f.ctx.principal.scopes,
+  } as unknown as typeof f.ctx.principal;
+  await assert.rejects(savePack(f, fictionalPack(still), agent), (e: any) => {
+    assert.equal(e.code, "SCOPE_DENIED");
+    return true;
+  });
+});
+
+test("a made-up character cannot name a person or a consent", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const pack = fictionalPack(still);
+  (pack.entries[0] as any).characterId = "lead";
+  (pack.entries[0] as any).consentId = crypto.randomUUID();
+  await assert.rejects(savePack(f, pack));
+});
+
+test("marking an image made up does not free it from a person's consent", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  await grantSend(f);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  await savePack(f, fictionalPack(still));
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /revoked/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
+test("marking an image made up does not stand in for consent to send it", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await consented(f, still.id, still.hash);
+  await savePack(f, fictionalPack(still));
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /No consent to send is recorded/,
+  );
+  assert.equal(state.inputRead, null);
+});
+
 test("a still is refused once its consent is revoked", async () => {
   const f = await fixture();
   const { state, adapter } = engine(f.video);

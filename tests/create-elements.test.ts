@@ -52,6 +52,18 @@ test("every kind of element is a pack the project accepts", () => {
   }
 });
 
+test("a made-up character can be kept, and is shown as one", () => {
+  assert.ok(ELEMENT_ROLES.includes("fictional-character"));
+  const pack = newElementPack(
+    "A fox",
+    "fictional-character",
+    image,
+    randomUUID,
+  );
+  assert.doesNotThrow(() => ReferencePackSchema.parse(pack));
+  assert.deepEqual(asElement(pack), pack);
+});
+
 test("no element can be a person's likeness or voice", () => {
   for (const role of ["character", "voice"])
     assert.ok(!(ELEMENT_ROLES as readonly string[]).includes(role));

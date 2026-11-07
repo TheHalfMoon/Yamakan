@@ -47,6 +47,7 @@ const ROLE_NAMES: Record<ElementRole, MessageKey> = {
   prop: "create.elementRole.prop",
   wardrobe: "create.elementRole.wardrobe",
   style: "create.elementRole.style",
+  "fictional-character": "create.elementRole.fictional",
 };
 
 export function ElementsPanel<S extends PinnableStory>(props: {

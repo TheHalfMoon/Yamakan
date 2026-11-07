@@ -151,6 +151,10 @@ export const REFERENCE_ROLES = [
   "camera",
   // YU-051: a speaker's voice, from project audio, under voice-clone consent.
   "voice",
+  // A person's own statement that this is drawn or made up, as the founder chose, so it
+  // needs no consent. Nothing can check it, so only a person may say it. It frees nothing:
+  // the same image linked to someone's consent elsewhere is still held to that.
+  "fictional-character",
 ] as const;
 type ReferenceRole = (typeof REFERENCE_ROLES)[number];
 // The roles that are a person's likeness or voice, so need consent.
@@ -422,6 +426,9 @@ function verifyConsents(pack: ReferencePack, c: CommitContext) {
 }
 
 /** Whether a pack links any likeness consent (agents cannot link one). */
+export const marksFictional = (pack: ReferencePack) =>
+  pack.entries.some((entry) => entry.role === "fictional-character");
+
 export const linksConsent = (pack: ReferencePack) =>
   pack.entries.some((e) => e.consentId !== null);
 

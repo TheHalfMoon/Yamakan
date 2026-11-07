@@ -280,7 +280,6 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Needs a founder decision before it can go further:**
 
-1. How a fictional or drawn character is stored. The `character` role requires a usable consent, so it cannot be kept without recording one for it, and the page offers neither. Filing it as a prop works, and mislabels it.
 2. What should happen with an unlinked photo of a person, which no check can recognise, and whether it matters that revoking consent cannot reach a notebook's history. The founder chose separate consent to send a person's image: the `likeness-send` purpose. It covers only an image a pack links to a person.
 
 **Already in main, for the founder to confirm or refuse:** since PR #212, media whose consent was revoked can be kept and shown as a place, prop, wardrobe or style. Placing and generating from those exact bytes stay refused. The founder's decision of 2026-11-05, as `docs/evidence/ultimate/consent-gate.md` describes it, asks that a revoked photo not be placed or used, and whether keeping it counts as use was not decided.
