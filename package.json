@@ -63,6 +63,7 @@
     "qualify:create-durable": "node scripts/qualify-create-durable.mjs",
     "qualify:kaggle-screens": "node scripts/qualify-kaggle-screens.mjs",
     "qualify:kaggle-first-frame": "node scripts/qualify-kaggle-first-frame.mjs",
+    "qualify:kaggle-cogvideox": "node scripts/qualify-kaggle-cogvideox.mjs",
     "qualify:comfyui": "node scripts/qualify-comfyui.mjs",
     "qualify:browser-restore": "node scripts/qualify-browser-restore.mjs",
     "qualify:crossfade": "node scripts/qualify-crossfade.mjs",
