@@ -69,10 +69,17 @@ source = source.replace("time.sleep(2)", "time.sleep(0.01)")
 assert source.count('"/proc/meminfo"') == 2 and source.count('"/proc/self/status"') == 1
 # What Kaggle's Linux host offers, in its own form, wherever this runs.
 def set_memory(available_kb, rss_kb):
-    with open(os.path.join(out, "fake-meminfo"), "w") as f:
-        f.write(f"MemTotal:       32000000 kB\nMemAvailable:    {available_kb} kB\n")
-    with open(os.path.join(out, "fake-status"), "w") as f:
-        f.write(f"Name:\tpython\nVmRSS:\t{rss_kb} kB\n")
+    import time
+    for attempt in range(100):
+        try:
+            with open(os.path.join(out, "fake-meminfo"), "w") as f:
+                f.write(f"MemTotal:       32000000 kB\nMemAvailable:    {available_kb} kB\n")
+            with open(os.path.join(out, "fake-status"), "w") as f:
+                f.write(f"Name:\tpython\nVmRSS:\t{rss_kb} kB\n")
+            return
+        except PermissionError:
+            time.sleep(0.05)
+    os._exit(99)
 set_memory(30000000, 1000000)
 # Until the sampling thread has written what is wanted, however busy this machine.
 def wait_for(check):
@@ -85,11 +92,17 @@ def wait_for(check):
         except (OSError, ValueError):
             seen = {}
         if seen and check(seen):
-            break
+            return seen
         time.sleep(0.01)
-    return seen
-def low_in(stage):
-    return lambda seen: seen["hostMemory"].get("byStage", {}).get(stage, {}).get("lowestAvailableBytes")
+    print("WAITED IN VAIN", file=sys.stderr)
+    sys.stderr.flush()
+    os._exit(99)
+def in_stage(stage, low_kb, rss_kb):
+    def check(seen):
+        figures = seen["hostMemory"].get("byStage", {}).get(stage, {})
+        return (figures.get("lowestAvailableBytes") == low_kb * 1024
+                and figures.get("highestRssBytes") == rss_kb * 1024)
+    return check
 source = source.replace('"/proc/meminfo"', repr(os.path.join(out, "fake-meminfo")))
 source = source.replace('"/proc/self/status"', repr(os.path.join(out, "fake-status")))
 
@@ -156,8 +169,9 @@ class Pipe:
     vae = Part()
     @classmethod
     def from_pretrained(cls, *a, **k):
+        asked["loaded"] = True
         set_memory(1000000, 28000000)
-        wait_for(lambda seen: low_in("loading")(seen) == 1000000 * 1024)
+        wait_for(in_stage("loading", 1000000, 28000000))
         return cls()
     def encode_prompt(self, **k):
         asked["encode"] = k.get("max_sequence_length")
@@ -170,7 +184,7 @@ class Pipe:
         if mode == "pipeline-raises":
             raise RuntimeError("words of the paper boat")
         set_memory(20000000, 8000000)
-        wait_for(low_in("generating"))
+        wait_for(lambda seen: "generating" in seen["hostMemory"].get("byStage", {}))
         if mode == "save-fails":
             def failing(a, b):
                 os.replace = real_replace
@@ -180,11 +194,12 @@ class Pipe:
             assert ending(self, step, 0, {}) == {}
         # Memory that moves within the stage, so its lowest and highest are not just its last.
         set_memory(6000000, 17000000)
-        wait_for(lambda seen: low_in("decoding")(seen) == 6000000 * 1024)
+        wait_for(in_stage("decoding", 6000000, 17000000))
         set_memory(5000000, 18000000)
-        seen = wait_for(lambda seen: low_in("decoding")(seen) == 5000000 * 1024)
+        wait_for(in_stage("decoding", 5000000, 18000000))
         set_memory(7000000, 16000000)
-        samples = seen.get("hostMemory", {}).get("samples", 0)
+        # Counted after the change, and one more than a sample already under way.
+        samples = wait_for(lambda seen: True)["hostMemory"].get("samples", 0)
         seen = wait_for(lambda seen: seen["hostMemory"].get("samples", 0) >= samples + 2)
         asked["stageAtDecode"] = seen.get("stage")
         if mode == "kill":

@@ -732,6 +732,17 @@ test("what a killed run says of itself takes only what it should", () => {
     }),
     /During decoding, the lowest was 3\.0 GiB\./,
   );
+  // Nor one lower than the lowest of the whole run, which cannot be.
+  assert.ok(
+    !killedAt({
+      stage: "decoding",
+      hostMemory: {
+        lowestAvailableBytes: 2 ** 31,
+        totalBytes: 2 ** 32,
+        byStage: { decoding: { lowestAvailableBytes: 2 ** 30 } },
+      },
+    }).includes("During"),
+  );
   // Nor does this let a receipt's own word for a stage through.
   assert.ok(
     !killedAt({
@@ -758,7 +769,7 @@ test("what a killed run says of itself takes only what it should", () => {
   const figures = { lowestAvailableBytes: 2 ** 30, totalBytes: 2 ** 31 };
   assert.match(
     killedAt({ hostMemory: { ...figures, stageAtLowest: "loading" } }),
-    /At its lowest, during loading, 1\.0 GiB of 2\.0 GiB .*sudden rise/,
+    /At its lowest, during loading, 1\.0 GiB of 2\.0 GiB .*sudden drop/,
   );
   assert.match(
     killedAt({ hostMemory: { ...figures, stageAtLowest: "the prompt" } }),

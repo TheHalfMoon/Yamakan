@@ -311,7 +311,7 @@ export function killedAt(receipt: {
   } = receipt.hostMemory ?? {};
   if (typeof total === "number" && plausibleFree(low, total)) {
     said.push(
-      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was free.`,
+      `At its lowest${isStage(where) ? `, during ${where},` : ""} ${gib(low)} GiB of ${gib(total)} GiB of memory was reported available.`,
     );
     // The lowest of the whole run may be from long before the stage it died in.
     const stage = receipt.stage;
@@ -319,9 +319,11 @@ export function killedAt(receipt: {
       isStage(stage) && stage !== where
         ? byStage?.[stage]?.lowestAvailableBytes
         : undefined;
-    if (plausibleFree(here, total))
+    if (plausibleFree(here, total) && here >= low)
       said.push(`During ${stage}, the lowest was ${gib(here)} GiB.`);
-    said.push("That was sampled, so a sudden rise would not show.");
+    said.push(
+      "That was sampled, up to its last save, so a sudden drop would not show.",
+    );
   }
   return said.join(" ");
 }
