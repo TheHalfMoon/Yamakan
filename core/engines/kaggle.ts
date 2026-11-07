@@ -79,7 +79,7 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
   {
     // Its own script and notebook, so that nothing here touches the text script's bytes.
     // Its time is the text run's, since the page has one entry for this model. Its one real
-    // run took 1,162 seconds: see docs/evidence/ultimate/first-ai-video.md.
+    // run took about 1,160 seconds: see docs/evidence/ultimate/first-ai-video.md.
     id: "kaggle-wan22-ti2v-5b-first-frame",
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
@@ -131,6 +131,10 @@ export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
 // The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
 // a bare 400. Kept to what was seen: nothing says the limit is any higher.
 export const SCRIPT_BYTES = 1_000_000;
+// The image is base64 inside a brief that is base64: each four bytes hold three, twice. The 16 is
+// what padding can add. Past this, a picture cannot go in a script this long.
+export const imageRoom = (scriptBytes: number) =>
+  Math.floor(((SCRIPT_BYTES - scriptBytes - 16) * 9) / 16);
 const TOO_MUCH_TO_SEND =
   "This run's prompt and image together are more than Kaggle accepts, so nothing was sent.";
 
@@ -261,10 +265,12 @@ const REFUSED_PUSH =
   /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)|Kernel push error|Permission '[^']+' was denied|Authentication required to call the Kaggle API/i;
 const wasRefused = (message: string) =>
   !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
-// What the real CLI says of a notebook that does not exist, and of the empty one a refused
-// first push leaves: seen on 2026-11-07, when a refused push turned the first into the second.
-const NO_SUCH_NOTEBOOK =
-  /Permission 'kernels\.get' was denied|\b404 Client Error: Not Found\b/;
+const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
+// What it said of the empty notebook a refused first push left, on 2026-11-07. Its list does not
+// hold that one either, so that list cannot prove a notebook is absent: this is only taken for
+// new when it is this question that had no answer, and it is asked whether that is private.
+const EMPTY_NOTEBOOK =
+  /\b404 Client Error: Not Found for url: \S*GetKernelSessionStatus\b/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 // The longest a start can take to reach Kaggle, from when it was recorded: two questions,
@@ -881,11 +887,20 @@ export function createKaggleEngine(options: {
     } catch (e) {
       // The CLI says this of any refusal, so it means new only when the account's own
       // list, which needs working credentials, does not hold it.
+      const { message } = e as Error;
+      const empty = EMPTY_NOTEBOOK.test(message);
       if (
-        NO_SUCH_NOTEBOOK.test((e as Error).message) &&
+        (empty || NO_SUCH_NOTEBOOK.test(message)) &&
         (await listed(recipe).catch(() => true)) === false
-      )
+      ) {
+        // An empty one may have nothing to answer with, and that is not a no.
+        if (
+          empty &&
+          (await reportedPrivate(recipe, folder).catch(() => true)) === false
+        )
+          throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
         return;
+      }
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         diagnostic(
@@ -1015,9 +1030,7 @@ export function createKaggleEngine(options: {
           seed: request.seed ?? 42,
           runId,
         };
-        // The image is base64 inside a brief that is base64: each four bytes hold three.
-        const room =
-          SCRIPT_BYTES -
+        const room = imageRoom(
           Buffer.byteLength(
             scriptWithBrief(script, {
               ...brief,
@@ -1027,15 +1040,19 @@ export function createKaggleEngine(options: {
                 sha256: "0".repeat(64),
               },
             }),
-          );
-        // Read last: opening it is where consent is checked, so that answer is this moment's.
+          ),
+        );
+        if (frame && room <= 0)
+          throw new CommandError("VALIDATION", TOO_MUCH_TO_SEND);
+        // Opening it is where consent is checked. Preparing it can take minutes, so it is opened
+        // again below, and that is the answer this goes on.
         const firstFrame = frame
           ? await readFirstFrame(
               frame.asset,
               context,
               recipe,
               path.join(folder, "clean"),
-              Math.floor((room * 9) / 16),
+              room,
             )
           : null;
         const sendable = scriptWithBrief(script, {
@@ -1044,6 +1061,7 @@ export function createKaggleEngine(options: {
         });
         if (Buffer.byteLength(sendable) > SCRIPT_BYTES)
           throw new CommandError("VALIDATION", TOO_MUCH_TO_SEND);
+        if (frame) for await (const _ of context.openAsset(frame.asset)) break;
         await writeFile(path.join(push, "run.py"), sendable);
         await writeFile(
           path.join(push, "kernel-metadata.json"),
@@ -1073,7 +1091,12 @@ export function createKaggleEngine(options: {
           );
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
-        await rm(push, { recursive: true, force: true }).catch(() => {});
+        await rm(push, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 200,
+        }).catch(() => {});
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
         // It has gone and it is running, whatever this says: so this warns, it does
@@ -1117,7 +1140,12 @@ export function createKaggleEngine(options: {
           };
         }
         if (folder)
-          await rm(folder, { recursive: true, force: true }).catch(() => {});
+          await rm(folder, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          }).catch(() => {});
         if (e instanceof CommandError) throw e;
         throw new CommandError(
           "CAPABILITY_UNAVAILABLE",

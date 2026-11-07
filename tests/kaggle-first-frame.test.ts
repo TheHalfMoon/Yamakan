@@ -23,6 +23,8 @@ import {
   FIRST_FRAME_BYTES,
   KAGGLE_RECIPES,
   SCRIPT_BYTES,
+  imageRoom,
+  scriptWithBrief,
   createKaggleEngine,
   kaggleRecipes,
   ledgerOptions,
@@ -35,6 +37,7 @@ import { jpegHoldsOnlyAPicture } from "../core/engines/clean-image.ts";
 import { Readable } from "node:stream";
 
 const recipe = KAGGLE_RECIPES.find((r) => r.operation === "imageToVideo")!;
+const REFUSED_RECIPE = /turned off in this build/;
 const SCRIPT = "BRIEF = {}  # yamakan:brief\n";
 const roots: string[] = [];
 after(() => {
@@ -194,7 +197,7 @@ test("the engine says where a run goes, which is what makes consent to send appl
 
 test("a recipe not offered refuses a first frame, and sends nothing", async () => {
   const f = await fixture([]);
-  await assert.rejects(f.service.start(f.request));
+  await assert.rejects(f.service.start(f.request), REFUSED_RECIPE);
   assert.equal(f.pushes.length, 0);
   await f.close();
 });
@@ -393,7 +396,15 @@ test("a picture too large as a PNG goes as a JPEG with only a picture in it, and
     firstFrame.sha256,
     createHash("sha256").update(sent).digest("hex"),
   );
-  assert.ok(jpegHoldsOnlyAPicture(sent));
+  assert.ok(
+    jpegHoldsOnlyAPicture(sent, { width: recipe.width, height: recipe.height }),
+  );
+  // Nor does the person's picture stay here, in any form.
+  const left = readdirSync(path.join(f.root, "tmp"), {
+    recursive: true,
+    withFileTypes: true,
+  }).filter((e) => e.isFile());
+  assert.deepEqual(left, []);
   await f.close();
 });
 
@@ -413,6 +424,64 @@ test("what a script cannot carry is refused, and nothing is sent", async () => {
   );
   assert.equal(f.pushes.length, 0);
   assert.ok(!f.asked.includes("push"));
+  // It leaves nothing, and does not stop the next.
+  const left = readdirSync(path.join(f.root, "tmp"), {
+    recursive: true,
+    withFileTypes: true,
+  }).filter((e) => e.isFile());
+  assert.deepEqual(left, []);
+  await f.adapter.submit(
+    adapterRequest(f, [{ role: "firstFrame", asset: noisyRef() }]),
+    opening(NOISY),
+  );
+  assert.equal(f.pushes.length, 1);
+  await f.close();
+});
+
+test("a picture's room is what a script can carry, by the byte", () => {
+  const brief = (bytes: number, pad = 0) =>
+    Buffer.byteLength(
+      scriptWithBrief(`${"#".repeat(pad)}\nBRIEF = {}  # yamakan:brief\n`, {
+        prompt: "A boat",
+        seed: 7,
+        runId: "r",
+        firstFrame: {
+          data: Buffer.alloc(bytes).toString("base64"),
+          mediaType: "image/jpeg",
+          sha256: "0".repeat(64),
+        },
+      }),
+    );
+  // Padding depends on where the bytes fall, so this holds at every remainder.
+  for (const pad of [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+  ]) {
+    const room = imageRoom(brief(0, pad));
+    for (const bytes of [room, room - 1, room - 2])
+      assert.ok(brief(bytes, pad) <= SCRIPT_BYTES, `${pad} ${bytes}`);
+    // And not much is left unused.
+    assert.ok(brief(room + 32, pad) > SCRIPT_BYTES);
+  }
+  assert.ok(imageRoom(SCRIPT_BYTES) <= 0);
+});
+
+test("consent is asked again at the moment of sending, after the picture is prepared", async () => {
+  const f = await fixture();
+  let opened = 0;
+  await assert.rejects(
+    f.adapter.submit(
+      adapterRequest(f, [{ role: "firstFrame", asset: noisyRef() }]),
+      {
+        openAsset: () => {
+          if (++opened > 1) throw new Error("consent was revoked just now");
+          return Readable.from([NOISY]);
+        },
+      } as never,
+    ),
+    /consent was revoked just now/,
+  );
+  assert.equal(opened, 2);
+  assert.equal(f.pushes.length, 0);
   await f.close();
 });
 
@@ -553,6 +622,28 @@ line = "BRIEF = {}  # yamakan:brief"
 assert source.count(line) == 1 and source.count('OUT = "/kaggle/working"') == 1
 source = source.replace(line, "BRIEF = " + repr(brief))
 source = source.replace('OUT = "/kaggle/working"', "OUT = " + repr(out))
+assert source.count("MEMORY_SAMPLE_SECONDS = 5") == 1
+source = source.replace("MEMORY_SAMPLE_SECONDS = 5", "MEMORY_SAMPLE_SECONDS = 0.01")
+# What Kaggle's Linux host offers, in its own form, wherever this runs.
+for name, text in {
+    "meminfo": "MemTotal:       32000000 kB\nMemAvailable:    2000000 kB\n",
+    "status": "Name:\tpython\nVmRSS:\t25000000 kB\n",
+    "limit": "32212254720\n",
+}.items():
+    open(os.path.join(out, "fake-" + name), "w").write(text)
+for real, name, uses in (("/proc/meminfo", "meminfo", 2), ("/proc/self/status", "status", 1),
+                         ("/sys/fs/cgroup/memory.max", "limit", 1)):
+    assert source.count('"' + real + '"') == uses, real
+    source = source.replace('"' + real + '"', repr(os.path.join(out, "fake-" + name)))
+real_dump = json.dump
+def dying_dump(obj, f, **k):
+    if obj.get("stage") == "decoding":
+        f.write('{"half')
+        f.flush()
+        os._exit(137)
+    real_dump(obj, f, **k)
+if mode == "kill-while-writing":
+    json.dump = dying_dump
 
 subprocess.check_call = lambda *a, **k: 0
 subprocess.run = lambda args, **k: types.SimpleNamespace(
@@ -606,8 +697,18 @@ class Pipe:
         asked["vaeMovedTo"] = before["moved"]
         ending = k["callback_on_step_end"]
         asked["stepEnds"] = [ending(self, step, 0, {}) for step in range(k["num_inference_steps"])][-1]
-        with open(os.path.join(out, "receipt.json")) as f:
-            asked["stageAtDecode"] = json.load(f)["stage"]
+        import time
+        seen = {}
+        for _ in range(3000):
+            try:
+                with open(os.path.join(out, "receipt.json")) as f:
+                    seen = json.load(f)
+            except (OSError, ValueError):
+                seen = {}
+            if "decoding" in seen.get("hostMemory", {}).get("byStage", {}):
+                break
+            time.sleep(0.01)
+        asked["stageAtDecode"] = seen.get("stage")
         return types.SimpleNamespace(frames=[["frame"]])
 diffusers = types.ModuleType("diffusers")
 diffusers.AutoencoderKLWan = Pipe
@@ -666,7 +767,7 @@ finally:
     print("ASKED " + json.dumps(asked))
 `;
 
-function runScript(mode: "right" | "wrong-hash") {
+function runScript(mode: "right" | "wrong-hash" | "kill-while-writing") {
   const out = mkdtempSync(path.join(tmpdir(), "first-frame-run-"));
   roots.push(out);
   const harness = path.join(out, "harness.py");
@@ -713,6 +814,12 @@ test(
     assert.equal(kept.verified, true);
     assert.deepEqual(kept.firstFrameSize, [320, 200]);
     assert.equal(typeof kept.decodingAfterSeconds, "number");
+    assert.equal(kept.hostMemory.cgroupLimitBytes, 30 * 1024 ** 3);
+    assert.equal(
+      kept.hostMemory.byStage.decoding.lowestAvailableBytes,
+      2000000 * 1024,
+    );
+    assert.equal(kept.hostMemory.highestRssBytes, 25000000 * 1024);
     assert.equal(
       kept.firstFrameSha256,
       createHash("sha256").update("the bytes of a still").digest("hex"),
@@ -734,5 +841,18 @@ test(
     const kept = JSON.parse(receipt);
     assert.equal(kept.stage, "failed at reading the frame");
     assert.match(kept.error, /not the one this run was sent/);
+  },
+);
+
+test(
+  "a kill in the middle of a write leaves the last whole receipt",
+  { skip: python ? false : "no Python here" },
+  () => {
+    const { status, receipt, stderr } = runScript("kill-while-writing");
+    assert.equal(status, 137, stderr);
+    assert.ok(
+      ["generating", "decoding"].includes(JSON.parse(receipt).stage),
+      receipt,
+    );
   },
 );

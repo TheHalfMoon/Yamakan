@@ -1,0 +1,10 @@
+{
+  "task": "the largest script real Kaggle accepts",
+  "at": "2026-11-07",
+  "how": "Pushes of one private, CPU-only notebook holding a print and padding, with the existing CLI. No GPU, no model, no picture.",
+  "notebook": "yamakan-probe-script-size",
+  "accepted": [100000, 1000000],
+  "refused": [1062500, 1125000, 1250000, 1500000, 2000000],
+  "refusal": "400 Client Error: Bad Request",
+  "notKnown": "Whether the limit is size alone, and exactly where it falls between the last two sizes."
+}

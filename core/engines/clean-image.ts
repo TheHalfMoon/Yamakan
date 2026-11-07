@@ -3,7 +3,8 @@
 // that: a file has many places to hide text in, and FFmpeg carries a colour profile across.
 // So FFmpeg, in its worker, only decodes: it turns the picture upright by what a JPEG says, fits
 // it to the size the model takes, and gives back bare pixels, with nothing beside them. This
-// writes those into a PNG of the three chunks that hold a picture.
+// writes those into a PNG of the three chunks that hold a picture. `imageWithin` then has FFmpeg
+// make a JPEG of that PNG when it is too large to send.
 // This cannot remove what the picture itself shows, such as a street sign or a face.
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -47,32 +48,68 @@ function pngOf(rgb: Buffer, width: number, height: number) {
   ]);
 }
 
-// Only what a picture needs, before its pixels: nothing here can hold a word. FFmpeg writes these
+// What FFmpeg's encoder writes here, in the shapes it writes them, and nothing else: no comment, no
+// camera's segment, no colour profile, no second picture, nothing after the end. FFmpeg writes this
 // from a PNG with nothing beside its pixels, and this checks that it did, as a colour profile once
-// came through it unasked. The size of APP0 is that of its fields alone, with no thumbnail.
-const JPEG_APP0 = 0xe0;
-const JPEG_START_OF_SCAN = 0xda;
-const JPEG_PICTURE_SEGMENTS = new Set([0xdb, 0xc0, 0xc4, 0xdd]);
-export function jpegHoldsOnlyAPicture(jpeg: Uint8Array) {
+// came through it unasked. A table's values and the scan's bytes are the picture's own, and this
+// cannot tell what those say: there is no place here for anything else, which is all it shows.
+const JFIF = ["4a46494600010100000100010000", "4a46494600010200000100010000"];
+export function jpegHoldsOnlyAPicture(
+  jpeg: Uint8Array,
+  size: { width: number; height: number },
+) {
   const b = Buffer.from(jpeg);
   if (b.length < 4 || b.readUInt16BE(0) !== 0xffd8) return false;
-  if (b.readUInt16BE(b.length - 2) !== 0xffd9) return false;
+  let framed = false;
   for (let at = 2; at + 4 <= b.length;) {
     if (b[at] !== 0xff) return false;
     const marker = b[at + 1];
-    if (marker === JPEG_START_OF_SCAN) return true;
     const length = b.readUInt16BE(at + 2);
-    if (marker === JPEG_APP0) {
-      if (length !== 16 || b.toString("latin1", at + 4, at + 9) !== "JFIF\0")
+    const end = at + 2 + length;
+    if (length < 2 || end > b.length) return false;
+    if (marker === 0xe0) {
+      // JFIF, as this encoder writes it: every byte fixed, so none is free to hold anything.
+      if (!JFIF.includes(b.toString("hex", at + 4, end))) return false;
+    } else if (marker === 0xdb) {
+      // Quantisation: each table one byte, then 64 of eight bits.
+      if (length === 2 || (length - 2) % 65 !== 0) return false;
+      for (let t = at + 4; t < end; t += 65) if (b[t] >> 4 !== 0) return false;
+    } else if (marker === 0xc0) {
+      // The one frame: eight bits, this size, three components.
+      if (framed || length !== 17 || b[at + 4] !== 8 || b[at + 9] !== 3)
         return false;
-    } else if (!JPEG_PICTURE_SEGMENTS.has(marker)) return false;
-    at += 2 + length;
+      if (
+        b.readUInt16BE(at + 5) !== size.height ||
+        b.readUInt16BE(at + 7) !== size.width
+      )
+        return false;
+      framed = true;
+    } else if (marker === 0xc4) {
+      // Huffman: each table says how long it is, and they must fill the segment exactly.
+      let t = at + 4;
+      while (t < end) {
+        if (t + 17 > end) return false;
+        let codes = 0;
+        for (let i = 1; i <= 16; i++) codes += b[t + i];
+        t += 17 + codes;
+      }
+      if (t !== end) return false;
+    } else if (marker === 0xda) {
+      // The one scan, then its bytes to the end. Encoded bytes never hold a marker.
+      if (!framed || length !== 12) return false;
+      const last = b.length - 2;
+      if (end > last || b.readUInt16BE(last) !== 0xffd9) return false;
+      for (let t = end; t < last; t++)
+        if (b[t] === 0xff && b[t + 1] !== 0) return false;
+      return true;
+    } else return false;
+    at = end;
   }
   return false;
 }
 
 // Best first: 2 is as fine as FFmpeg's encoder goes, and 12 is where a picture starts to show it.
-const JPEG_QUALITIES = [2, 3, 5, 8, 12];
+export const JPEG_QUALITIES = [2, 3, 5, 8, 12];
 
 // What is sent has to fit what Kaggle accepts in a script. A PNG loses nothing, so it goes as it
 // is when it fits. A photo's rarely does, and then a JPEG of the same bare pixels goes instead.
@@ -118,8 +155,9 @@ export async function imageWithin(
           "+bitexact",
           "-fflags",
           "+bitexact",
+          // One thread, or this encoder adds restart markers, which vary with the machine.
           "-threads",
-          String(RESOURCE_POLICY.enforced.renderThreads),
+          "1",
           "-f",
           "image2pipe",
           "-",
@@ -132,7 +170,13 @@ export async function imageWithin(
         onStdout: (piece) => chunks.push(piece),
       });
       const jpeg = Buffer.concat(chunks);
-      if (result.code !== 0 || !jpegHoldsOnlyAPicture(jpeg))
+      if (
+        result.code !== 0 ||
+        !jpegHoldsOnlyAPicture(jpeg, {
+          width: png.readUInt32BE(16),
+          height: png.readUInt32BE(20),
+        })
+      )
         throw new Error(REFUSED);
       if (jpeg.length <= maxBytes)
         return { data: jpeg, mediaType: "image/jpeg" };

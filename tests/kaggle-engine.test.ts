@@ -883,17 +883,31 @@ test("failing to fetch a result is tried again, however late", async () => {
 
 test("the empty notebook a refused first push leaves does not lock the model out", async () => {
   // As real Kaggle answered on 2026-11-07, after refusing a first push.
-  const EMPTY = "404 Client Error: Not Found for url: [url]";
-  const send = async (list: string) => {
+  const EMPTY =
+    "404 Client Error: Not Found for url: https://api.kaggle.com/v1/kernels.KernelsApiService/GetKernelSessionStatus";
+  const send = async (
+    list: () => string,
+    pull: () => Record<string, unknown> | null = () => null,
+    status = EMPTY,
+  ) => {
     let pushes = 0;
     const engine = createKaggleEngine({
       cli: async (args) => {
-        if (args[1] === "list") return { stdout: list };
+        if (args[1] === "list") return { stdout: list() };
         if (args[1] === "push") {
           pushes++;
           return { stdout: "successfully pushed" };
         }
-        if (args[1] === "status" && !pushes) throw new Error(EMPTY);
+        if (args[1] === "pull") {
+          const answer = pull();
+          if (!answer) throw new Error("nothing to pull");
+          writeFileSync(
+            path.join(args[4], "kernel-metadata.json"),
+            JSON.stringify(answer),
+          );
+          return { stdout: "" };
+        }
+        if (args[1] === "status" && !pushes) throw new Error(status);
         return { stdout: 'has status "KernelWorkerStatus.RUNNING"' };
       },
       username: "someone",
@@ -903,10 +917,33 @@ test("the empty notebook a refused first push leaves does not lock the model out
     await engine.submit(request(), context as never);
     return pushes;
   };
-  assert.equal(await send("Not found\n"), 1);
-  // A notebook the account does hold is not new, whatever a status says of it.
+  const absent = () => "Not found\n";
+  assert.equal(await send(absent), 1);
+  assert.equal(await send(absent, () => ({ is_private: true })), 1);
+  // Not new, whatever a status says, when the account does hold it.
   await assert.rejects(
-    send(`ref,title\nsomeone/${wan.slug},t\n`),
+    send(() => `ref,title\nsomeone/${wan.slug},t\n`),
+    /Could not ask Kaggle/,
+  );
+  // Nor when its list cannot be read.
+  await assert.rejects(
+    send(() => {
+      throw new Error("no list");
+    }),
+    /Could not ask Kaggle/,
+  );
+  // Nor when what it can read of the notebook says it is not private.
+  await assert.rejects(
+    send(absent, () => ({ is_private: false })),
+    /does not report this notebook as private/,
+  );
+  // A 404 from anything but this question says nothing of a notebook.
+  await assert.rejects(
+    send(
+      absent,
+      () => null,
+      "404 Client Error: Not Found for url: https://api.kaggle.com/v1/something/else",
+    ),
     /Could not ask Kaggle/,
   );
 });

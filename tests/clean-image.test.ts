@@ -16,6 +16,7 @@ import { deflateSync, inflateSync } from "node:zlib";
 import { mediaTools } from "../core/process/workers.ts";
 import { closeWorkers } from "../core/process/workers.ts";
 import {
+  JPEG_QUALITIES,
   cleanImage,
   imageWithin,
   jpegHoldsOnlyAPicture,
@@ -24,7 +25,11 @@ import {
 const root = mkdtempSync(path.join(tmpdir(), "clean-image-"));
 after(() => {
   closeWorkers();
-  rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    // Windows can still hold a folder: tidying up is not what this tests.
+  }
 });
 const SIZE = { width: 704, height: 480 };
 const SECRET = "24.7136N 46.6753E My Phone 2026-11-06";
@@ -373,6 +378,7 @@ const NOISY = (() => {
   );
   return readFileSync(file);
 })();
+const PICTURE = { width: 704, height: 480 };
 const within = (max: number) =>
   imageWithin(NOISY, max, path.join(root, `f-${Math.random()}`), "too much");
 
@@ -385,50 +391,88 @@ test("a PNG that fits goes as it is, losing nothing", async () => {
 test("one that does not goes as a JPEG of only a picture, of the same size", async () => {
   const { data, mediaType } = await within(NOISY.length - 1);
   assert.equal(mediaType, "image/jpeg");
-  assert.ok(jpegHoldsOnlyAPicture(data));
-  // A marker that holds words would be 0xFFFE, or 0xFFE1 and on. None comes before the pixels.
-  const scan = data.indexOf(Buffer.from([0xff, 0xda]));
-  assert.ok(scan > 0);
-  assert.ok(!data.subarray(0, scan).includes(Buffer.from([0xff, 0xfe])));
-  assert.ok(!data.subarray(0, scan).includes(Buffer.from([0xff, 0xe1])));
+  assert.ok(jpegHoldsOnlyAPicture(data, PICTURE));
   const sof = data.indexOf(Buffer.from([0xff, 0xc0]));
   assert.equal(data.readUInt16BE(sof + 5), 480);
   assert.equal(data.readUInt16BE(sof + 7), 704);
+  assert.equal(JPEG_QUALITIES[0], 2, "the best first");
 });
 
 test("the quality falls only as far as it must, and past that it is refused", async () => {
   const best = await within(NOISY.length - 1);
+  assert.ok((await within(best.data.length)).data.equals(best.data));
   const smaller = await within(best.data.length - 1);
   assert.ok(smaller.data.length < best.data.length);
   await assert.rejects(within(1000), /^Error: too much$/);
 });
 
-test("a JPEG with anything but a picture in it is not taken for one", () => {
+test("preparing it leaves nothing behind, and its failure names no path", async () => {
+  const folder = path.join(root, `kept-${Math.random()}`);
+  await imageWithin(NOISY, NOISY.length - 1, folder, "too much");
+  assert.ok(!existsSync(folder));
+  await assert.rejects(
+    imageWithin(NOISY, 1000, folder, "too much"),
+    /too much/,
+  );
+  assert.ok(!existsSync(folder));
+  // A folder that cannot be made, under a file: what the system says would name it.
+  const file = path.join(root, `a-file-${Math.random()}`);
+  writeFileSync(file, "x");
+  await assert.rejects(
+    imageWithin(NOISY, 1000, path.join(file, "under"), "too much"),
+    (e: Error) => {
+      assert.equal(
+        e.message,
+        "That image could not be prepared, so nothing was sent.",
+      );
+      return true;
+    },
+  );
+});
+
+test("a JPEG with anything but a picture in it is not taken for one", async () => {
+  const { data: real } = await within(NOISY.length - 1);
+  assert.ok(jpegHoldsOnlyAPicture(real, PICTURE));
   const seg = (marker: number, body: Buffer) => {
     const head = Buffer.from([0xff, marker, 0, 0]);
     head.writeUInt16BE(body.length + 2, 2);
     return Buffer.concat([head, body]);
   };
-  const jfif = seg(0xe0, Buffer.from("JFIF\0ninebytes", "latin1"));
-  const scan = Buffer.from([0xff, 0xda, 0, 2, 1, 2, 0xff, 0xd9]);
-  const whole = (...parts: Buffer[]) =>
-    Buffer.concat([Buffer.from([0xff, 0xd8]), ...parts, scan]);
-  assert.ok(jpegHoldsOnlyAPicture(whole(jfif)));
-  // A comment, a camera's EXIF, a colour profile, Adobe's segment.
-  for (const marker of [0xfe, 0xe1, 0xe2, 0xee])
-    assert.ok(
-      !jpegHoldsOnlyAPicture(whole(jfif, seg(marker, Buffer.from("words")))),
-      String(marker),
-    );
-  // A thumbnail in the JFIF segment, which is a picture of its own.
-  assert.ok(
-    !jpegHoldsOnlyAPicture(
-      whole(seg(0xe0, Buffer.from("JFIF\0ninebytes+a-thumbnail", "latin1"))),
+  const words = Buffer.from("24.7136N 46.6753E My Phone");
+  const afterStart = (extra: Buffer) =>
+    Buffer.concat([real.subarray(0, 2), extra, real.subarray(2)]);
+  const beforeEnd = (extra: Buffer) =>
+    Buffer.concat([real.subarray(0, -2), extra, real.subarray(-2)]);
+  // A comment, a camera's EXIF, a colour profile, Adobe's, JFIF with its free bytes, a restart.
+  for (const marker of [0xfe, 0xe1, 0xe2, 0xee, 0xe0, 0xdd]) {
+    const refused = (j: Buffer) =>
+      assert.ok(!jpegHoldsOnlyAPicture(j, PICTURE), String(marker));
+    refused(afterStart(seg(marker, words)));
+    // And after the pixels.
+    refused(beforeEnd(seg(marker, words)));
+  }
+  for (const [name, wrong] of Object.entries({
+    "words after the end": Buffer.concat([real, words]),
+    "JFIF with words in its free bytes": afterStart(
+      seg(0xe0, Buffer.from("JFIF\0My Phone 24N", "latin1").subarray(0, 14)),
     ),
-  );
-  // Something after the end, and something that is no JPEG.
+    "the end, words, the end": beforeEnd(
+      Buffer.concat([Buffer.from([0xff, 0xd9]), words]),
+    ),
+    "two pictures": Buffer.concat([real, real]),
+    "no end": real.subarray(0, -2),
+    "a table of the wrong length": afterStart(seg(0xdb, words)),
+    "a Huffman segment of padding": afterStart(
+      seg(0xc4, Buffer.alloc(5000, 0x41)),
+    ),
+    "a frame holding words": afterStart(seg(0xc0, words)),
+    "not a JPEG": Buffer.from("words"),
+    nothing: Buffer.alloc(0),
+  }))
+    assert.ok(!jpegHoldsOnlyAPicture(wrong, PICTURE), name);
   assert.ok(
-    !jpegHoldsOnlyAPicture(Buffer.concat([whole(jfif), Buffer.from("words")])),
+    !jpegHoldsOnlyAPicture(real, { width: 704, height: 479 }),
+    "height",
   );
-  assert.ok(!jpegHoldsOnlyAPicture(Buffer.from("words")));
+  assert.ok(!jpegHoldsOnlyAPicture(real, { width: 703, height: 480 }), "width");
 });

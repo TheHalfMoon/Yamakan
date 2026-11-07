@@ -10,6 +10,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -27,7 +28,8 @@ import { JobSupervisor } from "../core/jobs.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { ProjectStore } from "../core/store.ts";
 
-const [out] = process.argv.slice(2);
+// How much noise the picture has decides whether it goes as a PNG or a JPEG.
+const [out, noise = "14"] = process.argv.slice(2);
 const { YAMAKAN_KAGGLE_CLI: cliFile, YAMAKAN_KAGGLE_USERNAME: username } =
   process.env;
 if (!out || !cliFile || !username) {
@@ -59,6 +61,15 @@ const step = (name, detail = {}) => {
   console.log(`ok - ${name}`);
 };
 const root = mkdtempSync(join(tmpdir(), "yamakan-first-frame-run-"));
+const git = (...args) => {
+  try {
+    return execFileSync("git", args, { encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
+};
+const head = git("rev-parse", "HEAD");
+const changes = git("status", "--porcelain");
 const started = Date.now();
 let passed = false;
 let failure = null;
@@ -66,8 +77,8 @@ let generationId = null;
 let queue;
 let store;
 try {
-  // Made here, and made of fine detail: what is sent is a PNG, and its size is part of the
-  // question of what Kaggle accepts inside a script.
+  // Made here, and made of fine detail, since its size is part of the question of what Kaggle
+  // accepts inside a script.
   const still = join(out, "sent-frame.png");
   ffmpeg(
     "-y",
@@ -76,7 +87,7 @@ try {
     "-i",
     `mandelbrot=s=${recipe.width}x${recipe.height}:end_scale=0.05:start_scale=0.05`,
     "-vf",
-    "noise=alls=14:allf=u:all_seed=7,format=rgb24",
+    `noise=alls=${noise}:allf=u:all_seed=7,format=rgb24`,
     "-frames:v",
     "1",
     still,
@@ -178,9 +189,10 @@ try {
     ],
     { windowsHide: true, encoding: "utf8" },
   );
-  const psnr = Number(/average:([\d.]+|inf)/.exec(measured.stderr)?.[1]);
-  assert.ok(psnr > 0, "the first frame could be compared with the picture");
-  step("compared the first frame with the picture", { psnr });
+  const figure = /average:([\d.]+|inf)/.exec(measured.stderr)?.[1];
+  assert.ok(figure, "the first frame could be compared with the picture");
+  // A figure, not a verdict: whether the frame was used is judged by looking at what is kept.
+  step("compared the first frame with the picture", { psnr: figure });
   for (const [name, at] of [
     ["first", 0],
     ["middle", 40],
@@ -199,7 +211,10 @@ try {
   step("kept its first, middle and last frames, to look at");
   passed = true;
 } catch (e) {
-  failure = String(e?.message ?? e).slice(0, 1000);
+  // This receipt may be committed, and a CLI's error can hold an address naming the account.
+  failure = String(e?.message ?? e)
+    .replace(/https?:\S+/g, "[url]")
+    .slice(0, 1000);
   console.error(failure);
 } finally {
   // Whatever happens here, the receipt below must still be written.
@@ -209,9 +224,15 @@ try {
   } catch (e) {
     console.error(`Could not close: ${e?.message}`);
   }
+  rmSync(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200,
+  });
   writeFileSync(
     join(out, "receipt.json"),
-    `${JSON.stringify({ task: "first-frame-from-yamakan-on-kaggle", recipe: recipe.id, generationId, prompt: PROMPT, seed: SEED, head: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), dirty: execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim() !== "", passed, failure, steps }, null, 2)}\n`,
+    `${JSON.stringify({ task: "first-frame-from-yamakan-on-kaggle", recipe: recipe.id, generationId, prompt: PROMPT, seed: SEED, head, dirty: changes !== "", passed, failure, steps }, null, 2)}\n`,
   );
 }
 console.log(passed ? "FIRST FRAME RUN PASS" : "FIRST FRAME RUN FAIL");
