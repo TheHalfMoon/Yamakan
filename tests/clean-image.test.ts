@@ -15,7 +15,11 @@ import test, { after } from "node:test";
 import { deflateSync, inflateSync } from "node:zlib";
 import { mediaTools } from "../core/process/workers.ts";
 import { closeWorkers } from "../core/process/workers.ts";
-import { cleanImage } from "../core/engines/clean-image.ts";
+import {
+  cleanImage,
+  imageWithin,
+  jpegHoldsOnlyAPicture,
+} from "../core/engines/clean-image.ts";
 
 const root = mkdtempSync(path.join(tmpdir(), "clean-image-"));
 after(() => {
@@ -345,4 +349,86 @@ test("the photo's own copy does not stay in the working folder", async () => {
     () => {},
   );
   assert.equal(existsSync(folder), false);
+});
+
+const NOISY = (() => {
+  const file = path.join(root, "noisy.png");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "gradients=s=704x480:seed=7",
+      "-vf",
+      "noise=alls=14:allf=u:all_seed=7,format=rgb24",
+      "-frames:v",
+      "1",
+      file,
+    ],
+    { windowsHide: true },
+  );
+  return readFileSync(file);
+})();
+const within = (max: number) =>
+  imageWithin(NOISY, max, path.join(root, `f-${Math.random()}`), "too much");
+
+test("a PNG that fits goes as it is, losing nothing", async () => {
+  const { data, mediaType } = await within(NOISY.length);
+  assert.equal(mediaType, "image/png");
+  assert.ok(data.equals(NOISY));
+});
+
+test("one that does not goes as a JPEG of only a picture, of the same size", async () => {
+  const { data, mediaType } = await within(NOISY.length - 1);
+  assert.equal(mediaType, "image/jpeg");
+  assert.ok(jpegHoldsOnlyAPicture(data));
+  // A marker that holds words would be 0xFFFE, or 0xFFE1 and on. None comes before the pixels.
+  const scan = data.indexOf(Buffer.from([0xff, 0xda]));
+  assert.ok(scan > 0);
+  assert.ok(!data.subarray(0, scan).includes(Buffer.from([0xff, 0xfe])));
+  assert.ok(!data.subarray(0, scan).includes(Buffer.from([0xff, 0xe1])));
+  const sof = data.indexOf(Buffer.from([0xff, 0xc0]));
+  assert.equal(data.readUInt16BE(sof + 5), 480);
+  assert.equal(data.readUInt16BE(sof + 7), 704);
+});
+
+test("the quality falls only as far as it must, and past that it is refused", async () => {
+  const best = await within(NOISY.length - 1);
+  const smaller = await within(best.data.length - 1);
+  assert.ok(smaller.data.length < best.data.length);
+  await assert.rejects(within(1000), /^Error: too much$/);
+});
+
+test("a JPEG with anything but a picture in it is not taken for one", () => {
+  const seg = (marker: number, body: Buffer) => {
+    const head = Buffer.from([0xff, marker, 0, 0]);
+    head.writeUInt16BE(body.length + 2, 2);
+    return Buffer.concat([head, body]);
+  };
+  const jfif = seg(0xe0, Buffer.from("JFIF\0ninebytes", "latin1"));
+  const scan = Buffer.from([0xff, 0xda, 0, 2, 1, 2, 0xff, 0xd9]);
+  const whole = (...parts: Buffer[]) =>
+    Buffer.concat([Buffer.from([0xff, 0xd8]), ...parts, scan]);
+  assert.ok(jpegHoldsOnlyAPicture(whole(jfif)));
+  // A comment, a camera's EXIF, a colour profile, Adobe's segment.
+  for (const marker of [0xfe, 0xe1, 0xe2, 0xee])
+    assert.ok(
+      !jpegHoldsOnlyAPicture(whole(jfif, seg(marker, Buffer.from("words")))),
+      String(marker),
+    );
+  // A thumbnail in the JFIF segment, which is a picture of its own.
+  assert.ok(
+    !jpegHoldsOnlyAPicture(
+      whole(seg(0xe0, Buffer.from("JFIF\0ninebytes+a-thumbnail", "latin1"))),
+    ),
+  );
+  // Something after the end, and something that is no JPEG.
+  assert.ok(
+    !jpegHoldsOnlyAPicture(Buffer.concat([whole(jfif), Buffer.from("words")])),
+  );
+  assert.ok(!jpegHoldsOnlyAPicture(Buffer.from("words")));
 });

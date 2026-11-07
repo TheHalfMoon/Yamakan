@@ -47,6 +47,109 @@ function pngOf(rgb: Buffer, width: number, height: number) {
   ]);
 }
 
+// Only what a picture needs, before its pixels: nothing here can hold a word. FFmpeg writes these
+// from a PNG with nothing beside its pixels, and this checks that it did, as a colour profile once
+// came through it unasked. The size of APP0 is that of its fields alone, with no thumbnail.
+const JPEG_APP0 = 0xe0;
+const JPEG_START_OF_SCAN = 0xda;
+const JPEG_PICTURE_SEGMENTS = new Set([0xdb, 0xc0, 0xc4, 0xdd]);
+export function jpegHoldsOnlyAPicture(jpeg: Uint8Array) {
+  const b = Buffer.from(jpeg);
+  if (b.length < 4 || b.readUInt16BE(0) !== 0xffd8) return false;
+  if (b.readUInt16BE(b.length - 2) !== 0xffd9) return false;
+  for (let at = 2; at + 4 <= b.length;) {
+    if (b[at] !== 0xff) return false;
+    const marker = b[at + 1];
+    if (marker === JPEG_START_OF_SCAN) return true;
+    const length = b.readUInt16BE(at + 2);
+    if (marker === JPEG_APP0) {
+      if (length !== 16 || b.toString("latin1", at + 4, at + 9) !== "JFIF\0")
+        return false;
+    } else if (!JPEG_PICTURE_SEGMENTS.has(marker)) return false;
+    at += 2 + length;
+  }
+  return false;
+}
+
+// Best first: 2 is as fine as FFmpeg's encoder goes, and 12 is where a picture starts to show it.
+const JPEG_QUALITIES = [2, 3, 5, 8, 12];
+
+// What is sent has to fit what Kaggle accepts in a script. A PNG loses nothing, so it goes as it
+// is when it fits. A photo's rarely does, and then a JPEG of the same bare pixels goes instead.
+export async function imageWithin(
+  png: Buffer,
+  maxBytes: number,
+  folder: string,
+  refused: string,
+): Promise<{ data: Buffer; mediaType: "image/png" | "image/jpeg" }> {
+  if (png.length <= maxBytes) return { data: png, mediaType: "image/png" };
+  const source = path.join(folder, "clean.png");
+  try {
+    await mkdir(folder, { recursive: true });
+    await writeFile(source, png);
+    for (const quality of JPEG_QUALITIES) {
+      const chunks: Buffer[] = [];
+      const result = await workers().run({
+        executable: mediaTools().ffmpeg,
+        args: [
+          "-hide_banner",
+          "-nostdin",
+          "-loglevel",
+          "error",
+          "-threads",
+          String(RESOURCE_POLICY.enforced.renderThreads),
+          "-f",
+          "image2",
+          "-c:v",
+          "png",
+          "-i",
+          path.basename(source),
+          "-frames:v",
+          "1",
+          "-map_metadata",
+          "-1",
+          "-pix_fmt",
+          "yuvj420p",
+          "-c:v",
+          "mjpeg",
+          "-q:v",
+          String(quality),
+          "-flags",
+          "+bitexact",
+          "-fflags",
+          "+bitexact",
+          "-threads",
+          String(RESOURCE_POLICY.enforced.renderThreads),
+          "-f",
+          "image2pipe",
+          "-",
+        ],
+        cwd: folder,
+        readable: [source],
+        memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
+        signal: AbortSignal.timeout(60_000),
+        stderrLimit: 2000,
+        onStdout: (piece) => chunks.push(piece),
+      });
+      const jpeg = Buffer.concat(chunks);
+      if (result.code !== 0 || !jpegHoldsOnlyAPicture(jpeg))
+        throw new Error(REFUSED);
+      if (jpeg.length <= maxBytes)
+        return { data: jpeg, mediaType: "image/jpeg" };
+    }
+    throw new Error(refused);
+  } catch (e) {
+    throw new Error((e as Error).message === refused ? refused : REFUSED);
+  } finally {
+    await rm(folder, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    }).catch(() => {});
+  }
+}
+
 export async function cleanImage(
   data: Uint8Array,
   mediaType: string,

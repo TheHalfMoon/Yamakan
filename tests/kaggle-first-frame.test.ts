@@ -11,6 +11,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +22,7 @@ import { JobSupervisor } from "../core/jobs.ts";
 import {
   FIRST_FRAME_BYTES,
   KAGGLE_RECIPES,
+  SCRIPT_BYTES,
   createKaggleEngine,
   kaggleRecipes,
   ledgerOptions,
@@ -29,6 +31,7 @@ import {
 } from "../core/engines/kaggle.ts";
 import { createGenerationService } from "../core/engines/generation.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { jpegHoldsOnlyAPicture } from "../core/engines/clean-image.ts";
 import { Readable } from "node:stream";
 
 const recipe = KAGGLE_RECIPES.find((r) => r.operation === "imageToVideo")!;
@@ -115,6 +118,7 @@ async function fixture(
         throw new Error("Kernel push error: Maximum weekly GPU quota");
       if (world.push === "lost") throw new Error("Connection reset");
       pushes.push({
+        scriptBytes: statSync(path.join(args[3], "run.py")).size,
         brief: briefOf(args[3]),
         metadata: JSON.parse(
           readFileSync(path.join(args[3], "kernel-metadata.json"), "utf8"),
@@ -344,6 +348,92 @@ test("a phone's photo goes made anew, with nothing of its file", async () => {
     undefined,
     "no word of its file comes beside it",
   );
+  await f.close();
+});
+
+// Fine detail, as a real photo has: as a PNG it is far more than a script can carry.
+const NOISY_FILE = path.join(stillRoot, "noisy.png");
+execFileSync(
+  mediaTools().ffmpeg,
+  [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-f",
+    "lavfi",
+    "-i",
+    `gradients=s=${recipe.width}x${recipe.height}:seed=7`,
+    "-vf",
+    "noise=alls=14:allf=u:all_seed=7,format=rgb24",
+    "-frames:v",
+    "1",
+    NOISY_FILE,
+  ],
+  { windowsHide: true },
+);
+const NOISY = readFileSync(NOISY_FILE);
+const noisyRef = () => ({
+  assetVersionId: randomUUID(),
+  sha256: createHash("sha256").update(NOISY).digest("hex"),
+  mediaType: "image/png",
+});
+
+test("a picture too large as a PNG goes as a JPEG with only a picture in it, and fits", async () => {
+  const f = await fixture();
+  await f.adapter.submit(
+    adapterRequest(f, [{ role: "firstFrame", asset: noisyRef() }]),
+    opening(NOISY),
+  );
+  assert.equal(f.pushes.length, 1);
+  assert.ok(f.pushes[0].scriptBytes <= SCRIPT_BYTES, f.pushes[0].scriptBytes);
+  const { firstFrame } = f.pushes[0].brief;
+  assert.equal(firstFrame.mediaType, "image/jpeg");
+  const sent = Buffer.from(firstFrame.data, "base64");
+  assert.equal(
+    firstFrame.sha256,
+    createHash("sha256").update(sent).digest("hex"),
+  );
+  assert.ok(jpegHoldsOnlyAPicture(sent));
+  await f.close();
+});
+
+test("what a script cannot carry is refused, and nothing is sent", async () => {
+  const f = await fixture();
+  await assert.rejects(
+    f.adapter.submit(
+      {
+        ...(adapterRequest(f, [
+          { role: "firstFrame", asset: noisyRef() },
+        ]) as object),
+        prompt: "words ".repeat(170_000),
+      } as never,
+      opening(NOISY),
+    ),
+    /more than Kaggle accepts, so nothing was sent/,
+  );
+  assert.equal(f.pushes.length, 0);
+  assert.ok(!f.asked.includes("push"));
+  await f.close();
+});
+
+test("so is a prompt too long for a script, with no image", async () => {
+  const f = await fixture();
+  const text = KAGGLE_RECIPES.find(
+    (r) => r.operation === undefined && r.offered,
+  )!;
+  await assert.rejects(
+    f.adapter.submit(
+      {
+        ...(adapterRequest(f, []) as object),
+        recipeId: text.id,
+        operation: "textToVideo",
+        prompt: "words ".repeat(170_000),
+      } as never,
+      opening(NOISY),
+    ),
+    /more than Kaggle accepts, so nothing was sent/,
+  );
+  assert.equal(f.pushes.length, 0);
   await f.close();
 });
 

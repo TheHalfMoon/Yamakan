@@ -30,7 +30,7 @@ import {
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
-import { cleanImage } from "./clean-image.ts";
+import { cleanImage, imageWithin } from "./clean-image.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -128,6 +128,11 @@ const RECEIPT_BYTES = 1024 * 1024;
 // A first frame travels inside the script. What Kaggle accepts in one is not known, so this
 // is a guess kept small, for a real run to test.
 export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
+// The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
+// a bare 400. Kept to what was seen: nothing says the limit is any higher.
+export const SCRIPT_BYTES = 1_000_000;
+const TOO_MUCH_TO_SEND =
+  "This run's prompt and image together are more than Kaggle accepts, so nothing was sent.";
 
 const sha256 = (data: string | Uint8Array) =>
   createHash("sha256").update(data).digest("hex");
@@ -909,6 +914,7 @@ export function createKaggleEngine(options: {
     context: EngineContextV2,
     recipe: KaggleRecipe,
     folder: string,
+    maxBytes: number,
   ) {
     const parts: Uint8Array[] = [];
     let bytes = 0;
@@ -928,17 +934,21 @@ export function createKaggleEngine(options: {
         "That image is not the version this run was started with.",
       );
     // The founder chose that a photo's metadata does not go, so what goes is made anew.
-    let clean: Buffer;
     try {
-      clean = await cleanImage(image, asset.mediaType, recipe, folder);
+      const { data, mediaType } = await imageWithin(
+        await cleanImage(image, asset.mediaType, recipe, folder),
+        maxBytes,
+        folder,
+        TOO_MUCH_TO_SEND,
+      );
+      return {
+        data: data.toString("base64"),
+        mediaType,
+        sha256: sha256(data),
+      };
     } catch (e) {
       throw new CommandError("VALIDATION", (e as Error).message);
     }
-    return {
-      data: clean.toString("base64"),
-      mediaType: "image/png",
-      sha256: sha256(clean),
-    };
   }
 
   return {
@@ -996,6 +1006,25 @@ export function createKaggleEngine(options: {
         const runId = request.attemptKey;
         const push = path.join(folder, "push");
         await mkdir(push);
+        const script = await scriptFor(recipe);
+        const brief = {
+          prompt: request.prompt,
+          seed: request.seed ?? 42,
+          runId,
+        };
+        // The image is base64 inside a brief that is base64: each four bytes hold three.
+        const room =
+          SCRIPT_BYTES -
+          Buffer.byteLength(
+            scriptWithBrief(script, {
+              ...brief,
+              firstFrame: {
+                data: "",
+                mediaType: "image/jpeg",
+                sha256: "0".repeat(64),
+              },
+            }),
+          );
         // Read last: opening it is where consent is checked, so that answer is this moment's.
         const firstFrame = frame
           ? await readFirstFrame(
@@ -1003,17 +1032,16 @@ export function createKaggleEngine(options: {
               context,
               recipe,
               path.join(folder, "clean"),
+              Math.floor((room * 9) / 16),
             )
           : null;
-        await writeFile(
-          path.join(push, "run.py"),
-          scriptWithBrief(await scriptFor(recipe), {
-            prompt: request.prompt,
-            seed: request.seed ?? 42,
-            runId,
-            ...(firstFrame ? { firstFrame } : {}),
-          }),
-        );
+        const sendable = scriptWithBrief(script, {
+          ...brief,
+          ...(firstFrame ? { firstFrame } : {}),
+        });
+        if (Buffer.byteLength(sendable) > SCRIPT_BYTES)
+          throw new CommandError("VALIDATION", TOO_MUCH_TO_SEND);
+        await writeFile(path.join(push, "run.py"), sendable);
         await writeFile(
           path.join(push, "kernel-metadata.json"),
           JSON.stringify({
