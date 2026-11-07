@@ -149,3 +149,25 @@ Decoding began 405.0 seconds into the 742.3 seconds of generating.
 **A second run went as a PNG,** `481f65e5-6856-410c-b4aa-10ed3ae8e7ba` at `6ee67ee`, after a review tightened the picture path. Its receipts are `kaggle-first-frame-png-run-receipt.json` and `kaggle-first-frame-png-notebook-receipt.json`. The same picture without noise is a clean PNG of 417,786 bytes, in a script of about 0.75 MB by arithmetic, which was not read from what was sent. The notebook recorded `92c82d3f...`, the hash of that PNG rebuilt here, so it went as a PNG and arrived as it was. So real Kaggle has taken scripts of about 0.2 and 0.75 MB holding a picture, with 1,000,000 bytes seen only for padding. Its first frame is again plainly the picture, 27.07 dB apart at 88×60.
 
 The container's limit read 30.0 GiB again. Lowest free was 7.43 GiB and highest resident 24.73 GiB, both while loading. While decoding, 17.66 GiB resident and 13.01 GiB free. In the first run the decoding stage peaked at 15.19 GiB and its exporting stage at 17.51 GiB, so with samples 5 seconds apart, which stage holds a peak near the change between them is not exact.
+
+## CogVideoX from Yamakan, first real run (2026-11-07)
+
+Run `821aee60-14fd-42ae-9326-6350f93f05b9` at `52cfc86`, from `npm run qualify:kaggle-cogvideox`, with the paper boat prompt and seed 7. **It is still not offered:** the command names the recipe in its own process, and no page or service command can reach it. Receipts: `kaggle-cogvideox-run-receipt.json` and `kaggle-cogvideox-notebook-receipt.json`.
+
+This was the recipe's first run on its own notebook, `yamakan-run-cogvideox-2b`. Kaggle took the script, the run finished, and its video came back with the bytes its receipt names, `45331755...`, 49 frames at 720×480. Kaggle said it had finished 1,184 seconds after the command started. The earlier CogVideoX run at the top of this file was started by hand, with seed 42, so there are no earlier bytes to compare.
+
+**By looking:** a paper boat on calm water in warm low light, from the first frame to the last, turning a little as it drifts. That fits the prompt.
+
+**Memory,** of the 30.0 GiB container limit. Unlike Wan, the highest is while decoding:
+
+| Stage      | Highest resident | Lowest free |
+| ---------- | ---------------- | ----------- |
+| Loading    | 5.97 GiB         | 25.32 GiB   |
+| Generating | 17.41 GiB        | 15.67 GiB   |
+| Decoding   | 17.92 GiB        | 12.9 GiB    |
+
+The container's peak was 28.89 GiB, with 0 out-of-memory kills, and may count file cache. The peak read at the end was 19,851,956,224 bytes (about 18.49 GiB), above the sampled 17.92 GiB. **Only 93 samples were taken** in about 1,170 seconds, where one every 5 seconds would give over 200: sampling ran slower than set, by about half, for a reason not established. One run.
+
+Decoding began 952.7 seconds into the 995.1 seconds of generating, so 50 steps of a 49-frame video take most of the time, and decoding about 42 seconds.
+
+**What qualification does not yet cover:** a run through the page. Offering it means `offered: true`, after which `npm run qualify:kaggle` can run it from the page as it does Wan. That is a separate step.

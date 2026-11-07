@@ -1,0 +1,38 @@
+{
+  "task": "cogvideox-from-yamakan-on-kaggle",
+  "recipe": "kaggle-cogvideox-2b",
+  "generationId": "821aee60-14fd-42ae-9326-6350f93f05b9",
+  "prompt": "A paper boat floats slowly along a calm stream in soft morning light.",
+  "seed": 7,
+  "head": "52cfc868cbcc589f119cf19993b2340191ff7187",
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "Kaggle took the script",
+      "generationId": "821aee60-14fd-42ae-9326-6350f93f05b9",
+      "afterSeconds": 11.412,
+      "at": "2026-11-07T14:07:13.133Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 13.502,
+      "at": "2026-11-07T14:07:15.222Z"
+    },
+    {
+      "name": "Kaggle says succeeded",
+      "afterSeconds": 1184.149,
+      "at": "2026-11-07T14:26:45.872Z"
+    },
+    {
+      "name": "its video passed its receipt and came in",
+      "sha256": "4533175597cc7aafd2dd13d6da6311dc4f0ede807458f95b5c32972c0eb87c52",
+      "at": "2026-11-07T14:26:49.592Z"
+    },
+    {
+      "name": "kept its first, middle and last frames, to look at",
+      "at": "2026-11-07T14:26:50.433Z"
+    }
+  ]
+}
