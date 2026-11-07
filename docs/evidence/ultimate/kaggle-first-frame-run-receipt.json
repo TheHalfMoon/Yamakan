@@ -1,0 +1,49 @@
+{
+  "task": "first-frame-from-yamakan-on-kaggle",
+  "recipe": "kaggle-wan22-ti2v-5b-first-frame",
+  "generationId": "a7d72d34-df87-4158-8ea4-a54e43e09629",
+  "prompt": "The camera drifts slowly forward as the colours gently shift.",
+  "seed": 7,
+  "head": "5f51ad72e12325059c9756c22139e407c0ad1ab1",
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "made a picture of no one",
+      "bytes": 865792,
+      "sha256": "d84f06b35556e71727a94d2d8b0e5ec1411736af475716a2e30e103fcaeb6ff2",
+      "at": "2026-11-07T06:41:21.174Z"
+    },
+    {
+      "name": "Kaggle took a script with the picture inside",
+      "generationId": "a7d72d34-df87-4158-8ea4-a54e43e09629",
+      "afterSeconds": 13.098,
+      "at": "2026-11-07T06:41:32.315Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 14.854,
+      "at": "2026-11-07T06:41:34.071Z"
+    },
+    {
+      "name": "Kaggle says succeeded",
+      "afterSeconds": 1162.41,
+      "at": "2026-11-07T07:00:41.627Z"
+    },
+    {
+      "name": "its video passed its receipt and came in",
+      "sha256": "2eaa30e69832dd0c9ef87dd8a72da3a7716e5d2ff36bc11a00cd443ae31ca7d8",
+      "at": "2026-11-07T07:00:43.809Z"
+    },
+    {
+      "name": "compared the first frame with the picture",
+      "psnr": 27.144521,
+      "at": "2026-11-07T07:00:44.110Z"
+    },
+    {
+      "name": "kept its first, middle and last frames, to look at",
+      "at": "2026-11-07T07:00:44.549Z"
+    }
+  ]
+}

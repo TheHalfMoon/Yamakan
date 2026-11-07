@@ -15,12 +15,21 @@ import test, { after } from "node:test";
 import { deflateSync, inflateSync } from "node:zlib";
 import { mediaTools } from "../core/process/workers.ts";
 import { closeWorkers } from "../core/process/workers.ts";
-import { cleanImage } from "../core/engines/clean-image.ts";
+import {
+  JPEG_QUALITIES,
+  cleanImage,
+  imageWithin,
+  jpegHoldsOnlyAPicture,
+} from "../core/engines/clean-image.ts";
 
 const root = mkdtempSync(path.join(tmpdir(), "clean-image-"));
 after(() => {
   closeWorkers();
-  rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    // Windows can still hold a folder: tidying up is not what this tests.
+  }
 });
 const SIZE = { width: 704, height: 480 };
 const SECRET = "24.7136N 46.6753E My Phone 2026-11-06";
@@ -345,4 +354,163 @@ test("the photo's own copy does not stay in the working folder", async () => {
     () => {},
   );
   assert.equal(existsSync(folder), false);
+});
+
+const NOISY = (() => {
+  const file = path.join(root, "noisy.png");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "gradients=s=704x480:seed=7",
+      "-vf",
+      "noise=alls=14:allf=u:all_seed=7,format=rgb24",
+      "-frames:v",
+      "1",
+      file,
+    ],
+    { windowsHide: true },
+  );
+  return readFileSync(file);
+})();
+const PICTURE = { width: 704, height: 480 };
+const within = (max: number) =>
+  imageWithin(NOISY, max, path.join(root, `f-${Math.random()}`), "too much");
+
+test("a PNG that fits goes as it is, losing nothing", async () => {
+  const { data, mediaType } = await within(NOISY.length);
+  assert.equal(mediaType, "image/png");
+  assert.ok(data.equals(NOISY));
+});
+
+test("one that does not goes as a JPEG of only a picture, of the same size", async () => {
+  const { data, mediaType } = await within(NOISY.length - 1);
+  assert.equal(mediaType, "image/jpeg");
+  assert.ok(jpegHoldsOnlyAPicture(data, PICTURE));
+  const sof = data.indexOf(Buffer.from([0xff, 0xc0]));
+  assert.equal(data.readUInt16BE(sof + 5), 480);
+  assert.equal(data.readUInt16BE(sof + 7), 704);
+  assert.equal(JPEG_QUALITIES[0], 2, "the best first");
+});
+
+test("the quality falls only as far as it must, and past that it is refused", async () => {
+  const best = await within(NOISY.length - 1);
+  assert.ok((await within(best.data.length)).data.equals(best.data));
+  const smaller = await within(best.data.length - 1);
+  assert.ok(smaller.data.length < best.data.length);
+  await assert.rejects(within(1000), /^Error: too much$/);
+});
+
+test("preparing it leaves nothing behind, and its failure names no path", async () => {
+  const folder = path.join(root, `kept-${Math.random()}`);
+  await imageWithin(NOISY, NOISY.length - 1, folder, "too much");
+  assert.ok(!existsSync(folder));
+  await assert.rejects(
+    imageWithin(NOISY, 1000, folder, "too much"),
+    /too much/,
+  );
+  assert.ok(!existsSync(folder));
+  // A folder that cannot be made, under a file: what the system says would name it.
+  const file = path.join(root, `a-file-${Math.random()}`);
+  writeFileSync(file, "x");
+  await assert.rejects(
+    imageWithin(NOISY, 1000, path.join(file, "under"), "too much"),
+    (e: Error) => {
+      assert.equal(
+        e.message,
+        "That image could not be prepared, so nothing was sent.",
+      );
+      return true;
+    },
+  );
+});
+
+test("a JPEG with anything but a picture in it is not taken for one", async () => {
+  const { data: real } = await within(NOISY.length - 1);
+  assert.ok(jpegHoldsOnlyAPicture(real, PICTURE));
+  const seg = (marker: number, body: Buffer) => {
+    const head = Buffer.from([0xff, marker, 0, 0]);
+    head.writeUInt16BE(body.length + 2, 2);
+    return Buffer.concat([head, body]);
+  };
+  const words = Buffer.from("24.7136N 46.6753E My Phone");
+  const afterStart = (extra: Buffer) =>
+    Buffer.concat([real.subarray(0, 2), extra, real.subarray(2)]);
+  const beforeEnd = (extra: Buffer) =>
+    Buffer.concat([real.subarray(0, -2), extra, real.subarray(-2)]);
+  // A comment, a camera's EXIF, a colour profile, Adobe's, JFIF with its free bytes, a restart.
+  for (const marker of [0xfe, 0xe1, 0xe2, 0xee, 0xe0, 0xdd]) {
+    const refused = (j: Buffer) =>
+      assert.ok(!jpegHoldsOnlyAPicture(j, PICTURE), String(marker));
+    refused(afterStart(seg(marker, words)));
+    // And after the pixels.
+    refused(beforeEnd(seg(marker, words)));
+  }
+  for (const [name, wrong] of Object.entries({
+    "words after the end": Buffer.concat([real, words]),
+    "JFIF with words in its free bytes": afterStart(
+      seg(0xe0, Buffer.from("JFIF\0My Phone 24N", "latin1").subarray(0, 14)),
+    ),
+    "the end, words, the end": beforeEnd(
+      Buffer.concat([Buffer.from([0xff, 0xd9]), words]),
+    ),
+    "two pictures": Buffer.concat([real, real]),
+    "no end": real.subarray(0, -2),
+    "a table of the wrong length": afterStart(seg(0xdb, words)),
+    "a Huffman segment of padding": afterStart(
+      seg(0xc4, Buffer.alloc(5000, 0x41)),
+    ),
+    "a frame holding words": afterStart(seg(0xc0, words)),
+    "an empty Huffman segment": afterStart(seg(0xc4, Buffer.alloc(0))),
+    // A well-formed Huffman table beside the real ones, whose values spell words.
+    "an extra Huffman table": afterStart(
+      seg(
+        0xc4,
+        Buffer.concat([
+          Buffer.from([0x00, words.length, ...Array(15).fill(0)]),
+          words,
+        ]),
+      ),
+    ),
+    // And a quantisation table of the same kind, under another number or the same one.
+    "an extra table, numbered 15": afterStart(
+      seg(0xdb, Buffer.concat([Buffer.from([15]), Buffer.alloc(64, 0x41)])),
+    ),
+    "the table again": afterStart(
+      seg(0xdb, Buffer.concat([Buffer.from([0]), Buffer.alloc(64, 0x41)])),
+    ),
+    "no tables at all": (() => {
+      const frame = real.indexOf(Buffer.from([0xff, 0xc0]));
+      return Buffer.concat([real.subarray(0, 2), real.subarray(frame)]);
+    })(),
+    "words in the frame's header": (() => {
+      const j = Buffer.from(real);
+      const at = j.indexOf(Buffer.from([0xff, 0xc0]));
+      j.write("My Phone", at + 10, "latin1");
+      return j;
+    })(),
+    "words in the scan's header": (() => {
+      const j = Buffer.from(real);
+      const at = j.indexOf(Buffer.from([0xff, 0xda]));
+      j.write("My Phone", at + 4, "latin1");
+      return j;
+    })(),
+    "two frames": (() => {
+      const at = real.indexOf(Buffer.from([0xff, 0xc0]));
+      return afterStart(real.subarray(at, at + 19));
+    })(),
+    "not a JPEG": Buffer.from("words"),
+    nothing: Buffer.alloc(0),
+  }))
+    assert.ok(!jpegHoldsOnlyAPicture(wrong, PICTURE), name);
+  assert.ok(
+    !jpegHoldsOnlyAPicture(real, { width: 704, height: 479 }),
+    "height",
+  );
+  assert.ok(!jpegHoldsOnlyAPicture(real, { width: 703, height: 480 }), "width");
 });

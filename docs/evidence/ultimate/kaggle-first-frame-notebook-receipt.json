@@ -1,0 +1,82 @@
+{
+  "format": "yamakan.generation-receipt/v1",
+  "runId": "a7d72d34-df87-4158-8ea4-a54e43e09629",
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "revision": "b8fff7315c768468a5333511427288870b2e9635",
+  "license": "apache-2.0",
+  "prompt": "The camera drifts slowly forward as the colours gently shift.",
+  "negativePrompt": "blurry, low quality, distorted, static",
+  "seed": 7,
+  "firstFrameSha256": "5ca99535a56a1dba9934af48e85283132498923bbd0d8b3738637eb6df46090e",
+  "steps": 30,
+  "frames": 81,
+  "fps": 24,
+  "size": [704, 480],
+  "packages": [
+    "diffusers==0.36.0",
+    "transformers==4.57.1",
+    "accelerate==1.10.1",
+    "sentencepiece==0.2.1",
+    "ftfy==6.3.1",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0"
+  ],
+  "verified": true,
+  "stage": "done",
+  "hostMemory": {
+    "samples": 220,
+    "byStage": {
+      "start": {
+        "lowestAvailableBytes": 32387796992,
+        "highestRssBytes": 21356544
+      },
+      "installed": {
+        "lowestAvailableBytes": 31600205824,
+        "highestRssBytes": 1554890752
+      },
+      "loading": {
+        "lowestAvailableBytes": 8332443648,
+        "highestRssBytes": 25621454848
+      },
+      "generating": {
+        "lowestAvailableBytes": 18271064064,
+        "highestRssBytes": 14982447104
+      },
+      "decoding": {
+        "lowestAvailableBytes": 16039329792,
+        "highestRssBytes": 16307933184
+      },
+      "exporting": {
+        "lowestAvailableBytes": 13850034176,
+        "highestRssBytes": 18804023296
+      }
+    },
+    "lowestAvailableBytes": 8332443648,
+    "stageAtLowest": "loading",
+    "highestRssBytes": 25621454848,
+    "stageAtHighest": "loading",
+    "totalBytes": 33658150912,
+    "cgroupLimitBytes": 32212254720,
+    "cgroupPeakBytes": 31644323840,
+    "cgroupOomKills": 0
+  },
+  "gpus": ["Tesla T4, 15360 MiB", "Tesla T4, 15360 MiB"],
+  "memory": [
+    "Mem:              31           1          26           0           4          30"
+  ],
+  "disk": ["/dev/loop2       20G  508K   20G   1% /kaggle/working"],
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "firstFrameSize": [704, 480],
+  "loadSeconds": 290.4,
+  "decodingAfterSeconds": 405.0,
+  "generateSeconds": 742.3,
+  "peakHostBytes": 25716232192,
+  "peakGpuBytes": 13619549184,
+  "sha256": "2eaa30e69832dd0c9ef87dd8a72da3a7716e5d2ff36bc11a00cd443ae31ca7d8",
+  "bytes": 785334,
+  "decodedFrames": 81,
+  "decodedSize": [704, 480],
+  "spatialStd": 80.54,
+  "temporalDiff": 21.103
+}

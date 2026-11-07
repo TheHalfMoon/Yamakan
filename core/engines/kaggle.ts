@@ -30,7 +30,7 @@ import {
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
-import { cleanImage } from "./clean-image.ts";
+import { cleanImage, imageWithin } from "./clean-image.ts";
 
 export type KaggleRecipe = {
   id: string;
@@ -78,7 +78,8 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
   },
   {
     // Its own script and notebook, so that nothing here touches the text script's bytes.
-    // Its time is the text run's, for now: this has not been run for real.
+    // Its time is the text run's, since the page has one entry for this model. Its real runs
+    // took about 1,150 seconds: see docs/evidence/ultimate/first-ai-video.md.
     id: "kaggle-wan22-ti2v-5b-first-frame",
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
@@ -125,9 +126,24 @@ const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
 const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
-// A first frame travels inside the script. What Kaggle accepts in one is not known, so this
-// is a guess kept small, for a real run to test.
+// The most of a person's picture this will read. What goes is made anew from it, to fit below.
 export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
+// The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
+// a bare 400. Kept to what was seen: nothing says the limit is any higher.
+export const SCRIPT_BYTES = 1_000_000;
+// The image is base64 inside a brief that is base64: each four bytes hold three, twice. The 16 is
+// what padding can add. Past this, a picture cannot go in a script this long.
+export const imageRoom = (scriptBytes: number) =>
+  Math.floor(((SCRIPT_BYTES - scriptBytes - 16) * 9) / 16);
+// A virus scanner can hold a file for a moment, and these can hold a person's picture.
+const HELD_FOR_A_MOMENT = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 200,
+};
+const TOO_MUCH_TO_SEND =
+  "This run's prompt and image together are more than Kaggle accepts, so nothing was sent.";
 
 const sha256 = (data: string | Uint8Array) =>
   createHash("sha256").update(data).digest("hex");
@@ -257,6 +273,11 @@ const REFUSED_PUSH =
 const wasRefused = (message: string) =>
   !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
+// What it said of the empty notebook a refused first push left, on 2026-11-07. Its list does not
+// hold that one either, so that list cannot prove a notebook is absent: this is only taken for
+// new when it is this question that had no answer, and it is asked whether that is private.
+const EMPTY_NOTEBOOK =
+  /\b404 Client Error: Not Found for url: \S*GetKernelSessionStatus\b/;
 // How long an earlier run may still answer for this one, just after a push.
 const PUSH_SETTLE_MS = 3 * 60 * 1000;
 // The longest a start can take to reach Kaggle, from when it was recorded: two questions,
@@ -541,7 +562,7 @@ export function createKaggleEngine(options: {
     if (sendingNow.has(run.runId)) return;
     await Promise.all(
       ["push", "pulled", "clean"].map((name) =>
-        rm(path.join(run.folder, name), { recursive: true, force: true }),
+        rm(path.join(run.folder, name), HELD_FOR_A_MOMENT),
       ),
     ).catch(() => {});
   };
@@ -799,9 +820,9 @@ export function createKaggleEngine(options: {
 
   // Kaggle's own answer on a notebook's privacy, not what was asked of it. A pull
   // brings the script too, with its prompt, so nothing of it stays.
-  async function reportedPrivate(recipe: KaggleRecipe, folder: string) {
+  async function privacyOf(recipe: KaggleRecipe, folder: string) {
     const pulled = path.join(folder, "pulled");
-    await mkdir(pulled);
+    await mkdir(pulled, { recursive: true });
     try {
       await cli(
         ["kernels", "pull", remote(recipe), "-p", pulled, "-m"],
@@ -810,11 +831,13 @@ export function createKaggleEngine(options: {
       const metadata = JSON.parse(
         await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
       );
-      return metadata.is_private === true;
+      return metadata.is_private as unknown;
     } finally {
-      await rm(pulled, { recursive: true, force: true });
+      await rm(pulled, HELD_FOR_A_MOMENT);
     }
   }
+  const reportedPrivate = async (recipe: KaggleRecipe, folder: string) =>
+    (await privacyOf(recipe, folder)) === true;
   const listed = async (recipe: KaggleRecipe) => {
     const { stdout } = await cli(
       [
@@ -873,11 +896,20 @@ export function createKaggleEngine(options: {
     } catch (e) {
       // The CLI says this of any refusal, so it means new only when the account's own
       // list, which needs working credentials, does not hold it.
+      const { message } = e as Error;
+      const empty = EMPTY_NOTEBOOK.test(message);
       if (
-        NO_SUCH_NOTEBOOK.test((e as Error).message) &&
+        (empty || NO_SUCH_NOTEBOOK.test(message)) &&
         (await listed(recipe).catch(() => true)) === false
-      )
+      ) {
+        // An empty one may have nothing to answer with, and that is not a no: only a no is.
+        if (
+          empty &&
+          (await privacyOf(recipe, folder).catch(() => undefined)) === false
+        )
+          throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
         return;
+      }
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         diagnostic(
@@ -909,6 +941,7 @@ export function createKaggleEngine(options: {
     context: EngineContextV2,
     recipe: KaggleRecipe,
     folder: string,
+    maxBytes: number,
   ) {
     const parts: Uint8Array[] = [];
     let bytes = 0;
@@ -928,17 +961,21 @@ export function createKaggleEngine(options: {
         "That image is not the version this run was started with.",
       );
     // The founder chose that a photo's metadata does not go, so what goes is made anew.
-    let clean: Buffer;
     try {
-      clean = await cleanImage(image, asset.mediaType, recipe, folder);
+      const { data, mediaType } = await imageWithin(
+        await cleanImage(image, asset.mediaType, recipe, folder),
+        maxBytes,
+        folder,
+        TOO_MUCH_TO_SEND,
+      );
+      return {
+        data: data.toString("base64"),
+        mediaType,
+        sha256: sha256(data),
+      };
     } catch (e) {
       throw new CommandError("VALIDATION", (e as Error).message);
     }
-    return {
-      data: clean.toString("base64"),
-      mediaType: "image/png",
-      sha256: sha256(clean),
-    };
   }
 
   return {
@@ -996,24 +1033,45 @@ export function createKaggleEngine(options: {
         const runId = request.attemptKey;
         const push = path.join(folder, "push");
         await mkdir(push);
-        // Read last: opening it is where consent is checked, so that answer is this moment's.
+        const script = await scriptFor(recipe);
+        const brief = {
+          prompt: request.prompt,
+          seed: request.seed ?? 42,
+          runId,
+        };
+        const room = imageRoom(
+          Buffer.byteLength(
+            scriptWithBrief(script, {
+              ...brief,
+              firstFrame: {
+                data: "",
+                mediaType: "image/jpeg",
+                sha256: "0".repeat(64),
+              },
+            }),
+          ),
+        );
+        if (frame && room <= 0)
+          throw new CommandError("VALIDATION", TOO_MUCH_TO_SEND);
+        // Opening it is where consent is checked. Preparing it can take minutes, so it is opened
+        // again below, and that is the answer this goes on.
         const firstFrame = frame
           ? await readFirstFrame(
               frame.asset,
               context,
               recipe,
               path.join(folder, "clean"),
+              room,
             )
           : null;
-        await writeFile(
-          path.join(push, "run.py"),
-          scriptWithBrief(await scriptFor(recipe), {
-            prompt: request.prompt,
-            seed: request.seed ?? 42,
-            runId,
-            ...(firstFrame ? { firstFrame } : {}),
-          }),
-        );
+        const sendable = scriptWithBrief(script, {
+          ...brief,
+          ...(firstFrame ? { firstFrame } : {}),
+        });
+        if (Buffer.byteLength(sendable) > SCRIPT_BYTES)
+          throw new CommandError("VALIDATION", TOO_MUCH_TO_SEND);
+        if (frame) for await (const _ of context.openAsset(frame.asset)) break;
+        await writeFile(path.join(push, "run.py"), sendable);
         await writeFile(
           path.join(push, "kernel-metadata.json"),
           JSON.stringify({
@@ -1042,7 +1100,7 @@ export function createKaggleEngine(options: {
           );
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
-        await rm(push, { recursive: true, force: true }).catch(() => {});
+        await rm(push, HELD_FOR_A_MOMENT).catch(() => {});
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
         // It has gone and it is running, whatever this says: so this warns, it does
@@ -1064,10 +1122,9 @@ export function createKaggleEngine(options: {
         // replace it. It is followed like any other, and said to be uncertain.
         if (sending && !sent && !wasRefused((e as Error).message)) {
           if (folder)
-            await rm(path.join(folder, "push"), {
-              recursive: true,
-              force: true,
-            }).catch(() => {});
+            await rm(path.join(folder, "push"), HELD_FOR_A_MOMENT).catch(
+              () => {},
+            );
           runs.set(request.attemptKey, {
             recipe,
             runId: request.attemptKey,
@@ -1085,8 +1142,7 @@ export function createKaggleEngine(options: {
               .join(" "),
           };
         }
-        if (folder)
-          await rm(folder, { recursive: true, force: true }).catch(() => {});
+        if (folder) await rm(folder, HELD_FOR_A_MOMENT).catch(() => {});
         if (e instanceof CommandError) throw e;
         throw new CommandError(
           "CAPABILITY_UNAVAILABLE",
