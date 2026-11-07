@@ -108,11 +108,14 @@ The earlier paper-boat clip, at 41 frames, had a smaller jump between frames 25 
 
 The script now writes as it goes: the stage, including when decoding begins, the lowest free memory and the stage it happened at, the highest resident memory, and where the host offers them, the container's peak and its count of out-of-memory kills. A kill should leave all of this, as of its last save, in the receipt on its notebook, until a later run replaces it. No real kill has shown that. The page reports the stage, the lowest free memory and the stage it was lowest in. Only two saves can stop a run, on purpose: the first, before any GPU time is spent, and the last, since a video with no receipt cannot be trusted. The container's count of kills is read before the run's own kill, so it says nothing of that kill, and the page leaves it out. A kill itself is tested with a stand-in for the GPU libraries only, in `tests/kaggle-run-script.test.ts`. No real run has been killed with this in place. The real test now also fails if the kite video is not the same bytes as before, `8c4fe902...`.
 
-**The first real run that wrote these figures,** at `48495f7` on 2026-11-07, finished with the same bytes, so writing them did not change the video. Its receipt is `kaggle-restart-run-notebook-receipt.json`, from 218 samples:
+**Two real runs have written these figures,** on 2026-11-07, both with the service restarted partway. Both made the same bytes, so writing them did not change the video, and neither was killed. The second also recorded each stage, in `kaggle-restart-run-notebook-receipt.json`:
 
-- Highest resident memory: 26,464,870,400 bytes (about 24.65 GiB), **while loading**. The peak read at the end agrees: 26,500,964,352 bytes.
-- Lowest free memory: 9,023,799,296 bytes (about 8.4 GiB) of 33,658,159,104, also **while loading**.
-- Container peak: 31,394,344,960 bytes (about 29.24 GiB). This may count file cache that could have been given back, so it is not the memory the run needed.
-- Container out-of-memory kills: 0.
+| Stage      | Highest resident memory | Lowest free memory |
+| ---------- | ----------------------- | ------------------ |
+| Loading    | 24.2 GiB                | 7.06 GiB           |
+| Generating | 7.49 GiB                | 23.62 GiB          |
+| Decoding   | 17.71 GiB               | 12.79 GiB          |
 
-So in this good run, loading was the hardest moment for memory, and decoding never went past it at any sample. That is one good run, sampled every few seconds, so a short spike between samples would not show. The killed run came before the text encoder was freed, so its memory while decoding may have been quite different. **Why that run was killed is still not known, and the problem is still not shown to be solved.**
+Of 31.35 GiB, from 224 samples 5 seconds apart. The first run, at `48495f7`, had 8.4 GiB free at its lowest and 24.65 GiB resident at its highest, both while loading. In the second, the container's peak was 31,484,661,760 bytes (about 29.3 GiB), which may count file cache that could have been given back, and its out-of-memory kills were 0. Decoding began 387.8 seconds into the 738.7 seconds of generating.
+
+What this shows: loading is the hardest moment overall, and decoding adds about 10 GiB over generating, for about six minutes. What it suggests, and does not show: the killed run came before the text encoder was freed, and that is about 10 GB. Holding it through decoding would have left about 3 GiB free at the sampled peak, before any spike between samples. That fits a kill while decoding. It is an inference from good runs, not a measurement of the killed one. **Why that run was killed is still not known, and the problem is still not shown to be solved.**

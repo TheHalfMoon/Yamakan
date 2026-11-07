@@ -1,64 +1,64 @@
 {
   "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
   "restarted": true,
-  "generationId": "af370d3c-1c08-4610-b6a3-31d6c169dec4",
+  "generationId": "fe025688-9f65-49f2-93a7-9d201b583efc",
   "task": "generation-from-yamakan-on-kaggle",
   "prompt": "A red kite flies above a green hill under a clear blue sky.",
   "seed": 7,
-  "head": "48495f7dfa2f736d36a4fc789a7f3bbf9b3eaa03",
+  "head": "e2938b3f2de6dd325949bc8c16d1e31b3751b9af",
   "dirty": false,
   "passed": true,
   "failure": null,
   "steps": [
     {
       "name": "the agreement is readable in its place",
-      "at": "2026-11-07T03:47:16.708Z"
+      "at": "2026-11-07T04:39:54.014Z"
     },
     {
       "name": "started from the page, after agreeing the prompt leaves this computer",
-      "at": "2026-11-07T03:47:31.038Z"
+      "at": "2026-11-07T04:40:12.616Z"
     },
     {
       "name": "Kaggle says queued",
-      "afterSeconds": 0.009,
-      "at": "2026-11-07T03:47:31.409Z"
+      "afterSeconds": 0.014,
+      "at": "2026-11-07T04:40:12.870Z"
     },
     {
       "name": "Kaggle says running",
-      "afterSeconds": 10.045,
-      "at": "2026-11-07T03:47:41.444Z"
+      "afterSeconds": 10.024,
+      "at": "2026-11-07T04:40:22.880Z"
     },
     {
       "name": "the service is killed while the run is on Kaggle",
-      "generationId": "af370d3c-1c08-4610-b6a3-31d6c169dec4",
-      "at": "2026-11-07T03:47:41.900Z"
+      "generationId": "fe025688-9f65-49f2-93a7-9d201b583efc",
+      "at": "2026-11-07T04:40:23.178Z"
     },
     {
       "name": "after the restart the page has the same run, and is following it",
-      "at": "2026-11-07T03:47:45.632Z"
+      "at": "2026-11-07T04:40:25.492Z"
     },
     {
       "name": "Kaggle says succeeded",
-      "afterSeconds": 1127.738,
-      "at": "2026-11-07T04:06:19.139Z"
+      "afterSeconds": 1184.581,
+      "at": "2026-11-07T04:59:57.439Z"
     },
     {
       "name": "the run finished, and its video passed its receipt",
-      "seconds": 1128.119,
-      "at": "2026-11-07T04:06:19.520Z"
+      "seconds": 1184.883,
+      "at": "2026-11-07T04:59:57.739Z"
     },
     {
       "name": "it came into the project, with this prompt and seed",
-      "at": "2026-11-07T04:06:23.646Z"
+      "at": "2026-11-07T05:00:01.283Z"
     },
     {
       "name": "its record stays with the project, with this browser's storage cleared",
-      "at": "2026-11-07T04:06:25.368Z"
+      "at": "2026-11-07T05:00:02.518Z"
     },
     {
       "name": "placed whole on the Edit timeline",
       "frames": 101,
-      "at": "2026-11-07T04:06:28.299Z"
+      "at": "2026-11-07T05:00:05.478Z"
     },
     {
       "name": "exported from the toolbar, every frame",
@@ -67,11 +67,11 @@
       "frames": 101,
       "assetHash": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
       "exportHash": "456b72a18fb390948a9824d451569c755d7f185eb68aaee5e7a6d8d6ae440b8a",
-      "at": "2026-11-07T04:06:31.145Z"
+      "at": "2026-11-07T05:00:08.507Z"
     },
     {
       "name": "no page errors",
-      "at": "2026-11-07T04:06:31.151Z"
+      "at": "2026-11-07T05:00:08.517Z"
     }
   ]
 }

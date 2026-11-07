@@ -1,6 +1,6 @@
 {
   "format": "yamakan.generation-receipt/v1",
-  "runId": "af370d3c-1c08-4610-b6a3-31d6c169dec4",
+  "runId": "fe025688-9f65-49f2-93a7-9d201b583efc",
   "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
   "revision": "b8fff7315c768468a5333511427288870b2e9635",
   "license": "apache-2.0",
@@ -23,13 +23,35 @@
   "verified": true,
   "stage": "done",
   "hostMemory": {
-    "samples": 218,
-    "lowestAvailableBytes": 9023799296,
+    "samples": 224,
+    "byStage": {
+      "start": {
+        "lowestAvailableBytes": 32380858368,
+        "highestRssBytes": 21110784
+      },
+      "installed": {
+        "lowestAvailableBytes": 31664082944,
+        "highestRssBytes": 1525420032
+      },
+      "loading": {
+        "lowestAvailableBytes": 7579656192,
+        "highestRssBytes": 25989595136
+      },
+      "generating": {
+        "lowestAvailableBytes": 25361752064,
+        "highestRssBytes": 8047419392
+      },
+      "decoding": {
+        "lowestAvailableBytes": 13735133184,
+        "highestRssBytes": 19012259840
+      }
+    },
+    "lowestAvailableBytes": 7579656192,
     "stageAtLowest": "loading",
-    "highestRssBytes": 26464870400,
+    "highestRssBytes": 25989595136,
     "stageAtHighest": "loading",
     "totalBytes": 33658159104,
-    "cgroupPeakBytes": 31394344960,
+    "cgroupPeakBytes": 31484661760,
     "cgroupOomKills": 0
   },
   "gpus": ["Tesla T4, 15360 MiB", "Tesla T4, 15360 MiB"],
@@ -39,9 +61,10 @@
   "disk": ["/dev/loop2       20G  124K   20G   1% /kaggle/working"],
   "python": "3.13.16",
   "torch": "2.11.0+cu130",
-  "loadSeconds": 291.3,
-  "generateSeconds": 738.5,
-  "peakHostBytes": 26500964352,
+  "loadSeconds": 290.6,
+  "decodingAfterSeconds": 387.8,
+  "generateSeconds": 738.7,
+  "peakHostBytes": 26225455104,
   "peakGpuBytes": 13619549184,
   "sha256": "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c",
   "bytes": 67660,
