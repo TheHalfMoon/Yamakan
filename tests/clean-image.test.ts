@@ -466,6 +466,33 @@ test("a JPEG with anything but a picture in it is not taken for one", async () =
       seg(0xc4, Buffer.alloc(5000, 0x41)),
     ),
     "a frame holding words": afterStart(seg(0xc0, words)),
+    "an empty Huffman segment": afterStart(seg(0xc4, Buffer.alloc(0))),
+    // A well-formed Huffman table beside the real ones, whose values spell words.
+    "an extra Huffman table": afterStart(
+      seg(
+        0xc4,
+        Buffer.concat([
+          Buffer.from([0x00, words.length, ...Array(15).fill(0)]),
+          words,
+        ]),
+      ),
+    ),
+    "words in the frame's header": (() => {
+      const j = Buffer.from(real);
+      const at = j.indexOf(Buffer.from([0xff, 0xc0]));
+      j.write("My Phone", at + 10, "latin1");
+      return j;
+    })(),
+    "words in the scan's header": (() => {
+      const j = Buffer.from(real);
+      const at = j.indexOf(Buffer.from([0xff, 0xda]));
+      j.write("My Phone", at + 4, "latin1");
+      return j;
+    })(),
+    "two frames": (() => {
+      const at = real.indexOf(Buffer.from([0xff, 0xc0]));
+      return afterStart(real.subarray(at, at + 19));
+    })(),
     "not a JPEG": Buffer.from("words"),
     nothing: Buffer.alloc(0),
   }))

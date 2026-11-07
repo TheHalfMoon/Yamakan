@@ -291,7 +291,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - Low, from the last review of PR #209, with no asset or video lost: a stop from a stale tab during an import can leave the job row cancelled while the run is listed as imported; a finished or imported run stopped from a stale tab can read as possibly still running on the page; one test's "asks nothing" assertions would pass without the check they name.
 - A person's new start can replace an uncollected result, with no warning, in three cases: the local copy of its video has gone, from a restored copy, and from another workspace on the same account.
 - Preparing a picture can take up to about six minutes, which the time allowed for a send does not count: after a crash during a late push, a run found again could read as not Kaggle's latest. Low, and to fix before image-to-video is offered.
-- An empty notebook is told from a missing one by the status question's 404 and the account's list. If a live notebook ever got both, it would take a new run: never seen, and no second question is asked.
+- An empty notebook is told from a missing one by the status question's 404 and the account's list. If a live notebook ever got both, it would take a new run: never seen, and its status is not asked a second time.
 - If a Kaggle CLI never returned, that model could not start again until Yamakan was restarted, and nothing would say so. Whether a timed-out CLI really stops on Windows is assumed.
 - The page's Stop following and failure screens, and finding a run after a start's answer is lost, have run in a browser only with a stand-in CLI, `npm run qualify:kaggle-screens`, which is not in CI.
 - `create.runFailed` and `create.runCancelled` changed in Arabic: X-01 covers them too.

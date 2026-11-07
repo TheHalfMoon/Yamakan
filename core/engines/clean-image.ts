@@ -51,9 +51,15 @@ function pngOf(rgb: Buffer, width: number, height: number) {
 // What FFmpeg's encoder writes here, in the shapes it writes them, and nothing else: no comment, no
 // camera's segment, no colour profile, no second picture, nothing after the end. FFmpeg writes this
 // from a PNG with nothing beside its pixels, and this checks that it did, as a colour profile once
-// came through it unasked. A table's values and the scan's bytes are the picture's own, and this
-// cannot tell what those say: there is no place here for anything else, which is all it shows.
+// came through it unasked. The headers' bytes are fixed. A table's values and the scan's bytes are
+// the picture's own, and this cannot tell what those say: a forged file could hide words in them.
+// It shows only what FFmpeg was given no way to put here, and a segment it should not have written.
 const JFIF = ["4a46494600010100000100010000", "4a46494600010200000100010000"];
+// Three components: 4:2:0, with one of the two sets of tables each.
+const FRAME_COMPONENTS = /^01220002110[01]03110[01]$/;
+const SCAN_HEADER = /^0301(?:00|11)02(?:00|11)03(?:00|11)003f00$/;
+// Each of the four Huffman tables at most once: the two kinds, for the two sets.
+const HUFFMAN_TABLES = new Set([0x00, 0x01, 0x10, 0x11]);
 export function jpegHoldsOnlyAPicture(
   jpeg: Uint8Array,
   size: { width: number; height: number },
@@ -61,6 +67,7 @@ export function jpegHoldsOnlyAPicture(
   const b = Buffer.from(jpeg);
   if (b.length < 4 || b.readUInt16BE(0) !== 0xffd8) return false;
   let framed = false;
+  const huffman = new Set<number>();
   for (let at = 2; at + 4 <= b.length;) {
     if (b[at] !== 0xff) return false;
     const marker = b[at + 1];
@@ -78,6 +85,7 @@ export function jpegHoldsOnlyAPicture(
       // The one frame: eight bits, this size, three components.
       if (framed || length !== 17 || b[at + 4] !== 8 || b[at + 9] !== 3)
         return false;
+      if (!FRAME_COMPONENTS.test(b.toString("hex", at + 10, end))) return false;
       if (
         b.readUInt16BE(at + 5) !== size.height ||
         b.readUInt16BE(at + 7) !== size.width
@@ -86,9 +94,12 @@ export function jpegHoldsOnlyAPicture(
       framed = true;
     } else if (marker === 0xc4) {
       // Huffman: each table says how long it is, and they must fill the segment exactly.
+      if (length === 2) return false;
       let t = at + 4;
       while (t < end) {
         if (t + 17 > end) return false;
+        if (!HUFFMAN_TABLES.has(b[t]) || huffman.has(b[t])) return false;
+        huffman.add(b[t]);
         let codes = 0;
         for (let i = 1; i <= 16; i++) codes += b[t + i];
         t += 17 + codes;
@@ -97,6 +108,7 @@ export function jpegHoldsOnlyAPicture(
     } else if (marker === 0xda) {
       // The one scan, then its bytes to the end. Encoded bytes never hold a marker.
       if (!framed || length !== 12) return false;
+      if (!SCAN_HEADER.test(b.toString("hex", at + 4, end))) return false;
       const last = b.length - 2;
       if (end > last || b.readUInt16BE(last) !== 0xffd9) return false;
       for (let t = end; t < last; t++)

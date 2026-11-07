@@ -78,8 +78,8 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
   },
   {
     // Its own script and notebook, so that nothing here touches the text script's bytes.
-    // Its time is the text run's, since the page has one entry for this model. Its one real
-    // run took about 1,160 seconds: see docs/evidence/ultimate/first-ai-video.md.
+    // Its time is the text run's, since the page has one entry for this model. Its real runs
+    // took about 1,150 seconds: see docs/evidence/ultimate/first-ai-video.md.
     id: "kaggle-wan22-ti2v-5b-first-frame",
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
@@ -135,6 +135,13 @@ export const SCRIPT_BYTES = 1_000_000;
 // what padding can add. Past this, a picture cannot go in a script this long.
 export const imageRoom = (scriptBytes: number) =>
   Math.floor(((SCRIPT_BYTES - scriptBytes - 16) * 9) / 16);
+// A virus scanner can hold a file for a moment, and these can hold a person's picture.
+const HELD_FOR_A_MOMENT = {
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 200,
+};
 const TOO_MUCH_TO_SEND =
   "This run's prompt and image together are more than Kaggle accepts, so nothing was sent.";
 
@@ -555,7 +562,7 @@ export function createKaggleEngine(options: {
     if (sendingNow.has(run.runId)) return;
     await Promise.all(
       ["push", "pulled", "clean"].map((name) =>
-        rm(path.join(run.folder, name), { recursive: true, force: true }),
+        rm(path.join(run.folder, name), HELD_FOR_A_MOMENT),
       ),
     ).catch(() => {});
   };
@@ -813,9 +820,9 @@ export function createKaggleEngine(options: {
 
   // Kaggle's own answer on a notebook's privacy, not what was asked of it. A pull
   // brings the script too, with its prompt, so nothing of it stays.
-  async function reportedPrivate(recipe: KaggleRecipe, folder: string) {
+  async function privacyOf(recipe: KaggleRecipe, folder: string) {
     const pulled = path.join(folder, "pulled");
-    await mkdir(pulled);
+    await mkdir(pulled, { recursive: true });
     try {
       await cli(
         ["kernels", "pull", remote(recipe), "-p", pulled, "-m"],
@@ -824,11 +831,13 @@ export function createKaggleEngine(options: {
       const metadata = JSON.parse(
         await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
       );
-      return metadata.is_private === true;
+      return metadata.is_private as unknown;
     } finally {
-      await rm(pulled, { recursive: true, force: true });
+      await rm(pulled, HELD_FOR_A_MOMENT);
     }
   }
+  const reportedPrivate = async (recipe: KaggleRecipe, folder: string) =>
+    (await privacyOf(recipe, folder)) === true;
   const listed = async (recipe: KaggleRecipe) => {
     const { stdout } = await cli(
       [
@@ -893,10 +902,10 @@ export function createKaggleEngine(options: {
         (empty || NO_SUCH_NOTEBOOK.test(message)) &&
         (await listed(recipe).catch(() => true)) === false
       ) {
-        // An empty one may have nothing to answer with, and that is not a no.
+        // An empty one may have nothing to answer with, and that is not a no: only a no is.
         if (
           empty &&
-          (await reportedPrivate(recipe, folder).catch(() => true)) === false
+          (await privacyOf(recipe, folder).catch(() => undefined)) === false
         )
           throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
         return;
@@ -1091,12 +1100,7 @@ export function createKaggleEngine(options: {
           );
         sent = true;
         // It has gone: from here a problem is this run's, reported by this run.
-        await rm(push, {
-          recursive: true,
-          force: true,
-          maxRetries: 5,
-          retryDelay: 200,
-        }).catch(() => {});
+        await rm(push, HELD_FOR_A_MOMENT).catch(() => {});
         const run: Run = { recipe, runId, startedAt: now(), folder };
         runs.set(runId, run);
         // It has gone and it is running, whatever this says: so this warns, it does
@@ -1118,10 +1122,9 @@ export function createKaggleEngine(options: {
         // replace it. It is followed like any other, and said to be uncertain.
         if (sending && !sent && !wasRefused((e as Error).message)) {
           if (folder)
-            await rm(path.join(folder, "push"), {
-              recursive: true,
-              force: true,
-            }).catch(() => {});
+            await rm(path.join(folder, "push"), HELD_FOR_A_MOMENT).catch(
+              () => {},
+            );
           runs.set(request.attemptKey, {
             recipe,
             runId: request.attemptKey,
@@ -1139,13 +1142,7 @@ export function createKaggleEngine(options: {
               .join(" "),
           };
         }
-        if (folder)
-          await rm(folder, {
-            recursive: true,
-            force: true,
-            maxRetries: 5,
-            retryDelay: 200,
-          }).catch(() => {});
+        if (folder) await rm(folder, HELD_FOR_A_MOMENT).catch(() => {});
         if (e instanceof CommandError) throw e;
         throw new CommandError(
           "CAPABILITY_UNAVAILABLE",

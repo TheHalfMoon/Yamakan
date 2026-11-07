@@ -468,19 +468,30 @@ test("a picture's room is what a script can carry, by the byte", () => {
 test("consent is asked again at the moment of sending, after the picture is prepared", async () => {
   const f = await fixture();
   let opened = 0;
+  let read = false;
+  let readBeforeAsked = false;
   await assert.rejects(
     f.adapter.submit(
       adapterRequest(f, [{ role: "firstFrame", asset: noisyRef() }]),
       {
         openAsset: () => {
-          if (++opened > 1) throw new Error("consent was revoked just now");
-          return Readable.from([NOISY]);
+          if (++opened > 1) {
+            readBeforeAsked = read;
+            throw new Error("consent was revoked just now");
+          }
+          return Readable.from(
+            (function* () {
+              yield NOISY;
+              read = true;
+            })(),
+          );
         },
       } as never,
     ),
     /consent was revoked just now/,
   );
   assert.equal(opened, 2);
+  assert.ok(readBeforeAsked, "after it was read, not before");
   assert.equal(f.pushes.length, 0);
   await f.close();
 });

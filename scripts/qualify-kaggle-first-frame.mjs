@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RESOURCE_POLICY_HASH } from "../core/command/registry.ts";
+import { diagnostic } from "../core/engines/contract-v2.ts";
 import { createGenerationService } from "../core/engines/generation.ts";
 import {
   KAGGLE_RECIPES,
@@ -212,24 +213,26 @@ try {
   passed = true;
 } catch (e) {
   // This receipt may be committed, and a CLI's error can hold an address naming the account.
-  failure = String(e?.message ?? e)
-    .replace(/https?:\S+/g, "[url]")
-    .slice(0, 1000);
+  failure = diagnostic(String(e?.message ?? e)) ?? "It failed.";
   console.error(failure);
 } finally {
   // Whatever happens here, the receipt below must still be written.
-  try {
-    await queue?.close();
-    await store?.close();
-  } catch (e) {
-    console.error(`Could not close: ${e?.message}`);
-  }
-  rmSync(root, {
-    recursive: true,
-    force: true,
-    maxRetries: 5,
-    retryDelay: 200,
-  });
+  for (const close of [
+    () => queue?.close(),
+    () => store?.close(),
+    () =>
+      rmSync(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      }),
+  ])
+    try {
+      await close();
+    } catch (e) {
+      console.error(`Could not tidy up: ${e?.name}`);
+    }
   writeFileSync(
     join(out, "receipt.json"),
     `${JSON.stringify({ task: "first-frame-from-yamakan-on-kaggle", recipe: recipe.id, generationId, prompt: PROMPT, seed: SEED, head, dirty: changes !== "", passed, failure, steps }, null, 2)}\n`,

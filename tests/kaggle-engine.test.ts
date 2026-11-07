@@ -920,6 +920,8 @@ test("the empty notebook a refused first push leaves does not lock the model out
   const absent = () => "Not found\n";
   assert.equal(await send(absent), 1);
   assert.equal(await send(absent, () => ({ is_private: true })), 1);
+  // What an empty one has to say may lack an answer, and that is not a no.
+  assert.equal(await send(absent, () => ({})), 1);
   // Not new, whatever a status says, when the account does hold it.
   await assert.rejects(
     send(() => `ref,title\nsomeone/${wan.slug},t\n`),
