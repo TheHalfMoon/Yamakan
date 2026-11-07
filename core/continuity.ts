@@ -325,7 +325,23 @@ export function assertLinkedMediaNotRevoked(
   db: DatabaseSync,
   hashes: readonly string[],
 ) {
-  if (!hashes.length) return;
+  for (const newest of newestLinkedConsents(db, hashes)) {
+    if (newest.revokedAt !== null)
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+      );
+    if (!consentInCurrentEpoch(db, newest.id))
+      throw new CommandError(
+        "VALIDATION",
+        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
+      );
+  }
+}
+
+function newestLinkedConsents(db: DatabaseSync, hashes: readonly string[]) {
+  const found: { id: string; revokedAt: number | null }[] = [];
+  if (!hashes.length) return found;
   const linked = new Map<string, Set<string>>();
   const versions = db
     .prepare(
@@ -360,17 +376,29 @@ export function assertLinkedMediaNotRevoked(
         ? b
         : a,
     );
-    if (newest.row!.revoked_at !== null)
-      throw new CommandError(
-        "VALIDATION",
-        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
-      );
-    if (!consentInCurrentEpoch(db, newest.id))
-      throw new CommandError(
-        "VALIDATION",
-        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
-      );
+    found.push({ id: newest.id, revokedAt: newest.row!.revoked_at });
   }
+  return found;
+}
+
+/**
+ * Media whose person's consent was revoked is not kept again as a place, prop or the like.
+ * See the agent decision record. An entry with its own consent is checked by that consent, so
+ * a person who grants a new one can link their own image again. Only a revocation counts: a
+ * restore asks for revalidation before media is used, and keeping it is not using it.
+ */
+export function assertMayKeepWithoutConsent(
+  db: DatabaseSync,
+  pack: { entries: readonly { assetHash: string; consentId: string | null }[] },
+) {
+  const kept = pack.entries
+    .filter((e) => e.consentId === null)
+    .map((e) => e.assetHash);
+  if (newestLinkedConsents(db, kept).some((c) => c.revokedAt !== null))
+    throw new CommandError(
+      "VALIDATION",
+      "An image here is one whose person's consent was revoked, so this cannot be saved. Keep other images as a new element instead.",
+    );
 }
 
 /**

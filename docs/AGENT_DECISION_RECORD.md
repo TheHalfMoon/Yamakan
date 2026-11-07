@@ -2,6 +2,17 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-11-07: revoked media, and an unlinked photo of a person
+
+- **Authority:** the founder's "from now chose the best, you have my approval" ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).
+- **Decision (revoked media):** media whose person's consent was revoked is not kept again as a place, prop, wardrobe, style or made-up character. Consent was withdrawn, and keeping it serves no one but the keeper.
+  - An entry with its own consent is checked by that consent, so a person who consents again can link their image again.
+  - Only a revocation counts. After a restore, media nobody revoked can still be kept: revalidation is asked for before media is used, and keeping it is not using it.
+  - What was kept before the revocation stays shown, and placing and generating from it stay refused. An element holding such an image cannot be saved again, so a new element is the way on.
+  - This goes by the same bytes, so another copy is not recognised.
+- **Decision (unlinked photo of a person):** nothing here can recognise who a picture shows, so a check would only pretend. Before image sending is offered, each run must have a person tick a statement that the image shows no real person unless their consent is recorded. Nothing changes today, since sending is not offered.
+- **Change rule:** the founder can overturn either, and a new entry here records it.
+
 ## 2026-10-28: resource policy v3, segmented export (YU-026c)
 
 - **Authority:** the founder's autonomous-execution directive for the ultimate master plan ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-10-25-ultimate-master-plan-autonomous-execution)). The user's instruction was to "review the proposed timeline-scaled render timeout and stacked-layer limit before implementation".
