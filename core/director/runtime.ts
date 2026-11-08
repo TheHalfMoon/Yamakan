@@ -184,6 +184,35 @@ export function assertConsentUsable(
   return record;
 }
 
+function assertCovers(
+  db: DatabaseSync,
+  coveredId: string,
+  characterId: string,
+) {
+  const covered = consentRow(db, coveredId);
+  if (
+    !covered ||
+    covered.purpose !== "likeness-generate" ||
+    covered.character_id !== characterId ||
+    covered.revoked_at !== null ||
+    !revalidated(db, covered, epochOf(db))
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "Consent to send must cover an unrevoked consent to generate for the same character, revalidated after any restore.",
+    );
+}
+
+// What a consent to send covers, from a table a restored backup brought: one row, or none.
+function coverOf(db: DatabaseSync, consentId: string) {
+  const rows = db
+    .prepare(
+      "SELECT covers_consent_id AS covered FROM send_consent_covers WHERE consent_id = ?",
+    )
+    .all(consentId) as { covered: string }[];
+  return rows.length === 1 ? rows[0].covered : null;
+}
+
 export async function grantConsent(
   store: ProjectStore,
   input: {
@@ -193,12 +222,22 @@ export async function grantConsent(
     ttlMs: number;
     principalId: string;
     nowMs?: number;
+    // For consent to send only: the person's consent to generate it covers.
+    coversConsentId?: string;
   },
   receipt?: RequestReceipt,
-): Promise<ConsentRecord> {
+): Promise<ConsentRecord & { coversConsentId?: string }> {
   const now = input.nowMs ?? Date.now();
   if (input.ttlMs < 60_000 || input.ttlMs > 366 * 24 * 60 * 60 * 1000)
     throw new CommandError("VALIDATION", "Consent TTL out of range.");
+  const sending = input.purpose === "likeness-send";
+  if (sending !== (input.coversConsentId !== undefined))
+    throw new CommandError(
+      "VALIDATION",
+      sending
+        ? "Consent to send must name the person's consent to generate that it covers."
+        : "Only consent to send covers another consent.",
+    );
   const record = ConsentRecordSchema.parse({
     format: "yamakan.likeness-consent",
     formatVersion: 1,
@@ -213,6 +252,12 @@ export async function grantConsent(
   });
   return store.transaction((db) =>
     once(db, receipt, () => {
+      if (input.coversConsentId !== undefined) {
+        // Who it is about is that record, so it must be the same character's consent to
+        // generate, unrevoked and of this epoch. It may have expired: it still says who,
+        // and an image once linked to it needs it covered to be sent.
+        assertCovers(db, input.coversConsentId, input.characterId);
+      }
       db.prepare(
         "INSERT INTO likeness_consents(id, character_id, purpose, version, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       ).run(
@@ -225,7 +270,11 @@ export async function grantConsent(
         record.grantorPrincipalId,
         epochOf(db),
       );
-      return record;
+      if (input.coversConsentId === undefined) return record;
+      db.prepare(
+        "INSERT INTO send_consent_covers(consent_id, covers_consent_id) VALUES (?, ?)",
+      ).run(record.id, input.coversConsentId);
+      return { ...record, coversConsentId: input.coversConsentId };
     }),
   );
 }
@@ -264,7 +313,7 @@ export async function revalidateConsent(
   consentId: string,
   principalId: string,
   nowMs = Date.now(),
-): Promise<ConsentRecord> {
+): Promise<ConsentRecord & { coversConsentId?: string }> {
   return store.transaction((db) => {
     const row = consentRow(db, consentId);
     if (!row) throw new CommandError("NOT_FOUND", "Consent not found.");
@@ -273,10 +322,26 @@ export async function revalidateConsent(
         "VALIDATION",
         "A revoked consent cannot be revalidated.",
       );
+    // A restored consent to send is checked again for whom it covers, which that consent
+    // must itself have been revalidated to show, and the answer names it.
+    let coversConsentId: string | undefined;
+    if (row.purpose === "likeness-send") {
+      const covered = coverOf(db, consentId);
+      if (covered === null)
+        throw new CommandError(
+          "VALIDATION",
+          "This consent to send does not say whose consent to generate it covers.",
+        );
+      assertCovers(db, covered, row.character_id);
+      coversConsentId = covered;
+    }
     db.prepare(
       "INSERT INTO consent_revalidations(consent_id, epoch, revalidated_at, principal_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
     ).run(consentId, epochOf(db), nowMs, principalId);
-    return consentRecord(row);
+    const record = consentRecord(row);
+    return coversConsentId === undefined
+      ? record
+      : { ...record, coversConsentId };
   });
 }
 
