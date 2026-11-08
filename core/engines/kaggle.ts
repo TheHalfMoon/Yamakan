@@ -366,6 +366,17 @@ async function logSaysKilled(folder: string) {
 // What a finished run left cannot be read. Failing to fetch it is not this: that
 // can be tried again.
 class Unreadable extends Error {}
+
+// What a run's output may bring here, and nothing else. The Kaggle CLI joins each name Kaggle
+// lists onto the folder as it is, so a name holding `..\` or a drive would land wherever it
+// says: it is asked only for these, by exact name, and checks them before that join. Its log
+// is named from this notebook's own name, not Kaggle's. The check after it only sees what
+// landed in the folder: against a name that would escape it, the pattern is what protects.
+const regexWord = (text: string) => text.replace(/[\\^$.|?*+()[\]{}]/g, "\\$&");
+export const outputPattern = (r: KaggleRecipe) =>
+  `\\A(?:receipt\\.json|${regexWord(r.output)})\\Z`;
+const outputNames = (r: KaggleRecipe) =>
+  new Set(["receipt.json", r.output, `${r.slug}.log`]);
 // What came down is not what the run made: the CLI saves an error page as the file it
 // asked for, and exits as if all were well. Fetched again, but not on every poll.
 class Garbled extends Error {}
@@ -491,7 +502,18 @@ export function createKaggleEngine(options: {
   const download =
     options.download ??
     (async (r: KaggleRecipe, folder: string) => {
-      await cli(["kernels", "output", remote(r), "-p", folder], 5 * 60 * 1000);
+      await cli(
+        [
+          "kernels",
+          "output",
+          remote(r),
+          "-p",
+          folder,
+          "--file-pattern",
+          outputPattern(r),
+        ],
+        5 * 60 * 1000,
+      );
     });
   const remoteState = async (r: KaggleRecipe) => {
     const { stdout } = await cli(["kernels", "status", remote(r)], 90_000);
@@ -534,6 +556,11 @@ export function createKaggleEngine(options: {
     });
     const file = path.join(folder, "receipt.json");
     try {
+      // Anything else came from somewhere this did not ask, and is not read.
+      const expected = outputNames(run.recipe);
+      const found = await readdir(folder, { withFileTypes: true });
+      if (found.some((e) => !e.isFile() || !expected.has(e.name)))
+        throw new Unreadable("The run's output held files it should not.");
       if ((await stat(file)).size > RECEIPT_BYTES)
         throw new Unreadable("That receipt is too large to be one.");
       const receipt = JSON.parse(await readFile(file, "utf8"));
