@@ -298,7 +298,9 @@ async function fetchedBy(extra?: string) {
         asked = args;
         good(runId, args[4]);
         writeFileSync(path.join(args[4], `${wan.slug}.log`), "[]");
-        if (extra) writeFileSync(path.join(args[4], extra), "@echo off");
+        if (extra === "a folder")
+          mkdirSync(path.join(args[4], "receipt.json.d"));
+        else if (extra) writeFileSync(path.join(args[4], extra), "@echo off");
         return { stdout: "" };
       }
       throw new Error(`unexpected ${args}`);
@@ -322,9 +324,11 @@ test("a run's output is asked for by exact name, and anything else is not read",
   const { asked, answer } = await fetchedBy();
   assert.equal(answer.state, "succeeded", answer.diagnostic);
   assert.deepEqual(asked.slice(5), ["--file-pattern", outputPattern(wan)]);
-  const extra = await fetchedBy("x.cmd");
-  assert.equal(extra.answer.state, "failed");
-  assert.match(extra.answer.diagnostic!, /without a readable result/);
+  for (const stray of ["x.cmd", "a folder"]) {
+    const extra = await fetchedBy(stray);
+    assert.equal(extra.answer.state, "failed", stray);
+    assert.match(extra.answer.diagnostic!, /without a readable result/);
+  }
 });
 
 test(

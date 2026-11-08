@@ -370,7 +370,8 @@ class Unreadable extends Error {}
 // What a run's output may bring here, and nothing else. The Kaggle CLI joins each name Kaggle
 // lists onto the folder as it is, so a name holding `..\` or a drive would land wherever it
 // says: it is asked only for these, by exact name, and checks them before that join. Its log
-// is named from this notebook's own name, not Kaggle's.
+// is named from this notebook's own name, not Kaggle's. The check after it only sees what
+// landed in the folder: against a name that would escape it, the pattern is what protects.
 const regexWord = (text: string) => text.replace(/[\\^$.|?*+()[\]{}]/g, "\\$&");
 export const outputPattern = (r: KaggleRecipe) =>
   `\\A(?:receipt\\.json|${regexWord(r.output)})\\Z`;
