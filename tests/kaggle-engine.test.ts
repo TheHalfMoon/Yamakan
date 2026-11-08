@@ -587,16 +587,24 @@ test("a push Kaggle did not take is an error, and nothing is tracked", async () 
 });
 
 test("only a model with its own tested run from Yamakan is offered", async () => {
+  const all = [
+    "kaggle-wan22-ti2v-5b",
+    "kaggle-wan22-ti2v-5b-first-frame",
+    "kaggle-cogvideox-2b",
+  ];
   assert.deepEqual(
     offeredKaggleRecipes().map((r) => r.id),
-    ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"],
+    all,
   );
   assert.deepEqual(
     kaggleRecipes().map((r) => r.id),
-    ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"],
+    all,
   );
-  // Image-to-video has had real runs, but not the page work it needs first. This is the
-  // request it would take, so only its not being offered refuses it.
+  // Switched off here, the request it takes is refused for that alone.
+  const firstFrame = KAGGLE_RECIPES.find(
+    (r) => r.id === "kaggle-wan22-ti2v-5b-first-frame",
+  ) as { offered: boolean };
+  firstFrame.offered = false;
   const k = kaggle(["QUEUED"]);
   assert.deepEqual(
     await k.engine.submit(
@@ -618,6 +626,7 @@ test("only a model with its own tested run from Yamakan is offered", async () =>
     ),
     { refused: "ENGINE_DISABLED" },
   );
+  firstFrame.offered = true;
   assert.equal(k.calls.length, 0);
 });
 

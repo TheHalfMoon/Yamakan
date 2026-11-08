@@ -184,10 +184,10 @@ async function fixture(
   };
 }
 
-test("no image-to-video recipe is offered until its own real run has passed", () => {
-  assert.equal(recipe.offered, false);
-  assert.ok(!offeredKaggleRecipes().includes(recipe));
-  assert.ok(!kaggleRecipes().some((r) => r.operation === "imageToVideo"));
+test("image-to-video is offered, since its own runs passed, from a real photograph too", () => {
+  assert.equal(recipe.offered, true);
+  assert.ok(offeredKaggleRecipes().includes(recipe));
+  assert.ok(kaggleRecipes().some((r) => r.operation === "imageToVideo"));
 });
 
 test("the engine says where a run goes, which is what makes consent to send apply", async () => {
@@ -196,9 +196,15 @@ test("the engine says where a run goes, which is what makes consent to send appl
   await f.close();
 });
 
+// Offered now, so it is switched off here to show the rule still holds for a recipe that is not.
 test("a recipe not offered refuses a first frame, and sends nothing", async () => {
   const f = await fixture([]);
-  await assert.rejects(f.service.start(f.request), REFUSED_RECIPE);
+  (recipe as { offered: boolean }).offered = false;
+  try {
+    await assert.rejects(f.service.start(f.request), REFUSED_RECIPE);
+  } finally {
+    (recipe as { offered: boolean }).offered = true;
+  }
   assert.equal(f.pushes.length, 0);
   await f.close();
 });

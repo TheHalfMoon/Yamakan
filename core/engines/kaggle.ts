@@ -80,12 +80,14 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     // Its own script and notebook, so that nothing here touches the text script's bytes.
     // Its time is the text run's, since the page has one entry for this model. Its real runs
     // took about 1,150 seconds: see docs/evidence/ultimate/first-ai-video.md.
+    // Offered since its own runs from Yamakan passed, from a real photograph too, on
+    // 2026-11-08, for pictures that show no real person whose consent to send is not recorded.
     id: "kaggle-wan22-ti2v-5b-first-frame",
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
     revision: "b8fff7315c768468a5333511427288870b2e9635",
     licence: "Apache-2.0",
-    offered: false,
+    offered: true,
     operation: "imageToVideo",
     width: 704,
     height: 480,
