@@ -152,7 +152,9 @@ try {
       .getAttribute("value");
     await choice.selectOption(value);
     await page.getByTestId("create-no-person").check();
-    step("chose the picture, and said it shows no real person", { name });
+    step("chose the picture, and said it shows no real person", {
+      picture: name,
+    });
   }
 
   const start = page.getByTestId("create-generate-start");

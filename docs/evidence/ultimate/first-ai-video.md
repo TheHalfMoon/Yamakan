@@ -177,6 +177,22 @@ Run `9e726d9f-29ff-43e6-a5d8-30a0a4cdb466` at `3478fe2`, from `npm run qualify:k
 
 The container's peak was 29.50 GiB, again close under its limit, with 0 out-of-memory kills.
 
+**Offered, and run from the page.** At `13bc3a0`, with the recipe offered, `npm run qualify:kaggle -- <out> 0 "<prompt>"` with `YAMAKAN_QUALIFY_PICTURE` set ran in Edge against the real service and real Kaggle, with the founder's go-ahead to send the photograph again. Its receipt is `kaggle-first-frame-page-run-receipt.json`.
+
+The steps, in order:
+
+- The photograph was imported into a new project and chosen as the picture. The tick that it shows no real person was given, then the agreement, which says the picture leaves this computer.
+- The run was started from the page.
+- Kaggle began running it 10 seconds after the start, with no wait in its queue this time, and said it had finished 1,092 seconds after the start.
+- The video passed its receipt and came into the project with that prompt and seed.
+- Its record survived the browser's storage being cleared.
+- It was placed whole on the Edit timeline, as 101 frames at the project's frame rate.
+- Every frame was exported at 1280×720, with no page errors.
+
+**The same bytes again.** The video that came in is `85ff0795...`, exactly the video of the run above. That run was started by the command, this one from the page, both with seed 7 and the same cleaned frame. So on this path, the same request made the same video.
+
+**By looking at the export:** the lake, forest and mountains sit whole inside the 16:9 frame, with bars at the sides, and hold together from the first frame to the last.
+
 ## CogVideoX from Yamakan, first real run (2026-11-07)
 
 Run `821aee60-14fd-42ae-9326-6350f93f05b9` at `52cfc86`, from `npm run qualify:kaggle-cogvideox`, with the paper boat prompt and seed 7. **It is still not offered:** the command names the recipe in its own process, and no page or service command can reach it. Receipts: `kaggle-cogvideox-run-receipt.json` and `kaggle-cogvideox-notebook-receipt.json`.

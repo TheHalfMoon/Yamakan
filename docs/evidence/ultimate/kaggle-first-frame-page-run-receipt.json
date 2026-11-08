@@ -1,0 +1,73 @@
+{
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "restarted": false,
+  "generationId": null,
+  "task": "generation-from-yamakan-on-kaggle",
+  "prompt": "Gentle ripples move across the turquoise lake, and the pine trees sway softly in the breeze.",
+  "seed": 7,
+  "picture": "moraine.jpg",
+  "head": "13bc3a00b2962ffa16afd1208a63127f1fe5f53d",
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "moraine.jpg",
+      "at": "2026-11-08T18:54:22.175Z"
+    },
+    {
+      "name": "the agreement is readable in its place",
+      "at": "2026-11-08T18:54:22.429Z"
+    },
+    {
+      "name": "started from the page, after agreeing the prompt leaves this computer",
+      "at": "2026-11-08T18:54:38.695Z"
+    },
+    {
+      "name": "Kaggle says queued",
+      "afterSeconds": 0.003,
+      "at": "2026-11-08T18:54:38.902Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 10.009,
+      "at": "2026-11-08T18:54:48.908Z"
+    },
+    {
+      "name": "Kaggle says succeeded",
+      "afterSeconds": 1091.658,
+      "at": "2026-11-08T19:12:50.557Z"
+    },
+    {
+      "name": "the run finished, and its video passed its receipt",
+      "seconds": 1091.925,
+      "at": "2026-11-08T19:12:50.824Z"
+    },
+    {
+      "name": "it came into the project, with this prompt and seed",
+      "at": "2026-11-08T19:12:51.951Z"
+    },
+    {
+      "name": "its record stays with the project, with this browser's storage cleared",
+      "at": "2026-11-08T19:12:53.216Z"
+    },
+    {
+      "name": "placed whole on the Edit timeline",
+      "frames": 101,
+      "at": "2026-11-08T19:12:56.232Z"
+    },
+    {
+      "name": "exported from the toolbar, every frame",
+      "width": 1280,
+      "height": 720,
+      "frames": 101,
+      "assetHash": "85ff07957af7512f3f969e91127c2c686bbf6a31f9db1f7d2f340e64ed73517e",
+      "exportHash": "77e5901c2d07d2a9b5bd6eea3315bcd413c3c9e0b0c6e267e4b0271b9aafe028",
+      "at": "2026-11-08T19:12:59.206Z"
+    },
+    {
+      "name": "no page errors",
+      "at": "2026-11-08T19:12:59.210Z"
+    }
+  ]
+}
