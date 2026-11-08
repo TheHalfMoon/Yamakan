@@ -138,16 +138,17 @@ try {
   await page.getByTestId("create-seed").fill(String(SEED));
   if (PICTURE) {
     const name = PICTURE.split(/[\\/]/).pop();
+    // The name as written, whatever characters it holds.
+    const literal = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     await page.getByLabel("Import local media").setInputFiles(PICTURE);
     await page
       .getByRole("status")
-      .filter({
-        hasText: new RegExp(`Imported \\W?${name.replace(/\./g, "\\.")}`),
-      })
+      .filter({ hasText: new RegExp(`Imported \\W?${literal}`) })
       .waitFor({ timeout: 120_000 });
     const choice = page.getByTestId("create-picture");
+    // By its whole name, not as part of another's.
     const value = await choice
-      .locator("option", { hasText: name })
+      .locator("option", { hasText: new RegExp(`^${literal}$`) })
       .getAttribute("value");
     await choice.selectOption(value);
     await page.getByTestId("create-no-person").check();

@@ -605,29 +605,32 @@ test("only a model with its own tested run from Yamakan is offered", async () =>
     (r) => r.id === "kaggle-wan22-ti2v-5b-first-frame",
   ) as { offered: boolean };
   firstFrame.offered = false;
-  const k = kaggle(["QUEUED"]);
-  assert.deepEqual(
-    await k.engine.submit(
-      request({
-        recipeId: "kaggle-wan22-ti2v-5b-first-frame",
-        operation: "imageToVideo",
-        inputs: [
-          {
-            role: "firstFrame",
-            asset: {
-              assetVersionId: "v",
-              sha256: "0".repeat(64),
-              mediaType: "image/png",
+  try {
+    const k = kaggle(["QUEUED"]);
+    assert.deepEqual(
+      await k.engine.submit(
+        request({
+          recipeId: "kaggle-wan22-ti2v-5b-first-frame",
+          operation: "imageToVideo",
+          inputs: [
+            {
+              role: "firstFrame",
+              asset: {
+                assetVersionId: "v",
+                sha256: "0".repeat(64),
+                mediaType: "image/png",
+              },
             },
-          },
-        ],
-      }),
-      context as never,
-    ),
-    { refused: "ENGINE_DISABLED" },
-  );
-  firstFrame.offered = true;
-  assert.equal(k.calls.length, 0);
+          ],
+        }),
+        context as never,
+      ),
+      { refused: "ENGINE_DISABLED" },
+    );
+    assert.equal(k.calls.length, 0);
+  } finally {
+    firstFrame.offered = true;
+  }
 });
 
 for (const state of ["ERROR", "CANCEL_ACKNOWLEDGED", "CANCEL_REQUESTED"]) {
