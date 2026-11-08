@@ -344,9 +344,10 @@
       "YU-026d: the two-pass loudness measure reads the sound's own filters, not the picture's graph, so a normalised export with a picture no longer fails (an unmapped [picture] output).",
       "YU-026e: a still's fixed picture chain (grade, fit, transform) runs once before its loop instead of on every repeated frame, unless its transform scales it up (so a loop never holds more than one output frame); identical pixels; RENDERER_VERSION 6.",
       "SS-012: the render receipt records what two-pass loudness measured (input and target), or null; no change to the render.",
-      "Export colour: accurate scaling flags where a matrix or range conversion happens, because the defaults left pictures about 2 of 255 darker."
+      "Export colour: accurate scaling flags where a matrix or range conversion happens, because the defaults left pictures about 2 of 255 darker.",
+      "Security check 2026-11-08: the title fit check looks at each frame as it streams in, into one reused frame, instead of holding every title's frame in the service at once."
     ],
-    "importedSha256": "298285ca38443ae1f8ff53cc085dfd375e0b6d9972139eb135e133229f27c155",
+    "importedSha256": "b2caae6aa73da87c87c3883d7c847891d18d93ad2a59f0e157fed8e5c22bed8c",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",
