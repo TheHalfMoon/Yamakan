@@ -299,3 +299,24 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Open from the image work:** media worker memory peaked at about 3 GiB against its 2 GiB limit in crafted runs, on procd's reading, cause not found. **Flaky under load:** the test "no descendant outlives an exiting worker" in `tests/engine-worker-profile.test.ts` failed twice in full local runs, at "running before the budget", with little memory free. It has a 1.5-second budget, and passed each time alone.
 
 **Do not repeat:** nine reviews of PR #209 in a row each found real defects after green local runs, including one fix that broke a real send and a failure only the full `npm test` shows. Run all of `npm test` before pushing a new command. Deliberately break each fix and see a test fail: 58 breaks on PR #209 found 3 tests that needed adding or tightening and one pair of overlapping guards. A review agent ran `python -c "import kaggle"` once, which may load the credentials file: tell reviewers never to import that package. No token was read or printed.
+
+## Checkpoint: security check of main, 2026-11-08
+
+**Asked:** the founder asked for a deep security check of the whole project. Five independent reviewers read main at `c178610` area by area, read-only: the service boundary, files and storage, processes and the sandbox, engines and consent, and the browser app with CI and supply chain. The High and every Medium were then checked against the code. No exploit was run.
+
+**Clean:** `npm audit` found no known vulnerability at any severity. No credential pattern appears in any of 1,030 commits, scanned with and without an allow-list. No raw-HTML sink in `src`. No injection into FFmpeg arguments, filtergraphs, ASS or SQL. Host, Origin and DNS-rebinding checks hold, and the CSP is strict.
+
+**High, fixed in the PR that adds this checkpoint:** fetching a run's output from Kaggle let the Kaggle CLI write each listed file name onto the folder unchecked, so a name holding `..\` or a drive could land anywhere on this PC. It now asks for only the receipt and the video by exact name, which the CLI checks before that join, and refuses anything else that lands in the folder. On a real fetch of the Wan notebook's output on 2026-11-08, without GPU, exactly the receipt, the video and the notebook's log came down; the receipt of that check is in its PR, not in the repository.
+
+**Medium, open:**
+
+1. A crafted backup, once restored, can plant a token that acts as the browser: restore revokes only `revoked = 0` rows, and the token's principal is read from the row (`core/recovery.ts`, `core/store.ts`).
+2. Any process running as the user can become the browser user: it can write the launch file and post with a hand-set Origin. Outside the written threat model, but `docs/SECURITY.md` understates it, and agents with workspace access are in that class.
+3. Many burned caption cues make the title fit check hold every frame in the service, several GB at most (`core/render.ts`).
+4. The pinned FFmpeg 7.1.1 lacks six security fixes in 7.1.2, and no vulnerability review is recorded. Decoding runs inside the AppContainer, which limits the damage.
+
+**Low, open:** the MCP server acts as the full local client by default; clients send their token to whatever listens on the port; the launch-secret comparison is not constant-time; browser keys never rotate; agent tokens cannot be listed and never expire; slow request bodies can hold connections; a rollback over an unreadable revision skips the revocation check; `recovery diagnose` copies the database to a scratch folder without owner-only access; a compromised media worker can crash the service through unbounded output; exports have no size cap; all workers share one AppContainer profile; FFmpeg's DLLs are not hash-checked at run time; fetched output size is not bounded; `qualify-kaggle-generation.mjs` writes unredacted errors into receipts; the FFmpeg build is not reproducible and the SBOM leaves out the shipped binaries; a local `npm ci` runs install scripts; CI keeps its token in the checkout and installs a Python package without hashes; nine tracked files hold local paths with the Windows user name, and two the Kaggle user name.
+
+**Also from the engine review:** the Kaggle scripts pin only their top-level Python packages, with no hashes, so a compromised sub-dependency runs in the notebook. With the output fix it can no longer write onto this PC through an output file's name, but it can still change what a run makes.
+
+**Medium, open, found reviewing the fix:** the privacy check's `kernels pull` writes the notebook's script under a name built from the slug in Kaggle's own answer, joined onto the folder unchecked in the same way. That name comes from Kaggle's servers, not from anything a run controls, so it needs Kaggle or its answer to misbehave. The fix is to read privacy some way that writes no file named by Kaggle.
