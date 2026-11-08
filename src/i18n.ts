@@ -27,6 +27,14 @@ const en = {
     "To run it from here, start Yamakan with YAMAKAN_KAGGLE_CLI set to your Kaggle CLI's full path and YAMAKAN_KAGGLE_USERNAME to your username.",
   "create.agree":
     "Send this prompt and seed to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt leaves this computer, and Kaggle keeps it in the notebook's history. The video comes back here; the model stays on Kaggle.",
+  "create.agreePicture":
+    "Send this prompt, seed and picture to my private Kaggle notebook, using my free GPU quota. About {minutes} minutes. The prompt and the picture leave this computer, and Kaggle keeps them in the notebook's history, where withdrawing consent later cannot reach them. The video comes back here; the model stays on Kaggle.",
+  "create.picture": "Start from a picture",
+  "create.pictureNone": "No picture: from the prompt alone",
+  "create.pictureNote":
+    "Only this project's PNG and JPEG stills are listed. What is sent is a copy made from the picture's pixels, fitted to the model's frame, without its camera details or other data.",
+  "create.noRealPerson":
+    "This picture shows no real person, or only people whose consent to send it is recorded.",
   "create.elementsTitle": "Places and props",
   "create.elementsNote":
     "Kept with this project as a record, and pinned to a shot if you wish. They are not sent to a model and do not change what is generated. Saving one, or a pin, ends undo for what came before. Do not keep a real person's likeness here, even as a made-up character: that needs consent this does not ask for.",
@@ -508,6 +516,14 @@ const ar: Record<MessageKey, string> = {
     "لتشغيله من هنا، شغّل Yamakan مع ضبط YAMAKAN_KAGGLE_CLI على المسار الكامل لأداة Kaggle وYAMAKAN_KAGGLE_USERNAME على اسم المستخدم.",
   "create.agree":
     "أرسل هذا الوصف والبذرة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف هذا الحاسوب، ويحتفظ به Kaggle في سجل الدفتر. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
+  "create.agreePicture":
+    "أرسل هذا الوصف والبذرة والصورة إلى دفتر Kaggle الخاص بي باستخدام حصتي المجانية من GPU. نحو {minutes} دقيقة. يغادر الوصف والصورة هذا الحاسوب، ويحتفظ بهما Kaggle في سجل الدفتر، ولا يصل إليهما سحب الموافقة لاحقًا. يعود الفيديو إلى هنا، ويبقى النموذج على Kaggle.",
+  "create.picture": "البدء من صورة",
+  "create.pictureNone": "بلا صورة: من الوصف وحده",
+  "create.pictureNote":
+    "لا تظهر هنا إلا الصور الثابتة بصيغتي PNG وJPEG في هذا المشروع. ما يُرسل نسخة تُصنع من بكسلات الصورة، مُلاءَمة لإطار النموذج، دون بيانات الكاميرا أو أي بيانات أخرى.",
+  "create.noRealPerson":
+    "لا تُظهر هذه الصورة أي شخص حقيقي، أو تُظهر فقط أشخاصًا سُجّلت موافقتهم على إرسالها.",
   "create.elementsTitle": "الأماكن والأغراض",
   "create.elementsNote":
     "تُحفظ مع هذا المشروع كسجل، ويمكن تثبيتها على لقطة إن شئت. لا تُرسل إلى أي نموذج ولا تغيّر ما يُولَّد. وحفظ أي منها أو تثبيته يُنهي التراجع عمّا سبقه. لا تحفظ هنا صورة شخص حقيقي، ولو على أنها شخصية خيالية: فذلك يحتاج إلى موافقة لا يطلبها هذا القسم.",

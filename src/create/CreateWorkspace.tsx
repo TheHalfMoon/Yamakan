@@ -27,6 +27,7 @@ import {
   parseReceipt,
   readBrief,
   sha256Of,
+  startingStills,
   validSeed,
   type CreateBrief,
   type DirectionKind,
@@ -329,7 +330,13 @@ export function CreateWorkspace(props: {
     }
   };
 
-  const startable = models.find((m) => m.model === brief.modelId);
+  const startable = models.find(
+    (m) => m.model === brief.modelId && m.operation !== "imageToVideo",
+  );
+  // Listed only once that recipe is offered, which needs its own real run first.
+  const fromPicture = models.find(
+    (m) => m.model === brief.modelId && m.operation === "imageToVideo",
+  );
   // Awaited by the panel, under nothing else: the video has come in by now.
   const remember = async (receipt: RunReceipt, asset: Asset) => {
     // A retry: an earlier failure to save is no longer true.
@@ -520,6 +527,8 @@ export function CreateWorkspace(props: {
             api={props.generation}
             onMade={remember}
             findAsset={(id) => assets.find((x) => x.id === id)}
+            fromPicture={fromPicture}
+            stills={startingStills(assets)}
           />
         ) : (
           <div className="create-engine" data-testid="create-engine">

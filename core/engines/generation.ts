@@ -42,6 +42,9 @@ export type GenerationRequest = {
   durationFrames: number;
   // The project's still that an image-to-video starts from.
   firstFrameAssetId?: string;
+  // A person's word, with that still, that it shows no real person whose consent to send it
+  // is not recorded. Nothing can tell who a picture shows, so it is asked for each run.
+  noUnconsentedPerson?: true;
 };
 
 // Where an imported video came from. A story's take can hold its output and inputs,
@@ -374,6 +377,11 @@ export function createGenerationService(options: {
             "VALIDATION",
             "An image-to-video needs a still to start from.",
           );
+        if (request.noUnconsentedPerson !== true)
+          throw new CommandError(
+            "VALIDATION",
+            "Say that the still shows no real person whose consent to send it is not recorded.",
+          );
         const { asset, file } = await store.assetFile(
           request.projectId,
           request.firstFrameAssetId,
@@ -391,7 +399,10 @@ export function createGenerationService(options: {
           role: "firstFrame",
           asset: { assetVersionId: asset.id, sha256: asset.hash, mediaType },
         });
-      } else if (request.firstFrameAssetId)
+      } else if (
+        request.firstFrameAssetId ||
+        request.noUnconsentedPerson !== undefined
+      )
         throw new CommandError(
           "VALIDATION",
           "A text-to-video does not start from a still.",
