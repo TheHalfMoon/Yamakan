@@ -95,6 +95,31 @@ export function overflows(gray: Buffer, width: number, height: number) {
   return false;
 }
 
+// Frames of one size as they stream in, each looked at once and let go: a plan can carry
+// thousands of titles and captions, and holding every frame at once took gigabytes.
+export function framesAsTheyCome(
+  frameBytes: number,
+  look: (frame: Buffer, index: number) => void,
+) {
+  let pending: Buffer = Buffer.alloc(0);
+  let count = 0;
+  return {
+    take(chunk: Buffer) {
+      pending = pending.length ? Buffer.concat([pending, chunk]) : chunk;
+      let at = 0;
+      while (pending.length - at >= frameBytes) {
+        look(pending.subarray(at, at + frameBytes), count++);
+        at += frameBytes;
+      }
+      pending = at ? Buffer.from(pending.subarray(at)) : pending;
+    },
+    // Exactly this many whole frames, and nothing over: anything else was not checked.
+    whole(expected: number) {
+      return count === expected && pending.length === 0;
+    },
+  };
+}
+
 // libass breaks lines only at spaces, so an unbreakable run wider than the
 // frame, or more lines than the frame holds, would be cut off. Each title
 // is drawn alone for one second by the same libass and fonts and sampled at
@@ -119,7 +144,10 @@ async function assertTitlesFit(
   );
   const w = Math.ceil(width / FIT_SCALE);
   const h = Math.ceil(height / FIT_SCALE);
-  const chunks: Buffer[] = [];
+  let first: number | null = null;
+  const frames = framesAsTheyCome(w * h, (frame, i) => {
+    if (first === null && overflows(frame, w, h)) first = i;
+  });
   const confPath = path.join(dir, "fonts.conf");
   const result = await workers().run({
     executable: mediaTools().ffmpeg,
@@ -148,20 +176,18 @@ async function assertTitlesFit(
     memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
     signal,
     stderrLimit: 8000,
-    onStdout: (chunk) => chunks.push(chunk),
+    onStdout: (chunk) => frames.take(chunk),
   });
   if (signal.aborted) throw new Error("Cancelled.");
-  const frames = Buffer.concat(chunks);
-  if (result.code !== 0 || frames.length !== w * h * cues.length)
+  if (result.code !== 0 || !frames.whole(cues.length))
     throw new Error("Title layout could not be checked.", {
       cause: result.stderr,
     });
-  for (let i = 0; i < cues.length; i++)
-    if (overflows(frames.subarray(i * w * h, (i + 1) * w * h), w, h))
-      throw new CommandError(
-        "VALIDATION",
-        `Title ${i + 1} does not fit the frame; shorten long words, add spaces so it can wrap, or use fewer lines.`,
-      );
+  if (first !== null)
+    throw new CommandError(
+      "VALIDATION",
+      `Title ${first + 1} does not fit the frame; shorten long words, add spaces so it can wrap, or use fewer lines.`,
+    );
 }
 
 // A timestamp offset of `ticks` in a stream's own time base, from exact

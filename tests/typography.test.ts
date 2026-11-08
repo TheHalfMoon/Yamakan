@@ -557,3 +557,30 @@ test("a probe cut short is not reported as the wrong FFmpeg", () => {
   const logged = probeRefusal(1, 0, true, "C:\\Users\\someone");
   assert.doesNotMatch(logged!.message, /someone/);
 });
+
+test("title frames are looked at as they stream in, whatever the chunks", async () => {
+  const { framesAsTheyCome } = await import("../core/render.ts");
+  const size = 7;
+  const frames = [0, 1, 2, 3].map((n) => Buffer.alloc(size, n));
+  const all = Buffer.concat(frames);
+  for (const cut of [1, 3, 7, 8, 13, 28]) {
+    const seen: number[] = [];
+    const reader = framesAsTheyCome(size, (frame, i) => {
+      assert.ok(frame.equals(frames[i]), `frame ${i}, chunks of ${cut}`);
+      seen.push(i);
+    });
+    for (let at = 0; at < all.length; at += cut)
+      reader.take(all.subarray(at, at + cut));
+    assert.deepEqual(seen, [0, 1, 2, 3]);
+    assert.ok(reader.whole(4));
+    assert.ok(!reader.whole(3) && !reader.whole(5));
+  }
+  // A frame cut short is left over, not looked at.
+  const short = framesAsTheyCome(size, () => {});
+  short.take(all.subarray(0, size * 2 + 3));
+  assert.ok(!short.whole(2) && !short.whole(3));
+  // Nor is a stream that stops between frames, short of what was asked.
+  const stopped = framesAsTheyCome(size, () => {});
+  stopped.take(all.subarray(0, size * 2));
+  assert.ok(!stopped.whole(4));
+});
