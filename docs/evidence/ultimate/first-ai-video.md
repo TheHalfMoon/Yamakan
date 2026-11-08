@@ -152,7 +152,7 @@ The container's limit read 30.0 GiB again. Lowest free was 7.43 GiB and highest 
 
 ## Image to video from a real photograph (2026-11-08)
 
-Run `9e726d9f-29ff-43e6-a5d8-30a0a4cdb466` at `3478fe2`, from `npm run qualify:kaggle-first-frame -- <out> moraine.jpg "<prompt>"`, with the founder's go-ahead to download the photograph and send it. **Image-to-video is still not offered:** the command names the recipe in its own process. Receipts: `kaggle-first-frame-photo-run-receipt.json` and `kaggle-first-frame-photo-notebook-receipt.json`.
+Run `9e726d9f-29ff-43e6-a5d8-30a0a4cdb466` at `3478fe2`, from `npm run qualify:kaggle-first-frame -- <out> moraine.jpg "<prompt>"`, with the founder's go-ahead to download the photograph and send it. **Image-to-video is still not offered:** the command names the recipe in its own process. Receipts: `kaggle-first-frame-photo-run-receipt.json` and `kaggle-first-frame-photo-notebook-receipt.json`. The checks made by hand around them, the cleaned copy, the fetch and the comparison, are in `kaggle-first-frame-photo-check.json`.
 
 **The photograph:** `Moraine_Lake_17092005.jpg` from Wikimedia Commons, by the user Gorgo, marked public domain. It shows mountains, forest and a lake, and no people. It is 2048×1536 and 1,520,767 bytes, `adb3041e...`, exactly the size Commons lists. It carries a camera's EXIF data (a Canon PowerShot A70, and Photoshop 7.0). Neither the photograph nor the video is committed.
 

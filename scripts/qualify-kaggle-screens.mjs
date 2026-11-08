@@ -471,6 +471,8 @@ try {
       .filter({ hasText: /Imported \W?still\.png/ })
       .waitFor();
     const starts = [];
+    // What the handler found, asserted after: a throw inside it would only leave the page waiting.
+    const offered = {};
     await page.route("**/api/v1/call", async (route) => {
       const body = route.request().postData() ?? "";
       if (body.includes('"yamakan.generation.start"'))
@@ -489,21 +491,27 @@ try {
         }
         return null;
       })(answer);
-      assert.ok(holder, "the options answer lists models");
-      const text = holder.models.find((m) => m.recipeId === wan.id);
-      assert.ok(text, "the text recipe is offered");
-      assert.ok(
-        !holder.models.some((m) => m.operation === "imageToVideo"),
-        "the service itself offers no picture model",
+      const text = holder?.models.find((m) => m.recipeId === wan.id);
+      offered.listed = Boolean(text);
+      offered.servicePicture = Boolean(
+        holder?.models.some((m) => m.operation === "imageToVideo"),
       );
-      holder.models.push({
-        ...text,
-        recipeId: "kaggle-wan22-ti2v-5b-first-frame",
-        operation: "imageToVideo",
-      });
+      if (text)
+        holder.models.push({
+          ...text,
+          recipeId: "kaggle-wan22-ti2v-5b-first-frame",
+          operation: "imageToVideo",
+        });
       await route.fulfill({ response, json: answer });
     });
     await reopen();
+    await page.getByTestId("create-agree").waitFor();
+    assert.equal(offered.listed, true, "the text recipe is offered");
+    assert.equal(
+      offered.servicePicture,
+      false,
+      "the service itself offers no picture model",
+    );
     const picture = page.getByTestId("create-picture");
     const agree = page.getByTestId("create-agree");
     const noPerson = page.getByTestId("create-no-person");
@@ -558,7 +566,9 @@ try {
 
     await agree.check();
     await start.click();
-    await page.locator(".create-problem").waitFor({ timeout: 90_000 });
+    const problem = page.locator(".create-problem");
+    await problem.waitFor({ timeout: 90_000 });
+    assert.match(await problem.textContent(), /That recipe is not available/);
     assert.equal(starts.length, 1);
     const sent = starts[0].parameters;
     assert.equal(sent.recipeId, "kaggle-wan22-ti2v-5b-first-frame");

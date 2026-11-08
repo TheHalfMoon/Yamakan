@@ -1,0 +1,37 @@
+{
+  "task": "first-frame-photo-check",
+  "written": "by hand, from the commands below, on 2026-11-08",
+  "photo": {
+    "name": "Moraine_Lake_17092005.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Moraine_Lake_17092005.jpg",
+    "licence": "public domain, as Wikimedia Commons lists it",
+    "author": "Gorgo (Wikimedia Commons user)",
+    "listedBytes": 1520767,
+    "bytes": 1520767,
+    "sha256": "adb3041e3ac2de4cf3e7c3d186ea2c39a1a811b4a5fff4f888a6711579833d5f",
+    "carries": "EXIF: Canon PowerShot A70, Adobe Photoshop 7.0"
+  },
+  "cleanedBeforeTheRun": {
+    "how": "core/engines/clean-image.ts at 3478fe2: cleanImage to 704x480, then imageWithin with 700,000 bytes of room, run from a small script outside the repository before the run",
+    "mediaType": "image/jpeg",
+    "bytes": 108310,
+    "sha256": "c72b528ac1334ae26559da79862fde5c3f49e17d2f7c315ce3ef91a8f7f9c370",
+    "containsExif": false,
+    "containsCanon": false,
+    "containsPhotoshop": false,
+    "sameAsTheNotebookRecorded": "firstFrameSha256 in kaggle-first-frame-photo-notebook-receipt.json"
+  },
+  "fetchedAfterTheRun": {
+    "how": "kaggle kernels output with --file-pattern '\\A(?:receipt\\.json|wan\\-first\\-frame\\-video\\.mp4)\\Z', into a new folder",
+    "videoSha256": "85ff07957af7512f3f969e91127c2c686bbf6a31f9db1f7d2f340e64ed73517e",
+    "videoBytes": 761766,
+    "matchesTheNotebookReceipt": true
+  },
+  "firstFrameAgainstWhatWasSent": {
+    "ffmpeg": "7.1.5 (vendor/ffmpeg-win64-r8)",
+    "filter": "[0:v]select='eq(n,0)',scale=88:60:flags=area,format=rgb24[a];[1:v]scale=88:60:flags=area,format=rgb24[b];[a][b]psnr",
+    "inputs": ["the fetched video", "the cleaned JPEG above"],
+    "psnr": { "r": 38.995776, "g": 38.615883, "b": 38.355906, "average": 38.647946 }
+  },
+  "byLooking": "first frame plainly the photograph; middle (frame 40) and last (frame 80) keep the mountains, forest, shore and reflection, with ripples on the water and a slight drift"
+}

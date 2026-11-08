@@ -36,6 +36,11 @@ import { ProjectStore } from "../core/store.ts";
 const [out, picture = "14", promptGiven] = process.argv.slice(2);
 const photo = /\.(png|jpe?g)$/i.test(picture) ? picture : null;
 const noise = photo ? null : picture;
+if (!photo && !/^\d+(\.\d+)?$/.test(picture)) {
+  console.error("Name a PNG or JPEG photograph, or give a noise level.");
+  console.log("FIRST FRAME RUN NOT RUN");
+  process.exit(2);
+}
 const { YAMAKAN_KAGGLE_CLI: cliFile, YAMAKAN_KAGGLE_USERNAME: username } =
   process.env;
 if (!out || !cliFile || !username) {
@@ -221,7 +226,8 @@ try {
     sha256: video.asset.hash,
   });
 
-  // How like the picture it sent is the video's first frame? Looking at them decides; this is
+  // How like the picture it sent is the video's first frame? What went is a copy Yamakan made
+  // inside the engine, so this fits the picture to the frame the same way and compares that. Looking at them decides; this is
   // the figure beside that, at a size where the picture's fine noise averages out.
   const measured = spawnSync(
     mediaTools().ffmpeg,
