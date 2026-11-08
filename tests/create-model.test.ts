@@ -8,6 +8,10 @@ import {
   parseReceipt,
   readBrief,
   sha256Of,
+  choiceOf,
+  mayStart,
+  startRequest,
+  startingStills,
   validSeed,
 } from "../src/create/create-model.ts";
 
@@ -128,4 +132,122 @@ test("a model that reads only part of a prompt says so, in both languages", asyn
   const { MESSAGES } = await import("../src/i18n.ts");
   for (const language of Object.values(MESSAGES) as Record<string, string>[])
     assert.match(language["create.readsLittle"], /\{words\}/);
+});
+
+test("a run from a picture is offered only the project's PNG and JPEG stills", () => {
+  assert.deepEqual(
+    startingStills([
+      { id: "a", kind: "image", name: "boat.png" },
+      { id: "b", kind: "image", name: "kite.JPG" },
+      { id: "c", kind: "image", name: "hill.jpeg" },
+      { id: "d", kind: "image", name: "sky.webp" },
+      { id: "e", kind: "video", name: "clip.png" },
+      { id: "f", kind: "image", name: "png" },
+    ]),
+    [
+      { id: "a", name: "boat.png" },
+      { id: "b", name: "kite.JPG" },
+      { id: "c", name: "hill.jpeg" },
+    ],
+  );
+});
+
+test("a run from a picture says the picture leaves, in both languages", async () => {
+  const { MESSAGES } = await import("../src/i18n.ts");
+  const [english, arabic] = [MESSAGES.en, MESSAGES.ar] as Record<
+    string,
+    string
+  >[];
+  assert.match(english["create.agreePicture"], /picture leave this computer/);
+  assert.match(english["create.agreePicture"], /withdrawing consent later/);
+  assert.match(english["create.noRealPerson"], /no real person/);
+  for (const language of [english, arabic]) {
+    assert.match(language["create.agreePicture"], /\{minutes\}/);
+    for (const key of [
+      "create.picture",
+      "create.pictureNone",
+      "create.pictureNote",
+      "create.noRealPerson",
+    ])
+      assert.ok(language[key], key);
+  }
+});
+
+// The page sends what the person chose, and only with their word about who it shows.
+test("a start from a picture carries the still and the person's word, and needs both ticks", () => {
+  const model = {
+    recipeId: "kaggle-wan22-ti2v-5b-first-frame",
+    name: "Wan2.2-TI2V-5B",
+    operation: "imageToVideo" as const,
+    model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    revision: "r",
+    licence: "Apache-2.0",
+    width: 704,
+    height: 480,
+    frames: 81,
+    fps: 24,
+    steps: 30,
+    expectedSeconds: 1200,
+    timeoutSeconds: 3600,
+    notebook: "https://www.kaggle.com/code/someone/notebook",
+  };
+  const base = { model, prompt: "A boat.", seed: 7, projectFps: 30 };
+  assert.deepEqual(
+    startRequest({ ...base, picture: { id: "still" }, noPerson: true }),
+    {
+      recipeId: model.recipeId,
+      prompt: "A boat.",
+      seed: 7,
+      width: 704,
+      height: 480,
+      durationFrames: 101,
+      firstFrameAssetId: "still",
+      noUnconsentedPerson: true,
+    },
+  );
+  assert.throws(() =>
+    startRequest({ ...base, picture: { id: "still" }, noPerson: false }),
+  );
+  const fromPrompt = startRequest({
+    ...base,
+    picture: undefined,
+    noPerson: true,
+  });
+  assert.equal("firstFrameAssetId" in fromPrompt, false);
+  assert.equal("noUnconsentedPerson" in fromPrompt, false);
+  assert.equal(
+    mayStart({ agreed: true, picture: undefined, noPerson: false }),
+    true,
+  );
+  assert.equal(
+    mayStart({ agreed: false, picture: undefined, noPerson: true }),
+    false,
+  );
+  assert.equal(
+    mayStart({ agreed: true, picture: { id: "s" }, noPerson: false }),
+    false,
+  );
+  assert.equal(
+    mayStart({ agreed: false, picture: { id: "s" }, noPerson: true }),
+    false,
+  );
+  assert.equal(
+    mayStart({ agreed: true, picture: { id: "s" }, noPerson: true }),
+    true,
+  );
+});
+
+// A tick counts only for what it was given on, so switching away and back asks again.
+test("a tick given for one model or picture does not count for another", () => {
+  const given = choiceOf("first-frame", "still-a");
+  assert.equal(given, choiceOf("first-frame", "still-a"));
+  for (const other of [
+    choiceOf("first-frame", "still-b"),
+    choiceOf("first-frame"),
+    choiceOf("text", "still-a"),
+    choiceOf("text"),
+  ])
+    assert.notEqual(given, other);
+  // Names cannot run together into another choice's.
+  assert.notEqual(choiceOf("a|b"), choiceOf("a", "b"));
 });

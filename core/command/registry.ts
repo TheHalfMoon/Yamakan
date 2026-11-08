@@ -2198,6 +2198,9 @@ export const commands = {
         height: z.number().int().min(16).max(ENGINE_V2_LIMITS.dimension),
         durationFrames: z.number().int().positive().max(14_400),
         firstFrameAssetId: Id.optional(),
+        // With a still: the person's word that it shows no real person whose consent to
+        // send it is not recorded.
+        noUnconsentedPerson: z.literal(true).optional(),
       })
       .strict(),
     run: (ctx, { recipeId, ...request }) => {
@@ -2223,6 +2226,7 @@ export const commands = {
           ? offeredKaggleRecipes().map((r) => ({
               recipeId: r.id,
               name: r.name,
+              operation: r.operation ?? ("textToVideo" as const),
               model: r.model,
               revision: r.revision,
               licence: r.licence,

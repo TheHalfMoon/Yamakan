@@ -3,7 +3,12 @@
 // time. There is no percentage because Kaggle gives none: only a state and the time.
 import React, { useEffect, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
-import type { RunReceipt } from "./create-model.ts";
+import {
+  choiceOf,
+  mayStart,
+  startRequest,
+  type RunReceipt,
+} from "./create-model.ts";
 
 type Translate = (
   key: MessageKey,
@@ -13,6 +18,8 @@ type Translate = (
 export type GenerateModel = {
   recipeId: string;
   name: string;
+  // Absent from a service older than this page: a text-to-video.
+  operation?: "textToVideo" | "imageToVideo";
   model: string;
   revision: string;
   licence: string;
@@ -56,6 +63,9 @@ export type GenerationApi = {
     width: number;
     height: number;
     durationFrames: number;
+    // A run from a picture: the still, and the person's word about who it shows.
+    firstFrameAssetId?: string;
+    noUnconsentedPerson?: true;
   }) => Promise<{ generationId: string; uncertain?: string }>;
   status: (generationId: string) => Promise<{
     state: string;
@@ -118,17 +128,33 @@ export function GeneratePanel(props: {
   // Whether its record was saved. Bringing it in again is safe, and tries again.
   onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<boolean>;
   findAsset: (id: string) => MadeAsset | undefined;
+  // The same model started from a picture, when that is offered, and the project's stills
+  // it can start from.
+  fromPicture?: GenerateModel;
+  stills: readonly { id: string; name: string }[];
 }) {
-  const { model, prompt, seed, seedValid, t, api } = props;
+  const { prompt, seed, seedValid, t, api } = props;
   const [run, setRun] = useState<Run | null>(null);
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
   const [lost, setLost] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  // Each tick is for the exact choice it was given on: another model, recipe or picture
+  // needs it again, whatever the person switched through since.
+  const [agreedFor, setAgreedFor] = useState<string | null>(null);
+  const [pictureId, setPictureId] = useState("");
+  // Asked each run: nothing here can tell who a picture shows.
+  const [noPersonFor, setNoPersonFor] = useState<string | null>(null);
   const [problem, setProblem] = useState("");
   const [working, setWorking] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  const picture = props.fromPicture
+    ? props.stills.find((s) => s.id === pictureId)
+    : undefined;
+  const model = picture && props.fromPicture ? props.fromPicture : props.model;
+  const choice = choiceOf(model.recipeId, picture?.id);
+  const agreed = agreedFor === choice;
+  const noPerson = noPersonFor === choice;
   const finished = FINISHED.has(state);
   const receiptOf = (
     r: { recipeId: string; prompt: string | null; seed: number | null },
@@ -229,21 +255,21 @@ export function GeneratePanel(props: {
     setProblem("");
     setWorking(true);
     try {
-      const { generationId, uncertain } = await api.start({
-        recipeId: model.recipeId,
-        prompt,
-        seed,
-        width: model.width,
-        height: model.height,
-        durationFrames: Math.max(
-          1,
-          Math.floor((model.frames / model.fps) * props.projectFps),
-        ),
-      });
+      const { generationId, uncertain } = await api.start(
+        startRequest({
+          model,
+          prompt,
+          seed,
+          projectFps: props.projectFps,
+          picture,
+          noPerson,
+        }),
+      );
       setState("queued");
       setNote("");
       setLost(false);
-      setAgreed(false);
+      setAgreedFor(null);
+      setNoPersonFor(null);
       setRun({
         generationId,
         recipeId: model.recipeId,
@@ -253,7 +279,8 @@ export function GeneratePanel(props: {
         uncertain: Boolean(uncertain),
       });
     } catch (e) {
-      setAgreed(false);
+      setAgreedFor(null);
+      setNoPersonFor(null);
       // The answer can be lost with the run on its way. A refused one is not listed.
       const [latest] = await api.list().catch(() => [] as RunRecord[]);
       if (
@@ -320,15 +347,49 @@ export function GeneratePanel(props: {
     return (
       <div className="create-generate" data-testid="create-generate">
         <h3>{t("create.engineTitle")}</h3>
+        {props.fromPicture && (
+          <label className="create-picture">
+            {t("create.picture")}
+            <select
+              data-testid="create-picture"
+              value={picture ? picture.id : ""}
+              onChange={(e) => {
+                setPictureId(e.target.value);
+                // What was agreed to was without this picture, or with another.
+                setAgreedFor(null);
+                setNoPersonFor(null);
+              }}
+            >
+              <option value="">{t("create.pictureNone")}</option>
+              {props.stills.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <span className="note">{t("create.pictureNote")}</span>
+          </label>
+        )}
+        {picture && (
+          <label className="create-agree">
+            <input
+              type="checkbox"
+              checked={noPerson}
+              data-testid="create-no-person"
+              onChange={(e) => setNoPersonFor(e.target.checked ? choice : null)}
+            />
+            <span>{t("create.noRealPerson")}</span>
+          </label>
+        )}
         <label className="create-agree">
           <input
             type="checkbox"
             checked={agreed}
             data-testid="create-agree"
-            onChange={(e) => setAgreed(e.target.checked)}
+            onChange={(e) => setAgreedFor(e.target.checked ? choice : null)}
           />
           <span>
-            {t("create.agree", {
+            {t(picture ? "create.agreePicture" : "create.agree", {
               minutes: Math.ceil(model.expectedSeconds / 60),
             })}
           </span>
@@ -337,7 +398,12 @@ export function GeneratePanel(props: {
         <button
           type="button"
           className="create-primary"
-          disabled={!agreed || Boolean(blocked) || working || props.busy}
+          disabled={
+            !mayStart({ agreed, picture, noPerson }) ||
+            Boolean(blocked) ||
+            working ||
+            props.busy
+          }
           data-testid="create-generate-start"
           onClick={() => void start()}
         >

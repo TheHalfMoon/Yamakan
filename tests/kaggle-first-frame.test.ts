@@ -166,6 +166,7 @@ async function fixture(
     height: recipe.height,
     durationFrames: 100,
     firstFrameAssetId: asset.id,
+    noUnconsentedPerson: true as const,
   };
   return {
     root,

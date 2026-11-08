@@ -165,6 +165,7 @@ try {
     height: recipe.height,
     durationFrames: 100,
     firstFrameAssetId: asset.id,
+    noUnconsentedPerson: true,
   }));
   step("Kaggle took a script with the picture inside", {
     generationId,

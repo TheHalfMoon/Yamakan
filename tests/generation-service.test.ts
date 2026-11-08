@@ -171,6 +171,10 @@ const ask = (projectId: string, over: object = {}) => ({
   width: 64,
   height: 36,
   durationFrames: 24,
+  // A person's word about a still, which a run from one needs.
+  ...("firstFrameAssetId" in over
+    ? { noUnconsentedPerson: true as const }
+    : {}),
   ...over,
 });
 
@@ -779,6 +783,43 @@ test("an upload the engine refuses says why, when consent to send has ended", as
     ),
     /revoked/,
   );
+});
+
+// Nothing can tell who a picture shows, so each run from one carries a person's word.
+test("a run from a still needs a person's word that it shows no one without consent", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, {
+        recipe: stillRecipe,
+        firstFrameAssetId: still.id,
+        noUnconsentedPerson: undefined,
+      }),
+    ),
+    /shows no real person/,
+  );
+  assert.equal(state.inputRead, null, "no byte was read for the engine");
+  assert.equal(state.submitted.length, 0, "nothing was sent");
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+test("a run from a prompt alone takes no word about a still", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  await assert.rejects(
+    g.start(ask(f.projectId, { noUnconsentedPerson: true })),
+    /does not start from a still/,
+  );
+  assert.equal(state.submitted.length, 0);
 });
 
 // Stated, since it is why the page must not treat this as knowing who a picture shows.

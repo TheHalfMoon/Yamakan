@@ -728,6 +728,12 @@ footer {
   flex-wrap: wrap;
   gap: 8px;
 }
+.create .create-picture {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
 .create .create-agree {
   display: flex;
   flex-direction: row;

@@ -125,6 +125,59 @@ export function composePrompt(brief: CreateBrief) {
   return `${base.replace(/[.,;:\s]+$/, "")}. ${words.join(", ")}.`;
 }
 
+// The project's stills a run from a picture can start from: what the service takes, a PNG or
+// JPEG, by the name it was imported under. The service checks again.
+export const startingStills = (
+  assets: readonly { id: string; kind: string; name: string }[],
+) =>
+  assets
+    .filter((a) => a.kind === "image" && /\.(png|jpe?g)$/i.test(a.name))
+    .map(({ id, name }) => ({ id, name }));
+
+// What a start sends: from a picture only with the person's word about who it shows, which
+// the service also requires.
+export function startRequest(r: {
+  model: {
+    recipeId: string;
+    width: number;
+    height: number;
+    frames: number;
+    fps: number;
+  };
+  prompt: string;
+  seed: number;
+  projectFps: number;
+  picture: { id: string } | undefined;
+  noPerson: boolean;
+}) {
+  if (r.picture && !r.noPerson)
+    throw new Error("A run from a picture needs the person's word first.");
+  return {
+    recipeId: r.model.recipeId,
+    prompt: r.prompt,
+    seed: r.seed,
+    width: r.model.width,
+    height: r.model.height,
+    durationFrames: Math.max(
+      1,
+      Math.floor((r.model.frames / r.model.fps) * r.projectFps),
+    ),
+    ...(r.picture
+      ? { firstFrameAssetId: r.picture.id, noUnconsentedPerson: true as const }
+      : {}),
+  };
+}
+
+// What a tick was given for: this recipe, from this picture or none.
+export const choiceOf = (recipeId: string, pictureId?: string) =>
+  JSON.stringify([recipeId, pictureId ?? null]);
+
+export const mayStart = (r: {
+  agreed: boolean;
+  picture: { id: string } | undefined;
+  noPerson: boolean;
+}) => r.agreed && (r.picture === undefined || r.noPerson);
+
 export const validSeed = (seed: number) =>
   Number.isInteger(seed) && seed >= 0 && seed <= 2 ** 32 - 1;
 
