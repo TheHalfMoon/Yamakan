@@ -446,8 +446,9 @@ export function assertMayMarkFictional(
  * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
  *
- * For an engine elsewhere, each of those characters also needs consent to send: their
- * newest, usable now. An older grant does not outlive a newer one being revoked.
+ * For an engine elsewhere, each newest consent checked here also needs consent to send that
+ * names it: the newest of those, usable now. An older grant does not outlive a newer one
+ * being revoked, and a grant naming someone else's consent under the same name does not count.
  */
 export function assertLinkedMediaGeneratable(
   db: DatabaseSync,
