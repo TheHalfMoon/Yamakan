@@ -586,7 +586,15 @@ try {
       .getByTestId("people-linked")
       .filter({ hasText: "still.png" })
       .waitFor();
-    step("consent is recorded from the page, and a still is linked to them");
+    // The same link again adds nothing: one pack per person, and no use of another document.
+    await linkStill.selectOption({ label: "still.png" });
+    await people.getByTestId("people-link").click();
+    await people
+      .locator(".create-problem", { hasText: /already linked/ })
+      .waitFor();
+    step(
+      "consent is recorded from the page, and a still is linked to them, once",
+    );
 
     const generate = page.getByTestId("create-generate");
     const startFromPicture = async () => {

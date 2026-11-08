@@ -11,10 +11,14 @@ import {
   dateOf,
   daysToMs,
   grantable,
+  newestSends,
   peopleOf,
   personPack,
   sendFor,
+  sendTtl,
+  withLink,
   type ListedConsent,
+  type PersonPack,
 } from "./create-people.ts";
 
 type Translate = (
@@ -22,10 +26,20 @@ type Translate = (
   vars?: Record<string, string | number>,
 ) => string;
 
+export type KeptPersonPack = {
+  documentId: string;
+  contentHash: string;
+  pack: PersonPack;
+};
+
 export type PeopleApi = {
   list: () => Promise<readonly ListedConsent[]>;
-  // Which stills each consent is linked to, across the project's packs.
-  links: () => Promise<readonly { consentId: string; assetId: string }[]>;
+  // The project's packs as they stand: which stills each consent is linked to, and the packs
+  // this page keeps, one per person. A pack that cannot be read is left out.
+  packs: () => Promise<{
+    links: readonly { consentId: string; assetId: string }[];
+    people: readonly KeptPersonPack[];
+  }>;
   // Each says whether it was done; why not is not shown beyond that.
   grant: (input: {
     characterId: string;
@@ -36,7 +50,11 @@ export type PeopleApi = {
   }) => Promise<boolean>;
   revoke: (consentId: string) => Promise<boolean>;
   revalidate: (consentId: string) => Promise<boolean>;
-  link: (pack: ReturnType<typeof personPack>) => Promise<boolean>;
+  link: (next: {
+    documentId: string;
+    expectedContentHash: string | null;
+    pack: PersonPack;
+  }) => Promise<boolean>;
 };
 
 const STATE_NAMES: Record<string, MessageKey> = {
@@ -57,6 +75,7 @@ export function PeoplePanel(props: {
   const [links, setLinks] = useState<
     readonly { consentId: string; assetId: string }[]
   >([]);
+  const [kept, setKept] = useState<readonly KeptPersonPack[]>([]);
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [days, setDays] = useState<number>(CONSENT_DAYS[1]);
@@ -64,7 +83,7 @@ export function PeoplePanel(props: {
   // Per consent to generate: the send tick, and the still chosen to link.
   const [sendTicked, setSendTicked] = useState<string | null>(null);
   const [linkChoice, setLinkChoice] = useState<Record<string, string>>({});
-  // A revoke is for good, so it asks twice.
+  // A revoke is for good, so it asks twice, and anything else in between asks again.
   const [revoking, setRevoking] = useState<string | null>(null);
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const [working, setWorking] = useState(false);
@@ -74,10 +93,11 @@ export function PeoplePanel(props: {
   const reload = async () => {
     const started = ++loads.current;
     try {
-      const [found, linked] = await Promise.all([api.list(), api.links()]);
+      const [found, packs] = await Promise.all([api.list(), api.packs()]);
       if (started !== loads.current) return;
       setConsents(found);
-      setLinks(linked);
+      setLinks(packs.links);
+      setKept(packs.people);
       setNow(Date.now());
       setProblem((was) => (was === "create.peopleUnread" ? null : was));
     } catch {
@@ -86,17 +106,23 @@ export function PeoplePanel(props: {
   };
 
   useEffect(() => {
+    setRevoking(null);
     void reload();
     // A restore or undo can change what the project holds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.revision]);
 
-  const act = async (step: () => Promise<boolean>, after?: () => void) => {
+  const act = async (
+    step: () => Promise<boolean | MessageKey>,
+    after?: () => void,
+  ) => {
+    setRevoking(null);
     setProblem(null);
     setWorking(true);
     try {
-      if (!(await step())) setProblem("create.peopleFailed");
-      else after?.();
+      const done = await step();
+      if (done === true) after?.();
+      else setProblem(done === false ? "create.peopleFailed" : done);
     } catch {
       setProblem("create.peopleFailed");
     } finally {
@@ -104,6 +130,33 @@ export function PeoplePanel(props: {
       await reload();
     }
   };
+
+  const link = (characterId: string, consentId: string, stillId: string) =>
+    act(async () => {
+      const still = stills.find((s) => s.id === stillId);
+      if (!still) return false;
+      const mine = kept.find(
+        (k) => k.pack.entries[0].characterId === characterId,
+      );
+      if (!mine)
+        return api.link({
+          documentId: crypto.randomUUID(),
+          expectedContentHash: null,
+          pack: personPack(characterId, still, consentId, () =>
+            crypto.randomUUID(),
+          ),
+        });
+      const next = withLink(mine.pack, still, consentId, () =>
+        crypto.randomUUID(),
+      );
+      if (next === "already") return "create.peopleAlreadyLinked";
+      if (next === "full") return "create.peoplePackFull";
+      return api.link({
+        documentId: mine.documentId,
+        expectedContentHash: mine.contentHash,
+        pack: next,
+      });
+    });
 
   const off = busy || working;
   const people = peopleOf(consents);
@@ -197,8 +250,18 @@ export function PeoplePanel(props: {
           {person.generate.map((g) => {
             const state = consentState(g, now);
             const send = sendFor(person, g.id, now);
+            // The newest consents to send naming it, in whatever state, to confirm again.
+            const unconfirmed = newestSends(person, g.id).filter(
+              (s) => consentState(s, now) === "revalidate",
+            );
             const linked = links.filter((l) => l.consentId === g.id);
             const choice = linkChoice[g.id] ?? "";
+            // An expired consent still says who its linked stills show, and sending them
+            // needs it covered too, so it may still be given consent to send.
+            const mayCover =
+              state === "standing" ||
+              (state === "expired" && g.current && linked.length > 0);
+            const ttl = sendTtl(g, daysToMs(days), now);
             return (
               <div
                 key={g.id}
@@ -232,104 +295,102 @@ export function PeoplePanel(props: {
                     {t("create.peopleRevalidate")}
                   </button>
                 )}
-                {state === "standing" && (
+                {unconfirmed.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={off || state === "revalidate"}
+                    data-testid="people-revalidate-send"
+                    onClick={() => void act(() => api.revalidate(s.id))}
+                  >
+                    {t("create.peopleRevalidateSend")}
+                  </button>
+                ))}
+                {send && (
+                  <p data-testid="people-send-standing">
+                    {t("create.peopleSend", {
+                      until: dateOf(send.expiresAtMs),
+                    })}
+                  </p>
+                )}
+                {!send && mayCover && unconfirmed.length === 0 && (
                   <>
-                    {send ? (
-                      <p data-testid="people-send-standing">
-                        {t("create.peopleSend", {
-                          until: dateOf(send.expiresAtMs),
-                        })}
-                      </p>
-                    ) : (
-                      <>
-                        <p className="note" data-testid="people-no-send">
-                          {t("create.peopleNoSend")}
-                        </p>
-                        <label className="create-agree">
-                          <input
-                            type="checkbox"
-                            checked={sendTicked === g.id}
-                            data-testid="people-send-attest"
-                            onChange={(e) =>
-                              setSendTicked(e.target.checked ? g.id : null)
-                            }
-                          />
-                          <span>{t("create.peopleSendAttest")}</span>
-                        </label>
-                        <button
-                          type="button"
-                          disabled={off || sendTicked !== g.id}
-                          data-testid="people-allow-send"
-                          onClick={() =>
-                            void act(
-                              () =>
-                                api.grant({
-                                  characterId: person.characterId,
-                                  purpose: "likeness-send",
-                                  version: g.version,
-                                  ttlMs: Math.min(
-                                    daysToMs(days),
-                                    g.expiresAtMs - Date.now(),
-                                  ),
-                                  coversConsentId: g.id,
-                                }),
-                              () => setSendTicked(null),
-                            )
-                          }
-                        >
-                          {t("create.peopleAllowSend")}
-                        </button>
-                      </>
-                    )}
-                    {stills.length > 0 && (
-                      <div className="create-person-link">
-                        <select
-                          value={choice}
-                          aria-label={t("create.peopleLinkStill")}
-                          data-testid="people-link-still"
-                          onChange={(e) =>
-                            setLinkChoice({
-                              ...linkChoice,
-                              [g.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">
-                            {t("create.peopleLinkStill")}
-                          </option>
-                          {stills.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          disabled={off || !choice}
-                          data-testid="people-link"
-                          onClick={() => {
-                            const still = stills.find((s) => s.id === choice);
-                            if (!still) return;
-                            void act(
-                              () =>
-                                api.link(
-                                  personPack(
-                                    person.characterId,
-                                    still,
-                                    g.id,
-                                    () => crypto.randomUUID(),
-                                  ),
-                                ),
-                              () =>
-                                setLinkChoice({ ...linkChoice, [g.id]: "" }),
-                            );
-                          }}
-                        >
-                          {t("create.peopleLink")}
-                        </button>
-                      </div>
-                    )}
+                    <p className="note" data-testid="people-no-send">
+                      {t(
+                        state === "expired"
+                          ? "create.peopleNoSendExpired"
+                          : "create.peopleNoSend",
+                      )}
+                    </p>
+                    <label className="create-agree">
+                      <input
+                        type="checkbox"
+                        checked={sendTicked === g.id}
+                        data-testid="people-send-attest"
+                        onChange={(e) =>
+                          setSendTicked(e.target.checked ? g.id : null)
+                        }
+                      />
+                      <span>{t("create.peopleSendAttest")}</span>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={off || sendTicked !== g.id || ttl === null}
+                      data-testid="people-allow-send"
+                      onClick={() => {
+                        if (ttl === null) return;
+                        void act(
+                          () =>
+                            api.grant({
+                              characterId: person.characterId,
+                              purpose: "likeness-send",
+                              version: g.version,
+                              ttlMs: ttl,
+                              coversConsentId: g.id,
+                            }),
+                          () => setSendTicked(null),
+                        );
+                      }}
+                    >
+                      {t("create.peopleAllowSend", {
+                        days: Math.max(1, Math.floor((ttl ?? 0) / 86_400_000)),
+                      })}
+                    </button>
                   </>
+                )}
+                {state === "standing" && stills.length > 0 && (
+                  <div className="create-person-link">
+                    <select
+                      value={choice}
+                      aria-label={t("create.peopleLinkStill")}
+                      data-testid="people-link-still"
+                      onChange={(e) =>
+                        setLinkChoice({
+                          ...linkChoice,
+                          [g.id]: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">{t("create.peopleLinkStill")}</option>
+                      {stills.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={off || !choice}
+                      data-testid="people-link"
+                      onClick={() =>
+                        void link(person.characterId, g.id, choice).then(() =>
+                          setLinkChoice((was) => ({ ...was, [g.id]: "" })),
+                        )
+                      }
+                    >
+                      {t("create.peopleLink")}
+                    </button>
+                  </div>
                 )}
                 {state !== "revoked" && (
                   <RevokeButton
@@ -342,17 +403,20 @@ export function PeoplePanel(props: {
                     revoke={() => act(() => api.revoke(g.id))}
                   />
                 )}
-                {send && (
-                  <RevokeButton
-                    id={send.id}
-                    testid="people-revoke-send"
-                    off={off}
-                    t={t}
-                    revoking={revoking}
-                    setRevoking={setRevoking}
-                    revoke={() => act(() => api.revoke(send.id))}
-                  />
-                )}
+                {newestSends(person, g.id)
+                  .filter((s) => consentState(s, now) !== "revoked")
+                  .map((s) => (
+                    <RevokeButton
+                      key={s.id}
+                      id={s.id}
+                      testid="people-revoke-send"
+                      off={off}
+                      t={t}
+                      revoking={revoking}
+                      setRevoking={setRevoking}
+                      revoke={() => act(() => api.revoke(s.id))}
+                    />
+                  ))}
               </div>
             );
           })}

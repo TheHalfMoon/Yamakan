@@ -37,7 +37,7 @@ const en = {
     "This picture shows no real person, or only people whose consent to send it is recorded.",
   "create.peopleTitle": "People and consent",
   "create.peopleNote":
-    "A real person's likeness is used only with their consent, recorded here. Consent to make videos lets a still of them be linked to them. Consent to send also lets that still leave this computer for your private Kaggle notebook. Revoking stops any further use, for good; it cannot reach what Kaggle already keeps.",
+    "A real person's likeness is used only with their consent, recorded here. Consent to make videos lets a still of them be linked to them. Consent to send also lets that still leave this computer for your private Kaggle notebook. Revoking stops any further use, for good; it cannot reach what Kaggle already keeps. A still once linked stays bound to that consent, even after undo.",
   "create.peopleName": "Their name",
   "create.peopleVersion": "What they agreed to, such as the form they signed",
   "create.peopleDays": "For",
@@ -52,7 +52,12 @@ const en = {
     "Pictures linked to this consent cannot be sent to Kaggle: no consent to send is recorded for it.",
   "create.peopleSendAttest":
     "They also agreed that pictures of them may leave this computer for my private Kaggle notebook, which keeps them in its history.",
-  "create.peopleAllowSend": "Record consent to send",
+  "create.peopleAllowSend": "Record consent to send, for {days} days",
+  "create.peopleNoSendExpired":
+    "This consent has expired, but stills linked to it still need their own consent to send before they can go to Kaggle.",
+  "create.peopleRevalidateSend": "Confirm consent to send again",
+  "create.peopleAlreadyLinked": "That still is already linked to this consent.",
+  "create.peoplePackFull": "No more stills can be linked to this person.",
   "create.peopleLinked": "Linked stills: {names}",
   "create.peopleLinkStill": "A still of them",
   "create.peopleLink": "Link to them",
@@ -64,7 +69,7 @@ const en = {
   "create.peopleState.expired": "Expired.",
   "create.peopleState.revalidate":
     "From before a restore: confirm it again to use it.",
-  "create.peopleFailed": "That was not saved, and nothing changed.",
+  "create.peopleFailed": "That was not saved.",
   "create.peopleUnread": "Consents could not be read.",
   "create.elementsTitle": "Places and props",
   "create.elementsNote":
@@ -557,8 +562,8 @@ const ar: Record<MessageKey, string> = {
     "لا تُظهر هذه الصورة أي شخص حقيقي، أو تُظهر فقط أشخاصًا سُجّلت موافقتهم على إرسالها.",
   "create.peopleTitle": "الأشخاص والموافقة",
   "create.peopleNote":
-    "لا تُستخدم صورة شخص حقيقي إلا بموافقته المسجلة هنا. تتيح الموافقة على صنع الفيديو ربط صورة ثابتة له به. وتتيح الموافقة على الإرسال كذلك أن تغادر تلك الصورة هذا الحاسوب إلى دفتر Kaggle الخاص بك. السحب يوقف أي استخدام لاحق نهائيًا، ولا يصل إلى ما يحتفظ به Kaggle بالفعل.",
-  "create.peopleName": "اسمه",
+    "لا تُستخدم صورة شخص حقيقي إلا بموافقته المسجلة هنا. تتيح الموافقة على صنع الفيديو ربط صورة ثابتة له به. وتتيح الموافقة على الإرسال كذلك أن تغادر تلك الصورة هذا الحاسوب إلى دفتر Kaggle الخاص بك. السحب يوقف أي استخدام لاحق نهائيًا، ولا يصل إلى ما يحتفظ به Kaggle بالفعل. وتبقى الصورة الثابتة بعد ربطها مرتبطة بتلك الموافقة، حتى بعد التراجع.",
+  "create.peopleName": "الاسم",
   "create.peopleVersion": "ما وافق عليه، مثل النموذج الذي وقّعه",
   "create.peopleDays": "لمدة",
   "create.peopleDaysOption": "{days} يومًا",
@@ -572,7 +577,13 @@ const ar: Record<MessageKey, string> = {
     "لا يمكن إرسال الصور المرتبطة بهذه الموافقة إلى Kaggle: لا توجد موافقة على الإرسال مسجلة لها.",
   "create.peopleSendAttest":
     "وافق أيضًا على أن تغادر صوره هذا الحاسوب إلى دفتر Kaggle الخاص بي، الذي يحتفظ بها في سجله.",
-  "create.peopleAllowSend": "تسجيل الموافقة على الإرسال",
+  "create.peopleAllowSend": "تسجيل الموافقة على الإرسال لمدة {days} يومًا",
+  "create.peopleNoSendExpired":
+    "انتهت هذه الموافقة، لكن الصور الثابتة المرتبطة بها لا تزال تحتاج إلى موافقة خاصة على الإرسال قبل أن تذهب إلى Kaggle.",
+  "create.peopleRevalidateSend": "تأكيد الموافقة على الإرسال مجددًا",
+  "create.peopleAlreadyLinked":
+    "هذه الصورة الثابتة مرتبطة بهذه الموافقة بالفعل.",
+  "create.peoplePackFull": "لا يمكن ربط مزيد من الصور الثابتة بهذا الشخص.",
   "create.peopleLinked": "الصور الثابتة المرتبطة: {names}",
   "create.peopleLinkStill": "صورة ثابتة له",
   "create.peopleLink": "ربطها به",
@@ -584,7 +595,7 @@ const ar: Record<MessageKey, string> = {
   "create.peopleState.expired": "منتهية.",
   "create.peopleState.revalidate":
     "من قبل الاستعادة: أكّدها مجددًا لاستخدامها.",
-  "create.peopleFailed": "لم يُحفظ ذلك، ولم يتغير شيء.",
+  "create.peopleFailed": "لم يُحفظ ذلك.",
   "create.peopleUnread": "تعذّرت قراءة الموافقات.",
   "create.elementsTitle": "الأماكن والأغراض",
   "create.elementsNote":

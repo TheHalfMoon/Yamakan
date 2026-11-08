@@ -67,7 +67,7 @@ import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { asElement } from "./create/create-elements.ts";
-import { characterLinks } from "./create/create-people.ts";
+import { asPersonPack, characterLinks } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
@@ -2329,20 +2329,36 @@ function App() {
                     people={{
                       list: async () =>
                         (await call("yamakan.consent.list", {})) as any,
-                      links: async () => {
+                      packs: async () => {
                         const documents = (await call("yamakan.document.list", {
                           projectId: p.id,
                         })) as unknown as { id: string; kind: string }[];
-                        const found = [];
-                        for (const ref of documents)
-                          if (ref.kind === "referencePack") {
-                            const read = (await call("yamakan.document.get", {
-                              projectId: p.id,
+                        // One pack that cannot be read leaves the others shown.
+                        const read = await Promise.allSettled(
+                          documents
+                            .filter((ref) => ref.kind === "referencePack")
+                            .map(async (ref) => ({
                               documentId: ref.id,
-                            })) as any;
-                            found.push(...characterLinks(read.content));
-                          }
-                        return found;
+                              ...((await call("yamakan.document.get", {
+                                projectId: p.id,
+                                documentId: ref.id,
+                              })) as any),
+                            })),
+                        );
+                        const links = [];
+                        const people = [];
+                        for (const r of read) {
+                          if (r.status !== "fulfilled") continue;
+                          links.push(...characterLinks(r.value.content));
+                          const pack = asPersonPack(r.value.content);
+                          if (pack)
+                            people.push({
+                              documentId: r.value.documentId,
+                              contentHash: r.value.contentHash,
+                              pack,
+                            });
+                        }
+                        return { links, people };
                       },
                       // Consents are the workspace's, not the project's: nothing to save first.
                       grant: (input) =>
@@ -2360,7 +2376,7 @@ function App() {
                           () => true,
                           () => false,
                         ),
-                      link: (pack) =>
+                      link: (next) =>
                         new Promise((resolve) => {
                           let kept = false;
                           run(async () => {
@@ -2368,9 +2384,7 @@ function App() {
                             await call("yamakan.pack.save", {
                               projectId: p.id,
                               expectedRevision: head.current!.revision,
-                              documentId: crypto.randomUUID(),
-                              expectedContentHash: null,
-                              pack,
+                              ...next,
                             } as any);
                             kept = true;
                             accept(

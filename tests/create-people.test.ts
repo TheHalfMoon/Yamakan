@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ReferencePackSchema } from "../core/story.ts";
 import {
+  asPersonPack,
   characterLinks,
+  newestSends,
+  sendTtl,
+  withLink,
   consentState,
   grantable,
   peopleOf,
@@ -115,4 +119,82 @@ test("linking a still makes a pack the project accepts, and reads back", () => {
     [],
   );
   assert.deepEqual(characterLinks(null), []);
+});
+
+test("on a tie, consent to send counts only if every tied one stands, as the service asks", () => {
+  const generate = consent({});
+  const a = consent({
+    purpose: "likeness-send",
+    coversConsentId: generate.id,
+    grantedAtMs: 5,
+  });
+  const b = { ...a, id: crypto.randomUUID() };
+  const [both] = peopleOf([generate, a, b]);
+  assert.equal(newestSends(both, generate.id).length, 2);
+  assert.notEqual(sendFor(both, generate.id, NOW), null);
+  const [one] = peopleOf([generate, a, { ...b, revokedAtMs: NOW - 1 }]);
+  assert.equal(sendFor(one, generate.id, NOW), null);
+});
+
+test("consent to send lasts no longer than the consent it covers, and never under a minute", () => {
+  const day = 86_400_000;
+  const standing = consent({ expiresAtMs: NOW + 10 * day });
+  assert.equal(sendTtl(standing, 30 * day, NOW), 10 * day);
+  assert.equal(sendTtl(standing, 5 * day, NOW), 5 * day);
+  // Within a minute of its end, nothing the service would take.
+  assert.equal(sendTtl(consent({ expiresAtMs: NOW + 59_999 }), day, NOW), null);
+  // An expired one says who its linked stills show: the time chosen.
+  assert.equal(
+    sendTtl(consent({ expiresAtMs: NOW - 1 }), 30 * day, NOW),
+    30 * day,
+  );
+});
+
+test("one pack per person: a link is added to it, once, up to the pack's limit", () => {
+  const consentId = crypto.randomUUID();
+  const first = { id: crypto.randomUUID(), hash: "a".repeat(64) };
+  const second = { id: crypto.randomUUID(), hash: "b".repeat(64) };
+  const pack = personPack("Lead", first, consentId, () => crypto.randomUUID());
+  assert.equal(asPersonPack(pack), pack);
+  const more = withLink(pack, second, consentId, () => crypto.randomUUID());
+  assert.ok(typeof more === "object");
+  assert.doesNotThrow(() => ReferencePackSchema.parse(more));
+  assert.deepEqual(
+    characterLinks(more).map((l) => l.assetId),
+    [first.id, second.id],
+  );
+  assert.equal(
+    withLink(pack, first, consentId, () => crypto.randomUUID()),
+    "already",
+  );
+  // The same still on another consent of theirs is a link of its own.
+  assert.ok(
+    typeof withLink(pack, first, crypto.randomUUID(), () =>
+      crypto.randomUUID(),
+    ) === "object",
+  );
+  let full: ReturnType<typeof withLink> = pack;
+  for (let i = 1; i < 64; i++)
+    full = withLink(
+      full as typeof pack,
+      { id: crypto.randomUUID(), hash: "c".repeat(64) },
+      consentId,
+      () => crypto.randomUUID(),
+    );
+  assert.equal(
+    withLink(full as typeof pack, second, consentId, () => crypto.randomUUID()),
+    "full",
+  );
+  // A pack of places, or of two people, is not one person's.
+  assert.equal(
+    asPersonPack({
+      ...pack,
+      entries: [...pack.entries, { ...pack.entries[0], characterId: "Other" }],
+    }),
+    null,
+  );
+  assert.equal(
+    asPersonPack({ ...pack, entries: [{ ...pack.entries[0], role: "prop" }] }),
+    null,
+  );
 });
