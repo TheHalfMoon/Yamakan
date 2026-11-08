@@ -3,7 +3,14 @@
 // them run on an imported file, in the probe itself.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createReadStream, mkdtempSync, rmSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
@@ -75,7 +82,55 @@ test("JPEG 2000 and OpenEXR in a MOV are refused before their decoders run", asy
         },
       ) => {
         assert.equal(e.code, "MEDIA_INVALID", `${name}: ${e.message}`);
+        // The probe itself refused to open the decoder: the codec check after it would
+        // refuse too, but only once that decoder had already run.
+        assert.match(e.message, /Media probe failed/, name);
         return true;
       },
     );
+});
+
+// A file imported before this, already in a project, reaches a render, a proxy or a waveform
+// without the import's refusal: only the list on that input stands in the way. So every FFmpeg
+// input in core/ carries it, but for these, which read only what Yamakan itself generated.
+const OWN_INPUTS: readonly RegExp[] = [/"lavfi"/, /"file:pcm\.wav"/];
+
+test("every FFmpeg input in the service reads with the decoder list", () => {
+  const files = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? files(path.join(dir, e.name))
+        : e.name.endsWith(".ts")
+          ? [path.join(dir, e.name)]
+          : [],
+    );
+  const missing: string[] = [];
+  let inputs = 0;
+  for (const file of files("core")) {
+    const lines = readFileSync(file, "utf8").split("\n");
+    lines.forEach((line, i) => {
+      const where = `${file}:${i + 1}`;
+      // An ffmpeg input, and the arguments just before and after it.
+      if (line.trim() === '"-i",') {
+        inputs++;
+        const around = lines.slice(Math.max(0, i - 12), i + 2).join("\n");
+        if (
+          !around.includes('"-codec_whitelist"') &&
+          !OWN_INPUTS.some((own) => own.test(around))
+        )
+          missing.push(where);
+      }
+      // An ffprobe run: its arguments may come before or after naming it.
+      if (line.includes("executable: mediaTools().ffprobe")) {
+        inputs++;
+        const args = lines.slice(Math.max(0, i - 25), i + 30).join("\n");
+        if (!args.includes('"-codec_whitelist"')) missing.push(where);
+      }
+    });
+  }
+  assert.ok(
+    inputs >= 15,
+    `found ${inputs} inputs: the search has stopped seeing them`,
+  );
+  assert.deepEqual(missing, []);
 });
