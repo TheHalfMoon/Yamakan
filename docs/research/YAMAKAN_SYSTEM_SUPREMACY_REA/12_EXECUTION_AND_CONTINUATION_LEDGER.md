@@ -310,7 +310,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Medium, open:**
 
-1. A crafted backup, once restored, can plant a token that acts as the browser: restore revokes only `revoked = 0` rows, and the token's principal is read from the row (`core/recovery.ts`, `core/store.ts`).
+1. Fixed: a crafted backup, once restored, could plant a token that acts as the browser, and consents or approvals at the next epoch. Restore now revokes every token, a token counts only if it is an agent's and plainly not revoked, and the new epoch is past any the backup names.
 2. Any process running as the user can become the browser user: it can write the launch file and post with a hand-set Origin. Outside the written threat model. `docs/SECURITY.md` now says so plainly, and how agents must run to be bound by their grants. The fix in code is Q15, OS user presence before each human-only command, which is native work not yet built.
 3. Many burned caption cues make the title fit check hold every frame in the service, several GB at most (`core/render.ts`).
 4. The pinned FFmpeg 7.1.1 lacks six security fixes in 7.1.2. **Reviewed on 2026-11-08**, from ffmpeg.org's security page and the CVE records:
@@ -324,4 +324,4 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Also from the engine review:** the Kaggle scripts pin only their top-level Python packages, with no hashes, so a compromised sub-dependency runs in the notebook. With the output fix it can no longer write onto this PC through an output file's name, but it can still change what a run makes.
 
-**Medium, open, found reviewing the fix:** the privacy check's `kernels pull` writes the notebook's script under a name built from the slug in Kaggle's own answer, joined onto the folder unchecked in the same way. That name comes from Kaggle's servers, not from anything a run controls, so it needs Kaggle or its answer to misbehave. The fix is to read privacy some way that writes no file named by Kaggle.
+**Medium, fixed, found reviewing that fix:** the privacy check's `kernels pull` wrote the notebook's script under a name built from the slug in Kaggle's own answer, joined onto the folder unchecked. The CLI takes the name from a metadata file already in the folder instead, so the fresh folder now holds one naming the script `script.py`. On a real pull on 2026-11-08 the script came down as `script.py` and privacy still read true. This rests on the Kaggle CLI 2.2.4 reading that file, which is not pinned; a pull that leaves any other file in the folder is now refused, so a CLI that stops honouring it is noticed.
