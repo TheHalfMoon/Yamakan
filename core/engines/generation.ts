@@ -70,6 +70,9 @@ export type GenerationRecord = {
   height: number;
   durationFrames: number;
   firstFrameAssetId: string | null;
+  // With a still: the person's word that it shows no real person whose consent to send it
+  // is not recorded, kept as the record that it was given. Absent from older records.
+  noUnconsentedPerson?: boolean;
   inputs: GenerationLineage["inputs"];
   // The engine's name for it, once known. Before that, the attempt key is.
   executionRef: string | null;
@@ -452,6 +455,9 @@ export function createGenerationService(options: {
         height: request.height,
         durationFrames: request.durationFrames,
         firstFrameAssetId: request.firstFrameAssetId ?? null,
+        ...(request.firstFrameAssetId
+          ? { noUnconsentedPerson: request.noUnconsentedPerson === true }
+          : {}),
         inputs: inputPins,
         executionRef: null,
         phase: "sending",
