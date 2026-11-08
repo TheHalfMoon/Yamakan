@@ -144,6 +144,7 @@ const HELD_FOR_A_MOMENT = {
   maxRetries: 5,
   retryDelay: 200,
 };
+const PULLED_SCRIPT = "script.py";
 const TOO_MUCH_TO_SEND =
   "This run's prompt and image together are more than Kaggle accepts, so nothing was sent.";
 
@@ -851,8 +852,17 @@ export function createKaggleEngine(options: {
   // brings the script too, with its prompt, so nothing of it stays.
   async function privacyOf(recipe: KaggleRecipe, folder: string) {
     const pulled = path.join(folder, "pulled");
+    // Fresh, so that only what is written here names the script it brings.
+    await rm(pulled, HELD_FOR_A_MOMENT);
     await mkdir(pulled, { recursive: true });
     try {
+      // The CLI names the script from Kaggle's own answer, joined onto this folder as it is,
+      // unless a metadata file here already names it: so one does, with a name of ours.
+      await writeFile(
+        path.join(pulled, "kernel-metadata.json"),
+        JSON.stringify({ code_file: PULLED_SCRIPT }),
+        { flag: "wx" },
+      );
       await cli(
         ["kernels", "pull", remote(recipe), "-p", pulled, "-m"],
         90_000,

@@ -383,6 +383,41 @@ test(
   },
 );
 
+test("a pulled script is saved under a name of ours, not Kaggle's", async () => {
+  // As the CLI does: a code_file already named in the folder's metadata, else the slug from
+  // Kaggle's own answer, joined onto the folder as it is.
+  const named: string[] = [];
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
+      if (args[1] === "status")
+        return { stdout: 'has status "KernelWorkerStatus.COMPLETE"' };
+      if (args[1] === "pull") {
+        const folder = args[4];
+        const metadata = path.join(folder, "kernel-metadata.json");
+        const given = existsSync(metadata)
+          ? JSON.parse(readFileSync(metadata, "utf8")).code_file
+          : undefined;
+        const name = given ?? "..\\..\\..\\Startup\\x.py";
+        named.push(name);
+        assert.equal(path.dirname(path.join(folder, name)), folder, name);
+        writeFileSync(path.join(folder, name), "the prompt");
+        writeFileSync(metadata, JSON.stringify({ is_private: true }));
+        return { stdout: "" };
+      }
+      if (args[1] === "push")
+        return { stdout: "Kernel version 1 successfully pushed." };
+      throw new Error(`unexpected ${args}`);
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await engine.submit(request(), context as never);
+  assert.ok(named.length >= 1);
+  assert.deepEqual([...new Set(named)], ["script.py"]);
+});
+
 test("an earlier run's result is never this run's", async () => {
   const k = kaggle(["COMPLETE"], (_id, folder) => good("someone-else", folder));
   const { executionRef } = (await k.engine.submit(
