@@ -3648,11 +3648,7 @@ export class ProjectStore {
       { agent_id: string; scopes: string; revoked: number } | undefined;
     // Only a token this store issued and has not revoked: its schema says so, and a restored
     // database may not have kept that schema.
-    if (
-      !row ||
-      row.revoked !== 0 ||
-      !AgentId.safeParse(row.agent_id).success
-    )
+    if (!row || row.revoked !== 0 || !AgentId.safeParse(row.agent_id).success)
       return null;
     return {
       id: row.agent_id as Principal["id"],
