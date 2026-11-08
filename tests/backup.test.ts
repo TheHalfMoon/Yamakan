@@ -743,9 +743,11 @@ test("a backup made to carry authority restores with none", async () => {
   const { base, store, home } = await workspace();
   const backup = await backupWorkspace(store, home);
   const dir = path.join(home, "backups", backup.backupId);
-  // As someone who wrote the backup would: a token table without its rules, a token
-  // claiming to be the browser and never revoked, and a consent at the next epoch.
+  // As someone who wrote the backup would: tables without their rules and under names in
+  // another case, which SQLite reads as the same tables; a token claiming to be the browser
+  // and never revoked; a live agent's token; and a consent and a request at later epochs.
   const token = "a".repeat(64);
+  const agentToken = "e".repeat(64);
   const db = new DatabaseSync(path.join(dir, "workspace.sqlite"));
   const epoch = (
     db
@@ -755,13 +757,26 @@ test("a backup made to carry authority restores with none", async () => {
     }
   ).value;
   db.exec(`DROP TABLE agent_tokens;
-CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);`);
-  db.prepare(
-    "INSERT INTO agent_tokens VALUES ('browser-ui', ?, '[]', 'planted', NULL, '2026-01-01')",
-  ).run(hashAgentToken(token));
+CREATE TABLE Agent_Tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);
+ALTER TABLE director_epoch RENAME TO tmp_epoch;
+ALTER TABLE tmp_epoch RENAME TO Director_Epoch;
+ALTER TABLE director_requests RENAME TO tmp_requests;
+ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
+  const plant = db.prepare(
+    "INSERT INTO Agent_Tokens VALUES (?, ?, '[]', 'planted', ?, '2026-01-01')",
+  );
+  plant.run("browser-ui", hashAgentToken(token), null);
+  plant.run(
+    `agent:${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}`,
+    hashAgentToken(agentToken),
+    0,
+  );
   db.prepare(
     "INSERT INTO likeness_consents VALUES ('c1', 'someone', 'likeness-send', '1', 0, 9999999999999, 'browser-ui', ?)",
   ).run(epoch + 1);
+  db.prepare(
+    "INSERT INTO Director_Requests VALUES ('browser-ui', 'r1', ?, '{}', ?, 0)",
+  ).run("0".repeat(64), epoch + 5);
   db.close();
   const bytes = await readFile(path.join(dir, "workspace.sqlite"));
   const manifestFile = path.join(dir, "backup.json");
@@ -774,6 +789,7 @@ CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEX
   const restored = new ProjectStore(target);
   await restored.initialize();
   assert.equal(restored.principalForAgentToken(token), null);
+  assert.equal(restored.principalForAgentToken(agentToken), null);
   restored.close();
   const check = new DatabaseSync(path.join(target, "workspace.sqlite"), {
     readOnly: true,
@@ -785,14 +801,13 @@ CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEX
       value: number;
     }
   ).value;
-  assert.ok(now > epoch + 1, `the epoch ${now} is past the planted consent's`);
-  assert.equal(
-    (
-      check.prepare("SELECT revoked FROM agent_tokens").get() as {
-        revoked: number;
-      }
-    ).revoked,
-    1,
+  assert.ok(now > epoch + 5, `the epoch ${now} is past every planted one`);
+  assert.deepEqual(
+    check
+      .prepare("SELECT revoked FROM agent_tokens")
+      .all()
+      .map((r) => (r as { revoked: number }).revoked),
+    [1, 1],
   );
   check.close();
   store.close();
@@ -807,14 +822,18 @@ CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEX
   const plant = db.prepare(
     "INSERT INTO agent_tokens VALUES (?, ?, '[]', 'planted', ?, '2026-01-01')",
   );
+  const id = (n: string) =>
+    `agent:${n.repeat(8)}-${n.repeat(4)}-${n.repeat(4)}-${n.repeat(4)}-${n.repeat(12)}`;
   plant.run("browser-ui", hashAgentToken("b".repeat(64)), 0);
-  plant.run("agent:x", hashAgentToken("c".repeat(64)), null);
-  plant.run("agent:y", hashAgentToken("d".repeat(64)), 0);
+  plant.run(id("1"), hashAgentToken("c".repeat(64)), null);
+  plant.run(id("2"), hashAgentToken("d".repeat(64)), 0);
+  plant.run("agent:x", hashAgentToken("f".repeat(64)), 0);
   db.close();
   const reopened = new ProjectStore(root);
   await reopened.initialize();
   assert.equal(reopened.principalForAgentToken("b".repeat(64)), null);
   assert.equal(reopened.principalForAgentToken("c".repeat(64)), null);
-  assert.equal(reopened.principalForAgentToken("d".repeat(64))?.id, "agent:y");
+  assert.equal(reopened.principalForAgentToken("d".repeat(64))?.id, id("2"));
+  assert.equal(reopened.principalForAgentToken("f".repeat(64)), null);
   reopened.close();
 });

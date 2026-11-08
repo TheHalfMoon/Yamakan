@@ -792,7 +792,7 @@ function fenceRestored(db: DatabaseSync): Fenced {
   }
   if (has(db, "document_uploads"))
     fenced.uploadsDropped = run(
-      "DELETE FROM document_uploads WHERE state <> 'consumed'",
+      "DELETE FROM document_uploads WHERE state IS NOT 'consumed'",
     );
   // Every one, whatever it says: a backup can come from anyone, with its own schema, so
   // "revoked = 0" would miss a token written as NULL.
@@ -1427,9 +1427,13 @@ export type Closure = {
   reported: ClosureGap[];
 };
 
+// SQLite finds a table by its name in any case, so a backup's `Agent_Tokens` is what
+// `agent_tokens` reads. This must find it the same way, or every fence below skips it.
 const has = (db: DatabaseSync, table: string) =>
   db
-    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE",
+    )
     .get(table) !== undefined;
 
 export function creativeClosure(db: DatabaseSync): Closure {

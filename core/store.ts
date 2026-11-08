@@ -124,6 +124,7 @@ import type { Scope } from "./command/registry.ts";
 import type { Principal } from "./command/registry.ts";
 import {
   encodeAgentScopes,
+  AgentId,
   hashAgentToken,
   newAgentId,
   newAgentToken,
@@ -3650,8 +3651,7 @@ export class ProjectStore {
     if (
       !row ||
       row.revoked !== 0 ||
-      typeof row.agent_id !== "string" ||
-      !row.agent_id.startsWith("agent:")
+      !AgentId.safeParse(row.agent_id).success
     )
       return null;
     return {
