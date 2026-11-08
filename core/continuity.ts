@@ -446,9 +446,11 @@ export function assertMayMarkFictional(
  * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
  *
- * For an engine elsewhere, each newest consent checked here also needs consent to send that
- * names it: the newest of those, usable now. An older grant does not outlive a newer one
- * being revoked, and a grant naming someone else's consent under the same name does not count.
+ * For an engine elsewhere, every consent to generate the image has ever been linked to, not
+ * only the newest, needs consent to send that names it: the newest of those, usable now. So
+ * linking the image again to someone else's consent, under the same name or another, cannot
+ * make that person's word enough to send it. An older grant does not outlive a newer one
+ * being revoked.
  */
 export function assertLinkedMediaGeneratable(
   db: DatabaseSync,
@@ -489,15 +491,15 @@ export function assertLinkedMediaGeneratable(
     // Refuses a revoked, expired, wrong-purpose or unrevalidated consent. On a tie
     // every one must pass, so a clock cannot free the media.
     for (const { id, at } of order)
-      if (at === latest) {
+      if (at === latest)
         assertConsentUsable(db, id, {
           characterId,
           purpose: REFERENCE_CONSENT_PURPOSE,
           nowMs,
         });
-        if (options.leavesThisComputer)
-          assertMaySend(db, characterId, id, nowMs);
-      }
+    // Sending cannot be undone, so who it is about is everyone it was ever linked to.
+    if (options.leavesThisComputer)
+      for (const { id } of order) assertMaySend(db, characterId, id, nowMs);
   }
 }
 
@@ -511,7 +513,9 @@ function assertMaySend(
 ) {
   const grants = db
     .prepare(
-      "SELECT c.id, c.granted_at FROM likeness_consents c JOIN send_consent_covers s ON s.consent_id = c.id WHERE s.covers_consent_id = ? AND c.character_id = ? AND c.purpose = ?",
+      // A grant covering more than one consent, which only a crafted table could hold,
+      // counts for none.
+      "SELECT c.id, c.granted_at FROM likeness_consents c JOIN send_consent_covers s ON s.consent_id = c.id WHERE s.covers_consent_id = ? AND c.character_id = ? AND c.purpose = ? AND (SELECT count(*) FROM send_consent_covers x WHERE x.consent_id = c.id) = 1",
     )
     .all(covered, characterId, "likeness-send") as {
     id: string;

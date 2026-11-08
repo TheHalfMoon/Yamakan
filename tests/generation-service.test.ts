@@ -664,7 +664,7 @@ test("consent to send for another person given the same name does not count", as
   assert.notEqual(state.inputRead, null);
 });
 
-test("consent to send must cover a current consent to generate for that character", async () => {
+test("consent to send must cover an unrevoked consent to generate for that character", async () => {
   const f = await fixture();
   const generate = await grantGenerate(f);
   const send = await grantSend(f, generate);
@@ -1345,4 +1345,203 @@ test("without a service the commands refuse, and say why, touching nothing", asy
     );
   }
   assert.deepEqual(await f.store.exportProject(f.projectId), before);
+});
+
+// Every consent the image was ever linked to, since a later link is anyone's to save.
+const linkTo = (
+  still: { id: string; hash: string },
+  consentId: string,
+  characterId = "lead",
+) => ({
+  format: "yamakan.reference-pack",
+  formatVersion: 1,
+  name: "Cast",
+  entries: [
+    {
+      id: crypto.randomUUID(),
+      role: "character",
+      label: "Lead",
+      assetId: still.id,
+      assetHash: still.hash,
+      characterId,
+      consentId,
+    },
+  ],
+});
+
+// Over a copy without its rules, as a crafted backup's table could be.
+const looseCovers = (db: import("node:sqlite").DatabaseSync) =>
+  db.exec(
+    "CREATE TABLE covers_copy AS SELECT * FROM send_consent_covers; DROP TABLE send_consent_covers; ALTER TABLE covers_copy RENAME TO send_consent_covers",
+  );
+
+test("linking the image again to someone else's consent does not make their word enough", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const first = await consented(f, still.id, still.hash);
+  // Someone else consents to generate and to send, and the image is linked to them.
+  const other = await grantGenerate(f);
+  await grantSend(f, other);
+  await savePack(f, linkTo(still, other));
+  const start = () =>
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    );
+  await assert.rejects(start(), /No consent to send is recorded/);
+  assert.equal(state.inputRead, null);
+  // So under another name, too.
+  const renamed = await grantGenerate(f, "someone-else");
+  await grantSend(f, renamed, "someone-else");
+  await savePack(f, linkTo(still, renamed, "someone-else"));
+  await assert.rejects(start(), /No consent to send is recorded/);
+  assert.equal(state.inputRead, null);
+  await grantSend(f, first);
+  await start();
+  assert.notEqual(state.inputRead, null);
+});
+
+test("a person's renewed consent to generate needs consent to send of its own", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const old = await consented(f, still.id, still.hash);
+  await grantSend(f, old);
+  await new Promise((r) => setTimeout(r, 5));
+  const renewed = await grantGenerate(f);
+  await savePack(f, linkTo(still, renewed));
+  const start = () =>
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    );
+  await assert.rejects(start(), /No consent to send is recorded/);
+  assert.equal(state.inputRead, null);
+  await grantSend(f, renewed);
+  await start();
+  assert.notEqual(state.inputRead, null);
+});
+
+test("consent to send may cover an expired consent to generate, which still says who", async () => {
+  const f = await fixture();
+  const old = await grantGenerate(f);
+  await f.store.transaction((db) =>
+    db
+      .prepare("UPDATE likeness_consents SET expires_at = 1 WHERE id = ?")
+      .run(old),
+  );
+  const send = (
+    await execute(f.ctx, "yamakan.consent.grant", {
+      characterId: "lead",
+      purpose: "likeness-send",
+      version: "v1",
+      ttlMs: 3_600_000,
+      coversConsentId: old,
+    })
+  ).result as { id: string; coversConsentId: string };
+  assert.equal(send.coversConsentId, old);
+});
+
+test("consent to send covers only a consent to generate of this epoch", async () => {
+  const f = await fixture();
+  const generate = await grantGenerate(f);
+  // As a restore does.
+  await f.store.transaction((db) =>
+    db.prepare("UPDATE director_epoch SET value = value + 1").run(),
+  );
+  assert.equal(
+    await code(
+      execute(f.ctx, "yamakan.consent.grant", {
+        characterId: "lead",
+        purpose: "likeness-send",
+        version: "v1",
+        ttlMs: 3_600_000,
+        coversConsentId: generate,
+      }),
+    ),
+    "VALIDATION",
+  );
+  await execute(f.ctx, "yamakan.consent.revalidate", { consentId: generate });
+  await grantSend(f, generate);
+});
+
+test("revalidating consent to send checks again whom it covers, and says so", async () => {
+  const f = await fixture();
+  const generate = await grantGenerate(f);
+  const send = await grantSend(f, generate);
+  const revalidate = () =>
+    execute(f.ctx, "yamakan.consent.revalidate", { consentId: send });
+  assert.equal(
+    ((await revalidate()).result as { coversConsentId: string })
+      .coversConsentId,
+    generate,
+  );
+  // A second consent covered, then none.
+  const other = await grantGenerate(f);
+  await f.store.transaction((db) => {
+    looseCovers(db);
+    db.prepare(
+      "INSERT INTO send_consent_covers(consent_id, covers_consent_id) VALUES (?, ?)",
+    ).run(send, other);
+  });
+  assert.equal(await code(revalidate()), "VALIDATION");
+  await f.store.transaction((db) =>
+    db
+      .prepare("DELETE FROM send_consent_covers WHERE consent_id = ?")
+      .run(send),
+  );
+  assert.equal(await code(revalidate()), "VALIDATION");
+});
+
+test("revalidating consent to send refuses one covering someone else's consent", async () => {
+  const f = await fixture();
+  const generate = await grantGenerate(f);
+  const send = await grantSend(f, generate);
+  const elsewhere = await grantGenerate(f, "someone-else");
+  await f.store.transaction((db) =>
+    db
+      .prepare(
+        "UPDATE send_consent_covers SET covers_consent_id = ? WHERE consent_id = ?",
+      )
+      .run(elsewhere, send),
+  );
+  assert.equal(
+    await code(
+      execute(f.ctx, "yamakan.consent.revalidate", { consentId: send }),
+    ),
+    "VALIDATION",
+  );
+});
+
+test("a consent to send covering two consents counts for neither", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const generate = await consented(f, still.id, still.hash);
+  const other = await grantGenerate(f);
+  const send = await grantSend(f, other);
+  await f.store.transaction((db) => {
+    looseCovers(db);
+    db.prepare(
+      "INSERT INTO send_consent_covers(consent_id, covers_consent_id) VALUES (?, ?)",
+    ).run(send, generate);
+  });
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /No consent to send is recorded/,
+  );
+  assert.equal(state.inputRead, null);
 });
