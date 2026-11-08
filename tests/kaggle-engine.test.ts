@@ -297,10 +297,12 @@ async function fetchedBy(extra?: string) {
       if (args[1] === "output") {
         asked = args;
         good(runId, args[4]);
-        writeFileSync(path.join(args[4], `${wan.slug}.log`), "[]");
+        // A folder under a name it may have is not one of its files either.
         if (extra === "a folder")
-          mkdirSync(path.join(args[4], "receipt.json.d"));
-        else if (extra) writeFileSync(path.join(args[4], extra), "@echo off");
+          mkdirSync(path.join(args[4], `${wan.slug}.log`));
+        else writeFileSync(path.join(args[4], `${wan.slug}.log`), "[]");
+        if (extra && extra !== "a folder")
+          writeFileSync(path.join(args[4], extra), "@echo off");
         return { stdout: "" };
       }
       throw new Error(`unexpected ${args}`);
