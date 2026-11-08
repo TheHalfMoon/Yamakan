@@ -310,7 +310,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Medium, open:**
 
-1. A crafted backup, once restored, can plant a token that acts as the browser: restore revokes only `revoked = 0` rows, and the token's principal is read from the row (`core/recovery.ts`, `core/store.ts`).
+1. Fixed: a crafted backup, once restored, could plant a token that acts as the browser, and consents or approvals at the next epoch. Restore now revokes every token, a token counts only if it is an agent's and plainly not revoked, and the new epoch is past any the backup names.
 2. Any process running as the user can become the browser user: it can write the launch file and post with a hand-set Origin. Outside the written threat model, but `docs/SECURITY.md` understates it, and agents with workspace access are in that class.
 3. Many burned caption cues make the title fit check hold every frame in the service, several GB at most (`core/render.ts`). Fixed in the PR that changes this line: each frame is looked at as it streams in, into one reused frame, and let go.
 4. The pinned FFmpeg 7.1.1 lacks six security fixes in 7.1.2, and no vulnerability review is recorded. Decoding runs inside the AppContainer, which limits the damage.

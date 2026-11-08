@@ -760,6 +760,13 @@ type Fenced = {
 //   - a fresh Director epoch voids approvals and requires consents to be
 //     revalidated (YU-013).
 // Recorded history (receipts, Director requests, migrations) stays as it was.
+// Every table that records an epoch, fixed names only: each is read in SQL by name.
+const EPOCH_TABLES = [
+  "likeness_consents",
+  "consent_revalidations",
+  "director_attempts",
+  "director_requests",
+] as const;
 function fenceRestored(db: DatabaseSync): Fenced {
   const run = (sql: string, ...args: (string | number)[]) =>
     Number(db.prepare(sql).run(...args).changes);
@@ -785,16 +792,55 @@ function fenceRestored(db: DatabaseSync): Fenced {
   }
   if (has(db, "document_uploads"))
     fenced.uploadsDropped = run(
-      "DELETE FROM document_uploads WHERE state <> 'consumed'",
+      "DELETE FROM document_uploads WHERE state IS NOT 'consumed'",
     );
+  // Every one, whatever it says: a backup can come from anyone, with its own schema, so
+  // "revoked = 0" would miss a token written as NULL.
   if (has(db, "agent_tokens"))
     fenced.agentTokensRevoked = run(
-      "UPDATE agent_tokens SET revoked = 1 WHERE revoked = 0",
+      "UPDATE agent_tokens SET revoked = 1 WHERE revoked IS NOT 1",
     );
   // A backup older than schema v12 has no Director tables; its legacy
-  // files, once imported, belong to no live epoch either.
+  // files, once imported, belong to no live epoch either. The new epoch is past any the
+  // backup names, not one past its own counter: a consent or approval written at the next
+  // epoch would otherwise count as current here.
   if (has(db, "director_epoch")) {
-    run("UPDATE director_epoch SET value = value + 1 WHERE singleton = 1");
+    let highest = (
+      db
+        .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
+        .get() as {
+        value: unknown;
+      }
+    ).value;
+    for (const table of EPOCH_TABLES) {
+      if (!has(db, table)) continue;
+      if (
+        db
+          .prepare(
+            `SELECT 1 FROM ${table} WHERE typeof(epoch) <> 'integer' LIMIT 1`,
+          )
+          .get()
+      )
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "The backup's database holds an epoch that is not a whole number.",
+        );
+      const { most } = db
+        .prepare(`SELECT MAX(epoch) AS most FROM ${table}`)
+        .get() as { most: number | null };
+      if (most !== null && most > (highest as number)) highest = most;
+    }
+    if (
+      typeof highest !== "number" ||
+      !Number.isSafeInteger(highest) ||
+      highest < 0 ||
+      highest >= Number.MAX_SAFE_INTEGER
+    )
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "The backup's database holds an epoch this workspace cannot go past.",
+      );
+    run("UPDATE director_epoch SET value = ? WHERE singleton = 1", highest + 1);
     fenced.directorEpoch = (
       db
         .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
@@ -880,7 +926,7 @@ async function restore(
       if (
         check
           .prepare(
-            "SELECT 1 FROM sqlite_master WHERE type IN ('trigger', 'view') OR sql LIKE 'CREATE VIRTUAL%' LIMIT 1",
+            "SELECT 1 FROM sqlite_master WHERE type IN ('trigger', 'view') OR sql LIKE '%VIRTUAL%TABLE%' LIMIT 1",
           )
           .get()
       )
@@ -1381,9 +1427,13 @@ export type Closure = {
   reported: ClosureGap[];
 };
 
+// SQLite finds a table by its name in any case, so a backup's `Agent_Tokens` is what
+// `agent_tokens` reads. This must find it the same way, or every fence below skips it.
 const has = (db: DatabaseSync, table: string) =>
   db
-    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE",
+    )
     .get(table) !== undefined;
 
 export function creativeClosure(db: DatabaseSync): Closure {
