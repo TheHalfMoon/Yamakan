@@ -1,4 +1,4 @@
-// A file is read only with the decoders Yamakan supports. FFmpeg 7.1.1 has known overflows in
+// A file is read only with the decoders Yamakan supports. FFmpeg 7.1.1 had known overflows in
 // its JPEG 2000 and OpenEXR decoders, and a MOV can carry either: the container list alone let
 // them run on an imported file, in the probe itself.
 import assert from "node:assert/strict";

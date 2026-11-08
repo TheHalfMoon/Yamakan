@@ -62,7 +62,7 @@ export const MEDIA_FORMATS =
   "mov,matroska,wav,mp3,ogg,png_pipe,jpeg_pipe,webp_pipe,image2";
 
 // The decoders media is read with, and no others: FFmpeg's container list does not limit the
-// decoders inside a container, and FFmpeg 7.1.1 has known overflows in some it would otherwise
+// decoders inside a container, and FFmpeg 7.1.1 had known overflows in some it would otherwise
 // run on an imported file, JPEG 2000 and OpenEXR among them (see the security checkpoint in the
 // ledger). Passed as -codec_whitelist on every input, which refuses to open any other decoder,
 // in the probe as in a render. Names are FFmpeg's decoder names.

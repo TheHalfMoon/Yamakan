@@ -1,6 +1,6 @@
 # Yamakan Windows FFmpeg pin (R8 / Q3)
 
-Redistributable Windows x86_64 FFmpeg **7.1.1** whose **libass 0.17.3** is built
+Redistributable Windows x86_64 FFmpeg **7.1.5** whose **libass 0.17.3** is built
 with **fontconfig enabled and DirectWrite disabled**, so title fonts can be
 confined through `FONTCONFIG_FILE` (Q3).
 
