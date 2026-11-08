@@ -1,15 +1,15 @@
 {
   "receipt": "yamakan.ffmpeg-win64-r8/3",
   "purpose": "Q3/R8: libass fontconfig provider, DirectWrite disabled; libx265 for qualification fixtures",
-  "ffmpegVersion": "7.1.2",
+  "ffmpegVersion": "7.1.5",
   "libassVersion": "0.17.3",
   "host": "msys2-mingw64",
   "libass": { "directwrite": "disabled", "fontconfig": "enabled" },
-  "sources": { "ffmpeg": { "sha256": "089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304", "signedBy": "FCF986EA15E6E293A5644F10B4322F04D67658D8" }, "libass": { "sha256": "eae425da50f0015c21f7b3a9c7262a910f0218af469e22e2931462fed3c50959" } },
+  "sources": { "ffmpeg": { "sha256": "de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f", "signedBy": "FCF986EA15E6E293A5644F10B4322F04D67658D8" }, "libass": { "sha256": "eae425da50f0015c21f7b3a9c7262a910f0218af469e22e2931462fed3c50959" } },
   "configureNotes": "Built via scripts/vendor/build-ffmpeg-win64-r8-msys2.sh with --enable-libx265.",
-  "ffmpegSha256": "eb6f17b5d620cadd21a98875aca79ef9df2f6512e517de3a26bfb458a6725607",
-  "ffprobeSha256": "9cd96ee9292a474058ce3c0c7dc76f4472968fdbe15ac1db9781eedb22072653",
-  "packages": [
+  "ffmpegSha256": "ecfa375733106e9b72317e28d430c036ae4277e4038349f3d5f30c84fa05cfd5",
+  "ffprobeSha256": "c158d17f635be352866a2865151b33c97651ab22b3c2895b410d460ef393cfc6",
+  "packagesAtBuild": [
     "base 2022.06-1",
     "bash 5.3.20-3",
     "bash-completion 2.18.0-1",
@@ -243,8 +243,8 @@
 
   ],
   "binaries": {
-    "ffmpeg.exe": { "sha256": "eb6f17b5d620cadd21a98875aca79ef9df2f6512e517de3a26bfb458a6725607", "bytes": 24498688 },
-    "ffprobe.exe": { "sha256": "9cd96ee9292a474058ce3c0c7dc76f4472968fdbe15ac1db9781eedb22072653", "bytes": 24363520 },
+    "ffmpeg.exe": { "sha256": "ecfa375733106e9b72317e28d430c036ae4277e4038349f3d5f30c84fa05cfd5", "bytes": 24519168 },
+    "ffprobe.exe": { "sha256": "c158d17f635be352866a2865151b33c97651ab22b3c2895b410d460ef393cfc6", "bytes": 24382464 },
     "libbrotlicommon.dll": { "sha256": "121006fe45e8bd12b1929f86e1efb1dbd1c6291118f9a409693ce8c030f1cefb", "bytes": 140068 },
     "libbrotlidec.dll": { "sha256": "dab7d47981ee887865d1f82dcbcc8fc4c7a43942278bb27877e168909e10d346", "bytes": 60092 },
     "libbz2-1.dll": { "sha256": "a4fbb97c26662d2b8a80bf4597ed3effb69b12048b0cb1eef2c3f211e2e66673", "bytes": 108633 },

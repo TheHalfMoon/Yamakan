@@ -24,11 +24,12 @@ export PATH="$PREFIX/bin:/mingw64/bin:$PATH"
 
 log() { printf '[r8-ffmpeg-msys2] %s\n' "$*"; }
 
-# 7.1.2 carries the security fixes 7.1.1 lacks; see the security checkpoint in the ledger.
-FFMPEG_VERSION=7.1.2
+# The newest 7.1 release when this was built: it carries the security fixes 7.1.1 lacks, and
+# those of the point releases since. See the security checkpoint in the ledger.
+FFMPEG_VERSION=7.1.5
 # Pinned after checking: FFmpeg's tarball against its release key below; libass's against its
 # release's own signature, made by Oneric's key 5EE63F2A71BF132CFE3567E1DFFE615F2824C720.
-FFMPEG_SHA256=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
+FFMPEG_SHA256=de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f
 LIBASS_SHA256=eae425da50f0015c21f7b3a9c7262a910f0218af469e22e2931462fed3c50959
 
 fetch() {
@@ -56,14 +57,18 @@ signed_by_ffmpeg() {
   home="$(mktemp -d)"
   fetch "https://ffmpeg.org/ffmpeg-devel.asc" "$SRC/ffmpeg-devel.asc"
   fetch "${2}.asc" "$file.asc"
-  gpg --homedir "$home" --batch --quiet --import "$SRC/ffmpeg-devel.asc"
-  if ! gpg --homedir "$home" --batch --status-fd 1 --verify "$file.asc" "$file" 2>/dev/null |
-    grep -q "^\[GNUPG:\] VALIDSIG .* $FFMPEG_RELEASE_KEY\$"; then
-    log "ERROR: $file is not signed by FFmpeg's release key $FFMPEG_RELEASE_KEY"
-    rm -rf "$home"
-    exit 1
+  local status=""
+  # Read whole before it is looked at: a pipe could close on gpg early. A revoked or expired
+  # key, or one past its validity, is not accepted even with a good signature.
+  if gpg --homedir "$home" --batch --quiet --import "$SRC/ffmpeg-devel.asc"; then
+    status="$(gpg --homedir "$home" --batch --status-fd 1 --verify "$file.asc" "$file" 2>/dev/null || true)"
   fi
   rm -rf "$home"
+  if ! grep -q "^\[GNUPG:\] VALIDSIG .* $FFMPEG_RELEASE_KEY\$" <<<"$status" ||
+    grep -qE "^\[GNUPG:\] (REVKEYSIG|EXPKEYSIG|EXPSIG|BADSIG|ERRSIG)" <<<"$status"; then
+    log "ERROR: $file is not signed by FFmpeg's release key $FFMPEG_RELEASE_KEY"
+    exit 1
+  fi
 }
 
 untar() {
@@ -76,7 +81,11 @@ build_libass() {
   local v=0.17.3
   local d="$SRC/libass-$v"
   local stamp="$PREFIX/lib/libass-r8.stamp"
-  [[ -f "$stamp" && -f "$PREFIX/lib/libass.a" ]] && return 0
+  # Built before only counts if from the source pinned now; otherwise it is built again.
+  if [[ -f "$stamp" && -f "$PREFIX/lib/libass.a" ]] &&
+    grep -qx "source=$LIBASS_SHA256" "$stamp"; then
+    return 0
+  fi
   mkdir -p "$SRC" "$PREFIX"
   fetch "https://github.com/libass/libass/releases/download/$v/libass-$v.tar.xz" "$SRC/libass-$v.tar.xz"
   pinned "$SRC/libass-$v.tar.xz" "$LIBASS_SHA256"
@@ -92,7 +101,7 @@ build_libass() {
     ninja -C build install
   )
   # Prefer our static libass over any mingw shared package.
-  printf 'directwrite=disabled\nfontconfig=enabled\nlibass=%s\n' "$v" >"$stamp"
+  printf 'directwrite=disabled\nfontconfig=enabled\nlibass=%s\nsource=%s\n' "$v" "$LIBASS_SHA256" >"$stamp"
   log "libass meson summary:"
   grep -E 'directwrite|fontconfig|Feature' "$d/build/meson-info/intro-features.json" 2>/dev/null || true
   # Confirm DirectWrite was not enabled in the build options.
@@ -139,6 +148,8 @@ build_ffmpeg() {
 }
 
 package_dist() {
+  # Only this build's files: what an earlier one left would be hashed in and allowed.
+  rm -rf "$DIST"
   mkdir -p "$DIST"
   cp -f "$PREFIX/bin/ffmpeg.exe" "$DIST/ffmpeg.exe"
   cp -f "$PREFIX/bin/ffprobe.exe" "$DIST/ffprobe.exe"
@@ -167,7 +178,9 @@ package_dist() {
     printf '  "sources": { "ffmpeg": { "sha256": "%s", "signedBy": "%s" }, "libass": { "sha256": "%s" } },\n' "$FFMPEG_SHA256" "$FFMPEG_RELEASE_KEY" "$LIBASS_SHA256"
     printf '  "configureNotes": "Built via scripts/vendor/build-ffmpeg-win64-r8-msys2.sh with --enable-libx265.",\n'
     printf '  "ffmpegSha256": "%s",\n  "ffprobeSha256": "%s",\n' "$ffhash" "$fphash"
-    printf '  "packages": [\n'
+    # This machine's MSYS2 packages when it was built, for the record: they are not installed
+    # or held to these versions by this script, so this is not a lock.
+    printf '  "packagesAtBuild": [\n'
     pacman -Q | sed 's/.*/    "&"/' | paste -sd, - | sed 's/,/,\n/g'
     printf '\n  ],\n  "binaries": {\n'
     (cd "$DIST" && for f in *.exe *.dll; do
