@@ -446,8 +446,11 @@ export function assertMayMarkFictional(
  * need its role read here once one can be an input. Media no pack links passes:
  * this goes by hash, and cannot tell who a still shows.
  *
- * For an engine elsewhere, each of those characters also needs consent to send: their
- * newest, usable now. An older grant does not outlive a newer one being revoked.
+ * For an engine elsewhere, every consent to generate the image has ever been linked to, not
+ * only the newest, needs consent to send that names it: the newest of those, usable now. So
+ * linking the image again to someone else's consent, under the same name or another, cannot
+ * make that person's word enough to send it. An older grant does not outlive a newer one
+ * being revoked.
  */
 export function assertLinkedMediaGeneratable(
   db: DatabaseSync,
@@ -494,20 +497,45 @@ export function assertLinkedMediaGeneratable(
           purpose: REFERENCE_CONSENT_PURPOSE,
           nowMs,
         });
-    if (options.leavesThisComputer) assertMaySend(db, characterId, nowMs);
+    // Sending cannot be undone, so who it is about is everyone it was ever linked to.
+    if (options.leavesThisComputer)
+      for (const { id } of order) assertMaySend(db, characterId, id, nowMs);
   }
 }
 
-function assertMaySend(db: DatabaseSync, characterId: string, nowMs: number) {
+// Consent to send counts only for the consent to generate it names, so it is that person's
+// and not anyone's who shares the character's name.
+function assertMaySend(
+  db: DatabaseSync,
+  characterId: string,
+  covered: string,
+  nowMs: number,
+) {
+  // A person who withdrew a consent the image was linked to has withdrawn it from leaving,
+  // whatever consent to send still stands and whoever it was linked to since.
+  if (
+    db
+      .prepare("SELECT 1 FROM consent_revocations WHERE consent_id = ?")
+      .get(covered)
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "A consent this image was linked to has been revoked, so it cannot leave this computer.",
+    );
   const grants = db
     .prepare(
-      "SELECT id, granted_at FROM likeness_consents WHERE character_id = ? AND purpose = ?",
+      // A grant covering more than one consent, which only a crafted table could hold,
+      // counts for none.
+      "SELECT c.id, c.granted_at FROM likeness_consents c JOIN send_consent_covers s ON s.consent_id = c.id WHERE s.covers_consent_id = ? AND c.character_id = ? AND c.purpose = ? AND (SELECT count(*) FROM send_consent_covers x WHERE x.consent_id = c.id) = 1",
     )
-    .all(characterId, "likeness-send") as { id: string; granted_at: number }[];
+    .all(covered, characterId, "likeness-send") as {
+    id: string;
+    granted_at: number;
+  }[];
   if (!grants.length)
     throw new CommandError(
       "VALIDATION",
-      "No consent to send is recorded for the character this image is linked to, so it cannot leave this computer.",
+      "No consent to send is recorded for the person this image is linked to, so it cannot leave this computer.",
     );
   const latest = Math.max(...grants.map((g) => g.granted_at));
   // On an exact tie every one must pass.

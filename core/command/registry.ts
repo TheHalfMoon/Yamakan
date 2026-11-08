@@ -2039,6 +2039,8 @@ export const commands = {
         purpose: ConsentPurposeSchema,
         version: z.string().min(1).max(40),
         ttlMs: z.number().int().positive(),
+        // Consent to send only, and required there: the person's consent to generate.
+        coversConsentId: Id.optional(),
       })
       .strict(),
     run: ({ store, principal, receipt }, a) =>
@@ -2050,6 +2052,7 @@ export const commands = {
           version: a.version,
           ttlMs: a.ttlMs,
           principalId: principal.id,
+          coversConsentId: a.coversConsentId,
         },
         receipt,
       ),
