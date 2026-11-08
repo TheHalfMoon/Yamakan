@@ -1,7 +1,9 @@
 // One real image-to-video run on the person's own Kaggle, for the recipe that is not offered.
-// It sends a picture made here, of no one, because nothing has yet shown this path works, and
-// it reaches the recipe only by naming it, in this process. The page cannot reach it.
+// It sends a picture made here, of no one, or a photograph a person names, which must show no
+// one either. It reaches the recipe only by naming it, in this process. The page cannot reach it.
 // It uses GPU quota: a person starts it, and it does not retry.
+//
+// Usage: npm run qualify:kaggle-first-frame -- <out> [noise | photo.png | photo.jpg] [prompt]
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -29,8 +31,11 @@ import { JobSupervisor } from "../core/jobs.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { ProjectStore } from "../core/store.ts";
 
-// How much noise the picture has decides whether it goes as a PNG or a JPEG.
-const [out, noise = "14"] = process.argv.slice(2);
+// How much noise a picture made here has decides whether it goes as a PNG or a JPEG. A path
+// instead names a photograph to send.
+const [out, picture = "14", promptGiven] = process.argv.slice(2);
+const photo = /\.(png|jpe?g)$/i.test(picture) ? picture : null;
+const noise = photo ? null : picture;
 const { YAMAKAN_KAGGLE_CLI: cliFile, YAMAKAN_KAGGLE_USERNAME: username } =
   process.env;
 if (!out || !cliFile || !username) {
@@ -40,7 +45,9 @@ if (!out || !cliFile || !username) {
   console.log("FIRST FRAME RUN NOT RUN");
   process.exit(2);
 }
-const PROMPT = "The camera drifts slowly forward as the colours gently shift.";
+const PROMPT =
+  promptGiven ??
+  "The camera drifts slowly forward as the colours gently shift.";
 const SEED = 7;
 const MAX_WAIT_MS = 50 * 60 * 1000;
 const recipe = KAGGLE_RECIPES.find((r) => r.operation === "imageToVideo");
@@ -92,6 +99,7 @@ function writeReceipt() {
         generationId,
         prompt: PROMPT,
         seed: SEED,
+        photo: photo ? { name: photo.split(/[\\/]/).pop() } : null,
         head,
         dirty: changes !== "",
         passed,
@@ -107,22 +115,29 @@ let queue;
 let store;
 try {
   // Made here, and made of fine detail, since its size is part of the question of what Kaggle
-  // accepts inside a script.
-  const still = join(out, "sent-frame.png");
-  ffmpeg(
-    "-y",
-    "-f",
-    "lavfi",
-    "-i",
-    `mandelbrot=s=${recipe.width}x${recipe.height}:end_scale=0.05:start_scale=0.05`,
-    "-vf",
-    `noise=alls=${noise}:allf=u:all_seed=7,format=rgb24`,
-    "-frames:v",
-    "1",
-    still,
+  // accepts inside a script. Or the photograph named, as it is: Yamakan cleans it on the way.
+  const still = join(
+    out,
+    photo
+      ? `given-photo.${photo.split(".").pop().toLowerCase()}`
+      : "sent-frame.png",
   );
+  if (photo) writeFileSync(still, readFileSync(photo));
+  else
+    ffmpeg(
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `mandelbrot=s=${recipe.width}x${recipe.height}:end_scale=0.05:start_scale=0.05`,
+      "-vf",
+      `noise=alls=${noise}:allf=u:all_seed=7,format=rgb24`,
+      "-frames:v",
+      "1",
+      still,
+    );
   const size = statSync(still).size;
-  step("made a picture of no one", {
+  step(photo ? "took the photograph named" : "made a picture of no one", {
     bytes: size,
     sha256: createHash("sha256").update(readFileSync(still)).digest("hex"),
   });
@@ -146,7 +161,7 @@ try {
   const project = await store.create("First frame qualification");
   const { asset } = await store.importAsset(
     project.id,
-    "sent-frame.png",
+    still.split(/[\\/]/).pop(),
     createReadStream(still),
     size,
   );
@@ -210,7 +225,7 @@ try {
       "-i",
       still,
       "-lavfi",
-      "[0:v]select='eq(n,0)',scale=88:60:flags=area,format=rgb24[a];[1:v]scale=88:60:flags=area,format=rgb24[b];[a][b]psnr",
+      `[0:v]select='eq(n,0)',scale=88:60:flags=area,format=rgb24[a];[1:v]scale=${recipe.width}:${recipe.height}:force_original_aspect_ratio=increase:flags=lanczos,crop=${recipe.width}:${recipe.height},scale=88:60:flags=area,format=rgb24[b];[a][b]psnr`,
       "-frames:v",
       "1",
       "-f",
