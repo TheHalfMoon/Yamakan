@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "../core/store.ts";
+import { hashAgentToken } from "../core/agents.ts";
 import {
   backupWorkspace,
   diagnoseWorkspace,
@@ -736,4 +737,84 @@ test("distinct request ids restoring the same backup use separate restored folde
   assert.match(path.basename(first.root), /^.+-req-[0-9a-f]{64}$/);
   assert.match(path.basename(second.root), /^.+-req-[0-9a-f]{64}$/);
   store.close();
+});
+
+test("a backup made to carry authority restores with none", async () => {
+  const { base, store, home } = await workspace();
+  const backup = await backupWorkspace(store, home);
+  const dir = path.join(home, "backups", backup.backupId);
+  // As someone who wrote the backup would: a token table without its rules, a token
+  // claiming to be the browser and never revoked, and a consent at the next epoch.
+  const token = "a".repeat(64);
+  const db = new DatabaseSync(path.join(dir, "workspace.sqlite"));
+  const epoch = (
+    db
+      .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
+      .get() as {
+      value: number;
+    }
+  ).value;
+  db.exec(`DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);`);
+  db.prepare(
+    "INSERT INTO agent_tokens VALUES ('browser-ui', ?, '[]', 'planted', NULL, '2026-01-01')",
+  ).run(hashAgentToken(token));
+  db.prepare(
+    "INSERT INTO likeness_consents VALUES ('c1', 'someone', 'likeness-send', '1', 0, 9999999999999, 'browser-ui', ?)",
+  ).run(epoch + 1);
+  db.close();
+  const bytes = await readFile(path.join(dir, "workspace.sqlite"));
+  const manifestFile = path.join(dir, "backup.json");
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  manifest.database = { sha256: sha256(bytes), bytes: bytes.length };
+  await writeFile(manifestFile, JSON.stringify(manifest));
+
+  const target = path.join(base, "restored");
+  await restoreWorkspace(dir, target);
+  const restored = new ProjectStore(target);
+  await restored.initialize();
+  assert.equal(restored.principalForAgentToken(token), null);
+  restored.close();
+  const check = new DatabaseSync(path.join(target, "workspace.sqlite"), {
+    readOnly: true,
+  });
+  const now = (
+    check
+      .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
+      .get() as {
+      value: number;
+    }
+  ).value;
+  assert.ok(now > epoch + 1, `the epoch ${now} is past the planted consent's`);
+  assert.equal(
+    (
+      check.prepare("SELECT revoked FROM agent_tokens").get() as {
+        revoked: number;
+      }
+    ).revoked,
+    1,
+  );
+  check.close();
+  store.close();
+});
+
+test("a token is only an agent's, and only while it is plainly not revoked", async () => {
+  const { root, store } = await workspace();
+  store.close();
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.exec(`DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);`);
+  const plant = db.prepare(
+    "INSERT INTO agent_tokens VALUES (?, ?, '[]', 'planted', ?, '2026-01-01')",
+  );
+  plant.run("browser-ui", hashAgentToken("b".repeat(64)), 0);
+  plant.run("agent:x", hashAgentToken("c".repeat(64)), null);
+  plant.run("agent:y", hashAgentToken("d".repeat(64)), 0);
+  db.close();
+  const reopened = new ProjectStore(root);
+  await reopened.initialize();
+  assert.equal(reopened.principalForAgentToken("b".repeat(64)), null);
+  assert.equal(reopened.principalForAgentToken("c".repeat(64)), null);
+  assert.equal(reopened.principalForAgentToken("d".repeat(64))?.id, "agent:y");
+  reopened.close();
 });

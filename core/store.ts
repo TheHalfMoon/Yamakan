@@ -3645,7 +3645,15 @@ export class ProjectStore {
       )
       .get(hashAgentToken(token)) as
       { agent_id: string; scopes: string; revoked: number } | undefined;
-    if (!row || row.revoked) return null;
+    // Only a token this store issued and has not revoked: its schema says so, and a restored
+    // database may not have kept that schema.
+    if (
+      !row ||
+      row.revoked !== 0 ||
+      typeof row.agent_id !== "string" ||
+      !row.agent_id.startsWith("agent:")
+    )
+      return null;
     return {
       id: row.agent_id as Principal["id"],
       scopes: parseAgentScopes(row.scopes),
