@@ -644,6 +644,31 @@ try {
       .locator('[data-testid="people-consent"][data-state="revoked"]')
       .waitFor();
     step("consent revoked from the page says so");
+
+    // Consent given again, and the same still linked to it: the revoked link is left out of
+    // the person's pack, which could not be saved with it.
+    await people.getByTestId("people-name").fill("Lead");
+    await people.getByTestId("people-version").fill("Signed form B");
+    await people.getByTestId("people-attest").check();
+    await grant.click();
+    const renewed = people.locator(
+      '[data-testid="people-consent"][data-state="standing"]',
+    );
+    await renewed.waitFor();
+    await renewed
+      .getByTestId("people-link-still")
+      .selectOption({ label: "still.png" });
+    await renewed.getByTestId("people-link").click();
+    await renewed
+      .getByTestId("people-linked")
+      .filter({ hasText: "still.png" })
+      .waitFor();
+    assert.equal(
+      await people.locator(".create-problem").count(),
+      0,
+      "the link was kept",
+    );
+    step("after a revoke, the still is linked to the person's new consent");
   });
 
   passed = true;

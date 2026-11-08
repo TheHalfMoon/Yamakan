@@ -151,27 +151,24 @@ test("consent to send lasts no longer than the consent it covers, and never unde
 });
 
 test("one pack per person: a link is added to it, once, up to the pack's limit", () => {
+  const newId = () => crypto.randomUUID();
+  const all = () => true;
   const consentId = crypto.randomUUID();
   const first = { id: crypto.randomUUID(), hash: "a".repeat(64) };
   const second = { id: crypto.randomUUID(), hash: "b".repeat(64) };
-  const pack = personPack("Lead", first, consentId, () => crypto.randomUUID());
+  const pack = personPack("Lead", first, consentId, newId);
   assert.equal(asPersonPack(pack), pack);
-  const more = withLink(pack, second, consentId, () => crypto.randomUUID());
+  const more = withLink(pack, second, consentId, newId, all);
   assert.ok(typeof more === "object");
   assert.doesNotThrow(() => ReferencePackSchema.parse(more));
   assert.deepEqual(
     characterLinks(more).map((l) => l.assetId),
     [first.id, second.id],
   );
-  assert.equal(
-    withLink(pack, first, consentId, () => crypto.randomUUID()),
-    "already",
-  );
+  assert.equal(withLink(pack, first, consentId, newId, all), "already");
   // The same still on another consent of theirs is a link of its own.
   assert.ok(
-    typeof withLink(pack, first, crypto.randomUUID(), () =>
-      crypto.randomUUID(),
-    ) === "object",
+    typeof withLink(pack, first, crypto.randomUUID(), newId, all) === "object",
   );
   let full: ReturnType<typeof withLink> = pack;
   for (let i = 1; i < 64; i++)
@@ -179,10 +176,11 @@ test("one pack per person: a link is added to it, once, up to the pack's limit",
       full as typeof pack,
       { id: crypto.randomUUID(), hash: "c".repeat(64) },
       consentId,
-      () => crypto.randomUUID(),
+      newId,
+      all,
     );
   assert.equal(
-    withLink(full as typeof pack, second, consentId, () => crypto.randomUUID()),
+    withLink(full as typeof pack, second, consentId, newId, all),
     "full",
   );
   // A pack of places, or of two people, is not one person's.
@@ -197,4 +195,39 @@ test("one pack per person: a link is added to it, once, up to the pack's limit",
     asPersonPack({ ...pack, entries: [{ ...pack.entries[0], role: "prop" }] }),
     null,
   );
+});
+
+// Saving checks every consent in the pack, so a link whose consent no longer stands would
+// stop the person's pack being saved at all. It is left out; the service still counts it.
+test("links whose consent no longer stands are left out of the next version", () => {
+  const newId = () => crypto.randomUUID();
+  const gone = crypto.randomUUID();
+  const renewed = crypto.randomUUID();
+  const still = { id: crypto.randomUUID(), hash: "a".repeat(64) };
+  const pack = personPack("Lead", still, gone, newId);
+  const next = withLink(pack, still, renewed, newId, (id) => id === renewed);
+  assert.ok(typeof next === "object");
+  assert.deepEqual(characterLinks(next), [
+    { consentId: renewed, assetId: still.id },
+  ]);
+  assert.doesNotThrow(() => ReferencePackSchema.parse(next));
+  // And a pack full only of ones that no longer stand has room again.
+  let full: ReturnType<typeof withLink> = pack;
+  for (let i = 1; i < 64; i++)
+    full = withLink(
+      full as typeof pack,
+      { id: crypto.randomUUID(), hash: "c".repeat(64) },
+      gone,
+      newId,
+      () => true,
+    );
+  const after = withLink(
+    full as typeof pack,
+    still,
+    renewed,
+    newId,
+    (id) => id === renewed,
+  );
+  assert.ok(typeof after === "object");
+  assert.equal(after.entries.length, 1);
 });

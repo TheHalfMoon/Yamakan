@@ -135,9 +135,10 @@ export function PeoplePanel(props: {
     act(async () => {
       const still = stills.find((s) => s.id === stillId);
       if (!still) return false;
-      const mine = kept.find(
-        (k) => k.pack.entries[0].characterId === characterId,
-      );
+      // Their pack with the most room, if they have more than one.
+      const [mine] = kept
+        .filter((k) => k.pack.entries[0].characterId === characterId)
+        .sort((x, y) => x.pack.entries.length - y.pack.entries.length);
       if (!mine)
         return api.link({
           documentId: crypto.randomUUID(),
@@ -146,11 +147,27 @@ export function PeoplePanel(props: {
             crypto.randomUUID(),
           ),
         });
-      const next = withLink(mine.pack, still, consentId, () =>
-        crypto.randomUUID(),
+      const stands = (id: string) => {
+        const c = consents.find((x) => x.id === id);
+        return Boolean(c && consentState(c, Date.now()) === "standing");
+      };
+      const next = withLink(
+        mine.pack,
+        still,
+        consentId,
+        () => crypto.randomUUID(),
+        stands,
       );
       if (next === "already") return "create.peopleAlreadyLinked";
-      if (next === "full") return "create.peoplePackFull";
+      // Full of standing links: a pack of its own for this one.
+      if (next === "full")
+        return api.link({
+          documentId: crypto.randomUUID(),
+          expectedContentHash: null,
+          pack: personPack(characterId, still, consentId, () =>
+            crypto.randomUUID(),
+          ),
+        });
       return api.link({
         documentId: mine.documentId,
         expectedContentHash: mine.contentHash,

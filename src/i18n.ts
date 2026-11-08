@@ -57,7 +57,6 @@ const en = {
     "This consent has expired, but stills linked to it still need their own consent to send before they can go to Kaggle.",
   "create.peopleRevalidateSend": "Confirm consent to send again",
   "create.peopleAlreadyLinked": "That still is already linked to this consent.",
-  "create.peoplePackFull": "No more stills can be linked to this person.",
   "create.peopleLinked": "Linked stills: {names}",
   "create.peopleLinkStill": "A still of them",
   "create.peopleLink": "Link to them",
@@ -583,7 +582,6 @@ const ar: Record<MessageKey, string> = {
   "create.peopleRevalidateSend": "تأكيد الموافقة على الإرسال مجددًا",
   "create.peopleAlreadyLinked":
     "هذه الصورة الثابتة مرتبطة بهذه الموافقة بالفعل.",
-  "create.peoplePackFull": "لا يمكن ربط مزيد من الصور الثابتة بهذا الشخص.",
   "create.peopleLinked": "الصور الثابتة المرتبطة: {names}",
   "create.peopleLinkStill": "صورة ثابتة له",
   "create.peopleLink": "ربطها به",

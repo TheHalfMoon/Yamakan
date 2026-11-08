@@ -134,25 +134,26 @@ export function asPersonPack(content: unknown): PersonPack | null {
 export const PACK_ENTRY_LIMIT = 64;
 
 // A person's pack with one more still linked: one pack per person, so linking does not use up
-// the project's documents. The same still on the same consent is already there.
+// the project's documents. Saving a pack checks every consent in it, so links whose consent no
+// longer stands are left out of the new version; the service still counts every version ever
+// kept, so they stay bound. The same still on the same standing consent is already there. Full
+// means a new pack is needed.
 export function withLink(
   pack: PersonPack,
   still: { id: string; hash: string },
   consentId: string,
   newId: () => string,
+  stands: (consentId: string) => boolean,
 ): PersonPack | "already" | "full" {
-  if (
-    pack.entries.some(
-      (e) => e.assetId === still.id && e.consentId === consentId,
-    )
-  )
+  const kept = pack.entries.filter((e) => stands(e.consentId));
+  if (kept.some((e) => e.assetId === still.id && e.consentId === consentId))
     return "already";
-  if (pack.entries.length >= PACK_ENTRY_LIMIT) return "full";
+  if (kept.length >= PACK_ENTRY_LIMIT) return "full";
   const characterId = pack.entries[0].characterId;
   return {
     ...pack,
     entries: [
-      ...pack.entries,
+      ...kept,
       {
         id: newId(),
         role: "character" as const,
