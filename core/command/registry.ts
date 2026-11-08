@@ -2267,6 +2267,8 @@ export const commands = {
           held: g.held === true,
           diagnostic: g.diagnostic,
           imported: g.imported,
+          // The project's media it was made from, as pinned before anything left.
+          inputs: g.inputs,
         })),
   }),
   "yamakan.generation.dismiss": define({

@@ -6,6 +6,7 @@ import type { MessageKey } from "../i18n.ts";
 import {
   choiceOf,
   mayStart,
+  picturePins,
   startRequest,
   type RunReceipt,
 } from "./create-model.ts";
@@ -53,6 +54,8 @@ export type RunRecord = {
   held: boolean;
   diagnostic: string | null;
   imported: { assetId: string } | null;
+  // Absent from a service older than this page.
+  inputs?: { assetId: string; assetHash: string }[];
 };
 
 export type GenerationApi = {
@@ -92,6 +95,7 @@ type Run = {
   uncertain?: boolean;
   // A restored copy of a workspace: the run belongs to the original.
   held?: boolean;
+  inputs?: { assetId: string; assetHash: string }[];
 };
 
 const asRun = (r: RunRecord): Run => ({
@@ -103,6 +107,7 @@ const asRun = (r: RunRecord): Run => ({
   stopped: r.stopped,
   uncertain: r.uncertain,
   held: r.held,
+  inputs: r.inputs,
 });
 
 const POLL_MS = 20_000;
@@ -157,7 +162,12 @@ export function GeneratePanel(props: {
   const noPerson = noPersonFor === choice;
   const finished = FINISHED.has(state);
   const receiptOf = (
-    r: { recipeId: string; prompt: string | null; seed: number | null },
+    r: {
+      recipeId: string;
+      prompt: string | null;
+      seed: number | null;
+      inputs?: { assetId: string; assetHash: string }[];
+    },
     sha256: string,
   ): RunReceipt => {
     const m = props.models.find((x) => x.recipeId === r.recipeId) ?? model;
@@ -169,6 +179,7 @@ export function GeneratePanel(props: {
       steps: m.steps,
       sha256,
       licence: m.licence,
+      ...(r.inputs?.length ? { inputs: r.inputs } : {}),
     };
   };
   const following =
@@ -277,6 +288,7 @@ export function GeneratePanel(props: {
         seed,
         startedAt: Date.now(),
         uncertain: Boolean(uncertain),
+        inputs: picturePins(picture, props.findAsset),
       });
     } catch (e) {
       setAgreedFor(null);

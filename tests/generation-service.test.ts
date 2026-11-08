@@ -898,10 +898,14 @@ test("a run from a still needs a person's word that it shows no one without cons
   );
   assert.equal(state.inputRead, null, "no byte was read for the engine");
   assert.equal(state.submitted.length, 0, "nothing was sent");
-  await g.start(
+  const { generationId } = await g.start(
     ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
   );
   assert.notEqual(state.inputRead, null);
+  // Kept as the record that it was given.
+  const [kept] = g.list(f.projectId);
+  assert.equal(kept.generationId, generationId);
+  assert.equal(kept.noUnconsentedPerson, true);
 });
 
 test("a run from a prompt alone takes no word about a still", async () => {

@@ -70,6 +70,25 @@ execFileSync(
   { windowsHide: true, stdio: "ignore" },
 );
 
+// A still made here, of no one, for the picture scene.
+const stillFile = join(root, "still.png");
+execFileSync(
+  mediaTools().ffmpeg,
+  [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc2=size=64x48:rate=1:duration=1",
+    "-frames:v",
+    "1",
+    stillFile,
+  ],
+  { windowsHide: true },
+);
+
 const videoFile = join(root, "made.mp4");
 execFileSync(
   mediaTools().ffmpeg,
@@ -440,6 +459,128 @@ try {
       step("a start whose answer is lost finds its run, and shows no failure");
     },
   );
+
+  // Image-to-video is not offered, so the service lists no picture model. Only this page's
+  // view of that answer is changed, to offer one: what the page then does is what is
+  // checked, and the service still refuses the recipe, so nothing is sent.
+  await scene("picture", {}, async ({ page, read, reopen }) => {
+    await page.getByRole("tab", { name: "Edit", exact: true }).click();
+    await page.getByLabel("Import local media").setInputFiles(stillFile);
+    await page
+      .getByRole("status")
+      .filter({ hasText: /Imported \W?still\.png/ })
+      .waitFor();
+    const starts = [];
+    // What the handler found, asserted after: a throw inside it would only leave the page waiting.
+    const offered = {};
+    await page.route("**/api/v1/call", async (route) => {
+      const body = route.request().postData() ?? "";
+      if (body.includes('"yamakan.generation.start"'))
+        starts.push(JSON.parse(body));
+      if (!body.includes('"yamakan.generation.options"'))
+        return route.continue();
+      const response = await route.fetch();
+      const answer = await response.json();
+      const holder = (function find(o) {
+        if (o && typeof o === "object") {
+          if (Array.isArray(o.models)) return o;
+          for (const v of Object.values(o)) {
+            const found = find(v);
+            if (found) return found;
+          }
+        }
+        return null;
+      })(answer);
+      const text = holder?.models.find((m) => m.recipeId === wan.id);
+      offered.listed = Boolean(text);
+      offered.servicePicture = Boolean(
+        holder?.models.some((m) => m.operation === "imageToVideo"),
+      );
+      if (text)
+        holder.models.push({
+          ...text,
+          recipeId: "kaggle-wan22-ti2v-5b-first-frame",
+          operation: "imageToVideo",
+        });
+      await route.fulfill({ response, json: answer });
+    });
+    await reopen();
+    await page.getByTestId("create-agree").waitFor();
+    assert.equal(offered.listed, true, "the text recipe is offered");
+    assert.equal(
+      offered.servicePicture,
+      false,
+      "the service itself offers no picture model",
+    );
+    const picture = page.getByTestId("create-picture");
+    const agree = page.getByTestId("create-agree");
+    const noPerson = page.getByTestId("create-no-person");
+    const start = page.getByTestId("create-generate-start");
+    await picture.waitFor();
+    assert.equal(await noPerson.count(), 0, "no second tick without a picture");
+    const stillId = await picture
+      .locator("option", { hasText: "still.png" })
+      .getAttribute("value");
+    assert.ok(stillId, "the project's still is listed");
+    await picture.selectOption(stillId);
+    assert.match(
+      await page.locator(".create-agree").last().textContent(),
+      /picture leave this computer/,
+    );
+    await agree.check();
+    assert.equal(await start.isDisabled(), true, "one tick is not enough");
+    await noPerson.check();
+    assert.equal(await start.isDisabled(), false);
+    step(
+      "a picture run needs both ticks, and its agreement says the picture leaves",
+    );
+
+    // Away to a model with no picture recipe, a tick there, and back.
+    const model = page.getByTestId("create-model");
+    const wanModel = await model.inputValue();
+    const other = await model
+      .locator("option")
+      .evaluateAll(
+        (options, current) =>
+          options.map((o) => o.value).find((v) => v !== current),
+        wanModel,
+      );
+    await model.selectOption(other);
+    assert.equal(await picture.count(), 0, "no picture for that model");
+    assert.equal(
+      await agree.isChecked(),
+      false,
+      "its agreement is asked again",
+    );
+    await agree.check();
+    await model.selectOption(wanModel);
+    await picture.waitFor();
+    assert.equal(await picture.inputValue(), stillId);
+    assert.equal(await agree.isChecked(), false, "ticked for another choice");
+    // The word about this very picture, on this very recipe, still stands.
+    assert.equal(await noPerson.isChecked(), true);
+    assert.equal(await start.isDisabled(), true);
+    step(
+      "the agreement is asked again after a switch of model, and the word about the same picture stands",
+    );
+
+    await agree.check();
+    await start.click();
+    const problem = page.locator(".create-problem");
+    await problem.waitFor({ timeout: 90_000 });
+    assert.match(await problem.textContent(), /That recipe is not available/);
+    assert.equal(starts.length, 1);
+    const sent = starts[0].parameters;
+    assert.equal(sent.recipeId, "kaggle-wan22-ti2v-5b-first-frame");
+    assert.equal(sent.firstFrameAssetId, stillId);
+    assert.equal(sent.noUnconsentedPerson, true);
+    assert.equal(read().pushes.length, 0, "the service sent nothing");
+    assert.equal(await page.getByTestId("create-run-state").count(), 0);
+    await page.unroute("**/api/v1/call");
+    step(
+      "the start names the still and the person's word; the service refuses the recipe",
+    );
+  });
 
   passed = true;
 } catch (e) {
