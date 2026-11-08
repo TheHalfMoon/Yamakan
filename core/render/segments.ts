@@ -17,7 +17,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY, exportWallSeconds } from "../command/policy.ts";
-import { probe } from "../media.ts";
+import { probe, MEDIA_DECODERS } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { framesToTicks, ticksToFrames } from "../time.ts";
 import type { ProjectStore } from "../store.ts";
@@ -178,6 +178,8 @@ export async function renderSegmented(
         "file",
         "-format_whitelist",
         "concat,mov",
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-f",
         "concat",
         "-i",
@@ -188,6 +190,8 @@ export async function renderSegmented(
               "file",
               "-format_whitelist",
               "mov",
+              "-codec_whitelist",
+              MEDIA_DECODERS,
               "-i",
               path.relative(dir, soundFile).split(path.sep).join("/"),
             ]
@@ -228,6 +232,8 @@ export async function renderSegmented(
         "file",
         "-format_whitelist",
         "mov",
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-count_packets",
         "-select_streams",
         "v:0",
