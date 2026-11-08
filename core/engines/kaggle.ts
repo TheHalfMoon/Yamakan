@@ -867,6 +867,12 @@ export function createKaggleEngine(options: {
         ["kernels", "pull", remote(recipe), "-p", pulled, "-m"],
         90_000,
       );
+      // Nothing but what was named: another file means the CLI no longer takes the name given.
+      const allowed = new Set(["kernel-metadata.json", PULLED_SCRIPT]);
+      if ((await readdir(pulled)).some((name) => !allowed.has(name)))
+        throw new Error(
+          "Kaggle's pull wrote a file under a name not given to it.",
+        );
       const metadata = JSON.parse(
         await readFile(path.join(pulled, "kernel-metadata.json"), "utf8"),
       );

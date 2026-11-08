@@ -418,6 +418,33 @@ test("a pulled script is saved under a name of ours, not Kaggle's", async () => 
   assert.deepEqual([...new Set(named)], ["script.py"]);
 });
 
+test("a pull that leaves a file under another name is not believed", async () => {
+  const engine = createKaggleEngine({
+    cli: async (args) => {
+      if (args[1] === "list") return { stdout: "Not found\n" };
+      if (args[1] === "status")
+        return { stdout: 'has status "KernelWorkerStatus.COMPLETE"' };
+      if (args[1] === "pull") {
+        // As a CLI that no longer takes the name it is given would.
+        writeFileSync(path.join(args[4], "yamakan-run-wan22-ti2v-5b.py"), "x");
+        writeFileSync(
+          path.join(args[4], "kernel-metadata.json"),
+          JSON.stringify({ is_private: true }),
+        );
+        return { stdout: "" };
+      }
+      throw new Error(`unexpected ${args}`);
+    },
+    username: "someone",
+    folderRoot,
+    scriptFor: async () => SCRIPT,
+  });
+  await assert.rejects(
+    engine.submit(request(), context as never),
+    /Could not confirm that this notebook is private/,
+  );
+});
+
 test("an earlier run's result is never this run's", async () => {
   const k = kaggle(["COMPLETE"], (_id, folder) => good("someone-else", folder));
   const { executionRef } = (await k.engine.submit(
