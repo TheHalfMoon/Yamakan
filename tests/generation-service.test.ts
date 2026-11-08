@@ -1394,12 +1394,7 @@ test("linking the image again to someone else's consent does not make their word
     );
   await assert.rejects(start(), /No consent to send is recorded/);
   assert.equal(state.inputRead, null);
-  // So under another name, too.
-  const renamed = await grantGenerate(f, "someone-else");
-  await grantSend(f, renamed, "someone-else");
-  await savePack(f, linkTo(still, renamed, "someone-else"));
-  await assert.rejects(start(), /No consent to send is recorded/);
-  assert.equal(state.inputRead, null);
+  // Under another name, that name's newest consent is checked on its own anyway.
   await grantSend(f, first);
   await start();
   assert.notEqual(state.inputRead, null);
@@ -1491,13 +1486,13 @@ test("revalidating consent to send checks again whom it covers, and says so", as
       "INSERT INTO send_consent_covers(consent_id, covers_consent_id) VALUES (?, ?)",
     ).run(send, other);
   });
-  assert.equal(await code(revalidate()), "VALIDATION");
+  await assert.rejects(revalidate(), /does not say whose consent/);
   await f.store.transaction((db) =>
     db
       .prepare("DELETE FROM send_consent_covers WHERE consent_id = ?")
       .run(send),
   );
-  assert.equal(await code(revalidate()), "VALIDATION");
+  await assert.rejects(revalidate(), /does not say whose consent/);
 });
 
 test("revalidating consent to send refuses one covering someone else's consent", async () => {
@@ -1512,12 +1507,34 @@ test("revalidating consent to send refuses one covering someone else's consent",
       )
       .run(elsewhere, send),
   );
-  assert.equal(
-    await code(
-      execute(f.ctx, "yamakan.consent.revalidate", { consentId: send }),
-    ),
-    "VALIDATION",
+  await assert.rejects(
+    execute(f.ctx, "yamakan.consent.revalidate", { consentId: send }),
+    /must cover an unrevoked consent to generate for the same character/,
   );
+});
+
+test("a revoked consent the image was linked to stops it leaving, whoever it is linked to since", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const first = await consented(f, still.id, still.hash);
+  await grantSend(f, first);
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: first });
+  // Consent to send is left standing, and the image is linked under the same name since.
+  const other = await grantGenerate(f);
+  await grantSend(f, other);
+  await savePack(f, linkTo(still, other));
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /has been revoked, so it cannot leave/,
+  );
+  assert.equal(state.inputRead, null);
 });
 
 test("a consent to send covering two consents counts for neither", async () => {

@@ -511,6 +511,17 @@ function assertMaySend(
   covered: string,
   nowMs: number,
 ) {
+  // A person who withdrew a consent the image was linked to has withdrawn it from leaving,
+  // whatever consent to send still stands and whoever it was linked to since.
+  if (
+    db
+      .prepare("SELECT 1 FROM consent_revocations WHERE consent_id = ?")
+      .get(covered)
+  )
+    throw new CommandError(
+      "VALIDATION",
+      "A consent this image was linked to has been revoked, so it cannot leave this computer.",
+    );
   const grants = db
     .prepare(
       // A grant covering more than one consent, which only a crafted table could hold,
