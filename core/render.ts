@@ -101,21 +101,29 @@ export function framesAsTheyCome(
   frameBytes: number,
   look: (frame: Buffer, index: number) => void,
 ) {
-  let pending: Buffer = Buffer.alloc(0);
+  if (!Number.isSafeInteger(frameBytes) || frameBytes < 1)
+    throw new Error("A frame has at least one byte.");
+  // One frame's room, filled as bytes come and reused: each byte is copied once, however
+  // the stream is cut. What `look` is given is only good until it returns.
+  const frame = Buffer.alloc(frameBytes);
+  let filled = 0;
   let count = 0;
   return {
     take(chunk: Buffer) {
-      pending = pending.length ? Buffer.concat([pending, chunk]) : chunk;
-      let at = 0;
-      while (pending.length - at >= frameBytes) {
-        look(pending.subarray(at, at + frameBytes), count++);
-        at += frameBytes;
+      for (let at = 0; at < chunk.length;) {
+        const n = Math.min(frameBytes - filled, chunk.length - at);
+        chunk.copy(frame, filled, at, at + n);
+        filled += n;
+        at += n;
+        if (filled === frameBytes) {
+          look(frame, count++);
+          filled = 0;
+        }
       }
-      pending = at ? Buffer.from(pending.subarray(at)) : pending;
     },
     // Exactly this many whole frames, and nothing over: anything else was not checked.
     whole(expected: number) {
-      return count === expected && pending.length === 0;
+      return count === expected && filled === 0;
     },
   };
 }

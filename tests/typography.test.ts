@@ -575,6 +575,24 @@ test("title frames are looked at as they stream in, whatever the chunks", async 
     assert.ok(reader.whole(4));
     assert.ok(!reader.whole(3) && !reader.whole(5));
   }
+  // One byte at a time costs no more than a frame at a time: nothing is copied twice.
+  const copied = { bytes: 0 };
+  const realCopy = Buffer.prototype.copy;
+  Buffer.prototype.copy = function (this: Buffer, ...args: any[]) {
+    const n = (realCopy as any).apply(this, args);
+    copied.bytes += n;
+    return n;
+  } as typeof realCopy;
+  try {
+    const trickle = framesAsTheyCome(size, () => {});
+    for (let at = 0; at < all.length; at++)
+      trickle.take(all.subarray(at, at + 1));
+    assert.ok(trickle.whole(4));
+  } finally {
+    Buffer.prototype.copy = realCopy;
+  }
+  assert.equal(copied.bytes, all.length);
+  assert.throws(() => framesAsTheyCome(0, () => {}), /at least one byte/);
   // A frame cut short is left over, not looked at.
   const short = framesAsTheyCome(size, () => {});
   short.take(all.subarray(0, size * 2 + 3));
