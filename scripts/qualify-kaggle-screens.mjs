@@ -460,9 +460,7 @@ try {
     },
   );
 
-  // Image-to-video is not offered, so the service lists no picture model. Only this page's
-  // view of that answer is changed, to offer one: what the page then does is what is
-  // checked, and the service still refuses the recipe, so nothing is sent.
+  // Image-to-video from the page, against the stand-in: nothing reaches Kaggle.
   await scene("picture", {}, async ({ page, read, reopen }) => {
     await page.getByRole("tab", { name: "Edit", exact: true }).click();
     await page.getByLabel("Import local media").setInputFiles(stillFile);
@@ -470,48 +468,16 @@ try {
       .getByRole("status")
       .filter({ hasText: /Imported \W?still\.png/ })
       .waitFor();
+    // Only watched: what the page asks for, as the service answers it.
     const starts = [];
-    // What the handler found, asserted after: a throw inside it would only leave the page waiting.
-    const offered = {};
     await page.route("**/api/v1/call", async (route) => {
       const body = route.request().postData() ?? "";
       if (body.includes('"yamakan.generation.start"'))
         starts.push(JSON.parse(body));
-      if (!body.includes('"yamakan.generation.options"'))
-        return route.continue();
-      const response = await route.fetch();
-      const answer = await response.json();
-      const holder = (function find(o) {
-        if (o && typeof o === "object") {
-          if (Array.isArray(o.models)) return o;
-          for (const v of Object.values(o)) {
-            const found = find(v);
-            if (found) return found;
-          }
-        }
-        return null;
-      })(answer);
-      const text = holder?.models.find((m) => m.recipeId === wan.id);
-      offered.listed = Boolean(text);
-      offered.servicePicture = Boolean(
-        holder?.models.some((m) => m.operation === "imageToVideo"),
-      );
-      if (text)
-        holder.models.push({
-          ...text,
-          recipeId: "kaggle-wan22-ti2v-5b-first-frame",
-          operation: "imageToVideo",
-        });
-      await route.fulfill({ response, json: answer });
+      await route.continue();
     });
     await reopen();
     await page.getByTestId("create-agree").waitFor();
-    assert.equal(offered.listed, true, "the text recipe is offered");
-    assert.equal(
-      offered.servicePicture,
-      false,
-      "the service itself offers no picture model",
-    );
     const picture = page.getByTestId("create-picture");
     const agree = page.getByTestId("create-agree");
     const noPerson = page.getByTestId("create-no-person");
@@ -566,19 +532,30 @@ try {
 
     await agree.check();
     await start.click();
-    const problem = page.locator(".create-problem");
-    await problem.waitFor({ timeout: 90_000 });
-    assert.match(await problem.textContent(), /That recipe is not available/);
+    await page.getByTestId("create-run-state").waitFor({ timeout: 90_000 });
     assert.equal(starts.length, 1);
     const sent = starts[0].parameters;
     assert.equal(sent.recipeId, "kaggle-wan22-ti2v-5b-first-frame");
     assert.equal(sent.firstFrameAssetId, stillId);
     assert.equal(sent.noUnconsentedPerson, true);
-    assert.equal(read().pushes.length, 0, "the service sent nothing");
-    assert.equal(await page.getByTestId("create-run-state").count(), 0);
+    // What reached the stand-in: one push, its brief holding a picture made anew from the still.
+    const { pushes } = read();
+    assert.equal(pushes.length, 1);
+    const frame = pushes[0].firstFrame;
+    assert.ok(frame?.data, "the picture is in the brief");
+    const bytes = Buffer.from(frame.data, "base64");
+    assert.equal(
+      frame.sha256,
+      createHash("sha256").update(bytes).digest("hex"),
+    );
+    assert.notEqual(
+      frame.sha256,
+      createHash("sha256").update(readFileSync(stillFile)).digest("hex"),
+      "a copy made anew, not the file imported",
+    );
     await page.unroute("**/api/v1/call");
     step(
-      "the start names the still and the person's word; the service refuses the recipe",
+      "the start names the still and the person's word, and the brief carries a copy made anew",
     );
   });
 

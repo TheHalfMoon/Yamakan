@@ -6,6 +6,8 @@
  *
  * Usage: node scripts/qualify-kaggle-generation.mjs <out-folder> [model-index] [prompt]
  * With YAMAKAN_QUALIFY_READY_ONLY=1 it stops before sending anything, for the page.
+ * With YAMAKAN_QUALIFY_PICTURE=<photo.png|.jpg> it imports that still and starts from it,
+ * ticking that it shows no real person: name only a picture of which that is true.
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
@@ -43,7 +45,10 @@ const SEED = 7;
 const WAN_EXACT_OUTPUT =
   "8c4fe902a27baa98b526e2c6a3f4f3f6add7d53407a5e9f1a322fc57b3f67d8c";
 const READY_ONLY = Boolean(process.env.YAMAKAN_QUALIFY_READY_ONLY);
-const MAX_WAIT_MS = 45 * 60 * 1000;
+// From when Kaggle starts running it, since its queue alone has taken over half an hour.
+const MAX_RUN_MS = 45 * 60 * 1000;
+const MAX_WAIT_MS = 120 * 60 * 1000;
+const PICTURE = process.env.YAMAKAN_QUALIFY_PICTURE || null;
 execFileSync("npm", ["run", "build"], {
   stdio: "inherit",
   windowsHide: true,
@@ -131,16 +136,36 @@ try {
     .selectOption({ index: Number(modelIndex) });
   modelChosen = await page.getByTestId("create-model").inputValue();
   await page.getByTestId("create-seed").fill(String(SEED));
+  if (PICTURE) {
+    const name = PICTURE.split(/[\\/]/).pop();
+    // The name as written, whatever characters it holds.
+    const literal = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await page.getByLabel("Import local media").setInputFiles(PICTURE);
+    await page
+      .getByRole("status")
+      .filter({ hasText: new RegExp(`Imported \\W?${literal}`) })
+      .waitFor({ timeout: 120_000 });
+    const choice = page.getByTestId("create-picture");
+    // By its whole name, not as part of another's.
+    const value = await choice
+      .locator("option", { hasText: new RegExp(`^${literal}$`) })
+      .getAttribute("value");
+    await choice.selectOption(value);
+    await page.getByTestId("create-no-person").check();
+    step("chose the picture, and said it shows no real person", {
+      picture: name,
+    });
+  }
 
   const start = page.getByTestId("create-generate-start");
   await start.waitFor();
   assert.ok(await start.isDisabled(), "nothing starts until it is agreed to");
   await page.getByTestId("create-agree").check();
   await shot("1-ready");
-  // The agreement is read in place: inside its panel, on more than a sliver of it.
+  // The agreement, the last tick, is read in place: inside its panel, on more than a sliver.
   const fits = await page.evaluate(() => {
-    const text = document
-      .querySelector(".create-agree span")
+    const text = [...document.querySelectorAll(".create-agree span")]
+      .at(-1)
       .getBoundingClientRect();
     const panel = document
       .querySelector(".create-composer")
@@ -173,11 +198,13 @@ try {
   const began = Date.now();
   let last = "";
   let restarted = false;
+  let runningSince = null;
   for (;;) {
     const now = await state.getAttribute("data-state");
     if (now !== last) {
       step(`Kaggle says ${now}`, { afterSeconds: (Date.now() - began) / 1000 });
       if (now === "running") await shot("3-running");
+      if (now === "running" && runningSince === null) runningSince = Date.now();
       last = now;
     }
     if (RESTART && now === "running" && !restarted) {
@@ -234,7 +261,11 @@ try {
       continue;
     }
     if (["succeeded", "failed", "cancelled"].includes(now)) break;
-    assert.ok(Date.now() - began < MAX_WAIT_MS, "it took too long");
+    assert.ok(
+      Date.now() - began < MAX_WAIT_MS &&
+        (runningSince === null || Date.now() - runningSince < MAX_RUN_MS),
+      "it took too long",
+    );
     await page.waitForTimeout(10_000);
   }
   await shot("4-ended");
@@ -381,6 +412,7 @@ try {
           : "generation-from-yamakan-on-kaggle",
         prompt: PROMPT,
         seed: SEED,
+        picture: PICTURE ? PICTURE.split(/[\\/]/).pop() : null,
         head: execFileSync("git", ["rev-parse", "HEAD"], {
           encoding: "utf8",
         }).trim(),
