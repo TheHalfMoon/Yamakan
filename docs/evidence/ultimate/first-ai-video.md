@@ -170,4 +170,8 @@ The container's peak was 28.89 GiB, with 0 out-of-memory kills, and may count fi
 
 Decoding began 952.7 seconds into the 995.1 seconds of generating, so 50 steps of a 49-frame video take most of the time, and decoding about 42 seconds.
 
-**What qualification does not yet cover:** a run through the page. Offering it means `offered: true`, after which `npm run qualify:kaggle` can run it from the page as it does Wan. That is a separate step.
+**Offered since, and run from the page.** At `74aacc5`, with `offered: true`, `npm run qualify:kaggle -- <out> 1` chose CogVideoX-2b in the page's model list, with the kite prompt and seed 7. Its receipt is `kaggle-cogvideox-page-run-receipt.json`. It was started from the page after agreeing that the prompt leaves this computer. Kaggle said it had finished 1,213 seconds after the start, and the video passed its receipt. It came into the project with that prompt and seed, its record survived the browser's storage being cleared, and it was placed whole on the Edit timeline as 183 frames at the project's 30 a second. Every frame was exported, and there were no page errors.
+
+By looking at a frame from the middle of the export: a red kite above a green hill under a clear blue sky. The 720×480 picture sits inside the 16:9 export with bars at its sides.
+
+Kaggle's status twice answered so that the page said `unknown`, for about 20 and 30 seconds, and both times it went back to `running` and then finished. The page kept following the run, as it is meant to. Why Kaggle answered that way is not known.

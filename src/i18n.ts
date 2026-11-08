@@ -85,6 +85,8 @@ const en = {
   "create.modelFacts":
     "Run so far at {width}x{height}, {frames} frames at {fps} fps ({seconds} s), about {minutes} minutes in all on a free Kaggle T4, the first load included. {licence}.",
   "create.negativePrompt": "Its notebook also asks it to avoid: {words}.",
+  "create.readsLittle":
+    "This model reads only about the first {words} words of a prompt, and was trained on English. Words past that, including direction words added at the end, may not be read, and other languages may not be understood.",
   "create.engineChecking": "Checking what can run here.",
   "create.engineUnknown": "What can run here could not be checked.",
   "create.engineFound":
@@ -562,6 +564,8 @@ const ar: Record<MessageKey, string> = {
   "create.modelFacts":
     "شُغّل حتى الآن بدقة {width}x{height}، {frames} إطارًا بمعدل {fps} إطارًا في الثانية ({seconds} ث)، نحو {minutes} دقيقة إجمالًا على T4 مجاني في Kaggle، شاملة التحميل الأول. {licence}.",
   "create.negativePrompt": "يطلب دفتره أيضًا تجنّب: {words}.",
+  "create.readsLittle":
+    "لا يقرأ هذا النموذج إلا نحو أول {words} كلمة من الوصف، وقد دُرّب على الإنجليزية. قد لا يُقرأ ما بعد ذلك، بما فيه كلمات الإخراج المضافة في آخره، وقد لا تُفهم اللغات الأخرى.",
   "create.engineChecking": "جارٍ التحقق مما يمكن تشغيله هنا.",
   "create.engineUnknown": "تعذر التحقق مما يمكن تشغيله هنا.",
   "create.engineFound":
