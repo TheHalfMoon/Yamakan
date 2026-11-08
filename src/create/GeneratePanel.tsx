@@ -3,7 +3,12 @@
 // time. There is no percentage because Kaggle gives none: only a state and the time.
 import React, { useEffect, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
-import { mayStart, startRequest, type RunReceipt } from "./create-model.ts";
+import {
+  choiceOf,
+  mayStart,
+  startRequest,
+  type RunReceipt,
+} from "./create-model.ts";
 
 type Translate = (
   key: MessageKey,
@@ -133,10 +138,12 @@ export function GeneratePanel(props: {
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
   const [lost, setLost] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  // Each tick is for the exact choice it was given on: another model, recipe or picture
+  // needs it again, whatever the person switched through since.
+  const [agreedFor, setAgreedFor] = useState<string | null>(null);
   const [pictureId, setPictureId] = useState("");
   // Asked each run: nothing here can tell who a picture shows.
-  const [noPerson, setNoPerson] = useState(false);
+  const [noPersonFor, setNoPersonFor] = useState<string | null>(null);
   const [problem, setProblem] = useState("");
   const [working, setWorking] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -145,6 +152,9 @@ export function GeneratePanel(props: {
     ? props.stills.find((s) => s.id === pictureId)
     : undefined;
   const model = picture && props.fromPicture ? props.fromPicture : props.model;
+  const choice = choiceOf(model.recipeId, picture?.id);
+  const agreed = agreedFor === choice;
+  const noPerson = noPersonFor === choice;
   const finished = FINISHED.has(state);
   const receiptOf = (
     r: { recipeId: string; prompt: string | null; seed: number | null },
@@ -258,8 +268,8 @@ export function GeneratePanel(props: {
       setState("queued");
       setNote("");
       setLost(false);
-      setAgreed(false);
-      setNoPerson(false);
+      setAgreedFor(null);
+      setNoPersonFor(null);
       setRun({
         generationId,
         recipeId: model.recipeId,
@@ -269,8 +279,8 @@ export function GeneratePanel(props: {
         uncertain: Boolean(uncertain),
       });
     } catch (e) {
-      setAgreed(false);
-      setNoPerson(false);
+      setAgreedFor(null);
+      setNoPersonFor(null);
       // The answer can be lost with the run on its way. A refused one is not listed.
       const [latest] = await api.list().catch(() => [] as RunRecord[]);
       if (
@@ -346,8 +356,8 @@ export function GeneratePanel(props: {
               onChange={(e) => {
                 setPictureId(e.target.value);
                 // What was agreed to was without this picture, or with another.
-                setAgreed(false);
-                setNoPerson(false);
+                setAgreedFor(null);
+                setNoPersonFor(null);
               }}
             >
               <option value="">{t("create.pictureNone")}</option>
@@ -366,7 +376,7 @@ export function GeneratePanel(props: {
               type="checkbox"
               checked={noPerson}
               data-testid="create-no-person"
-              onChange={(e) => setNoPerson(e.target.checked)}
+              onChange={(e) => setNoPersonFor(e.target.checked ? choice : null)}
             />
             <span>{t("create.noRealPerson")}</span>
           </label>
@@ -376,7 +386,7 @@ export function GeneratePanel(props: {
             type="checkbox"
             checked={agreed}
             data-testid="create-agree"
-            onChange={(e) => setAgreed(e.target.checked)}
+            onChange={(e) => setAgreedFor(e.target.checked ? choice : null)}
           />
           <span>
             {t(picture ? "create.agreePicture" : "create.agree", {

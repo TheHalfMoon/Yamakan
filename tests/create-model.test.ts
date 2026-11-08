@@ -8,6 +8,7 @@ import {
   parseReceipt,
   readBrief,
   sha256Of,
+  choiceOf,
   mayStart,
   startRequest,
   startingStills,
@@ -234,4 +235,19 @@ test("a start from a picture carries the still and the person's word, and needs 
     mayStart({ agreed: true, picture: { id: "s" }, noPerson: true }),
     true,
   );
+});
+
+// A tick counts only for what it was given on, so switching away and back asks again.
+test("a tick given for one model or picture does not count for another", () => {
+  const given = choiceOf("first-frame", "still-a");
+  assert.equal(given, choiceOf("first-frame", "still-a"));
+  for (const other of [
+    choiceOf("first-frame", "still-b"),
+    choiceOf("first-frame"),
+    choiceOf("text", "still-a"),
+    choiceOf("text"),
+  ])
+    assert.notEqual(given, other);
+  // Names cannot run together into another choice's.
+  assert.notEqual(choiceOf("a|b"), choiceOf("a", "b"));
 });

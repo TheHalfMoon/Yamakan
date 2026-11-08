@@ -32,7 +32,7 @@ const en = {
   "create.picture": "Start from a picture",
   "create.pictureNone": "No picture: from the prompt alone",
   "create.pictureNote":
-    "Only this project's PNG and JPEG stills are listed. Only the picture's pixels are sent, without its camera details or other data.",
+    "Only this project's PNG and JPEG stills are listed. What is sent is a copy made from the picture's pixels, fitted to the model's frame, without its camera details or other data.",
   "create.noRealPerson":
     "This picture shows no real person, or only people whose consent to send it is recorded.",
   "create.elementsTitle": "Places and props",
@@ -521,7 +521,7 @@ const ar: Record<MessageKey, string> = {
   "create.picture": "البدء من صورة",
   "create.pictureNone": "بلا صورة: من الوصف وحده",
   "create.pictureNote":
-    "لا تظهر هنا إلا الصور الثابتة بصيغتي PNG وJPEG في هذا المشروع. لا يُرسل من الصورة إلا بكسلاتها، دون بيانات الكاميرا أو أي بيانات أخرى.",
+    "لا تظهر هنا إلا الصور الثابتة بصيغتي PNG وJPEG في هذا المشروع. ما يُرسل نسخة تُصنع من بكسلات الصورة، مُلاءَمة لإطار النموذج، دون بيانات الكاميرا أو أي بيانات أخرى.",
   "create.noRealPerson":
     "لا تُظهر هذه الصورة أي شخص حقيقي، أو تُظهر فقط أشخاصًا سُجّلت موافقتهم على إرسالها.",
   "create.elementsTitle": "الأماكن والأغراض",

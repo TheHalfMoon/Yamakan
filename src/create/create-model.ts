@@ -168,6 +168,10 @@ export function startRequest(r: {
   };
 }
 
+// What a tick was given for: this recipe, from this picture or none.
+export const choiceOf = (recipeId: string, pictureId?: string) =>
+  JSON.stringify([recipeId, pictureId ?? null]);
+
 export const mayStart = (r: {
   agreed: boolean;
   picture: { id: string } | undefined;
