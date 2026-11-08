@@ -560,8 +560,10 @@ const sending = (f: Awaited<ReturnType<typeof fixture>>) => {
   adapter.location = () => "someone/notebook";
   return { state, adapter, g: service(f, adapter) };
 };
+// It names the person's own consent to generate that it covers.
 const grantSend = async (
   f: Awaited<ReturnType<typeof fixture>>,
+  coversConsentId: string,
   characterId = "lead",
   ttlMs = 3_600_000,
 ) =>
@@ -572,6 +574,21 @@ const grantSend = async (
         purpose: "likeness-send",
         version: "v1",
         ttlMs,
+        coversConsentId,
+      })
+    ).result as { id: string }
+  ).id;
+const grantGenerate = async (
+  f: Awaited<ReturnType<typeof fixture>>,
+  characterId = "lead",
+) =>
+  (
+    (
+      await execute(f.ctx, "yamakan.consent.grant", {
+        characterId,
+        purpose: "likeness-generate",
+        version: "v1",
+        ttlMs: 3_600_000,
       })
     ).result as { id: string }
   ).id;
@@ -584,7 +601,7 @@ test("a person's image goes elsewhere only with consent to send", async () => {
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
+  const generate = await consented(f, still.id, still.hash);
   let submitted = 0;
   const submit = adapter.submit;
   adapter.submit = (request, context) => {
@@ -598,7 +615,7 @@ test("a person's image goes elsewhere only with consent to send", async () => {
   await assert.rejects(start(), /No consent to send is recorded/);
   assert.equal(state.inputRead, null, "no byte was read for the engine");
   assert.equal(submitted, 0, "the engine was not even asked");
-  await grantSend(f);
+  await grantSend(f, generate);
   await start();
   assert.notEqual(state.inputRead, null);
 });
@@ -619,9 +636,8 @@ test("the same image needs no consent to send on an engine on this computer", as
   assert.notEqual(state.inputRead, null);
 });
 
-// By name: a character's id is all this has. Two people given one name in a workspace would
-// share it, which must be closed before anything is offered. See the ledger.
-test("consent to send under another character's name does not count", async () => {
+// Tied to the person's own consent, not to the character's name, which two people can share.
+test("consent to send for another person given the same name does not count", async () => {
   const f = await fixture();
   const { state, g } = sending(f);
   const { asset: still } = await f.store.importAsset(
@@ -629,8 +645,84 @@ test("consent to send under another character's name does not count", async () =
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
-  await grantSend(f, "someone-else");
+  const linked = await consented(f, still.id, still.hash);
+  // Someone else, also called "lead", consents to generate and to send. Their consent to
+  // generate is the newer, but no pack links it to this image.
+  const other = await grantGenerate(f);
+  await grantSend(f, other);
+  await assert.rejects(
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    ),
+    /No consent to send is recorded/,
+  );
+  assert.equal(state.inputRead, null);
+  await grantSend(f, linked);
+  await g.start(
+    ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+  );
+  assert.notEqual(state.inputRead, null);
+});
+
+test("consent to send must cover a current consent to generate for that character", async () => {
+  const f = await fixture();
+  const generate = await grantGenerate(f);
+  const send = await grantSend(f, generate);
+  const grant = (input: Record<string, unknown>) =>
+    code(
+      execute(f.ctx, "yamakan.consent.grant", {
+        characterId: "lead",
+        purpose: "likeness-send",
+        version: "v1",
+        ttlMs: 3_600_000,
+        ...input,
+      }),
+    );
+  assert.equal(await grant({}), "VALIDATION", "it must name one");
+  assert.equal(
+    await grant({ coversConsentId: crypto.randomUUID() }),
+    "VALIDATION",
+    "one that exists",
+  );
+  assert.equal(
+    await grant({ coversConsentId: generate, characterId: "someone-else" }),
+    "VALIDATION",
+    "the same character's",
+  );
+  assert.equal(
+    await grant({ coversConsentId: send }),
+    "VALIDATION",
+    "a consent to generate, not another to send",
+  );
+  assert.equal(
+    await grant({ coversConsentId: generate, purpose: "likeness-generate" }),
+    "VALIDATION",
+    "only consent to send covers another",
+  );
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: generate });
+  assert.equal(
+    await grant({ coversConsentId: generate }),
+    "VALIDATION",
+    "not a revoked one",
+  );
+});
+
+// A workspace from before this was tied to the person has grants that name no one.
+test("consent to send that covers no consent does not count", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const generate = await consented(f, still.id, still.hash);
+  const send = await grantSend(f, generate);
+  await f.store.transaction((db) =>
+    db
+      .prepare("DELETE FROM send_consent_covers WHERE consent_id = ?")
+      .run(send),
+  );
   await assert.rejects(
     g.start(
       ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
@@ -648,10 +740,10 @@ test("consent to send revoked stops it, and an older grant does not outlive that
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
-  await grantSend(f);
+  const generate = await consented(f, still.id, still.hash);
+  await grantSend(f, generate);
   await new Promise((r) => setTimeout(r, 5));
-  const newest = await grantSend(f);
+  const newest = await grantSend(f, generate);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId: newest });
   assert.equal(
     await code(
@@ -672,8 +764,8 @@ test("consent to send revoked between the check and the read stops the upload", 
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
-  const send = await grantSend(f);
+  const generate = await consented(f, still.id, still.hash);
+  const send = await grantSend(f, generate);
   const submit = adapter.submit;
   adapter.submit = async (request, context) => {
     await execute(f.ctx, "yamakan.consent.revoke", { consentId: send });
@@ -699,7 +791,7 @@ test("consent to send alone is not consent to generate", async () => {
     f.still,
   );
   const consentId = await consented(f, still.id, still.hash);
-  await grantSend(f);
+  await grantSend(f, consentId);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
   await assert.rejects(
     g.start(
@@ -712,7 +804,7 @@ test("consent to send alone is not consent to generate", async () => {
 
 test("consent to send is good for nothing else", async () => {
   const f = await fixture();
-  const send = await grantSend(f);
+  const send = await grantSend(f, await grantGenerate(f));
   const { asset: still } = await f.store.importAsset(
     f.projectId,
     "still.png",
@@ -767,8 +859,8 @@ test("an upload the engine refuses says why, when consent to send has ended", as
     "still.png",
     f.still,
   );
-  await consented(f, still.id, still.hash);
-  const send = await grantSend(f);
+  const generate = await consented(f, still.id, still.hash);
+  const send = await grantSend(f, generate);
   adapter.submit = async () => {
     await execute(f.ctx, "yamakan.consent.revoke", { consentId: send });
     return { refused: "INPUT_UNSUPPORTED" as const };
@@ -1062,7 +1154,7 @@ test("marking an image made up does not free it from a person's consent", async 
   );
   await savePack(f, fictionalPack(still));
   const consentId = await consented(f, still.id, still.hash);
-  await grantSend(f);
+  await grantSend(f, consentId);
   await execute(f.ctx, "yamakan.consent.revoke", { consentId });
   await assert.rejects(
     g.start(

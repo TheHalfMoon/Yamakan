@@ -488,26 +488,38 @@ export function assertLinkedMediaGeneratable(
     // Refuses a revoked, expired, wrong-purpose or unrevalidated consent. On a tie
     // every one must pass, so a clock cannot free the media.
     for (const { id, at } of order)
-      if (at === latest)
+      if (at === latest) {
         assertConsentUsable(db, id, {
           characterId,
           purpose: REFERENCE_CONSENT_PURPOSE,
           nowMs,
         });
-    if (options.leavesThisComputer) assertMaySend(db, characterId, nowMs);
+        if (options.leavesThisComputer)
+          assertMaySend(db, characterId, id, nowMs);
+      }
   }
 }
 
-function assertMaySend(db: DatabaseSync, characterId: string, nowMs: number) {
+// Consent to send counts only for the consent to generate it names, so it is that person's
+// and not anyone's who shares the character's name.
+function assertMaySend(
+  db: DatabaseSync,
+  characterId: string,
+  covered: string,
+  nowMs: number,
+) {
   const grants = db
     .prepare(
-      "SELECT id, granted_at FROM likeness_consents WHERE character_id = ? AND purpose = ?",
+      "SELECT c.id, c.granted_at FROM likeness_consents c JOIN send_consent_covers s ON s.consent_id = c.id WHERE s.covers_consent_id = ? AND c.character_id = ? AND c.purpose = ?",
     )
-    .all(characterId, "likeness-send") as { id: string; granted_at: number }[];
+    .all(covered, characterId, "likeness-send") as {
+    id: string;
+    granted_at: number;
+  }[];
   if (!grants.length)
     throw new CommandError(
       "VALIDATION",
-      "No consent to send is recorded for the character this image is linked to, so it cannot leave this computer.",
+      "No consent to send is recorded for the person this image is linked to, so it cannot leave this computer.",
     );
   const latest = Math.max(...grants.map((g) => g.granted_at));
   // On an exact tie every one must pass.

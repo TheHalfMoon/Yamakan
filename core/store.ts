@@ -179,7 +179,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 15;
+export const WORKSPACE_SCHEMA_VERSION = 16;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -427,6 +427,16 @@ CREATE TABLE director_requests(
 // its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
 // rebuilt with the same columns and rows (foreign keys are checked after,
 // in the same transaction).
+// Consent to send names the person's own consent to generate it covers, so it is tied to
+// that record and not to a character's name, which two people could share. A grant made
+// before this step covers no one.
+const SCHEMA_V16 = `
+CREATE TABLE send_consent_covers(
+  consent_id TEXT PRIMARY KEY REFERENCES likeness_consents(id),
+  covers_consent_id TEXT NOT NULL REFERENCES likeness_consents(id)
+) STRICT;
+CREATE INDEX send_consent_covers_by_covered ON send_consent_covers(covers_consent_id);
+`;
 // YU-025: provenance of each approved source replacement (relink): the
 // revision it made and the two media versions it swapped.
 const SCHEMA_V15 = `
@@ -818,6 +828,7 @@ export class ProjectStore {
         SCHEMA_V13,
         SCHEMA_V14,
         SCHEMA_V15,
+        SCHEMA_V16,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify

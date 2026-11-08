@@ -193,12 +193,22 @@ export async function grantConsent(
     ttlMs: number;
     principalId: string;
     nowMs?: number;
+    // For consent to send only: the person's consent to generate it covers.
+    coversConsentId?: string;
   },
   receipt?: RequestReceipt,
 ): Promise<ConsentRecord> {
   const now = input.nowMs ?? Date.now();
   if (input.ttlMs < 60_000 || input.ttlMs > 366 * 24 * 60 * 60 * 1000)
     throw new CommandError("VALIDATION", "Consent TTL out of range.");
+  const sending = input.purpose === "likeness-send";
+  if (sending !== (input.coversConsentId !== undefined))
+    throw new CommandError(
+      "VALIDATION",
+      sending
+        ? "Consent to send must name the person's consent to generate that it covers."
+        : "Only consent to send covers another consent.",
+    );
   const record = ConsentRecordSchema.parse({
     format: "yamakan.likeness-consent",
     formatVersion: 1,
@@ -213,6 +223,22 @@ export async function grantConsent(
   });
   return store.transaction((db) =>
     once(db, receipt, () => {
+      if (input.coversConsentId !== undefined) {
+        // Who it is about is that record, so it must be the same character's consent
+        // to generate, and one still standing.
+        const covered = consentRow(db, input.coversConsentId);
+        if (
+          !covered ||
+          covered.purpose !== "likeness-generate" ||
+          covered.character_id !== input.characterId ||
+          covered.revoked_at !== null ||
+          covered.expires_at <= now
+        )
+          throw new CommandError(
+            "VALIDATION",
+            "Consent to send must cover a current consent to generate for the same character.",
+          );
+      }
       db.prepare(
         "INSERT INTO likeness_consents(id, character_id, purpose, version, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       ).run(
@@ -225,6 +251,10 @@ export async function grantConsent(
         record.grantorPrincipalId,
         epochOf(db),
       );
+      if (input.coversConsentId !== undefined)
+        db.prepare(
+          "INSERT INTO send_consent_covers(consent_id, covers_consent_id) VALUES (?, ?)",
+        ).run(record.id, input.coversConsentId);
       return record;
     }),
   );
