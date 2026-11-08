@@ -49,7 +49,9 @@ const PROMPT =
   promptGiven ??
   "The camera drifts slowly forward as the colours gently shift.";
 const SEED = 7;
-const MAX_WAIT_MS = 50 * 60 * 1000;
+// From when Kaggle starts running it, since its queue alone has taken over half an hour.
+const MAX_RUN_MS = 50 * 60 * 1000;
+const MAX_WAIT_MS = 120 * 60 * 1000;
 const recipe = KAGGLE_RECIPES.find((r) => r.operation === "imageToVideo");
 const ffmpeg = (...args) =>
   execFileSync(
@@ -189,13 +191,18 @@ try {
 
   let answer;
   let last;
-  while (Date.now() - started < MAX_WAIT_MS) {
+  let running = null;
+  while (
+    Date.now() - started < MAX_WAIT_MS &&
+    (running === null || Date.now() - running < MAX_RUN_MS)
+  ) {
     answer = await service.status(generationId);
     if (answer.state !== last)
       step(`Kaggle says ${answer.state}`, {
         afterSeconds: (Date.now() - started) / 1000,
       });
     last = answer.state;
+    if (running === null && answer.state === "running") running = Date.now();
     if (["succeeded", "failed", "canceled", "cancelled"].includes(answer.state))
       break;
     await new Promise((r) => setTimeout(r, 30_000));

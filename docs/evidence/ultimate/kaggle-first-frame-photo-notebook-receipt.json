@@ -1,0 +1,96 @@
+{
+  "format": "yamakan.generation-receipt/v1",
+  "runId": "9e726d9f-29ff-43e6-a5d8-30a0a4cdb466",
+  "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  "revision": "b8fff7315c768468a5333511427288870b2e9635",
+  "license": "apache-2.0",
+  "prompt": "Gentle ripples move across the turquoise lake, and the pine trees sway softly in the breeze.",
+  "negativePrompt": "blurry, low quality, distorted, static",
+  "seed": 7,
+  "firstFrameSha256": "c72b528ac1334ae26559da79862fde5c3f49e17d2f7c315ce3ef91a8f7f9c370",
+  "steps": 30,
+  "frames": 81,
+  "fps": 24,
+  "size": [
+    704,
+    480
+  ],
+  "packages": [
+    "diffusers==0.36.0",
+    "transformers==4.57.1",
+    "accelerate==1.10.1",
+    "sentencepiece==0.2.1",
+    "ftfy==6.3.1",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0"
+  ],
+  "verified": true,
+  "stage": "done",
+  "hostMemory": {
+    "samples": 215,
+    "byStage": {
+      "start": {
+        "lowestAvailableBytes": 32410136576,
+        "highestRssBytes": 21356544
+      },
+      "installed": {
+        "lowestAvailableBytes": 31695831040,
+        "highestRssBytes": 1505996800
+      },
+      "loading": {
+        "lowestAvailableBytes": 7601627136,
+        "highestRssBytes": 25377439744
+      },
+      "generating": {
+        "lowestAvailableBytes": 18010464256,
+        "highestRssBytes": 15163019264
+      },
+      "decoding": {
+        "lowestAvailableBytes": 16548388864,
+        "highestRssBytes": 16196612096
+      },
+      "exporting": {
+        "lowestAvailableBytes": 13921054720,
+        "highestRssBytes": 18779824128
+      }
+    },
+    "lowestAvailableBytes": 7601627136,
+    "stageAtLowest": "loading",
+    "highestRssBytes": 25377439744,
+    "stageAtHighest": "loading",
+    "totalBytes": 33658159104,
+    "cgroupLimitBytes": 32212254720,
+    "cgroupPeakBytes": 31679344640,
+    "cgroupOomKills": 0
+  },
+  "gpus": [
+    "Tesla T4, 15360 MiB",
+    "Tesla T4, 15360 MiB"
+  ],
+  "memory": [
+    "Mem:              31           1          26           0           4          30"
+  ],
+  "disk": [
+    "/dev/loop2       20G  504K   20G   1% /kaggle/working"
+  ],
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "firstFrameSize": [
+    704,
+    480
+  ],
+  "loadSeconds": 299.4,
+  "decodingAfterSeconds": 362.3,
+  "generateSeconds": 682.0,
+  "peakHostBytes": 25578254336,
+  "peakGpuBytes": 13619549184,
+  "sha256": "85ff07957af7512f3f969e91127c2c686bbf6a31f9db1f7d2f340e64ed73517e",
+  "bytes": 761766,
+  "decodedFrames": 81,
+  "decodedSize": [
+    704,
+    480
+  ],
+  "spatialStd": 74.95,
+  "temporalDiff": 4.827
+}

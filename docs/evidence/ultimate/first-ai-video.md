@@ -150,6 +150,33 @@ Decoding began 405.0 seconds into the 742.3 seconds of generating.
 
 The container's limit read 30.0 GiB again. Lowest free was 7.43 GiB and highest resident 24.73 GiB, both while loading. While decoding, 17.66 GiB resident and 13.01 GiB free. In the first run the decoding stage peaked at 15.19 GiB and its exporting stage at 17.51 GiB, so with samples 5 seconds apart, which stage holds a peak near the change between them is not exact.
 
+## Image to video from a real photograph (2026-11-08)
+
+Run `9e726d9f-29ff-43e6-a5d8-30a0a4cdb466` at `3478fe2`, from `npm run qualify:kaggle-first-frame -- <out> moraine.jpg "<prompt>"`, with the founder's go-ahead to download the photograph and send it. **Image-to-video is still not offered:** the command names the recipe in its own process. Receipts: `kaggle-first-frame-photo-run-receipt.json` and `kaggle-first-frame-photo-notebook-receipt.json`.
+
+**The photograph:** `Moraine_Lake_17092005.jpg` from Wikimedia Commons, by the user Gorgo, marked public domain. It shows mountains, forest and a lake, and no people. It is 2048×1536 and 1,520,767 bytes, `adb3041e...`, exactly the size Commons lists. It carries a camera's EXIF data (a Canon PowerShot A70, and Photoshop 7.0). Neither the photograph nor the video is committed.
+
+**What left this computer:** a JPEG of 108,310 bytes at 704×480, `c72b528a...`. Before the run it was rebuilt here by Yamakan's own cleaning, from the photo's pixels, fitted to the frame by covering and cropping the middle. That copy has no `Exif` and no `Canon` in its bytes. The notebook recorded that same hash for the frame it was given, so what went was that cleaned copy, as it was.
+
+**Prompt:** "Gentle ripples move across the turquoise lake, and the pine trees sway softly in the breeze." Seed 7.
+
+**It holds up, by looking.** The first frame is plainly the photograph: 38.65 dB apart from what was sent, at 88×60. The middle and last frames keep the same mountains, forest, shore and reflection. Ripples move across the water, and the view drifts a little. Nothing breaks up or turns into something else, unlike the abstract picture's run, whose later frames drifted far from it. Whether the trees sway, as the prompt asks, cannot be told from three frames. One photograph, one run.
+
+**The command stopped waiting before the video was ready.** Kaggle kept the run queued for 1,995 seconds before it began, so the command's 50-minute limit ran out while Kaggle said `running`. Its receipt records that failure. The notebook went on and finished. Its receipt and video were then fetched by exact name, `kaggle kernels output` with `--file-pattern '\A(?:receipt\.json|wan\-first\-frame\-video\.mp4)\Z'`, into a new folder. The video's bytes are those its receipt names, `85ff0795...`, 761,766 bytes, 81 frames at 704×480 and 24 fps. **So this run's video did not come into a project through Yamakan**: the two earlier image-to-video runs did, and this one shows how a real photograph holds up. The command now waits up to 50 minutes from when Kaggle starts running, within two hours in all.
+
+**Times:** loading 299.4 seconds, generating 682.0, decoding began 362.3 seconds into generating.
+
+**Memory,** of a 30.0 GiB container limit, from 215 samples:
+
+| Stage      | Highest resident | Lowest free |
+| ---------- | ---------------- | ----------- |
+| Loading    | 23.63 GiB        | 7.08 GiB    |
+| Generating | 14.12 GiB        | 16.77 GiB   |
+| Decoding   | 15.08 GiB        | 15.41 GiB   |
+| Exporting  | 17.49 GiB        | 12.96 GiB   |
+
+The container's peak was 29.50 GiB, again close under its limit, with 0 out-of-memory kills.
+
 ## CogVideoX from Yamakan, first real run (2026-11-07)
 
 Run `821aee60-14fd-42ae-9326-6350f93f05b9` at `52cfc86`, from `npm run qualify:kaggle-cogvideox`, with the paper boat prompt and seed 7. **It is still not offered:** the command names the recipe in its own process, and no page or service command can reach it. Receipts: `kaggle-cogvideox-run-receipt.json` and `kaggle-cogvideox-notebook-receipt.json`.

@@ -1,0 +1,38 @@
+{
+  "task": "first-frame-from-yamakan-on-kaggle",
+  "recipe": "kaggle-wan22-ti2v-5b-first-frame",
+  "generationId": "9e726d9f-29ff-43e6-a5d8-30a0a4cdb466",
+  "prompt": "Gentle ripples move across the turquoise lake, and the pine trees sway softly in the breeze.",
+  "seed": 7,
+  "photo": {
+    "name": "moraine.jpg"
+  },
+  "head": "3478fe2df239e4651eae3e9d5465bb1c82e923f0",
+  "dirty": false,
+  "passed": false,
+  "failure": "no answer in time\n+ actual - expected\n\n+ 'running'\n- 'succeeded'\n",
+  "steps": [
+    {
+      "name": "took the photograph named",
+      "bytes": 1520767,
+      "sha256": "adb3041e3ac2de4cf3e7c3d186ea2c39a1a811b4a5fff4f888a6711579833d5f",
+      "at": "2026-11-08T16:18:36.578Z"
+    },
+    {
+      "name": "Kaggle took a script with the picture inside",
+      "generationId": "9e726d9f-29ff-43e6-a5d8-30a0a4cdb466",
+      "afterSeconds": 17.149,
+      "at": "2026-11-08T16:18:53.719Z"
+    },
+    {
+      "name": "Kaggle says queued",
+      "afterSeconds": 21.772,
+      "at": "2026-11-08T16:18:58.342Z"
+    },
+    {
+      "name": "Kaggle says running",
+      "afterSeconds": 1995.307,
+      "at": "2026-11-08T16:51:51.879Z"
+    }
+  ]
+}
