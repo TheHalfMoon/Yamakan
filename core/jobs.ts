@@ -27,7 +27,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "./store.ts";
 import { AssetSchema, frameRateOf, framesToSeconds } from "./project.ts";
 import type { Asset } from "./project.ts";
-import { durationFramesAt, MEDIA_FORMATS, probe } from "./media.ts";
+import {
+  durationFramesAt,
+  MEDIA_DECODERS,
+  MEDIA_FORMATS,
+  probe,
+} from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { keepMainStream, renderRevision } from "./render.ts";
 import type { RenderJob } from "./render.ts";
@@ -1229,6 +1234,8 @@ export class JobSupervisor {
           "file",
           "-format_whitelist",
           MEDIA_FORMATS,
+          "-codec_whitelist",
+          MEDIA_DECODERS,
           "-i",
           source,
           "-map",

@@ -4,7 +4,7 @@ import { pipeline } from "node:stream/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { ProjectStore } from "./store.ts";
-import { MEDIA_FORMATS, probe } from "./media.ts";
+import { MEDIA_DECODERS, MEDIA_FORMATS, probe } from "./media.ts";
 import { RESOURCE_POLICY, exportWallSeconds } from "./command/policy.ts";
 import { planSegments, renderSegmented } from "./render/segments.ts";
 import { CommandError } from "./command/errors.ts";
@@ -420,6 +420,8 @@ export async function renderPlan(
         "file",
         "-format_whitelist",
         MEDIA_FORMATS,
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         ...options,
         "-i",
         file,

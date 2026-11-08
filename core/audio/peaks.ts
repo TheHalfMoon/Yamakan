@@ -21,7 +21,7 @@ import {
 import path from "node:path";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { MEDIA_FORMATS } from "../media.ts";
+import { MEDIA_DECODERS, MEDIA_FORMATS } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
 import { framesToSeconds, type Asset } from "../project.ts";
@@ -157,6 +157,8 @@ async function audioChannels(file: string, signal: AbortSignal) {
       "file",
       "-format_whitelist",
       MEDIA_FORMATS,
+      "-codec_whitelist",
+      MEDIA_DECODERS,
       "-select_streams",
       "a:0",
       "-show_entries",
@@ -208,6 +210,8 @@ async function decodePeaks(file: string, seconds: number, signal: AbortSignal) {
         "file",
         "-format_whitelist",
         MEDIA_FORMATS,
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-i",
         `file:${path.basename(file)}`,
         "-map",

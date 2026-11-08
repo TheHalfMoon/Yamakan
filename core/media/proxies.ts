@@ -34,7 +34,12 @@ import path from "node:path";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { durationFramesAt, MEDIA_FORMATS, probe } from "../media.ts";
+import {
+  durationFramesAt,
+  MEDIA_DECODERS,
+  MEDIA_FORMATS,
+  probe,
+} from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
 import { framesToSeconds, type Asset } from "../project.ts";
@@ -399,6 +404,8 @@ async function probeStream(
       "file",
       "-format_whitelist",
       MEDIA_FORMATS,
+      "-codec_whitelist",
+      MEDIA_DECODERS,
       "-select_streams",
       stream,
       "-show_entries",
@@ -541,6 +548,8 @@ async function runBuild(
         "file",
         "-format_whitelist",
         MEDIA_FORMATS,
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-i",
         source,
         "-map",
@@ -869,6 +878,8 @@ async function drawThumbnail(file: string, at: number) {
       "file",
       "-format_whitelist",
       MEDIA_FORMATS,
+      "-codec_whitelist",
+      MEDIA_DECODERS,
       "-ss",
       String(at),
       "-i",

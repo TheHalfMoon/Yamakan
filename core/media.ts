@@ -61,6 +61,75 @@ export function mediaHeader(bytes: Buffer, ext: string) {
 export const MEDIA_FORMATS =
   "mov,matroska,wav,mp3,ogg,png_pipe,jpeg_pipe,webp_pipe,image2";
 
+// The decoders media is read with, and no others: FFmpeg's container list does not limit the
+// decoders inside a container, and FFmpeg 7.1.1 has known overflows in some it would otherwise
+// run on an imported file, JPEG 2000 and OpenEXR among them (see the security checkpoint in the
+// ledger). Passed as -codec_whitelist on every input, which refuses to open any other decoder,
+// in the probe as in a render. Names are FFmpeg's decoder names.
+export const MEDIA_DECODERS = [
+  // Video and stills.
+  "h264",
+  "hevc",
+  "prores",
+  "av1",
+  "vp8",
+  "vp9",
+  "mpeg4",
+  "dnxhd",
+  "png",
+  "mjpeg",
+  "webp",
+  // Sound.
+  "aac",
+  "mp3float",
+  "mp3",
+  "opus",
+  "vorbis",
+  "flac",
+  "alac",
+  "pcm_s16le",
+  "pcm_s16be",
+  "pcm_s24le",
+  "pcm_s24be",
+  "pcm_s32le",
+  "pcm_f32le",
+  "pcm_u8",
+  // Plain-text subtitles a container may carry: not read, but a probe opens them.
+  "mov_text",
+  "subrip",
+  "ass",
+  "ssa",
+  "webvtt",
+  "text",
+].join(",");
+// The codecs a picture or sound may be in, as the probe names them.
+const MEDIA_CODECS = new Set([
+  "h264",
+  "hevc",
+  "prores",
+  "av1",
+  "vp8",
+  "vp9",
+  "mpeg4",
+  "dnxhd",
+  "png",
+  "mjpeg",
+  "webp",
+  "aac",
+  "mp3",
+  "opus",
+  "vorbis",
+  "flac",
+  "alac",
+  "pcm_s16le",
+  "pcm_s16be",
+  "pcm_s24le",
+  "pcm_s24be",
+  "pcm_s32le",
+  "pcm_f32le",
+  "pcm_u8",
+]);
+
 // Rotation in degrees from a stream's display matrix or legacy rotate tag.
 function rotation(stream: any): number {
   const matrix = (stream?.side_data_list ?? []).find(
@@ -107,6 +176,8 @@ export async function probe(file: string) {
         // Only the container families Yamakan accepts; no playlist or concat demuxers.
         "-format_whitelist",
         MEDIA_FORMATS,
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-show_streams",
         "-show_format",
         "-of",
@@ -138,6 +209,15 @@ export async function probe(file: string) {
   const audio = streams.find((x: any) => x.codec_type === "audio");
   if (streams.length > probeStreams || (!visual && !audio))
     throw new Error("Unsupported media streams.");
+  for (const stream of streams)
+    if (
+      (stream.codec_type === "video" || stream.codec_type === "audio") &&
+      !MEDIA_CODECS.has(stream.codec_name)
+    )
+      throw new CommandError(
+        "MEDIA_INVALID",
+        "This file's picture or sound is in a format Yamakan does not read.",
+      );
   // Display dimensions: FFmpeg applies a ±90° display rotation whenever it
   // decodes (renders and conversions), so the upright size is the real one.
   const turned = Math.abs(rotation(visual)) % 180 === 90;

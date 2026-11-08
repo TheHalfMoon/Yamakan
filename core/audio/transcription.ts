@@ -21,7 +21,7 @@ import path from "node:path";
 import { z } from "zod";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { MEDIA_FORMATS } from "../media.ts";
+import { MEDIA_DECODERS, MEDIA_FORMATS } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { canonicalJson, sha256Hex } from "../hash/canonical.ts";
 import { FLICKS_PER_SECOND, framesToTicks, type Rational } from "../time.ts";
@@ -305,6 +305,8 @@ export async function extractPcm(
         [
           "-format_whitelist",
           MEDIA_FORMATS,
+          "-codec_whitelist",
+          MEDIA_DECODERS,
           "-i",
           `file:${file}`,
           "-vn",

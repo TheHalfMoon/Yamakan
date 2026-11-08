@@ -9,7 +9,7 @@
 import path from "node:path";
 import { CommandError } from "../command/errors.ts";
 import { RESOURCE_POLICY } from "../command/policy.ts";
-import { MEDIA_FORMATS } from "../media.ts";
+import { MEDIA_DECODERS, MEDIA_FORMATS } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { FLICKS_PER_SECOND, ticksToFrames, type Rational } from "../time.ts";
 import type { ProjectStore } from "../store.ts";
@@ -165,6 +165,8 @@ async function analyse(
         "file",
         "-format_whitelist",
         MEDIA_FORMATS,
+        "-codec_whitelist",
+        MEDIA_DECODERS,
         "-i",
         `file:${path.basename(file)}`,
         "-an",
