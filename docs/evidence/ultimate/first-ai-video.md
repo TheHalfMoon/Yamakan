@@ -177,7 +177,7 @@ Run `9e726d9f-29ff-43e6-a5d8-30a0a4cdb466` at `3478fe2`, from `npm run qualify:k
 
 The container's peak was 29.50 GiB, again close under its limit, with 0 out-of-memory kills.
 
-**Offered, and run from the page.** At `13bc3a0`, with the recipe offered, `npm run qualify:kaggle -- <out> 0 "<prompt>"` with `YAMAKAN_QUALIFY_PICTURE` set ran in Edge against the real service and real Kaggle, with the founder's go-ahead to send the photograph again. Its receipt is `kaggle-first-frame-page-run-receipt.json`.
+**Offered, and run from the page.** At `13bc3a0`, with the recipe offered, `npm run qualify:kaggle -- <out> 0 "<prompt>"` with `YAMAKAN_QUALIFY_PICTURE` set ran in Edge against the real service and real Kaggle, with the founder's go-ahead to send the photograph again. Its receipt is `kaggle-first-frame-page-run-receipt.json`. Its first step reads `moraine.jpg`: that is the step "chose the picture, and said it shows no real person", whose name the picture's name overwrote. The command now records the picture under its own key. The receipt does not hold the generation's id, as the CogVideoX page receipt does not, and the video's hash is what ties it to the run.
 
 The steps, in order:
 
