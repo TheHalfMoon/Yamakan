@@ -16,7 +16,7 @@ type Take = {
   lineage: {
     label: string;
     outputHash: string;
-    inputs: never[];
+    inputs: { assetId: string; assetHash: string }[];
   };
 };
 type Shot = {
@@ -103,7 +103,12 @@ export function addMadeVideo(
         lineage: {
           label: `${upTo(label, NAME_LIMIT - tail.length)}${tail}`,
           outputHash: video.assetHash,
-          inputs: [],
+          // A take made from a picture names it, so its record does not read as if made
+          // from the prompt alone.
+          inputs: (receipt.inputs ?? []).map(({ assetId, assetHash }) => ({
+            assetId,
+            assetHash,
+          })),
         },
       },
     ],

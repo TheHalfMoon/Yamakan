@@ -178,6 +178,15 @@ export const mayStart = (r: {
   noPerson: boolean;
 }) => r.agreed && (r.picture === undefined || r.noPerson);
 
+// The still a run started from, by the version the page knows; none without one.
+export const picturePins = (
+  picture: { id: string } | undefined,
+  findAsset: (id: string) => { hash: string } | undefined,
+) => {
+  const hash = picture ? findAsset(picture.id)?.hash : undefined;
+  return picture && hash ? [{ assetId: picture.id, assetHash: hash }] : [];
+};
+
 export const validSeed = (seed: number) =>
   Number.isInteger(seed) && seed >= 0 && seed <= 2 ** 32 - 1;
 
@@ -213,6 +222,9 @@ export type RunReceipt = {
   steps: number;
   sha256: string;
   licence: string | null;
+  // The project's media a run started here was made from, such as its first frame. A
+  // receipt file brought in by hand names none.
+  inputs?: { assetId: string; assetHash: string }[];
 };
 
 export function parseReceipt(text: string): RunReceipt {

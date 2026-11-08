@@ -130,3 +130,29 @@ test("anything else reads as no records", () => {
     {},
   );
 });
+
+// So the project's record of it does not read as if made from the prompt alone.
+test("a take made from a picture names it as its input, and the project accepts it", () => {
+  const still = { assetId: newId(), assetHash: "c".repeat(64) };
+  const story = add(null, {
+    ...video,
+    assetId: newId(),
+    receipt: { ...receipt, inputs: [still] },
+  });
+  assert.doesNotThrow(() => StoryDocumentSchema.parse(story));
+  assert.deepEqual(story.scenes[0].shots[0].takes[0].lineage.inputs, [still]);
+  // One from a prompt, or brought in by hand, names none.
+  const plain = add(null, { ...video, assetId: newId() });
+  assert.deepEqual(plain.scenes[0].shots[0].takes[0].lineage.inputs, []);
+});
+
+test("a run from a picture is pinned to the version the page knows, and one without none", async () => {
+  const { picturePins } = await import("../src/create/create-model.ts");
+  const find = (id: string) =>
+    id === "still" ? { hash: "c".repeat(64) } : undefined;
+  assert.deepEqual(picturePins({ id: "still" }, find), [
+    { assetId: "still", assetHash: "c".repeat(64) },
+  ]);
+  assert.deepEqual(picturePins({ id: "gone" }, find), []);
+  assert.deepEqual(picturePins(undefined, find), []);
+});
