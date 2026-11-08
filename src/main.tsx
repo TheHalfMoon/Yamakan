@@ -67,6 +67,7 @@ import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { asElement } from "./create/create-elements.ts";
+import { characterLinks } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
@@ -2324,6 +2325,61 @@ function App() {
                           }).finally(() => resolve(made));
                         });
                       },
+                    }}
+                    people={{
+                      list: async () =>
+                        (await call("yamakan.consent.list", {})) as any,
+                      links: async () => {
+                        const documents = (await call("yamakan.document.list", {
+                          projectId: p.id,
+                        })) as unknown as { id: string; kind: string }[];
+                        const found = [];
+                        for (const ref of documents)
+                          if (ref.kind === "referencePack") {
+                            const read = (await call("yamakan.document.get", {
+                              projectId: p.id,
+                              documentId: ref.id,
+                            })) as any;
+                            found.push(...characterLinks(read.content));
+                          }
+                        return found;
+                      },
+                      // Consents are the workspace's, not the project's: nothing to save first.
+                      grant: (input) =>
+                        call("yamakan.consent.grant", input).then(
+                          () => true,
+                          () => false,
+                        ),
+                      revoke: (consentId) =>
+                        call("yamakan.consent.revoke", { consentId }).then(
+                          () => true,
+                          () => false,
+                        ),
+                      revalidate: (consentId) =>
+                        call("yamakan.consent.revalidate", { consentId }).then(
+                          () => true,
+                          () => false,
+                        ),
+                      link: (pack) =>
+                        new Promise((resolve) => {
+                          let kept = false;
+                          run(async () => {
+                            await save();
+                            await call("yamakan.pack.save", {
+                              projectId: p.id,
+                              expectedRevision: head.current!.revision,
+                              documentId: crypto.randomUUID(),
+                              expectedContentHash: null,
+                              pack,
+                            } as any);
+                            kept = true;
+                            accept(
+                              await call("yamakan.project.open", {
+                                projectId: p.id,
+                              }),
+                            );
+                          }).finally(() => resolve(kept));
+                        }),
                     }}
                     generation={{
                       start: (request) =>

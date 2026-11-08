@@ -213,6 +213,33 @@ function coverOf(db: DatabaseSync, consentId: string) {
   return rows.length === 1 ? rows[0].covered : null;
 }
 
+export type ListedConsent = ConsentRecord & {
+  // Granted or revalidated in this epoch: one from before a restore needs revalidating.
+  current: boolean;
+  // For consent to send: the consent to generate it covers, or null if it covers none.
+  coversConsentId: string | null;
+};
+
+/** Every likeness consent in the workspace, oldest first, for a person to see. */
+export async function listConsents(
+  store: ProjectStore,
+): Promise<ListedConsent[]> {
+  return store.read((db) => {
+    const epoch = epochOf(db);
+    const rows = db
+      .prepare(
+        "SELECT c.*, r.revoked_at FROM likeness_consents c LEFT JOIN consent_revocations r ON r.consent_id = c.id ORDER BY c.granted_at, c.id",
+      )
+      .all() as ConsentRow[];
+    return rows.map((row) => ({
+      ...consentRecord(row),
+      current: revalidated(db, row, epoch),
+      coversConsentId:
+        row.purpose === "likeness-send" ? coverOf(db, row.id) : null,
+    }));
+  });
+}
+
 export async function grantConsent(
   store: ProjectStore,
   input: {

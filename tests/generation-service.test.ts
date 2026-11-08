@@ -1607,3 +1607,51 @@ test("a consent to send covering two consents counts for neither", async () => {
   );
   assert.equal(state.inputRead, null);
 });
+
+// Who has consented to what, for the page: only at the browser, and saying what it covers.
+test("the consent list says each consent's state and what consent to send covers", async () => {
+  const f = await fixture();
+  const generate = await grantGenerate(f);
+  const send = await grantSend(f, generate);
+  const other = await grantGenerate(f, "someone-else");
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId: other });
+  const listed = (await execute(f.ctx, "yamakan.consent.list", {})).result as {
+    id: string;
+    characterId: string;
+    purpose: string;
+    revokedAtMs: number | null;
+    current: boolean;
+    coversConsentId: string | null;
+  }[];
+  const by = new Map(listed.map((c) => [c.id, c]));
+  assert.equal(by.get(generate)?.purpose, "likeness-generate");
+  assert.equal(by.get(generate)?.coversConsentId, null);
+  assert.equal(by.get(generate)?.current, true);
+  assert.equal(by.get(send)?.coversConsentId, generate);
+  assert.equal(by.get(other)?.characterId, "someone-else");
+  assert.notEqual(by.get(other)?.revokedAtMs, null);
+  // As a restore does: consents from before it need confirming again.
+  await f.store.transaction((db) =>
+    db.prepare("UPDATE director_epoch SET value = value + 1").run(),
+  );
+  const after = (await execute(f.ctx, "yamakan.consent.list", {})).result as {
+    id: string;
+    current: boolean;
+  }[];
+  assert.equal(after.find((c) => c.id === generate)?.current, false);
+  // An agent, whatever its scopes, cannot read it.
+  await assert.rejects(
+    execute(
+      {
+        ...f.ctx,
+        principal: {
+          id: `agent:${crypto.randomUUID()}`,
+          scopes: new Set(Scopes),
+        },
+      },
+      "yamakan.consent.list",
+      {},
+    ),
+    /requires the browser session/,
+  );
+});

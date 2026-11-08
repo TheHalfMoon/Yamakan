@@ -160,6 +160,7 @@ import {
   approveStage,
   directorNext,
   grantConsent,
+  listConsents,
   loadRun,
   recordEncoding,
   revalidateConsent,
@@ -2056,6 +2057,17 @@ export const commands = {
         },
         receipt,
       ),
+  }),
+  // Who has consented to what. A person's names and their consents are for the person at
+  // the browser, as granting them is.
+  "yamakan.consent.list": define({
+    scope: "consent:grant",
+    mutation: false,
+    humanOnly: true,
+    summary:
+      "List the workspace's likeness consents, with whether each is current and what a consent to send covers. Browser session only.",
+    input: z.object({}).strict(),
+    run: ({ store }) => listConsents(store),
   }),
   "yamakan.consent.revalidate": define({
     scope: "consent:grant",

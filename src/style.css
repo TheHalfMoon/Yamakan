@@ -587,6 +587,44 @@ footer {
   font-size: 0.95rem;
   color: var(--ink);
 }
+.create-people-grant {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.create-people-grant > label:not(.create-agree) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.create-person {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.create-person h4 {
+  margin: 0;
+}
+.create-consent {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 8px;
+  border: 1px solid #344156;
+  border-radius: 6px;
+}
+.create-consent p {
+  margin: 0;
+}
+.create-person-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .create-element-new {
   display: flex;
   flex-wrap: wrap;
