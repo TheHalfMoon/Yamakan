@@ -159,10 +159,10 @@ try {
   assert.ok(await start.isDisabled(), "nothing starts until it is agreed to");
   await page.getByTestId("create-agree").check();
   await shot("1-ready");
-  // The agreement is read in place: inside its panel, on more than a sliver of it.
+  // The agreement, the last tick, is read in place: inside its panel, on more than a sliver.
   const fits = await page.evaluate(() => {
-    const text = document
-      .querySelector(".create-agree span")
+    const text = [...document.querySelectorAll(".create-agree span")]
+      .at(-1)
       .getBoundingClientRect();
     const panel = document
       .querySelector(".create-composer")
