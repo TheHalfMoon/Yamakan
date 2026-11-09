@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import {
   mkdir,
+  open,
   readFile,
   readdir,
   rm,
@@ -359,13 +360,26 @@ export function killedAt(receipt: {
 const LOG_TAIL_BYTES = 8 * 1024 * 1024;
 // A whole output line, as a real killed run's log has it: a word in a prompt is not.
 const KILLED_LINE = /"data":"Killed\\n"/;
+// Only its end is read, however large the log Kaggle sent.
+async function tailOf(file: string, bytes: number) {
+  const handle = await open(file, "r");
+  try {
+    const { size } = await handle.stat();
+    const length = Math.min(size, bytes);
+    const buffer = Buffer.alloc(length);
+    await handle.read(buffer, 0, length, size - length);
+    return buffer.toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
 async function logSaysKilled(folder: string) {
   const names = await readdir(folder).catch(() => [] as string[]);
   for (const name of names.filter((n) => n.endsWith(".log"))) {
-    const text = await readFile(path.join(folder, name), "utf8").catch(
+    const text = await tailOf(path.join(folder, name), LOG_TAIL_BYTES).catch(
       () => "",
     );
-    if (KILLED_LINE.test(text.slice(-LOG_TAIL_BYTES))) return true;
+    if (KILLED_LINE.test(text)) return true;
   }
   return false;
 }

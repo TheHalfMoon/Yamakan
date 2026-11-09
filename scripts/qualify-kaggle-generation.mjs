@@ -397,7 +397,11 @@ try {
   passed = true;
 } catch (e) {
   // This receipt may be committed, and an error can hold an address naming the account.
-  failure = diagnostic(String(e?.message ?? e)) ?? "It failed.";
+  // A notebook's name, user/slug, is one segment of a path and passes that, so the user goes.
+  const user = process.env.YAMAKAN_KAGGLE_USERNAME;
+  const said = String(e?.message ?? e);
+  failure =
+    diagnostic(user ? said.replaceAll(user, "[user]") : said) ?? "It failed.";
   console.error(e);
 } finally {
   await browser?.close().catch(() => {});
