@@ -1747,7 +1747,7 @@ test("a restore over a damaged head does not bring back a still whose consent wa
   assert.equal(history.currentRevision, null, "the head cannot be read");
   await assert.rejects(
     f.store.restore(f.projectId, placed.revision, history.headFingerprint),
-    /revoked/,
+    /cannot be restored\. Restore a revision without it/,
   );
   // A revision without it still restores.
   const restored = await f.store.restore(

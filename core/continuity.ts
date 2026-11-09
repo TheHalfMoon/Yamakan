@@ -345,12 +345,16 @@ export function everLinkedByConsent(db: DatabaseSync) {
 export function assertLinkedMediaNotRevoked(
   db: DatabaseSync,
   hashes: readonly string[],
+  // A restore over a head that cannot be read: nothing stays, and the way out differs.
+  recovering = false,
 ) {
   for (const newest of newestLinkedConsents(db, hashes)) {
     if (newest.revokedAt !== null)
       throw new CommandError(
         "VALIDATION",
-        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+        recovering
+          ? "This revision shows media whose person's consent was revoked, so it cannot be restored. Restore a revision without it, or record a new consent and save the reference pack with it first."
+          : "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
       );
     if (!consentInCurrentEpoch(db, newest.id))
       throw new CommandError(
@@ -623,7 +627,7 @@ export function assertPlacementConsent(
       .filter(([key, ticks]) => ticks > (was.get(key) ?? 0))
       .map(([key]) => key.slice(0, key.indexOf("|")));
     assertLinkedMediaNotRevoked(c.db, [...new Set([...placed, ...more])]);
-  } else assertLinkedMediaNotRevoked(c.db, [...placed]);
+  } else assertLinkedMediaNotRevoked(c.db, [...placed], true);
   if (!placed.size) return;
   // One pass over the project's story versions for all placed hashes (at
   // most 200, one per clip, well within SQLite's expression limits); only
