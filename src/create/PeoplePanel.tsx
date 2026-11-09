@@ -297,7 +297,10 @@ export function PeoplePanel(props: {
                     })}
                   </p>
                 )}
-                {state === "revalidate" && (
+                {/* An expired one from before a restore still says who its stills show,
+                    and covering them needs it confirmed first. */}
+                {(state === "revalidate" ||
+                  (state === "expired" && !g.current && linked.length > 0)) && (
                   <button
                     type="button"
                     disabled={off}
