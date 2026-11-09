@@ -14,7 +14,7 @@ import path from "node:path";
 import test, { after } from "node:test";
 import { deflateSync, inflateSync } from "node:zlib";
 import { mediaTools } from "../core/process/workers.ts";
-import { closeWorkers } from "../core/process/workers.ts";
+import { closeWorkers, workers } from "../core/process/workers.ts";
 import {
   JPEG_QUALITIES,
   cleanImage,
@@ -513,4 +513,53 @@ test("a JPEG with anything but a picture in it is not taken for one", async () =
     "height",
   );
   assert.ok(!jpegHoldsOnlyAPicture(real, { width: 703, height: 480 }), "width");
+});
+
+// A worker writing more than it rightly could: the first encode overflows, and only that
+// quality is passed over; the next, real one is what goes.
+test("an encode past what may be sent is passed over for the next quality, not refused", async () => {
+  const best = await within(NOISY.length - 1);
+  const pool = workers();
+  const real = pool.run.bind(pool);
+  let calls = 0;
+  pool.run = (async (options: Parameters<typeof real>[0]) => {
+    calls++;
+    if (calls > 1) return real(options);
+    options.onStdout?.(Buffer.alloc(best.data.length + 1));
+    return {
+      code: 0,
+      pid: 0,
+      stderr: "",
+      peakMemoryBytes: null,
+      wallExceeded: false,
+    };
+  }) as typeof pool.run;
+  try {
+    const sent = await within(best.data.length);
+    assert.ok(calls >= 2, "the next quality was tried");
+    assert.equal(sent.mediaType, "image/jpeg");
+    assert.ok(sent.data.length <= best.data.length);
+  } finally {
+    pool.run = real;
+  }
+});
+
+test("a decode past one frame of pixels is refused", async () => {
+  const pool = workers();
+  const real = pool.run.bind(pool);
+  pool.run = (async (options: Parameters<typeof real>[0]) => {
+    options.onStdout?.(Buffer.alloc(SIZE.width * SIZE.height * 3 + 1));
+    return {
+      code: 0,
+      pid: 0,
+      stderr: "",
+      peakMemoryBytes: null,
+      wallExceeded: false,
+    };
+  }) as typeof pool.run;
+  try {
+    await assert.rejects(clean(PNG, "image/png"));
+  } finally {
+    pool.run = real;
+  }
 });
