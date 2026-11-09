@@ -1695,3 +1695,65 @@ test("an expired consent still lists its stills, and covering it lets them go", 
   await start();
   assert.notEqual(state.inputRead, null);
 });
+
+// A restore over a head that cannot be read has nothing to compare with, so all it puts back
+// is shown anew: a still whose consent was revoked does not come back with it.
+test("a restore over a damaged head does not bring back a still whose consent was revoked", async () => {
+  const f = await fixture();
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const consentId = await consented(f, still.id, still.hash);
+  const open = (
+    await execute(f.ctx, "yamakan.project.open", { projectId: f.projectId })
+  ).result as { revision: number; tracks: { id: string; kind: string }[] };
+  const placed = (
+    await execute(f.ctx, "yamakan.project.applyBatch", {
+      projectId: f.projectId,
+      expectedRevision: open.revision,
+      operations: [
+        {
+          type: "clip.add",
+          clipId: crypto.randomUUID(),
+          trackId: open.tracks.find((t) => t.kind === "video")!.id,
+          assetId: still.id,
+          title: null,
+          startTicks: 0,
+          // Whole frames at the project's 24000/1001.
+          durationTicks: 29_429_400 * 24,
+          sourceStartTicks: 0,
+        },
+      ],
+    })
+  ).result as { revision: number; clips: { id: string }[] };
+  // Taken off again, so the head no longer shows it.
+  await execute(f.ctx, "yamakan.project.applyBatch", {
+    projectId: f.projectId,
+    expectedRevision: placed.revision,
+    operations: [{ type: "clip.remove", clipId: placed.clips[0].id }],
+  });
+  await execute(f.ctx, "yamakan.consent.revoke", { consentId });
+  // The head's snapshot is damaged; older revisions stay readable.
+  await f.store.transaction((db) =>
+    db
+      .prepare(
+        "UPDATE snapshots SET bytes = ?, byte_length = 3 WHERE hash = (SELECT snapshot_hash FROM projects WHERE project_id = ?)",
+      )
+      .run(Buffer.from("bad"), f.projectId),
+  );
+  const history = await f.store.history(f.projectId);
+  assert.equal(history.currentRevision, null, "the head cannot be read");
+  await assert.rejects(
+    f.store.restore(f.projectId, placed.revision, history.headFingerprint),
+    /revoked/,
+  );
+  // A revision without it still restores.
+  const restored = await f.store.restore(
+    f.projectId,
+    open.revision,
+    history.headFingerprint,
+  );
+  assert.ok(restored.revision > placed.revision);
+});

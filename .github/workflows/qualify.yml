@@ -122,6 +122,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: pip install --disable-pip-version-check "opentimelineio==0.18.1"
+      # By hash: a package that does not match is refused, and nothing else is installed.
+      - run: pip install --disable-pip-version-check --require-hashes --no-deps -r scripts/ci/otio-requirements.txt
       - run: node scripts/write-otio-fixture.mjs
       - run: python scripts/otio-oracle.py docs/evidence/qualification/otio-fixture.otio

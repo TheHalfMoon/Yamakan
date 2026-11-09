@@ -615,14 +615,15 @@ export function assertPlacementConsent(
   );
   // More of a medium than before is a new use, by whatever route, so a clip that
   // stays cannot open further placements; a split or a move adds nothing. A
-  // recovery over a damaged head (no `before`) puts back committed work instead.
+  // recovery over a damaged head (no `before`) puts back committed work, all of it
+  // shown anew: a revoked consent holds against it too, as it can never be revalidated.
   if (before) {
     const was = presentedTicks(before);
     const more = [...presentedTicks(after)]
       .filter(([key, ticks]) => ticks > (was.get(key) ?? 0))
       .map(([key]) => key.slice(0, key.indexOf("|")));
     assertLinkedMediaNotRevoked(c.db, [...new Set([...placed, ...more])]);
-  }
+  } else assertLinkedMediaNotRevoked(c.db, [...placed]);
   if (!placed.size) return;
   // One pass over the project's story versions for all placed hashes (at
   // most 200, one per clip, well within SQLite's expression limits); only
