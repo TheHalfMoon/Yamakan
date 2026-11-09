@@ -359,7 +359,9 @@ export function assertLinkedMediaNotRevoked(
     if (!consentInCurrentEpoch(db, newest.id))
       throw new CommandError(
         "VALIDATION",
-        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
+        recovering
+          ? "This revision shows media whose person's consent must be revalidated after a restore, so it cannot be restored yet. Revalidate that consent, or restore a revision without it."
+          : "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
       );
   }
 }
