@@ -71,7 +71,12 @@ function kaggle(
   {
     privateAnswer = true,
     clock,
-  }: { privateAnswer?: boolean; clock?: () => number } = {},
+    videoBytes,
+  }: {
+    privateAnswer?: boolean;
+    clock?: () => number;
+    videoBytes?: number;
+  } = {},
 ) {
   const calls: string[][] = [];
   const pushed: {
@@ -121,6 +126,7 @@ function kaggle(
     scriptFor: async () => SCRIPT,
     download: async (_r, folder) => leave?.(runId, folder),
     ...(clock ? { now: clock } : {}),
+    ...(videoBytes !== undefined ? { videoBytes } : {}),
   });
   return { engine, calls, pushed, runIdOf: () => runId };
 }
@@ -1429,3 +1435,30 @@ test("the page's facts and the recipe say the same", () => {
     assert.match(script, new RegExp(`^STEPS = ${r.steps}\\b`, "m"));
   }
 });
+
+// Bounded before anything reads it: a run's output is what Kaggle sent, and a video far larger
+// than a few seconds' worth is not hashed or brought in.
+for (const [name, over] of [
+  ["at its limit is brought in", 0],
+  ["one byte over its limit is refused", 1],
+] as const)
+  test(`a fetched video ${name}`, async () => {
+    let time = 0;
+    const k = kaggle(["COMPLETE"], good, {
+      clock: () => time,
+      videoBytes: Buffer.byteLength(VIDEO) - over,
+    });
+    const { executionRef } = (await k.engine.submit(
+      request(),
+      context as never,
+    )) as any;
+    if (!over) {
+      assert.equal((await k.engine.status(executionRef)).state, "succeeded");
+      return;
+    }
+    assert.equal((await k.engine.status(executionRef)).state, "unknown");
+    time = 10 * 60 * 1000;
+    const answer = await k.engine.status(executionRef);
+    assert.equal(answer.state, "failed");
+    assert.match(answer.diagnostic!, /readable result/);
+  });

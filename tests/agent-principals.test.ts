@@ -35,6 +35,23 @@ test("launch secrets are single-use and expire", async () => {
   );
 });
 
+test("a wrong launch secret is refused, whatever its length, and leaves the right one", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-launch-"));
+  bases.push(root);
+  const { secret } = await writeLaunchLink(
+    root,
+    "http://127.0.0.1:4318",
+    1_000,
+  );
+  const flipped = (secret[0] === "a" ? "b" : "a") + secret.slice(1);
+  for (const wrong of [flipped, secret.slice(1), `${secret}0`, ""])
+    assert.deepEqual(await consumeLaunchSecret(root, wrong, 1_000), {
+      ok: false,
+      reason: "invalid",
+    });
+  assert.equal((await consumeLaunchSecret(root, secret, 1_000)).ok, true);
+});
+
 test("agent tokens derive principals and respect scope ceilings", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-agents-"));
   bases.push(root);

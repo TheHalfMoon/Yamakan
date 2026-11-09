@@ -45,6 +45,7 @@ import {
 } from "../core/audio/peaks.ts";
 import { assertSeparate, defaultRecoveryHome } from "../core/recovery.ts";
 import { restrictToOwner } from "../core/process/access.ts";
+import { readBody } from "./body.ts";
 import { verifyInstalledBinaries } from "../scripts/bundle.ts";
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -235,16 +236,7 @@ function authenticate(
     return principals["browser-ui"];
   return null;
 }
-async function body(req: import("node:http").IncomingMessage, max: number) {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > max) throw new Error("Request size limit exceeded.");
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-}
+const body = readBody;
 let closing = false;
 const server = createServer(async (req, res) => {
   let requestId: string = randomUUID();

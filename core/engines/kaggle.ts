@@ -130,6 +130,8 @@ const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
 const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
+// A few seconds of video are a few megabytes: one larger than this is not read or brought in.
+export const VIDEO_BYTES = 512 * 1024 * 1024;
 // The most of a person's picture this will read. What goes is made anew from it, to fit below.
 export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
 // The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
@@ -483,6 +485,8 @@ export function createKaggleEngine(options: {
   lastSentAt?: (recipeId: string, except: string) => number | undefined;
   // Tests only: recipes to treat as offered.
   alsoOffered?: readonly string[];
+  // Tests only: the largest video brought in.
+  videoBytes?: number;
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
@@ -568,6 +572,11 @@ export function createKaggleEngine(options: {
         throw new Unreadable("The run's output held files it should not.");
       if ((await stat(file)).size > RECEIPT_BYTES)
         throw new Unreadable("That receipt is too large to be one.");
+      const video = await stat(path.join(folder, run.recipe.output)).catch(
+        () => null,
+      );
+      if (video && video.size > (options.videoBytes ?? VIDEO_BYTES))
+        throw new Unreadable("That video is too large to bring in.");
       const receipt = JSON.parse(await readFile(file, "utf8"));
       if (receipt === null || typeof receipt !== "object")
         throw new Unreadable("That is not a receipt.");
