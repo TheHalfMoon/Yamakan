@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+import { diagnostic } from "../core/engines/contract-v2.ts";
 import { mediaTools } from "../core/process/workers.ts";
 
 const [out, modelIndex = "0", givenPrompt] = process.argv.slice(2);
@@ -395,7 +396,18 @@ try {
   step("no page errors");
   passed = true;
 } catch (e) {
-  failure = String(e?.message ?? e).slice(0, 1000);
+  // This receipt may be committed, and an error can hold an address naming the account.
+  // A notebook's name, user/slug, is one segment of a path and passes that, so the user goes.
+  // In any case: the engine writes notebook names in lower case.
+  const user = process.env.YAMAKAN_KAGGLE_USERNAME;
+  const said = String(e?.message ?? e);
+  const named = user
+    ? said.replace(
+        new RegExp(user.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+        "[user]",
+      )
+    : said;
+  failure = diagnostic(named) ?? "It failed.";
   console.error(e);
 } finally {
   await browser?.close().catch(() => {});

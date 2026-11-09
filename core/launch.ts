@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { safePath } from "./paths.ts";
 
@@ -60,7 +60,11 @@ export async function consumeLaunchSecret(
 > {
   const record = await readLaunchRecord(root);
   if (!record) return { ok: false, reason: "missing" };
-  if (record.secret !== secret) return { ok: false, reason: "invalid" };
+  // In constant time, so the time an answer takes says nothing of the secret.
+  const given = Buffer.from(secret);
+  const expected = Buffer.from(record.secret);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected))
+    return { ok: false, reason: "invalid" };
   if (now > record.expiresAt) {
     await unlink(await safePath(root, LAUNCH_FILE)).catch(() => {});
     return { ok: false, reason: "expired" };

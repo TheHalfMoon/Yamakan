@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+import { diagnostic } from "../core/engines/contract-v2.ts";
 import { mediaTools } from "../core/process/workers.ts";
 
 execFileSync("npm", ["run", "build"], {
@@ -405,7 +406,8 @@ try {
   step("no page errors");
   passed = true;
 } catch (e) {
-  failure = String(e?.message ?? e).slice(0, 1000);
+  // This receipt may be committed, and an error can hold a local path naming the user.
+  failure = diagnostic(String(e?.message ?? e)) ?? "It failed.";
   console.error(e);
 } finally {
   await browser?.close().catch(() => {});

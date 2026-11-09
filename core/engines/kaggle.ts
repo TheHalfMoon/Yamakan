@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import {
   mkdir,
+  open,
   readFile,
   readdir,
   rm,
@@ -130,6 +131,8 @@ const scriptOf = (r: KaggleRecipe) => path.join(SCRIPTS, r.folder, "run.py");
 const BRIEF_LINE = "BRIEF = {}  # yamakan:brief";
 const FOLDER_PREFIX = "yamakan-kaggle-work-";
 const RECEIPT_BYTES = 1024 * 1024;
+// A few seconds of video are a few megabytes: one larger than this is not read or brought in.
+export const VIDEO_BYTES = 512 * 1024 * 1024;
 // The most of a person's picture this will read. What goes is made anew from it, to fit below.
 export const FIRST_FRAME_BYTES = 4 * 1024 * 1024;
 // The largest script real Kaggle was seen to take on 2026-11-07. It refused 1,062,500 bytes, with
@@ -357,13 +360,26 @@ export function killedAt(receipt: {
 const LOG_TAIL_BYTES = 8 * 1024 * 1024;
 // A whole output line, as a real killed run's log has it: a word in a prompt is not.
 const KILLED_LINE = /"data":"Killed\\n"/;
+// Only its end is read, however large the log Kaggle sent.
+async function tailOf(file: string, bytes: number) {
+  const handle = await open(file, "r");
+  try {
+    const { size } = await handle.stat();
+    const length = Math.min(size, bytes);
+    const buffer = Buffer.alloc(length);
+    await handle.read(buffer, 0, length, size - length);
+    return buffer.toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
 async function logSaysKilled(folder: string) {
   const names = await readdir(folder).catch(() => [] as string[]);
   for (const name of names.filter((n) => n.endsWith(".log"))) {
-    const text = await readFile(path.join(folder, name), "utf8").catch(
+    const text = await tailOf(path.join(folder, name), LOG_TAIL_BYTES).catch(
       () => "",
     );
-    if (KILLED_LINE.test(text.slice(-LOG_TAIL_BYTES))) return true;
+    if (KILLED_LINE.test(text)) return true;
   }
   return false;
 }
@@ -483,6 +499,8 @@ export function createKaggleEngine(options: {
   lastSentAt?: (recipeId: string, except: string) => number | undefined;
   // Tests only: recipes to treat as offered.
   alsoOffered?: readonly string[];
+  // Tests only: the largest video brought in.
+  videoBytes?: number;
 }): EngineAdapterV2 {
   const { cli, username } = options;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/.test(username))
@@ -568,6 +586,11 @@ export function createKaggleEngine(options: {
         throw new Unreadable("The run's output held files it should not.");
       if ((await stat(file)).size > RECEIPT_BYTES)
         throw new Unreadable("That receipt is too large to be one.");
+      const video = await stat(path.join(folder, run.recipe.output)).catch(
+        () => null,
+      );
+      if (video && video.size > (options.videoBytes ?? VIDEO_BYTES))
+        throw new Unreadable("That video is too large to bring in.");
       const receipt = JSON.parse(await readFile(file, "utf8"));
       if (receipt === null || typeof receipt !== "object")
         throw new Unreadable("That is not a receipt.");
