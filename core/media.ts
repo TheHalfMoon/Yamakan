@@ -14,6 +14,8 @@ export const MAX_ASSET_BYTES = RESOURCE_POLICY.enforced.assetImportBytes;
 const { mediaDimension, probeStreams, probeWallSeconds, workerMemoryBytes } =
   RESOURCE_POLICY.enforced;
 const MAX_PROBE_OUTPUT = 1024 * 1024;
+// FFmpeg's progress lines are a few dozen bytes; a longer one without its end is dropped.
+export const PROGRESS_LINE_LIMIT = 64 * 1024;
 
 // "num/den" from ffprobe, reduced to a positive rational, or null.
 function ratio(text: unknown) {

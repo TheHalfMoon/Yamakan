@@ -19,9 +19,6 @@ fi
 if [[ -d "$HOME/AppData/Roaming/Python/Python314/Scripts" ]]; then
   export PATH="$HOME/AppData/Roaming/Python/Python314/Scripts:$PATH"
 fi
-if [[ -d "/c/Users/Shehr/AppData/Roaming/Python/Python314/Scripts" ]]; then
-  export PATH="/c/Users/Shehr/AppData/Roaming/Python/Python314/Scripts:$PATH"
-fi
 
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$PREFIX/bin:$PATH"

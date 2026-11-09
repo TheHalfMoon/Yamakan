@@ -28,6 +28,7 @@ import {
   restoreFromHome,
   restoreWorkspace,
 } from "../core/recovery.ts";
+import { readableByOtherAccounts } from "../core/process/access.ts";
 import { inspectWal } from "../core/wal.ts";
 import { CreativeAPI } from "../server/api.ts";
 import { toCommandError } from "../core/command/errors.ts";
@@ -837,3 +838,41 @@ CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEX
   assert.equal(reopened.principalForAgentToken("f".repeat(64)), null);
   reopened.close();
 });
+
+// The copy diagnosis examines holds everything the workspace does, so it is the owner's alone,
+// whatever the folder it is made in lets other accounts do.
+test(
+  "diagnosis examines its copy of the database in a folder only its owner can read",
+  { skip: process.platform !== "win32" && "Windows DACLs" },
+  async () => {
+    const { base, root, store } = await workspace();
+    store.close();
+    const scratch = path.join(base, "scratch");
+    await mkdir(scratch);
+    // A known permissive start: Users may read everything made in it.
+    execFileSync("icacls", [scratch, "/grant", "*S-1-5-32-545:(OI)(CI)R"], {
+      stdio: "pipe",
+      windowsHide: true,
+    });
+    assert.equal(
+      await readableByOtherAccounts(scratch),
+      true,
+      "another account can read the folder it is made in",
+    );
+    let seen = 0;
+    const report = await diagnoseWorkspace(root, {
+      scratch,
+      whileCopied: async (folder) => {
+        seen++;
+        assert.equal(await readableByOtherAccounts(folder), false, folder);
+        assert.equal(
+          await readableByOtherAccounts(path.join(folder, "workspace.sqlite")),
+          false,
+          "the copy itself",
+        );
+      },
+    });
+    assert.equal(seen, 1);
+    assert.deepEqual(report.database.integrity, ["ok"]);
+  },
+);

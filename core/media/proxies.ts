@@ -39,6 +39,7 @@ import {
   MEDIA_DECODERS,
   MEDIA_FORMATS,
   probe,
+  PROGRESS_LINE_LIMIT,
 } from "../media.ts";
 import { mediaTools, workers } from "../process/workers.ts";
 import { engineId, evictPreviews } from "../render/preview.ts";
@@ -610,6 +611,8 @@ async function runBuild(
         progress += chunk.toString("utf8");
         const lines = progress.split("\n");
         progress = lines.pop() || "";
+        // A progress line is short: one with no end is not kept growing.
+        if (progress.length > PROGRESS_LINE_LIMIT) progress = "";
         for (const line of lines) {
           const match = /^out_time_us=(\d+)/.exec(line);
           if (match)
