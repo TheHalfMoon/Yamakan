@@ -1,0 +1,7 @@
+# The OTIO oracle's one package, by hash: the CPython 3.12 manylinux wheel CI installs.
+# CI takes built wheels only, so the source release's hash, kept here, is never what
+# installs. It has no runtime dependencies. Hashes from PyPI's simple index and its JSON
+# API, which agreed, on 2026-11-09.
+opentimelineio==0.18.1 \
+    --hash=sha256:8f0924f818b496cf771612d489082bdb83f42b6bd97ed06589dd2e2c086742c9 \
+    --hash=sha256:a4e5086e2accd4ca9853ab48bf531e0c148eff47889363a6da3a03f662fbf5e8

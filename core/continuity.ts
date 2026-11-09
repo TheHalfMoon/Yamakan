@@ -345,17 +345,23 @@ export function everLinkedByConsent(db: DatabaseSync) {
 export function assertLinkedMediaNotRevoked(
   db: DatabaseSync,
   hashes: readonly string[],
+  // A restore over a head that cannot be read: nothing stays, and the way out differs.
+  recovering = false,
 ) {
   for (const newest of newestLinkedConsents(db, hashes)) {
     if (newest.revokedAt !== null)
       throw new CommandError(
         "VALIDATION",
-        "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
+        recovering
+          ? "This revision shows media whose person's consent was revoked, so it cannot be restored. Restore a revision without it, or record a new consent and save the reference pack with it first."
+          : "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it.",
       );
     if (!consentInCurrentEpoch(db, newest.id))
       throw new CommandError(
         "VALIDATION",
-        "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
+        recovering
+          ? "This revision shows media whose person's consent must be revalidated after a restore, so it cannot be restored yet. Revalidate that consent, or restore a revision without it."
+          : "This person's consent must be revalidated after a restore before this media can be placed on the timeline.",
       );
   }
 }
@@ -615,14 +621,15 @@ export function assertPlacementConsent(
   );
   // More of a medium than before is a new use, by whatever route, so a clip that
   // stays cannot open further placements; a split or a move adds nothing. A
-  // recovery over a damaged head (no `before`) puts back committed work instead.
+  // recovery over a damaged head (no `before`) puts back committed work, all of it
+  // shown anew: a revoked consent holds against it too, as it can never be revalidated.
   if (before) {
     const was = presentedTicks(before);
     const more = [...presentedTicks(after)]
       .filter(([key, ticks]) => ticks > (was.get(key) ?? 0))
       .map(([key]) => key.slice(0, key.indexOf("|")));
     assertLinkedMediaNotRevoked(c.db, [...new Set([...placed, ...more])]);
-  }
+  } else assertLinkedMediaNotRevoked(c.db, [...placed], true);
   if (!placed.size) return;
   // One pass over the project's story versions for all placed hashes (at
   // most 200, one per clip, well within SQLite's expression limits); only
