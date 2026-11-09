@@ -103,6 +103,7 @@ YU-013 moved this state from mutable JSON files into the workspace database (sch
 - **Execution epoch.** The workspace has an execution epoch. Restoring a backup mints a fresh epoch in the restored copy, in the same transaction that quarantines unverified objects. In the copy:
   - approvals given before the restore no longer count, and their stages await a new approval;
   - consents granted before it must be revalidated (`yamakan.consent.revalidate`, human-only) before any new encoding.
+  - `yamakan.consent.list` (human-only, read-only) lists every likeness consent with its state, whether it is current in this epoch, for `likeness-send` the consent it covers, and `linkedAssetHashes`: every medium any version of any reference pack has linked to it, which is what the send check counts. The Create page's People and consent panel uses it with `yamakan.consent.grant`, `.revoke`, `.revalidate` and `yamakan.pack.save` to link a still to a person.
 
   The original workspace is unaffected. Restoring a project revision never touches consent or revocations, which are workspace state.
 

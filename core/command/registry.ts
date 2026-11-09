@@ -110,6 +110,7 @@ import {
   CONTINUITY_STAGES,
   assertMayKeepWithoutConsent,
   assertMayMarkFictional,
+  everLinkedByConsent,
   resolveContinuity,
   verifySelectedContinuity,
   verifyStoryContinuity,
@@ -160,6 +161,7 @@ import {
   approveStage,
   directorNext,
   grantConsent,
+  listConsents,
   loadRun,
   recordEncoding,
   revalidateConsent,
@@ -2056,6 +2058,25 @@ export const commands = {
         },
         receipt,
       ),
+  }),
+  // Who has consented to what. A person's names and their consents are for the person at
+  // the browser, as granting them is.
+  "yamakan.consent.list": define({
+    scope: "consent:grant",
+    mutation: false,
+    humanOnly: true,
+    summary:
+      "List the workspace's likeness consents, with whether each is current, what a consent to send covers, and every medium ever linked to it. Browser session only.",
+    input: z.object({}).strict(),
+    run: async ({ store }) => {
+      const consents = await listConsents(store);
+      // Every version, as the send check counts them, not only the packs as they stand.
+      const linked = await store.read((db) => everLinkedByConsent(db));
+      return consents.map((c) => ({
+        ...c,
+        linkedAssetHashes: [...(linked.get(c.id) ?? [])].sort(),
+      }));
+    },
   }),
   "yamakan.consent.revalidate": define({
     scope: "consent:grant",

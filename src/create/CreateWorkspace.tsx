@@ -35,6 +35,7 @@ import {
 } from "./create-model.ts";
 
 import { ElementsPanel, type ElementsApi } from "./ElementsPanel.tsx";
+import { PeoplePanel, type PeopleApi } from "./PeoplePanel.tsx";
 
 type Translate = (
   key: MessageKey,
@@ -98,6 +99,7 @@ export function CreateWorkspace(props: {
   loadModels: () => Promise<readonly GenerateModel[]>;
   generation: GenerationApi;
   elements: ElementsApi;
+  people: PeopleApi;
   projectFps: number;
   // A restore or undo can change what the project holds, with the same videos.
   revision: number;
@@ -511,6 +513,17 @@ export function CreateWorkspace(props: {
             if (kept) setKeptStory(kept);
             return Boolean(kept);
           }}
+        />
+
+        <PeoplePanel
+          busy={busy}
+          revision={props.revision}
+          t={t}
+          api={props.people}
+          stills={startingStills(assets).map((still) => ({
+            ...still,
+            hash: assets.find((a) => a.id === still.id)?.hash ?? "",
+          }))}
         />
 
         {models.length > 0 ? (

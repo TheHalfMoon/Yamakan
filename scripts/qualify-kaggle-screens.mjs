@@ -559,6 +559,118 @@ try {
     );
   });
 
+  // A person's picture from the page: consent recorded, the still linked to them, refused
+  // until consent to send is recorded, refused again once that is revoked, and sent after.
+  await scene("people", {}, async ({ page, read }) => {
+    await page.getByLabel("Import local media").setInputFiles(stillFile);
+    await page
+      .getByRole("status")
+      .filter({ hasText: /Imported \W?still\.png/ })
+      .waitFor();
+    const people = page.getByTestId("create-people");
+    await people.getByTestId("people-empty").waitFor();
+    const grant = people.getByTestId("people-grant");
+    await people.getByTestId("people-name").fill("Lead");
+    await people.getByTestId("people-version").fill("Signed form A");
+    assert.equal(await grant.isDisabled(), true, "not without the tick");
+    await people.getByTestId("people-attest").check();
+    await grant.click();
+    const consent = people.getByTestId("people-consent").first();
+    await consent.waitFor();
+    assert.equal(await consent.getAttribute("data-state"), "standing");
+    await people.getByTestId("people-no-send").waitFor();
+    const linkStill = people.getByTestId("people-link-still");
+    await linkStill.selectOption({ label: "still.png" });
+    await people.getByTestId("people-link").click();
+    await people
+      .getByTestId("people-linked")
+      .filter({ hasText: "still.png" })
+      .waitFor();
+    // The same link again adds nothing: one pack per person, and no use of another document.
+    await linkStill.selectOption({ label: "still.png" });
+    await people.getByTestId("people-link").click();
+    await people
+      .locator(".create-problem", { hasText: /already linked/ })
+      .waitFor();
+    step(
+      "consent is recorded from the page, and a still is linked to them, once",
+    );
+
+    const generate = page.getByTestId("create-generate");
+    const startFromPicture = async () => {
+      const picture = generate.getByTestId("create-picture");
+      const value = await picture
+        .locator("option", { hasText: /^still\.png$/ })
+        .getAttribute("value");
+      await picture.selectOption(value);
+      await generate.getByTestId("create-no-person").check();
+      await generate.getByTestId("create-agree").check();
+      await generate.getByTestId("create-generate-start").click();
+    };
+    // By its words, so an earlier refusal still showing is not taken for this one.
+    const refusedFor = async (words) => {
+      await generate
+        .locator(".create-problem", { hasText: words })
+        .waitFor({ timeout: 90_000 });
+      assert.equal(read().pushes.length, 0, "nothing was sent");
+    };
+    await startFromPicture();
+    await refusedFor(/No consent to send is recorded/);
+    step("a linked person's picture is refused without consent to send");
+
+    await people.getByTestId("people-send-attest").check();
+    await people.getByTestId("people-allow-send").click();
+    await people.getByTestId("people-send-standing").waitFor();
+    await people.getByTestId("people-revoke-send").click();
+    await people.getByTestId("people-revoke-send-sure").click();
+    await people.getByTestId("people-no-send").waitFor();
+    await startFromPicture();
+    // The newest consent to send is the one that counts, and it is revoked.
+    await refusedFor(/Likeness consent was revoked/);
+    step("consent to send, once revoked, sends nothing");
+
+    await people.getByTestId("people-send-attest").check();
+    await people.getByTestId("people-allow-send").click();
+    await people.getByTestId("people-send-standing").waitFor();
+    await startFromPicture();
+    await page.getByTestId("create-run-state").waitFor({ timeout: 90_000 });
+    assert.equal(read().pushes.length, 1);
+    assert.ok(read().pushes[0].firstFrame?.data, "the picture went");
+    step("with consent to send recorded again, the picture goes");
+
+    await people.getByTestId("people-revoke").click();
+    await people.getByTestId("people-revoke-sure").click();
+    await people
+      .locator('[data-testid="people-consent"][data-state="revoked"]')
+      .waitFor();
+    step("consent revoked from the page says so");
+
+    // Consent given again, and the same still linked to it: the revoked link is left out of
+    // the person's pack, which could not be saved with it.
+    await people.getByTestId("people-name").fill("Lead");
+    await people.getByTestId("people-version").fill("Signed form B");
+    await people.getByTestId("people-attest").check();
+    await grant.click();
+    const renewed = people.locator(
+      '[data-testid="people-consent"][data-state="standing"]',
+    );
+    await renewed.waitFor();
+    await renewed
+      .getByTestId("people-link-still")
+      .selectOption({ label: "still.png" });
+    await renewed.getByTestId("people-link").click();
+    await renewed
+      .getByTestId("people-linked")
+      .filter({ hasText: "still.png" })
+      .waitFor();
+    assert.equal(
+      await people.locator(".create-problem").count(),
+      0,
+      "the link was kept",
+    );
+    step("after a revoke, the still is linked to the person's new consent");
+  });
+
   passed = true;
 } catch (e) {
   console.error(e);

@@ -35,6 +35,41 @@ const en = {
     "Only this project's PNG and JPEG stills are listed. What is sent is a copy made from the picture's pixels, fitted to the model's frame, without its camera details or other data.",
   "create.noRealPerson":
     "This picture shows no real person, or only people whose consent to send it is recorded.",
+  "create.peopleTitle": "People and consent",
+  "create.peopleNote":
+    "A real person's likeness is used only with their consent, recorded here. Consent to make videos lets a still of them be linked to them. Consent to send also lets that still leave this computer for your private Kaggle notebook. Revoking stops any further use, for good; it cannot reach what Kaggle already keeps. A still once linked stays bound to that consent, even after undo.",
+  "create.peopleName": "Their name",
+  "create.peopleVersion": "What they agreed to, such as the form they signed",
+  "create.peopleDays": "For",
+  "create.peopleDaysOption": "{days} days",
+  "create.peopleAttest":
+    "The person shown, or someone entitled to act for them, consented to videos being made from their likeness.",
+  "create.peopleGrant": "Record consent",
+  "create.peopleEmpty": "No consent is recorded.",
+  "create.peopleGenerate": "Consent to make videos: {version}, until {until}.",
+  "create.peopleSend": "Consent to send to Kaggle, until {until}.",
+  "create.peopleNoSend":
+    "Pictures linked to this consent cannot be sent to Kaggle: no consent to send is recorded for it.",
+  "create.peopleSendAttest":
+    "They also agreed that pictures of them may leave this computer for my private Kaggle notebook, which keeps them in its history.",
+  "create.peopleAllowSend": "Record consent to send, for {days} days",
+  "create.peopleNoSendExpired":
+    "This consent has expired, but stills linked to it still need their own consent to send before they can go to Kaggle.",
+  "create.peopleRevalidateSend": "Confirm consent to send again",
+  "create.peopleAlreadyLinked": "That still is already linked to this consent.",
+  "create.peopleLinked": "Linked stills: {names}",
+  "create.peopleLinkStill": "A still of them",
+  "create.peopleLink": "Link to them",
+  "create.peopleRevoke": "Revoke consent",
+  "create.peopleRevokeSend": "Revoke consent to send",
+  "create.peopleRevokeSure": "Revoke for good",
+  "create.peopleRevalidate": "Confirm again",
+  "create.peopleState.revoked": "Revoked.",
+  "create.peopleState.expired": "Expired.",
+  "create.peopleState.revalidate":
+    "From before a restore: confirm it again to use it.",
+  "create.peopleFailed": "That was not saved.",
+  "create.peopleUnread": "Consents could not be read.",
   "create.elementsTitle": "Places and props",
   "create.elementsNote":
     "Kept with this project as a record, and pinned to a shot if you wish. They are not sent to a model and do not change what is generated. Saving one, or a pin, ends undo for what came before. Do not keep a real person's likeness here, even as a made-up character: that needs consent this does not ask for.",
@@ -524,6 +559,42 @@ const ar: Record<MessageKey, string> = {
     "لا تظهر هنا إلا الصور الثابتة بصيغتي PNG وJPEG في هذا المشروع. ما يُرسل نسخة تُصنع من بكسلات الصورة، مُلاءَمة لإطار النموذج، دون بيانات الكاميرا أو أي بيانات أخرى.",
   "create.noRealPerson":
     "لا تُظهر هذه الصورة أي شخص حقيقي، أو تُظهر فقط أشخاصًا سُجّلت موافقتهم على إرسالها.",
+  "create.peopleTitle": "الأشخاص والموافقة",
+  "create.peopleNote":
+    "لا تُستخدم صورة شخص حقيقي إلا بموافقته المسجلة هنا. تتيح الموافقة على صنع الفيديو ربط صورة ثابتة له به. وتتيح الموافقة على الإرسال كذلك أن تغادر تلك الصورة هذا الحاسوب إلى دفتر Kaggle الخاص بك. السحب يوقف أي استخدام لاحق نهائيًا، ولا يصل إلى ما يحتفظ به Kaggle بالفعل. وتبقى الصورة الثابتة بعد ربطها مرتبطة بتلك الموافقة، حتى بعد التراجع.",
+  "create.peopleName": "الاسم",
+  "create.peopleVersion": "ما وافق عليه، مثل النموذج الذي وقّعه",
+  "create.peopleDays": "لمدة",
+  "create.peopleDaysOption": "{days} يومًا",
+  "create.peopleAttest":
+    "وافق الشخص الظاهر، أو من يحق له التصرف عنه، على صنع فيديوهات من صورته.",
+  "create.peopleGrant": "تسجيل الموافقة",
+  "create.peopleEmpty": "لا توجد موافقة مسجلة.",
+  "create.peopleGenerate": "موافقة على صنع الفيديو: {version}، حتى {until}.",
+  "create.peopleSend": "موافقة على الإرسال إلى Kaggle، حتى {until}.",
+  "create.peopleNoSend":
+    "لا يمكن إرسال الصور المرتبطة بهذه الموافقة إلى Kaggle: لا توجد موافقة على الإرسال مسجلة لها.",
+  "create.peopleSendAttest":
+    "وافق أيضًا على أن تغادر صوره هذا الحاسوب إلى دفتر Kaggle الخاص بي، الذي يحتفظ بها في سجله.",
+  "create.peopleAllowSend": "تسجيل الموافقة على الإرسال لمدة {days} يومًا",
+  "create.peopleNoSendExpired":
+    "انتهت هذه الموافقة، لكن الصور الثابتة المرتبطة بها لا تزال تحتاج إلى موافقة خاصة على الإرسال قبل أن تذهب إلى Kaggle.",
+  "create.peopleRevalidateSend": "تأكيد الموافقة على الإرسال مجددًا",
+  "create.peopleAlreadyLinked":
+    "هذه الصورة الثابتة مرتبطة بهذه الموافقة بالفعل.",
+  "create.peopleLinked": "الصور الثابتة المرتبطة: {names}",
+  "create.peopleLinkStill": "صورة ثابتة له",
+  "create.peopleLink": "ربطها به",
+  "create.peopleRevoke": "سحب الموافقة",
+  "create.peopleRevokeSend": "سحب الموافقة على الإرسال",
+  "create.peopleRevokeSure": "السحب نهائيًا",
+  "create.peopleRevalidate": "التأكيد مجددًا",
+  "create.peopleState.revoked": "مسحوبة.",
+  "create.peopleState.expired": "منتهية.",
+  "create.peopleState.revalidate":
+    "من قبل الاستعادة: أكّدها مجددًا لاستخدامها.",
+  "create.peopleFailed": "لم يُحفظ ذلك.",
+  "create.peopleUnread": "تعذّرت قراءة الموافقات.",
   "create.elementsTitle": "الأماكن والأغراض",
   "create.elementsNote":
     "تُحفظ مع هذا المشروع كسجل، ويمكن تثبيتها على لقطة إن شئت. لا تُرسل إلى أي نموذج ولا تغيّر ما يُولَّد. وحفظ أي منها أو تثبيته يُنهي التراجع عمّا سبقه. لا تحفظ هنا صورة شخص حقيقي، ولو على أنها شخصية خيالية: فذلك يحتاج إلى موافقة لا يطلبها هذا القسم.",
