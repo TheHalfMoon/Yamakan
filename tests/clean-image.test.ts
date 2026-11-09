@@ -544,6 +544,8 @@ test("an encode past what may be sent is passed over for the next quality, not r
   }
 });
 
+// Refused by either check alone, the bound or the frame's length, so this shows refusal; that the
+// bound stores nothing past its limit is boundedOutput's own test.
 test("a decode past one frame of pixels is refused", async () => {
   const pool = workers();
   const real = pool.run.bind(pool);

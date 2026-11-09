@@ -1280,10 +1280,11 @@ export async function diagnoseWorkspace(
   try {
     // The copy holds everything the workspace does, so only its owner may read it, whatever
     // the folder it is made in lets others do. Before anything is copied in.
-    await restrictToOwner(scratch, "dir").catch(() => {
+    await restrictToOwner(scratch, "dir").catch((cause: unknown) => {
       throw new CommandError(
         "VALIDATION",
         "The scratch folder must be on a drive that keeps file permissions, in a folder you own; choose another with --scratch.",
+        { cause },
       );
     });
     const copy = path.join(scratch, "workspace.sqlite");
