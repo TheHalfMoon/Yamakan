@@ -398,10 +398,16 @@ try {
 } catch (e) {
   // This receipt may be committed, and an error can hold an address naming the account.
   // A notebook's name, user/slug, is one segment of a path and passes that, so the user goes.
+  // In any case: the engine writes notebook names in lower case.
   const user = process.env.YAMAKAN_KAGGLE_USERNAME;
   const said = String(e?.message ?? e);
-  failure =
-    diagnostic(user ? said.replaceAll(user, "[user]") : said) ?? "It failed.";
+  const named = user
+    ? said.replace(
+        new RegExp(user.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+        "[user]",
+      )
+    : said;
+  failure = diagnostic(named) ?? "It failed.";
   console.error(e);
 } finally {
   await browser?.close().catch(() => {});
