@@ -4,7 +4,12 @@ import { pipeline } from "node:stream/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { ProjectStore } from "./store.ts";
-import { MEDIA_DECODERS, MEDIA_FORMATS, probe } from "./media.ts";
+import {
+  MEDIA_DECODERS,
+  MEDIA_FORMATS,
+  PROGRESS_LINE_LIMIT,
+  probe,
+} from "./media.ts";
 import { RESOURCE_POLICY, exportWallSeconds } from "./command/policy.ts";
 import { planSegments, renderSegmented } from "./render/segments.ts";
 import { CommandError } from "./command/errors.ts";
@@ -875,6 +880,8 @@ export async function renderPlan(
         progress += chunk.toString("utf8");
         const lines = progress.split("\n");
         progress = lines.pop() || "";
+        // A progress line is short: one with no end is not kept growing.
+        if (progress.length > PROGRESS_LINE_LIMIT) progress = "";
         for (const line of lines) {
           const match = /^out_time_us=(\d+)/.exec(line);
           if (match)

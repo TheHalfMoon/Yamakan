@@ -1232,7 +1232,12 @@ export async function offlineSource(root: string) {
 // the service refuses to open.
 export async function diagnoseWorkspace(
   root: string,
-  options: { verifyObjects?: boolean; scratch?: string } = {},
+  options: {
+    verifyObjects?: boolean;
+    scratch?: string;
+    // Tests only: called with the scratch folder while the copy is in it.
+    whileCopied?: (scratch: string) => Promise<void>;
+  } = {},
 ) {
   const file = await safePath(root, "workspace.sqlite");
   const size = async (p: string) =>
@@ -1273,10 +1278,20 @@ export async function diagnoseWorkspace(
     );
   const scratch = await mkdtemp(path.join(scratchParent, "yamakan-diagnose-"));
   try {
+    // The copy holds everything the workspace does, so only its owner may read it, whatever
+    // the folder it is made in lets others do. Before anything is copied in.
+    await restrictToOwner(scratch, "dir").catch((cause: unknown) => {
+      throw new CommandError(
+        "VALIDATION",
+        "The scratch folder must be on a drive that keeps file permissions, in a folder you own; choose another with --scratch.",
+        { cause },
+      );
+    });
     const copy = path.join(scratch, "workspace.sqlite");
     await copyFile(file, copy);
     if (report.database.walBytes !== null)
       await copyFile(`${file}-wal`, `${copy}-wal`);
+    await options.whileCopied?.(scratch);
     let db: DatabaseSync | null = null;
     let rows: {
       project_id: string;

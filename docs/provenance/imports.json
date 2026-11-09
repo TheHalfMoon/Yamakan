@@ -346,9 +346,10 @@
       "SS-012: the render receipt records what two-pass loudness measured (input and target), or null; no change to the render.",
       "Export colour: accurate scaling flags where a matrix or range conversion happens, because the defaults left pictures about 2 of 255 darker.",
       "Security check 2026-11-08: the title fit check looks at each frame as it streams in, into one reused frame, instead of holding every title's frame in the service at once.",
-      "Security check 2026-11-08: every input is read with -codec_whitelist MEDIA_DECODERS, so no decoder outside Yamakan's supported codecs runs on it."
+      "Security check 2026-11-08: every input is read with -codec_whitelist MEDIA_DECODERS, so no decoder outside Yamakan's supported codecs runs on it.",
+      "Security check Lows: an FFmpeg progress line with no end is dropped past PROGRESS_LINE_LIMIT rather than kept growing."
     ],
-    "importedSha256": "f4fcf52b5e3091e9c10e462bef1d56b9514f78ddda82fa1f2cf3b17dbe972ff2",
+    "importedSha256": "7787eacbca151d586b1626db001a7cc7ff69df4192dc8d649d90218f1b719956",
     "license": "GPL-3.0-or-later",
     "authorization": "public-licence",
     "owner": "editing builder",

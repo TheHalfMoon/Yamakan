@@ -129,6 +129,28 @@ export function jpegHoldsOnlyAPicture(
 // Best first: 2 is as fine as FFmpeg's encoder goes, and 12 is where a picture starts to show it.
 export const JPEG_QUALITIES = [2, 3, 5, 8, 12];
 
+// A worker's output, kept up to what it can rightly be: one writing more is not stored, so a
+// worker that went wrong cannot fill this service's memory.
+export function boundedOutput(limit: number) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  let over = false;
+  return {
+    take(piece: Buffer) {
+      if (over) return;
+      size += piece.length;
+      if (size > limit) {
+        over = true;
+        chunks.length = 0;
+      } else chunks.push(piece);
+    },
+    get over() {
+      return over;
+    },
+    bytes: () => Buffer.concat(chunks),
+  };
+}
+
 // What is sent has to fit what Kaggle accepts in a script. A PNG loses nothing, so it goes as it
 // is when it fits. A photo's rarely does, and then a JPEG of the same bare pixels goes instead.
 export async function imageWithin(
@@ -143,7 +165,8 @@ export async function imageWithin(
     await mkdir(folder, { recursive: true });
     await writeFile(source, png);
     for (const quality of JPEG_QUALITIES) {
-      const chunks: Buffer[] = [];
+      // Past what may be sent, this quality does not fit, whatever else it is.
+      const out = boundedOutput(maxBytes);
       const result = await workers().run({
         executable: mediaTools().ffmpeg,
         args: [
@@ -187,9 +210,10 @@ export async function imageWithin(
         memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
         signal: AbortSignal.timeout(60_000),
         stderrLimit: 2000,
-        onStdout: (piece) => chunks.push(piece),
+        onStdout: (piece) => out.take(piece),
       });
-      const jpeg = Buffer.concat(chunks);
+      if (result.code === 0 && out.over) continue;
+      const jpeg = out.bytes();
       if (
         result.code !== 0 ||
         !jpegHoldsOnlyAPicture(jpeg, {
@@ -227,7 +251,8 @@ export async function cleanImage(
   try {
     await mkdir(folder, { recursive: true });
     await writeFile(source, data);
-    const chunks: Buffer[] = [];
+    // Exactly one frame of bare pixels; anything more is not stored.
+    const out = boundedOutput(width * height * 3);
     const result = await workers().run({
       executable: mediaTools().ffmpeg,
       args: [
@@ -263,10 +288,10 @@ export async function cleanImage(
       memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
       signal: AbortSignal.timeout(60_000),
       stderrLimit: 2000,
-      onStdout: (piece) => chunks.push(piece),
+      onStdout: (piece) => out.take(piece),
     });
-    const rgb = Buffer.concat(chunks);
-    if (result.code !== 0 || rgb.length !== width * height * 3)
+    const rgb = out.bytes();
+    if (result.code !== 0 || out.over || rgb.length !== width * height * 3)
       throw new Error(REFUSED);
     return pngOf(rgb, width, height);
   } catch {
