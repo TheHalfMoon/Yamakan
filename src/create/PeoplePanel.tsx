@@ -34,12 +34,9 @@ export type KeptPersonPack = {
 
 export type PeopleApi = {
   list: () => Promise<readonly ListedConsent[]>;
-  // The project's packs as they stand: which stills each consent is linked to, and the packs
-  // this page keeps, one per person. A pack that cannot be read is left out.
-  packs: () => Promise<{
-    links: readonly { consentId: string; assetId: string }[];
-    people: readonly KeptPersonPack[];
-  }>;
+  // The packs this page keeps, one per person, as they stand. A pack that cannot be read is
+  // left out. Which stills a consent was ever linked to comes from the list instead.
+  packs: () => Promise<{ people: readonly KeptPersonPack[] }>;
   // Each says whether it was done; why not is not shown beyond that.
   grant: (input: {
     characterId: string;
@@ -72,9 +69,6 @@ export function PeoplePanel(props: {
 }) {
   const { busy, t, api, stills } = props;
   const [consents, setConsents] = useState<readonly ListedConsent[]>([]);
-  const [links, setLinks] = useState<
-    readonly { consentId: string; assetId: string }[]
-  >([]);
   const [kept, setKept] = useState<readonly KeptPersonPack[]>([]);
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
@@ -96,7 +90,6 @@ export function PeoplePanel(props: {
       const [found, packs] = await Promise.all([api.list(), api.packs()]);
       if (started !== loads.current) return;
       setConsents(found);
-      setLinks(packs.links);
       setKept(packs.people);
       setNow(Date.now());
       setProblem((was) => (was === "create.peopleUnread" ? null : was));
@@ -177,8 +170,9 @@ export function PeoplePanel(props: {
 
   const off = busy || working;
   const people = peopleOf(consents);
-  const stillName = (id: string) =>
-    stills.find((s) => s.id === id)?.name ?? id.slice(0, 8);
+  // By hash, as the service links them: one no longer in the project shows its hash.
+  const stillName = (hash: string) =>
+    stills.find((s) => s.hash === hash)?.name ?? hash.slice(0, 8);
 
   return (
     <div className="create-people" data-testid="create-people">
@@ -271,7 +265,8 @@ export function PeoplePanel(props: {
             const unconfirmed = newestSends(person, g.id).filter(
               (s) => consentState(s, now) === "revalidate",
             );
-            const linked = links.filter((l) => l.consentId === g.id);
+            // Every still ever linked to it, as the send check counts them.
+            const linked = g.linkedAssetHashes;
             const choice = linkChoice[g.id] ?? "";
             // An expired consent still says who its linked stills show, and sending them
             // needs it covered too, so it may still be given consent to send.
@@ -298,7 +293,7 @@ export function PeoplePanel(props: {
                 {linked.length > 0 && (
                   <p className="note" data-testid="people-linked">
                     {t("create.peopleLinked", {
-                      names: linked.map((l) => stillName(l.assetId)).join(", "),
+                      names: linked.map(stillName).join(", "),
                     })}
                   </p>
                 )}

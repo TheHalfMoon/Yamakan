@@ -26,6 +26,7 @@ const consent = (over: Partial<ListedConsent>): ListedConsent => ({
   revokedAtMs: null,
   current: true,
   coversConsentId: null,
+  linkedAssetHashes: [],
   ...over,
 });
 

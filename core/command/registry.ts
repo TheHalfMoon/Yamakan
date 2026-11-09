@@ -110,6 +110,7 @@ import {
   CONTINUITY_STAGES,
   assertMayKeepWithoutConsent,
   assertMayMarkFictional,
+  everLinkedByConsent,
   resolveContinuity,
   verifySelectedContinuity,
   verifyStoryContinuity,
@@ -2065,9 +2066,17 @@ export const commands = {
     mutation: false,
     humanOnly: true,
     summary:
-      "List the workspace's likeness consents, with whether each is current and what a consent to send covers. Browser session only.",
+      "List the workspace's likeness consents, with whether each is current, what a consent to send covers, and every medium ever linked to it. Browser session only.",
     input: z.object({}).strict(),
-    run: ({ store }) => listConsents(store),
+    run: async ({ store }) => {
+      const consents = await listConsents(store);
+      // Every version, as the send check counts them, not only the packs as they stand.
+      const linked = await store.read((db) => everLinkedByConsent(db));
+      return consents.map((c) => ({
+        ...c,
+        linkedAssetHashes: [...(linked.get(c.id) ?? [])].sort(),
+      }));
+    },
   }),
   "yamakan.consent.revalidate": define({
     scope: "consent:grant",

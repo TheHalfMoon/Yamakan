@@ -313,6 +313,27 @@ function linksOf(db: DatabaseSync, hash: string, hashes: readonly string[]) {
 }
 
 /**
+ * Every medium, by hash, that any version of any reference pack in the workspace has linked to
+ * each consent: what the send check counts, so a person sees what it will ask for. A damaged
+ * version is left out here; the check itself refuses the media it names.
+ */
+export function everLinkedByConsent(db: DatabaseSync) {
+  const linked = new Map<string, Set<string>>();
+  const versions = db
+    .prepare(
+      "SELECT DISTINCT v.content_hash AS hash FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE d.kind = 'referencePack'",
+    )
+    .all() as { hash: string }[];
+  for (const { hash } of versions)
+    for (const link of linksOf(db, hash, [])) {
+      const set = linked.get(link.consentId) ?? new Set<string>();
+      set.add(link.assetHash);
+      linked.set(link.consentId, set);
+    }
+  return linked;
+}
+
+/**
  * A person's own media: a medium a reference pack links to a character's consent
  * cannot be newly used once that consent is revoked, by the founder's decision
  * of 2026-11-05. Consents are workspace-wide, so every project's pack versions

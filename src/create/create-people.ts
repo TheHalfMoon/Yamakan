@@ -13,6 +13,8 @@ export type ListedConsent = {
   current: boolean;
   // For consent to send: the consent to generate it covers.
   coversConsentId: string | null;
+  // Every still, by hash, any version of any pack has linked to it: what sending counts.
+  linkedAssetHashes: string[];
 };
 
 export type ConsentState = "standing" | "revoked" | "expired" | "revalidate";

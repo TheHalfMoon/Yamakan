@@ -67,7 +67,7 @@ import { ANIMATION_ENABLED } from "../core/animation/flags.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaUrl, sessionHeaders, startSession } from "./session.ts";
 import { asElement } from "./create/create-elements.ts";
-import { asPersonPack, characterLinks } from "./create/create-people.ts";
+import { asPersonPack } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
@@ -2345,11 +2345,9 @@ function App() {
                               })) as any),
                             })),
                         );
-                        const links = [];
                         const people = [];
                         for (const r of read) {
                           if (r.status !== "fulfilled") continue;
-                          links.push(...characterLinks(r.value.content));
                           const pack = asPersonPack(r.value.content);
                           if (pack)
                             people.push({
@@ -2358,7 +2356,7 @@ function App() {
                               pack,
                             });
                         }
-                        return { links, people };
+                        return { people };
                       },
                       // Consents are the workspace's, not the project's: nothing to save first.
                       grant: (input) =>

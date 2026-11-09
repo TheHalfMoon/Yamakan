@@ -1655,3 +1655,43 @@ test("the consent list says each consent's state and what consent to send covers
     /requires the browser session/,
   );
 });
+
+// What the page shows a person, so they can give what sending will ask for: every still ever
+// linked to a consent, though the packs as they stand no longer link it.
+test("an expired consent still lists its stills, and covering it lets them go", async () => {
+  const f = await fixture();
+  const { state, g } = sending(f);
+  const { asset: still } = await f.store.importAsset(
+    f.projectId,
+    "still.png",
+    f.still,
+  );
+  const old = await consented(f, still.id, still.hash);
+  await f.store.transaction((db) =>
+    db
+      .prepare("UPDATE likeness_consents SET expires_at = ? WHERE id = ?")
+      .run(Date.now() - 1, old),
+  );
+  const renewed = await grantGenerate(f);
+  await savePack(f, linkTo(still, renewed));
+  await grantSend(f, renewed);
+  const start = () =>
+    g.start(
+      ask(f.projectId, { recipe: stillRecipe, firstFrameAssetId: still.id }),
+    );
+  await assert.rejects(start(), /No consent to send is recorded/);
+  assert.equal(state.inputRead, null);
+  const listed = (await execute(f.ctx, "yamakan.consent.list", {})).result as {
+    id: string;
+    linkedAssetHashes: string[];
+  }[];
+  assert.deepEqual(listed.find((c) => c.id === old)?.linkedAssetHashes, [
+    still.hash,
+  ]);
+  assert.deepEqual(listed.find((c) => c.id === renewed)?.linkedAssetHashes, [
+    still.hash,
+  ]);
+  await grantSend(f, old);
+  await start();
+  assert.notEqual(state.inputRead, null);
+});
