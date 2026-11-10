@@ -20,7 +20,7 @@ import {
   storedCaptions,
   type CaptionDocument,
 } from "../core/captions.ts";
-import { ProjectStore } from "../core/store.ts";
+import { ProjectStore, WORKSPACE_SCHEMA_VERSION } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes, type Scope } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
@@ -559,6 +559,8 @@ test("a version 13 workspace upgrades to 14 and stores caption tracks", async ()
   }
   db.exec("DROP TABLE IF EXISTS send_consent_covers");
   db.exec("DROP TABLE IF EXISTS asset_replacements");
+  // Schema 17's column, so the upgrade adds it again.
+  db.exec("ALTER TABLE agent_tokens DROP COLUMN expires_at");
   db.exec("PRAGMA user_version = 13");
   db.exec("COMMIT");
   assert.throws(() =>
@@ -577,7 +579,7 @@ test("a version 13 workspace upgrades to 14 and stores caption tracks", async ()
     assert.equal(
       (check.prepare("PRAGMA user_version").get() as { user_version: number })
         .user_version,
-      16,
+      WORKSPACE_SCHEMA_VERSION,
     );
     assert.deepEqual(check.prepare("PRAGMA foreign_key_check").all(), []);
   } finally {

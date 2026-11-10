@@ -203,3 +203,18 @@ test("a restored token table without the end column is read as having no end", a
   assert.equal(reopened.listAgentTokens().tokens[0].expiresAt, null);
   reopened.close();
 });
+
+test("a database that already has the end column but an older version opens", async () => {
+  const { root, store, browser } = await workspace();
+  const made = (
+    await execute(browser, "yamakan.agent.create", { scopes: ["project:read"] })
+  ).result as { token: string };
+  store.close();
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.exec("PRAGMA user_version = 16");
+  db.close();
+  const reopened = new ProjectStore(root);
+  await reopened.initialize();
+  assert.ok(reopened.principalForAgentToken(made.token));
+  reopened.close();
+});

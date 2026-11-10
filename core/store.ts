@@ -871,7 +871,16 @@ export class ProjectStore {
             v = at - 1;
             continue;
           }
-          db.exec(steps[v]);
+          // A table that already has schema 17's column (a hand-edited or partly downgraded
+          // database) is not altered twice: the step is already there.
+          const already =
+            steps[v] === SCHEMA_V17 &&
+            db
+              .prepare(
+                "SELECT 1 FROM pragma_table_info('agent_tokens') WHERE name = 'expires_at' COLLATE NOCASE",
+              )
+              .get() !== undefined;
+          if (!already) db.exec(steps[v]);
           if (
             rebuild &&
             ["snapshot_document_refs", "story_document_versions"].some(
