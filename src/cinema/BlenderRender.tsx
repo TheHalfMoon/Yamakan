@@ -114,6 +114,16 @@ export function BlenderRender({
         if (!current) return;
         misses++;
         setProblem({ key: "blender.lost", detail: message(e) });
+        // The service's own refusal (the job unknown, the session ended) or five minutes of
+        // misses: the panel stops following, so Render is offered again.
+        if (
+          (e as { retryable?: boolean }).retryable === false ||
+          misses >= 30
+        ) {
+          running.delete(projectId);
+          setView(null);
+          return;
+        }
         timer = setTimeout(tick, Math.min(10000, 1000 * 2 ** misses));
       }
     };

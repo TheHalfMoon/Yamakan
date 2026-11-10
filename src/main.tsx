@@ -1028,34 +1028,39 @@ function App() {
         let why: string | null = t("status.working");
         void run(async () => {
           why = t("error.operation");
-          if (!(await save())) {
-            why = t("blender.placeUnsaved");
-            return;
-          }
-          const opened = ProjectSchema.parse(
-            await call("yamakan.project.open", { projectId: p.id }),
+          await placeRendered(p.id, assetId).then(
+            (r) => (why = r),
+            (e: unknown) => (why = e instanceof Error ? e.message : String(e)),
           );
-          let placed: Project;
-          try {
-            placed = ProjectSchema.parse(
-              withAsset(opened, assetId, undefined, undefined, true),
-            );
-          } catch (e) {
-            // A schema's message is all its issues, as JSON: the first says enough.
-            const first = (e as { issues?: { message?: string }[] })
-              .issues?.[0];
-            why =
-              first?.message ??
-              (e instanceof Error ? e.message : t("error.edit"));
-            return;
-          }
-          accept(opened);
-          putHistory((h) => (h ? pushHistoryState(h, placed) : h));
-          await refresh();
-          why = null;
         }).finally(() => resolve(why));
       }),
   });
+  // Saves, reopens and places, inside the editor's busy state: null when placed, or why not.
+  const placeRendered = async (
+    projectId: string,
+    assetId: string,
+  ): Promise<string | null> => {
+    if (!(await save())) return t("blender.placeUnsaved");
+    const opened = ProjectSchema.parse(
+      await call("yamakan.project.open", { projectId }),
+    );
+    let placed: Project;
+    try {
+      placed = ProjectSchema.parse(
+        withAsset(opened, assetId, undefined, undefined, true),
+      );
+    } catch (e) {
+      // A schema's message is all its issues, as JSON: the first says enough.
+      const first = (e as { issues?: { message?: string }[] }).issues?.[0];
+      return (
+        first?.message ?? (e instanceof Error ? e.message : t("error.edit"))
+      );
+    }
+    accept(opened);
+    putHistory((h) => (h ? pushHistoryState(h, placed) : h));
+    await refresh();
+    return null;
+  };
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>

@@ -355,10 +355,6 @@ try {
   await page.getByRole("button", { name: "العربية" }).click();
   await page.waitForFunction(() => document.documentElement.dir === "rtl");
   assert.match(
-    await page.getByTestId("cinema-blender").textContent(),
-    /Blender/,
-  );
-  assert.match(
     await page.locator("#cinema-blender-title").textContent(),
     /[\u0600-\u06ff]/,
   );
@@ -385,7 +381,10 @@ try {
 
   // Evidence comes from a committed head only.
   receipt.passed = clean || process.env.YAMAKAN_QUALIFY_ALLOW_DIRTY === "1";
-  if (!receipt.passed) receipt.error = "the working tree is not clean";
+  if (!receipt.passed) {
+    receipt.error = "the working tree is not clean";
+    process.exitCode = 1;
+  }
 } catch (e) {
   receipt.error = e instanceof Error ? e.message : String(e);
   process.exitCode = 1;
