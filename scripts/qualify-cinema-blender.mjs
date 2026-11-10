@@ -359,7 +359,7 @@ try {
     /Blender/,
   );
   assert.match(
-    await page.getByTestId("cinema-blender-title").textContent(),
+    await page.locator("#cinema-blender-title").textContent(),
     /[\u0600-\u06ff]/,
   );
   await shot(page, "4-placed-ar");
