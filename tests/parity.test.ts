@@ -431,6 +431,8 @@ test(
     const env = {
       ...process.env,
       YAMAKAN_WORKSPACE: path.join(root, "workspace"),
+      // MCP runs as the full local client here, by name.
+      YAMAKAN_MCP_LOCAL_CLIENT: "1",
       YAMAKAN_PORT: String(port),
       YAMAKAN_URL: base,
     };

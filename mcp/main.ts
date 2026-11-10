@@ -1,6 +1,7 @@
 // Yamakan MCP stdio server. It is an explicit local client of the running
 // Yamakan service: tools are derived from the service catalog and every call
 // goes through the same command registry, scopes and validation as the UI.
+import { writeSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
@@ -17,8 +18,23 @@ if (new URL(url).hostname !== "127.0.0.1")
 const root = path.resolve(env("WORKSPACE") || ".yamakan");
 const tokenFile = env("AGENT_TOKEN_FILE");
 const tokenFromEnv = env("AGENT_TOKEN");
+// An agent gets only what its own token allows. Running as the full local client, with the
+// workspace's own token, is a choice the person makes by name, never a fallback.
+const asLocalClient = env("MCP_LOCAL_CLIENT") === "1";
+// A token of only spaces is no token: it gets this message, not an unexplained refusal later.
+if (!tokenFromEnv?.trim() && !tokenFile?.trim() && !asLocalClient) {
+  // Written at once, so a terminal cannot cut it off when the process ends.
+  writeSync(
+    2,
+    "Yamakan MCP needs an agent token. Make one in Yamakan (Finish, Agent tools, Agent access), " +
+      "save it in a file only the agent can read, and set YAMAKAN_AGENT_TOKEN_FILE to that file " +
+      "(or YAMAKAN_AGENT_TOKEN to the token). To run MCP as the full local client with the " +
+      "workspace's own token instead, set YAMAKAN_MCP_LOCAL_CLIENT=1.\n",
+  );
+  process.exit(2);
+}
 async function bearerToken() {
-  if (tokenFromEnv) return tokenFromEnv.trim();
+  if (tokenFromEnv?.trim()) return tokenFromEnv.trim();
   if (tokenFile)
     return (await readFile(path.resolve(tokenFile), "utf8")).trim();
   return (await readFile(path.join(root, "token"), "utf8")).trim();

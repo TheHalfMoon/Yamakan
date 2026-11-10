@@ -2,6 +2,14 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-11-10: the MCP server needs an agent token
+
+- **Authority:** the founder's standing approval to choose the best on open product decisions (2026-11-06), and the continuation directive's P1 item "MCP default access".
+- **Decision:** `npm run mcp` stops at start, with a message saying how to get a token, unless it is given an agent token (`YAMAKAN_AGENT_TOKEN_FILE` or `YAMAKAN_AGENT_TOKEN`) or `YAMAKAN_MCP_LOCAL_CLIENT=1`. Before this, it fell back to the workspace's own `token`, so any MCP host could do everything the local client can, which was more than the person may have meant to give it.
+- **Why now:** the page's Agent access panel lets the person make an agent token. Before it, requiring one would have left no way to use MCP short of calling the browser API by hand.
+- **Not changed:** the CLI still uses the workspace token, since it is the person's own tool. The MCP opt-in keeps existing setups working once they say so.
+- **Change rule:** going back to a silent fallback is a security regression and needs the founder.
+
 ## 2026-11-10: agent tokens can be listed and can end
 
 - **Authority:** the founder's standing approval to choose the best on open product decisions (2026-11-06), and the continuation directive's P1 item "agent token listing, expiry and revocation".
