@@ -60,6 +60,13 @@ export type CinemaSceneLocal = {
   }>;
 };
 
+// What the capability calls each thing Cinema does not do, in the page's words.
+const UNSUPPORTED_KEYS = {
+  "ai-conditioned-camera": "cinema.unsupported.aiCamera",
+  "generative-video": "cinema.unsupported.generativeVideo",
+  "remote-media-url-fetch": "cinema.unsupported.remoteMedia",
+} as const satisfies Record<string, MessageKey>;
+
 function assertLocalScene(raw: unknown): CinemaSceneLocal {
   const s = raw as CinemaSceneLocal;
   if (
@@ -794,9 +801,17 @@ export function CinemaViewport({
           {error}
         </p>
       ) : null}
-      <p data-testid="cinema-units">units: metres · euler: XYZ</p>
+      <p data-testid="cinema-units">{t("cinema.units")}</p>
       <p data-testid="cinema-unsupported">
-        unsupported: {(cinemaCapability().unsupported ?? []).join(", ")}
+        {t("cinema.unsupported", {
+          list: (cinemaCapability().unsupported ?? [])
+            .map((id) =>
+              id in UNSUPPORTED_KEYS
+                ? t(UNSUPPORTED_KEYS[id as keyof typeof UNSUPPORTED_KEYS])
+                : id,
+            )
+            .join(t("cinema.unsupported.separator")),
+        })}
       </p>
     </section>
   );

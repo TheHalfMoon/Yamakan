@@ -135,7 +135,10 @@ export function scaleCinemaItem(
   }));
 }
 
-/** What the page shows for an object: metres, degrees and size, rounded. */
+/**
+ * What the page shows for an object: metres, degrees and size, rounded. Numbers stay numbers,
+ * so the page writes them in its language's digits; a size that differs by axis is text.
+ */
 export function cinemaItemReadout(item: Item) {
   return {
     x: round(item.position.x, 2),
@@ -144,7 +147,7 @@ export function cinemaItemReadout(item: Item) {
     turn: Math.round((item.rotation.y * 180) / Math.PI),
     scale:
       item.scale.x === item.scale.y && item.scale.y === item.scale.z
-        ? String(round(item.scale.x, 2))
+        ? round(item.scale.x, 2)
         : [item.scale.x, item.scale.y, item.scale.z]
             .map((v) => round(v, 2))
             .join(" × "),

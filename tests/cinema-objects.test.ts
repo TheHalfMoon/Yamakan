@@ -39,7 +39,7 @@ test("every edit makes a new scene a project accepts", () => {
     y: 0.5,
     z: -2,
     turn: 38, // the sample starts turned 0.4 rad (22.9°), plus 15°
-    scale: "1.25",
+    scale: 1.25,
   });
 });
 
