@@ -101,6 +101,7 @@ jobs:
           echo "TEMP=$dir" >> $env:GITHUB_ENV
           echo "TMP=$dir" >> $env:GITHUB_ENV
       - run: node --test tests/bundle.test.ts
+      - run: node --test tests/ffmpeg-companions.test.ts
       - run: node --test --test-name-pattern "Q3:" tests/typography.test.ts
       - run: pwsh -File scripts/vendor/probe-r8-fontconfig.ps1
 

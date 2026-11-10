@@ -1,7 +1,7 @@
 // The service's media workers: FFmpeg and ffprobe resolved to absolute paths
 // once, launched only through one ProcessOwner (core/process/owner.ts).
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ProcessOwner, resolveExecutable } from "./owner.ts";
@@ -112,12 +112,19 @@ export function mediaTools() {
     assertPinned("ffprobe", ffprobe);
     // Run from the vendored folder, the DLLs beside them are checked too. An installed bundle's
     // are checked against its manifest when the service starts.
+    // By real path, so a junction, a short name or a \\?\ prefix reaches it too. Checked once
+    // per process: a DLL planted later is not seen, as with the executables' own pins.
+    const real = (dir: string) => {
+      try {
+        return realpathSync.native(dir).toLowerCase();
+      } catch {
+        return path.resolve(dir).toLowerCase();
+      }
+    };
     if (
       process.platform === "win32" &&
       [ffmpeg, ffprobe].some(
-        (tool) =>
-          path.resolve(path.dirname(tool)).toLowerCase() ===
-          path.resolve(VENDOR_FFMPEG_DIR).toLowerCase(),
+        (tool) => real(path.dirname(tool)) === real(VENDOR_FFMPEG_DIR),
       )
     )
       assertCompanionsPinned(VENDOR_FFMPEG_DIR);

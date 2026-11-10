@@ -45,7 +45,7 @@ import {
 } from "../core/audio/peaks.ts";
 import { assertSeparate, defaultRecoveryHome } from "../core/recovery.ts";
 import { restrictToOwner } from "../core/process/access.ts";
-import { guardUpload, readBody } from "./body.ts";
+import { readBody } from "./body.ts";
 import { verifyInstalledBinaries } from "../scripts/bundle.ts";
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -397,11 +397,12 @@ const server = createServer(async (req, res) => {
             "VALIDATION",
             "Uploads require a Content-Length header.",
           );
-        // A byte now and then would restart the idle timeout: the upload as a whole has a deadline.
-        const arrived = guardUpload(req, Number(length));
-        const staged = await store
-          .stageAsset(upload[1], name, req, Number(length))
-          .finally(arrived);
+        const staged = await store.stageAsset(
+          upload[1],
+          name,
+          req,
+          Number(length),
+        );
         // Variable-frame-rate video is edited only through a constant-rate
         // derivative; the asset joins the project when that job succeeds.
         if (staged.probe.variableFrameRate && staged.asset.kind === "video") {
