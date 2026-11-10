@@ -134,15 +134,34 @@ try {
   step("a token is made, shown once, and listed as active with its end");
 
   const read = await asAgent(token, "yamakan.project.list");
+  assert.equal(read.status, 200, JSON.stringify(read.body));
   assert.equal(read.ok, true, JSON.stringify(read.body));
-  const write = await asAgent(token, "yamakan.agent.list");
-  assert.equal(write.ok, false, "an agent cannot list tokens");
+  // A scope it was not given (only "read projects" was ticked) is refused.
+  const write = await asAgent(token, "yamakan.project.create");
+  assert.equal(write.ok, false, "it cannot change projects");
+  assert.match(JSON.stringify(write.body), /SCOPE_DENIED/);
+  const list = await asAgent(token, "yamakan.agent.list");
+  assert.equal(list.ok, false, "an agent cannot list tokens");
   step("the token works for an agent, within its grant only");
 
+  // Shown while open (the check below would prove nothing otherwise).
+  assert.equal(
+    await page.evaluate(
+      () => document.querySelector('[data-testid="agent-access-token"]').value,
+    ),
+    token,
+  );
   await page.getByTestId("agent-access-done").click();
   assert.equal(await tokenBox.count(), 0);
-  assert.ok(
-    !(await page.content()).includes(token),
+  assert.equal(
+    await page.evaluate(
+      (secret) =>
+        [...document.querySelectorAll("input, textarea")].some(
+          (el) => el.value === secret,
+        ) || document.documentElement.outerHTML.includes(secret),
+      token,
+    ),
+    false,
     "closed, the token is gone from the page",
   );
   step("closed, the token is no longer on the page");
@@ -159,6 +178,7 @@ try {
   );
   const after = await asAgent(token, "yamakan.project.list");
   assert.equal(after.ok, false, "a revoked token is refused");
+  assert.equal(after.status, 401);
   result.revokedStatus = after.status;
   step("revoked from the page, the token is refused");
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDate, type Lang, type MessageKey } from "./i18n.ts";
 import {
   AGENT_SCOPES,
   AGENT_TOKEN_ENDS,
   agentCreateInput,
   agentTokenStatus,
+  readableTime,
   type AgentScope,
   type AgentTokenEnd,
   type AgentTokenRow,
@@ -63,6 +64,12 @@ export function AgentAccess({
   );
   const [copied, setCopied] = useState<"yes" | "no" | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  const tokenRef = useRef<HTMLInputElement | null>(null);
+  // The new token gets focus, so a keyboard or screen reader user lands on it.
+  useEffect(() => {
+    if (made) tokenRef.current?.focus();
+  }, [made]);
 
   const load = async () => {
     const listed = (await client.call("yamakan.agent.list", {})) as {
@@ -76,7 +83,10 @@ export function AgentAccess({
   }, []);
 
   const form = agentCreateInput({ label, scopes, end });
-  const run = async (work: () => Promise<void>) => {
+  // One request at a time: a second submit while one runs is ignored, not sent.
+  const run = async (work: () => Promise<void>, after?: () => void) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -84,7 +94,9 @@ export function AgentAccess({
     } catch (e) {
       setError(message(e));
     } finally {
+      busyRef.current = false;
       setBusy(false);
+      after?.();
     }
   };
   const create = () =>
@@ -100,12 +112,17 @@ export function AgentAccess({
       setEnd("");
       await load();
     });
+  // Whatever the answer (revoked elsewhere already, say), the list is read again.
   const revoke = (agentId: string) =>
-    run(async () => {
-      await client.call("yamakan.agent.revoke", { agentId });
-      setConfirming(null);
-      await load();
-    });
+    run(
+      async () => {
+        await client.call("yamakan.agent.revoke", { agentId });
+      },
+      () => {
+        setConfirming(null);
+        load().catch((e: unknown) => setError(message(e)));
+      },
+    );
 
   return (
     <section
@@ -117,11 +134,19 @@ export function AgentAccess({
       <p>{t("agents.intro")}</p>
 
       {made ? (
-        <div className="agent-access-made" role="status">
+        <div
+          className="agent-access-made"
+          role="region"
+          aria-labelledby="agent-access-made-title"
+        >
           <p>
-            <strong>{t("agents.made.title")}</strong> {t("agents.made.once")}
+            <strong id="agent-access-made-title">
+              {t("agents.made.title")}
+            </strong>{" "}
+            {t("agents.made.once")}
           </p>
           <input
+            ref={tokenRef}
             readOnly
             dir="ltr"
             aria-label={t("agents.made.title")}
@@ -268,15 +293,19 @@ export function AgentAccess({
                 </span>
                 <br />
                 <span>
-                  {t("agents.created", {
-                    date: formatDate(lang, row.createdAt),
-                  })}
+                  {readableTime(row.createdAt) === null
+                    ? t("agents.createdUnreadable")
+                    : t("agents.created", {
+                        date: formatDate(lang, row.createdAt),
+                      })}
                   {" · "}
-                  {row.expiresAt
-                    ? t("agents.ends", {
-                        date: formatDate(lang, row.expiresAt),
-                      })
-                    : t("agents.endsNever")}
+                  {row.expiresAt === null
+                    ? t("agents.endsNever")
+                    : readableTime(row.expiresAt) === null
+                      ? t("agents.endsUnreadable")
+                      : t(row.expired ? "agents.ended" : "agents.ends", {
+                          date: formatDate(lang, row.expiresAt),
+                        })}
                 </span>
                 {!row.revoked ? (
                   <div className="agent-access-row">

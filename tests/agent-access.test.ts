@@ -5,6 +5,7 @@ import {
   AGENT_SCOPES,
   agentCreateInput,
   agentTokenStatus,
+  readableTime,
   type AgentScope,
   type AgentTokenRow,
 } from "../src/agent-access.ts";
@@ -80,4 +81,13 @@ test("the list says what each token is, revoked before ended", () => {
     agentTokenStatus(row({ scopes: null, active: false })),
     "unreadable",
   );
+});
+
+test("a time that cannot be read is not handed to the date formatter", () => {
+  assert.equal(
+    readableTime("2026-11-10T00:00:00.000Z"),
+    "2026-11-10T00:00:00.000Z",
+  );
+  assert.equal(readableTime(null), null);
+  assert.equal(readableTime("not a time at all here!!"), null);
 });

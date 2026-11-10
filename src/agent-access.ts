@@ -40,6 +40,15 @@ export function agentTokenStatus(row: AgentTokenRow): AgentTokenStatus {
   return "unreadable";
 }
 
+/**
+ * A stored time as the page can show it, or null when it cannot be read (a restored or
+ * hand-edited row); the shared date formatter would throw on it.
+ */
+export function readableTime(iso: string | null): string | null {
+  if (iso === null || Number.isNaN(Date.parse(iso))) return null;
+  return iso;
+}
+
 /** The create command's input for the page's form, or why it cannot be sent yet. */
 export function agentCreateInput(form: {
   label: string;
