@@ -27,3 +27,29 @@ export async function readBody(
   }
   return Buffer.concat(chunks);
 }
+
+// An upload streams into the store and can be large, so its deadline grows with its declared
+// size: two minutes, plus time at a floor far below anything a local client sends at. Only the
+// arriving counts: once the body has all come, the work after it is not cut short.
+export const UPLOAD_GRACE_MS = 120_000;
+export const UPLOAD_FLOOR_BYTES_PER_SECOND = 256 * 1024;
+export const uploadDeadlineMs = (declaredBytes: number) =>
+  UPLOAD_GRACE_MS +
+  Math.ceil(
+    (Math.max(0, declaredBytes) / UPLOAD_FLOOR_BYTES_PER_SECOND) * 1000,
+  );
+
+export function guardUpload(
+  req: Readable,
+  declaredBytes: number,
+  deadlineMs = uploadDeadlineMs(declaredBytes),
+) {
+  const late = setTimeout(
+    () => req.destroy(new Error("The upload took too long to arrive.")),
+    deadlineMs,
+  );
+  const done = () => clearTimeout(late);
+  req.once("end", done);
+  req.once("close", done);
+  return done;
+}
