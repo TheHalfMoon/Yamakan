@@ -21,6 +21,9 @@ const OUT = path.join(
   "yamakan-runtime.cdx.json",
 );
 const VENDOR = path.join(ROOT, "vendor", "ffmpeg-win64-r8");
+const PACKAGE = JSON.parse(
+  readFileSync(path.join(ROOT, "package.json"), "utf8"),
+);
 
 function npmSbom() {
   // Fixed arguments only. npm is a .cmd on Windows, which Node runs only through a shell.
@@ -61,8 +64,10 @@ function vendored() {
         type: "file",
         "bom-ref": `file:vendor/ffmpeg-win64-r8/${name}`,
         name: `vendor/ffmpeg-win64-r8/${name}`,
+        // Its files have several licences (FFmpeg GPL-3.0-or-later, zlib, libpng, brotli MIT,
+        // the GCC runtime exception...): none is claimed here for any one of them.
         description:
-          "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+          "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
         hashes: [{ alg: "SHA-256", content: hash }],
       };
     });
@@ -72,6 +77,12 @@ function vendored() {
 function normalise(bom) {
   const { serialNumber: _serial, ...rest } = bom;
   const { timestamp: _time, ...metadata } = rest.metadata ?? {};
+  // npm names the top component after the folder the checkout is in; every clone and CI
+  // would differ. It is named from package.json, as its purl already is.
+  if (metadata.component) metadata.component.name = PACKAGE.name;
+  // The npm version alone would make a Node upgrade look like a dependency change.
+  if (Array.isArray(metadata.tools))
+    metadata.tools = metadata.tools.map(({ version: _v, ...tool }) => tool);
   const components = [...(rest.components ?? []), ...vendored()].sort((a, b) =>
     String(a["bom-ref"] ?? a.purl ?? a.name).localeCompare(
       String(b["bom-ref"] ?? b.purl ?? b.name),

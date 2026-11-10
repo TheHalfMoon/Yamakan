@@ -12,14 +12,13 @@
     "tools": [
       {
         "vendor": "npm",
-        "name": "cli",
-        "version": "11.17.0"
+        "name": "cli"
       }
     ],
     "component": {
       "bom-ref": "yamakan@0.1.0",
       "type": "library",
-      "name": "Yamakan-firstframe",
+      "name": "yamakan",
       "version": "0.1.0",
       "scope": "required",
       "purl": "pkg:npm/yamakan@0.1.0",
@@ -184,7 +183,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/ffmpeg.exe",
       "name": "vendor/ffmpeg-win64-r8/ffmpeg.exe",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -196,7 +195,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/ffprobe.exe",
       "name": "vendor/ffmpeg-win64-r8/ffprobe.exe",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -208,7 +207,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libbrotlicommon.dll",
       "name": "vendor/ffmpeg-win64-r8/libbrotlicommon.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -220,7 +219,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libbrotlidec.dll",
       "name": "vendor/ffmpeg-win64-r8/libbrotlidec.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -232,7 +231,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libbz2-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libbz2-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -244,7 +243,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libexpat-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libexpat-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -256,7 +255,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libfontconfig-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libfontconfig-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -268,7 +267,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libfreetype-6.dll",
       "name": "vendor/ffmpeg-win64-r8/libfreetype-6.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -280,7 +279,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libfribidi-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libfribidi-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -292,7 +291,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libgcc_s_seh-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libgcc_s_seh-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -304,7 +303,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libglib-2.0-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libglib-2.0-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -316,7 +315,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libgraphite2.dll",
       "name": "vendor/ffmpeg-win64-r8/libgraphite2.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -328,7 +327,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libharfbuzz-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libharfbuzz-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -340,7 +339,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libiconv-2.dll",
       "name": "vendor/ffmpeg-win64-r8/libiconv-2.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -352,7 +351,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libintl-8.dll",
       "name": "vendor/ffmpeg-win64-r8/libintl-8.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -364,7 +363,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libmp3lame-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libmp3lame-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -376,7 +375,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libmpg123-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libmpg123-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -388,7 +387,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libopus-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libopus-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -400,7 +399,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libpcre2-8-0.dll",
       "name": "vendor/ffmpeg-win64-r8/libpcre2-8-0.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -412,7 +411,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libpng16-16.dll",
       "name": "vendor/ffmpeg-win64-r8/libpng16-16.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -424,7 +423,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libstdc++-6.dll",
       "name": "vendor/ffmpeg-win64-r8/libstdc++-6.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -436,7 +435,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libwinpthread-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libwinpthread-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -448,7 +447,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libx264-165.dll",
       "name": "vendor/ffmpeg-win64-r8/libx264-165.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -460,7 +459,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libx265-217.dll",
       "name": "vendor/ffmpeg-win64-r8/libx265-217.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -472,7 +471,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/libz-1.dll",
       "name": "vendor/ffmpeg-win64-r8/libz-1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
@@ -484,7 +483,7 @@
       "type": "file",
       "bom-ref": "file:vendor/ffmpeg-win64-r8/zlib1.dll",
       "name": "vendor/ffmpeg-win64-r8/zlib1.dll",
-      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "description": "A file of the vendored FFmpeg 7.1.5 build; licences in vendor/ffmpeg-win64-r8/README.md.",
       "hashes": [
         {
           "alg": "SHA-256",
