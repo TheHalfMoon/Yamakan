@@ -195,6 +195,10 @@
     {
       "path": "src/cinema/CinemaViewport.tsx",
       "reason": "Yamakan-authored Cinema preview viewport and activation test handle; not a donor file copy."
+    },
+    {
+      "path": "src/cinema/cinemaCameraOptics.ts",
+      "reason": "Yamakan-authored physical lens preview math and input validation; new original code, not adapted or copied from a donor."
     }
   ],
   "excludedPaths": [
