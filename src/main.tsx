@@ -71,6 +71,7 @@ import { asPersonPack } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
+import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
 import { Captions } from "./captions.tsx";
@@ -1014,7 +1015,14 @@ function App() {
     <>
       <h2>{t("cinema.title")}</h2>
       <p>{t("cinema.intro")}</p>
-      <CinemaViewport active={active} t={t} />
+      <CinemaViewport
+        active={active}
+        t={t}
+        project={p ? { id: p.id, revision: p.revision } : null}
+        client={client as unknown as CinemaProjectClient}
+        onSaved={documentSaved}
+        registerUnsaved={registerUnsaved}
+      />
     </>
   );
   const directorPanel = () => (

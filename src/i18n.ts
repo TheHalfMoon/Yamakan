@@ -350,7 +350,24 @@ const en = {
   "cinema.lens.preset": "{value} mm",
   "cinema.lens.fov": "Vertical field of view: {value}°",
   "cinema.lens.note":
-    "Local camera preview. This change is not saved to your project automatically and is not used to generate AI video.",
+    "Changes stay in this window until you choose Save scene to project. They are never used to generate AI video.",
+  "cinema.project.save": "Save scene to project",
+  "cinema.project.reopen": "Reopen saved scene",
+  "cinema.project.none": "Open a project to keep its Cinema scene.",
+  "cinema.project.loading": "Opening the project's Cinema scene…",
+  "cinema.project.new": "This project has no Cinema scene yet: not saved",
+  "cinema.project.saved": "Saved to the project",
+  "cinema.project.changed": "Changes not saved",
+  "cinema.project.saving": "Saving…",
+  "cinema.project.conflict":
+    "This scene was changed elsewhere since it was opened here. Reopen the saved scene to continue; changes not saved here are lost.",
+  "cinema.project.error": "The Cinema scene could not be saved: {message}",
+  "cinema.project.loadError":
+    "The project's Cinema scene could not be opened: {message}",
+  "cinema.project.unavailable":
+    "Saving Cinema scenes to the project is not enabled on this service.",
+  "cinema.project.turnedOff":
+    "Saving Cinema scenes is turned off on this service. This scene is not kept; saved scenes open again when saving is turned back on.",
   "director.title": "Director",
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
@@ -869,7 +886,23 @@ const ar: Record<MessageKey, string> = {
   "cinema.lens.preset": "{value} مم",
   "cinema.lens.fov": "زاوية الرؤية العمودية: {value}°",
   "cinema.lens.note":
-    "معاينة محلية للكاميرا. لا يُحفظ هذا التغيير في المشروع تلقائياً ولا يُستخدم لتوليد فيديو بالذكاء الاصطناعي.",
+    "تبقى التغييرات في هذه النافذة حتى تختار حفظ المشهد في المشروع. ولا تُستخدم أبداً لتوليد فيديو بالذكاء الاصطناعي.",
+  "cinema.project.save": "حفظ المشهد في المشروع",
+  "cinema.project.reopen": "إعادة فتح المشهد المحفوظ",
+  "cinema.project.none": "افتح مشروعاً للاحتفاظ بمشهد السينما الخاص به.",
+  "cinema.project.loading": "جارٍ فتح مشهد السينما في المشروع…",
+  "cinema.project.new": "لا يوجد مشهد سينما في هذا المشروع بعد: غير محفوظ",
+  "cinema.project.saved": "محفوظ في المشروع",
+  "cinema.project.changed": "التغييرات غير محفوظة",
+  "cinema.project.saving": "جارٍ الحفظ…",
+  "cinema.project.conflict":
+    "تغيّر هذا المشهد في مكان آخر منذ فتحه هنا. أعد فتح المشهد المحفوظ للمتابعة؛ وتضيع التغييرات غير المحفوظة هنا.",
+  "cinema.project.error": "تعذّر حفظ مشهد السينما: {message}",
+  "cinema.project.loadError": "تعذّر فتح مشهد السينما في المشروع: {message}",
+  "cinema.project.unavailable":
+    "حفظ مشاهد السينما في المشروع غير مفعّل في هذه الخدمة.",
+  "cinema.project.turnedOff":
+    "حفظ مشاهد السينما متوقف في هذه الخدمة. لا يُحتفظ بهذا المشهد؛ وتُفتح المشاهد المحفوظة مجدداً عند إعادة تشغيل الحفظ.",
   "director.title": "المخرج",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "engine.list": "عمليات التوليد",

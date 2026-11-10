@@ -8,6 +8,19 @@ import {
   cinemaVerticalFovDegrees,
   type CinemaCameraOptics,
 } from "./cinemaCameraOptics.ts";
+import {
+  cinemaCanEdit,
+  cinemaCanReopen,
+  cinemaCanSave,
+  cinemaChangedState,
+  loadProjectScene,
+  saveProjectScene,
+  storedSceneHash,
+  type CinemaProjectClient,
+  type CinemaSaveState,
+  CINEMA_SAMPLE_SCENE as SAMPLE_SCENE,
+  freshCinemaScene as freshScene,
+} from "./cinemaProject.ts";
 import type { MessageKey } from "../i18n.ts";
 
 /** Browser-local scene shape (mirrors core Scene3D; validated server-side on save). */
@@ -33,31 +46,6 @@ export type CinemaSceneLocal = {
     color?: string;
     visible?: boolean;
   }>;
-};
-
-const SAMPLE_SCENE: CinemaSceneLocal = {
-  format: "yamakan.scene3d",
-  formatVersion: 1,
-  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  units: "metres",
-  eulerOrder: "XYZ",
-  camera: {
-    focalLengthMm: 35,
-    sensorWidthMm: 36,
-    near: 0.1,
-    far: 1000,
-  },
-  items: [
-    {
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      name: "cube",
-      position: { x: 0, y: 0.5, z: -2 },
-      rotation: { x: 0, y: 0.4, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-      assetId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      color: "#6b8cae",
-    },
-  ],
 };
 
 function assertLocalScene(raw: unknown): CinemaSceneLocal {
@@ -106,6 +94,11 @@ type Props = {
   // False while another workspace is open: the loop draws nothing.
   active?: boolean;
   t?: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  // The open project: its Cinema scene is opened, and saved when the person chooses.
+  project?: { id: string; revision: number } | null;
+  client?: CinemaProjectClient;
+  onSaved?: (projectId: string, from: number, to: number) => void;
+  registerUnsaved?: (isUnsaved: () => boolean) => () => void;
 };
 
 /**
@@ -116,6 +109,10 @@ export function CinemaViewport({
   initialScene = SAMPLE_SCENE,
   active = true,
   t = (key) => key,
+  project = null,
+  client,
+  onSaved,
+  registerUnsaved,
 }: Props) {
   // Hidden (another workspace is open): the scene is kept, nothing is drawn.
   const activeRef = useRef(active);
@@ -130,6 +127,26 @@ export function CinemaViewport({
   const [fovDeg, setFovDeg] = useState(() =>
     cinemaVerticalFovDegrees(initialScene.camera, 16 / 9),
   );
+  // Set by the mount below: redraws the meshes for a scene.
+  const syncRef = useRef<((scene: CinemaSceneLocal) => void) | null>(null);
+
+  // The project's scene: saved only when the person chooses.
+  const projectId = project?.id ?? null;
+  const [save, setSave] = useState<CinemaSaveState | null>(null);
+  const [persistence, setPersistence] = useState<boolean | null>(null);
+  const [turnedOff, setTurnedOff] = useState(false);
+  const [reloads, setReloads] = useState(0);
+  const documentIdRef = useRef<string | null>(null);
+  const savedHashRef = useRef<string | null>(null);
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+  // Read by the Three.js handle, which is made once.
+  const saveRef = useRef<CinemaSaveState | null>(null);
+  saveRef.current = save;
+  // The newest project revision known here (the editor's saves advance it too).
+  const revision = useRef(project?.revision ?? 0);
+  revision.current = Math.max(revision.current, project?.revision ?? 0);
+  useEffect(() => registerUnsaved?.(() => dirtyRef.current), [registerUnsaved]);
 
   // Camera controls change the preview and browser-local scene only. They are
   // not connected to AI inference or automatic project persistence.
@@ -143,8 +160,25 @@ export function CinemaViewport({
     setFovDeg(camera.fov);
   };
 
+  // Shows a scene: checked first, then the meshes, the lens and the camera.
+  const showScene = (raw: unknown) => {
+    const next = assertLocalScene(raw);
+    sceneRef.current = next;
+    syncRef.current?.(next);
+    setLensMm(next.camera.focalLengthMm);
+    applyLocalCamera(next.camera);
+    return next;
+  };
+
+  // A change to a project's scene is unsaved until the person saves it.
+  const changed = () => {
+    if (!documentIdRef.current) return;
+    dirtyRef.current = true;
+    setSave((s) => cinemaChangedState(s, savedHashRef.current));
+  };
+
   const chooseLens = (focalLengthMm: number) => {
-    if (!CINEMA_ENABLED) return;
+    if (!CINEMA_ENABLED || !cinemaCanEdit(saveRef.current)) return;
     const next = {
       ...sceneRef.current,
       camera: { ...sceneRef.current.camera, focalLengthMm },
@@ -152,6 +186,146 @@ export function CinemaViewport({
     sceneRef.current = next;
     setLensMm(focalLengthMm);
     applyLocalCamera(next.camera);
+    changed();
+  };
+
+  // Opens the project's scene (or a new one) when the project changes, and on Reopen.
+  useEffect(() => {
+    documentIdRef.current = null;
+    savedHashRef.current = null;
+    dirtyRef.current = false;
+    if (!CINEMA_ENABLED || !projectId || !client) {
+      setPersistence(null);
+      setSave(null);
+      return;
+    }
+    let current = true;
+    setSave({ state: "loading" });
+    void (async () => {
+      const capability = (await client.call(
+        "yamakan.document.capability",
+        {},
+      )) as { available: boolean; turnedOff?: boolean };
+      if (!current) return;
+      setPersistence(capability.available);
+      setTurnedOff(Boolean(capability.turnedOff));
+      if (!capability.available) {
+        setSave(null);
+        return;
+      }
+      const stored = await loadProjectScene(client, projectId);
+      // Against the current head, as the Studio canvas is opened.
+      const head = (await client.call("yamakan.project.open", {
+        projectId,
+      })) as { revision: number };
+      if (!current) return;
+      revision.current = head.revision;
+      showScene(stored ? stored.scene : freshScene());
+      documentIdRef.current = stored?.documentId ?? sceneRef.current.id;
+      savedHashRef.current = stored?.contentHash ?? null;
+      setSave(
+        stored
+          ? { state: "saved", contentHash: stored.contentHash }
+          : { state: "new" },
+      );
+    })().catch((e: unknown) => {
+      if (current)
+        setSave({
+          state: "loadError",
+          message: e instanceof Error ? e.message : String(e),
+        });
+    });
+    return () => {
+      current = false;
+    };
+    // showScene reads refs only; the client is the page's one SDK client.
+  }, [projectId, reloads]);
+
+  // An editor undo or restore can change the stored scene under a clean view. Show what is
+  // stored then, or the view would say Saved over a scene it no longer holds.
+  const projectRevision = project?.revision;
+  useEffect(() => {
+    if (!projectId || !client || !persistence) return;
+    let current = true;
+    const settled = () =>
+      current &&
+      !dirtyRef.current &&
+      !savingRef.current &&
+      documentIdRef.current !== null;
+    void (async () => {
+      if (!settled()) return;
+      const now = await storedSceneHash(client, projectId);
+      if (settled() && now !== savedHashRef.current) setReloads((n) => n + 1);
+    })().catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [projectRevision]);
+
+  const saveScene = async () => {
+    const documentId = documentIdRef.current;
+    if (
+      !projectId ||
+      !client ||
+      !persistence ||
+      !documentId ||
+      savingRef.current
+    )
+      return;
+    savingRef.current = true;
+    // What is saved: a change made while this runs stays unsaved.
+    const scene = sceneRef.current;
+    const expectedContentHash = savedHashRef.current;
+    let from = revision.current;
+    setSave({ state: "saving" });
+    try {
+      const commit = () =>
+        saveProjectScene({
+          client,
+          projectId,
+          expectedRevision: from,
+          documentId,
+          expectedContentHash,
+          scene,
+        });
+      let result;
+      try {
+        result = await commit();
+      } catch (e) {
+        // Only the project moved (another part of it was saved), not this scene: save
+        // again against the new head, once.
+        if (
+          (e as { code?: string }).code !== "REVISION_CONFLICT" ||
+          (await storedSceneHash(client, projectId)) !== expectedContentHash
+        )
+          throw e;
+        const head = (await client.call("yamakan.project.open", {
+          projectId,
+        })) as { revision: number };
+        from = head.revision;
+        result = await commit();
+      }
+      onSaved?.(projectId, from, result.revision);
+      if (documentIdRef.current !== documentId) return;
+      revision.current = result.revision;
+      savedHashRef.current = result.contentHash;
+      dirtyRef.current = sceneRef.current !== scene;
+      setSave(
+        dirtyRef.current
+          ? { state: "changed", contentHash: result.contentHash }
+          : { state: "saved", contentHash: result.contentHash },
+      );
+    } catch (e) {
+      if (documentIdRef.current !== documentId) return;
+      const message = e instanceof Error ? e.message : String(e);
+      setSave(
+        (e as { code?: string }).code === "REVISION_CONFLICT"
+          ? { state: "conflict", message }
+          : { state: "error", message, contentHash: savedHashRef.current },
+      );
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   useEffect(() => {
@@ -208,11 +382,15 @@ export function CinemaViewport({
             new THREE.BoxGeometry(1, 1, 1),
             new THREE.MeshStandardMaterial({ color }),
           );
-          mesh.name = item.name || item.id;
-          mesh.userData.assetId = item.assetId;
           threeScene.add(mesh);
           meshes.set(item.id, mesh);
         }
+        // An opened scene can reuse an item's id with other values.
+        (mesh.material as THREE.MeshStandardMaterial).color.set(
+          item.color ?? "#888888",
+        );
+        mesh.name = item.name || item.id;
+        mesh.userData.assetId = item.assetId;
         mesh.position.set(item.position.x, item.position.y, item.position.z);
         mesh.rotation.set(item.rotation.x, item.rotation.y, item.rotation.z);
         mesh.scale.set(item.scale.x, item.scale.y, item.scale.z);
@@ -221,6 +399,7 @@ export function CinemaViewport({
     };
 
     syncMeshes(sceneRef.current);
+    syncRef.current = syncMeshes;
 
     let raf = 0;
     const tick = () => {
@@ -236,11 +415,10 @@ export function CinemaViewport({
     window.__yamakanCinema = {
       getScene: () => sceneRef.current,
       setScene: (raw) => {
-        const next = assertLocalScene(raw);
-        sceneRef.current = next;
-        syncMeshes(next);
-        setLensMm(next.camera.focalLengthMm);
-        applyLocalCamera(next.camera);
+        if (!cinemaCanEdit(saveRef.current))
+          throw new Error("The project's Cinema scene is still opening.");
+        const next = showScene(raw);
+        changed();
         return next;
       },
       getItemCount: () => sceneRef.current.items.length,
@@ -276,6 +454,7 @@ export function CinemaViewport({
       cancelAnimationFrame(raf);
       delete window.__yamakanCinema;
       cameraRef.current = null;
+      syncRef.current = null;
       controls.dispose();
       renderer.dispose();
       for (const mesh of meshes.values()) {
@@ -328,6 +507,7 @@ export function CinemaViewport({
               type="button"
               aria-pressed={lensMm === mm}
               data-testid={"cinema-lens-" + mm}
+              disabled={!cinemaCanEdit(save)}
               onClick={() => chooseLens(mm)}
             >
               {t("cinema.lens.preset", { value: mm })}
@@ -340,6 +520,49 @@ export function CinemaViewport({
           })}
         </output>
         <p className="cinema-lens-note">{t("cinema.lens.note")}</p>
+      </div>
+      <div className="cinema-project" data-testid="cinema-project">
+        {!projectId || !client ? (
+          <p data-testid="cinema-project-state">{t("cinema.project.none")}</p>
+        ) : persistence === false ? (
+          <p data-testid="cinema-project-state">
+            {t(
+              turnedOff
+                ? "cinema.project.turnedOff"
+                : "cinema.project.unavailable",
+            )}
+          </p>
+        ) : (
+          <>
+            <button
+              type="button"
+              data-testid="cinema-project-save"
+              disabled={!cinemaCanSave(save)}
+              onClick={() => void saveScene()}
+            >
+              {t("cinema.project.save")}
+            </button>
+            <button
+              type="button"
+              data-testid="cinema-project-reopen"
+              disabled={!cinemaCanReopen(save)}
+              onClick={() => setReloads((n) => n + 1)}
+            >
+              {t("cinema.project.reopen")}
+            </button>
+            <output
+              aria-live="polite"
+              data-testid="cinema-project-state"
+              data-state={save?.state ?? "none"}
+            >
+              {save?.state === "error" || save?.state === "loadError"
+                ? t(`cinema.project.${save.state}`, { message: save.message })
+                : save
+                  ? t(`cinema.project.${save.state}`)
+                  : ""}
+            </output>
+          </>
+        )}
       </div>
       {error ? (
         <p role="alert" data-testid="cinema-error">

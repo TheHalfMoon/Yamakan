@@ -199,6 +199,10 @@
     {
       "path": "src/cinema/cinemaCameraOptics.ts",
       "reason": "Yamakan-authored physical lens preview math and input validation; new original code, not adapted or copied from a donor."
+    },
+    {
+      "path": "src/cinema/cinemaProject.ts",
+      "reason": "Yamakan-authored saving and opening of the project's Cinema scene document through the SDK client; new original code, not adapted or copied from a donor."
     }
   ],
   "excludedPaths": [

@@ -243,6 +243,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Still to do for issue #203:** reference images and reusable elements; image-to-video; CogVideoX from the page, which also tests a first run on a new notebook; the panel's failure, stop and restart screens in a browser; pixel comparison against a baseline. [Draft PR #204](https://github.com/TheHalfMoon/Yamakan/pull/204), the lens preview, was not touched by this work.
 
+**Cinema, 2026-11-10 (#203):** [PR #243](https://github.com/TheHalfMoon/Yamakan/pull/243), merged as `6c6f0d2`, replaced draft #204 (closed): four lens presets drive the real preview camera's field of view, with bounded camera values and English and Arabic text. The next slice saves the open project's Cinema scene as its `cinemaScene` document from the page, only when the person chooses, with compare-and-swap; it reopens, survives a reload and follows an editor undo, checked in Edge. Still to do for Cinema: scene controls beyond the lens (movement, light), the model chooser, generation into the timeline, a resizing preview and visual checks at 1440 and 390 px. The AI camera stays off.
+
 **Open findings added:**
 
 - Exports sat steadily darker than their sources. Reduced, not removed, in PR #208: under 1 of 255 remains on the one real clip measured. See the next checkpoint.
