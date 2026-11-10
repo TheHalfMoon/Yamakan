@@ -296,11 +296,22 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
   }
 });
 
-test("without an agent token, MCP stops and says how to get one", async () => {
+test("without an agent token, MCP stops, says how to get one, and sends nothing", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "yamakan-mcp-none-"));
   bases.push(root);
   await writeFile(path.join(root, "token"), "a".repeat(64));
-  const env: NodeJS.ProcessEnv = { ...process.env, YAMAKAN_WORKSPACE: root };
+  // A service that counts every connection: there must be none.
+  let connections = 0;
+  const watcher = createHttpServer((_req, res) => res.end());
+  watcher.on("connection", () => connections++);
+  watcher.listen(0, "127.0.0.1");
+  await once(watcher, "listening");
+  const { port } = watcher.address() as AddressInfo;
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    YAMAKAN_WORKSPACE: root,
+    YAMAKAN_URL: `http://127.0.0.1:${port}`,
+  };
   for (const key of [
     "YAMAKAN_AGENT_TOKEN",
     "YAMAKAN_AGENT_TOKEN_FILE",
@@ -308,8 +319,11 @@ test("without an agent token, MCP stops and says how to get one", async () => {
     "DARZAIN_AGENT_TOKEN_FILE",
     "YAMAKAN_MCP_LOCAL_CLIENT",
     "DARZAIN_MCP_LOCAL_CLIENT",
+    "DARZAIN_URL",
   ])
     delete env[key];
+  // A token of spaces counts as none.
+  env.YAMAKAN_AGENT_TOKEN = "   ";
   const mcp = spawn(
     process.execPath,
     [fileURLToPath(new URL("../mcp/main.ts", import.meta.url))],
@@ -326,4 +340,6 @@ test("without an agent token, MCP stops and says how to get one", async () => {
   assert.match(stderr, /YAMAKAN_MCP_LOCAL_CLIENT=1/);
   // It never read or sent the workspace's own token.
   assert.equal(stdout, "");
+  assert.equal(connections, 0);
+  watcher.close();
 });
