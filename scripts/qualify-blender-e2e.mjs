@@ -223,7 +223,7 @@ try {
       "-i",
       join(workspace, file),
       "-vf",
-      "scale=8:8",
+      "scale=64:36",
       "-f",
       "rawvideo",
       "-pix_fmt",
@@ -232,31 +232,86 @@ try {
     ],
     { windowsHide: true, maxBuffer: 1 << 26 },
   );
-  const frameBytes = 8 * 8 * 3;
+  // For a person to look at: the first, middle and last exported frames as BMP images, written
+  // only where YAMAKAN_QUALIFY_FRAMES points (never into the repository).
+  if (process.env.YAMAKAN_QUALIFY_FRAMES) {
+    const [w, h] = [320, 180];
+    const big = execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        join(workspace, file),
+        "-vf",
+        `scale=${w}:${h}`,
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "bgr24",
+        "-",
+      ],
+      { windowsHide: true, maxBuffer: 1 << 28 },
+    );
+    const size = w * h * 3;
+    for (const [n, label] of [
+      [0, "first"],
+      [15, "middle"],
+      [29, "last"],
+    ]) {
+      const header = Buffer.alloc(54);
+      header.write("BM", 0);
+      header.writeUInt32LE(54 + size, 2);
+      header.writeUInt32LE(54, 10);
+      header.writeUInt32LE(40, 14);
+      header.writeInt32LE(w, 18);
+      header.writeInt32LE(-h, 22); // top-down rows
+      header.writeUInt16LE(1, 26);
+      header.writeUInt16LE(24, 28);
+      header.writeUInt32LE(size, 34);
+      writeFileSync(
+        join(process.env.YAMAKAN_QUALIFY_FRAMES, `${label}.bmp`),
+        Buffer.concat([header, big.subarray(n * size, (n + 1) * size)]),
+      );
+    }
+  }
+  // 64×36 cells: fine enough that small boxes moving near the middle register.
+  const frameBytes = 64 * 36 * 3;
   const frames = raw.length / frameBytes;
   assert.equal(frames, 30, "one second at 30 fps");
   const frameAt = (n) => raw.subarray(n * frameBytes, (n + 1) * frameBytes);
-  // Mean absolute difference per channel: encoder noise alone stays far below 8.
-  const differ = (a, b) => {
-    let sum = 0;
-    for (let x = 0; x < frameBytes; x++) sum += Math.abs(a[x] - b[x]);
-    return sum / frameBytes;
+  // The share of cells that changed by more than encoder noise does (24 levels on some channel).
+  // Measured on this scene's 90° orbit: 3 to 5 % between first, middle and last; identical
+  // frames give 0 %. A still render cannot pass 1.5 %.
+  const changed = (a, b) => {
+    let n = 0;
+    for (let x = 0; x < frameBytes; x += 3)
+      if (
+        Math.max(
+          Math.abs(a[x] - b[x]),
+          Math.abs(a[x + 1] - b[x + 1]),
+          Math.abs(a[x + 2] - b[x + 2]),
+        ) > 24
+      )
+        n++;
+    return n / (frameBytes / 3);
   };
   const first = frameAt(0);
   const middle = frameAt(Math.floor(frames / 2));
   const last = frameAt(frames - 1);
   const motion = {
-    firstToMiddle: Math.round(differ(first, middle)),
-    middleToLast: Math.round(differ(middle, last)),
-    firstToLast: Math.round(differ(first, last)),
+    firstToMiddle: Math.round(changed(first, middle) * 1000) / 10,
+    middleToLast: Math.round(changed(middle, last) * 1000) / 10,
+    firstToLast: Math.round(changed(first, last) * 1000) / 10,
   };
   assert.ok(
-    motion.firstToMiddle > 8,
-    `the camera moved early: ${JSON.stringify(motion)}`,
+    motion.firstToMiddle > 1.5,
+    `the camera moved early (% of the picture): ${JSON.stringify(motion)}`,
   );
   assert.ok(
-    motion.middleToLast > 8,
-    `and kept moving: ${JSON.stringify(motion)}`,
+    motion.middleToLast > 1.5,
+    `and kept moving (% of the picture): ${JSON.stringify(motion)}`,
   );
   // The boxes' own colours, in some frame: a bluish pixel (#3366cc) and an orangish one (#e07020).
   let bluish = false;
