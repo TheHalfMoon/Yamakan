@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Yamakan's only Blender script (Blender integration, first slice). The Blender worker runs
+# this file and nothing else: it reads one scene description (core/blender/scene.ts,
+# format "yamakan.blender-scene/1"), builds the scene from it and renders PNG frames with
+# Cycles on the CPU. It never runs code from the scene, the project or the person.
+#
+#   blender -b --factory-startup -Y --offline-mode -noaudio -t <threads> \
+#     --python yamakan_render.py -- <scene.json> <output folder>
+import json
+import math
+import os
+import sys
+
+import bpy
+from mathutils import Euler, Matrix, Vector
+
+FORMAT = "yamakan.blender-scene/1"
+
+
+def fail(message):
+    print("YAMAKAN_RENDER_ERROR " + message)
+    sys.exit(2)
+
+
+def number(value, low, high, name):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        fail(name + " is not a number")
+    if not (low <= value <= high) or value != value:
+        fail(name + " is out of range")
+    return float(value)
+
+
+def integer(value, low, high, name):
+    if isinstance(value, bool) or not isinstance(value, int) or not (low <= value <= high):
+        fail(name + " is not a whole number in range")
+    return value
+
+
+def vec3(value, low, high, name):
+    if not isinstance(value, dict) or set(value) != {"x", "y", "z"}:
+        fail(name + " is not a vector")
+    return [number(value[k], low, high, name) for k in ("x", "y", "z")]
+
+
+def colour(value, name):
+    if not isinstance(value, str) or len(value) != 7 or value[0] != "#":
+        fail(name + " is not a colour")
+    try:
+        return [int(value[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+    except ValueError:
+        fail(name + " is not a colour")
+
+
+# The scene's coordinates are three.js's (Y up); Blender's world is Z up. A quarter turn about X
+# takes one to the other, and every transform passes through it whole.
+Y_UP_TO_Z_UP = Matrix.Rotation(math.radians(90), 4, "X")
+
+
+def transform(position, rotation, scale):
+    # three.js Euler "XYZ" is the matrix Rx·Ry·Rz, which is Blender's "ZYX".
+    r = Euler(rotation, "ZYX").to_matrix().to_4x4()
+    s = Matrix.Diagonal((*scale, 1.0))
+    return Y_UP_TO_Z_UP @ (Matrix.Translation(position) @ r @ s)
+
+
+def point(p):
+    return (Y_UP_TO_Z_UP @ Vector((*p, 1.0))).xyz
+
+
+def main():
+    args = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
+    if len(args) != 2:
+        fail("usage: -- <scene.json> <output folder>")
+    scene_path, out = args
+    if not os.path.isdir(out):
+        fail("the output folder does not exist")
+    with open(scene_path, "r", encoding="utf-8") as f:
+        text = f.read(4 * 1024 * 1024 + 1)
+    if len(text) > 4 * 1024 * 1024:
+        fail("the scene description is too large")
+    s = json.loads(text)
+    if not isinstance(s, dict) or s.get("format") != FORMAT:
+        fail("not a " + FORMAT + " scene")
+
+    width = integer(s["width"], 64, 1280, "width")
+    height = integer(s["height"], 64, 720, "height")
+    fps = integer(s["fps"], 24, 30, "fps")
+    frames = integer(s["frames"], 1, 120, "frames")
+    samples = integer(s["samples"], 1, 32, "samples")
+    objects = s["objects"]
+    if not isinstance(objects, list) or len(objects) > 200:
+        fail("objects is not a list of at most 200")
+
+    scene = bpy.context.scene
+    for o in list(bpy.data.objects):
+        bpy.data.objects.remove(o, do_unlink=True)
+
+    # The world: one background colour.
+    world = bpy.data.worlds.new("yamakan")
+    scene.world = world
+    bg = colour(s["background"], "background")
+    if world.node_tree is None:
+        world.use_nodes = True
+    background = world.node_tree.nodes.get("Background")
+    if background is not None:
+        background.inputs[0].default_value = (*bg, 1.0)
+    world.color = bg
+
+    # Boxes, each with its own colour.
+    for i, item in enumerate(objects):
+        if not isinstance(item, dict) or item.get("shape") != "box":
+            fail("object " + str(i) + " is not a box")
+        position = vec3(item["position"], -1000, 1000, "position")
+        rotation = vec3(item["rotation"], -4 * math.pi, 4 * math.pi, "rotation")
+        scale = vec3(item["scale"], 0.001, 100, "scale")
+        rgb = colour(item["colour"], "colour")
+        bpy.ops.mesh.primitive_cube_add(size=1)
+        box = bpy.context.active_object
+        box.name = "box-" + str(i)
+        box.matrix_world = transform(position, rotation, scale)
+        material = bpy.data.materials.new("box-" + str(i))
+        material.diffuse_color = (*rgb, 1.0)
+        tree = material.node_tree
+        principled = tree.nodes.get("Principled BSDF") if tree is not None else None
+        if principled is not None:
+            principled.inputs["Base Color"].default_value = (*rgb, 1.0)
+        box.data.materials.append(material)
+
+    # The camera: its lens, where it starts, and an optional orbit around what it looks at.
+    c = s["camera"]
+    start = vec3(c["position"], -1000, 1000, "camera position")
+    target = point(vec3(c["target"], -1000, 1000, "camera target"))
+    orbit = math.radians(number(c["orbitDegrees"], -360, 360, "orbit"))
+    lens = bpy.data.cameras.new("yamakan")
+    lens.sensor_fit = "HORIZONTAL"
+    lens.sensor_width = number(c["sensorWidthMm"], 1, 1000, "sensor width")
+    lens.lens = number(c["focalLengthMm"], 1, 10000, "focal length")
+    lens.clip_start = 0.05
+    lens.clip_end = 5000
+    camera = bpy.data.objects.new("camera", lens)
+    scene.collection.objects.link(camera)
+    scene.camera = camera
+    first = point(start)
+    for frame in range(1, frames + 1):
+        t = (frame - 1) / max(1, frames - 1)
+        turn = Matrix.Translation(target) @ Matrix.Rotation(orbit * t, 4, "Z") @ Matrix.Translation(-target)
+        where = (turn @ Vector((*first, 1.0))).xyz
+        camera.location = where
+        camera.rotation_euler = (target - where).to_track_quat("-Z", "Y").to_euler()
+        camera.keyframe_insert(data_path="location", frame=frame)
+        camera.keyframe_insert(data_path="rotation_euler", frame=frame)
+
+    # One sun.
+    l = s["light"]
+    sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", type="SUN"))
+    sun.data.energy = number(l["strength"], 0, 20, "light strength")
+    sun.rotation_euler = vec3(l["rotation"], -4 * math.pi, 4 * math.pi, "light rotation")
+    scene.collection.objects.link(sun)
+
+    # Cycles on the CPU, PNG frames into the output folder only.
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = samples
+    scene.render.resolution_x = width
+    scene.render.resolution_y = height
+    scene.render.resolution_percentage = 100
+    scene.render.fps = fps
+    scene.render.fps_base = 1.0
+    scene.frame_start = 1
+    scene.frame_end = frames
+    scene.render.film_transparent = False
+    # Colours as the project gives them (Blender's default view would tone them).
+    scene.view_settings.view_transform = "Standard"
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGB"
+    scene.render.filepath = os.path.join(out, "frame_")
+    bpy.ops.render.render(animation=True)
+
+    with open(os.path.join(out, "receipt.json"), "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "format": "yamakan.blender-receipt/1",
+                "blender": bpy.app.version_string,
+                "frames": frames,
+                "width": width,
+                "height": height,
+                "online": bool(bpy.app.online_access),
+            },
+            f,
+        )
+    print("YAMAKAN_RENDER_DONE")
+
+
+try:
+    main()
+except SystemExit:
+    raise
+except Exception as e:  # Any other failure ends the worker plainly, without a trace of paths.
+    print("YAMAKAN_RENDER_ERROR " + type(e).__name__)
+    sys.exit(2)

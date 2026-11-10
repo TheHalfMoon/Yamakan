@@ -25,6 +25,7 @@
     "brand:check": "node scripts/brand-check.mjs",
     "benchmark": "node scripts/benchmark-production.ts",
     "mcp": "node mcp/main.ts",
+    "blender:install": "node scripts/blender-install.ts",
     "sbom": "node scripts/sbom.mjs",
     "sbom:check": "node scripts/sbom.mjs --check",
     "migrate": "node cli/migrate.ts",

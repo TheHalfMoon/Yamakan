@@ -12,13 +12,17 @@ import {
   type GenerationRecord,
 } from "./engines/generation.ts";
 import {
+  lstat,
   mkdir,
   open,
+  readdir,
+  readFile,
   rename,
   rm,
   rmdir,
   statfs,
   unlink,
+  writeFile,
 } from "node:fs/promises";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
@@ -35,6 +39,16 @@ import {
   PROGRESS_LINE_LIMIT,
 } from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
+import { ENGINE_WORKER_PROFILE } from "./process/owner.ts";
+import { BlenderSceneSchema } from "./blender/scene.ts";
+import {
+  BLENDER_PIN,
+  BLENDER_SCRIPT,
+  blenderRuntime,
+  verifyBlenderForRun,
+} from "./blender/runtime.ts";
+import { blenderWorkers } from "./blender/worker.ts";
+import { createReadStream } from "node:fs";
 import { keepMainStream, renderRevision } from "./render.ts";
 import type { RenderJob } from "./render.ts";
 import { CommandError, toCommandError } from "./command/errors.ts";
@@ -163,6 +177,18 @@ const ExportPayload = z
       .optional(),
   })
   .strict();
+// A Blender render (Blender integration, first slice): the scene the fixed script renders and
+// the name the made video joins the project under.
+const BlenderPayload = z
+  .object({
+    format: z.literal("blender/1"),
+    scene: BlenderSceneSchema,
+    name: z.string().min(1).max(120),
+  })
+  .strict();
+// Cycles on the CPU uses every core it is given: one render at a time, across all projects.
+const BLENDER_RENDERS_AT_ONCE = 1;
+
 const DerivativePayload = z
   .object({
     format: z.literal("cfr/1"),
@@ -1037,7 +1063,13 @@ export class JobSupervisor {
       await this.#options.fault?.("after-claim", jobId);
       const payload = safeJson(row.payload);
       const derivative = DerivativePayload.safeParse(payload);
-      if (row.kind === "export" && ExportPayload.safeParse(payload).success)
+      const blender = BlenderPayload.safeParse(payload);
+      if (row.kind === "blender-render" && blender.success)
+        await this.#runBlender(row, attempt, blender.data, controller.signal);
+      else if (
+        row.kind === "export" &&
+        ExportPayload.safeParse(payload).success
+      )
         await this.#runExport(row, attempt, controller.signal, output);
       else if (row.kind === "cfr-derivative" && derivative.success)
         await this.#runDerivative(
@@ -1173,6 +1205,315 @@ export class JobSupervisor {
   // attaches it as the asset's selected version. The original object stays
   // retained; the derivative version records its lineage. Attachment and the
   // job's success commit in one transaction.
+  async #runBlender(
+    row: Row,
+    attempt: number,
+    payload: z.output<typeof BlenderPayload>,
+    signal: AbortSignal,
+  ) {
+    const jobId = row.job_id;
+    const scene = payload.scene;
+    const runtime = await blenderRuntime();
+    if (!runtime.available)
+      throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+    // The whole install, not only blender.exe: its listing and the code Windows runs, every
+    // time; every byte once a day (core/blender/runtime.ts).
+    const broken = await verifyBlenderForRun(runtime.install);
+    if (broken) throw new CommandError("CAPABILITY_UNAVAILABLE", broken);
+    const dir = await this.store.file(
+      row.project_id,
+      "exports",
+      jobId,
+      `attempt-${attempt}`,
+    );
+    // Blender writes only its frames folder and FFmpeg only its own; the scene description and
+    // the published copy stay in the attempt folder, which neither worker can write.
+    const frames = path.join(dir, "frames");
+    const encoded = path.join(dir, "encoded");
+    // Blender reads "#" in an output path as a frame number.
+    if (frames.includes("#"))
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        "The workspace folder's path holds '#', which Blender would read as a frame number; move the workspace to render with Blender.",
+      );
+    await mkdir(frames, { recursive: true });
+    await mkdir(encoded, { recursive: true });
+    const sceneFile = path.join(dir, "scene.json");
+    await writeFile(sceneFile, JSON.stringify(scene));
+    // Room for every frame at full size and the video, above the disk reserve.
+    const frameBytes = scene.width * scene.height * 4;
+    const need = scene.frames * frameBytes * 2 + 64 * 1024 * 1024;
+    const space = await statfs(dir);
+    const free =
+      Number(space.bavail) * Number(space.bsize) -
+      RESOURCE_POLICY.enforced.diskReserveBytes;
+    if (free < need)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Insufficient free disk space for this render.",
+      );
+    if (signal.aborted) throw new Error("Cancelled.");
+    let said = "";
+    let refusal = "";
+    // Blender's own "Fra:" lines are buffered on a pipe and arrive only at the end; the frames
+    // it has written are counted instead, once a second, while it runs. The encode takes the
+    // last tenth.
+    const counting = setInterval(() => {
+      readdir(frames)
+        .then((names) => {
+          const made = names.filter((n) => /^frame_\d{4}\.png$/.test(n)).length;
+          this.#progress.set(jobId, Math.min(0.9, (0.9 * made) / scene.frames));
+        })
+        .catch(() => {});
+    }, 1000);
+    const result = await blenderWorkers(runtime.executable)
+      .run({
+        profile: ENGINE_WORKER_PROFILE,
+        executable: runtime.executable,
+        args: [
+          "-b",
+          "--factory-startup",
+          // Never run Python a .blend file carries, whatever the preferences say.
+          "-Y",
+          "--offline-mode",
+          "-noaudio",
+          "-t",
+          String(RESOURCE_POLICY.enforced.renderThreads),
+          // A script that cannot load or that raises ends Blender with a failure, not success.
+          "--python-exit-code",
+          "1",
+          "--python",
+          BLENDER_SCRIPT,
+          "--",
+          sceneFile,
+          frames,
+        ],
+        cwd: frames,
+        writable: [frames],
+        readable: [runtime.install, BLENDER_SCRIPT, sceneFile],
+        memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
+        signal,
+        stderrLimit: 8000,
+        onCreated: (pid) => this.#markRunning(jobId, attempt, pid),
+        onStdout: (chunk) => {
+          said += chunk.toString("utf8");
+          const lines = said.split("\n");
+          said = lines.pop() || "";
+          if (said.length > PROGRESS_LINE_LIMIT) said = "";
+          for (const line of lines) {
+            // The script's own word for a scene it refuses, kept for the error.
+            const refused = /^YAMAKAN_RENDER_ERROR ([\w .,'-]{1,120})/.exec(
+              line,
+            );
+            if (refused) refusal = refused[1];
+          }
+        },
+      })
+      .finally(() => clearInterval(counting));
+    if (signal.aborted) throw new Error("Cancelled.");
+    if (result.wallExceeded)
+      throw new Error("The render passed its time limit and was ended.");
+    if (result.code !== 0)
+      throw new Error(
+        `Blender could not render the scene${refusal ? `: ${refusal}` : ""} (exit ${result.code}).`,
+        {
+          cause: result.stderr,
+        },
+      );
+    // What it made is checked before anything uses it: its receipt, and exactly the frames asked.
+    // Files a worker made are read only if they are plain files of their own (no link, no second
+    // name) and of a sensible size.
+    const plain = async (file: string, most: number) => {
+      const stat = await lstat(file);
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size > most)
+        throw new Error(
+          "The render left a file that is not what it should be.",
+        );
+    };
+    const receiptFile = path.join(frames, "receipt.json");
+    await plain(receiptFile, 4096);
+    const receipt = JSON.parse(await readFile(receiptFile, "utf8")) as {
+      format?: string;
+      blender?: string;
+      online?: boolean;
+      frames?: number;
+      width?: number;
+      height?: number;
+    };
+    if (
+      receipt.format !== "yamakan.blender-receipt/1" ||
+      receipt.blender !== BLENDER_PIN.version ||
+      receipt.online !== false ||
+      receipt.frames !== scene.frames ||
+      receipt.width !== scene.width ||
+      receipt.height !== scene.height
+    )
+      throw new Error("The render's receipt does not match the scene.");
+    const names = (await readdir(frames)).filter((n) => n !== "receipt.json");
+    const expected = Array.from(
+      { length: scene.frames },
+      (_, i) => `frame_${String(i + 1).padStart(4, "0")}.png`,
+    );
+    if (
+      names.length !== expected.length ||
+      expected.some((n) => !names.includes(n))
+    )
+      throw new Error("The render did not make exactly the frames asked for.");
+    const outputCap = Math.min(
+      RESOURCE_POLICY.enforced.assetImportBytes,
+      Math.floor(free / 2),
+    );
+    const encode = await workers().run({
+      executable: mediaTools().ffmpeg,
+      args: [
+        "-hide_banner",
+        "-nostdin",
+        "-y",
+        "-threads",
+        String(RESOURCE_POLICY.enforced.renderThreads),
+        "-protocol_whitelist",
+        "file",
+        "-codec_whitelist",
+        "png",
+        "-f",
+        "image2",
+        "-framerate",
+        String(scene.fps),
+        "-i",
+        path.join(frames, "frame_%04d.png"),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-fs",
+        String(outputCap),
+        "encoded/render.mp4",
+      ],
+      cwd: dir,
+      writable: [encoded],
+      readable: [frames],
+      memoryBytes: RESOURCE_POLICY.enforced.renderMemoryBytes,
+      signal,
+      stderrLimit: 8000,
+    });
+    if (signal.aborted) throw new Error("Cancelled.");
+    if (encode.code !== 0)
+      throw new Error(
+        `FFmpeg could not encode the render (exit ${encode.code}).`,
+        {
+          cause: encode.stderr,
+        },
+      );
+    await plain(
+      path.join(encoded, "render.mp4"),
+      RESOURCE_POLICY.enforced.assetImportBytes,
+    );
+    const file = path.join(dir, "render.mp4");
+    await rename(path.join(encoded, "render.mp4"), file);
+    const probed = await probe(file);
+    if (
+      !probed.hasVideo ||
+      probed.width !== scene.width ||
+      probed.height !== scene.height ||
+      // The probe counts thirtieths of a second.
+      Math.abs(
+        probed.durationFrames - Math.round((scene.frames / scene.fps) * 30),
+      ) > 2
+    )
+      throw new Error("The encoded render failed verification.");
+    this.#markValidating(jobId, attempt);
+    const bytes = (await open(file, "r").then(async (h) => {
+      try {
+        return (await h.stat()).size;
+      } finally {
+        await h.close();
+      }
+    })) as number;
+    const staged = await this.store.stageAsset(
+      row.project_id,
+      `${payload.name}.mp4`,
+      createReadStream(file) as AsyncIterable<Uint8Array>,
+      bytes,
+    );
+    await this.#cleanup(row.project_id, jobId, attempt);
+    try {
+      await this.#options.fault?.("before-succeed", jobId);
+      await this.store.attachAsset(row.project_id, staged.asset, (db) =>
+        this.#succeedIn(db, jobId, attempt, `asset:${staged.asset.id}`),
+      );
+    } catch (e) {
+      await this.store.discardStagedVersion(row.project_id, staged.asset.id);
+      throw e;
+    }
+  }
+
+  // Queues a Blender render of a scene. The made video joins the project as a new asset only
+  // when the render, its encode and their checks have all succeeded.
+  async submitBlenderRender(projectId: string, scene: unknown, name: string) {
+    if (this.#closing) throw new Error("Render queue is closing.");
+    if (!this.#generation) await this.start();
+    this.#current();
+    const project = await this.store.load(projectId);
+    const payload = BlenderPayload.parse({ format: "blender/1", scene, name });
+    const key = `blender-${createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32)}`;
+    const row = this.store.transaction((db) => {
+      this.#currentIn(db);
+      const existing = db
+        .prepare(
+          "SELECT * FROM jobs WHERE project_id = ? AND kind = 'blender-render' AND frozen_revision = ? AND idempotency_key = ?",
+        )
+        .get(projectId, project.revision, key) as Row | undefined;
+      // The same render asked again while it runs is that render.
+      if (
+        existing &&
+        existing.state !== "failed" &&
+        existing.state !== "cancelled" &&
+        existing.state !== "succeeded"
+      )
+        return existing;
+      const active = (
+        db
+          .prepare(
+            `SELECT count(*) AS n FROM jobs WHERE state NOT IN (${terminalSql})`,
+          )
+          .get() as { n: number }
+      ).n;
+      if (active >= RESOURCE_POLICY.enforced.activeJobs)
+        throw new CommandError("LIMIT_EXCEEDED", "Too many active jobs.");
+      const rendering = (
+        db
+          .prepare(
+            `SELECT count(*) AS n FROM jobs WHERE kind = 'blender-render' AND state NOT IN (${terminalSql})`,
+          )
+          .get() as { n: number }
+      ).n;
+      if (rendering >= BLENDER_RENDERS_AT_ONCE)
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "A Blender render is already running; wait for it or cancel it.",
+        );
+      const jobId = randomUUID();
+      db.prepare(
+        "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'blender-render', ?, ?, ?, ?, 'queued')",
+      ).run(
+        jobId,
+        projectId,
+        project.revision,
+        existing ? `${key}-${jobId.slice(0, 8)}` : key,
+        JSON.stringify(payload),
+      );
+      return this.#row(db, jobId)!;
+    });
+    this.#pump();
+    return this.#view(row);
+  }
+
   async #runDerivative(
     row: Row,
     attempt: number,
