@@ -22,12 +22,15 @@ jobs:
           cache: npm
       # A stuck package mirror used to take this whole job to its time limit, before
       # any test ran, and cancel the run. Each try is bounded, and it fails plainly.
+      # Without recommended packages (video drivers, speech models and the like) the
+      # download falls from about 94 MB: FFmpeg's own libraries are hard dependencies,
+      # so they still come. A try that was cut off resumes from what it fetched.
       - name: Install FFmpeg and fonts
-        timeout-minutes: 14
+        timeout-minutes: 18
         run: |
           for attempt in 1 2 3; do
             if timeout 60 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update &&
-              timeout 180 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y ffmpeg fonts-dejavu-core; then
+              timeout 240 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y --no-install-recommends ffmpeg fonts-dejavu-core; then
               exit 0
             fi
             echo "Package install attempt $attempt did not finish."
