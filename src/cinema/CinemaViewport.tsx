@@ -126,6 +126,10 @@ export function CinemaViewport({
   const sceneRef = useRef<CinemaSceneLocal>(initialScene);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const [lensMm, setLensMm] = useState(initialScene.camera.focalLengthMm);
+  // Kept in state so a scene set from outside, with the same lens but another sensor, shows too.
+  const [fovDeg, setFovDeg] = useState(() =>
+    cinemaVerticalFovDegrees(initialScene.camera, 16 / 9),
+  );
 
   // Camera controls change the preview and browser-local scene only. They are
   // not connected to AI inference or automatic project persistence.
@@ -136,6 +140,7 @@ export function CinemaViewport({
     camera.near = intrinsics.near;
     camera.far = intrinsics.far;
     camera.updateProjectionMatrix();
+    setFovDeg(camera.fov);
   };
 
   const chooseLens = (focalLengthMm: number) => {
@@ -160,6 +165,8 @@ export function CinemaViewport({
 
     let cancelled = false;
     const width = Math.max(320, host.clientWidth || 640);
+    // Fixed once here. The field of view depends on this shape: a resize handler must
+    // set camera.aspect and call applyLocalCamera again.
     const height = 360;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -329,10 +336,7 @@ export function CinemaViewport({
         </div>
         <output aria-live="polite" data-testid="cinema-lens-fov">
           {t("cinema.lens.fov", {
-            value: Math.round(
-              cameraRef.current?.fov ??
-                cinemaVerticalFovDegrees(sceneRef.current.camera, 16 / 9),
-            ),
+            value: Math.round(fovDeg),
           })}
         </output>
         <p className="cinema-lens-note">{t("cinema.lens.note")}</p>

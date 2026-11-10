@@ -350,7 +350,7 @@ const en = {
   "cinema.lens.preset": "{value} mm",
   "cinema.lens.fov": "Vertical field of view: {value}°",
   "cinema.lens.note":
-    "Local camera preview only. This change is not saved to your project or used to generate AI video.",
+    "Local camera preview. This change is not saved to your project automatically and is not used to generate AI video.",
   "director.title": "Director",
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
@@ -869,7 +869,7 @@ const ar: Record<MessageKey, string> = {
   "cinema.lens.preset": "{value} مم",
   "cinema.lens.fov": "زاوية الرؤية العمودية: {value}°",
   "cinema.lens.note":
-    "معاينة محلية للكاميرا فقط. لا يُحفظ هذا التغيير في المشروع ولا يُستخدم لتوليد فيديو بالذكاء الاصطناعي.",
+    "معاينة محلية للكاميرا. لا يُحفظ هذا التغيير في المشروع تلقائياً ولا يُستخدم لتوليد فيديو بالذكاء الاصطناعي.",
   "director.title": "المخرج",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "engine.list": "عمليات التوليد",
