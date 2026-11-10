@@ -75,6 +75,7 @@ import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
 import { Captions } from "./captions.tsx";
+import { AgentAccess } from "./agent-access.tsx";
 import type {
   Operation,
   OperationInput,
@@ -1047,6 +1048,14 @@ function App() {
   );
   const catalogPanel = () => (
     <>
+      <AgentAccess
+        client={{
+          call: (operation, parameters) =>
+            client.call(operation as never, parameters as never),
+        }}
+        t={t}
+        lang={lang}
+      />
       <pre>npm run cli -- yamakan.project.list {"{}"}</pre>
       {/* Shown here: a new tab would hold no session. */}
       <p>

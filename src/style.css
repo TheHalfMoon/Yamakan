@@ -887,3 +887,53 @@ footer {
   color: var(--ink);
   font-size: 0.9rem;
 }
+
+/* Agent access: tokens the person makes for agents. */
+.agent-access {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.agent-access h3,
+.agent-access p {
+  margin: 0;
+}
+.agent-access-form {
+  display: grid;
+  gap: 10px;
+}
+.agent-access-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+}
+.agent-access-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.agent-access-made input {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+}
+.agent-access-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agent-access-list li {
+  padding: 10px 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+}
