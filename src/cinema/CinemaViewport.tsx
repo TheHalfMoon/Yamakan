@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CINEMA_ENABLED, cinemaCapability } from "../../core/scene3d-flags.ts";
@@ -59,6 +59,13 @@ export type CinemaSceneLocal = {
     visible?: boolean;
   }>;
 };
+
+// What the capability calls each thing Cinema does not do, in the page's words.
+const UNSUPPORTED_KEYS = {
+  "ai-conditioned-camera": "cinema.unsupported.aiCamera",
+  "generative-video": "cinema.unsupported.generativeVideo",
+  "remote-media-url-fetch": "cinema.unsupported.remoteMedia",
+} as const satisfies Record<string, MessageKey>;
 
 function assertLocalScene(raw: unknown): CinemaSceneLocal {
   const s = raw as CinemaSceneLocal;
@@ -794,9 +801,22 @@ export function CinemaViewport({
           {error}
         </p>
       ) : null}
-      <p data-testid="cinema-units">units: metres · euler: XYZ</p>
+      <p data-testid="cinema-units">{t("cinema.units")}</p>
       <p data-testid="cinema-unsupported">
-        unsupported: {(cinemaCapability().unsupported ?? []).join(", ")}
+        {t("cinema.unsupported")}{" "}
+        {/* Each item isolated on its own, so one the page has no words for (shown as its id)
+            cannot turn the order of the others around in Arabic. */}
+        {(cinemaCapability().unsupported ?? []).map((id, i) => (
+          <Fragment key={id}>
+            {i > 0 ? t("cinema.unsupported.separator") : null}
+            <bdi>
+              {Object.hasOwn(UNSUPPORTED_KEYS, id)
+                ? t(UNSUPPORTED_KEYS[id as keyof typeof UNSUPPORTED_KEYS])
+                : id}
+            </bdi>
+          </Fragment>
+        ))}
+        .
       </p>
     </section>
   );

@@ -207,10 +207,13 @@ try {
   const moved = (await sceneItems())[0];
   assert.equal(moved.x, firstX + 0.5);
   assert.equal(moved.z, -2.25);
-  assert.match(
-    await page.getByTestId("cinema-objects-readout").textContent(),
-    /Position 0\.5, 0\.5, -2\.25 m/,
-  );
+  // Values may be wrapped in direction isolates; read without them.
+  const readoutText = async () =>
+    (await page.getByTestId("cinema-objects-readout").textContent()).replace(
+      /[\u2066-\u2069]/g,
+      "",
+    );
+  assert.match(await readoutText(), /Position 0\.5, 0\.5, -2\.25 m/);
   await page.getByTestId("cinema-objects-add").click();
   const withBox = await sceneItems();
   assert.equal(withBox.length, 2);
@@ -348,7 +351,7 @@ try {
   // desktop and a phone width. Screenshots go only where YAMAKAN_QUALIFY_SHOTS points
   // (outside the repository), never into the evidence.
   const shots = process.env.YAMAKAN_QUALIFY_SHOTS;
-  const layout = async (width, height) => {
+  const layout = async (width, height, label = "") => {
     await page.setViewportSize({ width, height });
     await page.waitForFunction(
       () => {
@@ -378,9 +381,14 @@ try {
           180) /
           Math.PI,
       );
+      // Arabic writes its own digits (٠-٩); read them as numbers too.
       const shown = Number(
         /(\d+)°/.exec(
-          document.querySelector('[data-testid="cinema-lens-fov"]').textContent,
+          document
+            .querySelector('[data-testid="cinema-lens-fov"]')
+            .textContent.replace(/[٠-٩]/g, (d) =>
+              String(d.charCodeAt(0) - 0x0660),
+            ),
         )?.[1],
       );
       const overflowing = [
@@ -415,7 +423,7 @@ try {
       mkdirSync(shots, { recursive: true });
       await page
         .getByTestId("cinema-viewport")
-        .screenshot({ path: join(shots, `cinema-${width}.png`) });
+        .screenshot({ path: join(shots, `cinema-${width}${label}.png`) });
     }
     return measured;
   };
@@ -430,9 +438,33 @@ try {
   );
   assert.deepEqual(widened.canvas, desktop.canvas, "and back when widened");
 
+  // #203: the Cinema page in Arabic on a phone: right to left, translated, nothing past either
+  // edge, and the readout's numbers in Arabic digits.
+  await page.getByRole("button", { name: "العربية", exact: true }).click();
+  await page.waitForFunction(() => document.dir === "rtl");
+  await page.getByText("معاينة العدسة", { exact: true }).waitFor();
+  await page.getByText("العناصر", { exact: true }).waitFor();
+  const arabic = await layout(390, 844, "-ar");
+  const arabicText = await page.evaluate(() => ({
+    units: document.querySelector('[data-testid="cinema-units"]').textContent,
+    unsupported: document.querySelector('[data-testid="cinema-unsupported"]')
+      .textContent,
+    readout: document.querySelector('[data-testid="cinema-objects-readout"]')
+      .textContent,
+  }));
+  assert.match(arabicText.units, /بالمتر/);
+  assert.match(arabicText.unsupported, /غير متاح في السينما/);
+  assert.doesNotMatch(arabicText.unsupported, /ai-conditioned/);
+  // Three items, with the Arabic separator between them.
+  assert.equal(arabicText.unsupported.split("؛").length, 3);
+  // Arabic-Indic digits, as every number on the Arabic page.
+  assert.match(arabicText.readout, /الموضع/);
+  assert.match(arabicText.readout, /[\u0660-\u0669]/);
+  assert.doesNotMatch(arabicText.readout, /[0-9]/);
+
   assert.equal(pageErrors.length, 0, pageErrors.join("\n"));
   result.passed = true;
-  result.layout = { desktop, phone };
+  result.layout = { desktop, phone, widened, arabic };
   result.before = before;
   result.afterPose = after;
   result.contentHash = contentHash;
