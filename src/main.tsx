@@ -1014,7 +1014,7 @@ function App() {
     <>
       <h2>{t("cinema.title")}</h2>
       <p>{t("cinema.intro")}</p>
-      <CinemaViewport active={active} />
+      <CinemaViewport active={active} t={t} />
     </>
   );
   const directorPanel = () => (

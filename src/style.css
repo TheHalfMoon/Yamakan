@@ -812,3 +812,36 @@ footer {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Cinema lens preview: original Yamakan control, not AI model conditioning. */
+.cinema-lens-panel {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.cinema-lens-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cinema-lens-presets button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--canvas);
+  font-weight: 700;
+}
+.cinema-lens-panel output {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+.cinema-lens-note {
+  margin: 0;
+  color: #aebbd2;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
