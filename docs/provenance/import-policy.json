@@ -203,6 +203,10 @@
     {
       "path": "src/cinema/cinemaProject.ts",
       "reason": "Yamakan-authored saving and opening of the project's Cinema scene document through the SDK client; new original code, not adapted or copied from a donor."
+    },
+    {
+      "path": "src/cinema/cinemaObjects.ts",
+      "reason": "Yamakan-authored editing of the Cinema scene's placeholder boxes (add, remove, move, turn, resize) within core scene3d bounds; new original code, not adapted or copied from a donor."
     }
   ],
   "excludedPaths": [

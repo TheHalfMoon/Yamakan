@@ -845,3 +845,24 @@ footer {
   font-size: 0.82rem;
   line-height: 1.5;
 }
+
+/* Cinema objects: placeholder boxes for blocking out a shot. */
+.cinema-objects {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.cinema-objects-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cinema-objects output {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
