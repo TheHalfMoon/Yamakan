@@ -233,6 +233,8 @@ Adapters report bounded observations (status, cancellation, artifacts, reconcile
 
 `yamakan.engines.capabilities` (read-only, no parameters) reports each generative operation, whether it could run here, and a plain reason. It never returns which internal check refused. The Director panel shows each reason in the interface language, and says the state is unknown if the call fails. `discoverEngineCapabilities` (core/engines/manifests.ts) decides them.
 
+`yamakan.prompt.search` and `yamakan.prompt.fill` (read-only, scope `project:read`, offline) are the local prompt library (core/prompts/library.ts). Search takes `query` (words in English or Arabic; every word must match; Arabic vowel marks, letter variants, the article and Arabic-Indic digits are forgiven), optional `category` and `kind` (`video` or `image`) and `limit` (1-100), and returns the matching templates best first, every category, and the credit for YouMind's category list. Fill takes `templateId`, `language` (`en` or `ar`) and `values` as `{field, value}` pairs (at most 16, each value at most 200 characters); a value loses braces, line breaks and control characters, an empty or missing value takes the field's default, an unknown field is refused (`VALIDATION`), an unknown template is `NOT_FOUND`, and the prompt is at most 2,000 characters. Every template is written for Yamakan; no YouMind or community prompt text is included.
+
 - **Engines off (this build).** `ENGINE_ENABLED` is false, so discovery does no IO at all and every operation is `ENGINE_DISABLED`.
 - **Pinned manifests only.** No model is pinned in this build (`PINNED_MODEL_MANIFESTS` is empty).
   - A pin names a model folder, its operation and the manifest's exact SHA-256.

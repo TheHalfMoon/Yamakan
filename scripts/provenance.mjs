@@ -76,6 +76,8 @@ for (const file of [
   "notices/ai-video-production-editor-LICENSE",
   "notices/Ninerr-LICENSE",
   "notices/OpenCut-LICENSE",
+  // The prompt library's category list (core/prompts/library.ts).
+  "notices/YouMind-ai-image-prompts-skill-LICENSE",
 ])
   if (!existsSync(file)) errors.push(`Missing notice: ${file}`);
 
