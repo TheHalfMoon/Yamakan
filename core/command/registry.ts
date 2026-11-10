@@ -2604,13 +2604,24 @@ export const commands = {
       .object({
         label: z.string().min(1).max(80).optional(),
         scopes: z.array(z.enum(Scopes)).min(1).max(Scopes.length),
+        // Chosen by the person; without it the token works until revoked, as before.
+        expiresInDays: z.number().int().min(1).max(366).optional(),
       })
       .strict(),
     run: ({ store }, a) => {
       const scopes = new Set(a.scopes) as ReadonlySet<Scope>;
       assertAgentScopeCeiling(scopes);
-      return store.createAgentToken(scopes, a.label);
+      return store.createAgentToken(scopes, a.label, a.expiresInDays);
     },
+  }),
+  "yamakan.agent.list": define({
+    scope: "agent:revoke",
+    mutation: false,
+    humanOnly: true,
+    summary:
+      "List this workspace's agent tokens (id, label, scopes, created, ends, revoked, active), never the tokens themselves. Requires the browser session.",
+    input: z.object({}).strict(),
+    run: ({ store }) => store.listAgentTokens(),
   }),
   "yamakan.agent.revoke": define({
     scope: "agent:revoke",
