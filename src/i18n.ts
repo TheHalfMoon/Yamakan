@@ -360,7 +360,7 @@ const en = {
   "cinema.project.changed": "Changes not saved",
   "cinema.project.saving": "Saving…",
   "cinema.project.conflict":
-    "Another window saved this scene first. Reopen the saved scene to continue.",
+    "This scene was changed elsewhere since it was opened here. Reopen the saved scene to continue; changes not saved here are lost.",
   "cinema.project.error": "The Cinema scene could not be saved: {message}",
   "cinema.project.loadError":
     "The project's Cinema scene could not be opened: {message}",
@@ -896,7 +896,7 @@ const ar: Record<MessageKey, string> = {
   "cinema.project.changed": "التغييرات غير محفوظة",
   "cinema.project.saving": "جارٍ الحفظ…",
   "cinema.project.conflict":
-    "حفظت نافذة أخرى هذا المشهد أولاً. أعد فتح المشهد المحفوظ للمتابعة.",
+    "تغيّر هذا المشهد في مكان آخر منذ فتحه هنا. أعد فتح المشهد المحفوظ للمتابعة؛ وتضيع التغييرات غير المحفوظة هنا.",
   "cinema.project.error": "تعذّر حفظ مشهد السينما: {message}",
   "cinema.project.loadError": "تعذّر فتح مشهد السينما في المشروع: {message}",
   "cinema.project.unavailable":

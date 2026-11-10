@@ -9,8 +9,13 @@ import {
   type CinemaCameraOptics,
 } from "./cinemaCameraOptics.ts";
 import {
+  cinemaCanEdit,
+  cinemaCanReopen,
+  cinemaCanSave,
+  cinemaChangedState,
   loadProjectScene,
   saveProjectScene,
+  storedSceneHash,
   type CinemaProjectClient,
   type CinemaSaveState,
   CINEMA_SAMPLE_SCENE as SAMPLE_SCENE,
@@ -134,6 +139,10 @@ export function CinemaViewport({
   const documentIdRef = useRef<string | null>(null);
   const savedHashRef = useRef<string | null>(null);
   const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+  // Read by the Three.js handle, which is made once.
+  const saveRef = useRef<CinemaSaveState | null>(null);
+  saveRef.current = save;
   // The newest project revision known here (the editor's saves advance it too).
   const revision = useRef(project?.revision ?? 0);
   revision.current = Math.max(revision.current, project?.revision ?? 0);
@@ -165,15 +174,11 @@ export function CinemaViewport({
   const changed = () => {
     if (!documentIdRef.current) return;
     dirtyRef.current = true;
-    setSave((s) =>
-      s?.state === "conflict" || s?.state === "loadError"
-        ? s
-        : { state: "changed", contentHash: savedHashRef.current },
-    );
+    setSave((s) => cinemaChangedState(s, savedHashRef.current));
   };
 
   const chooseLens = (focalLengthMm: number) => {
-    if (!CINEMA_ENABLED) return;
+    if (!CINEMA_ENABLED || !cinemaCanEdit(saveRef.current)) return;
     const next = {
       ...sceneRef.current,
       camera: { ...sceneRef.current.camera, focalLengthMm },
@@ -236,22 +241,70 @@ export function CinemaViewport({
     // showScene reads refs only; the client is the page's one SDK client.
   }, [projectId, reloads]);
 
+  // An editor undo or restore can change the stored scene under a clean view. Show what is
+  // stored then, or the view would say Saved over a scene it no longer holds.
+  const projectRevision = project?.revision;
+  useEffect(() => {
+    if (!projectId || !client || !persistence) return;
+    let current = true;
+    const settled = () =>
+      current &&
+      !dirtyRef.current &&
+      !savingRef.current &&
+      documentIdRef.current !== null;
+    void (async () => {
+      if (!settled()) return;
+      const now = await storedSceneHash(client, projectId);
+      if (settled() && now !== savedHashRef.current) setReloads((n) => n + 1);
+    })().catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [projectRevision]);
+
   const saveScene = async () => {
     const documentId = documentIdRef.current;
-    if (!projectId || !client || !persistence || !documentId) return;
+    if (
+      !projectId ||
+      !client ||
+      !persistence ||
+      !documentId ||
+      savingRef.current
+    )
+      return;
+    savingRef.current = true;
     // What is saved: a change made while this runs stays unsaved.
     const scene = sceneRef.current;
-    const from = revision.current;
+    const expectedContentHash = savedHashRef.current;
+    let from = revision.current;
     setSave({ state: "saving" });
     try {
-      const result = await saveProjectScene({
-        client,
-        projectId,
-        expectedRevision: from,
-        documentId,
-        expectedContentHash: savedHashRef.current,
-        scene,
-      });
+      const commit = () =>
+        saveProjectScene({
+          client,
+          projectId,
+          expectedRevision: from,
+          documentId,
+          expectedContentHash,
+          scene,
+        });
+      let result;
+      try {
+        result = await commit();
+      } catch (e) {
+        // Only the project moved (another part of it was saved), not this scene: save
+        // again against the new head, once.
+        if (
+          (e as { code?: string }).code !== "REVISION_CONFLICT" ||
+          (await storedSceneHash(client, projectId)) !== expectedContentHash
+        )
+          throw e;
+        const head = (await client.call("yamakan.project.open", {
+          projectId,
+        })) as { revision: number };
+        from = head.revision;
+        result = await commit();
+      }
       onSaved?.(projectId, from, result.revision);
       if (documentIdRef.current !== documentId) return;
       revision.current = result.revision;
@@ -268,8 +321,10 @@ export function CinemaViewport({
       setSave(
         (e as { code?: string }).code === "REVISION_CONFLICT"
           ? { state: "conflict", message }
-          : { state: "error", message },
+          : { state: "error", message, contentHash: savedHashRef.current },
       );
+    } finally {
+      savingRef.current = false;
     }
   };
 
@@ -360,6 +415,8 @@ export function CinemaViewport({
     window.__yamakanCinema = {
       getScene: () => sceneRef.current,
       setScene: (raw) => {
+        if (!cinemaCanEdit(saveRef.current))
+          throw new Error("The project's Cinema scene is still opening.");
         const next = showScene(raw);
         changed();
         return next;
@@ -450,6 +507,7 @@ export function CinemaViewport({
               type="button"
               aria-pressed={lensMm === mm}
               data-testid={"cinema-lens-" + mm}
+              disabled={!cinemaCanEdit(save)}
               onClick={() => chooseLens(mm)}
             >
               {t("cinema.lens.preset", { value: mm })}
@@ -479,11 +537,7 @@ export function CinemaViewport({
             <button
               type="button"
               data-testid="cinema-project-save"
-              disabled={
-                save?.state !== "new" &&
-                save?.state !== "changed" &&
-                save?.state !== "error"
-              }
+              disabled={!cinemaCanSave(save)}
               onClick={() => void saveScene()}
             >
               {t("cinema.project.save")}
@@ -491,12 +545,7 @@ export function CinemaViewport({
             <button
               type="button"
               data-testid="cinema-project-reopen"
-              disabled={
-                save?.state !== "changed" &&
-                save?.state !== "conflict" &&
-                save?.state !== "error" &&
-                save?.state !== "loadError"
-              }
+              disabled={!cinemaCanReopen(save)}
               onClick={() => setReloads((n) => n + 1)}
             >
               {t("cinema.project.reopen")}

@@ -3,10 +3,16 @@ import assert from "node:assert/strict";
 import { validateDocument } from "../core/documents.ts";
 import {
   CINEMA_SAMPLE_SCENE,
+  cinemaCanEdit,
+  cinemaCanReopen,
+  cinemaCanSave,
+  cinemaChangedState,
   freshCinemaScene,
   loadProjectScene,
   saveProjectScene,
+  storedSceneHash,
   type CinemaProjectClient,
+  type CinemaSaveState,
 } from "../src/cinema/cinemaProject.ts";
 
 const hash = (c: string) => c.repeat(64);
@@ -110,4 +116,57 @@ test("a conflict reaches the page as the service's error", async () => {
     }),
     (e) => e === conflict,
   );
+});
+
+test("Save and Reopen are offered only where they do something", () => {
+  const saved = hash("a");
+  const cases: Array<[CinemaSaveState | null, boolean, boolean]> = [
+    [null, false, false],
+    [{ state: "loading" }, false, false],
+    [{ state: "new" }, true, false],
+    [{ state: "saved", contentHash: saved }, false, false],
+    // Nothing saved yet: Reopen would only swap in another sample.
+    [{ state: "changed", contentHash: null }, true, false],
+    [{ state: "changed", contentHash: saved }, true, true],
+    [{ state: "saving" }, false, false],
+    [{ state: "conflict", message: "m" }, false, true],
+    [{ state: "error", message: "m", contentHash: null }, true, false],
+    [{ state: "error", message: "m", contentHash: saved }, true, true],
+    [{ state: "loadError", message: "m" }, false, true],
+  ];
+  for (const [state, save, reopen] of cases) {
+    assert.equal(cinemaCanSave(state), save, JSON.stringify(state));
+    assert.equal(cinemaCanReopen(state), reopen, JSON.stringify(state));
+  }
+  assert.equal(cinemaCanEdit({ state: "loading" }), false);
+  assert.equal(cinemaCanEdit(null), true);
+  assert.equal(cinemaCanEdit({ state: "saving" }), true);
+});
+
+test("a change during a save leaves the save running, not a second Save", () => {
+  const saving: CinemaSaveState = { state: "saving" };
+  assert.equal(cinemaChangedState(saving, hash("a")), saving);
+  assert.equal(cinemaCanSave(cinemaChangedState(saving, hash("a"))), false);
+  for (const s of [
+    { state: "conflict", message: "m" },
+    { state: "loadError", message: "m" },
+    { state: "loading" },
+  ] as CinemaSaveState[])
+    assert.equal(cinemaChangedState(s, hash("a")), s);
+  assert.deepEqual(
+    cinemaChangedState({ state: "saved", contentHash: hash("a") }, hash("a")),
+    { state: "changed", contentHash: hash("a") },
+  );
+  assert.equal(cinemaChangedState(null, null), null);
+});
+
+test("the stored hash is the one of the scene the page opens", async () => {
+  const client = {
+    call: async () => [
+      { id: "s-2", kind: "cinemaScene", contentHash: hash("b") },
+      { id: "s-1", kind: "cinemaScene", contentHash: hash("a") },
+    ],
+  };
+  assert.equal(await storedSceneHash(client, "p-1"), hash("a"));
+  assert.equal(await storedSceneHash({ call: async () => [] }, "p-1"), null);
 });

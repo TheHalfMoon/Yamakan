@@ -26,8 +26,39 @@ export type CinemaSaveState =
   | { state: "changed"; contentHash: string | null }
   | { state: "saving" }
   | { state: "conflict"; message: string }
-  | { state: "error"; message: string }
+  | { state: "error"; message: string; contentHash: string | null }
   | { state: "loadError"; message: string };
+
+/** Save is offered for a scene not yet saved, a change, or after a failed save. */
+export const cinemaCanSave = (s: CinemaSaveState | null) =>
+  s?.state === "new" || s?.state === "changed" || s?.state === "error";
+
+/** Reopen is offered only when there is a saved scene to go back to, or after a conflict. */
+export const cinemaCanReopen = (s: CinemaSaveState | null) =>
+  ((s?.state === "changed" || s?.state === "error") &&
+    s.contentHash !== null) ||
+  s?.state === "conflict" ||
+  s?.state === "loadError";
+
+/** The scene can be changed except while the project's scene is opening. */
+export const cinemaCanEdit = (s: CinemaSaveState | null) =>
+  s?.state !== "loading";
+
+/**
+ * The state after a change. A save in flight keeps its state: it reports the change itself
+ * when it ends. A conflict or a failed open stays until the person reopens.
+ */
+export const cinemaChangedState = (
+  s: CinemaSaveState | null,
+  savedHash: string | null,
+): CinemaSaveState | null =>
+  !s ||
+  s.state === "saving" ||
+  s.state === "conflict" ||
+  s.state === "loadError" ||
+  s.state === "loading"
+    ? s
+    : { state: "changed", contentHash: savedHash };
 
 export const CINEMA_SAMPLE_SCENE: CinemaSceneLocal = Object.freeze({
   format: "yamakan.scene3d",
@@ -64,6 +95,22 @@ export const freshCinemaScene = (): CinemaSceneLocal => ({
 
 type DocumentRef = { id: string; kind: string; contentHash: string };
 
+const pickScene = (refs: DocumentRef[]) =>
+  refs
+    .filter((d) => d.kind === "cinemaScene")
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+
+/** The stored hash of the scene the page opens, or null when the project has none. */
+export async function storedSceneHash(
+  client: Pick<CinemaProjectClient, "call">,
+  projectId: string,
+): Promise<string | null> {
+  const refs = (await client.call("yamakan.document.list", {
+    projectId,
+  })) as DocumentRef[];
+  return pickScene(refs)?.contentHash ?? null;
+}
+
 /**
  * The project's Cinema scene, if it has one. A project normally holds one; if an agent
  * committed more, the lowest id is taken, so every window opens the same one.
@@ -75,9 +122,7 @@ export async function loadProjectScene(
   const refs = (await client.call("yamakan.document.list", {
     projectId,
   })) as DocumentRef[];
-  const ref = refs
-    .filter((d) => d.kind === "cinemaScene")
-    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+  const ref = pickScene(refs);
   if (!ref) return null;
   const got = (await client.call("yamakan.document.get", {
     projectId,

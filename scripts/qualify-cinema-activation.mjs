@@ -272,6 +272,14 @@ try {
     return { id: scene.id, lensMm: scene.camera.focalLengthMm };
   });
   assert.deepEqual(reloaded, { id: savedSceneId, lensMm: 24 });
+
+  // The editor's Undo takes the save back: the view must not still say Saved.
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await waitState("new");
+  const undone = await page.evaluate(
+    () => window.__yamakanCinema.getScene().camera.focalLengthMm,
+  );
+  assert.equal(undone, 35, "after Undo the project has no saved scene");
   const listed = await callApi("yamakan.scene.list", {});
   assert.ok(
     listed.result.scenes.some((s) => s.id === scene.id),
@@ -283,7 +291,12 @@ try {
   result.before = before;
   result.afterPose = after;
   result.contentHash = contentHash;
-  result.projectScene = { ...reloaded, reopened: true, reloaded: true };
+  result.projectScene = {
+    ...reloaded,
+    reopened: true,
+    reloaded: true,
+    lensAfterUndoMm: undone,
+  };
   result.pageErrors = pageErrors;
   result.detail =
     "Cinema mounted; lens saved to the project from the page, reopened and reloaded; orbit interaction; scene.save/open/list across reload; AI camera disabled.";
