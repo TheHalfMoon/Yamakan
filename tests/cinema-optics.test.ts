@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CINEMA_LENS_PRESETS_MM,
   assertCinemaCameraOptics,
+  cinemaPreviewSize,
   cinemaVerticalFovDegrees,
 } from "../src/cinema/cinemaCameraOptics.ts";
 
@@ -49,4 +50,15 @@ test("Cinema camera rejects malformed intrinsics rather than corrupting a render
     assert.throws(() => cinemaVerticalFovDegrees(source, bad));
   }
   assert.deepEqual(assertCinemaCameraOptics(source), source);
+});
+
+test("the preview takes the width it has, in a 16:9 frame within 180 to 360 pixels tall", () => {
+  assert.deepEqual(cinemaPreviewSize(1280), { width: 1280, height: 360 });
+  assert.deepEqual(cinemaPreviewSize(640), { width: 640, height: 360 });
+  assert.deepEqual(cinemaPreviewSize(480), { width: 480, height: 270 });
+  // A phone: never wider than the room it has, so the page never scrolls sideways.
+  assert.deepEqual(cinemaPreviewSize(342.6), { width: 342, height: 192 });
+  assert.deepEqual(cinemaPreviewSize(200), { width: 200, height: 180 });
+  for (const bad of [0, -5, Number.NaN, Infinity])
+    assert.deepEqual(cinemaPreviewSize(bad), { width: 640, height: 360 });
 });

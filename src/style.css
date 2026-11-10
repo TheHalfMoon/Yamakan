@@ -866,3 +866,24 @@ footer {
   color: var(--ink);
   font-size: 0.9rem;
 }
+
+/* Cinema: saving the scene to the project. */
+.cinema-project {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.cinema-project output,
+.cinema-project p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+}

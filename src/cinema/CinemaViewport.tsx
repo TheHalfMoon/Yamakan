@@ -5,6 +5,7 @@ import { CINEMA_ENABLED, cinemaCapability } from "../../core/scene3d-flags.ts";
 import {
   CINEMA_LENS_PRESETS_MM,
   assertCinemaCameraOptics,
+  cinemaPreviewSize,
   cinemaVerticalFovDegrees,
   type CinemaCameraOptics,
 } from "./cinemaCameraOptics.ts";
@@ -392,15 +393,14 @@ export function CinemaViewport({
     if (!host) return;
 
     let cancelled = false;
-    const width = Math.max(320, host.clientWidth || 640);
-    // Fixed once here. The field of view depends on this shape: a resize handler must
-    // set camera.aspect and call applyLocalCamera again.
-    const height = 360;
+    const { width, height } = cinemaPreviewSize(host.clientWidth);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     host.appendChild(renderer.domElement);
     renderer.domElement.setAttribute("data-testid", "cinema-canvas");
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.maxWidth = "100%";
 
     const threeScene = new THREE.Scene();
     threeScene.background = new THREE.Color(0x1a1d21);
@@ -500,11 +500,30 @@ export function CinemaViewport({
       aiCameraAvailable: () => false,
     };
 
+    // The preview follows its container's width; the field of view follows its shape.
+    let size = { width, height };
+    const resize = () => {
+      // Hidden (another workspace open): keep the size until it is shown again.
+      if (host.clientWidth === 0) return;
+      const next = cinemaPreviewSize(host.clientWidth);
+      if (next.width === size.width && next.height === size.height) return;
+      size = next;
+      renderer.setSize(next.width, next.height);
+      camera.aspect = next.width / next.height;
+      applyLocalCamera(sceneRef.current.camera);
+    };
+    const observer =
+      typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+    observer?.observe(host);
+    window.addEventListener("resize", resize);
+
     setStatus("mounted");
     setError(null);
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
+      window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf);
       delete window.__yamakanCinema;
       cameraRef.current = null;
@@ -677,7 +696,7 @@ export function CinemaViewport({
       <div
         ref={hostRef}
         data-testid="cinema-surface"
-        style={{ width: "100%", minHeight: 360 }}
+        style={{ width: "100%", minHeight: 180 }}
       />
       <div
         className="cinema-lens-panel"

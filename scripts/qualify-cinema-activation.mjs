@@ -344,8 +344,83 @@ try {
     "scene survives reload via workspace cinema store",
   );
 
+  // #203: the preview fits the width it has and its field of view follows its shape, at a
+  // desktop and a phone width. Screenshots go only where YAMAKAN_QUALIFY_SHOTS points
+  // (outside the repository), never into the evidence.
+  const shots = process.env.YAMAKAN_QUALIFY_SHOTS;
+  const layout = async (width, height) => {
+    await page.setViewportSize({ width, height });
+    await page.waitForFunction(
+      () => {
+        const canvas = document.querySelector('[data-testid="cinema-canvas"]');
+        const host = document.querySelector('[data-testid="cinema-surface"]');
+        return canvas && host && canvas.clientWidth === host.clientWidth;
+      },
+      null,
+      { timeout: 15000 },
+    );
+    const measured = await page.evaluate(() => {
+      const canvas = document.querySelector('[data-testid="cinema-canvas"]');
+      const camera = window.__yamakanCinema.getScene().camera;
+      const aspect = canvas.clientWidth / canvas.clientHeight;
+      const expectedFov = Math.round(
+        (2 *
+          Math.atan(
+            camera.sensorWidthMm / aspect / (2 * camera.focalLengthMm),
+          ) *
+          180) /
+          Math.PI,
+      );
+      const shown = Number(
+        /(\d+)°/.exec(
+          document.querySelector('[data-testid="cinema-lens-fov"]').textContent,
+        )?.[1],
+      );
+      const overflowing = [
+        ...document.querySelectorAll(
+          '[data-testid="cinema-viewport"] button, [data-testid="cinema-viewport"] select',
+        ),
+      ].filter(
+        (el) => el.getBoundingClientRect().right > innerWidth + 0.5,
+      ).length;
+      return {
+        canvas: { width: canvas.clientWidth, height: canvas.clientHeight },
+        scrollWidth: document.documentElement.scrollWidth,
+        expectedFov,
+        shown,
+        overflowing,
+      };
+    });
+    assert.ok(
+      measured.scrollWidth <= width,
+      `no sideways scroll at ${width}px: ${measured.scrollWidth}`,
+    );
+    assert.ok(measured.canvas.width <= width, JSON.stringify(measured));
+    assert.equal(measured.overflowing, 0, `controls fit at ${width}px`);
+    assert.equal(
+      measured.shown,
+      measured.expectedFov,
+      JSON.stringify(measured),
+    );
+    if (shots) {
+      mkdirSync(shots, { recursive: true });
+      await page
+        .getByTestId("cinema-viewport")
+        .screenshot({ path: join(shots, `cinema-${width}.png`) });
+    }
+    return measured;
+  };
+  const desktop = await layout(1440, 1050);
+  const phone = await layout(390, 844);
+  assert.notEqual(
+    desktop.canvas.width,
+    phone.canvas.width,
+    "the preview resized",
+  );
+
   assert.equal(pageErrors.length, 0, pageErrors.join("\n"));
   result.passed = true;
+  result.layout = { desktop, phone };
   result.before = before;
   result.afterPose = after;
   result.contentHash = contentHash;
