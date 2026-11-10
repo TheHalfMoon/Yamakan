@@ -3686,6 +3686,29 @@ export class ProjectStore {
       .get();
     return has ? "expires_at" : "NULL AS expires_at";
   }
+  /** The hashes of the agent tokens that still work: not revoked, not ended, well formed. */
+  activeAgentTokenHashes(now = new Date()): string[] {
+    const rows = this.#database
+      .prepare(
+        `SELECT agent_id, token_hash, scopes, revoked, ${this.#expiresColumn()} FROM agent_tokens`,
+      )
+      .all() as {
+      agent_id: string;
+      token_hash: string;
+      scopes: string;
+      revoked: number;
+      expires_at: string | null;
+    }[];
+    return rows
+      .filter(
+        (row) =>
+          row.revoked === 0 &&
+          !agentTokenExpired(row.expires_at, now) &&
+          AgentId.safeParse(row.agent_id).success &&
+          /^[a-f0-9]{64}$/.test(row.token_hash),
+      )
+      .map((row) => row.token_hash);
+  }
   /**
    * Every agent token this workspace made, newest first: who it is, what it may do, when it
    * was made and ends, and whether it still works. Never the token or its hash.

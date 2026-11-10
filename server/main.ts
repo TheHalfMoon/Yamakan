@@ -1,4 +1,11 @@
 import { createServer } from "node:http";
+import {
+  HEX64,
+  sameHex,
+  serviceId,
+  serviceProof,
+  tokenKey,
+} from "../sdk/service-proof.ts";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
@@ -324,6 +331,27 @@ const server = createServer(async (req, res) => {
         new CommandError("FORBIDDEN_ORIGIN", "Origin is not allowed."),
       );
     const url = new URL(req.url || "/", origin);
+    // A client proves nothing here and gets nothing but a proof: that this service knows the
+    // token the id names (the CLI's, or a live agent token's). See sdk/service-proof.ts.
+    if (req.method === "GET" && url.pathname === "/api/v1/hello") {
+      const id = url.searchParams.get("id") ?? "";
+      const nonce = url.searchParams.get("nonce") ?? "";
+      if (!HEX64.test(id) || !HEX64.test(nonce))
+        throw new CommandError("VALIDATION", "Invalid hello.");
+      for (const key of [
+        await tokenKey(cliToken),
+        ...store.activeAgentTokenHashes(),
+      ])
+        if (sameHex(await serviceId(key), id))
+          return json(200, {
+            apiVersion: 1,
+            proof: await serviceProof(key, nonce),
+          });
+      // As any request with a token the service does not know.
+      return fail(
+        new CommandError("UNAUTHENTICATED", "Authentication required."),
+      );
+    }
     // The page exchanges the launch secret for its session cookie. Only the
     // Yamakan page itself may do so (exact Origin), and only with the secret.
     if (req.method === "POST" && url.pathname === "/api/v1/session") {

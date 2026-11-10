@@ -6,6 +6,14 @@ import type {
 import type { ErrorCode } from "../core/command/errors.ts";
 import type { StagedDocumentReceipt } from "../core/store.ts";
 import { DOCUMENT_LIMITS } from "../core/document-ref.ts";
+import {
+  HEX64,
+  newNonce,
+  sameHex,
+  serviceId,
+  serviceProof,
+  tokenKey,
+} from "./service-proof.ts";
 
 // saveDocument derives "<id>.stage" and "<id>.commit"; both must stay within
 // the service's 128-character request ids.
@@ -51,11 +59,64 @@ export class YamakanClient {
   readonly #token: string | undefined;
   readonly #fetch: typeof fetch;
   readonly #extra: () => Record<string, string>;
+  #verified: Promise<void> | null = null;
   constructor(options: ClientOptions = {}) {
     this.#base = options.baseUrl?.replace(/\/$/, "") ?? "";
     this.#token = options.token;
     this.#extra = options.headers ?? (() => ({}));
-    this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    const raw = options.fetch ?? globalThis.fetch.bind(globalThis);
+    // With a token, nothing is sent until the service has proved it is this workspace's.
+    this.#fetch = this.#token
+      ? ((async (input: RequestInfo | URL, init?: RequestInit) => {
+          this.#verified ??= this.#verify(raw).catch((e: unknown) => {
+            // Asked again next time: the service may only now be starting.
+            this.#verified = null;
+            throw e;
+          });
+          await this.#verified;
+          return raw(input, init);
+        }) as typeof fetch)
+      : raw;
+  }
+  async #verify(raw: typeof fetch) {
+    const key = await tokenKey(this.#token!);
+    const nonce = newNonce();
+    const url = `${this.#base}/api/v1/hello?id=${await serviceId(key)}&nonce=${nonce}`;
+    const refused = () =>
+      new YamakanError(
+        "UNAVAILABLE",
+        `The service at ${this.#base || "this page"} did not prove it is this workspace's Yamakan, so the token was not sent. If Yamakan is starting, try again; if another program holds its port, close it.`,
+        true,
+        null,
+      );
+    let response: Response;
+    let value: {
+      proof?: unknown;
+      requestId?: string;
+      error?: { code?: ErrorCode; message?: string; retryable?: boolean };
+    } | null;
+    try {
+      response = await raw(url, { method: "GET" });
+      value = await response.json().catch(() => null);
+    } catch {
+      throw refused();
+    }
+    // Refused by the service in its own words (an unknown, revoked or ended token): told as
+    // any call's refusal is. The token was still not sent.
+    if (value?.error?.code)
+      throw new YamakanError(
+        value.error.code,
+        value.error.message ?? `Request failed with HTTP ${response.status}.`,
+        Boolean(value.error.retryable),
+        value.requestId ?? null,
+      );
+    const proof = value?.proof;
+    if (
+      typeof proof !== "string" ||
+      !HEX64.test(proof) ||
+      !sameHex(proof, await serviceProof(key, nonce))
+    )
+      throw refused();
   }
   #headers(extra: Record<string, string> = {}) {
     const headers = { ...this.#extra(), ...extra };
