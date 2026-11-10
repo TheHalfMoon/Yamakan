@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import {
   HEX64,
   sameHex,
@@ -732,6 +733,7 @@ const close = async (code = 0) => {
   await drained;
   await stopped;
   closeWorkers();
+  closeBlenderWorkers();
   store.close();
   lock.release();
   process.exit(code);

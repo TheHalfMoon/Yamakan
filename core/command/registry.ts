@@ -43,7 +43,17 @@ import {
   restoreFromHome,
   restoreFromHomeIdempotent,
 } from "../recovery.ts";
-import { Scene3DSchema, cinemaCapability, saveScene3D } from "../scene3d.ts";
+import {
+  Scene3DSchema,
+  cinemaCapability,
+  parseScene3D,
+  saveScene3D,
+} from "../scene3d.ts";
+import {
+  BlenderRenderSettingsSchema,
+  blenderSceneFromCinema,
+} from "../blender/scene.ts";
+import { BLENDER_PIN, blenderRuntime } from "../blender/runtime.ts";
 import {
   listCinemaScenes,
   loadCinemaScene,
@@ -1788,6 +1798,60 @@ export const commands = {
     summary: "Stop a video asset's proxy build; a ready proxy stays.",
     input: z.object({ projectId: Id, assetId: Id }).strict(),
     run: ({ store }, a) => cancelProxy(store, a.projectId, a.assetId),
+  }),
+  "yamakan.blender.capability": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Whether the pinned Blender runtime is installed for Yamakan's Blender worker, and if not, why (Windows only: the worker runs contained by yamakan-procd).",
+    input: z.object({}).strict(),
+    run: async () => {
+      const runtime = await blenderRuntime();
+      return runtime.available
+        ? { available: true, version: BLENDER_PIN.version }
+        : {
+            available: false,
+            version: BLENDER_PIN.version,
+            reason: runtime.reason,
+            message: runtime.message,
+          };
+    },
+  }),
+  "yamakan.blender.render": define({
+    scope: "render:execute",
+    mutation: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Queue a Blender render (Cycles on the CPU, in a contained worker) of the project's saved Cinema scene: its boxes, lens and an optional camera orbit, at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
+    input: z
+      .object({
+        projectId: Id,
+        settings: BlenderRenderSettingsSchema,
+        name: z.string().min(1).max(120).optional(),
+      })
+      .strict(),
+    run: async ({ store, queue }, a) => {
+      const runtime = await blenderRuntime();
+      if (!runtime.available)
+        throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+      // The project's own saved scene: the one its Cinema page opens (lowest id).
+      const ref = store
+        .listDocuments(a.projectId)
+        .filter((d) => d.kind === "cinemaScene")
+        .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))[0];
+      if (!ref)
+        throw new CommandError(
+          "VALIDATION",
+          "This project has no saved Cinema scene to render. Save one on the Cinema page first.",
+        );
+      const { bytes } = store.getDocument(a.projectId, ref.id);
+      const scene = parseScene3D(JSON.parse(bytes.toString("utf8")));
+      return queue.submitBlenderRender(
+        a.projectId,
+        blenderSceneFromCinema(scene, a.settings),
+        a.name ?? "Blender render",
+      );
+    },
   }),
   "yamakan.export.video": define({
     scope: "render:execute",
