@@ -444,7 +444,20 @@ pub fn staged_tool(exe: &str) -> Result<String, String> {
     if let (Ok(real_exe), Ok(real_root)) =
         (std::fs::canonicalize(source), std::fs::canonicalize(&root))
     {
-        if real_exe.starts_with(&real_root) && real_exe != real_root {
+        // Only a Blender runtime folder's own blender.exe: every other tool is still copied and
+        // byte-checked as before, and the service verifies the Blender tree before each run.
+        let in_runtime = real_exe
+            .strip_prefix(&real_root)
+            .ok()
+            .map(|rest| {
+                let parts: Vec<String> = rest
+                    .components()
+                    .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+                    .collect();
+                parts.len() == 2 && parts[0].starts_with("blender-") && parts[1] == "blender.exe"
+            })
+            .unwrap_or(false);
+        if in_runtime {
             return Ok(exe.to_string());
         }
     }

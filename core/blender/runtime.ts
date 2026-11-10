@@ -60,7 +60,7 @@ const sha256File = (file: string) =>
   });
 
 // The hash of a 120 MB executable is read once per size and modification time.
-const verified = new Map<string, string>();
+const verified = new Map<string, Promise<string>>();
 
 /**
  * The pinned runtime, if it is installed where the worker may run it and is the pinned build.
@@ -88,11 +88,14 @@ export async function blenderRuntime(
     };
   const stat = statSync(executable);
   const key = `${executable}|${stat.size}|${stat.mtimeMs}`;
-  let hash = verified.get(key);
-  if (hash === undefined) {
-    hash = await sha256File(executable);
-    verified.set(key, hash);
+  let pending = verified.get(key);
+  if (pending === undefined) {
+    verified.clear();
+    pending = sha256File(executable);
+    verified.set(key, pending);
+    pending.catch(() => verified.delete(key));
   }
+  const hash = await pending;
   if (hash !== BLENDER_PIN.exeSha256)
     return {
       available: false,
@@ -177,7 +180,13 @@ export async function verifyBlenderForRun(
   try {
     found = await blenderTreeDigests(install, { code: true, full });
   } catch (e) {
-    return e instanceof Error ? e.message : String(e);
+    // Node's file errors name the full path (the user's own folders): the job is told plainly,
+    // and the detail stays in the service's log.
+    console.warn("Blender install check:", e);
+    return e instanceof Error &&
+      e.message.startsWith("The Blender install holds")
+      ? e.message
+      : "The Blender install could not be checked.";
   }
   if (found.listing !== BLENDER_PIN.listingSha256)
     return "The Blender install's files are not the pinned build's.";

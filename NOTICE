@@ -60,5 +60,6 @@ download.blender.org and installs with `npm run blender:install`; its zip and
 blender.exe are pinned by SHA-256 (core/blender/runtime.ts). Blender is
 GPL-3.0-or-later as distributed (source GPL-2.0-or-later, Cycles Apache-2.0);
 its own license/ folder stays in the installed copy. Yamakan ships no Blender
-code or binaries. "Blender" is a trademark of the Blender Foundation; renders
-are credited as "Rendered with Blender", without the logo.
+code or binaries. "Blender" is a trademark of the Blender Foundation; where the
+page offers Blender renders it credits them as "Rendered with Blender", in text,
+without the logo.
