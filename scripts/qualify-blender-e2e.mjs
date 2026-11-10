@@ -24,6 +24,11 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { YamakanClient } from "../sdk/client.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { boxColours, moved } from "./lib/frame-checks.ts";
+
+// The negative control: the same scene with a camera that does not move. The run passes only if
+// the motion check refuses it, so a still render can never pass as moving.
+const STILL = process.argv.includes("--still");
 
 const root = mkdtempSync(join(tmpdir(), "yamakan-blender-e2e-"));
 const workspace = join(root, "workspace");
@@ -148,7 +153,7 @@ try {
       fps: 30,
       frames: 30,
       samples: 8,
-      orbitDegrees: 90,
+      orbitDegrees: STILL ? 0 : 90,
     },
     name: "Two boxes",
   });
@@ -281,61 +286,36 @@ try {
   const frames = raw.length / frameBytes;
   assert.equal(frames, 30, "one second at 30 fps");
   const frameAt = (n) => raw.subarray(n * frameBytes, (n + 1) * frameBytes);
-  // The share of cells that changed by more than encoder noise does (24 levels on some channel).
-  // Measured on this scene's 90° orbit: 3 to 5 % between first, middle and last; identical
-  // frames give 0 %. A still render cannot pass 1.5 %.
-  const changed = (a, b) => {
-    let n = 0;
-    for (let x = 0; x < frameBytes; x += 3)
-      if (
-        Math.max(
-          Math.abs(a[x] - b[x]),
-          Math.abs(a[x + 1] - b[x + 1]),
-          Math.abs(a[x + 2] - b[x + 2]),
-        ) > 24
-      )
-        n++;
-    return n / (frameBytes / 3);
-  };
   const first = frameAt(0);
-  const middle = frameAt(Math.floor(frames / 2));
-  const last = frameAt(frames - 1);
-  const motion = {
-    firstToMiddle: Math.round(changed(first, middle) * 1000) / 10,
-    middleToLast: Math.round(changed(middle, last) * 1000) / 10,
-    firstToLast: Math.round(changed(first, last) * 1000) / 10,
-  };
-  assert.ok(
-    motion.firstToMiddle > 1.5,
-    `the camera moved early (% of the picture): ${JSON.stringify(motion)}`,
+  const { motion, moved: didMove } = moved(
+    first,
+    frameAt(Math.floor(frames / 2)),
+    frameAt(frames - 1),
   );
-  assert.ok(
-    motion.middleToLast > 1.5,
-    `and kept moving (% of the picture): ${JSON.stringify(motion)}`,
+  if (STILL) {
+    assert.equal(
+      didMove,
+      false,
+      `a still render must not pass as moving: ${JSON.stringify(motion)}`,
+    );
+  } else
+    assert.ok(
+      didMove,
+      `the camera moved (% of the picture): ${JSON.stringify(motion)}`,
+    );
+  const { bluish, orangish } = boxColours(
+    Array.from({ length: frames }, (_, n) => frameAt(n)),
   );
-  // The boxes' own colours, in some frame: a bluish pixel (#3366cc) and an orangish one (#e07020).
-  let bluish = false;
-  let orangish = false;
-  for (let n = 0; n < frames; n++) {
-    const f = frameAt(n);
-    for (let x = 0; x < frameBytes; x += 3) {
-      const [r, g, b] = [f[x], f[x + 1], f[x + 2]];
-      if (b > r + 40 && b > g + 10) bluish = true;
-      if (r > b + 60 && r > g + 20) orangish = true;
-    }
-  }
   assert.ok(bluish, "the blue box is in the render");
   assert.ok(orangish, "the orange box is in the render");
   const colours = new Set();
   for (let x = 0; x < frameBytes; x += 3)
     colours.add(`${first[x] >> 4},${first[x + 1] >> 4},${first[x + 2] >> 4}`);
   step(
-    "a real MP4 export decodes with both boxes in their colours and the camera moving",
-    {
-      frames,
-      motion,
-      coloursInFirstFrame: colours.size,
-    },
+    STILL
+      ? "a still render's export, with both boxes in their colours, is refused as motion"
+      : "a real MP4 export decodes with both boxes in their colours and the camera moving",
+    { frames, motion, moved: didMove, coloursInFirstFrame: colours.size },
   );
 
   // Saved and reopened: the service is stopped and started again.
@@ -360,7 +340,9 @@ try {
 } finally {
   await stop().catch(() => {});
   const receipt = {
-    task: "blender-vertical-slice",
+    task: STILL
+      ? "blender-vertical-slice-still-control"
+      : "blender-vertical-slice",
     head: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),

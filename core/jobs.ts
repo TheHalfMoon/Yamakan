@@ -1231,7 +1231,7 @@ export class JobSupervisor {
     const frames = path.join(dir, "frames");
     const encoded = path.join(dir, "encoded");
     // Blender reads "#" in an output path as a frame number.
-    if (frames.includes("#"))
+    if (/[#{}]/.test(frames))
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         "The workspace folder's path holds '#', which Blender would read as a frame number; move the workspace to render with Blender.",
@@ -1332,7 +1332,7 @@ export class JobSupervisor {
     };
     const receiptFile = path.join(frames, "receipt.json");
     await plain(receiptFile, 4096);
-    const receipt = JSON.parse(await readFile(receiptFile, "utf8")) as {
+    let receipt: {
       format?: string;
       blender?: string;
       online?: boolean;
@@ -1340,6 +1340,11 @@ export class JobSupervisor {
       width?: number;
       height?: number;
     };
+    try {
+      receipt = JSON.parse(await readFile(receiptFile, "utf8"));
+    } catch {
+      throw new Error("The render's receipt does not match the scene.");
+    }
     if (
       receipt.format !== "yamakan.blender-receipt/1" ||
       receipt.blender !== BLENDER_PIN.version ||
@@ -1359,6 +1364,13 @@ export class JobSupervisor {
       expected.some((n) => !names.includes(n))
     )
       throw new Error("The render did not make exactly the frames asked for.");
+    // Each frame, before FFmpeg is given read on it: a plain file of its own, no larger than an
+    // uncompressed frame and its PNG overhead.
+    for (const name of expected)
+      await plain(
+        path.join(frames, name),
+        scene.width * scene.height * 4 + 1024 * 1024,
+      );
     const outputCap = Math.min(
       RESOURCE_POLICY.enforced.assetImportBytes,
       Math.floor(free / 2),
