@@ -721,6 +721,93 @@ footer {
   grid-column: 1 / -1;
   margin: 0;
 }
+/* Create: the local prompt library. */
+.prompt-library {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.prompt-library summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.prompt-library .note {
+  margin: 6px 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.prompt-library-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prompt-library-filters label,
+.prompt-library-fill label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prompt-library-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.prompt-library-list button {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 2px;
+  text-align: start;
+}
+.prompt-library-list button span {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.prompt-library-list button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.prompt-library-fill {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.prompt-library-language {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.prompt-library-language label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.prompt-library-language input {
+  width: auto;
+  margin: 0;
+}
+.prompt-library-preview {
+  margin: 0;
+  padding: 8px;
+  background: #111722;
+  border-radius: 6px;
+}
+.prompt-library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .create-settings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

@@ -188,6 +188,15 @@ import {
 } from "../quality/lab.ts";
 import { explainRoutes } from "../router/explain.ts";
 import {
+  PROMPT_CATEGORIES,
+  PromptFillSchema,
+  PromptSearchSchema,
+  YOUMIND_TAXONOMY_SOURCE,
+  fillPrompt,
+  promptTemplate,
+  searchPrompts,
+} from "../prompts/library.ts";
+import {
   evaluateReviewIndependenceV1,
   type ReviewLineageV1,
 } from "../agents/lineage.ts";
@@ -2396,6 +2405,40 @@ export const commands = {
       "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it.",
     input: z.object({ generationId: Id }).strict(),
     run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
+  }),
+  "yamakan.prompt.search": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Search the local prompt library (offline): Yamakan-written prompt templates in English and Arabic, with named fields, by words in either language, category or kind. Lists the categories and the credit for YouMind's category list too.",
+    input: PromptSearchSchema,
+    run: (_ctx, a) => ({
+      categories: PROMPT_CATEGORIES,
+      credit: YOUMIND_TAXONOMY_SOURCE.credit,
+      templates: searchPrompts(a),
+    }),
+  }),
+  "yamakan.prompt.fill": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Fill a prompt library template's fields in English or Arabic and return the prompt text, ready for yamakan.generation.start. An empty or missing value takes the field's default.",
+    input: PromptFillSchema,
+    run: (_ctx, a) => {
+      if (!promptTemplate(a.templateId))
+        throw new CommandError(
+          "NOT_FOUND",
+          `There is no prompt template ${a.templateId}.`,
+        );
+      try {
+        return fillPrompt(a);
+      } catch (e) {
+        throw new CommandError(
+          "VALIDATION",
+          e instanceof Error ? e.message : String(e),
+        );
+      }
+    },
   }),
   "yamakan.engines.capabilities": define({
     scope: "project:read",

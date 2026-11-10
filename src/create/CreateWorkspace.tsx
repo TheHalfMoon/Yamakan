@@ -36,6 +36,8 @@ import {
 
 import { ElementsPanel, type ElementsApi } from "./ElementsPanel.tsx";
 import { PeoplePanel, type PeopleApi } from "./PeoplePanel.tsx";
+import { PromptLibrary } from "./PromptLibrary.tsx";
+import type { Lang } from "../i18n.ts";
 
 type Translate = (
   key: MessageKey,
@@ -93,6 +95,8 @@ export function CreateWorkspace(props: {
   placedAssetIds: ReadonlySet<string>;
   busy: boolean;
   t: Translate;
+  // The page's language: the prompt library shows its titles in it.
+  lang: Lang;
   // Whether a generation could run here, from the service.
   checkEngine: () => Promise<EngineAnswer | null>;
   // What can be started from here, and how.
@@ -385,6 +389,24 @@ export function CreateWorkspace(props: {
             })}
           </small>
         </div>
+        <PromptLibrary
+          lang={props.lang}
+          t={t}
+          hasPrompt={brief.prompt.trim() !== ""}
+          use={(prompt, how) => {
+            const base = brief.prompt.trim().replace(/[.,;:\s]+$/, "");
+            const next = how === "add" && base ? `${base}. ${prompt}` : prompt;
+            if (next.length > PROMPT_LIMIT) {
+              setProblem({
+                key: "library.tooLong",
+                vars: { limit: PROMPT_LIMIT },
+              });
+              return;
+            }
+            setProblem(null);
+            update({ prompt: next });
+          }}
+        />
 
         <fieldset className="create-direction">
           <legend>{t("create.direction")}</legend>

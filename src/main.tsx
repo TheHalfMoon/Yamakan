@@ -2253,6 +2253,7 @@ function App() {
                     }
                     busy={busy}
                     t={t}
+                    lang={lang}
                     checkEngine={async () => {
                       const { operations } = await call(
                         "yamakan.engines.capabilities",

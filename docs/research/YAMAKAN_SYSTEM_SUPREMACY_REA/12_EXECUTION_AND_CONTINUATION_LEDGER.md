@@ -344,22 +344,52 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - "Rendered with Blender", then Place on timeline.
   - When Blender is missing, the service's own reason.
   - English and Arabic.
-- **Placing:** a finished render changes nothing in the editor. Place saves the editor's work, reopens the project and places the whole video as one undoable step. A save that meets a conflict stops it.
+- **Placing:** a finished render changes nothing in the editor (the qualification checks this on the service: the saved project has no clip until Place). Place saves the editor's work, reopens the project and places the whole video as one undoable step. A save that meets a conflict stops it.
 - **Following a render:**
   - status reads are retried with backoff;
   - following stops when the service refuses the read;
   - the panel follows its render again after another project is opened and this one reopened.
 - **Evidence:**
-  - `npm run qualify:cinema-blender` runs a real browser, the real service and the pinned Blender, and refuses a dirty tree. It passed at `38e9b12` with these steps:
+  - `npm run qualify:cinema-blender` runs a real browser, the real service and the pinned Blender, and records a failure on a dirty tree unless `YAMAKAN_QUALIFY_ALLOW_DIRTY=1` is set. It passed at `38e9b12` with these steps:
     - Render was disabled until the scene was saved.
-    - A cancel at 6% left no asset.
+    - A cancel after the first progress (6% in that run) left no asset.
     - The service's "already running" refusal was shown.
     - The render was followed through a project switch.
     - A full 34 s render.
-    - One clip placed on the page, read back through the SDK as a 320×180 video of 30 frames with a 30-frame clip.
-    - The Arabic panel laid out right to left.
+    - One clip placed on the page, read back through the SDK as a 320×180 video with a clip as long as the video (30 frames in that run; the script does not assert the 30).
+    - The page switched to Arabic: the document is right to left and the panel's title is in Arabic (layout itself was checked only by screenshot).
     - A service without Blender showed its reason.
   - The full suite at `38e9b12` passed: 1,335 tests, 1,332 passed, 0 failed, 3 POSIX-only skips.
 - **Review:** the independent review (1 High, 3 Medium, Lows; none security) and its re-check were addressed before merging.
 - **Still a known limit:** a render running when the page is reloaded is not followed again. Its video still joins the project, and Render is refused until it ends or is cancelled.
 - **Next:** YouMind Phase B (local, rights-cleared prompt library), the Creative Director on Cinema scenes and the Blender worker, then compositing, tracking, animation and 3D asset import.
+- **Ledger review:** PR #260, which added this entry, was merged on CI alone; an independent review after merging found no High or Medium issue and four overstatements, corrected above.
+
+**YouMind Phase B, local prompt library, 2026-11-11:**
+- **What it is:** `core/prompts/library.ts`, a library of 21 prompt templates (18 video, 3 still image) with named fields, each in English and Arabic.
+  - Every template is written for Yamakan.
+  - No YouMind or community prompt text, image or video is included, per the founder's decision of 2026-11-11.
+  - From YouMind only the category list is taken:
+    - the eleven slugs and English titles from `ai-image-prompts-skill` `references/manifest.json`;
+    - pinned to commit `7a1233b5` and the file's SHA-256;
+    - MIT, credited in `NOTICE` and the page, with the licence in `notices/YouMind-ai-image-prompts-skill-LICENSE`, which the provenance check now requires.
+  - Yamakan adds five categories for moving pictures. The Arabic category titles are Yamakan's.
+- **Search:**
+  - offline;
+  - every query word must match, in either language;
+  - title, then tags or category, then the rest;
+  - Arabic vowel marks, tatweel, letter variants (alef forms, alef maqsura, ta marbuta, hamza seats), the article and Arabic-Indic digits are forgiven.
+- **Fill:**
+  - values lose braces, line breaks and control characters;
+  - empty values take the field's default in that language;
+  - unknown fields and templates are refused;
+  - the result stays within 2,000 characters.
+- **Service:** `yamakan.prompt.search` and `yamakan.prompt.fill`, read-only and `project:read`, reach the CLI, SDK and MCP.
+- **Create page:** a Prompt library panel to search, filter by category and kind, fill fields, and write the prompt in English (the default; most models read it best) or Arabic. It uses, replaces or adds to the brief's prompt, and refuses an addition past 2,000 characters.
+- **Evidence:**
+  - `npm run qualify:prompt-library` runs the real service, the SDK and a real browser, and refuses a dirty tree unless allowed. Its PR names the commit it passed at.
+  - Arabic interface text, including the templates' Arabic, still needs the human Arabic review (X-01).
+- **Not yet:**
+  - presets saved in the project: a document kind of their own, because a project holds at most 32 documents;
+  - the Creative Director using the library;
+  - a generation started from a library prompt. No engine runs here: the Kaggle GPU quota is spent until it resets.

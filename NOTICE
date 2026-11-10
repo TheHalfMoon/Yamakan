@@ -63,3 +63,13 @@ its own license/ folder stays in the installed copy. Yamakan ships no Blender
 code or binaries. "Blender" is a trademark of the Blender Foundation; where the
 page offers Blender renders it credits them as "Rendered with Blender", in text,
 without the logo.
+
+YouMind OpenLab (category list only): the prompt library's eleven YouMind
+categories (slugs and English titles) come from YouMind OpenLab's
+ai-image-prompts-skill, references/manifest.json at commit
+7a1233b5a012aea57cd906ba4616fc2eb1f2bb6c (file SHA-256
+51c82f84d19d3c912d9cd51355269fe161abb0178e12620e683e25f7b532e665),
+Copyright (c) 2026 YouMind-OpenLab, MIT License; see
+notices/YouMind-ai-image-prompts-skill-LICENSE. No YouMind prompt text, image
+or video is included; every prompt template is written for Yamakan
+(core/prompts/library.ts), and the Arabic category titles are Yamakan's.
