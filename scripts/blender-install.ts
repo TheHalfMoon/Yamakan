@@ -21,6 +21,7 @@ import path from "node:path";
 import {
   BLENDER_PIN,
   blenderRuntime,
+  blenderTreeDigests,
   workerToolsRoot,
 } from "../core/blender/runtime.ts";
 import { mediaTools, workers } from "../core/process/workers.ts";
@@ -55,11 +56,17 @@ const root = workerToolsRoot();
 if (!root) throw new Error("LOCALAPPDATA is not set.");
 // The tools folder's grant reaches only files made after it is set: let procd set it first,
 // by running one contained worker, before anything is extracted.
-await workers().run({
+const grant = await workers().run({
   executable: mediaTools().ffprobe,
   args: ["-version"],
   cwd: root,
 });
+if (grant.code !== 0) {
+  console.error(
+    "The worker tools folder could not be prepared; nothing was installed.",
+  );
+  process.exit(1);
+}
 mkdirSync(root, { recursive: true });
 const target = path.join(root, BLENDER_PIN.folder);
 const staging = path.join(root, `${BLENDER_PIN.folder}.partial-${process.pid}`);
@@ -75,7 +82,24 @@ try {
   const inner = path.join(staging, BLENDER_PIN.zip.replace(/\.zip$/, ""));
   if (!existsSync(path.join(inner, "blender.exe")))
     throw new Error("The zip did not hold the expected folder.");
-  rmSync(target, { recursive: true, force: true });
+  // Every byte of the new copy is the pinned build's before it takes the old one's place.
+  const found = await blenderTreeDigests(inner);
+  if (
+    found.listing !== BLENDER_PIN.listingSha256 ||
+    found.code !== BLENDER_PIN.codeSha256 ||
+    found.tree !== BLENDER_PIN.treeSha256
+  )
+    throw new Error("The extracted files are not the pinned build's.");
+  // An old copy is set aside, not deleted where a render may be using it.
+  if (existsSync(target)) {
+    const aside = `${target}.old-${Date.now()}`;
+    renameSync(target, aside);
+    try {
+      rmSync(aside, { recursive: true, force: true });
+    } catch {
+      console.warn(`An old copy is in use and was left at ${aside}.`);
+    }
+  }
   renameSync(inner, target);
 } finally {
   rmSync(staging, { recursive: true, force: true });

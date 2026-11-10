@@ -55,6 +55,17 @@ const validInput: Record<string, unknown> = {
   "yamakan.director.importLegacy": {},
   "yamakan.agent.create": { scopes: ["project:read"] },
   "yamakan.agent.revoke": { agentId: `agent:${randomUUID()}` },
+  "yamakan.blender.render": {
+    projectId: id,
+    settings: {
+      width: 160,
+      height: 90,
+      fps: 24,
+      frames: 1,
+      samples: 1,
+      orbitDegrees: 0,
+    },
+  },
 };
 
 const definitions = Object.entries(commands) as Array<

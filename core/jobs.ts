@@ -12,6 +12,7 @@ import {
   type GenerationRecord,
 } from "./engines/generation.ts";
 import {
+  lstat,
   mkdir,
   open,
   readdir,
@@ -40,7 +41,12 @@ import {
 import { mediaTools, workers } from "./process/workers.ts";
 import { ENGINE_WORKER_PROFILE } from "./process/owner.ts";
 import { BlenderSceneSchema } from "./blender/scene.ts";
-import { BLENDER_SCRIPT, blenderRuntime } from "./blender/runtime.ts";
+import {
+  BLENDER_PIN,
+  BLENDER_SCRIPT,
+  blenderRuntime,
+  verifyBlenderForRun,
+} from "./blender/runtime.ts";
 import { blenderWorkers } from "./blender/worker.ts";
 import { createReadStream } from "node:fs";
 import { keepMainStream, renderRevision } from "./render.ts";
@@ -1210,6 +1216,10 @@ export class JobSupervisor {
     const runtime = await blenderRuntime();
     if (!runtime.available)
       throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+    // The whole install, not only blender.exe: its listing and the code Windows runs, every
+    // time; every byte once a day (core/blender/runtime.ts).
+    const broken = await verifyBlenderForRun(runtime.install);
+    if (broken) throw new CommandError("CAPABILITY_UNAVAILABLE", broken);
     const dir = await this.store.file(
       row.project_id,
       "exports",
@@ -1220,6 +1230,12 @@ export class JobSupervisor {
     // the published copy stay in the attempt folder, which neither worker can write.
     const frames = path.join(dir, "frames");
     const encoded = path.join(dir, "encoded");
+    // Blender reads "#" in an output path as a frame number.
+    if (frames.includes("#"))
+      throw new CommandError(
+        "CAPABILITY_UNAVAILABLE",
+        "The workspace folder's path holds '#', which Blender would read as a frame number; move the workspace to render with Blender.",
+      );
     await mkdir(frames, { recursive: true });
     await mkdir(encoded, { recursive: true });
     const sceneFile = path.join(dir, "scene.json");
@@ -1238,65 +1254,96 @@ export class JobSupervisor {
       );
     if (signal.aborted) throw new Error("Cancelled.");
     let said = "";
-    const result = await blenderWorkers(runtime.executable).run({
-      profile: ENGINE_WORKER_PROFILE,
-      executable: runtime.executable,
-      args: [
-        "-b",
-        "--factory-startup",
-        // Never run Python a .blend file carries, whatever the preferences say.
-        "-Y",
-        "--offline-mode",
-        "-noaudio",
-        "-t",
-        String(RESOURCE_POLICY.enforced.renderThreads),
-        "--python",
-        BLENDER_SCRIPT,
-        "--",
-        sceneFile,
-        frames,
-      ],
-      cwd: frames,
-      writable: [frames],
-      readable: [runtime.install, BLENDER_SCRIPT, sceneFile],
-      memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
-      signal,
-      stderrLimit: 8000,
-      onCreated: (pid) => this.#markRunning(jobId, attempt, pid),
-      onStdout: (chunk) => {
-        said += chunk.toString("utf8");
-        const lines = said.split("\n");
-        said = lines.pop() || "";
-        if (said.length > PROGRESS_LINE_LIMIT) said = "";
-        for (const line of lines) {
-          // "Fra:12 …" while frame 12 renders; the encode takes the last tenth.
-          const match = /^Fra:(\d+)/.exec(line);
-          if (match)
-            this.#progress.set(
-              jobId,
-              Math.min(0.9, (0.9 * (Number(match[1]) - 1)) / scene.frames),
+    let refusal = "";
+    // Blender's own "Fra:" lines are buffered on a pipe and arrive only at the end; the frames
+    // it has written are counted instead, once a second, while it runs. The encode takes the
+    // last tenth.
+    const counting = setInterval(() => {
+      readdir(frames)
+        .then((names) => {
+          const made = names.filter((n) => /^frame_\d{4}\.png$/.test(n)).length;
+          this.#progress.set(jobId, Math.min(0.9, (0.9 * made) / scene.frames));
+        })
+        .catch(() => {});
+    }, 1000);
+    const result = await blenderWorkers(runtime.executable)
+      .run({
+        profile: ENGINE_WORKER_PROFILE,
+        executable: runtime.executable,
+        args: [
+          "-b",
+          "--factory-startup",
+          // Never run Python a .blend file carries, whatever the preferences say.
+          "-Y",
+          "--offline-mode",
+          "-noaudio",
+          "-t",
+          String(RESOURCE_POLICY.enforced.renderThreads),
+          // A script that cannot load or that raises ends Blender with a failure, not success.
+          "--python-exit-code",
+          "1",
+          "--python",
+          BLENDER_SCRIPT,
+          "--",
+          sceneFile,
+          frames,
+        ],
+        cwd: frames,
+        writable: [frames],
+        readable: [runtime.install, BLENDER_SCRIPT, sceneFile],
+        memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
+        signal,
+        stderrLimit: 8000,
+        onCreated: (pid) => this.#markRunning(jobId, attempt, pid),
+        onStdout: (chunk) => {
+          said += chunk.toString("utf8");
+          const lines = said.split("\n");
+          said = lines.pop() || "";
+          if (said.length > PROGRESS_LINE_LIMIT) said = "";
+          for (const line of lines) {
+            // The script's own word for a scene it refuses, kept for the error.
+            const refused = /^YAMAKAN_RENDER_ERROR ([\w .,'-]{1,120})/.exec(
+              line,
             );
-          const refused = /^YAMAKAN_RENDER_ERROR (.{1,200})/.exec(line);
-          if (refused) said = `refused: ${refused[1]}`;
-        }
-      },
-    });
+            if (refused) refusal = refused[1];
+          }
+        },
+      })
+      .finally(() => clearInterval(counting));
     if (signal.aborted) throw new Error("Cancelled.");
     if (result.wallExceeded)
       throw new Error("The render passed its time limit and was ended.");
     if (result.code !== 0)
       throw new Error(
-        `Blender could not render the scene (exit ${result.code}).`,
+        `Blender could not render the scene${refusal ? `: ${refusal}` : ""} (exit ${result.code}).`,
         {
           cause: result.stderr,
         },
       );
     // What it made is checked before anything uses it: its receipt, and exactly the frames asked.
-    const receipt = JSON.parse(
-      await readFile(path.join(frames, "receipt.json"), "utf8"),
-    ) as { format?: string; frames?: number; width?: number; height?: number };
+    // Files a worker made are read only if they are plain files of their own (no link, no second
+    // name) and of a sensible size.
+    const plain = async (file: string, most: number) => {
+      const stat = await lstat(file);
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size > most)
+        throw new Error(
+          "The render left a file that is not what it should be.",
+        );
+    };
+    const receiptFile = path.join(frames, "receipt.json");
+    await plain(receiptFile, 4096);
+    const receipt = JSON.parse(await readFile(receiptFile, "utf8")) as {
+      format?: string;
+      blender?: string;
+      online?: boolean;
+      frames?: number;
+      width?: number;
+      height?: number;
+    };
     if (
       receipt.format !== "yamakan.blender-receipt/1" ||
+      receipt.blender !== BLENDER_PIN.version ||
+      receipt.online !== false ||
       receipt.frames !== scene.frames ||
       receipt.width !== scene.width ||
       receipt.height !== scene.height
@@ -1363,6 +1410,10 @@ export class JobSupervisor {
           cause: encode.stderr,
         },
       );
+    await plain(
+      path.join(encoded, "render.mp4"),
+      RESOURCE_POLICY.enforced.assetImportBytes,
+    );
     const file = path.join(dir, "render.mp4");
     await rename(path.join(encoded, "render.mp4"), file);
     const probed = await probe(file);
