@@ -239,3 +239,35 @@ test("the service offers the library to the CLI, SDK and MCP, read-only", async 
     (e: unknown) => e instanceof CommandError && e.code === "SCOPE_DENIED",
   );
 });
+
+test("search ignores one-letter words, matches from a word's start, and sees past Arabic prefixes", () => {
+  const ids = (query: string) => searchPrompts({ query }).map((t) => t.id);
+  // One letter is no filter at all; "art" is not found inside "starts".
+  assert.equal(ids("a").length, PROMPT_TEMPLATES.length);
+  assert.deepEqual(ids("art"), []);
+  // Prefixes: with the article after "bi", and "wa" alone.
+  assert.equal(ids("بالمطر")[0], "yamakan.rain-night-street");
+  assert.equal(ids("وأمواج")[0], "yamakan.ocean-waves-slow");
+  assert.equal(ids("للمنتج").length > 0, true);
+});
+
+test("a value loses invisible direction and joining marks, and a field given twice is refused", () => {
+  const { prompt } = fillPrompt({
+    templateId: "yamakan.orbit-hero",
+    language: "en",
+    values: [{ field: "subject", value: "a\u200dcat\u2066 by\u200f the door" }],
+  });
+  assert.match(prompt, /around acat by the door, who/);
+  assert.throws(
+    () =>
+      fillPrompt({
+        templateId: "yamakan.orbit-hero",
+        language: "en",
+        values: [
+          { field: "subject", value: "a" },
+          { field: "subject", value: "b" },
+        ],
+      }),
+    /given twice/,
+  );
+});

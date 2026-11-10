@@ -182,7 +182,7 @@ const en = {
   "library.add": "Add to the prompt",
   "library.credit": "Every template is Yamakan's own.",
   "library.tooLong":
-    "Together they are longer than {limit} characters. Shorten the prompt first.",
+    "The prompt with this added is longer than {limit} characters. Shorten the prompt first.",
   "create.direction": "Direction",
   "create.direction.shot": "Shot",
   "create.direction.movement": "Movement",
@@ -854,7 +854,8 @@ const ar: Record<MessageKey, string> = {
   "library.replace": "استبدل الوصف",
   "library.add": "أضف إلى الوصف",
   "library.credit": "كل القوالب من كتابة Yamakan.",
-  "library.tooLong": "معاً يتجاوزان {limit} حرفاً. اختصر الوصف أولاً.",
+  "library.tooLong":
+    "الوصف مع الإضافة يتجاوز {limit} حرفاً. اختصر الوصف أولاً.",
   "create.direction": "الإخراج",
   "create.direction.shot": "اللقطة",
   "create.direction.movement": "الحركة",

@@ -68,6 +68,7 @@ export function PromptLibrary({
     }
   }, [template, language, values]);
   const choose = (templateId: string) => {
+    if (templateId === chosen) return;
     setChosen(templateId);
     setValues({});
   };
@@ -172,7 +173,11 @@ export function PromptLibrary({
                   value={l}
                   checked={language === l}
                   data-testid={`prompt-library-language-${l}`}
-                  onChange={() => setLanguage(l)}
+                  onChange={() => {
+                    // Values typed for one language are not carried into the other.
+                    setLanguage(l);
+                    setValues({});
+                  }}
                 />
                 {t(l === "en" ? "library.language.en" : "library.language.ar")}
               </label>

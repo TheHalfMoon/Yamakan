@@ -376,7 +376,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - Yamakan adds five categories for moving pictures. The Arabic category titles are Yamakan's.
 - **Search:**
   - offline;
-  - every query word must match, in either language;
+  - every query word of two letters or more must match the start of a word, in either language;
+  - Arabic prefixes are seen past: the article, alone or after و ف ب ك, and و ف ب ك ل alone;
   - title, then tags or category, then the rest;
   - Arabic vowel marks, tatweel, letter variants (alef forms, alef maqsura, ta marbuta, hamza seats), the article and Arabic-Indic digits are forgiven.
 - **Fill:**

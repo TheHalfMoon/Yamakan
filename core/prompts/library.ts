@@ -167,7 +167,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Wide establishing shot of {place} at dawn, first light on the rooftops, thin mist in the streets, calm and still, slow push in.",
-      ar: "لقطة تأسيسية واسعة لـ{place} عند الفجر، أول الضوء على الأسطح، ضباب خفيف في الشوارع، هدوء وسكون، اقتراب بطيء.",
+      ar: "لقطة تأسيسية واسعة تُظهر {place} عند الفجر، أول الضوء على الأسطح، ضباب خفيف في الشوارع، هدوء وسكون، اقتراب بطيء.",
     },
     fields: [PLACE("an old harbour city", "مدينة ميناء قديمة")],
     tags: ["city", "dawn", "wide", "opening", "مدينة", "فجر"],
@@ -183,7 +183,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Aerial view of {subject} driving along a straight desert road, long shadows at golden hour, dunes on both sides, the camera follows from high above.",
-      ar: "منظر جوي لـ{subject} تسير على طريق صحراوي مستقيم، ظلال طويلة في الساعة الذهبية، كثبان على الجانبين، والكاميرا تتبعها من علو.",
+      ar: "منظر جوي يتبع {subject} على طريق صحراوي مستقيم، ظلال طويلة في الساعة الذهبية، كثبان على الجانبين، والكاميرا تتابع من علو.",
     },
     fields: [SUBJECT("a white jeep", "سيارة جيب بيضاء")],
     tags: ["desert", "aerial", "drone", "road", "صحراء", "جوي"],
@@ -215,7 +215,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "The camera orbits slowly around {subject}, who stays centred and still, background turning behind, cinematic lighting, shallow depth of field.",
-      ar: "تدور الكاميرا ببطء حول {subject} الذي يبقى في المنتصف ثابتاً، والخلفية تدور وراءه، إضاءة سينمائية، عمق ميدان ضحل.",
+      ar: "تدور الكاميرا ببطء حول {subject} الذي يبقى في المنتصف ثابتاً، والخلفية تدور وراءه، إضاءة سينمائية، عمق مجال ضحل.",
     },
     fields: [SUBJECT("a statue in a courtyard", "تمثال في فناء")],
     tags: ["orbit", "circle", "hero", "دوران"],
@@ -231,7 +231,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Slow push in from a medium shot to an extreme close-up of {subject}, the background falls out of focus, still and quiet.",
-      ar: "اقتراب بطيء من لقطة متوسطة إلى لقطة قريبة جداً لـ{subject}، وتغيب الخلفية عن التركيز، في سكون وهدوء.",
+      ar: "اقتراب بطيء من لقطة متوسطة إلى لقطة قريبة جداً تُظهر {subject}، وتغيب الخلفية عن التركيز، في سكون وهدوء.",
     },
     fields: [
       SUBJECT("an old pocket watch on a table", "ساعة جيب قديمة على طاولة"),
@@ -249,7 +249,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Side tracking shot of {subject} walking through {place}, the camera keeps pace at shoulder height, people and stalls pass between, natural light.",
-      ar: "لقطة تتبّع جانبية لـ{subject} يمشي عبر {place}، والكاميرا تواكبه على مستوى الكتف، والناس والأكشاك يمرّون بينهما، ضوء طبيعي.",
+      ar: "لقطة تتبّع جانبية لمشي {subject} عبر {place}، والكاميرا تواكب المشي على مستوى الكتف، والناس والأكشاك يمرّون بينهما، ضوء طبيعي.",
     },
     fields: [
       SUBJECT("a young woman in a red coat", "شابة في معطف أحمر"),
@@ -268,7 +268,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Starts on a close-up of {subject}, then the camera pulls back and rises to reveal {place} around it, slow and steady.",
-      ar: "تبدأ بلقطة قريبة لـ{subject}، ثم تبتعد الكاميرا وترتفع لتكشف {place} من حوله، ببطء وثبات.",
+      ar: "تبدأ بلقطة قريبة تُظهر {subject}، ثم تبتعد الكاميرا وترتفع لتكشف {place} من حول الموضوع، ببطء وثبات.",
     },
     fields: [
       SUBJECT("a single lit window", "نافذة واحدة مضاءة"),
@@ -280,7 +280,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     id: "yamakan.handheld-chase",
     kind: "video",
     category: "camera-move",
-    title: { en: "Handheld urgency", ar: "كاميرا محمولة ملحّة" },
+    title: { en: "Handheld urgency", ar: "كاميرا محمولة متوترة" },
     description: {
       en: "A shaky, close camera for tension and speed.",
       ar: "كاميرا قريبة مهتزة للتوتر والسرعة.",
@@ -303,7 +303,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Close-up of {subject}, {feeling}, eyes looking just past the camera, soft side light, shallow depth of field, almost still.",
-      ar: "لقطة قريبة لـ{subject}، {feeling}، والعينان تنظران بجانب الكاميرا، إضاءة جانبية ناعمة، عمق ميدان ضحل، شبه ساكنة.",
+      ar: "لقطة قريبة تُظهر {subject}، {feeling}، والعينان تنظران بجانب الكاميرا، إضاءة جانبية ناعمة، عمق مجال ضحل، شبه ساكنة.",
     },
     fields: [
       SUBJECT("an old fisherman", "صياد عجوز"),
@@ -335,20 +335,20 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     id: "yamakan.silhouette-sunset",
     kind: "video",
     category: "character-moment",
-    title: { en: "Silhouette at sunset", ar: "ظل عند الغروب" },
+    title: { en: "Silhouette at sunset", ar: "صورة ظلية عند الغروب" },
     description: {
       en: "A figure as a dark shape against a bright sky.",
       ar: "شخص يظهر كهيئة داكنة أمام سماء ساطعة.",
     },
     text: {
       en: "Silhouette of {subject} against a sunset sky over {place}, the sun low behind, warm orange and purple, slow and calm.",
-      ar: "ظل {subject} أمام سماء الغروب فوق {place}، والشمس منخفضة خلفه، برتقالي وبنفسجي دافئان، ببطء وهدوء.",
+      ar: "صورة ظلية تُظهر {subject} أمام سماء الغروب فوق {place}، والشمس منخفضة في الخلف، برتقالي وبنفسجي دافئان، ببطء وهدوء.",
     },
     fields: [
       SUBJECT("a rider on a horse", "فارس على حصان"),
       PLACE("the dunes", "الكثبان"),
     ],
-    tags: ["silhouette", "sunset", "backlight", "غروب", "ظل"],
+    tags: ["silhouette", "sunset", "backlight", "غروب", "صورة ظلية"],
   },
   {
     id: "yamakan.rain-night-street",
@@ -377,7 +377,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Time-lapse of clouds racing over {place}, light changing from day to dusk, shadows sweeping the ground, locked-off camera.",
-      ar: "تسريع زمني لسحب تتسابق فوق {place}، والضوء يتغير من النهار إلى الغسق، والظلال تكنس الأرض، كاميرا ثابتة.",
+      ar: "تسريع زمني لسحب تتسابق فوق {place}، والضوء يتغير من النهار إلى الغسق، والظلال تجتاح الأرض، كاميرا ثابتة.",
     },
     fields: [PLACE("a mountain valley", "وادٍ جبلي")],
     tags: ["time-lapse", "clouds", "sky", "تسريع", "سحب"],
@@ -489,7 +489,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Storyboard frame, pencil sketch, {shot} of {subject} in {place}, simple shading, arrows showing camera movement, 16:9 frame.",
-      ar: "إطار لوحة قصة، رسم بالقلم الرصاص، {shot} لـ{subject} في {place}، تظليل بسيط، أسهم تبيّن حركة الكاميرا، إطار ١٦:٩.",
+      ar: "إطار لوحة قصة، رسم بالقلم الرصاص، {shot} تُظهر {subject} في {place}، تظليل بسيط، أسهم تبيّن حركة الكاميرا، إطار ١٦:٩.",
     },
     fields: [
       field(
@@ -513,7 +513,7 @@ export const PROMPT_TEMPLATES: readonly PromptTemplate[] = Object.freeze([
     },
     text: {
       en: "Portrait of {subject} with an expressive face on the right third, bright saturated {colour} background, strong rim light, empty space on the left, no text.",
-      ar: "صورة شخصية لـ{subject} بوجه معبّر في الثلث الأيمن، خلفية {colour} ساطعة مشبعة، إضاءة حافّة قوية، مساحة فارغة في اليسار، بلا نص.",
+      ar: "صورة شخصية تُظهر {subject} بوجه معبّر في الثلث الأيمن، خلفية {colour} ساطعة مشبعة، إضاءة حافّة قوية، مساحة فارغة في اليسار، بلا نص.",
     },
     fields: [
       SUBJECT("a chef", "طاهٍ"),
@@ -576,6 +576,7 @@ export const promptTemplate = (id: string) => templateById.get(id) ?? null;
 // characters, spaces collapsed.
 const cleanValue = (value: string) =>
   value
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g, "")
     .replace(/[{}\p{Cc}\p{Cf}]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -591,6 +592,10 @@ export function fillPrompt(input: z.input<typeof PromptFillSchema>) {
   if (!template) throw new Error(`There is no prompt template ${templateId}.`);
   const known = new Set(template.fields.map((f) => f.name));
   const unknown = values.map((v) => v.field).filter((k) => !known.has(k));
+  const twice = values
+    .map((v) => v.field)
+    .filter((k, i, all) => all.indexOf(k) !== i);
+  if (twice.length) throw new Error(`The field ${twice[0]} is given twice.`);
   const given = new Map(values.map((v) => [v.field, v.value]));
   if (unknown.length)
     throw new Error(
@@ -636,12 +641,32 @@ export function normaliseForSearch(text: string) {
     .trim();
 }
 
-// A query word, also without the Arabic article, so "المدينه" finds "مدينة".
+// A word, and the word without an Arabic prefix: the article (ال, لل), alone or after و ف ب ك,
+// or one of و ف ب ك ل alone, when three letters or more are left. So "بالمطر" finds "مطر".
+const forms = (word: string) => {
+  const article =
+    /^(?:[\u0648\u0641\u0628\u0643]?\u0627\u0644|\u0644\u0644)(.{3,})$/.exec(
+      word,
+    );
+  if (article) return [word, article[1]];
+  const letter = /^[\u0648\u0641\u0628\u0643\u0644](.{3,})$/.exec(word);
+  return letter ? [word, letter[1]] : [word];
+};
+const wordsOf = (text: string) =>
+  new Set(normaliseForSearch(text).split(" ").filter(Boolean).flatMap(forms));
+
+// The query's words of two letters or more, each with its forms.
 const queryTerms = (query: string) =>
   normaliseForSearch(query)
     .split(" ")
-    .filter(Boolean)
-    .map((w) => (w.length > 3 && w.startsWith("ال") ? w.slice(2) : w));
+    .filter((w) => w.length > 1)
+    .map(forms);
+
+// A word of the text starts with one of the term's forms.
+const has = (words: Set<string>, term: string[]) => {
+  for (const w of words) if (term.some((t) => w.startsWith(t))) return true;
+  return false;
+};
 
 export const PromptSearchSchema = z
   .object({
@@ -656,8 +681,8 @@ const indexed = PROMPT_TEMPLATES.map((t) => {
   const category = PROMPT_CATEGORIES.find((c) => c.slug === t.category);
   return {
     template: t,
-    title: normaliseForSearch(`${t.title.en} ${t.title.ar}`),
-    tags: normaliseForSearch(
+    title: wordsOf(`${t.title.en} ${t.title.ar}`),
+    tags: wordsOf(
       [
         ...t.tags,
         category?.title.en ?? "",
@@ -665,7 +690,7 @@ const indexed = PROMPT_TEMPLATES.map((t) => {
         t.category,
       ].join(" "),
     ),
-    body: normaliseForSearch(
+    body: wordsOf(
       [
         t.description.en,
         t.description.ar,
@@ -683,9 +708,10 @@ const indexed = PROMPT_TEMPLATES.map((t) => {
 });
 
 /**
- * Templates matching every word of the query, in English or Arabic, best first: a word in the
- * title counts most, then in the tags or category, then anywhere in the description, prompt or
- * fields. An empty query lists them all, in library order.
+ * Templates matching every word of the query (two letters or more), in English or Arabic, best
+ * first: a query word matches a word that starts with it. A match in the title counts most, then
+ * in the tags or category, then in the description, prompt or fields. An empty query lists them
+ * all, in library order.
  */
 export function searchPrompts(input: z.input<typeof PromptSearchSchema>) {
   const { query, category, kind, limit } = PromptSearchSchema.parse(input);
@@ -698,9 +724,9 @@ export function searchPrompts(input: z.input<typeof PromptSearchSchema>) {
     let score = 0;
     for (const term of terms) {
       const s =
-        (row.title.includes(term) ? 3 : 0) +
-        (row.tags.includes(term) ? 2 : 0) +
-        (row.body.includes(term) ? 1 : 0);
+        (has(row.title, term) ? 3 : 0) +
+        (has(row.tags, term) ? 2 : 0) +
+        (has(row.body, term) ? 1 : 0);
       if (s === 0) return;
       score += s;
     }

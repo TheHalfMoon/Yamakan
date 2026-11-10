@@ -394,7 +394,9 @@ export function CreateWorkspace(props: {
           t={t}
           hasPrompt={brief.prompt.trim() !== ""}
           use={(prompt, how) => {
-            const base = brief.prompt.trim().replace(/[.,;:\s]+$/, "");
+            const base = brief.prompt
+              .trim()
+              .replace(/[.,;:!?\u060C\u061B\u061F\s]+$/, "");
             const next = how === "add" && base ? `${base}. ${prompt}` : prompt;
             if (next.length > PROMPT_LIMIT) {
               setProblem({
