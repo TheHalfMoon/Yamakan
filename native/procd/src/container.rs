@@ -437,6 +437,17 @@ pub fn staged_tool(exe: &str) -> Result<String, String> {
     let root_str = root.to_string_lossy().to_string();
     set_access(&root_str, sid, Some((INHERIT, FILE_GENERIC_READ | FILE_GENERIC_EXECUTE)))?;
     let source = std::path::Path::new(exe);
+    // A runtime of many files (Blender: its DLL folders and data beside the exe) is installed
+    // into this folder once, where everything inherits the grant above. Its executable runs
+    // where it is: copied alone it could not find what it loads. By real path, so a link out
+    // of the folder does not count.
+    if let (Ok(real_exe), Ok(real_root)) =
+        (std::fs::canonicalize(source), std::fs::canonicalize(&root))
+    {
+        if real_exe.starts_with(&real_root) && real_exe != real_root {
+            return Ok(exe.to_string());
+        }
+    }
     let meta = std::fs::metadata(source).map_err(|e| format!("executable: {e}"))?;
     let file = source.file_name().ok_or("executable has no name")?;
     let folder = root.join(format!(
