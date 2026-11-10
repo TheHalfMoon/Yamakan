@@ -17,6 +17,18 @@ if (new URL(url).hostname !== "127.0.0.1")
 const root = path.resolve(env("WORKSPACE") || ".yamakan");
 const tokenFile = env("AGENT_TOKEN_FILE");
 const tokenFromEnv = env("AGENT_TOKEN");
+// An agent gets only what its own token allows. Running as the full local client, with the
+// workspace's own token, is a choice the person makes by name, never a fallback.
+const asLocalClient = env("MCP_LOCAL_CLIENT") === "1";
+if (!tokenFromEnv && !tokenFile && !asLocalClient) {
+  process.stderr.write(
+    "Yamakan MCP needs an agent token. Make one in Yamakan (Finish, Agent tools, Agent access), " +
+      "save it in a file only the agent can read, and set YAMAKAN_AGENT_TOKEN_FILE to that file " +
+      "(or YAMAKAN_AGENT_TOKEN to the token). To run MCP as the full local client with the " +
+      "workspace's own token instead, set YAMAKAN_MCP_LOCAL_CLIENT=1.\n",
+  );
+  process.exit(2);
+}
 async function bearerToken() {
   if (tokenFromEnv) return tokenFromEnv.trim();
   if (tokenFile)

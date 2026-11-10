@@ -57,6 +57,7 @@ test("a refused first tool list keeps the caller's own request id", async () => 
       env: {
         ...process.env,
         YAMAKAN_WORKSPACE: root,
+        YAMAKAN_MCP_LOCAL_CLIENT: "1",
         YAMAKAN_URL: `http://127.0.0.1:${port}`,
       },
       stdio: ["pipe", "pipe", "pipe"],
@@ -111,6 +112,7 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
   const env = {
     ...process.env,
     YAMAKAN_WORKSPACE: root,
+    YAMAKAN_MCP_LOCAL_CLIENT: "1",
     YAMAKAN_PORT: String(port),
     YAMAKAN_URL: `http://127.0.0.1:${port}`,
   };
@@ -292,4 +294,36 @@ test("MCP stdio exposes registry tools and runs the shared command path", async 
       await done;
     }
   }
+});
+
+test("without an agent token, MCP stops and says how to get one", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-mcp-none-"));
+  bases.push(root);
+  await writeFile(path.join(root, "token"), "a".repeat(64));
+  const env: NodeJS.ProcessEnv = { ...process.env, YAMAKAN_WORKSPACE: root };
+  for (const key of [
+    "YAMAKAN_AGENT_TOKEN",
+    "YAMAKAN_AGENT_TOKEN_FILE",
+    "DARZAIN_AGENT_TOKEN",
+    "DARZAIN_AGENT_TOKEN_FILE",
+    "YAMAKAN_MCP_LOCAL_CLIENT",
+    "DARZAIN_MCP_LOCAL_CLIENT",
+  ])
+    delete env[key];
+  const mcp = spawn(
+    process.execPath,
+    [fileURLToPath(new URL("../mcp/main.ts", import.meta.url))],
+    { env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true },
+  );
+  let stderr = "";
+  mcp.stderr!.on("data", (c) => (stderr += String(c)));
+  let stdout = "";
+  mcp.stdout!.on("data", (c) => (stdout += String(c)));
+  const [code] = (await once(mcp, "exit")) as [number];
+  assert.equal(code, 2);
+  assert.match(stderr, /needs an agent token/);
+  assert.match(stderr, /Agent access/);
+  assert.match(stderr, /YAMAKAN_MCP_LOCAL_CLIENT=1/);
+  // It never read or sent the workspace's own token.
+  assert.equal(stdout, "");
 });

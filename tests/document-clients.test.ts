@@ -93,6 +93,8 @@ test("against the real service with AG-DOCS turned off, SDK, MCP and CLI saves a
   const env = {
     ...process.env,
     YAMAKAN_WORKSPACE: root,
+    // MCP runs as the full local client here, by name.
+    YAMAKAN_MCP_LOCAL_CLIENT: "1",
     YAMAKAN_PORT: String(port),
     YAMAKAN_URL: url,
     YAMAKAN_AG_DOCS_OFF: "1",

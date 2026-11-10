@@ -32,6 +32,7 @@ Release requires exact-head independent review, real Windows fault/ACL/backup/ne
 
 Until Q15 OS user presence is wired into each human-only command, these hold:
 
-- An agent meant to be bound by its grant runs under a separate Windows account, or in an AppContainer, with no access to the workspace folder, and is given only its own agent token (`YAMAKAN_AGENT_TOKEN_FILE`), never the workspace `token`.
+- An agent meant to be bound by its grant runs under a separate Windows account, or in an AppContainer, with no access to the workspace folder, and is given only its own agent token (`YAMAKAN_AGENT_TOKEN_FILE`), never the workspace `token`. The person makes, lists and revokes these tokens in Finish → Agent tools → Agent access.
+- The MCP server refuses to start without an agent token (`YAMAKAN_AGENT_TOKEN_FILE` or `YAMAKAN_AGENT_TOKEN`). Running it as the full local client, with the workspace `token`, takes `YAMAKAN_MCP_LOCAL_CLIENT=1`: a choice made by name, never a fallback.
 - An agent run as the user, with the workspace token or file access, is trusted as the user: what it does counts as the user's own act, including consent and approvals.
 - Moving the launch secret into the service's memory would not help, because the launcher proves itself with the same file access. Zero-cost assessment (UserConsentVerifier preferred; procd stays dependency-free; no Q15 pass claimed): [`evidence/qualification/q15-user-presence-assessment.md`](evidence/qualification/q15-user-presence-assessment.md).

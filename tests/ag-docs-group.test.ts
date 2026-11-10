@@ -88,6 +88,8 @@ async function service(
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     YAMAKAN_WORKSPACE: root,
+    // MCP runs as the full local client here, by name.
+    YAMAKAN_MCP_LOCAL_CLIENT: "1",
     YAMAKAN_PORT: String(port),
     YAMAKAN_URL: url,
     ...extra,
