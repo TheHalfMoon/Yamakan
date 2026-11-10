@@ -71,6 +71,7 @@ import { asPersonPack } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
+import type { BlenderHost } from "./cinema/BlenderRender.tsx";
 import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
@@ -1012,6 +1013,54 @@ function App() {
       />
     </>
   );
+  // The Cinema page's Blender render: the service's commands, and the editor's own placing.
+  const blenderHost = (p: Project): BlenderHost => ({
+    capability: () => call("yamakan.blender.capability", {}),
+    start: (settings) =>
+      call("yamakan.blender.render", { projectId: p.id, settings }),
+    status: (jobId) => call("yamakan.job.status", { jobId }),
+    cancel: (jobId) => call("yamakan.job.cancel", { jobId }),
+    // Only when the person chooses: the editor's work is saved, the project reopened (the new
+    // video is in it) and the whole video placed, as one step under the editor's busy state.
+    // A save that met a conflict stops here, so its notice and unapplied change stay.
+    place: (assetId) =>
+      new Promise((resolve) => {
+        let why: string | null = t("status.working");
+        void run(async () => {
+          why = t("error.operation");
+          await placeRendered(p.id, assetId).then(
+            (r) => (why = r),
+            (e: unknown) => (why = e instanceof Error ? e.message : String(e)),
+          );
+        }).finally(() => resolve(why));
+      }),
+  });
+  // Saves, reopens and places, inside the editor's busy state: null when placed, or why not.
+  const placeRendered = async (
+    projectId: string,
+    assetId: string,
+  ): Promise<string | null> => {
+    if (!(await save())) return t("blender.placeUnsaved");
+    const opened = ProjectSchema.parse(
+      await call("yamakan.project.open", { projectId }),
+    );
+    let placed: Project;
+    try {
+      placed = ProjectSchema.parse(
+        withAsset(opened, assetId, undefined, undefined, true),
+      );
+    } catch (e) {
+      // A schema's message is all its issues, as JSON: the first says enough.
+      const first = (e as { issues?: { message?: string }[] }).issues?.[0];
+      return (
+        first?.message ?? (e instanceof Error ? e.message : t("error.edit"))
+      );
+    }
+    accept(opened);
+    putHistory((h) => (h ? pushHistoryState(h, placed) : h));
+    await refresh();
+    return null;
+  };
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
@@ -1023,6 +1072,7 @@ function App() {
         client={client as unknown as CinemaProjectClient}
         onSaved={documentSaved}
         registerUnsaved={registerUnsaved}
+        blender={p ? blenderHost(p) : undefined}
       />
     </>
   );

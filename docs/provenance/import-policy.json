@@ -207,6 +207,14 @@
     {
       "path": "src/cinema/cinemaObjects.ts",
       "reason": "Yamakan-authored editing of the Cinema scene's placeholder boxes (add, remove, move, turn, resize) within core scene3d bounds; new original code, not adapted or copied from a donor."
+    },
+    {
+      "path": "src/cinema/blenderRender.ts",
+      "reason": "Yamakan-authored Blender render choices for the Cinema page and how a render job is shown; new original code, not adapted or copied from a donor or from Blender."
+    },
+    {
+      "path": "src/cinema/BlenderRender.tsx",
+      "reason": "Yamakan-authored Cinema page panel that starts, follows, cancels and places a Blender render through the SDK; new original code, not adapted or copied from a donor or from Blender."
     }
   ],
   "excludedPaths": [

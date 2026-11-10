@@ -49,6 +49,7 @@
     "qualify:quality-lab": "node scripts/qualify-quality-lab.mjs",
     "qualify:agent-access": "node scripts/qualify-agent-access.mjs",
     "qualify:blender-slice": "node scripts/qualify-blender-e2e.mjs",
+    "qualify:cinema-blender": "node scripts/qualify-cinema-blender.mjs",
     "qualify:cinema-activation": "node scripts/qualify-cinema-activation.mjs",
     "qualify:director-activation": "node scripts/qualify-director-activation.mjs",
     "qualify:take-review": "node scripts/qualify-take-review.mjs",
