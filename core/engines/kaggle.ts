@@ -14,12 +14,14 @@ import {
   readdir,
   rm,
   stat,
+  statfs,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CommandError } from "../command/errors.ts";
+import { RESOURCE_POLICY } from "../command/policy.ts";
 import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
@@ -191,6 +193,8 @@ export function scriptWithBrief(
 export type KaggleCli = (
   args: string[],
   timeoutMs: number,
+  // Stops the CLI (a download growing past what a run makes).
+  signal?: AbortSignal,
 ) => Promise<{ stdout: string }>;
 
 // What the CLI needs to find itself and its own settings, and nothing else of this
@@ -243,23 +247,50 @@ export const cliWords = (...streams: string[]) =>
     .filter((line) => line && !line.startsWith("Warning: Looks like you're"))
     .join(" ");
 
+// Stops the CLI and what it started. On Windows `kaggle.exe` is a launcher that runs Python as
+// its own child, so ending the launcher alone would leave Python writing: the whole tree is
+// ended, by the system's own taskkill, named by its full path.
+function endTree(child: ReturnType<typeof execFile>) {
+  if (child.pid === undefined || child.exitCode !== null) return;
+  if (process.platform === "win32") {
+    const taskkill = path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "taskkill.exe",
+    );
+    execFile(
+      taskkill,
+      ["/pid", String(child.pid), "/T", "/F"],
+      { windowsHide: true },
+      () => {},
+    );
+  } else child.kill("SIGKILL");
+}
+
 export function kaggleCli(file: string): KaggleCli {
-  return (args, timeout) =>
+  return (args, timeout, signal) =>
     new Promise((resolve, reject) => {
-      execFile(
+      let timedOut = false;
+      // The time limit ends the whole tree, as a stop does: a limit that ended only the
+      // launcher would leave Python running, and no later stop could reach it.
+      const timer = setTimeout(() => {
+        timedOut = true;
+        endTree(child);
+      }, timeout);
+      const child = execFile(
         file,
         args,
         {
-          timeout,
           windowsHide: true,
           maxBuffer: 4 * 1024 * 1024,
           env: kaggleCliEnvironment(process.env),
         },
         (error, stdout, stderr) => {
+          clearTimeout(timer);
           if (error)
             reject(
               new Error(
-                `${error.killed ? "Timed out. " : ""}${
+                `${timedOut || error.killed ? "Timed out. " : ""}${
                   cliWords(stderr, stdout) ||
                   `The Kaggle CLI failed (${error.code ?? "stopped"}).`
                 }`,
@@ -268,6 +299,7 @@ export function kaggleCli(file: string): KaggleCli {
           else resolve({ stdout });
         },
       );
+      signal?.addEventListener("abort", () => endTree(child), { once: true });
     });
 }
 
@@ -479,7 +511,17 @@ export function createKaggleEngine(options: {
   username: string;
   // Tests only.
   scriptFor?: (recipe: KaggleRecipe) => Promise<string>;
-  download?: (recipe: KaggleRecipe, folder: string) => Promise<void>;
+  download?: (
+    recipe: KaggleRecipe,
+    folder: string,
+    signal?: AbortSignal,
+  ) => Promise<void>;
+  /** Free bytes on the disk holding the folder (tests); the disk's own by default. */
+  freeBytes?: (folder: string) => Promise<number>;
+  /** How often a download in progress is looked at, in milliseconds (tests). */
+  watchMs?: number;
+  /** How long a stopped download is given to end before its folder goes (tests). */
+  stopGraceMs?: number;
   now?: () => number;
   folderRoot?: string;
   // What a run was, from the record kept before it was sent: so that one started before
@@ -524,7 +566,7 @@ export function createKaggleEngine(options: {
   const remote = (r: KaggleRecipe) => `${username}/${r.slug}`;
   const download =
     options.download ??
-    (async (r: KaggleRecipe, folder: string) => {
+    (async (r: KaggleRecipe, folder: string, signal?: AbortSignal) => {
       await cli(
         [
           "kernels",
@@ -536,8 +578,86 @@ export function createKaggleEngine(options: {
           outputPattern(r),
         ],
         5 * 60 * 1000,
+        signal,
       );
     });
+  // While the CLI writes, what it wrote and the disk's free space are watched: a run makes one
+  // video and one receipt, so an output past both limits (with room for a log) is not one, and
+  // the disk keeps the reserve every import keeps. Both are limits that already exist.
+  const outputLimit = (options.videoBytes ?? VIDEO_BYTES) + 2 * RECEIPT_BYTES;
+  const freeBytes =
+    options.freeBytes ??
+    (async (folder: string) => {
+      const s = await statfs(folder);
+      return Number(s.bavail) * Number(s.bsize);
+    });
+  async function bounded(r: KaggleRecipe, folder: string) {
+    const stop = new AbortController();
+    let why: string | null = null;
+    let retryable = false;
+    const refusal = (message: string) =>
+      retryable ? new Error(message) : new Unreadable(message);
+    const check = async () => {
+      let used = 0;
+      for (const entry of await readdir(folder, {
+        recursive: true,
+        withFileTypes: true,
+      }))
+        if (entry.isFile())
+          used += (
+            await stat(path.join(entry.parentPath, entry.name)).catch(() => ({
+              size: 0,
+            }))
+          ).size;
+      if (used > outputLimit)
+        why =
+          "The run's output grew past what a run makes; it was stopped and removed.";
+      else if (
+        (await freeBytes(folder)) < RESOURCE_POLICY.enforced.diskReserveBytes
+      )
+        why =
+          "The disk is nearly full; the run's output was stopped and removed.";
+      if (why) {
+        // Freed space lets the same output be fetched again: that is not the run's fault.
+        retryable = !(used > outputLimit);
+        stop.abort();
+      }
+    };
+    const stopped = new Promise<never>((_, reject) =>
+      stop.signal.addEventListener("abort", () =>
+        reject(refusal(why ?? "The run's output was stopped.")),
+      ),
+    );
+    stopped.catch(() => {});
+    let checking = false;
+    const timer = setInterval(() => {
+      if (checking || why) return;
+      checking = true;
+      check()
+        .catch(() => {})
+        .finally(() => (checking = false));
+    }, options.watchMs ?? 250);
+    const fetching = download(r, folder, stop.signal);
+    try {
+      await Promise.race([fetching, stopped]);
+      // Whatever arrived between the last look and the end is looked at too.
+      await check();
+      if (why) throw refusal(why);
+    } catch (e) {
+      // Told to stop, the CLI is given a moment to end before what it wrote is removed, so
+      // nothing is still writing then; it is not waited for longer than that.
+      if (why)
+        await Promise.race([
+          fetching.catch(() => {}),
+          new Promise((done) =>
+            setTimeout(done, options.stopGraceMs ?? 10_000),
+          ),
+        ]);
+      throw e;
+    } finally {
+      clearInterval(timer);
+    }
+  }
   const remoteState = async (r: KaggleRecipe) => {
     const { stdout } = await cli(["kernels", "status", remote(r)], 90_000);
     const state = REMOTE_STATES.exec(stdout)?.[1];
@@ -572,9 +692,15 @@ export function createKaggleEngine(options: {
     const folder = path.join(run.folder, "output");
     await rm(folder, { recursive: true, force: true });
     await mkdir(folder, { recursive: true, mode: 0o700 });
-    await download(run.recipe, folder).catch(async (e) => {
-      // A part of a download can hold the prompt.
-      await rm(folder, { recursive: true, force: true });
+    await bounded(run.recipe, folder).catch(async (e) => {
+      // A part of a download can hold the prompt. Tried again briefly: on Windows a file a
+      // stopped CLI was writing can still be held for a moment.
+      await rm(folder, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      });
       throw e;
     });
     const file = path.join(folder, "receipt.json");
