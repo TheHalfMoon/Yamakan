@@ -30,3 +30,7 @@ and `ffprobe.exe` (Windows loads them from the executable directory).
 
 FFmpeg is GPL-3.0-or-later in this build (`--enable-gpl --enable-version3`).
 See `NOTICE` and `notices/ffmpeg-win64-r8-NOTICE.txt` in the repository root.
+
+## Pinned at run time
+
+Run from this folder, Yamakan checks `ffmpeg.exe` and `ffprobe.exe` against `PINNED_SHA256` in `core/process/workers.ts`, `SHA256SUMS` against `PINNED_SUMS_SHA256` there (read with LF line ends), and every file `SHA256SUMS` names against it. It refuses any DLL here that the list does not name. A new build means updating all three pins, and `scripts/bundle.ts`'s.
