@@ -351,7 +351,7 @@ try {
   // desktop and a phone width. Screenshots go only where YAMAKAN_QUALIFY_SHOTS points
   // (outside the repository), never into the evidence.
   const shots = process.env.YAMAKAN_QUALIFY_SHOTS;
-  const layout = async (width, height) => {
+  const layout = async (width, height, label = "") => {
     await page.setViewportSize({ width, height });
     await page.waitForFunction(
       () => {
@@ -423,7 +423,7 @@ try {
       mkdirSync(shots, { recursive: true });
       await page
         .getByTestId("cinema-viewport")
-        .screenshot({ path: join(shots, `cinema-${width}.png`) });
+        .screenshot({ path: join(shots, `cinema-${width}${label}.png`) });
     }
     return measured;
   };
@@ -444,7 +444,7 @@ try {
   await page.waitForFunction(() => document.dir === "rtl");
   await page.getByText("معاينة العدسة", { exact: true }).waitFor();
   await page.getByText("العناصر", { exact: true }).waitFor();
-  const arabic = await layout(390, 844);
+  const arabic = await layout(390, 844, "-ar");
   const arabicText = await page.evaluate(() => ({
     units: document.querySelector('[data-testid="cinema-units"]').textContent,
     unsupported: document.querySelector('[data-testid="cinema-unsupported"]')
@@ -455,14 +455,12 @@ try {
   assert.match(arabicText.units, /بالمتر/);
   assert.match(arabicText.unsupported, /غير متاح في السينما/);
   assert.doesNotMatch(arabicText.unsupported, /ai-conditioned/);
+  // Three items, with the Arabic separator between them.
+  assert.equal(arabicText.unsupported.split("؛").length, 3);
   // Arabic-Indic digits, as every number on the Arabic page.
   assert.match(arabicText.readout, /الموضع/);
   assert.match(arabicText.readout, /[\u0660-\u0669]/);
   assert.doesNotMatch(arabicText.readout, /[0-9]/);
-  if (shots)
-    await page
-      .getByTestId("cinema-viewport")
-      .screenshot({ path: join(shots, "cinema-390-ar.png") });
 
   assert.equal(pageErrors.length, 0, pageErrors.join("\n"));
   result.passed = true;

@@ -352,7 +352,7 @@ const en = {
   "cinema.lens.note":
     "Changes stay in this window until you choose Save scene to project. They are never used to generate AI video.",
   "cinema.units": "Measured in metres. Turns apply about X, then Y, then Z.",
-  "cinema.unsupported": "Not available in Cinema: {list}.",
+  "cinema.unsupported": "Not available in Cinema:",
   "cinema.unsupported.separator": "; ",
   "cinema.unsupported.aiCamera": "an AI-guided camera",
   "cinema.unsupported.generativeVideo": "generating video from this scene",
@@ -916,7 +916,7 @@ const ar: Record<MessageKey, string> = {
   "cinema.lens.note":
     "تبقى التغييرات في هذه النافذة حتى تختار حفظ المشهد في المشروع. ولا تُستخدم أبداً لتوليد فيديو بالذكاء الاصطناعي.",
   "cinema.units": "القياس بالمتر. يُطبَّق الدوران حول X ثم Y ثم Z.",
-  "cinema.unsupported": "غير متاح في السينما: {list}.",
+  "cinema.unsupported": "غير متاح في السينما:",
   "cinema.unsupported.separator": "؛ ",
   "cinema.unsupported.aiCamera": "كاميرا يوجّهها الذكاء الاصطناعي",
   "cinema.unsupported.generativeVideo": "توليد فيديو من هذا المشهد",
