@@ -185,18 +185,22 @@ test(
     );
     // Cancelled while Blender is rendering: once at least one frame is on disk (progress counts
     // the frames written), long before all 120 could be.
-    const started = Date.now();
     for (let t = 0; t < 120000; t += 100) {
       if (supervisor.status(job.id).progress > 0) break;
       await new Promise((r) => setTimeout(r, 100));
     }
     assert.ok(supervisor.status(job.id).progress > 0, "Blender was rendering");
     assert.ok(supervisor.status(job.id).progress < 0.5, "and far from done");
+    const cancelledAt = Date.now();
     supervisor.cancel(job.id);
     const done = await settled(supervisor, job.id);
     assert.equal(done.state, "CANCELLED");
-    // Ended promptly, not left to finish.
-    assert.ok(Date.now() - started < 90000, `${Date.now() - started} ms`);
+    // Ended promptly after the cancel, not left to finish its 120 frames (however long the
+    // first frame took on a busy machine).
+    assert.ok(
+      Date.now() - cancelledAt < 30000,
+      `${Date.now() - cancelledAt} ms after the cancel`,
+    );
     const after = await store.load(project.id);
     assert.equal(after.assets.length, 0, "nothing joined the project");
     // Its attempt folder is gone, and no Blender is left running.
