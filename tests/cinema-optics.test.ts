@@ -59,6 +59,8 @@ test("the preview takes the width it has, in a 16:9 frame within 180 to 360 pixe
   // A phone: never wider than the room it has, so the page never scrolls sideways.
   assert.deepEqual(cinemaPreviewSize(342.6), { width: 342, height: 192 });
   assert.deepEqual(cinemaPreviewSize(200), { width: 200, height: 180 });
+  // Narrower than any phone still takes only the room it has.
+  assert.deepEqual(cinemaPreviewSize(120.9), { width: 120, height: 180 });
   for (const bad of [0, -5, Number.NaN, Infinity])
     assert.deepEqual(cinemaPreviewSize(bad), { width: 640, height: 360 });
 });

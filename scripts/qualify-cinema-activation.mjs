@@ -354,7 +354,14 @@ try {
       () => {
         const canvas = document.querySelector('[data-testid="cinema-canvas"]');
         const host = document.querySelector('[data-testid="cinema-surface"]');
-        return canvas && host && canvas.clientWidth === host.clientWidth;
+        if (!canvas || !host) return false;
+        // The size the renderer set, not the CSS clamp, must match the room it has.
+        const w = Math.floor(host.getBoundingClientRect().width);
+        return (
+          parseFloat(canvas.style.width) === w &&
+          parseFloat(canvas.style.height) ===
+            Math.min(360, Math.max(180, Math.round((w * 9) / 16)))
+        );
       },
       null,
       { timeout: 15000 },
@@ -380,9 +387,11 @@ try {
         ...document.querySelectorAll(
           '[data-testid="cinema-viewport"] button, [data-testid="cinema-viewport"] select',
         ),
-      ].filter(
-        (el) => el.getBoundingClientRect().right > innerWidth + 0.5,
-      ).length;
+      ].filter((el) => {
+        const box = el.getBoundingClientRect();
+        // Either edge: a right-to-left page overflows on the left.
+        return box.right > innerWidth + 0.5 || box.left < -0.5;
+      }).length;
       return {
         canvas: { width: canvas.clientWidth, height: canvas.clientHeight },
         scrollWidth: document.documentElement.scrollWidth,
@@ -410,13 +419,16 @@ try {
     }
     return measured;
   };
+  // Narrowed and widened again: widening is what a CSS clamp alone cannot hide.
   const desktop = await layout(1440, 1050);
   const phone = await layout(390, 844);
+  const widened = await layout(1440, 1050);
   assert.notEqual(
     desktop.canvas.width,
     phone.canvas.width,
     "the preview resized",
   );
+  assert.deepEqual(widened.canvas, desktop.canvas, "and back when widened");
 
   assert.equal(pageErrors.length, 0, pageErrors.join("\n"));
   result.passed = true;

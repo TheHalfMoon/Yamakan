@@ -60,15 +60,15 @@ export function cinemaVerticalFovDegrees(
 }
 
 /**
- * The preview's size for the width it has: all of it (so a phone never scrolls sideways), a
- * 16:9 frame, between 180 and 360 pixels tall.
+ * The preview's size for the width it has: all of it, rounded down (so a phone never scrolls
+ * sideways and CSS never squashes it), a 16:9 frame, between 180 and 360 pixels tall.
  */
 export function cinemaPreviewSize(hostWidth: number): {
   width: number;
   height: number;
 } {
   const width = Math.max(
-    160,
+    1,
     Math.floor(Number.isFinite(hostWidth) && hostWidth > 0 ? hostWidth : 640),
   );
   const height = Math.min(360, Math.max(180, Math.round((width * 9) / 16)));

@@ -393,7 +393,9 @@ export function CinemaViewport({
     if (!host) return;
 
     let cancelled = false;
-    const { width, height } = cinemaPreviewSize(host.clientWidth);
+    const { width, height } = cinemaPreviewSize(
+      host.getBoundingClientRect().width,
+    );
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -502,15 +504,31 @@ export function CinemaViewport({
 
     // The preview follows its container's width; the field of view follows its shape.
     let size = { width, height };
-    const resize = () => {
+    let ratio = renderer.getPixelRatio();
+    let pending = 0;
+    const apply = () => {
+      pending = 0;
+      if (cancelled) return;
       // Hidden (another workspace open): keep the size until it is shown again.
-      if (host.clientWidth === 0) return;
-      const next = cinemaPreviewSize(host.clientWidth);
-      if (next.width === size.width && next.height === size.height) return;
+      const hostWidth = host.getBoundingClientRect().width;
+      if (hostWidth === 0) return;
+      const next = cinemaPreviewSize(hostWidth);
+      // Zoom or another screen changes the pixel ratio, not always the size.
+      const nextRatio = Math.min(window.devicePixelRatio || 1, 2);
+      if (nextRatio !== ratio) {
+        ratio = nextRatio;
+        renderer.setPixelRatio(nextRatio);
+      } else if (next.width === size.width && next.height === size.height)
+        return;
       size = next;
       renderer.setSize(next.width, next.height);
       camera.aspect = next.width / next.height;
       applyLocalCamera(sceneRef.current.camera);
+    };
+    // Applied in the next frame, not inside the observer's callback: the canvas's new height
+    // changes the host's, which would otherwise report a ResizeObserver loop.
+    const resize = () => {
+      if (!pending) pending = requestAnimationFrame(apply);
     };
     const observer =
       typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
@@ -524,6 +542,7 @@ export function CinemaViewport({
       cancelled = true;
       observer?.disconnect();
       window.removeEventListener("resize", resize);
+      cancelAnimationFrame(pending);
       cancelAnimationFrame(raf);
       delete window.__yamakanCinema;
       cameraRef.current = null;
