@@ -23,8 +23,9 @@ jobs:
       # A stuck package mirror used to take this whole job to its time limit, before
       # any test ran, and cancel the run. Each try is bounded, and it fails plainly.
       # Without recommended packages (video drivers, speech models and the like) the
-      # download falls from about 94 MB: FFmpeg's own libraries are hard dependencies,
-      # so they still come. A try that was cut off resumes from what it fetched.
+      # download is far smaller than the 94 MB it was: FFmpeg's own libraries are hard
+      # dependencies, so they still come. A try that was cut off resumes from what it
+      # fetched; one cut off while installing is finished before the next starts.
       - name: Install FFmpeg and fonts
         timeout-minutes: 18
         run: |
@@ -34,6 +35,8 @@ jobs:
               exit 0
             fi
             echo "Package install attempt $attempt did not finish."
+            # A try stopped while dpkg was installing would make every later one fail.
+            sudo dpkg --configure -a || true
             sleep 15
           done
           exit 1
