@@ -25,25 +25,31 @@ export type BlenderHost = {
   start(settings: ReturnType<typeof blenderSettings>): Promise<{ id: string }>;
   status(jobId: string): Promise<BlenderJob>;
   cancel(jobId: string): Promise<unknown>;
-  // Re-reads the project so its new video is in the editor.
-  refresh(): Promise<void>;
-  // Places a whole video on the timeline; null when placed, or why it could not be.
-  place(assetId: string): string | null;
+  // Saves the editor's work, reopens the project (the new video is in it) and places the whole
+  // video on the timeline: null when placed, or why it was not.
+  place(assetId: string): Promise<string | null>;
 };
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// A render still running when the panel is unmounted (another project opened) is followed
+// again when the project's panel comes back.
+const running = new Map<string, string>();
+
 /**
  * Render the project's saved Cinema scene with Blender, then place it on the timeline. Only a
  * saved scene is rendered: the job renders what the project holds, never unsaved changes.
+ * Nothing in the editor changes until the person chooses Place on timeline.
  */
 export function BlenderRender({
   host,
   t,
+  projectId,
   sceneSaved,
 }: {
   host: BlenderHost;
   t: Translate;
+  projectId: string;
   sceneSaved: boolean;
 }) {
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -51,66 +57,96 @@ export function BlenderRender({
   const [choices, setChoices] = useState<BlenderChoices>(
     DEFAULT_BLENDER_CHOICES,
   );
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [view, setView] = useState<BlenderView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [placed, setPlaced] = useState<string | null>(null);
-  const refreshed = useRef<string | null>(null);
-  // The page's newest host: its refresh and place read the editor as it is now.
+  const [jobId, setJobId] = useState<string | null>(
+    () => running.get(projectId) ?? null,
+  );
+  const [view, setView] = useState<BlenderView | null>(() =>
+    running.has(projectId) ? { kind: "working", percent: 0 } : null,
+  );
+  // Why starting, following, cancelling or placing did not work, and which it was.
+  const [problem, setProblem] = useState<{
+    key: MessageKey;
+    detail: string;
+  } | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const [placed, setPlaced] = useState(false);
   const hostRef = useRef(host);
   hostRef.current = host;
 
   useEffect(() => {
+    let current = true;
     host
       .capability()
       .then((c) => {
+        if (!current) return;
         setAvailable(c.available);
         setUnavailable(c.message ?? "");
       })
       .catch((e: unknown) => {
+        if (!current) return;
         setAvailable(false);
         setUnavailable(message(e));
       });
+    return () => {
+      current = false;
+    };
     // The page's one host; asked once.
   }, []);
 
-  // While a render runs, its state is read every second.
+  // While a render runs, its state is read every second. A failed read is tried again, more
+  // slowly, so a dropped connection does not leave the panel stuck.
   useEffect(() => {
     if (!jobId) return;
     let current = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let misses = 0;
     const tick = async () => {
       try {
         const job = await hostRef.current.status(jobId);
         if (!current) return;
+        misses = 0;
+        setProblem((p) => (p?.key === "blender.lost" ? null : p));
         const next = blenderView(job);
         setView(next);
-        if (next.kind === "working") setTimeout(tick, 1000);
-        else if (next.kind === "done" && refreshed.current !== jobId) {
-          // The new video joins the editor's project before it can be placed.
-          refreshed.current = jobId;
-          await hostRef.current.refresh();
-        }
+        if (next.kind === "working") timer = setTimeout(tick, 1000);
+        else running.delete(projectId);
       } catch (e) {
-        if (current) setError(message(e));
+        if (!current) return;
+        misses++;
+        setProblem({ key: "blender.lost", detail: message(e) });
+        timer = setTimeout(tick, Math.min(10000, 1000 * 2 ** misses));
       }
     };
     void tick();
     return () => {
       current = false;
+      clearTimeout(timer);
     };
   }, [jobId]);
 
   const working = view?.kind === "working";
   const start = async () => {
-    setError(null);
-    setPlaced(null);
+    setProblem(null);
+    setPlaced(false);
     setView({ kind: "working", percent: 0 });
     try {
       const job = await host.start(blenderSettings(choices));
+      running.set(projectId, job.id);
       setJobId(job.id);
     } catch (e) {
       setView(null);
-      setError(message(e));
+      setProblem({ key: "blender.failed", detail: message(e) });
+    }
+  };
+  const place = async (assetId: string) => {
+    setProblem(null);
+    setPlacing(true);
+    try {
+      const why = await host.place(assetId);
+      if (why) setProblem({ key: "blender.placeFailed", detail: why });
+      else setPlaced(true);
+    } finally {
+      setPlacing(false);
     }
   };
   const choose = <K extends keyof BlenderChoices>(
@@ -127,6 +163,23 @@ export function BlenderRender({
         </p>
       </div>
     );
+
+  // Announced when it changes: what the render is doing, not each percent.
+  const said =
+    view?.kind === "working"
+      ? t("blender.rendering")
+      : view?.kind === "done"
+        ? placed
+          ? t("blender.placed")
+          : t("blender.done")
+        : view?.kind === "cancelled"
+          ? t("blender.cancelled")
+          : "";
+  const failure =
+    view?.kind === "failed"
+      ? (view.message ??
+        t(view.noVideo ? "blender.noVideo" : "blender.unknown"))
+      : null;
 
   return (
     <div
@@ -234,7 +287,7 @@ export function BlenderRender({
         <button
           type="button"
           data-testid="cinema-blender-render"
-          disabled={available !== true || !sceneSaved || working}
+          disabled={available !== true || !sceneSaved || working || placing}
           onClick={() => void start()}
         >
           {t("blender.render")}
@@ -244,7 +297,12 @@ export function BlenderRender({
             type="button"
             data-testid="cinema-blender-cancel"
             onClick={() =>
-              host.cancel(jobId).catch((e: unknown) => setError(message(e)))
+              host.cancel(jobId).catch((e: unknown) =>
+                setProblem({
+                  key: "blender.cancelFailed",
+                  detail: message(e),
+                }),
+              )
             }
           >
             {t("blender.cancel")}
@@ -254,12 +312,8 @@ export function BlenderRender({
           <button
             type="button"
             data-testid="cinema-blender-place"
-            disabled={placed === "yes"}
-            onClick={() => {
-              const why = host.place(view.assetId);
-              if (why) setError(why);
-              else setPlaced("yes");
-            }}
+            disabled={placing}
+            onClick={() => void place(view.assetId)}
           >
             {t("blender.place")}
           </button>
@@ -273,20 +327,26 @@ export function BlenderRender({
         data-testid="cinema-blender-state"
         data-state={view?.kind ?? "idle"}
       >
-        {view?.kind === "working"
-          ? t("blender.working", { percent: view.percent })
-          : view?.kind === "done"
-            ? placed === "yes"
-              ? t("blender.placed")
-              : t("blender.done")
-            : view?.kind === "cancelled"
-              ? t("blender.cancelled")
-              : ""}
+        {said}
       </output>
-      {view?.kind === "failed" || error ? (
+      {view?.kind === "working" ? (
+        <progress
+          data-testid="cinema-blender-progress"
+          max={100}
+          value={view.percent}
+          aria-label={t("blender.progress", { percent: view.percent })}
+        >
+          {view.percent}%
+        </progress>
+      ) : null}
+      {failure !== null ? (
         <p role="alert" data-testid="cinema-blender-error">
-          {t("blender.failed")}{" "}
-          <bdi>{view?.kind === "failed" ? view.message : error}</bdi>
+          {t("blender.failed")} <bdi>{failure}</bdi>
+        </p>
+      ) : null}
+      {problem ? (
+        <p role="alert" data-testid="cinema-blender-problem">
+          {t(problem.key)} <bdi>{problem.detail}</bdi>
         </p>
       ) : null}
     </div>

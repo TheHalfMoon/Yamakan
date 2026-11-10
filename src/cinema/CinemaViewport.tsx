@@ -805,6 +805,7 @@ export function CinemaViewport({
           key={projectId}
           host={blender}
           t={t}
+          projectId={projectId}
           sceneSaved={save?.state === "saved"}
         />
       ) : null}

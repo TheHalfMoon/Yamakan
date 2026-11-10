@@ -78,7 +78,10 @@ test("a failed or cancelled render says so", () => {
     blenderView({ id: "j", state: "FAILED", error: "Blender stopped." }),
     { kind: "failed", message: "Blender stopped." },
   );
-  assert.equal(blenderView({ id: "j", state: "FAILED" }).kind, "failed");
+  assert.deepEqual(blenderView({ id: "j", state: "FAILED" }), {
+    kind: "failed",
+    message: null,
+  });
   assert.deepEqual(blenderView({ id: "j", state: "CANCELLED" }), {
     kind: "cancelled",
   });

@@ -1020,14 +1020,41 @@ function App() {
       call("yamakan.blender.render", { projectId: p.id, settings }),
     status: (jobId) => call("yamakan.job.status", { jobId }),
     cancel: (jobId) => call("yamakan.job.cancel", { jobId }),
-    // The new video joins the editor's project, as a generated one is brought in.
-    refresh: () =>
-      run(async () => {
-        await save();
-        accept(await call("yamakan.project.open", { projectId: p.id }));
-        await refresh();
+    // Only when the person chooses: the editor's work is saved, the project reopened (the new
+    // video is in it) and the whole video placed, as one step under the editor's busy state.
+    // A save that met a conflict stops here, so its notice and unapplied change stay.
+    place: (assetId) =>
+      new Promise((resolve) => {
+        let why: string | null = t("status.working");
+        void run(async () => {
+          why = t("error.operation");
+          if (!(await save())) {
+            why = t("blender.placeUnsaved");
+            return;
+          }
+          const opened = ProjectSchema.parse(
+            await call("yamakan.project.open", { projectId: p.id }),
+          );
+          let placed: Project;
+          try {
+            placed = ProjectSchema.parse(
+              withAsset(opened, assetId, undefined, undefined, true),
+            );
+          } catch (e) {
+            // A schema's message is all its issues, as JSON: the first says enough.
+            const first = (e as { issues?: { message?: string }[] })
+              .issues?.[0];
+            why =
+              first?.message ??
+              (e instanceof Error ? e.message : t("error.edit"));
+            return;
+          }
+          accept(opened);
+          putHistory((h) => (h ? pushHistoryState(h, placed) : h));
+          await refresh();
+          why = null;
+        }).finally(() => resolve(why));
       }),
-    place: (assetId) => placeWhole(p, assetId),
   });
   const cinemaPanel = (active = true) => (
     <>

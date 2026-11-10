@@ -116,6 +116,27 @@ const shot = async (page, name) => {
       .screenshot({ path: join(shots, `${name}.png`) });
 };
 
+const percent = async (page) => {
+  const bar = page.getByTestId("cinema-blender-progress");
+  if (!(await bar.count())) return null;
+  return Number(await bar.getAttribute("value"));
+};
+// Until the render has gone further than `past` percent, or finished.
+const waitProgress = (page, past = 0) =>
+  page.waitForFunction(
+    (p) =>
+      Number(
+        document
+          .querySelector('[data-testid="cinema-blender-progress"]')
+          ?.getAttribute("value") ?? -1,
+      ) > p ||
+      document
+        .querySelector('[data-testid="cinema-blender-state"]')
+        ?.getAttribute("data-state") === "done",
+    past,
+    { timeout: 300000 },
+  );
+
 let browser;
 const receipt = {
   qualification: "CINEMA_BLENDER_CONTROL",
@@ -171,20 +192,8 @@ try {
   // A render, cancelled once it has made progress.
   await page.getByTestId("cinema-blender-render").click();
   await page.getByTestId("cinema-blender-cancel").waitFor();
-  await page.waitForFunction(
-    () => {
-      const t = document.querySelector(
-        '[data-testid="cinema-blender-state"]',
-      )?.textContent;
-      const n = Number(/(\d+)%/.exec(t ?? "")?.[1] ?? 0);
-      return n > 0;
-    },
-    null,
-    { timeout: 180000 },
-  );
-  const cancelledAt = await page
-    .getByTestId("cinema-blender-state")
-    .textContent();
+  await waitProgress(page);
+  const cancelledAt = await percent(page);
   await shot(page, "1-working");
   await page.getByTestId("cinema-blender-cancel").click();
   await waitAttr(
@@ -202,7 +211,7 @@ try {
     0,
     "a cancelled render made no asset",
   );
-  step("progress shown, then cancelled", { at: cancelledAt.trim() });
+  step("progress shown, then cancelled", { atPercent: cancelledAt });
 
   // The service's own refusal, shown: another render holds the one slot.
   const other = await client.call("yamakan.blender.render", {
@@ -217,8 +226,10 @@ try {
     },
   });
   await page.getByTestId("cinema-blender-render").click();
-  await page.getByTestId("cinema-blender-error").waitFor();
-  const refusal = await page.getByTestId("cinema-blender-error").textContent();
+  await page.getByTestId("cinema-blender-problem").waitFor();
+  const refusal = await page
+    .getByTestId("cinema-blender-problem")
+    .textContent();
   assert.match(refusal, /already running/);
   await shot(page, "2-refused");
   await client.call("yamakan.job.cancel", { jobId: other.id });
@@ -229,16 +240,43 @@ try {
   }
   step("refusal shown", { error: refusal.trim() });
 
-  // A full render, with its progress seen as it runs.
+  // A full render, with its progress seen as it runs. Midway, another project is opened and
+  // this one opened again: its panel follows the same render, and the editor is not reloaded
+  // when it finishes.
   await page.getByTestId("cinema-blender-render").click();
   const seen = new Set();
   const started = Date.now();
+  await waitProgress(page);
+  const before = await percent(page);
+  await page.getByLabel("Project name", { exact: true }).fill("Other");
+  await page
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "Other", exact: true }).waitFor();
+  await page
+    .locator(".project-list button", { hasText: "Blender page" })
+    .click();
+  await page
+    .getByRole("heading", { name: "Blender page", exact: true })
+    .waitFor();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
+  await page.getByTestId("cinema-blender").waitFor();
+  assert.ok(
+    ["working", "done"].includes(
+      await attr(page, "cinema-blender-state", "data-state"),
+    ),
+    "the reopened project's panel follows its render",
+  );
+  await waitProgress(page, before ?? 0);
+  step("render followed after another project was opened", {
+    beforePercent: before,
+    afterPercent: await percent(page),
+  });
   for (;;) {
     const state = await attr(page, "cinema-blender-state", "data-state");
     if (state !== "working") break;
-    const t = await page.getByTestId("cinema-blender-state").textContent();
-    const n = /(\d+)%/.exec(t ?? "")?.[1];
-    if (n) seen.add(Number(n));
+    const n = await percent(page);
+    if (n !== null) seen.add(n);
     assert.ok(Date.now() - started < 600000, "render took over 10 minutes");
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -256,8 +294,17 @@ try {
     progress,
   });
 
+  // Finishing changed nothing in the editor: the video is placed only when chosen.
+  assert.equal(
+    (await client.call("yamakan.project.open", { projectId: project.id })).clips
+      .length,
+    0,
+  );
+
   // Placed on the timeline, saved, and read back from the service.
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
   const clipsBefore = await page.locator("[data-clip-id]").count();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
   await page.getByTestId("cinema-blender-place").click();
   await page.waitForFunction(() =>
     /on the timeline/.test(
@@ -266,6 +313,10 @@ try {
     ),
   );
   await shot(page, "4-placed");
+  await page.getByRole("tab", { name: "Edit", exact: true }).click();
+  const clipsAfter = await page.locator("[data-clip-id]").count();
+  assert.equal(clipsAfter, clipsBefore + 1, "one clip placed on the page");
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).first().click();
   let saved;
   for (let i = 0; i < 60; i++) {
@@ -288,7 +339,7 @@ try {
     "the whole video is placed",
   );
   step("placed on the timeline and saved", {
-    clipsOnPageBefore: clipsBefore,
+    clipsOnPage: [clipsBefore, clipsAfter],
     asset: {
       id: asset.id,
       kind: asset.kind,
@@ -299,6 +350,20 @@ try {
     clip: { id: clip.id, durationFrames: clip.durationFrames },
   });
   assert.deepEqual(pageErrors, []);
+
+  // The same panel in Arabic, right to left.
+  await page.getByRole("button", { name: "العربية" }).click();
+  await page.waitForFunction(() => document.documentElement.dir === "rtl");
+  assert.match(
+    await page.getByTestId("cinema-blender").textContent(),
+    /Blender/,
+  );
+  assert.match(
+    await page.getByTestId("cinema-blender-title").textContent(),
+    /[\u0600-\u06ff]/,
+  );
+  await shot(page, "4-placed-ar");
+  step("shown in Arabic, right to left");
 
   // A service with no Blender install says why.
   const bare = mkdtempSync(join(tmpdir(), "yamakan-no-blender-"));
@@ -312,12 +377,15 @@ try {
   const why = await page2
     .getByTestId("cinema-blender-unavailable")
     .textContent();
-  assert.match(why, /not available/);
+  // The service's own reason, not only the panel's heading.
+  assert.match(why, /is not installed for Yamakan/);
   assert.equal(await page2.getByTestId("cinema-blender-render").count(), 0);
   await shot(page2, "5-unavailable");
   step("unavailable reason shown", { text: why.trim() });
 
-  receipt.passed = true;
+  // Evidence comes from a committed head only.
+  receipt.passed = clean || process.env.YAMAKAN_QUALIFY_ALLOW_DIRTY === "1";
+  if (!receipt.passed) receipt.error = "the working tree is not clean";
 } catch (e) {
   receipt.error = e instanceof Error ? e.message : String(e);
   process.exitCode = 1;

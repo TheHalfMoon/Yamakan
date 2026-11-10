@@ -57,7 +57,8 @@ export type BlenderJob = {
 export type BlenderView =
   | { kind: "working"; percent: number }
   | { kind: "done"; assetId: string }
-  | { kind: "failed"; message: string }
+  // The service's own message, or null when it gave none (the page says it in its language).
+  | { kind: "failed"; message: string | null; noVideo?: true }
   | { kind: "cancelled" };
 
 /** What the page shows for a render job. A finished one names the asset it made. */
@@ -66,10 +67,10 @@ export function blenderView(job: BlenderJob): BlenderView {
     const assetId = /^asset:([0-9a-f-]{36})$/.exec(job.artifact ?? "")?.[1];
     return assetId
       ? { kind: "done", assetId }
-      : { kind: "failed", message: "The render finished without a video." };
+      : { kind: "failed", message: null, noVideo: true };
   }
   if (job.state === "FAILED")
-    return { kind: "failed", message: job.error || "The render failed." };
+    return { kind: "failed", message: job.error || null };
   if (job.state === "CANCELLED") return { kind: "cancelled" };
   return {
     kind: "working",
