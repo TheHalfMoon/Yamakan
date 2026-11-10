@@ -270,20 +270,27 @@ function endTree(child: ReturnType<typeof execFile>) {
 export function kaggleCli(file: string): KaggleCli {
   return (args, timeout, signal) =>
     new Promise((resolve, reject) => {
+      let timedOut = false;
+      // The time limit ends the whole tree, as a stop does: a limit that ended only the
+      // launcher would leave Python running, and no later stop could reach it.
+      const timer = setTimeout(() => {
+        timedOut = true;
+        endTree(child);
+      }, timeout);
       const child = execFile(
         file,
         args,
         {
-          timeout,
           windowsHide: true,
           maxBuffer: 4 * 1024 * 1024,
           env: kaggleCliEnvironment(process.env),
         },
         (error, stdout, stderr) => {
+          clearTimeout(timer);
           if (error)
             reject(
               new Error(
-                `${error.killed ? "Timed out. " : ""}${
+                `${timedOut || error.killed ? "Timed out. " : ""}${
                   cliWords(stderr, stdout) ||
                   `The Kaggle CLI failed (${error.code ?? "stopped"}).`
                 }`,
@@ -587,6 +594,9 @@ export function createKaggleEngine(options: {
   async function bounded(r: KaggleRecipe, folder: string) {
     const stop = new AbortController();
     let why: string | null = null;
+    let retryable = false;
+    const refusal = (message: string) =>
+      retryable ? new Error(message) : new Unreadable(message);
     const check = async () => {
       let used = 0;
       for (const entry of await readdir(folder, {
@@ -607,11 +617,15 @@ export function createKaggleEngine(options: {
       )
         why =
           "The disk is nearly full; the run's output was stopped and removed.";
-      if (why) stop.abort();
+      if (why) {
+        // Freed space lets the same output be fetched again: that is not the run's fault.
+        retryable = !(used > outputLimit);
+        stop.abort();
+      }
     };
     const stopped = new Promise<never>((_, reject) =>
       stop.signal.addEventListener("abort", () =>
-        reject(new Unreadable(why ?? "The run's output was stopped.")),
+        reject(refusal(why ?? "The run's output was stopped.")),
       ),
     );
     stopped.catch(() => {});
@@ -628,7 +642,7 @@ export function createKaggleEngine(options: {
       await Promise.race([fetching, stopped]);
       // Whatever arrived between the last look and the end is looked at too.
       await check();
-      if (why) throw new Unreadable(why);
+      if (why) throw refusal(why);
     } catch (e) {
       // Told to stop, the CLI is given a moment to end before what it wrote is removed, so
       // nothing is still writing then; it is not waited for longer than that.

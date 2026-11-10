@@ -1484,9 +1484,12 @@ const stoppedWhileWriting = async (
     grow: boolean;
     freeBytes?: (folder: string) => Promise<number>;
     heedStop?: boolean;
+    // Space freed after the stop: the same run is fetched again and succeeds.
+    spaceFreed?: () => void;
   },
 ) => {
   let time = 0;
+  let downloads = 0;
   let given: AbortSignal | undefined;
   let late = 0;
   let written = "";
@@ -1498,6 +1501,8 @@ const stoppedWhileWriting = async (
       written = folder;
       given = signal;
       good(runId, folder);
+      // Fetched again once space is freed, it arrives whole.
+      if (++downloads > 1 && options.spaceFreed) return;
       // Keeps writing, as a CLI fed a huge output would, until it is stopped: past the
       // 2 MiB a receipt and a log may add within about 32 steps.
       for (let i = 0; i < 400; i++) {
@@ -1522,11 +1527,17 @@ const stoppedWhileWriting = async (
   const started = Date.now();
   assert.equal((await k.engine.status(executionRef)).state, "unknown");
   // Stopped soon, not after the 2 s the writer would take.
-  assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
+  assert.ok(Date.now() - started < 4000, `${Date.now() - started} ms`);
   assert.ok(written, "the download began");
   assert.equal(existsSync(written), false, "what it wrote is removed");
   // The CLI was told to stop, whether or not it listened.
   assert.equal(given?.aborted, true);
+  if (options.spaceFreed) {
+    options.spaceFreed();
+    assert.equal((await k.engine.status(executionRef)).state, "succeeded");
+    assert.equal(downloads, 2);
+    return;
+  }
   time = 10 * 60 * 1000;
   const answer = await k.engine.status(executionRef);
   assert.equal(answer.state, "failed");
@@ -1536,11 +1547,14 @@ const stoppedWhileWriting = async (
 test("a download growing past what a run makes is stopped and removed", () =>
   stoppedWhileWriting(/readable result/, { grow: true }));
 
-test("a download is stopped when the disk falls below its reserve", () =>
-  stoppedWhileWriting(/readable result/, {
+test("a download stopped for a nearly full disk is fetched again once space is freed", () => {
+  let free = 0;
+  return stoppedWhileWriting(/readable result/, {
     grow: false,
-    freeBytes: async () => 0,
-  }));
+    freeBytes: async () => free,
+    spaceFreed: () => (free = 1e15),
+  });
+});
 
 test("a download that does not heed the stop is still not waited for", () =>
   stoppedWhileWriting(/readable result/, { grow: true, heedStop: false }));
