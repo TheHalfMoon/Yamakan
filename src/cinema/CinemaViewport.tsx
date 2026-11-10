@@ -21,6 +21,17 @@ import {
   CINEMA_SAMPLE_SCENE as SAMPLE_SCENE,
   freshCinemaScene as freshScene,
 } from "./cinemaProject.ts";
+import {
+  CINEMA_NUDGE,
+  CINEMA_PAGE_MAX_ITEMS,
+  addCinemaBox,
+  cinemaItemReadout,
+  moveCinemaItem,
+  removeCinemaItem,
+  scaleCinemaItem,
+  turnCinemaItem,
+  type CinemaAxis,
+} from "./cinemaObjects.ts";
 import type { MessageKey } from "../i18n.ts";
 
 /** Browser-local scene shape (mirrors core Scene3D; validated server-side on save). */
@@ -60,7 +71,24 @@ function assertLocalScene(raw: unknown): CinemaSceneLocal {
     throw new Error("Invalid local Cinema scene");
   }
   assertCinemaCameraOptics(s.camera);
+  const vector = (v: unknown) =>
+    !!v &&
+    typeof v === "object" &&
+    (["x", "y", "z"] as const).every((k) =>
+      Number.isFinite((v as Record<string, unknown>)[k]),
+    );
   for (const item of s.items) {
+    if (
+      !item ||
+      typeof item.id !== "string" ||
+      !vector(item.position) ||
+      !vector(item.rotation) ||
+      !vector(item.scale)
+    ) {
+      throw new Error(
+        "Cinema items need an id and finite position, rotation and scale",
+      );
+    }
     if (item.assetId != null && typeof item.assetId !== "string") {
       throw new Error("Cinema items may only carry asset ids, not URLs");
     }
@@ -123,6 +151,12 @@ export function CinemaViewport({
   const sceneRef = useRef<CinemaSceneLocal>(initialScene);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const [lensMm, setLensMm] = useState(initialScene.camera.focalLengthMm);
+  // The object the inspector edits, and a counter that redraws it after an edit.
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialScene.items[0]?.id ?? null,
+  );
+  const [, setEdits] = useState(0);
+  const objectsRef = useRef<HTMLDivElement | null>(null);
   // Kept in state so a scene set from outside, with the same lens but another sensor, shows too.
   const [fovDeg, setFovDeg] = useState(() =>
     cinemaVerticalFovDegrees(initialScene.camera, 16 / 9),
@@ -167,6 +201,7 @@ export function CinemaViewport({
     syncRef.current?.(next);
     setLensMm(next.camera.focalLengthMm);
     applyLocalCamera(next.camera);
+    setEdits((n) => n + 1);
     return next;
   };
 
@@ -175,6 +210,25 @@ export function CinemaViewport({
     if (!documentIdRef.current) return;
     dirtyRef.current = true;
     setSave((s) => cinemaChangedState(s, savedHashRef.current));
+  };
+
+  // An edit to the scene's objects: drawn at once, and unsaved until the person saves.
+  const editScene = (edit: (scene: CinemaSceneLocal) => CinemaSceneLocal) => {
+    if (!CINEMA_ENABLED || !cinemaCanEdit(saveRef.current)) return;
+    let next: CinemaSceneLocal;
+    try {
+      next = edit(sceneRef.current);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setEdits((n) => n + 1);
+      return;
+    }
+    setError(null);
+    sceneRef.current = next;
+    syncRef.current?.(next);
+    setEdits((n) => n + 1);
+    changed();
+    return next;
   };
 
   const chooseLens = (focalLengthMm: number) => {
@@ -480,6 +534,138 @@ export function CinemaViewport({
     );
   }
 
+  const objectsPanel = () => {
+    const items = sceneRef.current.items;
+    const selected = items.find((i) => i.id === selectedId) ?? items[0] ?? null;
+    const editable = cinemaCanEdit(save);
+    const full = items.length >= CINEMA_PAGE_MAX_ITEMS;
+    const readout = selected ? cinemaItemReadout(selected) : null;
+    const move = (axis: CinemaAxis, metres: number) =>
+      selected &&
+      editScene((s) => moveCinemaItem(s, selected.id, axis, metres));
+    const button = (
+      key: MessageKey,
+      testId: string,
+      onClick: () => void,
+      disabled = !editable || !selected,
+    ) => (
+      <button
+        type="button"
+        data-testid={testId}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {t(key)}
+      </button>
+    );
+    const m = CINEMA_NUDGE.metres;
+    return (
+      <div
+        ref={objectsRef}
+        className="cinema-objects"
+        role="group"
+        aria-labelledby="cinema-objects-title"
+        data-testid="cinema-objects"
+      >
+        <strong id="cinema-objects-title">{t("cinema.objects.title")}</strong>
+        {selected ? (
+          <label>
+            {t("cinema.objects.choose")}{" "}
+            <select
+              data-testid="cinema-objects-select"
+              value={selected.id}
+              disabled={!editable}
+              onChange={(e) => setSelectedId(e.target.value)}
+            >
+              {items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name || item.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p data-testid="cinema-objects-empty">{t("cinema.objects.none")}</p>
+        )}
+        <div className="cinema-objects-buttons">
+          {button("cinema.objects.left", "cinema-move-left", () =>
+            move("x", -m),
+          )}
+          {button("cinema.objects.right", "cinema-move-right", () =>
+            move("x", m),
+          )}
+          {button("cinema.objects.forward", "cinema-move-forward", () =>
+            move("z", -m),
+          )}
+          {button("cinema.objects.back", "cinema-move-back", () =>
+            move("z", m),
+          )}
+          {button("cinema.objects.up", "cinema-move-up", () => move("y", m))}
+          {button("cinema.objects.down", "cinema-move-down", () =>
+            move("y", -m),
+          )}
+          {button("cinema.objects.turnLeft", "cinema-turn-left", () =>
+            editScene((s) =>
+              turnCinemaItem(s, selected!.id, CINEMA_NUDGE.degrees),
+            ),
+          )}
+          {button("cinema.objects.turnRight", "cinema-turn-right", () =>
+            editScene((s) =>
+              turnCinemaItem(s, selected!.id, -CINEMA_NUDGE.degrees),
+            ),
+          )}
+          {button("cinema.objects.bigger", "cinema-scale-up", () =>
+            editScene((s) =>
+              scaleCinemaItem(s, selected!.id, CINEMA_NUDGE.factor),
+            ),
+          )}
+          {button("cinema.objects.smaller", "cinema-scale-down", () =>
+            editScene((s) =>
+              scaleCinemaItem(s, selected!.id, 1 / CINEMA_NUDGE.factor),
+            ),
+          )}
+        </div>
+        <div className="cinema-objects-buttons">
+          {button(
+            "cinema.objects.add",
+            "cinema-objects-add",
+            () => {
+              const id = crypto.randomUUID();
+              const next = editScene((s) =>
+                addCinemaBox(s, (n) => t("cinema.objects.boxName", { n }), id),
+              );
+              if (next) setSelectedId(id);
+            },
+            !editable || full,
+          )}
+          {button("cinema.objects.remove", "cinema-objects-remove", () => {
+            const next = editScene((s) => removeCinemaItem(s, selected!.id));
+            if (next) setSelectedId(next.items[0]?.id ?? null);
+            if (next && next.items.length === 0)
+              requestAnimationFrame(() =>
+                objectsRef.current
+                  ?.querySelector<HTMLButtonElement>(
+                    '[data-testid="cinema-objects-add"]',
+                  )
+                  ?.focus(),
+              );
+          })}
+        </div>
+        {readout ? (
+          <output aria-live="polite" data-testid="cinema-objects-readout">
+            {t("cinema.objects.readout", readout)}
+          </output>
+        ) : null}
+        {full ? (
+          <p data-testid="cinema-objects-full">
+            {t("cinema.objects.full", { max: CINEMA_PAGE_MAX_ITEMS })}
+          </p>
+        ) : null}
+        <p className="cinema-lens-note">{t("cinema.objects.note")}</p>
+      </div>
+    );
+  };
+
   return (
     <section
       data-testid="cinema-viewport"
@@ -521,6 +707,7 @@ export function CinemaViewport({
         </output>
         <p className="cinema-lens-note">{t("cinema.lens.note")}</p>
       </div>
+      {objectsPanel()}
       <div className="cinema-project" data-testid="cinema-project">
         {!projectId || !client ? (
           <p data-testid="cinema-project-state">{t("cinema.project.none")}</p>

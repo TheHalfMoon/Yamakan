@@ -189,6 +189,43 @@ try {
     "true",
   );
 
+  // #203: objects are moved and added from the page, and saved with the scene.
+  const sceneItems = () =>
+    page.evaluate(() =>
+      window.__yamakanCinema.getScene().items.map((i) => ({
+        name: i.name,
+        x: i.position.x,
+        z: i.position.z,
+        assetId: i.assetId,
+      })),
+    );
+  const firstX = (await sceneItems())[0].x;
+  await page.getByTestId("cinema-move-right").click();
+  await page.getByTestId("cinema-move-right").click();
+  await page.getByTestId("cinema-move-forward").click();
+  assert.equal(await projectState(), "changed");
+  const moved = (await sceneItems())[0];
+  assert.equal(moved.x, firstX + 0.5);
+  assert.equal(moved.z, -2.25);
+  assert.match(
+    await page.getByTestId("cinema-objects-readout").textContent(),
+    /Position 0\.5, 0\.5, -2\.25 m/,
+  );
+  await page.getByTestId("cinema-objects-add").click();
+  const withBox = await sceneItems();
+  assert.equal(withBox.length, 2);
+  assert.deepEqual(
+    { name: withBox[1].name, assetId: withBox[1].assetId },
+    { name: "Box 2", assetId: null },
+  );
+  assert.equal(
+    await page.getByTestId("cinema-objects-select").inputValue(),
+    await page.evaluate(() => window.__yamakanCinema.getScene().items[1].id),
+    "the new box is the one selected",
+  );
+  await page.getByTestId("cinema-project-save").click();
+  await waitState("saved");
+
   const before = await page.evaluate(() => {
     const h = window.__yamakanCinema;
     return {
@@ -269,17 +306,38 @@ try {
   await waitState("saved");
   const reloaded = await page.evaluate(() => {
     const scene = window.__yamakanCinema.getScene();
-    return { id: scene.id, lensMm: scene.camera.focalLengthMm };
+    return {
+      id: scene.id,
+      lensMm: scene.camera.focalLengthMm,
+      items: scene.items.length,
+      firstX: scene.items[0].position.x,
+    };
   });
-  assert.deepEqual(reloaded, { id: savedSceneId, lensMm: 24 });
+  assert.deepEqual(reloaded, {
+    id: savedSceneId,
+    lensMm: 24,
+    items: 2,
+    firstX: firstX + 0.5,
+  });
 
-  // The editor's Undo takes the save back: the view must not still say Saved.
+  // The editor's Undo takes the last save back: the view shows the scene saved before it
+  // (the lens only), not the objects it no longer holds.
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await waitState("new");
-  const undone = await page.evaluate(
-    () => window.__yamakanCinema.getScene().camera.focalLengthMm,
+  await page.waitForFunction(
+    () => window.__yamakanCinema.getScene().items.length === 1,
+    null,
+    { timeout: 30000 },
   );
-  assert.equal(undone, 35, "after Undo the project has no saved scene");
+  await waitState("saved");
+  const undone = await page.evaluate(() => {
+    const scene = window.__yamakanCinema.getScene();
+    return {
+      lensMm: scene.camera.focalLengthMm,
+      items: scene.items.length,
+      firstX: scene.items[0].position.x,
+    };
+  });
+  assert.deepEqual(undone, { lensMm: 24, items: 1, firstX });
   const listed = await callApi("yamakan.scene.list", {});
   assert.ok(
     listed.result.scenes.some((s) => s.id === scene.id),
@@ -295,11 +353,11 @@ try {
     ...reloaded,
     reopened: true,
     reloaded: true,
-    lensAfterUndoMm: undone,
+    afterUndo: undone,
   };
   result.pageErrors = pageErrors;
   result.detail =
-    "Cinema mounted; lens saved to the project from the page, reopened and reloaded; orbit interaction; scene.save/open/list across reload; AI camera disabled.";
+    "Cinema mounted; lens, object moves and an added box saved to the project from the page, reopened, reloaded and undone; orbit interaction; scene.save/open/list across reload; AI camera disabled.";
 } catch (err) {
   result.passed = false;
   result.detail = err instanceof Error ? err.message : String(err);

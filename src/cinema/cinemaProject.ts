@@ -40,9 +40,12 @@ export const cinemaCanReopen = (s: CinemaSaveState | null) =>
   s?.state === "conflict" ||
   s?.state === "loadError";
 
-/** The scene can be changed except while the project's scene is opening. */
+/**
+ * The scene can be changed except while the project's scene is opening, and after a conflict
+ * or a failed open, where a change could never be saved (only Reopen leads on).
+ */
 export const cinemaCanEdit = (s: CinemaSaveState | null) =>
-  s?.state !== "loading";
+  s?.state !== "loading" && s?.state !== "conflict" && s?.state !== "loadError";
 
 /**
  * The state after a change. A save in flight keeps its state: it reports the change itself
