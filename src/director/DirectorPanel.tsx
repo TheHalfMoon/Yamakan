@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   DIRECTOR_ENABLED,
   directorCapability,
 } from "../../core/director-flags.ts";
 import { MESSAGES, type MessageKey } from "../i18n.ts";
 import { TakeReview } from "./TakeReview.tsx";
+
+// What the capability calls each thing the Director does not do, in the page's words.
+const UNSUPPORTED_KEYS = {
+  "model-dependent-stages": "director.unsupported.modelStages",
+  "paid-inference": "director.unsupported.paidInference",
+  "agent-human-approval": "director.unsupported.agentApproval",
+} as const satisfies Record<string, MessageKey>;
 import type { TakeApplyOutcome, TakeProposal } from "./take-review.ts";
 
 type Client = {
@@ -295,7 +302,20 @@ export function DirectorPanel({
       aria-label="Director"
     >
       <p data-testid="director-unsupported">
-        unsupported: {(directorCapability().unsupported ?? []).join(", ")}
+        {t("director.unsupported")}{" "}
+        {/* Each item isolated on its own, as on the Cinema page: one the page has no words
+            for is shown as its id and cannot turn the others around in Arabic. */}
+        {(directorCapability().unsupported ?? []).map((id, i) => (
+          <Fragment key={id}>
+            {i > 0 ? t("director.unsupported.separator") : null}
+            <bdi>
+              {Object.hasOwn(UNSUPPORTED_KEYS, id)
+                ? t(UNSUPPORTED_KEYS[id as keyof typeof UNSUPPORTED_KEYS])
+                : id}
+            </bdi>
+          </Fragment>
+        ))}
+        .
       </p>
       <EngineOperations client={client} t={t} />
       {projectId ? (

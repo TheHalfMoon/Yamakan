@@ -106,6 +106,13 @@ try {
   await panel.waitFor();
   assert.equal(await panel.getAttribute("data-director-enabled"), "true");
   await page.getByTestId("director-unsupported").waitFor();
+  // In the page's words, not the capability's ids.
+  const unsupported = await page
+    .getByTestId("director-unsupported")
+    .textContent();
+  assert.match(unsupported, /^Not available in the Director: /);
+  assert.match(unsupported, /paid AI services/);
+  assert.doesNotMatch(unsupported, /paid-inference|model-dependent/);
   // YU-042: each generative operation with its plain reason (engines off).
   const engineOps = page.getByTestId("engine-operations");
   await engineOps.waitFor();

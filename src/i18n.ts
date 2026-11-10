@@ -397,6 +397,12 @@ const en = {
   "cinema.project.turnedOff":
     "Saving Cinema scenes is turned off on this service. This scene is not kept; saved scenes open again when saving is turned back on.",
   "director.title": "Director",
+  "director.unsupported": "Not available in the Director:",
+  "director.unsupported.separator": "; ",
+  "director.unsupported.modelStages": "stages that need an AI model",
+  "director.unsupported.paidInference": "paid AI services",
+  "director.unsupported.agentApproval":
+    "an agent approving a stage in place of a person",
   "director.intro":
     "Manual stage workflows. Model-dependent stages stay disabled.",
   "engine.list": "Generative operations",
@@ -960,6 +966,12 @@ const ar: Record<MessageKey, string> = {
   "cinema.project.turnedOff":
     "حفظ مشاهد السينما متوقف في هذه الخدمة. لا يُحتفظ بهذا المشهد؛ وتُفتح المشاهد المحفوظة مجدداً عند إعادة تشغيل الحفظ.",
   "director.title": "المخرج",
+  "director.unsupported": "غير متاح في المخرج:",
+  "director.unsupported.separator": "؛ ",
+  "director.unsupported.modelStages":
+    "المراحل التي تحتاج إلى نموذج ذكاء اصطناعي",
+  "director.unsupported.paidInference": "خدمات الذكاء الاصطناعي المدفوعة",
+  "director.unsupported.agentApproval": "موافقة وكيل على مرحلة بدلاً من شخص",
   "director.intro": "مسارات المراحل اليدوية. مراحل النماذج تبقى متوقفة.",
   "engine.list": "عمليات التوليد",
   "clip.dissolve.heading": "مزج انتقالي",
