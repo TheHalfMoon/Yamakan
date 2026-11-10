@@ -40,20 +40,34 @@ function update(
   return { ...scene, items };
 }
 
-/** A new placeholder box in front of the camera's start, offset so boxes don't stack. */
+/** The next box number: one more than the largest number ending an object's name. */
+export function nextCinemaBoxNumber(scene: CinemaSceneLocal) {
+  let largest = scene.items.length;
+  for (const item of scene.items) {
+    const n = Number(/(\d+)\s*$/.exec(item.name ?? "")?.[1]);
+    if (Number.isSafeInteger(n) && n > largest) largest = n;
+  }
+  return largest + 1;
+}
+
+/**
+ * A new placeholder box in front of the camera's start, named and placed by its number, so
+ * names don't repeat and boxes added one after another don't stack.
+ */
 export function addCinemaBox(
   scene: CinemaSceneLocal,
-  name: string,
+  nameFor: (n: number) => string,
   id: string = crypto.randomUUID(),
 ): CinemaSceneLocal {
   if (scene.items.length >= CINEMA_PAGE_MAX_ITEMS)
     throw new Error(
       `This scene holds the most objects the page edits (${CINEMA_PAGE_MAX_ITEMS}).`,
     );
-  const n = scene.items.length;
+  const number = nextCinemaBoxNumber(scene);
+  const n = number - 1;
   const item: Item = {
     id,
-    name,
+    name: nameFor(number),
     position: { x: round(((n % 5) - 2) * 1.25), y: 0.5, z: -2 },
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
@@ -90,7 +104,10 @@ export function moveCinemaItem(
   }));
 }
 
-/** Turns about the vertical axis, kept within -180° to 180°. */
+/**
+ * Turns about the scene's y axis, kept within -180° to 180°. Moves and turns follow the scene's
+ * own axes, not the preview camera, so after orbiting behind the scene "left" is on the right.
+ */
 export function turnCinemaItem(
   scene: CinemaSceneLocal,
   id: string,
@@ -125,6 +142,11 @@ export function cinemaItemReadout(item: Item) {
     y: round(item.position.y, 2),
     z: round(item.position.z, 2),
     turn: Math.round((item.rotation.y * 180) / Math.PI),
-    scale: round(item.scale.x, 2),
+    scale:
+      item.scale.x === item.scale.y && item.scale.y === item.scale.z
+        ? String(round(item.scale.x, 2))
+        : [item.scale.x, item.scale.y, item.scale.z]
+            .map((v) => round(v, 2))
+            .join(" × "),
   };
 }

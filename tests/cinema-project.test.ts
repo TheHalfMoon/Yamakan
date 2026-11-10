@@ -139,6 +139,9 @@ test("Save and Reopen are offered only where they do something", () => {
     assert.equal(cinemaCanReopen(state), reopen, JSON.stringify(state));
   }
   assert.equal(cinemaCanEdit({ state: "loading" }), false);
+  // Only Reopen leads on from these, so a change could never be saved.
+  assert.equal(cinemaCanEdit({ state: "conflict", message: "m" }), false);
+  assert.equal(cinemaCanEdit({ state: "loadError", message: "m" }), false);
   assert.equal(cinemaCanEdit(null), true);
   assert.equal(cinemaCanEdit({ state: "saving" }), true);
 });

@@ -71,7 +71,24 @@ function assertLocalScene(raw: unknown): CinemaSceneLocal {
     throw new Error("Invalid local Cinema scene");
   }
   assertCinemaCameraOptics(s.camera);
+  const vector = (v: unknown) =>
+    !!v &&
+    typeof v === "object" &&
+    (["x", "y", "z"] as const).every((k) =>
+      Number.isFinite((v as Record<string, unknown>)[k]),
+    );
   for (const item of s.items) {
+    if (
+      !item ||
+      typeof item.id !== "string" ||
+      !vector(item.position) ||
+      !vector(item.rotation) ||
+      !vector(item.scale)
+    ) {
+      throw new Error(
+        "Cinema items need an id and finite position, rotation and scale",
+      );
+    }
     if (item.assetId != null && typeof item.assetId !== "string") {
       throw new Error("Cinema items may only carry asset ids, not URLs");
     }
@@ -139,6 +156,7 @@ export function CinemaViewport({
     initialScene.items[0]?.id ?? null,
   );
   const [, setEdits] = useState(0);
+  const objectsRef = useRef<HTMLDivElement | null>(null);
   // Kept in state so a scene set from outside, with the same lens but another sensor, shows too.
   const [fovDeg, setFovDeg] = useState(() =>
     cinemaVerticalFovDegrees(initialScene.camera, 16 / 9),
@@ -183,6 +201,7 @@ export function CinemaViewport({
     syncRef.current?.(next);
     setLensMm(next.camera.focalLengthMm);
     applyLocalCamera(next.camera);
+    setEdits((n) => n + 1);
     return next;
   };
 
@@ -196,7 +215,15 @@ export function CinemaViewport({
   // An edit to the scene's objects: drawn at once, and unsaved until the person saves.
   const editScene = (edit: (scene: CinemaSceneLocal) => CinemaSceneLocal) => {
     if (!CINEMA_ENABLED || !cinemaCanEdit(saveRef.current)) return;
-    const next = edit(sceneRef.current);
+    let next: CinemaSceneLocal;
+    try {
+      next = edit(sceneRef.current);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setEdits((n) => n + 1);
+      return;
+    }
+    setError(null);
     sceneRef.current = next;
     syncRef.current?.(next);
     setEdits((n) => n + 1);
@@ -534,6 +561,7 @@ export function CinemaViewport({
     const m = CINEMA_NUDGE.metres;
     return (
       <div
+        ref={objectsRef}
         className="cinema-objects"
         role="group"
         aria-labelledby="cinema-objects-title"
@@ -604,11 +632,7 @@ export function CinemaViewport({
             () => {
               const id = crypto.randomUUID();
               const next = editScene((s) =>
-                addCinemaBox(
-                  s,
-                  t("cinema.objects.boxName", { n: s.items.length + 1 }),
-                  id,
-                ),
+                addCinemaBox(s, (n) => t("cinema.objects.boxName", { n }), id),
               );
               if (next) setSelectedId(id);
             },
@@ -617,6 +641,14 @@ export function CinemaViewport({
           {button("cinema.objects.remove", "cinema-objects-remove", () => {
             const next = editScene((s) => removeCinemaItem(s, selected!.id));
             if (next) setSelectedId(next.items[0]?.id ?? null);
+            if (next && next.items.length === 0)
+              requestAnimationFrame(() =>
+                objectsRef.current
+                  ?.querySelector<HTMLButtonElement>(
+                    '[data-testid="cinema-objects-add"]',
+                  )
+                  ?.focus(),
+              );
           })}
         </div>
         {readout ? (
