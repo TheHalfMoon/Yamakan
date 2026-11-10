@@ -670,6 +670,15 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
     );
     db.exec("DROP TABLE IF EXISTS send_consent_covers");
     db.exec("DROP TABLE IF EXISTS asset_replacements");
+    // Schema 17's column, so the upgrade adds it again (a refused upgrade never added it).
+    if (
+      db
+        .prepare(
+          "SELECT 1 FROM pragma_table_info('agent_tokens') WHERE name = 'expires_at'",
+        )
+        .get()
+    )
+      db.exec("ALTER TABLE agent_tokens DROP COLUMN expires_at");
     db.exec("DROP TABLE IF EXISTS story_document_versions");
     db.exec("PRAGMA user_version = 12");
     db.exec("COMMIT");
@@ -710,7 +719,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   const upgraded = new ProjectStore(c.root);
   handles.push(upgraded);
   await upgraded.initialize();
-  assert.equal(read("PRAGMA user_version").user_version, 16);
+  assert.equal(read("PRAGMA user_version").user_version, 17);
   const db = new DatabaseSync(file, { readOnly: true });
   try {
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);

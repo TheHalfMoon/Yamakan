@@ -179,7 +179,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 16;
+export const WORKSPACE_SCHEMA_VERSION = 17;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -422,6 +422,12 @@ CREATE TABLE director_requests(
   PRIMARY KEY(principal_id, request_id)
 ) STRICT;
 `;
+// An agent token may end at a time the person chose when making it. A token made before this
+// step, or without one, does not end; revoking it still does.
+const SCHEMA_V17 = `
+ALTER TABLE agent_tokens ADD COLUMN expires_at TEXT
+  CHECK(expires_at IS NULL OR length(expires_at) = 24);
+`;
 // Story documents and reference packs (YU-031): the two document tables
 // accept the new kinds, and each story or pack version is recorded under
 // its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
@@ -647,6 +653,16 @@ type Commit = {
 };
 
 // Integrity, version and ownership checks, run read-only before any write.
+/**
+ * Whether an agent token has ended. No end time means it does not end; one that cannot be read
+ * counts as ended, so a damaged row never keeps a token working.
+ */
+export function agentTokenExpired(expiresAt: string | null, now: Date) {
+  if (expiresAt === null) return false;
+  const at = Date.parse(expiresAt);
+  return !(at > now.getTime());
+}
+
 function acceptable(db: DatabaseSync): number {
   const integrity = db.prepare("PRAGMA quick_check").all();
   if (
@@ -829,6 +845,7 @@ export class ProjectStore {
         SCHEMA_V14,
         SCHEMA_V15,
         SCHEMA_V16,
+        SCHEMA_V17,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
@@ -3623,22 +3640,86 @@ export class ProjectStore {
       operation: string;
     }[];
   }
-  createAgentToken(scopes: ReadonlySet<Scope>, label?: string) {
+  createAgentToken(
+    scopes: ReadonlySet<Scope>,
+    label?: string,
+    expiresInDays?: number,
+    now = new Date(),
+  ) {
     const agentId = newAgentId();
     const token = newAgentToken();
     const tokenHash = hashAgentToken(token);
+    const expiresAt =
+      expiresInDays === undefined
+        ? null
+        : new Date(now.getTime() + expiresInDays * 86_400_000).toISOString();
     this.#database
       .prepare(
-        "INSERT INTO agent_tokens(agent_id, token_hash, scopes, label, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO agent_tokens(agent_id, token_hash, scopes, label, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
       )
       .run(
         agentId,
         tokenHash,
         encodeAgentScopes(scopes),
         label ?? null,
-        new Date().toISOString(),
+        now.toISOString(),
+        expiresAt,
       );
-    return { agentId, token, scopes: [...scopes] };
+    return { agentId, token, scopes: [...scopes], expiresAt };
+  }
+  // A restored database may keep a token table from before schema 17, without the column. Its
+  // tokens had no end then, so they are read as having none (revoking still ends them).
+  #expiresColumn() {
+    const has = this.#database
+      .prepare(
+        "SELECT 1 FROM pragma_table_info('agent_tokens') WHERE name = 'expires_at' COLLATE NOCASE",
+      )
+      .get();
+    return has ? "expires_at" : "NULL AS expires_at";
+  }
+  /**
+   * Every agent token this workspace made, newest first: who it is, what it may do, when it
+   * was made and ends, and whether it still works. Never the token or its hash.
+   */
+  listAgentTokens(now = new Date()) {
+    const rows = this.#database
+      .prepare(
+        `SELECT agent_id, scopes, label, revoked, created_at, ${this.#expiresColumn()} FROM agent_tokens ORDER BY created_at DESC, agent_id`,
+      )
+      .all() as {
+      agent_id: string;
+      scopes: string;
+      label: string | null;
+      revoked: number;
+      created_at: string;
+      expires_at: string | null;
+    }[];
+    return {
+      tokens: rows.map((row) => {
+        let scopes: Scope[] | null;
+        try {
+          scopes = [...parseAgentScopes(row.scopes)];
+        } catch {
+          // A row the store would refuse to honour is listed, not hidden.
+          scopes = null;
+        }
+        const expired = agentTokenExpired(row.expires_at, now);
+        return {
+          agentId: row.agent_id,
+          label: row.label,
+          scopes,
+          createdAt: row.created_at,
+          expiresAt: row.expires_at,
+          revoked: row.revoked !== 0,
+          expired,
+          active:
+            row.revoked === 0 &&
+            !expired &&
+            scopes !== null &&
+            AgentId.safeParse(row.agent_id).success,
+        };
+      }),
+    };
   }
   revokeAgentToken(agentId: string) {
     const changed = this.#database
@@ -3650,16 +3731,27 @@ export class ProjectStore {
       throw new CommandError("NOT_FOUND", "Agent token was not found.");
     return { agentId, revoked: true as const };
   }
-  principalForAgentToken(token: string): Principal | null {
+  principalForAgentToken(token: string, now = new Date()): Principal | null {
     const row = this.#database
       .prepare(
-        "SELECT agent_id, scopes, revoked FROM agent_tokens WHERE token_hash = ?",
+        `SELECT agent_id, scopes, revoked, ${this.#expiresColumn()} FROM agent_tokens WHERE token_hash = ?`,
       )
       .get(hashAgentToken(token)) as
-      { agent_id: string; scopes: string; revoked: number } | undefined;
-    // Only a token this store issued and has not revoked: its schema says so, and a restored
-    // database may not have kept that schema.
-    if (!row || row.revoked !== 0 || !AgentId.safeParse(row.agent_id).success)
+      | {
+          agent_id: string;
+          scopes: string;
+          revoked: number;
+          expires_at: string | null;
+        }
+      | undefined;
+    // Only a token this store issued, has not revoked and has not seen end: its schema says
+    // so, and a restored database may not have kept that schema.
+    if (
+      !row ||
+      row.revoked !== 0 ||
+      agentTokenExpired(row.expires_at, now) ||
+      !AgentId.safeParse(row.agent_id).success
+    )
       return null;
     return {
       id: row.agent_id as Principal["id"],

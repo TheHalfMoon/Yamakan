@@ -2,6 +2,13 @@
 
 Decisions the implementing agent (Claude, Claude Code) made under authority the founder delegated. They are **not** founder approvals and are never attributed to one. Each records its authority, rationale, evidence and how to change it. Founder decisions are in the [founder decision record](FOUNDER_DECISION_RECORD.md).
 
+## 2026-11-10: agent tokens can be listed and can end
+
+- **Authority:** the founder's standing approval to choose the best on open product decisions (2026-11-06), and the continuation directive's P1 item "agent token listing, expiry and revocation".
+- **Decision:** `yamakan.agent.list` lists a workspace's agent tokens for the person only (browser session; scope `agent:revoke`, since listing is how one finds what to revoke). It shows each token's id, label, scopes, created and end times, and whether it is revoked, ended or active. It never shows a token or its hash. `yamakan.agent.create` takes an optional `expiresInDays`, from 1 to 366 days, after which the token is refused. Without it, a token works until revoked, as before. Workspace schema 17 adds the `expires_at` column. Tokens made before it have no end, and so does a restored table without the column. An end time that can't be read ends the token.
+- **Not a new resource limit:** the end is the person's own choice for each token, and nothing is imposed on tokens that don't set one. The frozen resource limits are unchanged.
+- **Change rule:** a default end for every token, or a cap on how many may exist, would be a new limit, and needs the founder.
+
 ## 2026-11-09: consent is recorded from the Create page
 
 - **Authority:** the founder's "from now chose the best, you have my approval", within their rules that sending a person's image needs its own consent ("Yes, separate consent") and that consent commands stay at the browser ([founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-07-claude-chooses-on-open-product-decisions)).
