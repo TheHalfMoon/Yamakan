@@ -72,10 +72,18 @@ function kaggle(
     privateAnswer = true,
     clock,
     videoBytes,
+    download,
+    freeBytes,
   }: {
     privateAnswer?: boolean;
     clock?: () => number;
     videoBytes?: number;
+    download?: (
+      runId: string,
+      folder: string,
+      signal?: AbortSignal,
+    ) => Promise<void>;
+    freeBytes?: (folder: string) => Promise<number>;
   } = {},
 ) {
   const calls: string[][] = [];
@@ -124,7 +132,12 @@ function kaggle(
     username: "someone",
     folderRoot,
     scriptFor: async () => SCRIPT,
-    download: async (_r, folder) => leave?.(runId, folder),
+    download: download
+      ? (_r, folder, signal) => download(runId, folder, signal)
+      : async (_r, folder) => leave?.(runId, folder),
+    ...(freeBytes ? { freeBytes } : {}),
+    watchMs: 10,
+    stopGraceMs: 1000,
     ...(clock ? { now: clock } : {}),
     ...(videoBytes !== undefined ? { videoBytes } : {}),
   });
@@ -1462,3 +1475,72 @@ for (const [name, over] of [
     assert.equal(answer.state, "failed");
     assert.match(answer.diagnostic!, /readable result/);
   });
+
+// Bounded while it arrives, not only once it has: the CLI writes what Kaggle sends, and a
+// huge output would fill the disk before anything looked at it.
+const stoppedWhileWriting = async (
+  why: RegExp,
+  options: {
+    grow: boolean;
+    freeBytes?: (folder: string) => Promise<number>;
+    heedStop?: boolean;
+  },
+) => {
+  let time = 0;
+  let given: AbortSignal | undefined;
+  let late = 0;
+  let written = "";
+  const k = kaggle(["COMPLETE"], undefined, {
+    clock: () => time,
+    videoBytes: 1000,
+    ...(options.freeBytes ? { freeBytes: options.freeBytes } : {}),
+    download: async (runId, folder, signal) => {
+      written = folder;
+      given = signal;
+      good(runId, folder);
+      // Keeps writing, as a CLI fed a huge output would, until it is stopped: past the
+      // 2 MiB a receipt and a log may add within about 32 steps.
+      for (let i = 0; i < 400; i++) {
+        if (signal?.aborted) {
+          if (options.heedStop !== false) return;
+          // Ended by force a little later, as a process tree is.
+          if (++late > 10) return;
+        }
+        if (options.grow)
+          writeFileSync(
+            path.join(folder, wan.output),
+            "x".repeat(65536 * (i + 1)),
+          );
+        await new Promise((r) => setTimeout(r, 5));
+      }
+    },
+  });
+  const { executionRef } = (await k.engine.submit(
+    request(),
+    context as never,
+  )) as any;
+  const started = Date.now();
+  assert.equal((await k.engine.status(executionRef)).state, "unknown");
+  // Stopped soon, not after the 2 s the writer would take.
+  assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
+  assert.ok(written, "the download began");
+  assert.equal(existsSync(written), false, "what it wrote is removed");
+  // The CLI was told to stop, whether or not it listened.
+  assert.equal(given?.aborted, true);
+  time = 10 * 60 * 1000;
+  const answer = await k.engine.status(executionRef);
+  assert.equal(answer.state, "failed");
+  assert.match(answer.diagnostic!, why);
+};
+
+test("a download growing past what a run makes is stopped and removed", () =>
+  stoppedWhileWriting(/readable result/, { grow: true }));
+
+test("a download is stopped when the disk falls below its reserve", () =>
+  stoppedWhileWriting(/readable result/, {
+    grow: false,
+    freeBytes: async () => 0,
+  }));
+
+test("a download that does not heed the stop is still not waited for", () =>
+  stoppedWhileWriting(/readable result/, { grow: true, heedStop: false }));
