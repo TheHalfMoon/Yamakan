@@ -37,3 +37,11 @@ Until Q15 OS user presence is wired into each human-only command, these hold:
 - The MCP server refuses to start without an agent token (`YAMAKAN_AGENT_TOKEN_FILE` or `YAMAKAN_AGENT_TOKEN`). Running it as the full local client, with the workspace `token`, takes `YAMAKAN_MCP_LOCAL_CLIENT=1`: a choice made by name, never a fallback.
 - An agent run as the user, with the workspace token or file access, is trusted as the user: what it does counts as the user's own act, including consent and approvals.
 - Moving the launch secret into the service's memory would not help, because the launcher proves itself with the same file access. Zero-cost assessment (UserConsentVerifier preferred; procd stays dependency-free; no Q15 pass claimed): [`evidence/qualification/q15-user-presence-assessment.md`](evidence/qualification/q15-user-presence-assessment.md).
+
+## Blender worker (2026-11-10)
+
+- Blender renders run only through yamakan-procd on Windows, in the engine-worker profile: an AppContainer with no network capability and no GPU, a low-integrity token, a kill-on-close Job Object (at most 4 processes, 30 minutes, 4 GiB committed memory). It may read only its own install, Yamakan's one fixed script (`scripts/blender/yamakan_render.py`) and that render's scene description, and write only that render's frames folder.
+- It runs `-b --factory-startup -Y --offline-mode -noaudio`: factory settings, Python embedded in .blend files never auto-runs, no online access. Yamakan hands it a bounded JSON scene (`core/blender/scene.ts`), never Python; the script re-checks every value.
+- The runtime is the pinned official build, checked by SHA-256 before each use, installed from a zip the person downloaded (`npm run blender:install`, which also verifies the zip's hash). It runs in place inside procd's worker tools folder, whose read-and-execute grant its files inherit (procd's run-in-place rule, `native/procd/src/container.rs`).
+- Its frames are checked against the scene (count, size, receipt) before Yamakan's own FFmpeg, reading only those frames and only PNG, encodes them; the video is probed before it joins the project.
+- Not covered yet: macOS and Linux (no contained worker there, so no Blender); GPU rendering (EEVEE, Workbench) needs a GPU the container does not give.
