@@ -34,6 +34,7 @@ import {
   type CinemaAxis,
 } from "./cinemaObjects.ts";
 import type { MessageKey } from "../i18n.ts";
+import { BlenderRender, type BlenderHost } from "./BlenderRender.tsx";
 
 /** Browser-local scene shape (mirrors core Scene3D; validated server-side on save). */
 export type CinemaSceneLocal = {
@@ -135,6 +136,8 @@ type Props = {
   client?: CinemaProjectClient;
   onSaved?: (projectId: string, from: number, to: number) => void;
   registerUnsaved?: (isUnsaved: () => boolean) => () => void;
+  // Renders the saved scene with Blender and places the video on the timeline.
+  blender?: BlenderHost;
 };
 
 /**
@@ -149,6 +152,7 @@ export function CinemaViewport({
   client,
   onSaved,
   registerUnsaved,
+  blender,
 }: Props) {
   // Hidden (another workspace is open): the scene is kept, nothing is drawn.
   const activeRef = useRef(active);
@@ -796,6 +800,14 @@ export function CinemaViewport({
           </>
         )}
       </div>
+      {blender && projectId && client && persistence ? (
+        <BlenderRender
+          key={projectId}
+          host={blender}
+          t={t}
+          sceneSaved={save?.state === "saved"}
+        />
+      ) : null}
       {error ? (
         <p role="alert" data-testid="cinema-error">
           {error}

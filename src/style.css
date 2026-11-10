@@ -888,6 +888,34 @@ footer {
   font-size: 0.9rem;
 }
 
+/* Cinema: rendering the saved scene with Blender. */
+.cinema-blender {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.cinema-blender-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.cinema-blender-choices label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.cinema-blender output,
+.cinema-blender p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
 /* Agent access: tokens the person makes for agents. */
 .agent-access {
   display: grid;

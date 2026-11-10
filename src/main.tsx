@@ -71,6 +71,7 @@ import { asPersonPack } from "./create/create-people.ts";
 import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
+import type { BlenderHost } from "./cinema/BlenderRender.tsx";
 import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
@@ -1012,6 +1013,22 @@ function App() {
       />
     </>
   );
+  // The Cinema page's Blender render: the service's commands, and the editor's own placing.
+  const blenderHost = (p: Project): BlenderHost => ({
+    capability: () => call("yamakan.blender.capability", {}),
+    start: (settings) =>
+      call("yamakan.blender.render", { projectId: p.id, settings }),
+    status: (jobId) => call("yamakan.job.status", { jobId }),
+    cancel: (jobId) => call("yamakan.job.cancel", { jobId }),
+    // The new video joins the editor's project, as a generated one is brought in.
+    refresh: () =>
+      run(async () => {
+        await save();
+        accept(await call("yamakan.project.open", { projectId: p.id }));
+        await refresh();
+      }),
+    place: (assetId) => placeWhole(p, assetId),
+  });
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
@@ -1023,6 +1040,7 @@ function App() {
         client={client as unknown as CinemaProjectClient}
         onSaved={documentSaved}
         registerUnsaved={registerUnsaved}
+        blender={p ? blenderHost(p) : undefined}
       />
     </>
   );
