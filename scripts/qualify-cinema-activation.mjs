@@ -116,6 +116,28 @@ try {
     { timeout: 60000 },
   );
 
+  // #203: the project's Cinema scene opens first. A new project has none yet.
+  const projectState = () =>
+    page.getByTestId("cinema-project-state").getAttribute("data-state");
+  const waitState = (state) =>
+    page.waitForFunction(
+      (s) =>
+        document
+          .querySelector('[data-testid="cinema-project-state"]')
+          ?.getAttribute("data-state") === s,
+      state,
+      { timeout: 30000 },
+    );
+  await waitState("new");
+  assert.equal(
+    await page.getByTestId("cinema-project-save").isDisabled(),
+    false,
+  );
+  assert.equal(
+    await page.getByTestId("cinema-project-reopen").isDisabled(),
+    true,
+  );
+
   // #203: the lens inspector must control the real Cinema camera, not just
   // change text or pretend to condition a generative model.
   await page.getByTestId("cinema-lens-85").click();
@@ -141,7 +163,30 @@ try {
   assert.notEqual(wideLensFov, longLensFov);
   assert.match(
     await page.getByTestId("cinema-lens-panel").textContent(),
-    /not saved/i,
+    /until you choose Save scene to project/i,
+  );
+
+  // #203: saved to the project only when the person chooses, then opened from it.
+  assert.equal(await projectState(), "changed");
+  await page.getByTestId("cinema-project-save").click();
+  await waitState("saved");
+  const savedSceneId = await page.evaluate(
+    () => window.__yamakanCinema.getScene().id,
+  );
+  await page.getByTestId("cinema-lens-85").click();
+  assert.equal(await projectState(), "changed");
+  await page.getByTestId("cinema-project-reopen").click();
+  await waitState("saved");
+  assert.equal(
+    await page.evaluate(
+      () => window.__yamakanCinema.getScene().camera.focalLengthMm,
+    ),
+    24,
+    "Reopen shows the saved lens, not the unsaved one",
+  );
+  assert.equal(
+    await page.getByTestId("cinema-lens-24").getAttribute("aria-pressed"),
+    "true",
   );
 
   const before = await page.evaluate(() => {
@@ -212,6 +257,21 @@ try {
     null,
     { timeout: 60000 },
   );
+  // The project's saved scene opens again with the project after a reload.
+  await page
+    .getByRole("button", { name: /Cinema act/ })
+    .first()
+    .click();
+  await page
+    .getByRole("heading", { name: "Cinema act", exact: true })
+    .waitFor();
+  await page.getByRole("tab", { name: "Story", exact: true }).click();
+  await waitState("saved");
+  const reloaded = await page.evaluate(() => {
+    const scene = window.__yamakanCinema.getScene();
+    return { id: scene.id, lensMm: scene.camera.focalLengthMm };
+  });
+  assert.deepEqual(reloaded, { id: savedSceneId, lensMm: 24 });
   const listed = await callApi("yamakan.scene.list", {});
   assert.ok(
     listed.result.scenes.some((s) => s.id === scene.id),
@@ -223,9 +283,10 @@ try {
   result.before = before;
   result.afterPose = after;
   result.contentHash = contentHash;
+  result.projectScene = { ...reloaded, reopened: true, reloaded: true };
   result.pageErrors = pageErrors;
   result.detail =
-    "Cinema mounted; orbit interaction; scene.save/open/list across reload; AI camera disabled.";
+    "Cinema mounted; lens saved to the project from the page, reopened and reloaded; orbit interaction; scene.save/open/list across reload; AI camera disabled.";
 } catch (err) {
   result.passed = false;
   result.detail = err instanceof Error ? err.message : String(err);
