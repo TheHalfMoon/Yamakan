@@ -333,5 +333,33 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
 **Blender first vertical slice qualified, 2026-11-10:** `npm run qualify:blender-slice` (scripts/qualify-blender-e2e.mjs) runs the real service and SDK: a project, its saved Cinema scene (two boxes), a contained Blender 5.3.0 render (30 frames at 320×180, Cycles CPU, 89 s including the first render's full install check), the video joining the project, a clip on the timeline, a real MP4 export decoded to 30 frames in which a bluish and an orangish pixel (the two boxes) appear and the frames differ by more than encoder noise (the camera moving), and the service restarted with the project reopening with its asset and clip. The receipt records the commit and whether the tree was clean; it is kept outside the repository. The commit it passed at is named in the PR. Not yet: a control on the page.
 
-**Blender, after the founder's decisions of 2026-11-11:** main `d1936f7` passed CI, and the full suite there passed (1,324 tests, 1,321 passed, 0 failed, 3 POSIX-only skips; the real-Blender tests ran). A still render is now a negative control: `node scripts/qualify-blender-e2e.mjs --still` renders the same scene with the camera fixed and passes only if the motion check refuses it (0.0 % changed); the frame checks are in `scripts/lib/frame-checks.ts` with unit tests on frames made to order. A fresh independent security review of the final worker code found no High or Medium issues; its Lows are fixed: no file path in job errors, every frame checked as a plain file of a sensible size, one shared hash for concurrent capability checks, `{` and `}` refused in the workspace path, a malformed receipt never quoted, procd's run-in-place limited to `worker-toolslender-*lender.exe`, and NOTICE and SECURITY.md matched to the code. Left as a documented limit: one Blender render at a time, refused rather than queued.
+**Blender, after the founder's decisions of 2026-11-11:** main `d1936f7` passed CI, and the full suite there passed (1,324 tests, 1,321 passed, 0 failed, 3 POSIX-only skips; the real-Blender tests ran). A still render is now a negative control: `node scripts/qualify-blender-e2e.mjs --still` renders the same scene with the camera fixed and passes only if the motion check refuses it (0.0 % changed); the frame checks are in `scripts/lib/frame-checks.ts` with unit tests on frames made to order. A fresh independent security review of the final worker code found no High or Medium issues; its Lows are fixed: no file path in job errors, every frame checked as a plain file of a sensible size, one shared hash for concurrent capability checks, `{` and `}` refused in the workspace path, a malformed receipt never quoted, procd's run-in-place limited to `worker-tools\blender-*\blender.exe`, and NOTICE and SECURITY.md matched to the code. Left as a documented limit: one Blender render at a time, refused rather than queued.
 
+**Cinema-page Blender control, 2026-11-11 (PR #259, merged as `e3733b0`):**
+- **The panel:**
+  - Render settings: size, length, frame rate, quality (samples) and camera orbit, never more than 120 frames.
+  - Render only for a saved scene.
+  - A progress bar and Cancel.
+  - The service's errors and refusals, each saying what failed.
+  - "Rendered with Blender", then Place on timeline.
+  - When Blender is missing, the service's own reason.
+  - English and Arabic.
+- **Placing:** a finished render changes nothing in the editor. Place saves the editor's work, reopens the project and places the whole video as one undoable step. A save that meets a conflict stops it.
+- **Following a render:**
+  - status reads are retried with backoff;
+  - following stops when the service refuses the read;
+  - the panel follows its render again after another project is opened and this one reopened.
+- **Evidence:**
+  - `npm run qualify:cinema-blender` runs a real browser, the real service and the pinned Blender, and refuses a dirty tree. It passed at `38e9b12` with these steps:
+    - Render was disabled until the scene was saved.
+    - A cancel at 6% left no asset.
+    - The service's "already running" refusal was shown.
+    - The render was followed through a project switch.
+    - A full 34 s render.
+    - One clip placed on the page, read back through the SDK as a 320×180 video of 30 frames with a 30-frame clip.
+    - The Arabic panel laid out right to left.
+    - A service without Blender showed its reason.
+  - The full suite at `38e9b12` passed: 1,335 tests, 1,332 passed, 0 failed, 3 POSIX-only skips.
+- **Review:** the independent review (1 High, 3 Medium, Lows; none security) and its re-check were addressed before merging.
+- **Still a known limit:** a render running when the page is reloaded is not followed again. Its video still joins the project, and Render is refused until it ends or is cancelled.
+- **Next:** YouMind Phase B (local, rights-cleared prompt library), the Creative Director on Cinema scenes and the Blender worker, then compositing, tracking, animation and 3D asset import.
