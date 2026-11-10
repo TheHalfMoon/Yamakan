@@ -1,0 +1,297 @@
+/**
+ * The Blender integration's first vertical slice, end to end through the real service and its
+ * SDK (Windows, with the pinned Blender installed by `npm run blender:install`):
+ *
+ *   a project → its saved Cinema scene → a contained Blender render → a verified video asset
+ *   → the timeline → a real MP4 export, decoded frame by frame → the service restarted and the
+ *   project reopened with its asset and clip.
+ *
+ * Nothing here is mocked. The receipt is printed, and written only where
+ * YAMAKAN_QUALIFY_RECEIPT points (never into the repository).
+ */
+import { execFileSync, fork } from "node:child_process";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { YamakanClient } from "../sdk/client.ts";
+import { mediaTools } from "../core/process/workers.ts";
+
+const root = mkdtempSync(join(tmpdir(), "yamakan-blender-e2e-"));
+const workspace = join(root, "workspace");
+const port = 24381;
+const base = `http://127.0.0.1:${port}`;
+const SECOND = 705_600_000;
+const steps = [];
+const step = (name, detail) => {
+  steps.push(detail ? { name, ...detail } : { name });
+  console.log(`- ${name}${detail ? ` ${JSON.stringify(detail)}` : ""}`);
+};
+
+let child;
+async function start() {
+  child = fork(
+    fileURLToPath(new URL("../server/main.ts", import.meta.url)),
+    [],
+    {
+      env: {
+        ...process.env,
+        YAMAKAN_WORKSPACE: workspace,
+        YAMAKAN_PORT: String(port),
+      },
+      silent: true,
+      windowsHide: true,
+    },
+  );
+  let errors = "";
+  child.stderr.on("data", (c) => (errors += String(c)));
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`startup: ${errors}`)),
+      30000,
+    );
+    child.stdout.on("data", (c) => {
+      if (String(c).includes("Yamakan is running")) {
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`exited ${code}: ${errors}`));
+    });
+  });
+  // The service makes a new client token each start.
+  const token = readFileSync(join(workspace, "token"), "utf8").trim();
+  return new YamakanClient({ baseUrl: base, token });
+}
+async function stop() {
+  if (!child || child.exitCode !== null) return;
+  const done = new Promise((r) => child.once("exit", r));
+  child.send("shutdown");
+  await done;
+}
+
+let passed = false;
+const started = Date.now();
+try {
+  let client = await start();
+  const capability = await client.call("yamakan.blender.capability", {});
+  assert.equal(capability.available, true, capability.message ?? "");
+  step("the pinned Blender is available", { version: capability.version });
+
+  const project = await client.call("yamakan.project.create", {
+    name: "Blender slice",
+  });
+  const projectId = project.id;
+  // The project's Cinema scene, as the Cinema page saves it: two boxes.
+  const sceneId = randomUUID();
+  const opened = await client.call("yamakan.project.open", { projectId });
+  await client.saveDocument({
+    projectId,
+    expectedRevision: opened.revision,
+    documentId: sceneId,
+    kind: "cinemaScene",
+    schemaVersion: 1,
+    expectedContentHash: null,
+    content: {
+      format: "yamakan.scene3d",
+      formatVersion: 1,
+      id: sceneId,
+      units: "metres",
+      eulerOrder: "XYZ",
+      camera: { focalLengthMm: 35, sensorWidthMm: 36, near: 0.1, far: 1000 },
+      items: [
+        {
+          id: randomUUID(),
+          name: "blue",
+          position: { x: 0, y: 0.5, z: -2 },
+          rotation: { x: 0, y: 0.4, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+          assetId: null,
+          color: "#3366cc",
+        },
+        {
+          id: randomUUID(),
+          name: "orange",
+          position: { x: -1.25, y: 0.5, z: -2 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 2, z: 1 },
+          assetId: null,
+          color: "#e07020",
+        },
+      ],
+    },
+    requestId: `scene.${randomUUID()}`,
+  });
+  step("the project's Cinema scene is saved");
+
+  const renderStarted = Date.now();
+  const job = await client.call("yamakan.blender.render", {
+    projectId,
+    settings: {
+      width: 320,
+      height: 180,
+      fps: 30,
+      frames: 30,
+      samples: 8,
+      orbitDegrees: 90,
+    },
+    name: "Two boxes",
+  });
+  let done;
+  for (let i = 0; i < 1200; i++) {
+    done = await client.call("yamakan.job.status", { jobId: job.id });
+    if (["COMPLETED", "FAILED", "CANCELLED"].includes(done.state)) break;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  assert.equal(done.state, "COMPLETED", done.error ?? JSON.stringify(done));
+  const renderSeconds = (Date.now() - renderStarted) / 1000;
+  const head = await client.call("yamakan.project.open", { projectId });
+  const asset = head.assets.find((a) => a.name === "Two boxes.mp4");
+  assert.ok(asset, "the render joined the project");
+  assert.equal(asset.kind, "video");
+  assert.equal(asset.width, 320);
+  assert.equal(asset.height, 180);
+  step("Blender rendered it, contained, and the video joined the project", {
+    renderSeconds,
+    asset: {
+      width: asset.width,
+      height: asset.height,
+      durationFrames: asset.durationFrames,
+    },
+  });
+
+  const track = head.tracks.find((t) => t.kind === "video").id;
+  const clipId = randomUUID();
+  await client.call("yamakan.project.applyBatch", {
+    projectId,
+    expectedRevision: head.revision,
+    operations: [
+      {
+        type: "clip.add",
+        clipId,
+        trackId: track,
+        assetId: asset.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: SECOND,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  step("it is placed on the timeline");
+
+  const exportJob = await client.call("yamakan.export.video", {
+    projectId,
+    idempotencyKey: randomUUID().replaceAll("-", ""),
+  });
+  let exported;
+  for (let i = 0; i < 1200; i++) {
+    exported = await client.call("yamakan.job.status", { jobId: exportJob.id });
+    if (["COMPLETED", "FAILED", "CANCELLED"].includes(exported.state)) break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  assert.equal(exported.state, "COMPLETED", exported.error ?? "");
+  const file = readdirSync(workspace, { recursive: true })
+    .map(String)
+    .find((f) => f.replaceAll("\\", "/").endsWith(exported.artifact));
+  assert.ok(file, "the export is in the workspace");
+  // Decoded frame by frame, each scaled to 8×8: the boxes move across the frames (the camera
+  // orbits), so the frames differ, and they hold more than the background colour.
+  const raw = execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      join(workspace, file),
+      "-vf",
+      "scale=8:8",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "-",
+    ],
+    { windowsHide: true, maxBuffer: 1 << 26 },
+  );
+  const frameBytes = 8 * 8 * 3;
+  const frames = raw.length / frameBytes;
+  assert.equal(frames, 30, "one second at 30 fps");
+  const first = raw.subarray(0, frameBytes);
+  const last = raw.subarray((frames - 1) * frameBytes, frames * frameBytes);
+  assert.notDeepEqual([...first], [...last], "the camera moved");
+  const colours = new Set();
+  for (let i = 0; i < frameBytes; i += 3)
+    colours.add(`${first[i] >> 4},${first[i + 1] >> 4},${first[i + 2] >> 4}`);
+  assert.ok(
+    colours.size >= 3,
+    `the frame holds the boxes, not one colour (${colours.size})`,
+  );
+  step(
+    "a real MP4 export of the timeline decodes with moving, coloured frames",
+    {
+      frames,
+      coloursInFirstFrame: colours.size,
+    },
+  );
+
+  // Saved and reopened: the service is stopped and started again.
+  await stop();
+  client = await start();
+  const reopened = await client.call("yamakan.project.open", { projectId });
+  assert.ok(
+    reopened.assets.some((a) => a.id === asset.id),
+    "the asset is still there",
+  );
+  assert.ok(
+    reopened.clips.some((c) => c.id === clipId),
+    "the clip is still there",
+  );
+  assert.equal(reopened.revision, head.revision + 1);
+  step("after a restart the project reopens with the render and its clip", {
+    revision: reopened.revision,
+  });
+  passed = true;
+} catch (e) {
+  console.error(e);
+} finally {
+  await stop().catch(() => {});
+  const receipt = {
+    task: "blender-vertical-slice",
+    head: execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).trim(),
+    passed,
+    seconds: (Date.now() - started) / 1000,
+    engine:
+      "Blender 5.3.0, Cycles CPU, contained (yamakan-procd engine-worker profile)",
+    aiGenerated: false,
+    steps,
+  };
+  console.log(JSON.stringify(receipt, null, 2));
+  if (process.env.YAMAKAN_QUALIFY_RECEIPT)
+    writeFileSync(
+      process.env.YAMAKAN_QUALIFY_RECEIPT,
+      `${JSON.stringify(receipt, null, 2)}\n`,
+    );
+  await new Promise((r) => setTimeout(r, 1000));
+  rmSync(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
+}
+console.log(passed ? "BLENDER SLICE PASS" : "BLENDER SLICE FAIL");
+process.exit(passed ? 0 : 1);
