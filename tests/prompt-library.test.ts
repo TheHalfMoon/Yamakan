@@ -249,6 +249,9 @@ test("search ignores one-letter words, matches from a word's start, and sees pas
   assert.equal(ids("بالمطر")[0], "yamakan.rain-night-street");
   assert.equal(ids("وأمواج")[0], "yamakan.ocean-waves-slow");
   assert.equal(ids("للمنتج").length > 0, true);
+  // A letter that belongs to the library's word is not a prefix: "قطة" (cat) is not "لقطة" (shot).
+  assert.deepEqual(ids("قطة"), []);
+  assert.ok(ids("لقطة").length > 5);
 });
 
 test("a value loses invisible direction and joining marks, and a field given twice is refused", () => {

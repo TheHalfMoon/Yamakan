@@ -643,24 +643,35 @@ export function normaliseForSearch(text: string) {
 
 // A word, and the word without an Arabic prefix: the article (ال, لل), alone or after و ف ب ك,
 // or one of و ف ب ك ل alone, when three letters or more are left. So "بالمطر" finds "مطر".
-const forms = (word: string) => {
-  const article =
-    /^(?:[\u0648\u0641\u0628\u0643]?\u0627\u0644|\u0644\u0644)(.{3,})$/.exec(
-      word,
-    );
+const forms = (word: string, query = true) => {
+  const article = (
+    query ? /^(?:[وفبك]?ال|لل)(.{3,})$/ : /^[وفبك]?ال(.{3,})$/
+  ).exec(word);
   if (article) return [word, article[1]];
-  const letter = /^[\u0648\u0641\u0628\u0643\u0644](.{3,})$/.exec(word);
+  if (!query) return [word];
+  const letter = /^[وفبكل](.{3,})$/.exec(word);
   return letter ? [word, letter[1]] : [word];
 };
+// The library's own words lose only the article (ال, after و ف ب ك or alone): a single letter
+// there, or the ل of لل, may be part of the word (لقطة, للقطة), so stripping it would make "قطة"
+// find every shot.
 const wordsOf = (text: string) =>
-  new Set(normaliseForSearch(text).split(" ").filter(Boolean).flatMap(forms));
+  new Set(
+    normaliseForSearch(text)
+      .split(" ")
+      .filter(Boolean)
+      .flatMap((w) => forms(w, false)),
+  );
 
-// The query's words of two letters or more, each with its forms.
+// The query's distinct words of two letters or more, each with its forms.
 const queryTerms = (query: string) =>
-  normaliseForSearch(query)
-    .split(" ")
-    .filter((w) => w.length > 1)
-    .map(forms);
+  [
+    ...new Set(
+      normaliseForSearch(query)
+        .split(" ")
+        .filter((w) => w.length > 1),
+    ),
+  ].map((w) => forms(w));
 
 // A word of the text starts with one of the term's forms.
 const has = (words: Set<string>, term: string[]) => {
