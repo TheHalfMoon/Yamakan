@@ -209,6 +209,18 @@ function sameToken(value: string, expected: string) {
 // downloads) are the only routes the media key opens.
 const MEDIA_ROUTE =
   /^\/api\/v1\/(projects\/[^/]+\/(assets\/[^/]+(\/(peaks|proxy|thumbnail))?|preview)|jobs\/[^/]+\/artifact)$/;
+// Each token's id is worked out once, not on every hello (a few agent tokens at most).
+const cliKey = await tokenKey(cliToken);
+const ids = new Map<string, string>();
+async function idOf(key: string) {
+  let id = ids.get(key);
+  if (id === undefined) {
+    if (ids.size > 10_000) ids.clear();
+    id = await serviceId(key);
+    ids.set(key, id);
+  }
+  return id;
+}
 function authenticate(
   req: import("node:http").IncomingMessage,
   url: URL,
@@ -338,14 +350,11 @@ const server = createServer(async (req, res) => {
       const nonce = url.searchParams.get("nonce") ?? "";
       if (!HEX64.test(id) || !HEX64.test(nonce))
         throw new CommandError("VALIDATION", "Invalid hello.");
-      for (const key of [
-        await tokenKey(cliToken),
-        ...store.activeAgentTokenHashes(),
-      ])
-        if (sameHex(await serviceId(key), id))
+      for (const key of [cliKey, ...store.activeAgentTokenHashes()])
+        if (sameHex(await idOf(key), id))
           return json(200, {
             apiVersion: 1,
-            proof: await serviceProof(key, nonce),
+            proof: await serviceProof(key, nonce, origin),
           });
       // As any request with a token the service does not know.
       return fail(

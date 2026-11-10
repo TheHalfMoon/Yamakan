@@ -30,8 +30,11 @@ export async function serviceId(key: string) {
   );
 }
 
-/** The service's answer to a challenge, for the token whose hash is `key`. */
-export async function serviceProof(key: string, nonce: string) {
+/**
+ * The service's answer to a challenge, for the token whose hash is `key`, at its own address
+ * (`origin`): a proof another service made, at another port, does not count here.
+ */
+export async function serviceProof(key: string, nonce: string, origin: string) {
   const hmac = await crypto.subtle.importKey(
     "raw",
     encoder.encode(key),
@@ -43,7 +46,7 @@ export async function serviceProof(key: string, nonce: string) {
     await crypto.subtle.sign(
       "HMAC",
       hmac,
-      encoder.encode(`yamakan-service-proof/1:${nonce}`),
+      encoder.encode(`yamakan-service-proof/2:${origin}:${nonce}`),
     ),
   );
 }

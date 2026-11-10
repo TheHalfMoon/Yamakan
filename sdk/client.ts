@@ -59,24 +59,27 @@ export class YamakanClient {
   readonly #token: string | undefined;
   readonly #fetch: typeof fetch;
   readonly #extra: () => Record<string, string>;
-  #verified: Promise<void> | null = null;
   constructor(options: ClientOptions = {}) {
     this.#base = options.baseUrl?.replace(/\/$/, "") ?? "";
     this.#token = options.token;
     this.#extra = options.headers ?? (() => ({}));
     const raw = options.fetch ?? globalThis.fetch.bind(globalThis);
-    // With a token, nothing is sent until the service has proved it is this workspace's.
+    // With a token, nothing is sent until the service has proved it is this workspace's, before
+    // every request: between two, the service can stop and another process take its port.
     this.#fetch = this.#token
       ? ((async (input: RequestInfo | URL, init?: RequestInit) => {
-          this.#verified ??= this.#verify(raw).catch((e: unknown) => {
-            // Asked again next time: the service may only now be starting.
-            this.#verified = null;
-            throw e;
-          });
-          await this.#verified;
+          await this.#verify(raw);
           return raw(input, init);
         }) as typeof fetch)
       : raw;
+  }
+  // The address this client meant: what the proof must name.
+  #origin() {
+    try {
+      return new URL(this.#base).origin;
+    } catch {
+      return this.#base;
+    }
   }
   async #verify(raw: typeof fetch) {
     const key = await tokenKey(this.#token!);
@@ -101,20 +104,23 @@ export class YamakanClient {
     } catch {
       throw refused();
     }
-    // Refused by the service in its own words (an unknown, revoked or ended token): told as
-    // any call's refusal is. The token was still not sent.
-    if (value?.error?.code)
+    // An unknown, revoked or ended token is refused as any call with it would be, in this
+    // client's own words: nothing an unproven party says is passed on. The token was not sent.
+    if (value?.error?.code === "UNAUTHENTICATED")
       throw new YamakanError(
-        value.error.code,
-        value.error.message ?? `Request failed with HTTP ${response.status}.`,
-        Boolean(value.error.retryable),
-        value.requestId ?? null,
+        "UNAUTHENTICATED",
+        "Authentication required.",
+        false,
+        typeof value.requestId === "string" &&
+          /^[A-Za-z0-9._:-]{1,128}$/.test(value.requestId)
+          ? value.requestId
+          : null,
       );
     const proof = value?.proof;
     if (
       typeof proof !== "string" ||
       !HEX64.test(proof) ||
-      !sameHex(proof, await serviceProof(key, nonce))
+      !sameHex(proof, await serviceProof(key, nonce, this.#origin()))
     )
       throw refused();
   }
