@@ -5,6 +5,7 @@ import {
 } from "../../core/director-flags.ts";
 import { MESSAGES, type MessageKey } from "../i18n.ts";
 import { TakeReview } from "./TakeReview.tsx";
+import type { TakeApplyOutcome, TakeProposal } from "./take-review.ts";
 
 // What the capability calls each thing the Director does not do, in the page's words.
 const UNSUPPORTED_KEYS = {
@@ -12,7 +13,6 @@ const UNSUPPORTED_KEYS = {
   "paid-inference": "director.unsupported.paidInference",
   "agent-human-approval": "director.unsupported.agentApproval",
 } as const satisfies Record<string, MessageKey>;
-import type { TakeApplyOutcome, TakeProposal } from "./take-review.ts";
 
 type Client = {
   call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
