@@ -44,6 +44,8 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run provenance:check
+      # The committed SBOM must be what the lockfile and the vendored list make now.
+      - run: npm run sbom:check
       - run: npm run brand:check
       # Same gate: audit must pass. Retries only cover transient registry 5xx/timeouts
       # (npm status outages); never treats audit failure or skipped scan as success.

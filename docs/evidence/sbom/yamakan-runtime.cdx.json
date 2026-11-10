@@ -1,0 +1,1031 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "lifecycles": [
+      {
+        "phase": "pre-build"
+      }
+    ],
+    "tools": [
+      {
+        "vendor": "npm",
+        "name": "cli",
+        "version": "11.17.0"
+      }
+    ],
+    "component": {
+      "bom-ref": "yamakan@0.1.0",
+      "type": "library",
+      "name": "Yamakan-firstframe",
+      "version": "0.1.0",
+      "scope": "required",
+      "purl": "pkg:npm/yamakan@0.1.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:private",
+          "value": "true"
+        }
+      ],
+      "externalReferences": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "@types/dom-mediacapture-transform@0.1.12",
+      "type": "library",
+      "name": "@types/dom-mediacapture-transform",
+      "version": "0.1.12",
+      "scope": "required",
+      "purl": "pkg:npm/%40types/dom-mediacapture-transform@0.1.12",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@types/dom-mediacapture-transform/-/dom-mediacapture-transform-0.1.12.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "77bfd0b0b47017ceb80399a020cfd8adf8a0947a189fbce009c0282605b8d38afed83c2736bec405b2e7096a6638c807f32d2d7bbdcbd4057a1f56e66ae69617"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@types/dom-webcodecs@0.1.13",
+      "type": "library",
+      "name": "@types/dom-webcodecs",
+      "version": "0.1.13",
+      "scope": "required",
+      "purl": "pkg:npm/%40types/dom-webcodecs@0.1.13",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@types/dom-webcodecs/-/dom-webcodecs-0.1.13.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3b986488521c8e3b333c8632512caf49ccafac1a15dcd384119c7fa4c96cbb8e132b358d90b5410719f1273e368a7e67dd022895839c0581423d967487c4a4c1"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "abslink@1.3.1",
+      "type": "library",
+      "name": "abslink",
+      "version": "1.3.1",
+      "scope": "required",
+      "purl": "pkg:npm/abslink@1.3.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/abslink/-/abslink-1.3.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ba416853aabf441323a02edfbb4671dbe7951f640531f57e689d9c2376299744a19b48a41a36744f654dd31bcb9746bc8a6856aaf7d5aeabb69f6325dde48cc9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "ag-psd@31.0.3",
+      "type": "library",
+      "name": "ag-psd",
+      "version": "31.0.3",
+      "scope": "required",
+      "purl": "pkg:npm/ag-psd@31.0.3",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/ag-psd/-/ag-psd-31.0.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4c70d82be58ad45e46387e06d25e3091045cd02caae6d9f123005ecc008ac1aea274aca0a619c680c212af89665ba9f443cf5c7a8aa974f65017763b4cbd6982"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "base64-js@1.5.1",
+      "type": "library",
+      "name": "base64-js",
+      "version": "1.5.1",
+      "scope": "required",
+      "purl": "pkg:npm/base64-js@1.5.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "00aa5a6251e7f2de1255b3870b2f9be7e28a82f478bebb03f2f6efadb890269b3b7ca0d3923903af2ea38b4ad42630b49336cd78f2f0cf1abc8b2a68e35a9e58"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/ffmpeg.exe",
+      "name": "vendor/ffmpeg-win64-r8/ffmpeg.exe",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ecfa375733106e9b72317e28d430c036ae4277e4038349f3d5f30c84fa05cfd5"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/ffprobe.exe",
+      "name": "vendor/ffmpeg-win64-r8/ffprobe.exe",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c158d17f635be352866a2865151b33c97651ab22b3c2895b410d460ef393cfc6"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libbrotlicommon.dll",
+      "name": "vendor/ffmpeg-win64-r8/libbrotlicommon.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "121006fe45e8bd12b1929f86e1efb1dbd1c6291118f9a409693ce8c030f1cefb"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libbrotlidec.dll",
+      "name": "vendor/ffmpeg-win64-r8/libbrotlidec.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "dab7d47981ee887865d1f82dcbcc8fc4c7a43942278bb27877e168909e10d346"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libbz2-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libbz2-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a4fbb97c26662d2b8a80bf4597ed3effb69b12048b0cb1eef2c3f211e2e66673"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libexpat-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libexpat-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d96eafff7e3356e13aab6b569cc373ef61b1b2b9489803f45561cbfeaf70ee1b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libfontconfig-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libfontconfig-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bed1827dbb226483026b2b33127866ce173aa2423d89ae7da6f88d6328792ec9"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libfreetype-6.dll",
+      "name": "vendor/ffmpeg-win64-r8/libfreetype-6.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f62ad75bdc24573940f2e0b0db1848464ce02928926808885e3744fc5272add"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libfribidi-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libfribidi-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "777543504df2de352659d5153f90c9ca17957d9ad88fe8d37126819995f5336b"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libgcc_s_seh-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libgcc_s_seh-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "661f70dc19fde8c25bb56387b807b7a9ab7e532cf58fa8aeee078256c19d8980"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libglib-2.0-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libglib-2.0-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "84b15dc907fd1d3bb1cd799fc034d2edcbc3946c8c4acd6a8dd3ace381f9e568"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libgraphite2.dll",
+      "name": "vendor/ffmpeg-win64-r8/libgraphite2.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "063a9ad34a5ec87d038b4646660957395224ecf2cf707917256b7d251a7c5f57"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libharfbuzz-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libharfbuzz-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "042059d5fcb90daaabd2af52ac60b1aed43df9a2f785ce92ec4cfdc08234d2e2"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libiconv-2.dll",
+      "name": "vendor/ffmpeg-win64-r8/libiconv-2.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "587bd8c780e89f5d834c251accc6053f479713184c433e0f1bab898ee0aa3751"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libintl-8.dll",
+      "name": "vendor/ffmpeg-win64-r8/libintl-8.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0537c3dd2378218508ebe3cc416d72a99ee2d24ae1c5525e23458f32544ef861"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libmp3lame-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libmp3lame-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "35bc561d60948094f9fc2a11a343714ab49c71ada1220b0f259a4375a44c5be3"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libmpg123-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libmpg123-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5d9ccd4c86b75a984044ebe1d4c95afd1e771b74e89c1467bf76a520c37a5299"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libopus-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libopus-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e602e0f79080e988df0ab1c9ce2ec9c11325c3d808fbae3230ad1cfd4942acc4"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libpcre2-8-0.dll",
+      "name": "vendor/ffmpeg-win64-r8/libpcre2-8-0.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "68a7cee2acc36d6a61d73f78825d17dfd32f8580f4bb1bc399134719518213d5"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libpng16-16.dll",
+      "name": "vendor/ffmpeg-win64-r8/libpng16-16.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4a33007395f1d30881d0c185c120f1ecf05c8ebb520933068902ddc1f6c58506"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libstdc++-6.dll",
+      "name": "vendor/ffmpeg-win64-r8/libstdc++-6.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b720a96289bcd6d9ec6f5f1f5612f1b1a523ce15d3ada20fe119791274cb512f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libwinpthread-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libwinpthread-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "98a4fea591385952cad1c532f4a92606358630976e9ede5fcf115ab945305a09"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libx264-165.dll",
+      "name": "vendor/ffmpeg-win64-r8/libx264-165.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0d814d13db7eeac0ff5264ed86d376f9260746323107cb07affb6c306b240329"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libx265-217.dll",
+      "name": "vendor/ffmpeg-win64-r8/libx265-217.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "23a4579cf07ad233818d53f941e846847876cb68f57e4492f943d26463cc995f"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/libz-1.dll",
+      "name": "vendor/ffmpeg-win64-r8/libz-1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b82cab3e02b60e664c19eb3459f6e6ca7f6165a727bbb18f48dee0474b42a920"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:vendor/ffmpeg-win64-r8/zlib1.dll",
+      "name": "vendor/ffmpeg-win64-r8/zlib1.dll",
+      "description": "Vendored FFmpeg 7.1.5 build (GPL-3.0-or-later); see vendor/ffmpeg-win64-r8/README.md.",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "72df18f3a7c8e9341c776a5a23c2dfb2524dbbf1f343c3012cb1178436535a29"
+        }
+      ]
+    },
+    {
+      "bom-ref": "jassub@2.5.20",
+      "type": "library",
+      "name": "jassub",
+      "version": "2.5.20",
+      "scope": "required",
+      "purl": "pkg:npm/jassub@2.5.20",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/jassub/-/jassub-2.5.20.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b94134628527c3fa5d80556879f44dd2578bbb98854b7f617ce8a4a2e0aa1d47df2c2014df0a91539564a416d8d69895f165a515c1c2cf71c43f3bf2c5b0094f"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "js-tokens@4.0.0",
+      "type": "library",
+      "name": "js-tokens",
+      "version": "4.0.0",
+      "scope": "required",
+      "purl": "pkg:npm/js-tokens@4.0.0",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "45d2547e5704ddc5332a232a420b02bb4e853eef5474824ed1b7986cf84737893a6a9809b627dca02b53f5b7313a9601b690f690233a49bce0e026aeb16fcf29"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "lfa-ponyfill@1.1.1",
+      "type": "library",
+      "name": "lfa-ponyfill",
+      "version": "1.1.1",
+      "scope": "required",
+      "purl": "pkg:npm/lfa-ponyfill@1.1.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/lfa-ponyfill/-/lfa-ponyfill-1.1.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1da778b6c1841ed223e7c311b5fe9296e6cd0e5b718a7c4c49dc489f519dc2b59bc9ef130fea59f83eaa2844e727dfaf40e7c6f6afc3b385943ec921c80329e5"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "loose-envify@1.4.0",
+      "type": "library",
+      "name": "loose-envify",
+      "version": "1.4.0",
+      "scope": "required",
+      "purl": "pkg:npm/loose-envify@1.4.0",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "972bb13c6aff59f86b95e9b608bfd472751cd7372a280226043cee918ed8e45ff242235d928ebe7d12debe5c351e03324b0edfeb5d54218e34f04b71452a0add"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "mediabunny@1.61.3",
+      "type": "library",
+      "name": "mediabunny",
+      "version": "1.61.3",
+      "scope": "required",
+      "purl": "pkg:npm/mediabunny@1.61.3",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.61.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "914a8b2955d05701d1eb61a4389c58a2c0265c44496ea9d70602434ed465c47118be2564320fc4be197d5cdea479da92e4b3f5b55e2414acb363f5786b8a1fa3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "pako@2.1.0",
+      "type": "library",
+      "name": "pako",
+      "version": "2.1.0",
+      "scope": "required",
+      "purl": "pkg:npm/pako@2.1.0",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/pako/-/pako-2.1.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c3e7ae7e26755ae25880f5db57f3cedcd08c11cdf1ab2964287ce9f1bc69d6e5b8a9a48d41493098b2c473790ab1fcfc96957517c1eddd4d429bef52ae8836ba"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "(MIT AND Zlib)"
+        }
+      ]
+    },
+    {
+      "bom-ref": "perfect-freehand@1.2.3",
+      "type": "library",
+      "name": "perfect-freehand",
+      "version": "1.2.3",
+      "scope": "required",
+      "purl": "pkg:npm/perfect-freehand@1.2.3",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/perfect-freehand/-/perfect-freehand-1.2.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6c76527ea0c718d94fa601f6cb15e03c795048fa446e8faa83b962d0cefc27dbcd022db28f02de038c7bf41110857e389445a908b48509e459c29c349e28973c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "react-dom@18.3.1",
+      "type": "library",
+      "name": "react-dom",
+      "version": "18.3.1",
+      "scope": "required",
+      "purl": "pkg:npm/react-dom@18.3.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e66e2740aa7ead945bd3d2cd1f9f463380714e1f76e75ff295b2886e97bb4e91b17c9fbd92fe812e42c15c88e3b296e06e720136a948db7b519d3593d2c9d423"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "react@18.3.1",
+      "type": "library",
+      "name": "react",
+      "version": "18.3.1",
+      "scope": "required",
+      "purl": "pkg:npm/react@18.3.1",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/react/-/react-18.3.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c12fa1020252851d0a844bcf240adfb8f54dd7e1f3d6dd18ea7e632eb1906e46f8bab80f13fd11bdefb590c075bffa16807826e1621c57e8bb176a53563fb689"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "rvfc-polyfill@1.0.8",
+      "type": "library",
+      "name": "rvfc-polyfill",
+      "version": "1.0.8",
+      "scope": "required",
+      "purl": "pkg:npm/rvfc-polyfill@1.0.8",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/rvfc-polyfill/-/rvfc-polyfill-1.0.8.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b80fb4c304e4678393f2fe39a5f0df1feed8abc998e8cbcd9e0885e52aba54182326cbec7e0b7b435f1cc99a998df0215bdae19205cf5f4716d11f6ec3bc8494"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "scheduler@0.23.2",
+      "type": "library",
+      "name": "scheduler",
+      "version": "0.23.2",
+      "scope": "required",
+      "purl": "pkg:npm/scheduler@0.23.2",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/scheduler/-/scheduler-0.23.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "50e4a1b0fc33ecdacc52a851eadd215a315dbaf3b36edbfbb680c7d7f848adf44d2030679c159dd02c094c6bd3a67815966c0609d3fdfd997fb55ac3a9cb98cd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "soundtouchjs@0.3.0",
+      "type": "library",
+      "name": "soundtouchjs",
+      "version": "0.3.0",
+      "scope": "required",
+      "purl": "pkg:npm/soundtouchjs@0.3.0",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/soundtouchjs/-/soundtouchjs-0.3.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3fff92c27204e012eb31b60af1a07cf867d745f2efdfe055f0714cac4a8eb85d05f41b08dec2843754fe918fc9aa255445c09082be74042f03fee57313f1a8cd"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "three@0.171.0",
+      "type": "library",
+      "name": "three",
+      "version": "0.171.0",
+      "scope": "required",
+      "purl": "pkg:npm/three@0.171.0",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/three/-/three-0.171.0.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "63f9405cf68a64f7047642a387424e00756ff0e3a7bff34326a9b4c237c2cf24267cac55ef3be4c2c9c180f04a4f32474e848e8511900066cf24e6d3e7d07f3d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "throughput@1.0.2",
+      "type": "library",
+      "name": "throughput",
+      "version": "1.0.2",
+      "scope": "required",
+      "purl": "pkg:npm/throughput@1.0.2",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/throughput/-/throughput-1.0.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8ef2b5657ba1b208236f7a9842332253f0156188937aa4f9b615af611db2bb2d8b18cf383f93124b20229f01da846b1d058291f66f479dc551ff77f79c52a4c6"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "zod@4.6.7",
+      "type": "library",
+      "name": "zod",
+      "version": "4.6.7",
+      "scope": "required",
+      "purl": "pkg:npm/zod@4.6.7",
+      "properties": [],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "83c5b60f6914e9af2e9ed734e777d7d6e5412b333bcaa0315bfdf3c24f37fba472176f9228eb95f9cd30043854c335753da19aa66647fab99c5333dffb7086c2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "@types/dom-mediacapture-transform@0.1.12",
+      "dependsOn": [
+        "@types/dom-webcodecs@0.1.13"
+      ]
+    },
+    {
+      "ref": "@types/dom-webcodecs@0.1.13",
+      "dependsOn": []
+    },
+    {
+      "ref": "abslink@1.3.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "ag-psd@31.0.3",
+      "dependsOn": [
+        "base64-js@1.5.1",
+        "pako@2.1.0"
+      ]
+    },
+    {
+      "ref": "base64-js@1.5.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "jassub@2.5.20",
+      "dependsOn": [
+        "abslink@1.3.1",
+        "lfa-ponyfill@1.1.1",
+        "rvfc-polyfill@1.0.8",
+        "throughput@1.0.2"
+      ]
+    },
+    {
+      "ref": "js-tokens@4.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "lfa-ponyfill@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "loose-envify@1.4.0",
+      "dependsOn": [
+        "js-tokens@4.0.0"
+      ]
+    },
+    {
+      "ref": "mediabunny@1.61.3",
+      "dependsOn": [
+        "@types/dom-mediacapture-transform@0.1.12",
+        "@types/dom-webcodecs@0.1.13"
+      ]
+    },
+    {
+      "ref": "pako@2.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "perfect-freehand@1.2.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "react-dom@18.3.1",
+      "dependsOn": [
+        "loose-envify@1.4.0",
+        "react@18.3.1",
+        "scheduler@0.23.2"
+      ]
+    },
+    {
+      "ref": "react@18.3.1",
+      "dependsOn": [
+        "loose-envify@1.4.0"
+      ]
+    },
+    {
+      "ref": "rvfc-polyfill@1.0.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "scheduler@0.23.2",
+      "dependsOn": [
+        "loose-envify@1.4.0"
+      ]
+    },
+    {
+      "ref": "soundtouchjs@0.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "three@0.171.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "throughput@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "yamakan@0.1.0",
+      "dependsOn": [
+        "ag-psd@31.0.3",
+        "jassub@2.5.20",
+        "mediabunny@1.61.3",
+        "perfect-freehand@1.2.3",
+        "react-dom@18.3.1",
+        "react@18.3.1",
+        "soundtouchjs@0.3.0",
+        "three@0.171.0",
+        "zod@4.6.7"
+      ]
+    },
+    {
+      "ref": "zod@4.6.7",
+      "dependsOn": []
+    }
+  ]
+}
