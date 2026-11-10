@@ -74,10 +74,15 @@ async function start() {
   return new YamakanClient({ baseUrl: base, token });
 }
 async function stop() {
-  if (!child || child.exitCode !== null) return;
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
   const done = new Promise((r) => child.once("exit", r));
-  child.send("shutdown");
+  try {
+    child.send("shutdown");
+  } catch {}
+  // A service that does not stop in time is ended, so the run never hangs.
+  const late = setTimeout(() => child.kill(), 30000);
   await done;
+  clearTimeout(late);
 }
 
 let passed = false;
@@ -161,6 +166,7 @@ try {
   assert.equal(asset.kind, "video");
   assert.equal(asset.width, 320);
   assert.equal(asset.height, 180);
+  assert.equal(asset.durationFrames, 30, "one second of render at 30 fps");
   step("Blender rendered it, contained, and the video joined the project", {
     renderSeconds,
     asset: {
@@ -201,10 +207,11 @@ try {
     await new Promise((r) => setTimeout(r, 250));
   }
   assert.equal(exported.state, "COMPLETED", exported.error ?? "");
-  const file = readdirSync(workspace, { recursive: true })
+  const matches = readdirSync(workspace, { recursive: true })
     .map(String)
-    .find((f) => f.replaceAll("\\", "/").endsWith(exported.artifact));
-  assert.ok(file, "the export is in the workspace");
+    .filter((f) => f.replaceAll("\\", "/").endsWith(exported.artifact));
+  assert.equal(matches.length, 1, "exactly one export file");
+  const file = matches[0];
   // Decoded frame by frame, each scaled to 8×8: the boxes move across the frames (the camera
   // orbits), so the frames differ, and they hold more than the background colour.
   const raw = execFileSync(
@@ -228,20 +235,50 @@ try {
   const frameBytes = 8 * 8 * 3;
   const frames = raw.length / frameBytes;
   assert.equal(frames, 30, "one second at 30 fps");
-  const first = raw.subarray(0, frameBytes);
-  const last = raw.subarray((frames - 1) * frameBytes, frames * frameBytes);
-  assert.notDeepEqual([...first], [...last], "the camera moved");
-  const colours = new Set();
-  for (let i = 0; i < frameBytes; i += 3)
-    colours.add(`${first[i] >> 4},${first[i + 1] >> 4},${first[i + 2] >> 4}`);
+  const frameAt = (n) => raw.subarray(n * frameBytes, (n + 1) * frameBytes);
+  // Mean absolute difference per channel: encoder noise alone stays far below 8.
+  const differ = (a, b) => {
+    let sum = 0;
+    for (let x = 0; x < frameBytes; x++) sum += Math.abs(a[x] - b[x]);
+    return sum / frameBytes;
+  };
+  const first = frameAt(0);
+  const middle = frameAt(Math.floor(frames / 2));
+  const last = frameAt(frames - 1);
+  const motion = {
+    firstToMiddle: Math.round(differ(first, middle)),
+    middleToLast: Math.round(differ(middle, last)),
+    firstToLast: Math.round(differ(first, last)),
+  };
   assert.ok(
-    colours.size >= 3,
-    `the frame holds the boxes, not one colour (${colours.size})`,
+    motion.firstToMiddle > 8,
+    `the camera moved early: ${JSON.stringify(motion)}`,
   );
+  assert.ok(
+    motion.middleToLast > 8,
+    `and kept moving: ${JSON.stringify(motion)}`,
+  );
+  // The boxes' own colours, in some frame: a bluish pixel (#3366cc) and an orangish one (#e07020).
+  let bluish = false;
+  let orangish = false;
+  for (let n = 0; n < frames; n++) {
+    const f = frameAt(n);
+    for (let x = 0; x < frameBytes; x += 3) {
+      const [r, g, b] = [f[x], f[x + 1], f[x + 2]];
+      if (b > r + 40 && b > g + 10) bluish = true;
+      if (r > b + 60 && r > g + 20) orangish = true;
+    }
+  }
+  assert.ok(bluish, "the blue box is in the render");
+  assert.ok(orangish, "the orange box is in the render");
+  const colours = new Set();
+  for (let x = 0; x < frameBytes; x += 3)
+    colours.add(`${first[x] >> 4},${first[x + 1] >> 4},${first[x + 2] >> 4}`);
   step(
-    "a real MP4 export of the timeline decodes with moving, coloured frames",
+    "a real MP4 export decodes with both boxes in their colours and the camera moving",
     {
       frames,
+      motion,
       coloursInFirstFrame: colours.size,
     },
   );
@@ -272,6 +309,11 @@ try {
     head: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),
+    // Uncommitted changes would make "head" not the code that ran.
+    clean:
+      execFileSync("git", ["status", "--porcelain"], {
+        encoding: "utf8",
+      }).trim() === "",
     passed,
     seconds: (Date.now() - started) / 1000,
     engine:
