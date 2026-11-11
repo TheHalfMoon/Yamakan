@@ -255,7 +255,7 @@ export function CinemaShot({
         <button
           type="button"
           data-testid="director-cinema-render"
-          disabled={!chosen || locked}
+          disabled={!chosen || locked || acting}
           onClick={() =>
             void act(async () => {
               if (!chosen) return;
@@ -298,6 +298,7 @@ export function CinemaShot({
           <button
             type="button"
             data-testid="director-cinema-review"
+            disabled={acting}
             onClick={() =>
               void act(async () => {
                 // The run records the video and waits for the person.
@@ -323,6 +324,7 @@ export function CinemaShot({
           <button
             type="button"
             data-testid="director-cinema-approve"
+            disabled={acting}
             onClick={() =>
               void act(async () => {
                 const next = await call<{ version: number }>(
@@ -347,6 +349,7 @@ export function CinemaShot({
           <button
             type="button"
             data-testid="director-cinema-place"
+            disabled={acting}
             onClick={() =>
               void act(async () => {
                 const kept = stories?.find(

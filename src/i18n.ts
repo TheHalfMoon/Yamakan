@@ -186,7 +186,7 @@ const en = {
   "directorCinema.partlyPlaced":
     "Some of this story's other shots are on the timeline, but not this one. Place the story's shots together.",
   "directorCinema.clipRemoved":
-    "This shot is on the timeline without its clip. Undo the clip's removal in the editor, then place it again.",
+    "This shot is on the timeline without its clip. Undo the removal if it was your last edit, or restore an earlier revision from History (that may also take back this render's video), then place it again.",
   "directorCinema.takeChanged":
     "The story now selects another take for this shot. Select this render's take again, or start over.",
   "directorCinema.startOver": "Start over (the video stays in the project)",
@@ -905,7 +905,7 @@ const ar: Record<MessageKey, string> = {
   "directorCinema.partlyPlaced":
     "بعض لقطات هذه القصة الأخرى على الخط الزمني، لكن ليس هذه. ضع لقطات القصة معًا.",
   "directorCinema.clipRemoved":
-    "هذه اللقطة على الخط الزمني دون مقطعها. تراجع عن إزالة المقطع في المحرر، ثم ضعه مجددًا.",
+    "هذه اللقطة على الخط الزمني دون مقطعها. تراجع عن الإزالة إن كانت آخر تعديل لك، أو استعد نسخة سابقة من السجل (وقد يُزيل ذلك فيديو هذا التصيير أيضًا)، ثم ضعه مجددًا.",
   "directorCinema.takeChanged":
     "تختار القصة الآن لقطة مأخوذة أخرى لهذه اللقطة. اختر لقطة هذا التصيير مجددًا، أو ابدأ من جديد.",
   "directorCinema.startOver": "ابدأ من جديد (يبقى الفيديو في المشروع)",
