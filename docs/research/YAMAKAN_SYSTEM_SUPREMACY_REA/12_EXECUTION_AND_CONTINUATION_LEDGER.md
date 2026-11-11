@@ -690,5 +690,6 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - `tests/blender-render.test.ts`, with the real pinned Blender: the same detail-ground scene from the usual view and from above. Neighbouring-pixel difference across the frame's top fifth is 7 against 38 (the test asks for 3 times).
   - **Found on the way:** I first expected the usual view's top to be empty sky. It is not: that camera already looks down 23 degrees, past half the frame's height, so the 2 km ground fills it, far off and too fine to show. The test was restated around near ground showing its detail sharply from above.
 - **Independent review:** no High. Fixed: a view with tracked footage is refused rather than silently ignored; the render command's description names the view. Stated: from above, a pan turns about the vertical (a gimbal yaw), so it mostly turns the picture.
+- **Full suite:** clean at `4bf1644` on AC power (1,432 tests, 1,429 pass, 0 fail, 3 POSIX-only skips). The run before it failed 8 tests, all for lack of disk space: C: had 0.85 GB free. 645 leftover Yamakan test temp folders from this session's runs (about 2.65 GB, unchanged for over an hour) were removed, and nothing else was touched.
 - **Not yet:** a Cinema page control for the view (the planner and the render command offer it), and object animation.
 
