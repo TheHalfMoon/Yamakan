@@ -530,6 +530,8 @@ const en = {
   "cinema.model.needsProject": "Open a project to add a 3D model.",
   "cinema.model.notAdded":
     "The model was stored, but the scene could not take it just then. Add it again.",
+  "cinema.model.fileChanged":
+    "The file for the 3D model {name} has moved or changed since it was added; add it again.",
   "cinema.objects.remove": "Remove object",
   "cinema.objects.boxName": "Box {n}",
   "cinema.objects.readout":
@@ -1257,6 +1259,8 @@ const ar: Record<MessageKey, string> = {
   "cinema.model.needsProject": "افتح مشروعاً لإضافة نموذج ثلاثي الأبعاد.",
   "cinema.model.notAdded":
     "حُفظ النموذج، لكن المشهد لم يتمكن من استقباله حينها. أضفه مرة أخرى.",
+  "cinema.model.fileChanged":
+    "نُقل ملف النموذج ثلاثي الأبعاد {name} أو تغيّر منذ إضافته؛ أضفه مرة أخرى.",
   "cinema.objects.remove": "إزالة العنصر",
   "cinema.objects.boxName": "صندوق {n}",
   "cinema.objects.readout":

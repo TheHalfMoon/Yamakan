@@ -179,7 +179,7 @@ test("the model strings exist in English and Arabic", () => {
   const keys = Object.keys(en).filter(
     (k) => k.startsWith("cinema.model.") || k === "cinema.objects.addModel",
   );
-  assert.equal(keys.length, 9);
+  assert.equal(keys.length, 10);
   for (const key of keys) assert.ok((ar as Record<string, string>)[key], key);
 });
 
@@ -238,4 +238,16 @@ test("a model's name leaves out invisible format characters and is never cut ins
   const name = cinemaModelName(long);
   assert.equal(Array.from(name).length, 120);
   assert.ok(!/[\uD800-\uDBFF]$/.test(name), "no half of a pair at the end");
+});
+
+test("the page tells zod to validate without compiling, before anything else is loaded", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const main = await readFile(
+    new URL("../src/main.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.equal(main.split("\n")[0], 'import "./zod-browser.ts";');
+  await import("../src/zod-browser.ts");
+  const { config } = await import("zod");
+  assert.equal(config().jitless, true);
 });

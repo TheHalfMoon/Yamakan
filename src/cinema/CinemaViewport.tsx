@@ -383,24 +383,30 @@ export function CinemaViewport({
       const named = new Set(
         scene.items.flatMap((item) => (item.model ? [item.model] : [])),
       );
-      for (const [digest, upload] of uploadedRef.current)
+      for (const [key, upload] of uploadedRef.current) {
+        const [owner, digest] = key.split(":");
         if (
-          named.has(digest) &&
-          Date.now() - upload.at > CINEMA_MODEL_REFRESH_MS &&
-          client.uploadCinemaModel
-        ) {
-          // From the person's own file, so it works even after the service freed its copy.
-          const bytes = new Uint8Array(await upload.file.arrayBuffer());
-          const again = await client.uploadCinemaModel(projectId, bytes);
-          if (again.digest !== digest)
-            throw new Error(
-              `The file for a 3D model has changed since it was added (${upload.file.name}); add it again.`,
-            );
-          uploadedRef.current.set(digest, {
-            at: Date.now(),
-            file: upload.file,
-          });
-        }
+          owner !== projectId ||
+          !named.has(digest) ||
+          Date.now() - upload.at <= CINEMA_MODEL_REFRESH_MS ||
+          !client.uploadCinemaModel
+        )
+          continue;
+        // From the person's own file, so it works even after the service freed its copy. A
+        // file moved, deleted or changed since cannot be read the same, and is said so.
+        const bytes = await upload.file.arrayBuffer().then(
+          (b) => new Uint8Array(b),
+          () => null,
+        );
+        const again = bytes
+          ? await client.uploadCinemaModel(projectId, bytes)
+          : null;
+        if (!again || again.digest !== digest)
+          throw new Error(
+            t("cinema.model.fileChanged", { name: upload.file.name }),
+          );
+        uploadedRef.current.set(key, { at: Date.now(), file: upload.file });
+      }
       const commit = () =>
         saveProjectScene({
           client,
@@ -429,7 +435,8 @@ export function CinemaViewport({
       }
       onSaved?.(projectId, from, result.revision);
       // Saved models are named by a revision now, which keeps them.
-      for (const digest of named) uploadedRef.current.delete(digest);
+      for (const digest of named)
+        uploadedRef.current.delete(`${projectId}:${digest}`);
       if (documentIdRef.current !== documentId) return;
       revision.current = result.revision;
       savedHashRef.current = result.contentHash;
@@ -736,7 +743,10 @@ export function CinemaViewport({
       const stored = await client.uploadCinemaModel(owner, bytes);
       // Another project was opened meanwhile: the stored model is left unnamed, and freed.
       if (projectIdRef.current !== owner) return;
-      uploadedRef.current.set(stored.digest, { at: Date.now(), file });
+      uploadedRef.current.set(`${owner}:${stored.digest}`, {
+        at: Date.now(),
+        file,
+      });
       if (cinemaModelCount(sceneRef.current) >= CINEMA_PAGE_MAX_MODELS) {
         setError(t("cinema.model.limit", { n: CINEMA_PAGE_MAX_MODELS }));
         return;
