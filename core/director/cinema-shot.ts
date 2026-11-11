@@ -97,9 +97,16 @@ const SET_FOR_SIZE: Record<string, number> = {
 // Each camera movement as the render makes it (core/blender/scene.ts): around the subject, a
 // push in or pull back of a third of the distance, a turn of 30 degrees where the camera stands,
 // and a slight handheld sway.
-const MOVES: Record<
-  string,
-  { orbitDegrees?: number; dolly?: number; panDegrees?: number; shake?: number }
+export const CAMERA_MOVES: Readonly<
+  Record<
+    string,
+    {
+      orbitDegrees?: number;
+      dolly?: number;
+      panDegrees?: number;
+      shake?: number;
+    }
+  >
 > = {
   still: {},
   orbit: { orbitDegrees: 90 },
@@ -108,6 +115,7 @@ const MOVES: Record<
   pan: { panDegrees: 30 },
   handheld: { shake: 0.03 },
 };
+const MOVES = CAMERA_MOVES;
 
 // A kind and a choice of the Create page's own, never one inherited from Object.
 const known = (kind: string, choice: unknown) =>

@@ -1,6 +1,10 @@
 // The Cinema page's Blender render (Blender integration): the choices it offers, as the render
 // settings the service accepts (core/blender/scene.ts), and what a render job says, as the page
-// shows it. Pure, so it is tested without a page.
+// shows it. Pure, so it is tested without a page. The camera moves and lights are the Director's
+// own (core/director/cinema-shot.ts CAMERA_MOVES, core/blender/scene.ts LIGHTING), so a move or a
+// light looks the same from either.
+import { CAMERA_MOVES } from "../../core/director/cinema-shot.ts";
+import { DIRECTIONS } from "../../core/prompts/directions.ts";
 
 export const BLENDER_SIZES = {
   small: { width: 320, height: 180 },
@@ -15,14 +19,23 @@ export type BlenderQuality = keyof typeof BLENDER_QUALITY;
 
 export const BLENDER_SECONDS = [1, 2, 4] as const;
 export const BLENDER_FPS = [24, 30] as const;
-export const BLENDER_ORBITS = [0, 45, 90, 180] as const;
+export const BLENDER_MOVES = Object.keys(DIRECTIONS.movement) as (
+  "still" | "orbit" | "push" | "pull" | "pan" | "handheld"
+)[];
+export const BLENDER_LIGHTS = [
+  "neutral",
+  ...(Object.keys(DIRECTIONS.light) as (
+    "morning" | "golden" | "night" | "studio"
+  )[]),
+] as const;
 
 export type BlenderChoices = {
   size: BlenderSize;
   seconds: (typeof BLENDER_SECONDS)[number];
   fps: (typeof BLENDER_FPS)[number];
   quality: BlenderQuality;
-  orbitDegrees: (typeof BLENDER_ORBITS)[number];
+  move: (typeof BLENDER_MOVES)[number];
+  light: (typeof BLENDER_LIGHTS)[number];
 };
 
 export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
@@ -30,7 +43,9 @@ export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
   seconds: 1,
   fps: 30,
   quality: "draft",
-  orbitDegrees: 90,
+  // A 90-degree orbit under the neutral light: what the panel rendered before moves and lights.
+  move: "orbit",
+  light: "neutral",
 };
 
 /** The settings the service is sent: never more than 120 frames (4 s at 30 fps). */
@@ -42,7 +57,9 @@ export function blenderSettings(choices: BlenderChoices) {
     fps: choices.fps,
     frames: Math.min(120, choices.seconds * choices.fps),
     samples: BLENDER_QUALITY[choices.quality],
-    orbitDegrees: choices.orbitDegrees,
+    orbitDegrees: 0,
+    ...CAMERA_MOVES[choices.move],
+    ...(choices.light === "neutral" ? {} : { lighting: choices.light }),
   };
 }
 

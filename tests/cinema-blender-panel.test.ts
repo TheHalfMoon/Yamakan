@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   BLENDER_FPS,
-  BLENDER_ORBITS,
+  BLENDER_LIGHTS,
+  BLENDER_MOVES,
   BLENDER_QUALITY,
   BLENDER_SECONDS,
   BLENDER_SIZES,
@@ -13,6 +14,7 @@ import {
 } from "../src/cinema/blenderRender.ts";
 import { BlenderRenderSettingsSchema } from "../core/blender/scene.ts";
 import { MESSAGES } from "../src/i18n.ts";
+import { planCinemaShot } from "../core/director/cinema-shot.ts";
 
 test("every choice the Cinema page offers is settings the service accepts", () => {
   for (const size of Object.keys(BLENDER_SIZES) as BlenderChoices["size"][])
@@ -21,20 +23,22 @@ test("every choice the Cinema page offers is settings the service accepts", () =
         for (const quality of Object.keys(
           BLENDER_QUALITY,
         ) as BlenderChoices["quality"][])
-          for (const orbitDegrees of BLENDER_ORBITS) {
-            const settings = blenderSettings({
-              size,
-              seconds,
-              fps,
-              quality,
-              orbitDegrees,
-            });
-            assert.ok(settings.frames <= 120);
-            BlenderRenderSettingsSchema.parse(settings);
-          }
+          for (const move of BLENDER_MOVES)
+            for (const light of BLENDER_LIGHTS) {
+              const settings = blenderSettings({
+                size,
+                seconds,
+                fps,
+                quality,
+                move,
+                light,
+              });
+              assert.ok(settings.frames <= 120);
+              BlenderRenderSettingsSchema.parse(settings);
+            }
 });
 
-test("the default render is the small, quick one", () => {
+test("the default render is the small, quick one, the orbit under the neutral light it always was", () => {
   assert.deepEqual(blenderSettings(DEFAULT_BLENDER_CHOICES), {
     width: 320,
     height: 180,
@@ -93,4 +97,51 @@ test("the panel's words are in English and Arabic", () => {
   assert.ok(keys.length >= 20);
   for (const k of keys) assert.ok(ar[k as keyof typeof ar], k);
   assert.match(en["blender.done"], /Rendered with Blender/);
+});
+
+test("a move and a light are the Director's own: the same settings from the page", () => {
+  const settings = (
+    move: BlenderChoices["move"],
+    light: BlenderChoices["light"],
+  ) => blenderSettings({ ...DEFAULT_BLENDER_CHOICES, move, light });
+  assert.deepEqual(
+    BLENDER_MOVES.map((m) => {
+      const { orbitDegrees, dolly, panDegrees, shake } = settings(m, "neutral");
+      return [m, orbitDegrees, dolly, panDegrees, shake];
+    }),
+    [
+      ["still", 0, undefined, undefined, undefined],
+      ["pan", 0, undefined, 30, undefined],
+      ["push", 0, 0.35, undefined, undefined],
+      ["pull", 0, -0.35, undefined, undefined],
+      ["handheld", 0, undefined, undefined, 0.03],
+      ["orbit", 90, undefined, undefined, undefined],
+    ],
+  );
+  assert.equal(settings("still", "neutral").lighting, undefined);
+  assert.equal(settings("still", "golden").lighting, "golden");
+  // The planner gives a Director shot the same settings for the same words.
+  for (const move of BLENDER_MOVES)
+    for (const light of BLENDER_LIGHTS) {
+      const fromPage = settings(move, light);
+      const fromDirector = planCinemaShot({
+        shotId: "1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b",
+        direction:
+          light === "neutral" ? { movement: move } : { movement: move, light },
+        seconds: 1,
+        fps: 30,
+      }).settings;
+      for (const key of [
+        "orbitDegrees",
+        "dolly",
+        "panDegrees",
+        "shake",
+        "lighting",
+      ] as const)
+        assert.equal(
+          fromPage[key],
+          fromDirector[key],
+          `${move} ${light} ${key}`,
+        );
+    }
 });

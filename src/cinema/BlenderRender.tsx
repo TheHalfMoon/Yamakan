@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   BLENDER_FPS,
-  BLENDER_ORBITS,
+  BLENDER_LIGHTS,
+  BLENDER_MOVES,
   BLENDER_QUALITY,
   BLENDER_SECONDS,
   BLENDER_SIZES,
@@ -13,6 +14,7 @@ import {
   type BlenderJob,
   type BlenderView,
 } from "./blenderRender.ts";
+import { DIRECTIONS } from "../../core/prompts/directions.ts";
 
 type Translate = (
   key: MessageKey,
@@ -273,21 +275,37 @@ export function BlenderRender({
           </select>
         </label>
         <label>
-          {t("blender.orbit")}{" "}
+          {t("create.direction.movement")}{" "}
           <select
-            data-testid="cinema-blender-orbit"
-            value={choices.orbitDegrees}
+            data-testid="cinema-blender-move"
+            value={choices.move}
             disabled={working}
             onChange={(e) =>
-              choose(
-                "orbitDegrees",
-                Number(e.target.value) as BlenderChoices["orbitDegrees"],
-              )
+              choose("move", e.target.value as BlenderChoices["move"])
             }
           >
-            {BLENDER_ORBITS.map((o) => (
-              <option key={o} value={o}>
-                {t("blender.degrees", { n: o })}
+            {BLENDER_MOVES.map((m) => (
+              <option key={m} value={m}>
+                {DIRECTIONS.movement[m]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("create.direction.light")}{" "}
+          <select
+            data-testid="cinema-blender-light"
+            value={choices.light}
+            disabled={working}
+            onChange={(e) =>
+              choose("light", e.target.value as BlenderChoices["light"])
+            }
+          >
+            {BLENDER_LIGHTS.map((l) => (
+              <option key={l} value={l}>
+                {l === "neutral"
+                  ? t("blender.lightNeutral")
+                  : DIRECTIONS.light[l]}
               </option>
             ))}
           </select>
