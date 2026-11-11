@@ -52,6 +52,17 @@ const Even = (min: number, max: number) =>
     .max(max)
     .refine((n) => n % 2 === 0, "Sizes are even, as the video encoder needs.");
 
+const Finish = z
+  .object({
+    // A soft bloom around the brightest parts of the picture.
+    glow: Finite.min(0).max(1).default(0),
+    // Corners darkened toward the middle.
+    vignette: Finite.min(0).max(1).default(0),
+    // A slight colour fringe at the edges, as a lens makes.
+    dispersion: Finite.min(0).max(0.1).default(0),
+  })
+  .strict();
+
 export const BlenderSceneSchema = z
   .object({
     format: z.literal(BLENDER_SCENE_FORMAT),
@@ -87,6 +98,8 @@ export const BlenderSceneSchema = z
         colour: Colour.default("#ffffff"),
       })
       .strict(),
+    // The compositor's finish on every frame; all 0 (the default) is none at all.
+    finish: Finish.default({ glow: 0, vignette: 0, dispersion: 0 }),
     objects: z
       .array(
         z
@@ -119,6 +132,8 @@ export const BlenderRenderSettingsSchema = z
     shake: Finite.min(0).max(0.1).optional(),
     // The light of the shot (LIGHTING); absent is the neutral light every render had before.
     lighting: z.enum(["morning", "golden", "night", "studio"]).optional(),
+    // A finish (FINISHES); absent is none, as every render had before.
+    finish: z.enum(["glow", "vignette", "film"]).optional(),
   })
   .strict();
 export type BlenderRenderSettings = z.infer<typeof BlenderRenderSettingsSchema>;
@@ -162,6 +177,15 @@ export const LIGHTING = Object.freeze({
     colour: "#ffffff",
     background: "#2c2c2c",
   },
+});
+
+/** Each finish as the compositor makes it. */
+export const FINISHES = Object.freeze({
+  none: Object.freeze({ glow: 0, vignette: 0, dispersion: 0 }),
+  glow: Object.freeze({ glow: 0.9, vignette: 0, dispersion: 0 }),
+  vignette: Object.freeze({ glow: 0, vignette: 0.7, dispersion: 0 }),
+  // A light touch of each, as a film camera might give.
+  film: Object.freeze({ glow: 0.4, vignette: 0.5, dispersion: 0.015 }),
 });
 
 const clamp = (n: number, lo: number, hi: number) =>
@@ -233,6 +257,7 @@ export function blenderSceneFromCinema(
       panDegrees: s.panDegrees ?? 0,
       shake: s.shake ?? 0,
     },
+    finish: { ...FINISHES[s.finish ?? "none"] },
     light: {
       rotation: { ...LIGHTING[s.lighting ?? "neutral"].rotation },
       strength: LIGHTING[s.lighting ?? "neutral"].strength,
