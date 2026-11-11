@@ -651,13 +651,17 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Blender camera tracking, 2026-11-11:**
 - **New job kind `blender-track`** and two commands: `yamakan.blender.track`, which queues a track of a project video given its lens, and `yamakan.track.read`, which returns the solved camera.
   - The worker copies the video into the attempt folder (Blender reads it, never writes it).
-  - The fixed script `scripts/blender/yamakan_track.py` detects features, follows them and refuses a clip whose features barely move. It solves with Blender's keyframe selection, drops features over 3 px, solves again, and refuses a solve with fewer than 8 features or more than 3 px average error.
+  - The fixed script `scripts/blender/yamakan_track.py` sets Blender's scene range to the whole clip, detects features, follows them, and refuses a clip whose features barely move. It solves with Blender's keyframe selection, drops features over 3 px, and solves again. It refuses a solve that places fewer than 8 features, has more than 3 px average error, or covers less than 80 % of the clip. Clips of 10 to 720 frames; a longer video is refused before it is copied.
   - The result `yamakan.camera-track/1` is checked against a strict schema and published as `exports/<job>/track-N.json`. Tracks share Blender's one slot with renders.
 - **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender inside procd, on clips the worker rendered itself with the detail surface (640 x 360, 36 frames, five boxes):
   - **A 40-degree orbit** is solved over 36 cameras from 90 features, at 0.53 px average error, as a 36.7-degree turn (the test asks for 40 ± 6). It travelled as the orbit does: the direction (0.952, 0.144, −0.271) against the arc's chord (0.940, 0.133, −0.315), an agreement of 0.999 (the test asks for 0.97).
   - **A still clip** is refused ("the camera does not move enough to be solved"). Before that check was added, Blender returned a "solved" still camera; the test caught it.
+  - **The turn's axis** is the world's vertical, as an orbit turns: within 0.95 of up in the first camera's axes.
+  - **A 288-frame clip** (the orbit forward and back four times) is tracked to its end: 288 of 288 frames solved, at 0.60 px. Blender's default scene range stops at frame 250; the first version would have cut it there and still succeeded, which the independent review found.
+  - **A render is refused while a track holds Blender's one slot.** A track cannot be read through another project.
   - **A video the project does not hold** is refused.
   - **A plain test** checks the result schema (frame order, error and track bounds, finite values, no extra fields) and the turn and travel measures.
 - **Found, and stated as a limit:** a 20-degree orbit seen from this far (about 18 m from a few metres of boxes, a 35 mm lens) was solved at 0.64 px error as a 9.7-degree turn. A small turn and a sideways slide look nearly alike from far away (a known ambiguity of camera solving), so the test uses 40 degrees and the docs say footage needs enough motion.
+- **Limits, stated:** the solved turn read about 8 % low on the test clip (36.7 for 40 degrees). A camera that only turns where it stands gives a turn but no meaningful travel. Memory at 1920 x 1080 x 720 frames is bounded by a 1 GiB frame cache but was not qualified on a clip that size.
 - **Not yet:** applying the solved camera (a matched Cinema camera, and 3D objects rendered over the footage), a page control, aerial views.
 

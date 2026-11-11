@@ -1095,6 +1095,7 @@ export class JobSupervisor {
           attempt,
           track.data,
           controller.signal,
+          output,
         );
       else if (
         row.kind === "export" &&
@@ -1616,6 +1617,13 @@ export class JobSupervisor {
         "LIMIT_EXCEEDED",
         `Tracking takes videos up to ${BLENDER_TRACK_LIMITS.maxWidth} x ${BLENDER_TRACK_LIMITS.maxHeight}.`,
       );
+    // Counted at the project's frame rate, so a first bound only: the script counts the clip's
+    // own frames exactly. A long video is refused before it is copied.
+    if (asset.durationFrames > BLENDER_TRACK_LIMITS.maxFrames)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `Tracking takes clips of at most ${BLENDER_TRACK_LIMITS.maxFrames} frames.`,
+      );
     const key = `blender-track-${createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32)}`;
     const row = this.store.transaction((db) => {
       this.#currentIn(db);
@@ -1669,9 +1677,9 @@ export class JobSupervisor {
   }
 
   // The solved camera of a finished track, checked again as it is read.
-  async trackResult(jobId: string): Promise<CameraTrack> {
+  async trackResult(projectId: string, jobId: string): Promise<CameraTrack> {
     const row = this.store.transaction((db) => this.#row(db, jobId));
-    if (!row || row.kind !== "blender-track")
+    if (!row || row.kind !== "blender-track" || row.project_id !== projectId)
       throw new CommandError("NOT_FOUND", "No such camera track.");
     if (row.state !== "succeeded" || !row.artifact)
       throw new CommandError("BUSY", "This camera track has not finished.");
@@ -1705,6 +1713,7 @@ export class JobSupervisor {
     attempt: number,
     payload: z.output<typeof TrackPayload>,
     signal: AbortSignal,
+    output: { published: string | null },
   ) {
     const jobId = row.job_id;
     const runtime = await blenderRuntime();
@@ -1790,7 +1799,7 @@ export class JobSupervisor {
         said = lines.pop() || "";
         if (said.length > PROGRESS_LINE_LIMIT) said = "";
         for (const line of lines) {
-          const refused = /^YAMAKAN_TRACK_ERROR ([\w .,'():;-]{1,160})/.exec(
+          const refused = /^YAMAKAN_TRACK_ERROR ([\w .,'():;/"%-]{1,160})/.exec(
             line,
           );
           if (refused) refusal = refused[1];
@@ -1841,6 +1850,8 @@ export class JobSupervisor {
       jobId,
       `track-${attempt}.json`,
     );
+    // Owned by the job until it succeeds: removed if anything after this fails or is cancelled.
+    output.published = target;
     await writeFile(target, JSON.stringify(track));
     await this.#cleanup(row.project_id, jobId, attempt);
     this.store.transaction((db) =>
@@ -1856,6 +1867,7 @@ export class JobSupervisor {
         },
       ),
     );
+    output.published = null;
   }
 
   async #runDerivative(

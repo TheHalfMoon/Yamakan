@@ -1920,9 +1920,9 @@ export const commands = {
     scope: "job:read",
     mutation: false,
     summary:
-      "Read the solved camera of a finished camera track: per-frame camera matrices (Blender's reconstruction: the first solved camera is the identity, in an arbitrary scale), the lens, the features kept and the solve's average error in pixels.",
-    input: z.object({ jobId: Id }).strict(),
-    run: ({ queue }, a) => queue.trackResult(a.jobId),
+      "Read the solved camera of a finished camera track of the project: per-frame camera matrices (Blender's reconstruction: the first solved camera is the identity, in an arbitrary scale), the lens, the features kept and the solve's average error in pixels.",
+    input: z.object({ projectId: Id, jobId: Id }).strict(),
+    run: ({ queue }, a) => queue.trackResult(a.projectId, a.jobId),
   }),
   "yamakan.export.video": define({
     scope: "render:execute",

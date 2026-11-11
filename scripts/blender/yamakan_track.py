@@ -67,20 +67,28 @@ def main():
         fail("the settings are not as described")
     focal = number(s["focalLengthMm"], 1, 1000, "focal length")
     sensor = number(s["sensorWidthMm"], 1, 100, "sensor width")
-    max_frames = integer(s["maxFrames"], 2, 720, "most frames")
+    max_frames = integer(s["maxFrames"], 10, 720, "most frames")
     max_width = integer(s["maxWidth"], 64, 1920, "widest")
     max_height = integer(s["maxHeight"], 64, 1080, "tallest")
     max_error = number(s["maxErrorPixels"], 0.1, 10, "largest error")
     min_tracks = integer(s["minTracks"], 8, 1000, "fewest tracks")
 
+    # Decoded frames are cached within a bound well inside the worker's memory.
+    bpy.context.preferences.system.memory_cache_limit = 1024
     clip = bpy.data.movieclips.load(video)
     frames = clip.frame_duration
     width, height = clip.size[0], clip.size[1]
-    if not (2 <= frames <= max_frames):
-        fail("the video has " + str(frames) + " frames; tracking takes 2 to " + str(max_frames))
+    # Cleaning drops features followed for fewer than 10 frames, so shorter clips cannot solve.
+    if not (10 <= frames <= max_frames):
+        fail("the video has " + str(frames) + " frames; tracking takes 10 to " + str(max_frames))
     if not (64 <= width <= max_width and 64 <= height <= max_height):
         fail("the video is " + str(width) + " x " + str(height) + ", larger than tracking takes")
     fps = float(clip.fps) if clip.fps else 24.0
+    # Tracking runs over the scene's frame range, which is 1 to 250 after a factory start: the
+    # whole clip, then.
+    scene = bpy.context.scene
+    scene.frame_start = clip.frame_start
+    scene.frame_end = clip.frame_start + frames - 1
 
     tracking = clip.tracking
     settings = tracking.settings
@@ -132,8 +140,11 @@ def main():
             markers = [m for m in track.markers if not m.mute]
             if len(markers) < 2:
                 continue
-            a, b = markers[0].co, markers[-1].co
-            moved.append(math.hypot((b[0] - a[0]) * width, (b[1] - a[1]) * height))
+            # The furthest it got from where it started (a camera can move and come back).
+            a = markers[0].co
+            moved.append(
+                max(math.hypot((m.co[0] - a[0]) * width, (m.co[1] - a[1]) * height) for m in markers)
+            )
         moved.sort()
         travel = moved[len(moved) // 2] if moved else 0.0
         if travel < 0.02 * width:
@@ -157,17 +168,25 @@ def main():
     error = float(reconstruction.average_error)
     if not math.isfinite(error) or error > max_error:
         fail("the solve is not good enough (" + format(error, ".2f") + " px on average)")
-    kept = len(tracking.tracks)
+    # Features the solve actually placed in 3D, not every track left.
+    kept = sum(1 for t in tracking.tracks if t.has_bundle)
     if kept < min_tracks:
-        fail("too few features were kept for the solve")
+        fail("too few features were placed by the solve (" + str(kept) + ")")
     cameras = []
     for camera in reconstruction.cameras:
         values = [float(v) for row in camera.matrix for v in row]
         if not all(math.isfinite(v) and abs(v) <= 1e6 for v in values):
             fail("a solved camera is out of range")
         cameras.append({"frame": int(camera.frame), "matrix": values})
-    if len(cameras) < 2:
-        fail("the camera was solved for fewer than two frames")
+    # Most of the clip, not a piece of it: a solve that lost the camera part way is refused.
+    if len(cameras) < max(2, math.ceil(0.8 * frames)):
+        fail(
+            "the camera was solved for only "
+            + str(len(cameras))
+            + " of "
+            + str(frames)
+            + " frames"
+        )
     target = tracking.objects.active
 
     with open(os.path.join(out, "track.json"), "w", encoding="utf-8") as f:
@@ -177,6 +196,7 @@ def main():
                 "width": width,
                 "height": height,
                 "fps": fps,
+                "frames": frames,
                 "lens": {"focalLengthMm": focal, "sensorWidthMm": sensor},
                 "tracks": kept,
                 "averageErrorPixels": error,

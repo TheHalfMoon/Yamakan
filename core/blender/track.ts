@@ -19,8 +19,10 @@ export const BLENDER_TRACK_LIMITS = Object.freeze({
   // A solve whose features land further than this from where the solved camera puts them, on
   // average, is refused rather than handed on as if it were good.
   maxErrorPixels: 3,
-  // Features followed at least this far count; fewer than this many and there is nothing to solve.
+  // Features placed by the solve; fewer than this many and there is nothing to solve.
   minTracks: 8,
+  // Shorter clips cannot be solved: features followed for fewer frames are dropped.
+  minFrames: 10,
   resultBytes: 4 * 1024 * 1024,
 });
 
@@ -49,6 +51,9 @@ export const CameraTrackSchema = z
       .min(BLENDER_TRACK_LIMITS.minSide)
       .max(BLENDER_TRACK_LIMITS.maxHeight),
     fps: Finite.positive().max(240),
+    // Frames in the clip; the solved cameras cover at least 80 % of them (gaps may remain where
+    // the camera could not be placed).
+    frames: z.number().int().min(10).max(BLENDER_TRACK_LIMITS.maxFrames),
     lens: TrackLensSchema,
     // Features that were followed and kept for the solve.
     tracks: z.number().int().min(BLENDER_TRACK_LIMITS.minTracks).max(100_000),
@@ -71,6 +76,12 @@ export const CameraTrackSchema = z
     (t) =>
       t.cameras.every((c, i) => i === 0 || c.frame > t.cameras[i - 1].frame),
     "The solved cameras are in frame order, each once.",
+  )
+  .refine(
+    (t) =>
+      t.cameras.length >= Math.ceil(0.8 * t.frames) &&
+      t.cameras.every((c) => c.frame <= t.frames),
+    "The solved cameras cover most of the clip, within it.",
   );
 export type CameraTrack = z.infer<typeof CameraTrackSchema>;
 
@@ -88,6 +99,23 @@ export function cameraTurnDegrees(track: CameraTrack): number {
     for (let k = 0; k < 3; k++) trace += r(first, k, i) * r(last, k, i);
   const cos = Math.min(1, Math.max(-1, (trace - 1) / 2));
   return (Math.acos(cos) * 180) / Math.PI;
+}
+
+/**
+ * The axis the camera turned about, first to last solved frame, in the first camera's own axes
+ * (a unit vector; the identity gives 0, 0, 0).
+ */
+export function cameraTurnAxis(track: CameraTrack): [number, number, number] {
+  const first = track.cameras[0].matrix;
+  const last = track.cameras[track.cameras.length - 1].matrix;
+  // R = R_firstᵀ · R_last; its axis is (R32 - R23, R13 - R31, R21 - R12).
+  const r = (row: number, col: number) =>
+    first[row] * last[col] +
+    first[1 * 4 + row] * last[1 * 4 + col] +
+    first[2 * 4 + row] * last[2 * 4 + col];
+  const axis = [r(2, 1) - r(1, 2), r(0, 2) - r(2, 0), r(1, 0) - r(0, 1)];
+  const n = Math.hypot(...axis);
+  return (n ? axis.map((v) => v / n) : [0, 0, 0]) as [number, number, number];
 }
 
 /** The direction the camera moved, first to last solved frame, in the first camera's own axes. */
