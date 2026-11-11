@@ -87,7 +87,8 @@ export type CameraTrack = z.infer<typeof CameraTrackSchema>;
 
 /**
  * How far the camera turned between its first and last solved frames, in degrees, from the
- * rotation parts of the two matrices.
+ * rotation parts of the two matrices. These measures compare the first and last frames only: a
+ * camera that moves and comes back reads as hardly moved.
  */
 export function cameraTurnDegrees(track: CameraTrack): number {
   const first = track.cameras[0].matrix;

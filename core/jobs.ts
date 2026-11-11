@@ -299,13 +299,15 @@ export class JobSupervisor {
     // Unregistered outputs of interrupted attempts are removed, including an
     // export published just before its success could commit.
     for (const a of interrupted) {
-      if (a.kind === "export")
+      if (a.kind === "export" || a.kind === "blender-track")
         await unlink(
           await this.store.file(
             a.project_id,
             "exports",
             a.job_id,
-            `render-${a.attempt_no}.mp4`,
+            a.kind === "export"
+              ? `render-${a.attempt_no}.mp4`
+              : `track-${a.attempt_no}.json`,
           ),
         ).catch(() => {});
       await this.#cleanup(a.project_id, a.job_id, a.attempt_no);
@@ -1617,9 +1619,13 @@ export class JobSupervisor {
         "LIMIT_EXCEEDED",
         `Tracking takes videos up to ${BLENDER_TRACK_LIMITS.maxWidth} x ${BLENDER_TRACK_LIMITS.maxHeight}.`,
       );
-    // Counted at the project's frame rate, so a first bound only: the script counts the clip's
-    // own frames exactly. A long video is refused before it is copied.
-    if (asset.durationFrames > BLENDER_TRACK_LIMITS.maxFrames)
+    // A video far longer than any trackable clip is refused before it is copied: by its length in
+    // seconds (720 frames is 60 s even at 12 fps), whatever the project's frame rate. The script
+    // counts the clip's own frames exactly.
+    if (
+      framesToSeconds(asset.durationFrames, frameRateOf(project)) >
+      BLENDER_TRACK_LIMITS.maxFrames / 12
+    )
       throw new CommandError(
         "LIMIT_EXCEEDED",
         `Tracking takes clips of at most ${BLENDER_TRACK_LIMITS.maxFrames} frames.`,

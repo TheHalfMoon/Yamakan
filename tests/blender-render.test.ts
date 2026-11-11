@@ -1744,6 +1744,10 @@ test(
         lens,
       );
       // Blender's one slot is the track's: a render waits.
+      assert.ok(
+        ["QUEUED", "RUNNING"].includes(supervisor.status(longJob.id).state),
+        JSON.stringify(supervisor.status(longJob.id)),
+      );
       await assert.rejects(
         supervisor.submitBlenderRender(
           project.id,
