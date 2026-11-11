@@ -193,25 +193,33 @@ test("a loaded model is shared while items show it, freed after the last, and a 
     if (key === "p:bad" && fail) throw new Error("not reachable");
     return key;
   }, add);
+  const tick = () => new Promise((r) => setImmediate(r));
   const a = cache.acquire("p:one");
   const b = cache.acquire("p:one");
-  assert.equal(await a, await b);
+  assert.equal(await a.value, await b.value);
   assert.deepEqual(loads, ["p:one"]);
-  cache.release("p:one");
-  await new Promise((r) => setImmediate(r));
+  a.release();
+  a.release(); // twice is once
+  await tick();
   assert.deepEqual(freed, [], "still shown by one item");
-  cache.release("p:one");
-  await new Promise((r) => setImmediate(r));
+  b.release();
+  await tick();
   assert.deepEqual(freed, ["p:one"], "freed after the last");
   assert.equal(cache.size(), 0);
-  await assert.rejects(cache.acquire("p:bad"));
+  // A failed load is forgotten; letting go of it never takes a count from the newer load.
+  const failed = cache.acquire("p:bad");
+  await assert.rejects(failed.value);
   fail = false;
-  assert.equal(await cache.acquire("p:bad"), "p:bad", "tried again");
+  const retried = cache.acquire("p:bad");
+  assert.equal(await retried.value, "p:bad", "tried again");
+  failed.release();
+  await tick();
+  const all: string[] = freed;
+  assert.ok(!all.includes("p:bad"), "the newer load is still shown");
   assert.deepEqual(loads, ["p:one", "p:bad", "p:bad"]);
   cache.acquire("q:two");
   cache.clear();
-  await new Promise((r) => setImmediate(r));
-  const all: string[] = freed;
+  await tick();
   assert.ok(all.includes("q:two") && all.includes("p:bad"));
 });
 

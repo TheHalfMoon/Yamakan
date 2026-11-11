@@ -111,7 +111,8 @@ export function imageTextures(parser: {
 /**
  * Loaded models shared by the items that show them: each key is loaded once while anything
  * uses it, and freed when the last user lets go. A load that fails is forgotten, so the next
- * user tries again.
+ * user tries again. Each use gets its own release, bound to the load it used, so letting go of
+ * a failed load never takes a count from a newer one.
  */
 export function createModelCache<T>(
   load: (key: string) => Promise<T>,
@@ -119,7 +120,7 @@ export function createModelCache<T>(
 ) {
   const entries = new Map<string, { value: Promise<T>; users: number }>();
   return {
-    acquire(key: string): Promise<T> {
+    acquire(key: string): { value: Promise<T>; release: () => void } {
       let entry = entries.get(key);
       if (!entry) {
         const value = load(key);
@@ -130,14 +131,19 @@ export function createModelCache<T>(
           if (entries.get(key) === made) entries.delete(key);
         });
       }
-      entry.users++;
-      return entry.value;
-    },
-    release(key: string) {
-      const entry = entries.get(key);
-      if (!entry || --entry.users > 0) return;
-      entries.delete(key);
-      entry.value.then(dispose, () => {});
+      const held = entry;
+      held.users++;
+      let released = false;
+      return {
+        value: held.value,
+        release() {
+          if (released) return;
+          released = true;
+          if (--held.users > 0 || entries.get(key) !== held) return;
+          entries.delete(key);
+          held.value.then(dispose, () => {});
+        },
+      };
     },
     clear() {
       for (const entry of entries.values()) entry.value.then(dispose, () => {});

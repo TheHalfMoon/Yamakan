@@ -212,7 +212,7 @@ export function CinemaViewport({
   const modelBusy = modelBusyFor !== null && modelBusyFor === projectId;
   // Models uploaded here and not yet saved, with when they were stored: the service frees an
   // unnamed model after its grace period, so a save stores older ones again first.
-  const uploadedRef = useRef(new Map<string, number>());
+  const uploadedRef = useRef(new Map<string, { at: number; file: File }>());
   const [save, setSave] = useState<CinemaSaveState | null>(null);
   const [persistence, setPersistence] = useState<boolean | null>(null);
   const [turnedOff, setTurnedOff] = useState(false);
@@ -383,16 +383,23 @@ export function CinemaViewport({
       const named = new Set(
         scene.items.flatMap((item) => (item.model ? [item.model] : [])),
       );
-      for (const [digest, at] of uploadedRef.current)
+      for (const [digest, upload] of uploadedRef.current)
         if (
           named.has(digest) &&
-          Date.now() - at > CINEMA_MODEL_REFRESH_MS &&
-          client.cinemaModel &&
+          Date.now() - upload.at > CINEMA_MODEL_REFRESH_MS &&
           client.uploadCinemaModel
         ) {
-          const bytes = await client.cinemaModel(projectId, digest);
-          await client.uploadCinemaModel(projectId, new Uint8Array(bytes));
-          uploadedRef.current.set(digest, Date.now());
+          // From the person's own file, so it works even after the service freed its copy.
+          const bytes = new Uint8Array(await upload.file.arrayBuffer());
+          const again = await client.uploadCinemaModel(projectId, bytes);
+          if (again.digest !== digest)
+            throw new Error(
+              `The file for a 3D model has changed since it was added (${upload.file.name}); add it again.`,
+            );
+          uploadedRef.current.set(digest, {
+            at: Date.now(),
+            file: upload.file,
+          });
         }
       const commit = () =>
         saveProjectScene({
@@ -504,7 +511,7 @@ export function CinemaViewport({
         for (const child of o.children) free(child);
       };
       free(object);
-      if (object.userData.cacheKey) models.release(object.userData.cacheKey);
+      (object.userData.release as (() => void) | undefined)?.();
     };
     // What an object shows: a box, or a model of this project (by project and digest).
     const keyOf = (item: CinemaSceneLocal["items"][number]) =>
@@ -537,7 +544,9 @@ export function CinemaViewport({
           threeScene.add(group);
           meshes.set(item.id, group);
           mesh = group;
-          models.acquire(key).then(
+          const use = models.acquire(key);
+          group.userData.release = use.release;
+          use.value.then(
             (template) => {
               if (meshes.get(item.id) !== group || cancelled) return;
               group.remove(placeholder);
@@ -706,7 +715,7 @@ export function CinemaViewport({
   // named by a new item (unsaved until the person saves the scene, like any edit).
   const receiveModel = async (file: File) => {
     const owner = projectId;
-    if (!owner || !client?.uploadCinemaModel || modelBusyFor) return;
+    if (!owner || !client?.uploadCinemaModel || modelBusyFor === owner) return;
     if (!cinemaCanEdit(saveRef.current)) return;
     if (file.size > GLB_LIMITS.bytes) {
       setError(t("cinema.model.tooLarge"));
@@ -727,9 +736,15 @@ export function CinemaViewport({
       const stored = await client.uploadCinemaModel(owner, bytes);
       // Another project was opened meanwhile: the stored model is left unnamed, and freed.
       if (projectIdRef.current !== owner) return;
-      uploadedRef.current.set(stored.digest, Date.now());
+      uploadedRef.current.set(stored.digest, { at: Date.now(), file });
       if (cinemaModelCount(sceneRef.current) >= CINEMA_PAGE_MAX_MODELS) {
         setError(t("cinema.model.limit", { n: CINEMA_PAGE_MAX_MODELS }));
+        return;
+      }
+      // The scene could not take it now (it is opening again, or in conflict): said, not
+      // dropped. A refusal from the scene itself (such as its object limit) is shown as it is.
+      if (!cinemaCanEdit(saveRef.current)) {
+        setError(t("cinema.model.notAdded"));
         return;
       }
       const id = crypto.randomUUID();
@@ -737,7 +752,6 @@ export function CinemaViewport({
         addCinemaModel(s, cinemaModelName(file.name), stored.digest, id),
       );
       if (next) setSelectedId(id);
-      else setError(t("cinema.model.notAdded"));
     } catch (e) {
       setError(
         `${t("cinema.model.uploadFailed")} ${e instanceof Error ? e.message : String(e)}`,
