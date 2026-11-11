@@ -12,6 +12,7 @@ import {
   type GenerationRecord,
 } from "./engines/generation.ts";
 import {
+  copyFile,
   lstat,
   mkdir,
   open,
@@ -29,7 +30,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { ProjectStore } from "./store.ts";
-import { AssetSchema, frameRateOf, framesToSeconds } from "./project.ts";
+import { AssetSchema, Id, frameRateOf, framesToSeconds } from "./project.ts";
 import type { Asset } from "./project.ts";
 import {
   durationFramesAt,
@@ -50,9 +51,16 @@ import { DOCUMENT_LIMITS } from "./document-ref.ts";
 import {
   BLENDER_PIN,
   BLENDER_SCRIPT,
+  BLENDER_TRACK_SCRIPT,
   blenderRuntime,
   verifyBlenderForRun,
 } from "./blender/runtime.ts";
+import {
+  BLENDER_TRACK_LIMITS,
+  CameraTrackSchema,
+  TrackLensSchema,
+  type CameraTrack,
+} from "./blender/track.ts";
 import { blenderWorkers } from "./blender/worker.ts";
 import { createReadStream } from "node:fs";
 import { keepMainStream, renderRevision } from "./render.ts";
@@ -192,6 +200,14 @@ const BlenderPayload = z
     name: z.string().min(1).max(120),
   })
   .strict();
+// A camera track of one of the project's videos (core/blender/track.ts).
+const TrackPayload = z
+  .object({
+    format: z.literal("blender-track/1"),
+    assetId: Id,
+    lens: TrackLensSchema,
+  })
+  .strict();
 // Cycles on the CPU uses every core it is given: one render at a time, across all projects.
 const BLENDER_RENDERS_AT_ONCE = 1;
 
@@ -283,13 +299,15 @@ export class JobSupervisor {
     // Unregistered outputs of interrupted attempts are removed, including an
     // export published just before its success could commit.
     for (const a of interrupted) {
-      if (a.kind === "export")
+      if (a.kind === "export" || a.kind === "blender-track")
         await unlink(
           await this.store.file(
             a.project_id,
             "exports",
             a.job_id,
-            `render-${a.attempt_no}.mp4`,
+            a.kind === "export"
+              ? `render-${a.attempt_no}.mp4`
+              : `track-${a.attempt_no}.json`,
           ),
         ).catch(() => {});
       await this.#cleanup(a.project_id, a.job_id, a.attempt_no);
@@ -1031,7 +1049,7 @@ export class JobSupervisor {
     jobId: string,
     attempt: number,
     artifact: string,
-    receipt?: { planHash: string },
+    receipt?: { planHash?: string; [detail: string]: unknown },
   ) {
     const current = (
       db.prepare("SELECT generation FROM supervisor WHERE id = 1").get() as {
@@ -1070,8 +1088,17 @@ export class JobSupervisor {
       const payload = safeJson(row.payload);
       const derivative = DerivativePayload.safeParse(payload);
       const blender = BlenderPayload.safeParse(payload);
+      const track = TrackPayload.safeParse(payload);
       if (row.kind === "blender-render" && blender.success)
         await this.#runBlender(row, attempt, blender.data, controller.signal);
+      else if (row.kind === "blender-track" && track.success)
+        await this.#runBlenderTrack(
+          row,
+          attempt,
+          track.data,
+          controller.signal,
+          output,
+        );
       else if (
         row.kind === "export" &&
         ExportPayload.safeParse(payload).success
@@ -1542,7 +1569,7 @@ export class JobSupervisor {
       const rendering = (
         db
           .prepare(
-            `SELECT count(*) AS n FROM jobs WHERE kind = 'blender-render' AND state NOT IN (${terminalSql})`,
+            `SELECT count(*) AS n FROM jobs WHERE kind IN ('blender-render', 'blender-track') AND state NOT IN (${terminalSql})`,
           )
           .get() as { n: number }
       ).n;
@@ -1565,6 +1592,288 @@ export class JobSupervisor {
     });
     this.#pump();
     return this.#view(row);
+  }
+
+  // Queues a camera track of one of the project's videos. It shares Blender's one slot with
+  // renders. The result is the job's artifact, read back with trackResult.
+  async submitBlenderTrack(projectId: string, assetId: string, lens: unknown) {
+    if (this.#closing) throw new Error("Render queue is closing.");
+    if (!this.#generation) await this.start();
+    this.#current();
+    const project = await this.store.load(projectId);
+    const payload = TrackPayload.parse({
+      format: "blender-track/1",
+      assetId,
+      lens,
+    });
+    const asset = project.assets.find((a) => a.id === payload.assetId);
+    if (!asset)
+      throw new CommandError("NOT_FOUND", "This project holds no such video.");
+    if (asset.kind !== "video")
+      throw new CommandError("VALIDATION", "Only a video can be tracked.");
+    if (
+      asset.width > BLENDER_TRACK_LIMITS.maxWidth ||
+      asset.height > BLENDER_TRACK_LIMITS.maxHeight
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `Tracking takes videos up to ${BLENDER_TRACK_LIMITS.maxWidth} x ${BLENDER_TRACK_LIMITS.maxHeight}.`,
+      );
+    // A video far longer than any trackable clip is refused before it is copied: by its length in
+    // seconds (720 frames is 60 s even at 12 fps), whatever the project's frame rate. The script
+    // counts the clip's own frames exactly.
+    if (
+      framesToSeconds(asset.durationFrames, frameRateOf(project)) >
+      BLENDER_TRACK_LIMITS.maxFrames / 12
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `Tracking takes clips of at most ${BLENDER_TRACK_LIMITS.maxFrames} frames and 60 seconds.`,
+      );
+    const key = `blender-track-${createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32)}`;
+    const row = this.store.transaction((db) => {
+      this.#currentIn(db);
+      const existing = db
+        .prepare(
+          "SELECT * FROM jobs WHERE project_id = ? AND kind = 'blender-track' AND frozen_revision = ? AND idempotency_key = ?",
+        )
+        .get(projectId, project.revision, key) as Row | undefined;
+      if (
+        existing &&
+        existing.state !== "failed" &&
+        existing.state !== "cancelled" &&
+        existing.state !== "succeeded"
+      )
+        return existing;
+      const active = (
+        db
+          .prepare(
+            `SELECT count(*) AS n FROM jobs WHERE state NOT IN (${terminalSql})`,
+          )
+          .get() as { n: number }
+      ).n;
+      if (active >= RESOURCE_POLICY.enforced.activeJobs)
+        throw new CommandError("LIMIT_EXCEEDED", "Too many active jobs.");
+      const busy = (
+        db
+          .prepare(
+            `SELECT count(*) AS n FROM jobs WHERE kind IN ('blender-render', 'blender-track') AND state NOT IN (${terminalSql})`,
+          )
+          .get() as { n: number }
+      ).n;
+      if (busy >= BLENDER_RENDERS_AT_ONCE)
+        throw new CommandError(
+          "LIMIT_EXCEEDED",
+          "Blender is already working; wait for it or cancel it.",
+        );
+      const jobId = randomUUID();
+      db.prepare(
+        "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'blender-track', ?, ?, ?, ?, 'queued')",
+      ).run(
+        jobId,
+        projectId,
+        project.revision,
+        existing ? `${key}-${jobId.slice(0, 8)}` : key,
+        JSON.stringify(payload),
+      );
+      return this.#row(db, jobId)!;
+    });
+    this.#pump();
+    return this.#view(row);
+  }
+
+  // The solved camera of a finished track, checked again as it is read.
+  async trackResult(projectId: string, jobId: string): Promise<CameraTrack> {
+    const row = this.store.transaction((db) => this.#row(db, jobId));
+    if (!row || row.kind !== "blender-track" || row.project_id !== projectId)
+      throw new CommandError("NOT_FOUND", "No such camera track.");
+    if (row.state !== "succeeded" || !row.artifact)
+      throw new CommandError("BUSY", "This camera track has not finished.");
+    if (!/^exports\/[0-9a-f-]{36}\/track-\d{1,3}\.json$/.test(row.artifact))
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "This camera track's result is not where it should be.",
+      );
+    const file = await this.store.file(
+      row.project_id,
+      ...(row.artifact.split("/") as [string, ...string[]]),
+    );
+    const stat = await lstat(file).catch(() => null);
+    if (
+      !stat?.isFile() ||
+      stat.nlink !== 1 ||
+      stat.size > BLENDER_TRACK_LIMITS.resultBytes
+    )
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "This camera track's result is missing or damaged.",
+      );
+    return CameraTrackSchema.parse(JSON.parse(await readFile(file, "utf8")));
+  }
+
+  // Tracks a video with the Blender worker: the project's stored file is copied into the attempt
+  // folder (Blender reads it, never writes it), the fixed tracking script runs inside procd, and
+  // the solved cameras it writes are checked before they become the job's artifact.
+  async #runBlenderTrack(
+    row: Row,
+    attempt: number,
+    payload: z.output<typeof TrackPayload>,
+    signal: AbortSignal,
+    output: { published: string | null },
+  ) {
+    const jobId = row.job_id;
+    const runtime = await blenderRuntime();
+    if (!runtime.available)
+      throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+    const broken = await verifyBlenderForRun(runtime.install);
+    if (broken) throw new CommandError("CAPABILITY_UNAVAILABLE", broken);
+    const { file: source, asset } = await this.store.assetFile(
+      row.project_id,
+      payload.assetId,
+    );
+    if (asset.kind !== "video")
+      throw new CommandError("VALIDATION", "Only a video can be tracked.");
+    const dir = await this.store.file(
+      row.project_id,
+      "exports",
+      jobId,
+      `attempt-${attempt}`,
+    );
+    const input = path.join(dir, "input");
+    const out = path.join(dir, "out");
+    await mkdir(input, { recursive: true });
+    await mkdir(out, { recursive: true });
+    const space = await statfs(dir);
+    const free =
+      Number(space.bavail) * Number(space.bsize) -
+      RESOURCE_POLICY.enforced.diskReserveBytes;
+    if (free < asset.bytes + 64 * 1024 * 1024)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Insufficient free disk space for this track.",
+      );
+    const clip = path.join(input, `clip.${asset.extension}`);
+    await copyFile(source, clip);
+    const settingsFile = path.join(dir, "track-settings.json");
+    await writeFile(
+      settingsFile,
+      JSON.stringify({
+        format: "yamakan.blender-track/1",
+        focalLengthMm: payload.lens.focalLengthMm,
+        sensorWidthMm: payload.lens.sensorWidthMm,
+        maxFrames: BLENDER_TRACK_LIMITS.maxFrames,
+        maxWidth: BLENDER_TRACK_LIMITS.maxWidth,
+        maxHeight: BLENDER_TRACK_LIMITS.maxHeight,
+        maxErrorPixels: BLENDER_TRACK_LIMITS.maxErrorPixels,
+        minTracks: BLENDER_TRACK_LIMITS.minTracks,
+      }),
+    );
+    if (signal.aborted) throw new Error("Cancelled.");
+    this.#progress.set(jobId, 0.1);
+    let said = "";
+    let refusal = "";
+    const result = await blenderWorkers(runtime.executable).run({
+      profile: ENGINE_WORKER_PROFILE,
+      executable: runtime.executable,
+      args: [
+        "-b",
+        "--factory-startup",
+        "-Y",
+        "--offline-mode",
+        "-noaudio",
+        "-t",
+        String(RESOURCE_POLICY.enforced.renderThreads),
+        "--python-exit-code",
+        "1",
+        "--python",
+        BLENDER_TRACK_SCRIPT,
+        "--",
+        settingsFile,
+        clip,
+        out,
+      ],
+      cwd: out,
+      writable: [out],
+      readable: [runtime.install, BLENDER_TRACK_SCRIPT, settingsFile, input],
+      memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
+      signal,
+      stderrLimit: 8000,
+      onCreated: (pid) => this.#markRunning(jobId, attempt, pid),
+      onStdout: (chunk) => {
+        said += chunk.toString("utf8");
+        const lines = said.split("\n");
+        said = lines.pop() || "";
+        if (said.length > PROGRESS_LINE_LIMIT) said = "";
+        for (const line of lines) {
+          const refused = /^YAMAKAN_TRACK_ERROR ([\w .,'():;/"%-]{1,160})/.exec(
+            line,
+          );
+          if (refused) refusal = refused[1];
+        }
+      },
+    });
+    if (signal.aborted) throw new Error("Cancelled.");
+    if (result.wallExceeded)
+      throw new Error("The track passed its time limit and was ended.");
+    if (result.code !== 0)
+      throw new Error(
+        `Blender could not track the video${refusal ? `: ${refusal}` : ""} (exit ${result.code}).`,
+        { cause: result.stderr },
+      );
+    this.#markValidating(jobId, attempt);
+    // What the worker made is read only as plain files of their own, of a sensible size.
+    const plain = async (file: string, most: number) => {
+      const stat = await lstat(file);
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size > most)
+        throw new Error("The track left a file that is not what it should be.");
+    };
+    const receiptFile = path.join(out, "receipt.json");
+    const trackFile = path.join(out, "track.json");
+    await plain(receiptFile, 4096);
+    await plain(trackFile, BLENDER_TRACK_LIMITS.resultBytes);
+    const receipt = JSON.parse(await readFile(receiptFile, "utf8")) as {
+      format?: string;
+      blender?: string;
+      online?: boolean;
+    };
+    if (
+      receipt.format !== "yamakan.blender-receipt/1" ||
+      receipt.blender !== BLENDER_PIN.version ||
+      receipt.online !== false
+    )
+      throw new Error("The track's receipt does not match the pinned Blender.");
+    let track: CameraTrack;
+    try {
+      track = CameraTrackSchema.parse(
+        JSON.parse(await readFile(trackFile, "utf8")),
+      );
+    } catch {
+      throw new Error("The track's result is not a valid camera track.");
+    }
+    const target = await this.store.file(
+      row.project_id,
+      "exports",
+      jobId,
+      `track-${attempt}.json`,
+    );
+    // Owned by the job until it succeeds: removed if anything after this fails or is cancelled.
+    output.published = target;
+    await writeFile(target, JSON.stringify(track));
+    await this.#cleanup(row.project_id, jobId, attempt);
+    this.store.transaction((db) =>
+      this.#succeedIn(
+        db,
+        jobId,
+        attempt,
+        `exports/${jobId}/track-${attempt}.json`,
+        {
+          tracks: track.tracks,
+          averageErrorPixels: track.averageErrorPixels,
+          cameras: track.cameras.length,
+        },
+      ),
+    );
+    output.published = null;
   }
 
   async #runDerivative(

@@ -33,6 +33,13 @@ import {
   moved,
 } from "../scripts/lib/frame-checks.ts";
 import { planCinemaShot } from "../core/director/cinema-shot.ts";
+import {
+  CameraTrackSchema,
+  TrackLensSchema,
+  cameraTravelDirection,
+  cameraTurnAxis,
+  cameraTurnDegrees,
+} from "../core/blender/track.ts";
 
 const bases: string[] = [];
 after(async () => {
@@ -1518,6 +1525,282 @@ test(
       assert.ok(
         detail.boxDetail >= plain.boxDetail + 2,
         JSON.stringify({ plain, detail }),
+      );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+test("a camera track is checked before it is used, and its turn and travel are measured", () => {
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const turned = (deg: number, x: number) => {
+    const r = (deg * Math.PI) / 180;
+    // A turn about the camera's up axis (Y), then a move along X.
+    return [
+      Math.cos(r),
+      0,
+      Math.sin(r),
+      x,
+      0,
+      1,
+      0,
+      0,
+      -Math.sin(r),
+      0,
+      Math.cos(r),
+      0,
+      0,
+      0,
+      0,
+      1,
+    ];
+  };
+  const track = CameraTrackSchema.parse({
+    format: "yamakan.camera-track/1",
+    width: 640,
+    height: 360,
+    fps: 24,
+    frames: 2 + 8,
+    lens: { focalLengthMm: 35, sensorWidthMm: 36 },
+    tracks: 40,
+    averageErrorPixels: 0.4,
+    keyframes: [1, 30],
+    cameras: Array.from({ length: 10 }, (_, i) => ({
+      frame: i + 1,
+      matrix:
+        i === 0 ? identity : i === 9 ? turned(20, 2) : turned(2 * i, 0.2 * i),
+    })),
+  });
+  assert.ok(Math.abs(cameraTurnDegrees(track) - 20) < 1e-6);
+  // Turned about the camera's up axis.
+  assert.deepEqual(
+    cameraTurnAxis(track).map((v) => +v.toFixed(6) + 0),
+    [0, 1, 0],
+  );
+  assert.deepEqual(
+    cameraTravelDirection(track).map((v) => +v.toFixed(6)),
+    [1, 0, 0],
+  );
+  // Out of frame order, too inaccurate, too few tracks, or a value out of range: refused.
+  const base = { ...track, cameras: track.cameras };
+  for (const bad of [
+    { ...base, cameras: [...base.cameras].reverse() },
+    { ...base, averageErrorPixels: 3.5 },
+    { ...base, tracks: 7 },
+    {
+      ...base,
+      cameras: [
+        { frame: 1, matrix: [...identity.slice(0, 15), Infinity] },
+        base.cameras[1],
+      ],
+    },
+    { ...base, extra: true },
+    // Solved for too little of the clip, or past its end.
+    { ...base, cameras: base.cameras.slice(0, 7) },
+    { ...base, frames: 9 },
+    { ...base, cameras: base.cameras.map((c, i) => ({ ...c, frame: i + 2 })) },
+  ])
+    assert.equal(CameraTrackSchema.safeParse(bad).success, false);
+  assert.equal(
+    TrackLensSchema.safeParse({ focalLengthMm: 0, sensorWidthMm: 36 }).success,
+    false,
+  );
+});
+
+test(
+  "Blender tracks a rendered clip of known camera motion: a 40 degree orbit is solved as about 40 degrees, moving as it did",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-track-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Track");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      // A clip whose camera motion is known: boxes on the detail ground, the camera orbiting
+      // 40 degrees around them over 36 frames. (A 20 degree orbit seen from this far is
+      // ambiguous: a turn and a slide look nearly alike, and the solve took about half the turn.)
+      const clip = async (orbitDegrees: number, name: string) => {
+        const scene = blenderSceneFromCinema(
+          cinema([
+            { position: { x: -1.5, y: 0.5, z: -1 }, color: "#c84a4a" },
+            { position: { x: 0, y: 0.5, z: 0 }, color: "#4a8ac8" },
+            { position: { x: 1.5, y: 0.5, z: 1 }, color: "#5ab05a" },
+            { position: { x: 1, y: 0.5, z: -2 }, color: "#c8b04a" },
+            { position: { x: -1, y: 0.5, z: 2 }, color: "#a04ac8" },
+          ]),
+          {
+            width: 640,
+            height: 360,
+            fps: 24,
+            frames: 36,
+            samples: 8,
+            orbitDegrees,
+            surface: "detail",
+          },
+        );
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          name,
+        );
+        const done = await settled(supervisor, job.id, 600000);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        return /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+      };
+      const lens = { focalLengthMm: 35, sensorWidthMm: 36 };
+      const orbit = await clip(40, "orbit");
+      const started = Date.now();
+      const job = await supervisor.submitBlenderTrack(project.id, orbit, lens);
+      const done = await settled(supervisor, job.id, 600000);
+      assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+      const track = await supervisor.trackResult(project.id, job.id);
+      const turn = cameraTurnDegrees(track);
+      console.log(
+        "track",
+        JSON.stringify({
+          seconds: Math.round((Date.now() - started) / 1000),
+          cameras: track.cameras.length,
+          tracks: track.tracks,
+          error: +track.averageErrorPixels.toFixed(3),
+          turn: +turn.toFixed(2),
+          travel: cameraTravelDirection(track).map((v) => +v.toFixed(3)),
+          keyframes: track.keyframes,
+        }),
+      );
+      assert.equal(track.width, 640);
+      assert.equal(track.height, 360);
+      assert.ok(track.cameras.length >= 30, `${track.cameras.length} cameras`);
+      assert.ok(
+        track.averageErrorPixels < 1.5,
+        `${track.averageErrorPixels} px`,
+      );
+      assert.ok(Math.abs(turn - 40) <= 6, `solved a ${turn} degree turn`);
+      // And it moved as the orbit does: along the chord of the arc, in the first camera's axes
+      // (right, and toward the target it looks down at from about 23 degrees above).
+      const pitch = Math.atan2(2, Math.hypot(2.5, 4));
+      const half = (20 * Math.PI) / 180;
+      const expected = [
+        Math.cos(half),
+        Math.sin(half) * Math.sin(pitch),
+        -Math.sin(half) * Math.cos(pitch),
+      ];
+      const travel = cameraTravelDirection(track);
+      const agreement = travel.reduce((sum, v, i) => sum + v * expected[i], 0);
+      assert.ok(
+        agreement >= 0.97,
+        `travelled ${travel} against ${expected.map((v) => v.toFixed(3))}`,
+      );
+      // About the world's vertical, as an orbit turns: in the first camera's axes, up tilted back
+      // by the pitch it looks down at.
+      const axis = cameraTurnAxis(track);
+      const up = [0, Math.cos(pitch), Math.sin(pitch)];
+      const upright = Math.abs(axis.reduce((sum, v, i) => sum + v * up[i], 0));
+      assert.ok(upright >= 0.95, `turned about ${axis}`);
+      assert.equal(track.frames, 36);
+      // Another track of the project cannot be read as this one's.
+      await assert.rejects(
+        supervisor.trackResult("00000000-0000-4000-8000-000000000000", job.id),
+        /No such camera track/,
+      );
+
+      // Longer than Blender's default 250 frames: the same orbit forward and back, four times
+      // (288 frames), is tracked to its end.
+      const orbitFile = (await store.assetFile(project.id, orbit)).file;
+      const longFile = path.join(root, "long.mp4");
+      execFileSync(
+        mediaTools().ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-i",
+          orbitFile,
+          "-filter_complex",
+          "[0:v]split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1[c];[c]loop=3:size=72:start=0[v]",
+          "-map",
+          "[v]",
+          "-c:v",
+          "libx264",
+          "-pix_fmt",
+          "yuv420p",
+          "-crf",
+          "16",
+          longFile,
+        ],
+        { windowsHide: true, timeout: 120000 },
+      );
+      const long = readFileSync(longFile);
+      const longAsset = (
+        await store.importAsset(project.id, "long orbit.mp4", long)
+      ).asset;
+      const longJob = await supervisor.submitBlenderTrack(
+        project.id,
+        longAsset.id,
+        lens,
+      );
+      // Blender's one slot is the track's: a render waits.
+      assert.ok(
+        ["QUEUED", "RUNNING"].includes(supervisor.status(longJob.id).state),
+        JSON.stringify(supervisor.status(longJob.id)),
+      );
+      await assert.rejects(
+        supervisor.submitBlenderRender(
+          project.id,
+          blenderSceneFromCinema(cinema([{}]), settings),
+          "waits",
+        ),
+        /already working|already running/,
+      );
+      const longDone = await settled(supervisor, longJob.id, 900000);
+      assert.equal(longDone.state, "COMPLETED", JSON.stringify(longDone));
+      const longTrack = await supervisor.trackResult(project.id, longJob.id);
+      console.log(
+        "long track",
+        JSON.stringify({
+          frames: longTrack.frames,
+          cameras: longTrack.cameras.length,
+          last: longTrack.cameras.at(-1)!.frame,
+          error: +longTrack.averageErrorPixels.toFixed(3),
+        }),
+      );
+      assert.equal(longTrack.frames, 288);
+      assert.ok(
+        longTrack.cameras.at(-1)!.frame > 250,
+        "tracked past frame 250",
+      );
+      assert.ok(longTrack.cameras.length >= 231);
+
+      // A clip with no camera motion has nothing to solve: refused with its reason.
+      const still = await clip(0, "still");
+      const stillJob = await supervisor.submitBlenderTrack(
+        project.id,
+        still,
+        lens,
+      );
+      const stillDone = await settled(supervisor, stillJob.id, 600000);
+      assert.equal(stillDone.state, "FAILED", JSON.stringify(stillDone));
+      assert.match(
+        JSON.stringify(stillDone),
+        /does not move enough to be solved/,
+      );
+      await assert.rejects(
+        supervisor.trackResult(project.id, stillJob.id),
+        /not finished/,
+      );
+
+      // Only a video of this project is tracked.
+      await assert.rejects(
+        supervisor.submitBlenderTrack(
+          project.id,
+          "00000000-0000-4000-8000-000000000000",
+          lens,
+        ),
+        /no such video/,
       );
     } finally {
       await supervisor.close();

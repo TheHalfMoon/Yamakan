@@ -36,6 +36,12 @@ export const BLENDER_SCRIPT = path.resolve(
   "../../scripts/blender/yamakan_render.py",
 );
 
+/** The fixed tracking script (core/blender/track.ts); like the render script, the only code. */
+export const BLENDER_TRACK_SCRIPT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../scripts/blender/yamakan_track.py",
+);
+
 /** Where procd's workers may run tools from (native/procd container.rs). */
 export function workerToolsRoot(env: NodeJS.ProcessEnv = process.env) {
   const local = env.LOCALAPPDATA;

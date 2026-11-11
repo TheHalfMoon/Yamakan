@@ -72,6 +72,11 @@ const validInput: Record<string, unknown> = {
       orbitDegrees: 0,
     },
   },
+  "yamakan.blender.track": {
+    projectId: id,
+    assetId: id,
+    lens: { focalLengthMm: 35, sensorWidthMm: 36 },
+  },
 };
 
 const definitions = Object.entries(commands) as Array<
