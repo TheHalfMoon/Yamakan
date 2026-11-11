@@ -1,0 +1,100 @@
+{
+  "format": "yamakan.plan-review-delta/v1",
+  "reviewer": "Codex fresh-context PStack security/native-Windows/cost planning reviewer",
+  "reviewDate": "2026-10-23",
+  "priorReviewedHeadSha": "3e15bab459cf2ba904926cf9e4d79fd62d729e7b",
+  "reviewedHeadSha": "135a7979f253b0d9324536db42aade6afc0f3abf",
+  "originalBaseSha": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "scope": {
+    "kind": "scoped planning-contract repair review",
+    "priorReport": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/evidence/plan-review-security.json",
+    "findingIds": ["SEC-PLAN-01", "SEC-PLAN-02", "SEC-PLAN-03"],
+    "readContext": [
+      "Immutable repair diff for 10_FINAL_TARGET_ARCHITECTURE.md",
+      "Immutable repair diff for 13_GENERATIVE_ENGINE_INTEGRATION_PLAN.md",
+      "Immutable repair diff for 14_AGENTIC_PRODUCTION_ARCHITECTURE.md",
+      "Immutable repair diff for 17_SECURITY_COST_AND_RESOURCE_GATES.md",
+      "Immutable repair diff for 18_ATOMIC_IMPLEMENTATION_TASKS.md",
+      "Immutable repair diff for 20_TEST_REVIEW_AND_ACCEPTANCE_MATRIX.md",
+      "Immutable TASK_REGISTRY.json entries YU-010/013/014/015/041/061/080 at reviewedHeadSha"
+    ],
+    "additionalCheck": "AG-DOCS shared activation and lossless legacy-save policy checked for consistency with the security repairs.",
+    "productionOrRuntimeReviewed": false
+  },
+  "verdict": "SCOPED_PLANNING_REPAIRS_ACCEPTED",
+  "dispositions": [
+    {
+      "id": "SEC-PLAN-01",
+      "originalCategory": "must-fix",
+      "status": "resolved in planning contract at reviewedHeadSha",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+      "section": "Restore is not execution authorization",
+      "evidence": [
+        "Restore/import creates a fresh workspace execution epoch, fences source leases/attempts and persists restoreHold before supervisor requeue/recovery.",
+        "Copied queued/in-flight jobs, proposals and approvals cannot authorize effects; terminal receipts remain historical evidence.",
+        "Provider account/request identities and uncertain reservations are retained; copied state cannot resubmit or assume release/refund while the original workspace may remain active.",
+        "Explicit authorized reconciliation/restart is required, including local renders; repeat restore/open/restart must cause zero spawns, submissions, attachment publications or automatic reservation releases.",
+        "The contract and fault cases are propagated into docs14/17/20 and rendered/machine task specifications YU-013/014/061/080."
+      ],
+      "repairAssessment": "The repair closes the missing restore authority boundary and explicitly overrides the existing stale-attempt requeue behavior for copied state. It preserves uncertainty instead of treating a historical backup as proof of external outcome."
+    },
+    {
+      "id": "SEC-PLAN-02",
+      "originalCategory": "worth-considering",
+      "status": "addressed in planning contract at reviewedHeadSha",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+      "section": "Document transport without widening command limits",
+      "evidence": [
+        "A separate authenticated project-scoped streamed staging route bounds both raw and canonical whole-document UTF-8 bytes to 8 MiB; general 2 MiB command/snapshot limits remain unchanged.",
+        "Staging receipts bind project/principal/hash/kind/request digest and expiry; private handles never expose server host paths.",
+        "Admission reserves bytes before upload; proposed concurrency/aggregate/TTL limits, nested complexity validation and rejection of embedded pixels/URLs are explicit.",
+        "Commit reopens/rehashes outside the DB write transaction, excludes cleanup, atomically consumes the handle with the revision and returns receipt replay after expiry/cleanup.",
+        "YU-010 requires real transport, UTF-8/escape expansion, disconnect, foreign/expired/changed handle and cleanup/commit race cases."
+      ],
+      "repairAssessment": "This is a coherent bounded transport decision rather than an implicit global ingress increase. Proposed ceilings remain qualification candidates."
+    },
+    {
+      "id": "SEC-PLAN-03",
+      "originalCategory": "worth-considering",
+      "status": "addressed in planning contract at reviewedHeadSha",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/13_GENERATIVE_ENGINE_INTEGRATION_PLAN.md",
+      "section": "E1 containment positive controls",
+      "evidence": [
+        "Every denial is paired with same-receipt/environment unrestricted sentinel access, live restricted-worker execution and authorized staging IO controls.",
+        "Permitted descendants must execute only in the named profile; missing/crashed workers and unreachable sentinels invalidate a denial result.",
+        "YU-041 machine/rendered tests and negative tests carry those requirements."
+      ],
+      "repairAssessment": "The evidence contract now rejects vacuous isolation passes while preserving separate GPU/runtime qualification."
+    }
+  ],
+  "additionalConsistency": [
+    {
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+      "section": "Shared activation gate and legacy saves",
+      "assessment": "AG-DOCS prevents isolated schema/migration tasks from promoting live v5 persistence before YU-010 through YU-015 complete recovery and legacy-save evidence. Existing/full-save paths must preserve creative/nested references or explicitly refuse; this supports the repaired authority and closure contracts."
+    }
+  ],
+  "must-fix": [],
+  "worth-considering": [],
+  "residualConcerns": [
+    {
+      "kind": "implementation evidence outstanding",
+      "detail": "No restoreHold, upload staging, resource-boundary, race, Windows isolation or positive-control fixture was executed by this delta review. Future implementation still needs the declared deterministic/native/browser tests and independent review."
+    },
+    {
+      "kind": "provider activation remains blocked",
+      "detail": "Actual account-scoped reconciliation, shared budget authority across original/restored copies, provider idempotency and unknown-submit handling remain adapter-specific qualification work. The repaired plan safely holds copied execution state; it does not prove that a provider can guarantee stop, refund or duplicate-charge avoidance. Keep those routes disabled until their separate gates pass."
+    }
+  ],
+  "executionRecord": {
+    "actions": "Read-only RTK-prefixed immutable Git diff/task inspection; creation and JSON parsing of this delta report only.",
+    "productionChanges": 0,
+    "testRuns": 0,
+    "installs": 0,
+    "paidCalls": 0,
+    "modelDownloads": 0,
+    "branchOrCommitActions": 0
+  },
+  "limitations": "Scoped planning repair acceptance only. Not a full re-review of all plan content, runtime security certification, independent native expert attestation, implementation enablement or release approval.",
+  "manifest": "panel contribution: separate session-model security/native-Windows/cost planning delta review; SEC-PLAN-01/02/03 addressed; runtime/native/model/security-scan/release gates not executed"
+}

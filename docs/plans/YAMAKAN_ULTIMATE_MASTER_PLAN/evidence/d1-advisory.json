@@ -1,0 +1,12 @@
+{
+  "role": "ADVISORY ONLY; no security or merge approval",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "HTTPError: HTTP Error 400: Bad Request"
+      }
+    ],
+    "isError": true
+  }
+}

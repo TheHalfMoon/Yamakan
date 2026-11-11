@@ -1,0 +1,122 @@
+{
+  "format": "yamakan.plan-review/v1",
+  "reviewer": "Codex fresh-context PStack security/native-Windows/cost planning reviewer",
+  "reviewDate": "2026-10-23",
+  "baseSha": "a3c3ce91815aee35ce5b91b4a483dd85766a4429",
+  "reviewedHeadSha": "3e15bab459cf2ba904926cf9e4d79fd62d729e7b",
+  "scope": {
+    "kind": "planning-contract review",
+    "diff": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/** and docs/adr/0004-canonical-creative-project-and-qualified-execution.md",
+    "focus": [
+      "Canonical document and nested bitmap/media closure",
+      "Legacy sidecar migration and security-state restore",
+      "Human proposal authority and replay",
+      "Native Windows worker process/file/network isolation",
+      "Provider uncertainty, cancellation, refunds and budget gates",
+      "Source rights and future test/review gates"
+    ],
+    "coverage": "Focused reading of architecture, engine, workflow, security, selected atomic tasks, acceptance and source/license contracts; not an exhaustive audit of every research capture or donor file.",
+    "productionChanges": false,
+    "runtimeOrExploitTestsExecuted": false,
+    "securityScanCertification": false,
+    "releaseApproval": false
+  },
+  "necessaryContext": [
+    "AGENTS.md and C:/Users/Shehr/.codex/RTK.md",
+    "C:/Users/Shehr/.agents/skills/ps-review/SKILL.md",
+    "specs/CURRENT.md; docs/IMPLEMENTATION_PLAN.md",
+    "docs/SECURITY.md; docs/OPERATIONAL_CONTRACTS.md",
+    "docs/adr/0004-canonical-creative-project-and-qualified-execution.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/08_SOURCE_DONOR_MASTER_MATRIX.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/13_GENERATIVE_ENGINE_INTEGRATION_PLAN.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/14_AGENTIC_PRODUCTION_ARCHITECTURE.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/17_SECURITY_COST_AND_RESOURCE_GATES.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/18_ATOMIC_IMPLEMENTATION_TASKS.md: YU-000/001, YU-010 through YU-015, YU-040 through YU-043, YU-051, YU-060 through YU-062 and qualification/release sections",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/20_TEST_REVIEW_AND_ACCEPTANCE_MATRIX.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/21_RISK_REGISTER_AND_DECISION_LOG.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/22_CURSOR_IMPLEMENTATION_PROMPT.md",
+    "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/23_FINAL_READINESS_REPORT.md",
+    "TASK_REGISTRY.json and DEPENDENCY_GRAPH.json: sampled contract/dependency context",
+    "core/jobs.ts: supervisor restart reconciliation and state definitions",
+    "core/recovery.ts: ready-object enumeration, verified database restore and quarantine",
+    "core/store.ts: searched reference/backup/GC seams",
+    "core/command/registry.ts: human-only scope ceilings, consent/director commands and authorization",
+    "core/command/policy.ts: request/snapshot resource caps",
+    "core/process/owner.ts: restricted inputs/outputs and native owner protocol",
+    "core/studio.ts; core/identity.ts; core/director/stages.ts; core/director/runtime.ts: existing validation and mutable sidecar authority"
+  ],
+  "verdict": "REPAIR_REQUIRED_FOR_PLANNING_HANDOFF",
+  "must-fix": [
+    {
+      "id": "SEC-PLAN-01",
+      "priority": "P1",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+      "line": 39,
+      "relatedPaths": [
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/18_ATOMIC_IMPLEMENTATION_TASKS.md:317",
+        "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/18_ATOMIC_IMPLEMENTATION_TASKS.md:1175",
+        "core/jobs.ts:175"
+      ],
+      "issue": "Restored execution state has no explicit authority reset. Consent revalidation is specified, but restored approvals, queued/in-flight jobs, submission intents and unsettled reservations are not assigned a nonexecuting restore state.",
+      "risk": "A database backup is a past observation of external effects. An effect may have completed after that snapshot. Existing supervisor startup requeues interrupted local attempts; carrying that behavior into restored workflow/provider jobs could replay an approved effect, reuse stale authority or release/reuse an unsettled reservation. The plan promises duplicate-free resume without defining this restore boundary.",
+      "repair": "Specify a new workspace execution identity on restore; invalidate or explicitly revalidate pending human approvals and grants; suspend queued jobs and quarantine/reconcile interrupted attempts and external intents before supervisor admission. Preserve external request IDs and unsettled reservations for account-scoped reconciliation, and forbid automatic provider resubmission or automatic reservation release. Require a new approved run for new effects. Propagate the rule into YU-013/014/061/080, the task registry and acceptance matrix.",
+      "requiredEvidence": "Future deterministic stand-in fixtures restore snapshots captured before submit, after intent/before acknowledgement, after effect/before receipt, and after approval; opening the restored workspace starts no effects, preserves uncertain amounts and request identities, and cannot consume the prior approval. This review did not execute these fixtures.",
+      "status": "open at reviewedHeadSha"
+    }
+  ],
+  "worth-considering": [
+    {
+      "id": "SEC-PLAN-02",
+      "priority": "P2",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/18_ATOMIC_IMPLEMENTATION_TASKS.md",
+      "line": 174,
+      "issue": "The 8 MiB canvas target lacks a document transport budget decision; the existing general request cap is 2 MiB.",
+      "risk": "An implementation may globally raise ingress limits to accommodate creative documents, weakening unrelated command/MCP admission bounds, or may claim 8 MiB persistence while all transports reject it.",
+      "repair": "Before YU-010 implementation, choose a bounded staged document upload/handle flow or a separately versioned per-command cap including UTF-8/envelope expansion, concurrency and aggregate memory limits. Keep the existing snapshot cap and unrelated request limits. Add exact-boundary and multibyte parity cases across enabled transports.",
+      "evidence": "core/command/policy.ts:16-17 enforces 2 MiB request/snapshot maxima; YU-010 asks to measure an 8 MiB bounded canvas while retaining the snapshot cap.",
+      "status": "advisory at reviewedHeadSha"
+    },
+    {
+      "id": "SEC-PLAN-03",
+      "priority": "P2",
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/13_GENERATIVE_ENGINE_INTEGRATION_PLAN.md",
+      "line": 22,
+      "issue": "Stand-in isolation negatives should explicitly require positive controls in the same receipt.",
+      "risk": "A broken stand-in, unreadable sentinel or unreachable test endpoint can make denied file/network attempts appear to prove isolation even when the operation was never exercised.",
+      "repair": "Require the stand-in to prove it can read its granted input, write its private staging output and execute the same attempted operation in an approved unrestricted control process. Use deterministic test-owned endpoints/sentinels and record attempted operations plus denial evidence. Keep real GPU/driver qualification separate.",
+      "evidence": "E1/YU-041 already require actual file/network/process negatives and fail-closed unsupported profiles; explicit controls would make the resulting evidence harder to misinterpret.",
+      "status": "advisory at reviewedHeadSha"
+    }
+  ],
+  "skip-it": [
+    {
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/10_FINAL_TARGET_ARCHITECTURE.md",
+      "issue": "Do not replace the existing store, registry or supervisor to implement creative documents.",
+      "risk": "No additional issue found in the proposed authority split: immutable subordinate document blobs, atomic refs/head/receipt/outbox and server-derived media closure are coherent planning constraints.",
+      "repair": "Retain these constraints and prove them in the future YU-010 through YU-014 tests."
+    },
+    {
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/17_SECURITY_COST_AND_RESOURCE_GATES.md",
+      "issue": "No finding requiring immediate real models, paid calls or worker installs for this planning review.",
+      "risk": "The plan explicitly preserves spend zero, F/E-SEC gates, separate cancel/stop/refund outcomes, OS denial requirements and independent review; current flags remain disabled.",
+      "repair": "Retain the gates; do not label this planning review or stand-in evidence as inference/runtime/release qualification."
+    },
+    {
+      "path": "docs/plans/YAMAKAN_ULTIMATE_MASTER_PLAN/08_SOURCE_DONOR_MASTER_MATRIX.md",
+      "issue": "Do not reopen the founder's source-rights grant merely because model or redistribution rights remain unresolved.",
+      "risk": "The plan distinguishes applicable source grants, exact module/license closure, weight terms, hosted entitlement and GPL distribution duties; discovery-only candidates remain deferred.",
+      "repair": "Apply the declared per-import hash/notice/dependency gate when implementation is separately authorized."
+    }
+  ],
+  "executionRecord": {
+    "actions": "Read-only RTK-prefixed source/document inspection and creation of this review JSON only.",
+    "installs": 0,
+    "paidCalls": 0,
+    "modelDownloads": 0,
+    "branchOrCommitActions": 0,
+    "d1": "Not used to decide security/correctness findings or satisfy this independent review.",
+    "reviewLineage": "Fresh subagent context over the immutable parent-provided diff and necessary contracts; session model reviewer, not an external native engineer or security scanner."
+  },
+  "manifest": "panel contribution: separate fresh-context security/native-Windows/cost planning review (session model); runtime/native/model/security-scan/release gates not executed"
+}
