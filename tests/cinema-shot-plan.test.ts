@@ -83,6 +83,7 @@ test("movement: still and orbit are followed; what the render cannot make is sai
   assert.deepEqual(orbit.notFollowed, []);
   const rest = plan({ movement: "push", shot: "aerial", light: "golden" });
   assert.equal(rest.settings.orbitDegrees, 0);
+  assert.deepEqual(rest.followed, []);
   assert.deepEqual(rest.notFollowed, [
     "shot:aerial",
     "movement:push",
@@ -97,6 +98,20 @@ test("length and size are kept within what a render may ask for; bad input is re
   assert.throws(() => plan({}, 0), /positive/);
   assert.throws(() => plan({}, Number.NaN), /positive/);
   assert.throws(() => plan({ shot: "extreme" }), /no shot choice extreme/);
+  // Only the Create page's own kinds and choices; nothing inherited from Object.
+  assert.throws(() => plan({ foo: "x" }), /no foo choice x/);
+  assert.throws(() => plan({ shot: "toString" }), /no shot choice toString/);
+  assert.throws(() => plan({ toString: "name" }), /no toString choice name/);
+  // An id in capitals is the same shot.
+  assert.deepEqual(
+    planCinemaShot({
+      shotId: SHOT.toUpperCase(),
+      direction: {},
+      seconds: 1,
+      fps: 30,
+    }),
+    plan(),
+  );
   assert.throws(
     () =>
       planCinemaShot({

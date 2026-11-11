@@ -423,8 +423,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **The Director today only keeps records.** It runs no engine or job, its one pipeline is a smoke test, and its outputs are asset hashes. Connecting it to Cinema and Blender takes two bounded PRs.
 - **This one is the planner and render-by-scene:**
   - `core/director/cinema-shot.ts` turns a shot's direction words (the Create page's, now in `core/prompts/directions.ts`) and length into a Cinema scene and Blender settings, deterministically.
-  - Shot size is how much of a fixed set is shown, because the render frames all that is shown. The lens is the focal length. `still` and `orbit` are the camera's movement.
-  - What the render cannot make yet (pan, push, pull, handheld, aerial, light) is listed as not followed.
+  - Shot size is how much of a fixed set is shown, because the render stands back to frame all that is shown (so the sizes hold at a given lens). The lens is the focal length. `still` and `orbit` are the camera's movement.
+  - What the render cannot make yet (pan, push, pull, handheld, aerial (planned as wide), light) is listed as not followed, and never also as followed.
   - `yamakan.blender.render` takes an optional `documentId`, so a shot's own scene is rendered rather than the Cinema page's.
 - **Evidence:**
   - `tests/cinema-shot-plan.test.ts` checks every combination for valid scenes and settings, the same each time; size by camera distance; lens; movement; and refusals.

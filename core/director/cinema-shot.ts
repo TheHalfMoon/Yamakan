@@ -29,7 +29,7 @@ export type CinemaShotPlan = {
 };
 
 const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // A lens choice as a focal length on a full-frame sensor.
 const LENS_MM: Record<string, number> = {
@@ -96,9 +96,11 @@ const SET_FOR_SIZE: Record<string, number> = {
 
 const ORBIT: Record<string, number> = { still: 0, orbit: 90 };
 
-const known = (kind: DirectionKind, choice: string | undefined) =>
-  choice !== undefined &&
-  Object.hasOwn(DIRECTIONS[kind] as Record<string, string>, choice);
+// A kind and a choice of the Create page's own, never one inherited from Object.
+const known = (kind: string, choice: unknown) =>
+  Object.hasOwn(DIRECTIONS, kind) &&
+  typeof choice === "string" &&
+  Object.hasOwn(DIRECTIONS[kind as DirectionKind], choice);
 
 /** An id made from the shot's: the same shot, the same ids. */
 const derivedId = (shotId: string, n: number) =>
@@ -106,25 +108,28 @@ const derivedId = (shotId: string, n: number) =>
 
 /**
  * The Cinema scene and Blender settings for one shot. Shot size sets how much of the set is
- * shown; the lens sets the focal length; "still" and "orbit" set the camera's movement. Pan,
+ * shown (the render stands back to frame what is shown, whatever the lens, so the sizes hold
+ * at a given lens: a long lens makes every size tighter); the lens sets the focal length; "still" and "orbit" set the camera's movement. Pan,
  * push, pull, handheld, an aerial view and the light choices are not something this render can
  * make yet, so they are listed in notFollowed (and the shot is planned without them).
  */
 export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
   if (!UUID.test(input.shotId))
     throw new Error("A shot is planned from its story id (a UUID).");
+  const shotId = input.shotId.toLowerCase();
   if (!Number.isFinite(input.seconds) || input.seconds <= 0)
     throw new Error("A shot lasts a positive number of seconds.");
   const followed: string[] = [];
   const notFollowed: string[] = [];
   const direction = input.direction;
-  for (const kind of Object.keys(direction) as DirectionKind[])
-    if (!known(kind, direction[kind]))
-      throw new Error(`There is no ${kind} choice ${direction[kind]}.`);
+  for (const [kind, choice] of Object.entries(direction))
+    if (!known(kind, choice))
+      throw new Error(`There is no ${kind} choice ${String(choice)}.`);
 
   const size = direction.shot ?? "medium";
-  if (direction.shot) followed.push(`shot:${size}`);
+  // An aerial view is planned as a wide shot: the render cannot look down from above.
   if (size === "aerial") notFollowed.push("shot:aerial");
+  else if (direction.shot) followed.push(`shot:${size}`);
   const boxes = [SUBJECT, ...SET.slice(0, SET_FOR_SIZE[size])];
 
   let focalLengthMm = 35;
@@ -145,12 +150,12 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
   const scene: Scene3D = {
     format: "yamakan.scene3d",
     formatVersion: 1,
-    id: derivedId(input.shotId, 0),
+    id: derivedId(shotId, 0),
     units: "metres",
     eulerOrder: "XYZ",
     camera: { focalLengthMm, sensorWidthMm: 36, near: 0.1, far: 1000 },
     items: boxes.map((b, i) => ({
-      id: derivedId(input.shotId, i + 1),
+      id: derivedId(shotId, i + 1),
       name: b.name,
       position: { ...b.position },
       rotation: { x: 0, y: b.rotationY, z: 0 },
