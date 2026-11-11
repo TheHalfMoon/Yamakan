@@ -553,3 +553,20 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
   The panel's tests check each finish reaches the render's scene as the table says, and that none is no compositing. `qualify:cinema-blender` chooses the film finish on the panel and checks it is kept through a project switch.
 - **Not yet:** tracking, 3D import, and aerial views. The Director's words have no finish (the panel and the commands offer it).
+- **Merged as `e72665a`** (PR #269; main's CI passed).
+- **Clean local full suite on AC power at `e72665a`:** 1,368 tests, 1,365 pass, 0 fail, 3 POSIX-only skips; every real-Blender test ran. This settles the battery-time failures of #266 and #267.
+
+**3D asset import, first step: the .glb check, 2026-11-11:**
+- **`core/cinema/glb.ts` `checkGlb`** checks an untrusted model before anything else reads it. Only a plain, self-contained binary glTF 2.0 file passes:
+  - one JSON chunk and at most one binary chunk that ends the file;
+  - no `uri` anywhere (other files, URLs, data URIs), and no byte-order mark;
+  - extensions only from a three-name allowlist (material and texture-placement ones that add no decoder), checked wherever they are declared;
+  - no skins, animations, morph targets, cameras or lights;
+  - every accessor stored in the file, aligned, not overlapping, inside its view, with the type glTF gives its vertex data and a count matching the positions;
+  - every reference in range (meshes, materials, textures, samplers, texture slots, nodes, scenes), each node with one parent at most, no loops, depth at most 64, and node placement finite, a unit rotation, one way of placing, and an enlargement down each chain of at most 1e9;
+  - bounded counts and a budget on the data the importer would read, checked before any index is read.
+- **What it returns:** counts, and the model's extent measured from its positions, never taken from the file's own min and max.
+- **Evidence:** `tests/glb-check.test.ts`, 30 tests. They build a triangle in code, and each hostile variant is refused with its reason.
+- **Independent review:** two rounds. The first found one High (extensions outside the declaration lists were not checked) and three Mediums (unchecked references, zero-filled accessors of any size, prototype-key type names). The second found one Medium (a top-level texture slot could hide the one Blender reads). The third found only Lows (whole-number colours not marked normalized, enlargement multiplied down a chain, degenerate rotations, a matrix together with a separate placement). The fourth found only Lows; a matrix must now be a placement (bottom row 0, 0, 0, 1) and a root's own enlargement is bounded. All of these are fixed and tested.
+- **Left, and why:** re-serialising the JSON before storage comes with the storage step. Texture coordinate sets are not matched against each part's data; Blender fails safe on them. Data shared by several parts is counted per use, which is stricter, never weaker. Zero and very small scales are allowed (glTF uses zero scale to hide a part), and a matrix's 3×3 determinant is not checked; both stay finite.
+- **Not yet:** storage, the Cinema item, the worker's import, the page button, tracking and aerial views.
