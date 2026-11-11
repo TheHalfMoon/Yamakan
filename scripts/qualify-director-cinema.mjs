@@ -247,14 +247,15 @@ try {
   const first = await pass({
     shot: "medium",
     movement: "orbit",
-    light: "golden",
+    light: "studio",
   });
   // Values come wrapped in direction isolates (U+2068, U+2069).
   assert.match(
     first.planned,
-    /Followed: \u2068?shot:medium, movement:orbit\u2069?\./,
+    /Followed: \u2068?shot:medium, movement:orbit, light:studio\u2069?\./,
   );
-  assert.match(first.planned, /Not followed .*\u2068?light:golden\u2069?\./);
+  // Every choice was followed: nothing is listed as not followed.
+  assert.doesNotMatch(first.planned, /Not followed/);
   if (shots)
     await panel.screenshot({ path: join(shots, "director-placed.png") });
   const read = async () => {

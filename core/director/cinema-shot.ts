@@ -123,9 +123,9 @@ const derivedId = (shotId: string, n: number) =>
  * The Cinema scene and Blender settings for one shot. Shot size sets how much of the set is
  * shown (the render stands back to frame what is shown, whatever the lens, so the sizes hold
  * at a given lens: a long lens makes every size tighter); the lens sets the focal length; the
- * movement is the camera's (still, orbit, push, pull, pan, handheld). An aerial view and the
- * light choices are not something this render can make yet, so they are listed in notFollowed
- * (and the shot is planned without them).
+ * movement is the camera's (still, orbit, push, pull, pan, handheld); the light is a sun and a sky
+ * (morning, golden, night, studio). An aerial view is not something this render can make yet, so
+ * it is listed in notFollowed (and the shot is planned as a wide one).
  */
 export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
   if (!UUID.test(input.shotId))
@@ -159,7 +159,8 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       followed.push(`movement:${direction.movement}`);
     } else notFollowed.push(`movement:${direction.movement}`);
   }
-  if (direction.light) notFollowed.push(`light:${direction.light}`);
+  // Each light choice is a sun and a sky (core/blender/scene.ts LIGHTING).
+  if (direction.light) followed.push(`light:${direction.light}`);
 
   const scene: Scene3D = {
     format: "yamakan.scene3d",
@@ -196,6 +197,12 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       ...(move.dolly !== undefined ? { dolly: move.dolly } : {}),
       ...(move.panDegrees !== undefined ? { panDegrees: move.panDegrees } : {}),
       ...(move.shake !== undefined ? { shake: move.shake } : {}),
+      ...(direction.light
+        ? {
+            lighting: direction.light as
+              "morning" | "golden" | "night" | "studio",
+          }
+        : {}),
     },
     followed,
     notFollowed,

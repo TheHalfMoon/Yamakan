@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { planCinemaShot } from "../core/director/cinema-shot.ts";
 import {
   BlenderRenderSettingsSchema,
+  LIGHTING,
   blenderSceneFromCinema,
 } from "../core/blender/scene.ts";
 import { parseScene3D } from "../core/scene3d.ts";
@@ -129,8 +130,9 @@ test("every movement is followed as a camera move; what the render cannot make i
     },
   });
   const rest = plan({ movement: "push", shot: "aerial", light: "golden" });
-  assert.deepEqual(rest.followed, ["movement:push"]);
-  assert.deepEqual(rest.notFollowed, ["shot:aerial", "light:golden"]);
+  assert.deepEqual(rest.followed, ["movement:push", "light:golden"]);
+  // Only an aerial view is not something the render can make.
+  assert.deepEqual(rest.notFollowed, ["shot:aerial"]);
   // The render takes each as given.
   for (const movement of Object.keys(DIRECTIONS.movement)) {
     const p = plan({ movement });
@@ -185,3 +187,31 @@ test("length and size are kept within what a render may ask for; bad input is re
 
 // The real render of a planned shot is in tests/blender-render.test.ts, beside the other real
 // renders: tests in one file run one after another, and those check that no Blender is left.
+
+test("each light is a sun and a sky; no light is the neutral light every render had before", () => {
+  const neutral = blenderSceneFromCinema(plan().scene, plan().settings);
+  assert.deepEqual(
+    [neutral.background, neutral.light],
+    [
+      "#1a1d21",
+      { rotation: { x: -0.9, y: 0.4, z: 0 }, strength: 3, colour: "#ffffff" },
+    ],
+  );
+  for (const light of Object.keys(
+    DIRECTIONS.light,
+  ) as (keyof typeof LIGHTING)[]) {
+    const p = plan({ light });
+    assert.equal(p.settings.lighting, light);
+    assert.deepEqual(p.followed, [`light:${light}`]);
+    const scene = blenderSceneFromCinema(p.scene, p.settings);
+    assert.equal(scene.background, LIGHTING[light].background);
+    assert.deepEqual(scene.light, {
+      rotation: LIGHTING[light].rotation,
+      strength: LIGHTING[light].strength,
+      colour: LIGHTING[light].colour,
+    });
+  }
+  // Night is dim and studio is bright; golden is the warmest.
+  assert.ok(LIGHTING.night.strength < LIGHTING.neutral.strength);
+  assert.ok(LIGHTING.studio.strength > LIGHTING.neutral.strength);
+});

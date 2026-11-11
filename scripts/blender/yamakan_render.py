@@ -184,6 +184,7 @@ def main():
     l = s["light"]
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", type="SUN"))
     sun.data.energy = number(l["strength"], 0, 20, "light strength")
+    sun.data.color = colour(l.get("colour", "#ffffff"), "light colour")
     sun.rotation_euler = vec3(l["rotation"], -4 * math.pi, 4 * math.pi, "light rotation")
     scene.collection.objects.link(sun)
 

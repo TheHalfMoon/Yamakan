@@ -81,9 +81,10 @@ export const BlenderSceneSchema = z
       .strict(),
     light: z
       .object({
-        // A sun: its direction is its rotation; strength in Blender's sun units.
+        // A sun: its direction is its rotation; strength in Blender's sun units; its colour.
         rotation: Angles,
         strength: Finite.min(0).max(20),
+        colour: Colour.default("#ffffff"),
       })
       .strict(),
     objects: z
@@ -116,9 +117,52 @@ export const BlenderRenderSettingsSchema = z
     dolly: Finite.min(-0.9).max(0.9).optional(),
     panDegrees: Finite.min(-90).max(90).optional(),
     shake: Finite.min(0).max(0.1).optional(),
+    // The light of the shot (LIGHTING); absent is the neutral light every render had before.
+    lighting: z.enum(["morning", "golden", "night", "studio"]).optional(),
   })
   .strict();
 export type BlenderRenderSettings = z.infer<typeof BlenderRenderSettingsSchema>;
+
+/**
+ * Each light as a sun (its angle, strength and colour) and the sky behind the boxes. Neutral is
+ * the light every render had before lighting could be chosen.
+ */
+export const LIGHTING = Object.freeze({
+  neutral: {
+    rotation: { x: -0.9, y: 0.4, z: 0 },
+    strength: 3,
+    colour: "#ffffff",
+    background: "#1a1d21",
+  },
+  // Soft and pale: a lower sun, a little less of it, a cool morning sky.
+  morning: {
+    rotation: { x: -1.15, y: 0.3, z: 0.8 },
+    strength: 2.4,
+    colour: "#fff2e0",
+    background: "#3c4c60",
+  },
+  // Low and warm: a sun near the horizon, orange, and a dusky sky.
+  golden: {
+    rotation: { x: -1.35, y: 0.2, z: -0.9 },
+    strength: 3.5,
+    colour: "#ffa850",
+    background: "#4a2c18",
+  },
+  // Dim and cool: a faint blue light and a near-black sky.
+  night: {
+    rotation: { x: -0.7, y: 0.5, z: 0.3 },
+    strength: 0.5,
+    colour: "#8fa6ff",
+    background: "#05070d",
+  },
+  // Even and bright: a high white light and a plain grey backdrop.
+  studio: {
+    rotation: { x: -0.5, y: 0.3, z: 0.4 },
+    strength: 4.5,
+    colour: "#ffffff",
+    background: "#2c2c2c",
+  },
+});
 
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n));
@@ -170,7 +214,7 @@ export function blenderSceneFromCinema(
     fps: s.fps,
     frames: s.frames,
     samples: s.samples,
-    background: "#1a1d21",
+    background: LIGHTING[s.lighting ?? "neutral"].background,
     camera: {
       position: {
         x: metres(centre.x + 2.5 * back),
@@ -189,7 +233,11 @@ export function blenderSceneFromCinema(
       panDegrees: s.panDegrees ?? 0,
       shake: s.shake ?? 0,
     },
-    light: { rotation: { x: -0.9, y: 0.4, z: 0 }, strength: 3 },
+    light: {
+      rotation: { ...LIGHTING[s.lighting ?? "neutral"].rotation },
+      strength: LIGHTING[s.lighting ?? "neutral"].strength,
+      colour: LIGHTING[s.lighting ?? "neutral"].colour,
+    },
     objects: scene.items
       .filter((item) => item.visible !== false)
       .slice(0, L.maxObjects)
