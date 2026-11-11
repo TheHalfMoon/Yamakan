@@ -1628,7 +1628,7 @@ export class JobSupervisor {
     )
       throw new CommandError(
         "LIMIT_EXCEEDED",
-        `Tracking takes clips of at most ${BLENDER_TRACK_LIMITS.maxFrames} frames.`,
+        `Tracking takes clips of at most ${BLENDER_TRACK_LIMITS.maxFrames} frames and 60 seconds.`,
       );
     const key = `blender-track-${createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32)}`;
     const row = this.store.transaction((db) => {
