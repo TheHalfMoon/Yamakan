@@ -132,8 +132,8 @@ const derivedId = (shotId: string, n: number) =>
  * shown (the render stands back to frame what is shown, whatever the lens, so the sizes hold
  * at a given lens: a long lens makes every size tighter); the lens sets the focal length; the
  * movement is the camera's (still, orbit, push, pull, pan, handheld); the light is a sun and a sky
- * (morning, golden, night, studio). An aerial view is not something this render can make yet, so
- * it is listed in notFollowed (and the shot is planned as a wide one).
+ * (morning, golden, night, studio). An aerial view frames the set as a wide shot does, from about
+ * 70 degrees above.
  */
 export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
   if (!UUID.test(input.shotId))
@@ -149,9 +149,8 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       throw new Error(`There is no ${kind} choice ${String(choice)}.`);
 
   const size = direction.shot ?? "medium";
-  // An aerial view is planned as a wide shot: the render cannot look down from above.
-  if (size === "aerial") notFollowed.push("shot:aerial");
-  else if (direction.shot) followed.push(`shot:${size}`);
+  // An aerial view frames the whole set, as a wide shot does, from high above.
+  if (direction.shot) followed.push(`shot:${size}`);
   const boxes = [SUBJECT, ...SET.slice(0, SET_FOR_SIZE[size])];
 
   let focalLengthMm = 35;
@@ -205,6 +204,7 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       ...(move.dolly !== undefined ? { dolly: move.dolly } : {}),
       ...(move.panDegrees !== undefined ? { panDegrees: move.panDegrees } : {}),
       ...(move.shake !== undefined ? { shake: move.shake } : {}),
+      ...(size === "aerial" ? { view: "aerial" as const } : {}),
       ...(direction.light
         ? {
             lighting: direction.light as

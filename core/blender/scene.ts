@@ -203,6 +203,9 @@ export const BlenderRenderSettingsSchema = z
     finish: z.enum(["glow", "vignette", "film"]).optional(),
     // A ground and fine surface detail (BlenderSceneSchema's surface); absent is plain.
     surface: z.enum(["detail"]).optional(),
+    // Where the camera looks from: absent is the preview's own direction, about 23 degrees above
+    // the subject; "aerial" is high above, about 70 degrees, looking down (AERIAL_DIRECTION).
+    view: z.enum(["aerial"]).optional(),
   })
   .strict();
 export type BlenderRenderSettings = z.infer<typeof BlenderRenderSettingsSchema>;
@@ -262,6 +265,25 @@ const clamp = (n: number, lo: number, hi: number) =>
 const colourOf = (value: string | undefined) =>
   value && /^#[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : "#888888";
 
+/** The preview's own direction to the camera from what it looks at (about 23 degrees up). */
+export const PREVIEW_DIRECTION = Object.freeze({ x: 2.5, y: 2, z: 4 });
+/**
+ * The aerial view's: the same compass direction and distance as the preview's, raised to 70
+ * degrees above the subject, so it frames the same set from high above.
+ */
+export const AERIAL_DIRECTION = Object.freeze(
+  (() => {
+    const length = Math.hypot(2.5, 2, 4);
+    const across = Math.hypot(2.5, 4);
+    const up = (70 * Math.PI) / 180;
+    return {
+      x: (2.5 / across) * length * Math.cos(up),
+      y: length * Math.sin(up),
+      z: (4 / across) * length * Math.cos(up),
+    };
+  })(),
+);
+
 /**
  * The scene a project's Cinema scene renders as: its boxes and its lens, seen from the Cinema
  * preview's direction (2.5, 2, 4) at the middle of the boxes, far enough back to take them in,
@@ -300,6 +322,7 @@ export function blenderSceneFromCinema(
         ),
     );
   const back = Math.min(L.maxMetres / 10, reach);
+  const from = s.view === "aerial" ? AERIAL_DIRECTION : PREVIEW_DIRECTION;
   const angle = (n: number) => clamp(n, -4 * Math.PI, 4 * Math.PI);
   const size = (n: number) => clamp(Math.abs(n), 0.001, L.maxScale);
   return BlenderSceneSchema.parse({
@@ -312,9 +335,9 @@ export function blenderSceneFromCinema(
     background: LIGHTING[s.lighting ?? "neutral"].background,
     camera: {
       position: {
-        x: metres(centre.x + 2.5 * back),
-        y: metres(centre.y + 2 * back),
-        z: metres(centre.z + 4 * back),
+        x: metres(centre.x + from.x * back),
+        y: metres(centre.y + from.y * back),
+        z: metres(centre.z + from.z * back),
       },
       target: {
         x: metres(centre.x),

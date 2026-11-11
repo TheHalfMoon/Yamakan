@@ -130,9 +130,29 @@ test("every movement is followed as a camera move; what the render cannot make i
     },
   });
   const rest = plan({ movement: "push", shot: "aerial", light: "golden" });
-  assert.deepEqual(rest.followed, ["movement:push", "light:golden"]);
-  // Only an aerial view is not something the render can make.
-  assert.deepEqual(rest.notFollowed, ["shot:aerial"]);
+  // Every one is followed now, an aerial view included: it frames the whole set, as a wide shot
+  // does, from about 70 degrees above.
+  assert.deepEqual(rest.followed, [
+    "shot:aerial",
+    "movement:push",
+    "light:golden",
+  ]);
+  assert.deepEqual(rest.notFollowed, []);
+  assert.equal(rest.settings.view, "aerial");
+  const above = blenderSceneFromCinema(rest.scene, rest.settings).camera;
+  const rise = above.position.y - above.target.y;
+  const across = Math.hypot(
+    above.position.x - above.target.x,
+    above.position.z - above.target.z,
+  );
+  assert.ok(
+    Math.abs((Math.atan2(rise, across) * 180) / Math.PI - 70) < 0.5,
+    "about 70 degrees above",
+  );
+  assert.equal(
+    rest.scene.items.length,
+    plan({ shot: "wide" }).scene.items.length,
+  );
   // The render takes each as given.
   for (const movement of Object.keys(DIRECTIONS.movement)) {
     const p = plan({ movement });
