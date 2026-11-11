@@ -24,9 +24,13 @@ export type CinemaShotHost = {
   place(next: {
     documentId: string;
     expectedContentHash: string;
+    // The story with the take; saved unless saveStory is false (an earlier Place saved it).
     story: KeptStory["story"];
+    saveStory: boolean;
     shotId: string;
     takeId: string;
+    // The video the shot's clip must show.
+    assetId: string;
   }): Promise<string | null>;
 };
 
@@ -366,16 +370,18 @@ export function CinemaShot({
                         : "directorCinema.storyGone",
                     ),
                   );
-                if (next) {
-                  const why = await host.place({
-                    documentId: kept.documentId,
-                    expectedContentHash: kept.contentHash,
-                    story: next,
-                    shotId: target.shotId,
-                    takeId,
-                  });
-                  if (why) throw new Error(why);
-                }
+                // The timeline step runs either way: a take saved by an earlier Place may not
+                // have reached the timeline.
+                const why = await host.place({
+                  documentId: kept.documentId,
+                  expectedContentHash: kept.contentHash,
+                  story: next ?? kept.story,
+                  saveStory: next !== null,
+                  shotId: target.shotId,
+                  takeId,
+                  assetId: made.assetId,
+                });
+                if (why) throw new Error(why);
                 const done = await call<{ version: number }>(
                   "yamakan.director.advance",
                   {
@@ -395,6 +401,26 @@ export function CinemaShot({
           </button>
         ) : null}
       </div>
+      {locked && step !== "rendering" ? (
+        <p>
+          <button
+            type="button"
+            data-testid="director-cinema-start-over"
+            onClick={() => {
+              setStep("idle");
+              setTarget(null);
+              setMade(null);
+              setRun(null);
+              setJobId(null);
+              setView(null);
+              setPlanned(null);
+              setProblem(null);
+            }}
+          >
+            {t("directorCinema.startOver")}
+          </button>
+        </p>
+      ) : null}
       {planned ? (
         <p data-testid="director-cinema-planned">
           {planned.followed.length

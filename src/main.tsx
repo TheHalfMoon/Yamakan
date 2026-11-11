@@ -1084,37 +1084,53 @@ function App() {
             const current = (await call("yamakan.project.open", {
               projectId: p.id,
             })) as Project;
-            // Which of the story's shots the timeline holds, decided before anything is written:
-            // none, and the story is assembled; this shot, and its clip shows the new take; some
-            // others only, and nothing is done (assembly would refuse a story partly placed).
-            const placed = new Set(
+            // Which of the story's shots the timeline holds, decided before anything is written
+            // and as assembly decides it (a shot is there while its id is, even with its clips
+            // removed): none, and the story is assembled; this shot, and its clip shows the new
+            // take; others only, or this shot without its clip, and nothing is done.
+            const there = new Map(
               current.scenes.flatMap((sc) =>
-                (sc.shots ?? [])
-                  .filter((sh) => sh.clipIds.length > 0)
-                  .map((sh) => sh.id),
+                (sc.shots ?? []).map((sh) => [sh.id, sh] as const),
               ),
             );
+            const mine = there.get(next.shotId);
             const storyShots = next.story.scenes.flatMap((sc) =>
               sc.shots.map((sh) => sh.id),
             );
-            const onTimeline = placed.has(next.shotId);
-            if (!onTimeline && storyShots.some((id) => placed.has(id))) {
+            if (!mine && storyShots.some((id) => there.has(id))) {
               why = t("directorCinema.partlyPlaced");
+              return;
+            }
+            if (mine && mine.clipIds.length === 0) {
+              why = t("directorCinema.clipRemoved");
+              return;
+            }
+            // Already the shot's clip (an earlier Place got that far): nothing left to do here.
+            const showing =
+              mine &&
+              current.clips.some(
+                (c) =>
+                  mine.clipIds.includes(c.id) && c.assetId === next.assetId,
+              );
+            if (showing) {
+              why = null;
               return;
             }
             const track = current.tracks.find((x) => x.kind === "video");
             if (!track) throw new Error(t("error.edit"));
-            await call("yamakan.story.save", {
-              projectId: p.id,
-              expectedRevision: current.revision,
-              documentId: next.documentId,
-              expectedContentHash: next.expectedContentHash,
-              story: next.story,
-            } as any);
+            // Saved unless an earlier Place saved it already.
+            if (next.saveStory)
+              await call("yamakan.story.save", {
+                projectId: p.id,
+                expectedRevision: current.revision,
+                documentId: next.documentId,
+                expectedContentHash: next.expectedContentHash,
+                story: next.story,
+              } as any);
             const saved = (await call("yamakan.project.open", {
               projectId: p.id,
             })) as Project;
-            if (!onTimeline)
+            if (!mine)
               await call("yamakan.story.assemble", {
                 projectId: p.id,
                 expectedRevision: saved.revision,
@@ -1139,8 +1155,12 @@ function App() {
             why = e instanceof Error ? e.message : String(e);
           } finally {
             // Whatever got written, the editor and the panel go on from the project as it is.
-            accept(await call("yamakan.project.open", { projectId: p.id }));
-            await refresh();
+            try {
+              accept(await call("yamakan.project.open", { projectId: p.id }));
+              await refresh();
+            } catch (e) {
+              why ??= e instanceof Error ? e.message : String(e);
+            }
           }
         }).finally(() => resolve(why));
       }),

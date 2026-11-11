@@ -184,7 +184,10 @@ const en = {
   "directorCinema.placed":
     "Rendered with Blender. The video is the shot's take and is on the timeline.",
   "directorCinema.partlyPlaced":
-    "Some of this story's other shots are on the timeline, but not this one. Place the story's shots together, or remove them from the timeline first.",
+    "Some of this story's other shots are on the timeline, but not this one. Place the story's shots together.",
+  "directorCinema.clipRemoved":
+    "This shot is on the timeline without its clip. Put its clip back, or remove the shot from the timeline's scenes, first.",
+  "directorCinema.startOver": "Start over (the video stays in the project)",
   "directorCinema.storyGone": "The story or its shot is no longer there.",
   "directorCinema.takesFull":
     "This shot already has 8 takes, the most a shot keeps. Remove one first.",
@@ -898,7 +901,10 @@ const ar: Record<MessageKey, string> = {
   "directorCinema.placed":
     "صُيِّر باستخدام Blender. الفيديو هو اللقطة المأخوذة للمشهد وهو على الخط الزمني.",
   "directorCinema.partlyPlaced":
-    "بعض لقطات هذه القصة الأخرى على الخط الزمني، لكن ليس هذه. ضع لقطات القصة معًا، أو أزلها من الخط الزمني أولًا.",
+    "بعض لقطات هذه القصة الأخرى على الخط الزمني، لكن ليس هذه. ضع لقطات القصة معًا.",
+  "directorCinema.clipRemoved":
+    "هذه اللقطة على الخط الزمني دون مقطعها. أعد مقطعها، أو أزل اللقطة من مشاهد الخط الزمني أولًا.",
+  "directorCinema.startOver": "ابدأ من جديد (يبقى الفيديو في المشروع)",
   "directorCinema.storyGone": "لم تعد القصة أو لقطتها موجودة.",
   "directorCinema.takesFull":
     "لهذه اللقطة 8 لقطات مأخوذة، وهو أقصى ما تحفظه اللقطة. احذف واحدة أولًا.",

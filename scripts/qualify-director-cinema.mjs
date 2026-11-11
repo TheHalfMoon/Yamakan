@@ -297,6 +297,62 @@ try {
     clips: two.opened.clips.length,
   });
 
+  // A third render, approved; then the shot's clip is removed (as a person might) before Place.
+  // The shot is still on the timeline without its clip: Place refuses before writing anything,
+  // and Start over frees the panel.
+  await page.getByTestId("director-cinema-story-shot").selectOption(value);
+  await page.getByTestId("director-cinema-render").click();
+  await waitStep("rendered", 600000);
+  await page.getByTestId("director-cinema-review").click();
+  await waitStep("awaiting");
+  await page.getByTestId("director-cinema-approve").click();
+  await waitStep("approved");
+  {
+    const opened = await client.call("yamakan.project.open", {
+      projectId: project.id,
+    });
+    const shotOnTimeline = opened.scenes
+      .flatMap((sc) => sc.shots ?? [])
+      .find((sh) => sh.id === shotId);
+    await client.call("yamakan.timeline.rippleDelete", {
+      projectId: project.id,
+      expectedRevision: opened.revision,
+      clipId: shotOnTimeline.clipIds[0],
+    });
+  }
+  const storyBefore = (
+    await client.call("yamakan.document.get", {
+      projectId: project.id,
+      documentId: storyDocumentId,
+    })
+  ).contentHash;
+  await page.getByTestId("director-cinema-place").click();
+  await page.getByTestId("director-cinema-problem").waitFor();
+  assert.match(
+    await page.getByTestId("director-cinema-problem").textContent(),
+    /without its clip/,
+  );
+  assert.equal(await panel.getAttribute("data-step"), "approved");
+  assert.equal(
+    (
+      await client.call("yamakan.document.get", {
+        projectId: project.id,
+        documentId: storyDocumentId,
+      })
+    ).contentHash,
+    storyBefore,
+    "nothing was written",
+  );
+  await page.getByTestId("director-cinema-start-over").click();
+  await waitStep("idle");
+  assert.equal(
+    await page.getByTestId("director-cinema-story-shot").isDisabled(),
+    false,
+  );
+  step(
+    "a shot without its clip is refused before writing; start over frees the panel",
+  );
+
   // The panel in Arabic.
   await page.getByRole("button", { name: "العربية" }).click();
   await page.waitForFunction(() => document.documentElement.dir === "rtl");

@@ -467,4 +467,9 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - a failed render left the panel stuck;
   - a half-done place left the editor stale, and assembly-or-replace was decided by matching an error's English text.
 
+  Its re-check found one new Medium in that fix: after a Place that saved the take but failed to put it on the timeline, a retry could record the shot as placed when it was not. Fixed before merging:
+  - "on the timeline" is now decided as assembly decides it (a shot is there while its id is, with or without clips), and a shot there without its clip is refused before anything is written;
+  - a retry still does the timeline step, and only skips saving the story again;
+  - a Place that keeps failing can be left with "Start over".
+
   The qualification now runs at 23.976 fps.
