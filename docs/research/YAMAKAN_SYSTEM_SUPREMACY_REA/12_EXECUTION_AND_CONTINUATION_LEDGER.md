@@ -532,4 +532,5 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Followed renders:** a render followed after another project is opened shows the move and light it was started with.
 - **Evidence:**
   - `tests/cinema-blender-panel.test.ts`: every choice is settings the service accepts, and each move and light matches the planner's settings.
-  - `qualify:cinema-blender` renders a push under the studio light chosen on the panel, and checks the choices are shown again after the project switch.
+  - `qualify:cinema-blender` chooses a push under the studio light on the panel and renders. It checks the choices are shown again after the project switch, but not the frames; that the render makes each move and light is shown by the real-Blender tests of #266 and #267.
+  - A test checks every movement word has its camera move, so a new word cannot silently render as a still shot. The move table is frozen.

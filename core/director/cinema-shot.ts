@@ -107,14 +107,14 @@ export const CAMERA_MOVES: Readonly<
       shake?: number;
     }
   >
-> = {
-  still: {},
-  orbit: { orbitDegrees: 90 },
-  push: { dolly: 0.35 },
-  pull: { dolly: -0.35 },
-  pan: { panDegrees: 30 },
-  handheld: { shake: 0.03 },
-};
+> = Object.freeze({
+  still: Object.freeze({}),
+  orbit: Object.freeze({ orbitDegrees: 90 }),
+  push: Object.freeze({ dolly: 0.35 }),
+  pull: Object.freeze({ dolly: -0.35 }),
+  pan: Object.freeze({ panDegrees: 30 }),
+  handheld: Object.freeze({ shake: 0.03 }),
+});
 const MOVES = CAMERA_MOVES;
 
 // A kind and a choice of the Create page's own, never one inherited from Object.

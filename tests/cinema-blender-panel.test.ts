@@ -14,7 +14,8 @@ import {
 } from "../src/cinema/blenderRender.ts";
 import { BlenderRenderSettingsSchema } from "../core/blender/scene.ts";
 import { MESSAGES } from "../src/i18n.ts";
-import { planCinemaShot } from "../core/director/cinema-shot.ts";
+import { CAMERA_MOVES, planCinemaShot } from "../core/director/cinema-shot.ts";
+import { DIRECTIONS } from "../core/prompts/directions.ts";
 
 test("every choice the Cinema page offers is settings the service accepts", () => {
   for (const size of Object.keys(BLENDER_SIZES) as BlenderChoices["size"][])
@@ -144,4 +145,19 @@ test("a move and a light are the Director's own: the same settings from the page
           `${move} ${light} ${key}`,
         );
     }
+});
+
+test("every movement word has its camera move, and the panel offers each", () => {
+  // A word added without a move would render as a still shot without saying so.
+  assert.deepEqual(
+    Object.keys(CAMERA_MOVES).sort(),
+    Object.keys(DIRECTIONS.movement).sort(),
+  );
+  assert.deepEqual(
+    [...BLENDER_MOVES].sort(),
+    Object.keys(DIRECTIONS.movement).sort(),
+  );
+  assert.ok(
+    Object.isFrozen(CAMERA_MOVES) && Object.isFrozen(CAMERA_MOVES.push),
+  );
 });
