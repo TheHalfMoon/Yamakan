@@ -1906,19 +1906,26 @@ export const commands = {
           blenderSceneFromCinema(scene, a.settings),
           a.name ?? "Blender render",
         );
-      const { track, assetId } = await queue.trackFootage(
+      const { track, assetId, assetHash } = await queue.trackFootage(
         a.projectId,
         a.plate.trackJobId,
       );
-      // The render's picture has the footage's shape, and is no longer than it.
+      // The render's picture has the footage's shape (within 0.5 %; the footage is stretched to
+      // the render's size), its frame rate (frames are matched one for one), and is no longer.
       if (
         Math.abs(
           a.settings.width / a.settings.height - track.width / track.height,
-        ) > 0.01
+        ) >
+        0.005 * (track.width / track.height)
       )
         throw new CommandError(
           "VALIDATION",
           `A render over this footage has its shape (${track.width} x ${track.height}).`,
+        );
+      if (Math.abs(a.settings.fps - track.fps) > 0.01)
+        throw new CommandError(
+          "VALIDATION",
+          `This footage runs at ${track.fps} frames a second; render it at that rate.`,
         );
       if (a.settings.frames > track.frames)
         throw new CommandError(
@@ -1934,6 +1941,7 @@ export const commands = {
         ),
         a.name ?? "Blender render over footage",
         assetId,
+        assetHash,
       );
     },
   }),

@@ -116,6 +116,9 @@ export const BlenderSceneSchema = z
       .object({
         focalLengthMm: Finite.min(1).max(1000),
         sensorWidthMm: Finite.min(1).max(100),
+        // The footage's own size, checked against the clip the worker hands Blender.
+        width: z.number().int().min(16).max(8192),
+        height: z.number().int().min(16).max(8192),
         // Camera-to-world, row-major, in metres: frame i + 1 is cameras[i].
         cameras: z
           .array(z.array(Finite.min(-1e6).max(1e6)).length(16))
@@ -161,6 +164,8 @@ export const BlenderSceneSchema = z
     (scene) =>
       !scene.plate ||
       (scene.plate.cameras.length === scene.frames &&
+        scene.plate.focalLengthMm === scene.camera.focalLengthMm &&
+        scene.plate.sensorWidthMm === scene.camera.sensorWidthMm &&
         scene.camera.orbitDegrees === 0 &&
         scene.camera.dolly === 0 &&
         scene.camera.panDegrees === 0 &&
@@ -392,6 +397,8 @@ export function plateFromTrack(
   return {
     focalLengthMm: track.lens.focalLengthMm,
     sensorWidthMm: track.lens.sensorWidthMm,
+    width: track.width,
+    height: track.height,
     cameras,
   };
 }

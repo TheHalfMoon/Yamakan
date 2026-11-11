@@ -1850,12 +1850,14 @@ test(
         scene: ReturnType<typeof blenderSceneFromCinema>,
         name: string,
         plateAssetId?: string,
+        plateAssetHash?: string,
       ) => {
         const job = await supervisor.submitBlenderRender(
           project.id,
           scene,
           name,
           plateAssetId,
+          plateAssetHash,
         );
         const done = await settled(supervisor, job.id, 900000);
         assert.equal(done.state, "COMPLETED", JSON.stringify(done));
@@ -1912,8 +1914,8 @@ test(
                 raw[i] > 2.2 * raw[i + 1] &&
                 raw[i] > 2.2 * raw[i + 2]
               ) {
-                sx += x;
-                sy += y;
+                sx += x + 0.5;
+                sy += y + 0.5;
                 n++;
               }
             }
@@ -1940,7 +1942,7 @@ test(
         (await settled(supervisor, trackJob.id, 900000)).state,
         "COMPLETED",
       );
-      const { track, assetId } = await supervisor.trackFootage(
+      const { track, assetId, assetHash } = await supervisor.trackFootage(
         project.id,
         trackJob.id,
       );
@@ -2002,7 +2004,7 @@ test(
           },
           plateFromTrack(track, FRAMES, scale),
         );
-        return render(scene, name, assetId);
+        return render(scene, name, assetId, assetHash);
       };
       const matched = await overFootage(metresPerUnit, "matched");
       const plate = plateFromTrack(track, FRAMES, metresPerUnit);

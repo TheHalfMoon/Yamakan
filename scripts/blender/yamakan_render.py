@@ -172,10 +172,18 @@ def main():
     plate_clip = None
     plate_cameras = []
     if plate is not None:
-        if not isinstance(plate, dict) or set(plate) != {"focalLengthMm", "sensorWidthMm", "cameras"}:
+        if not isinstance(plate, dict) or set(plate) != {
+            "focalLengthMm",
+            "sensorWidthMm",
+            "width",
+            "height",
+            "cameras",
+        }:
             fail("the plate is not as described")
-        number(plate["focalLengthMm"], 1, 1000, "plate focal length")
-        number(plate["sensorWidthMm"], 1, 100, "plate sensor width")
+        plate_focal = number(plate["focalLengthMm"], 1, 1000, "plate focal length")
+        plate_sensor = number(plate["sensorWidthMm"], 1, 100, "plate sensor width")
+        plate_width = integer(plate["width"], 16, 8192, "plate width")
+        plate_height = integer(plate["height"], 16, 8192, "plate height")
         cams = plate["cameras"]
         if not isinstance(cams, list) or len(cams) != frames:
             fail("the plate has not one solved camera for every frame")
@@ -187,9 +195,13 @@ def main():
         names = os.listdir(plates)
         if len(names) != 1 or not names[0].startswith("clip."):
             fail("the plate folder does not hold one clip")
+        # Decoded footage is cached within a bound well inside the worker's memory.
+        bpy.context.preferences.system.memory_cache_limit = 1024
         plate_clip = bpy.data.movieclips.load(os.path.join(plates, names[0]))
         if plate_clip.frame_duration < frames:
             fail("the footage is shorter than the render")
+        if (plate_clip.size[0], plate_clip.size[1]) != (plate_width, plate_height):
+            fail("the footage is not the size it was tracked at")
         WORLD[0] = Matrix.Identity(4)
     if sum(1 for o in objects if isinstance(o, dict) and o.get("shape") == "model") > 8:
         fail("a render holds at most 8 3D models")
@@ -356,6 +368,9 @@ def main():
 
     # Over footage, the camera is the solve's for every frame instead.
     if plate_clip is not None:
+        # The lens the footage was solved with.
+        lens.lens = plate_focal
+        lens.sensor_width = plate_sensor
         camera.animation_data_clear()
         for frame, m in enumerate(plate_cameras, start=1):
             camera.matrix_world = m
@@ -431,9 +446,14 @@ def main():
         fit = nodes.new("CompositorNodeScale")
         fit.inputs["Type"].default_value = "Render Size"
         links.new(footage.outputs["Image"], fit.inputs["Image"])
+        # Footage with its own transparency is laid on black first, so the frame stays opaque.
+        under = nodes.new("CompositorNodeAlphaOver")
+        under_colours = [i for i in under.inputs if i.type == "RGBA"]
+        under_colours[0].default_value = (0.0, 0.0, 0.0, 1.0)
+        links.new(fit.outputs["Image"], under_colours[1])
         over = nodes.new("CompositorNodeAlphaOver")
         colours = [i for i in over.inputs if i.type == "RGBA"]
-        links.new(fit.outputs["Image"], colours[0])
+        links.new(under.outputs["Image"], colours[0])
         links.new(layers.outputs["Image"], colours[1])
         links.new(over.outputs["Image"], nodes.new("NodeGroupOutput").inputs[0])
         scene.compositing_node_group = tree
