@@ -43,6 +43,17 @@ function triangle(): Gltf {
   };
 }
 
+// A PNG's signature and IHDR header (no pixels): what the check reads an image's size from.
+function pngHead(width = 8, height = 8) {
+  const out = new Uint8Array(24);
+  out.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+  out.set([0x49, 0x48, 0x44, 0x52], 12);
+  const view = new DataView(out.buffer);
+  view.setUint32(16, width);
+  view.setUint32(20, height);
+  return out;
+}
+
 const pad = (bytes: Uint8Array, fill: number) => {
   const out = new Uint8Array(Math.ceil(bytes.byteLength / 4) * 4).fill(fill);
   out.set(bytes);
@@ -91,6 +102,7 @@ test("a plain triangle passes and is counted, with its extent", () => {
     triangles: 1,
     materials: 0,
     images: 0,
+    pixels: 0,
     min: [0, 0, 0],
     max: [1, 2, 0],
   });
@@ -111,13 +123,13 @@ test("a model without indices counts triangles from its vertices", () => {
 });
 
 test("a PNG texture stored in the file and an allowed extension pass", () => {
-  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const bin = new Uint8Array(52);
+  const png = pngHead();
+  const bin = new Uint8Array(68);
   bin.set(triangleBin());
   bin.set(png, 44);
   const g = triangle() as Record<string, any>;
-  g.buffers[0].byteLength = 52;
-  g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 8 });
+  g.buffers[0].byteLength = 68;
+  g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 24 });
   g.images = [{ bufferView: 2, mimeType: "image/png" }];
   g.textures = [{ source: 0 }];
   g.materials = [
@@ -837,12 +849,12 @@ test("a byte-order mark, a short image and the wrong argument type are refused",
 
 test("a texture slot is checked wherever it appears, so a valid copy cannot hide another", () => {
   const withTexture = (material: Record<string, unknown>) => {
-    const bin = new Uint8Array(48);
+    const bin = new Uint8Array(68);
     bin.set(triangleBin());
-    bin.set([0x89, 0x50, 0x4e, 0x47], 44);
+    bin.set(pngHead(), 44);
     const g = triangle() as Record<string, any>;
-    g.buffers[0].byteLength = 48;
-    g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 4 });
+    g.buffers[0].byteLength = 68;
+    g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 24 });
     g.images = [{ bufferView: 2, mimeType: "image/png" }];
     g.textures = [{ source: 0 }];
     g.materials = [material];
@@ -981,4 +993,100 @@ test("whole-number texture coordinates and colours must be marked normalized", (
   refused(extra("COLOR_0", "VEC4"), /not normalized/);
   refused(extra("TEXCOORD_0", "VEC2", false), /not normalized/);
   assert.equal(checkGlb(extra("COLOR_0", "VEC4", true)).vertices, 3);
+});
+
+test("an image's size is read from its header, and one too large to decode is refused", () => {
+  const withImage = (head: Uint8Array, mimeType = "image/png") => {
+    const length = Math.ceil(head.byteLength / 4) * 4;
+    const bin = new Uint8Array(44 + length);
+    bin.set(triangleBin());
+    bin.set(head, 44);
+    const g = triangle() as Record<string, any>;
+    g.buffers[0].byteLength = bin.byteLength;
+    g.bufferViews.push({
+      buffer: 0,
+      byteOffset: 44,
+      byteLength: head.byteLength,
+    });
+    g.images = [{ bufferView: 2, mimeType }];
+    return glb(g, bin);
+  };
+  assert.equal(checkGlb(withImage(pngHead(8192, 8))).images, 1);
+  refused(withImage(pngHead(8193, 8)), /8192 pixels a side/);
+  refused(withImage(pngHead(30_000, 30_000)), /8192 pixels a side/);
+  refused(withImage(pngHead(0, 8)), /8192 pixels a side/);
+  // A signature without its IHDR header says no size.
+  refused(withImage(pngHead().subarray(0, 12)), /no size/);
+  // JPEG: an APP0 segment, then a frame header (SOF0) giving height then width.
+  const jpeg = (width: number, height: number, sof = 0xc0) =>
+    new Uint8Array([
+      0xff,
+      0xd8,
+      0xff,
+      0xe0,
+      0,
+      4,
+      0,
+      0,
+      0xff,
+      sof,
+      0,
+      11,
+      8,
+      height >> 8,
+      height & 0xff,
+      width >> 8,
+      width & 0xff,
+      1,
+      1,
+      0x11,
+      0,
+    ]);
+  assert.equal(checkGlb(withImage(jpeg(640, 480), "image/jpeg")).images, 1);
+  // A progressive frame (SOF2) is read the same way.
+  assert.equal(
+    checkGlb(withImage(jpeg(640, 480, 0xc2), "image/jpeg")).images,
+    1,
+  );
+  refused(withImage(jpeg(9000, 480), "image/jpeg"), /8192 pixels a side/);
+  // A Huffman table marker (0xC4) is not a frame header, and nothing follows it.
+  refused(withImage(jpeg(640, 480, 0xc4), "image/jpeg"), /no size/);
+  // All images together are bounded too: 32 of 8192 x 512 is 128 Mpx.
+  const many = triangle() as Record<string, any>;
+  const head = pngHead(8192, 512);
+  const bin = new Uint8Array(44 + 24);
+  bin.set(triangleBin());
+  bin.set(head, 44);
+  many.buffers[0].byteLength = bin.byteLength;
+  many.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 24 });
+  many.images = Array.from({ length: 32 }, () => ({
+    bufferView: 2,
+    mimeType: "image/png",
+  }));
+  refused(glb(many, bin), /too large together/);
+});
+
+test("a model's texture pixels are counted, a 16-bit PNG four times", () => {
+  const withPng = (head: Uint8Array) => {
+    const bin = new Uint8Array(44 + 28);
+    bin.set(triangleBin());
+    bin.set(head, 44);
+    const g = triangle() as Record<string, any>;
+    g.buffers[0].byteLength = bin.byteLength;
+    g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: head.length });
+    g.images = [{ bufferView: 2, mimeType: "image/png" }];
+    return glb(g, bin);
+  };
+  const eight = new Uint8Array(25);
+  eight.set(pngHead(100, 10));
+  eight[24] = 8;
+  const sixteen = eight.slice();
+  sixteen[24] = 16;
+  assert.equal(checkGlb(withPng(eight)).pixels, 1000);
+  assert.equal(checkGlb(withPng(sixteen)).pixels, 4000);
+  // 16-bit at 4100 x 4100 is just over 16 Mpx, counted four times: over the limit.
+  const big = sixteen.slice();
+  new DataView(big.buffer).setUint32(16, 4100);
+  new DataView(big.buffer).setUint32(20, 4100);
+  refused(withPng(big), /too large together/);
 });

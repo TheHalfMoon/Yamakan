@@ -5,10 +5,14 @@
 # Cycles on the CPU. It never runs code from the scene, the project or the person.
 #
 #   blender -b --factory-startup -Y --offline-mode -noaudio -t <threads> \
-#     --python yamakan_render.py -- <scene.json> <output folder>
+#     --python yamakan_render.py -- <scene.json> <output folder> <models folder>
+#
+# The models folder holds the 3D models the scene names, as <sha256>.glb: copies the worker has
+# hashed and checked (core/cinema/glb.ts), which this script can read but not write.
 import json
 import math
 import os
+import re
 import sys
 
 import bpy
@@ -67,13 +71,77 @@ def point(p):
     return (Y_UP_TO_Z_UP @ Vector((*p, 1.0))).xyz
 
 
+DIGEST = re.compile(r"[a-f0-9]{64}")
+
+
+def import_model(path, name):
+    """Imports one checked .glb and returns an empty holding it, fitted to a 1 m box at the
+    origin in the scene's own (Y up) frame, so it is placed exactly like a 1 m box."""
+    before = set(bpy.data.objects)
+    # Every option the importer takes that could reach further is set here, not left to its
+    # defaults: no extra texture decoders, no custom properties from the file, nothing beyond
+    # the objects themselves.
+    result = bpy.ops.import_scene.gltf(
+        filepath=path,
+        import_pack_images=True,
+        merge_vertices=False,
+        import_shading="NORMALS",
+        import_webp_texture=False,
+        import_ktx_texture=False,
+        import_unused_materials=False,
+        import_select_created_objects=False,
+        import_scene_extras=False,
+        import_scene_as_collection=False,
+        import_merge_material_slots=True,
+        import_point_as_pointcloud=False,
+    )
+    if result != {"FINISHED"}:
+        fail("a 3D model could not be imported")
+    created = [o for o in bpy.data.objects if o not in before]
+    # Only meshes and the empties that group them; the check has already refused cameras,
+    # lights and skins, and nothing else is kept even so.
+    for o in [o for o in created if o.type not in ("MESH", "EMPTY")]:
+        bpy.data.objects.remove(o, do_unlink=True)
+    kept = set(created)
+    created = [o for o in bpy.data.objects if o in kept]
+    kept = set(created)
+    meshes = [o for o in created if o.type == "MESH"]
+    if not meshes:
+        fail("a 3D model holds no mesh")
+    bpy.context.view_layer.update()
+    corners = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
+    low = Vector([min(c[i] for c in corners) for i in range(3)])
+    high = Vector([max(c[i] for c in corners) for i in range(3)])
+    extent = max(high - low)
+    if not all(math.isfinite(v) for v in (*low, *high, extent)) or not extent > 0:
+        fail("a 3D model has no finite size")
+    # The importer has already turned glTF's Y up into Blender's Z up; this turns it back, so
+    # the empty's own transform (from the scene) does the one conversion, as for a box.
+    fit = (
+        Y_UP_TO_Z_UP.inverted()
+        @ Matrix.Scale(1.0 / extent, 4)
+        @ Matrix.Translation(-(low + high) / 2)
+    )
+    holder = bpy.data.objects.new(name, None)
+    bpy.context.scene.collection.objects.link(holder)
+    for o in created:
+        if o.parent is None or o.parent not in kept:
+            world = o.matrix_world.copy()
+            o.parent = holder
+            o.matrix_parent_inverse = Matrix.Identity(4)
+            o.matrix_basis = fit @ world
+    return holder
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
-    if len(args) != 2:
-        fail("usage: -- <scene.json> <output folder>")
-    scene_path, out = args
+    if len(args) != 3:
+        fail("usage: -- <scene.json> <output folder> <models folder>")
+    scene_path, out, models = args
     if not os.path.isdir(out):
         fail("the output folder does not exist")
+    if not os.path.isdir(models):
+        fail("the models folder does not exist")
     with open(scene_path, "r", encoding="utf-8") as f:
         text = f.read(4 * 1024 * 1024 + 1)
     if len(text) > 4 * 1024 * 1024:
@@ -90,6 +158,8 @@ def main():
     objects = s["objects"]
     if not isinstance(objects, list) or len(objects) > 200:
         fail("objects is not a list of at most 200")
+    if sum(1 for o in objects if isinstance(o, dict) and o.get("shape") == "model") > 8:
+        fail("a render holds at most 8 3D models")
 
     scene = bpy.context.scene
     for o in list(bpy.data.objects):
@@ -106,13 +176,25 @@ def main():
         background.inputs[0].default_value = (*bg, 1.0)
     world.color = bg
 
-    # Boxes, each with its own colour.
+    # Boxes, each with its own colour, and 3D models with their own materials.
     for i, item in enumerate(objects):
-        if not isinstance(item, dict) or item.get("shape") != "box":
-            fail("object " + str(i) + " is not a box")
+        if not isinstance(item, dict) or item.get("shape") not in ("box", "model"):
+            fail("object " + str(i) + " is not a box or a model")
         position = vec3(item["position"], -1000, 1000, "position")
         rotation = vec3(item["rotation"], -4 * math.pi, 4 * math.pi, "rotation")
         scale = vec3(item["scale"], 0.001, 100, "scale")
+        if item["shape"] == "model":
+            if set(item) != {"shape", "model", "position", "rotation", "scale"}:
+                fail("object " + str(i) + " is not a model as described")
+            digest = item["model"]
+            if not isinstance(digest, str) or not DIGEST.fullmatch(digest):
+                fail("object " + str(i) + " names no model")
+            path = os.path.join(models, digest + ".glb")
+            if not os.path.isfile(path):
+                fail("a 3D model the scene names was not provided")
+            holder = import_model(path, "model-" + str(i))
+            holder.matrix_world = transform(position, rotation, scale)
+            continue
         rgb = colour(item["colour"], "colour")
         bpy.ops.mesh.primitive_cube_add(size=1)
         box = bpy.context.active_object

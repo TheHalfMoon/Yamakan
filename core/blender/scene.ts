@@ -20,6 +20,10 @@ export const BLENDER_SCENE_LIMITS = Object.freeze({
   maxFrames: 120,
   maxSamples: 32,
   maxObjects: 200,
+  // 3D models in one render: each is imported, so they are few; and their textures' decoded
+  // pixels over the whole render, each import counted (the worker's memory is bounded).
+  maxModels: 8,
+  maxModelPixels: 128 * 1024 * 1024,
   maxMetres: 1000,
   maxScale: 100,
   fps: [24, 25, 30] as const,
@@ -102,19 +106,43 @@ export const BlenderSceneSchema = z
     finish: Finish.default({ glow: 0, vignette: 0, dispersion: 0 }),
     objects: z
       .array(
-        z
-          .object({
-            shape: z.literal("box"),
-            position: Vec3,
-            rotation: Angles,
-            scale: Scale,
-            colour: Colour,
-          })
-          .strict(),
+        z.discriminatedUnion("shape", [
+          z
+            .object({
+              shape: z.literal("box"),
+              position: Vec3,
+              rotation: Angles,
+              scale: Scale,
+              colour: Colour,
+            })
+            .strict(),
+          // A project's stored 3D model (core/cinema/glb.ts) by its digest, fitted to a 1 m box
+          // and placed like a box. The worker hands it to Blender as a checked, read-only copy.
+          z
+            .object({
+              shape: z.literal("model"),
+              model: z.string().regex(/^[a-f0-9]{64}$/),
+              position: Vec3,
+              rotation: Angles,
+              scale: Scale,
+            })
+            .strict(),
+        ]),
       )
-      .max(L.maxObjects),
+      .max(L.maxObjects)
+      .refine(
+        (objects) =>
+          objects.filter((o) => o.shape === "model").length <= L.maxModels,
+        `A render holds at most ${L.maxModels} 3D models.`,
+      ),
   })
   .strict();
+/** The stored models a render reads, each once. */
+export const blenderSceneModels = (scene: BlenderScene) => [
+  ...new Set(
+    scene.objects.flatMap((o) => (o.shape === "model" ? [o.model] : [])),
+  ),
+];
 export type BlenderScene = z.infer<typeof BlenderSceneSchema>;
 
 /** What the person chooses for a render; the rest comes from the project's Cinema scene. */
@@ -266,24 +294,27 @@ export function blenderSceneFromCinema(
     objects: scene.items
       .filter((item) => item.visible !== false)
       .slice(0, L.maxObjects)
-      .map((item) => ({
-        shape: "box" as const,
-        position: {
-          x: metres(item.position.x),
-          y: metres(item.position.y),
-          z: metres(item.position.z),
-        },
-        rotation: {
-          x: angle(item.rotation.x),
-          y: angle(item.rotation.y),
-          z: angle(item.rotation.z),
-        },
-        scale: {
-          x: size(item.scale.x),
-          y: size(item.scale.y),
-          z: size(item.scale.z),
-        },
-        colour: colourOf(item.color),
-      })),
+      .map((item) => {
+        const placed = {
+          position: {
+            x: metres(item.position.x),
+            y: metres(item.position.y),
+            z: metres(item.position.z),
+          },
+          rotation: {
+            x: angle(item.rotation.x),
+            y: angle(item.rotation.y),
+            z: angle(item.rotation.z),
+          },
+          scale: {
+            x: size(item.scale.x),
+            y: size(item.scale.y),
+            z: size(item.scale.z),
+          },
+        };
+        return item.model
+          ? { shape: "model" as const, model: item.model, ...placed }
+          : { shape: "box" as const, ...placed, colour: colourOf(item.color) };
+      }),
   });
 }

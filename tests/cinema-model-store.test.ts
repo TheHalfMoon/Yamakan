@@ -538,3 +538,34 @@ test("agents share two model uploads, and the workspace checks four at once", as
   last.end(bytes);
   assert.equal(((await done) as { triangles: number }).triangles, 1);
 });
+
+test("the stored copy leaves out extras, which Blender would copy onto its objects", async () => {
+  const { store, project } = await workspace();
+  const { gltf } = triangle();
+  const text = JSON.stringify({
+    ...gltf,
+    extras: { note: "file" },
+    nodes: [{ mesh: 0, extras: { note: "node" } }],
+    meshes: [{ ...gltf.meshes[0], extras: { note: "mesh" } }],
+  });
+  const { bytes } = triangle(1, text);
+  const model = await store.importCinemaModel(
+    project.id,
+    stream(bytes),
+    bytes.length,
+  );
+  const stored = await readFile(
+    await store.cinemaModelFile(project.id, model.digest),
+  );
+  const description = stored
+    .subarray(20, 20 + stored.readUInt32LE(12))
+    .toString("utf8");
+  assert.doesNotMatch(description, /extras|note/);
+  // The same model without extras is the same stored model.
+  const plain = triangle().bytes;
+  assert.equal(
+    (await store.importCinemaModel(project.id, stream(plain), plain.length))
+      .digest,
+    model.digest,
+  );
+});

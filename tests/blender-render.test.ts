@@ -17,10 +17,12 @@ import {
   existsSync,
   linkSync,
   mkdirSync,
+  readFileSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { crc32, deflateSync } from "node:zlib";
 import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
 import { toCommandError } from "../core/command/errors.ts";
@@ -77,8 +79,8 @@ test("a Cinema scene becomes a bounded Blender scene aimed at its boxes", () => 
   // Hidden boxes are not rendered; the camera looks at the middle of the shown ones.
   assert.equal(scene.objects.length, 2);
   assert.deepEqual(scene.camera.target, { x: 3, y: 0, z: 0 });
-  assert.equal(scene.objects[0].colour, "#ab12cd");
-  assert.equal(scene.objects[1].colour, "#888888");
+  assert.equal((scene.objects[0] as { colour: string }).colour, "#ab12cd");
+  assert.equal((scene.objects[1] as { colour: string }).colour, "#888888");
   assert.equal(scene.camera.orbitDegrees, 90);
   assert.equal(scene.camera.focalLengthMm, 35);
   BlenderSceneSchema.parse(scene);
@@ -1029,6 +1031,369 @@ test(
         changedPercent(none.frame, vignette.frame) > 3,
         "the vignette looks like no finish",
       );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+// A solid-colour PNG, for a model's own texture.
+function solidPng(rgb: [number, number, number], side = 4) {
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
+    const out = Buffer.alloc(8 + data.length + 4);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc32(body) >>> 0, 8 + data.length);
+    return out;
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(side, 0);
+  ihdr.writeUInt32BE(side, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2; // RGB
+  const row = Buffer.concat([
+    Buffer.from([0]),
+    ...Array.from({ length: side }, () => Buffer.from(rgb)),
+  ]);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(Buffer.concat(Array(side).fill(row)))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// A bar as a .glb: a box mesh of the given half sizes, red by its own material, or coloured
+// only by an embedded texture. `scale` is a node scale inside the file; `offset` moves the
+// vertices away from the origin; `parent` puts the mesh under a translated parent node. The
+// fit to a 1 m box takes all of these out.
+function redBar(
+  scale = 1,
+  {
+    half = [1, 0.25, 0.25] as [number, number, number],
+    offset = [0, 0, 0] as [number, number, number],
+    parent = false,
+    texture = null as Buffer | null,
+  } = {},
+) {
+  const [hx, hy, hz] = half;
+  const positions = [
+    [-hx, -hy, -hz],
+    [hx, -hy, -hz],
+    [hx, hy, -hz],
+    [-hx, hy, -hz],
+    [-hx, -hy, hz],
+    [hx, -hy, hz],
+    [hx, hy, hz],
+    [-hx, hy, hz],
+  ].map(([x, y, z]) => [x + offset[0], y + offset[1], z + offset[2]]);
+  // prettier-ignore
+  const indices = [
+    0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4,
+    3, 7, 6, 3, 6, 2, 1, 2, 6, 1, 6, 5, 0, 4, 7, 0, 7, 3,
+  ];
+  // Positions (96 bytes), indices (72), texture coordinates (64), then the image.
+  const image = texture ?? Buffer.alloc(0);
+  const imageAt = 96 + 72 + 64;
+  const bin = Buffer.alloc(imageAt + Math.ceil(image.length / 4) * 4);
+  positions.flat().forEach((v, i) => bin.writeFloatLE(v, i * 4));
+  indices.forEach((v, i) => bin.writeUInt16LE(v, 96 + i * 2));
+  [0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1].forEach((v, i) =>
+    bin.writeFloatLE(v, 168 + i * 4),
+  );
+  image.copy(bin, imageAt);
+  const mesh = {
+    mesh: 0,
+    ...(scale !== 1 ? { scale: [scale, scale, scale] } : {}),
+  };
+  const gltf = {
+    asset: { version: "2.0" },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: parent ? [{ translation: [3, -2, 1], children: [1] }, mesh] : [mesh],
+    meshes: [
+      {
+        primitives: [
+          {
+            attributes: texture
+              ? { POSITION: 0, TEXCOORD_0: 2 }
+              : { POSITION: 0 },
+            indices: 1,
+            material: 0,
+          },
+        ],
+      },
+    ],
+    materials: [
+      {
+        pbrMetallicRoughness: {
+          baseColorFactor: texture ? [1, 1, 1, 1] : [1, 0, 0, 1],
+          ...(texture ? { baseColorTexture: { index: 0 } } : {}),
+          metallicFactor: 0,
+          roughnessFactor: 0.6,
+        },
+      },
+    ],
+    ...(texture
+      ? {
+          images: [{ bufferView: 3, mimeType: "image/png" }],
+          textures: [{ source: 0 }],
+        }
+      : {}),
+    buffers: [{ byteLength: bin.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 96 },
+      { buffer: 0, byteOffset: 96, byteLength: 72 },
+      { buffer: 0, byteOffset: 168, byteLength: 64 },
+      ...(texture
+        ? [{ buffer: 0, byteOffset: imageAt, byteLength: image.length }]
+        : []),
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 8, type: "VEC3" },
+      { bufferView: 1, componentType: 5123, count: 36, type: "SCALAR" },
+      { bufferView: 2, componentType: 5126, count: 8, type: "VEC2" },
+    ],
+  };
+  const text = Buffer.from(JSON.stringify(gltf), "utf8");
+  const json = Buffer.alloc(Math.ceil(text.length / 4) * 4, 0x20);
+  text.copy(json);
+  const header = Buffer.alloc(28);
+  const length = 20 + json.length + 8 + bin.length;
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(length, 8);
+  header.writeUInt32LE(json.length, 12);
+  header.writeUInt32LE(0x4e4f534a, 16);
+  const binHeader = Buffer.alloc(8);
+  binHeader.writeUInt32LE(bin.length, 0);
+  binHeader.writeUInt32LE(0x004e4942, 4);
+  return Buffer.concat([header.subarray(0, 20), json, binHeader, bin]);
+}
+
+test("a Cinema item's model maps to a model object; a render holds at most eight", () => {
+  const digest = "a".repeat(64);
+  const scene = blenderSceneFromCinema(
+    cinema([{ model: digest, color: "#ff0000" }, {}]),
+    settings,
+  );
+  assert.deepEqual(
+    scene.objects.map((o) => o.shape),
+    ["model", "box"],
+  );
+  assert.equal((scene.objects[0] as { model: string }).model, digest);
+  assert.equal("colour" in scene.objects[0], false);
+  assert.throws(
+    () =>
+      BlenderSceneSchema.parse(
+        blenderSceneFromCinema(
+          cinema(Array.from({ length: 9 }, () => ({ model: digest }))),
+          settings,
+        ),
+      ),
+    /at most 8 3D models/,
+  );
+  assert.throws(() =>
+    BlenderSceneSchema.parse({
+      ...scene,
+      objects: [{ ...scene.objects[0], model: "../../etc/passwd" }],
+    }),
+  );
+});
+
+test(
+  "a stored 3D model renders with its own material and shape, fitted to a 1 m box",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-model-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Models");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 160;
+      const H = 90;
+      const upload = async (bytes: Buffer) =>
+        (
+          await store.importCinemaModel(
+            project.id,
+            (async function* () {
+              yield bytes;
+            })(),
+            bytes.length,
+          )
+        ).digest;
+      const small = await upload(redBar(1));
+      const large = await upload(redBar(50));
+      assert.notEqual(small, large);
+      // Red pixels in the first frame, and how far across and down they spread.
+      const render = async (
+        item: Partial<Scene3D["items"][number]>,
+        name: string,
+      ) => {
+        const scene = blenderSceneFromCinema(cinema([item]), {
+          ...settings,
+          width: W,
+          height: H,
+          frames: 1,
+          samples: 4,
+        });
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          name,
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        ).subarray(0, W * H * 3);
+        let red = 0;
+        let green = 0;
+        let [x0, x1, y0, y1] = [W, -1, H, -1];
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 3;
+            const [r, g, b] = [raw[i], raw[i + 1], raw[i + 2]];
+            if (g > 90 && g > 2 * r && g > 2 * b) green++;
+            if (r > 90 && r > 2 * g && r > 2 * b) {
+              red++;
+              x0 = Math.min(x0, x);
+              x1 = Math.max(x1, x);
+              y0 = Math.min(y0, y);
+              y1 = Math.max(y1, y);
+            }
+          }
+        return {
+          red,
+          green,
+          wide: x1 - x0 + 1,
+          tall: y1 - y0 + 1,
+          cx: (x0 + x1) / 2,
+          cy: (y0 + y1) / 2,
+        };
+      };
+      const box = await render({ color: "#888888" }, "box");
+      const model = await render({ model: small }, "model");
+      const scaled = await render({ model: large }, "scaled");
+      console.log("model", JSON.stringify({ box, model, scaled }));
+      // The grey box has no red; the model brings its own red material.
+      assert.equal(box.red, 0);
+      assert.ok(model.red > 60, `${model.red} red pixels`);
+      // A bar, wider than it is tall, as its mesh is (a box would be about as wide as tall).
+      assert.ok(model.wide > 1.6 * model.tall, JSON.stringify(model));
+      // Fifty times larger inside the file, the same size on screen: both fit a 1 m box.
+      assert.ok(
+        Math.abs(scaled.red - model.red) <= 0.1 * model.red,
+        JSON.stringify({ model, scaled }),
+      );
+      // Tall along glTF's up axis, its vertices far from the origin, under a moved parent node:
+      // it stands up (taller than wide), and sits where the plain bar did.
+      const tall = await render(
+        {
+          model: await upload(
+            redBar(1, {
+              half: [0.25, 1, 0.25],
+              offset: [6, 0, 0],
+              parent: true,
+            }),
+          ),
+        },
+        "tall",
+      );
+      // Coloured only by an embedded PNG texture, decoded inside the sandbox.
+      const textured = await render(
+        {
+          model: await upload(redBar(1, { texture: solidPng([0, 220, 0]) })),
+        },
+        "textured",
+      );
+      console.log("model placed", JSON.stringify({ tall, textured }));
+      assert.ok(tall.tall > 1.6 * tall.wide, JSON.stringify(tall));
+      assert.ok(
+        Math.abs(tall.cx - model.cx) <= 3 && Math.abs(tall.cy - model.cy) <= 3,
+        JSON.stringify({ model, tall }),
+      );
+      assert.equal(textured.red, 0);
+      assert.ok(textured.green > 60, JSON.stringify(textured));
+
+      // Textures are counted over the whole render: a model whose image says 8192 x 2112
+      // (17.3 Mpx, within one model's 64 Mi) placed eight times is 138 Mpx, more than a render's 128 Mi (134.2 million).
+      // It is refused before Blender starts; the image is never decoded (its header is all
+      // there is).
+      const header = Buffer.alloc(28);
+      Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13,
+      ]).copy(header);
+      header.write("IHDR", 12, "latin1");
+      header.writeUInt32BE(8192, 16);
+      header.writeUInt32BE(2112, 20);
+      header[24] = 8;
+      const heavy = await upload(redBar(1, { texture: header }));
+      const crowded = blenderSceneFromCinema(
+        cinema(
+          Array.from({ length: 8 }, (_, i) => ({
+            model: heavy,
+            position: { x: i, y: 0, z: 0 },
+          })),
+        ),
+        { ...settings, frames: 1 },
+      );
+      const over = await supervisor.submitBlenderRender(
+        project.id,
+        crowded,
+        "crowded",
+      );
+      const refusedRender = await settled(supervisor, over.id);
+      assert.equal(refusedRender.state, "FAILED");
+      assert.match(JSON.stringify(refusedRender), /128 megapixels/);
+      // A model this project does not hold is refused when the render is asked for.
+      const missing = blenderSceneFromCinema(
+        cinema([{ model: "c".repeat(64) }]),
+        settings,
+      );
+      await assert.rejects(
+        supervisor.submitBlenderRender(project.id, missing, "missing"),
+        /Model not found/,
+      );
+      // A stored copy changed on disk (same length) stops the render before Blender reads it.
+      const stored = await store.cinemaModelFile(project.id, small);
+      const bytes = readFileSync(stored);
+      bytes[bytes.length - 1] ^= 0xff;
+      writeFileSync(stored, bytes);
+      const tampered = blenderSceneFromCinema(cinema([{ model: small }]), {
+        ...settings,
+        frames: 1,
+      });
+      const job = await supervisor.submitBlenderRender(
+        project.id,
+        tampered,
+        "tampered",
+      );
+      const done = await settled(supervisor, job.id);
+      assert.equal(done.state, "FAILED");
+      assert.match(JSON.stringify(done), /does not match its digest/);
     } finally {
       await supervisor.close();
       store.close();

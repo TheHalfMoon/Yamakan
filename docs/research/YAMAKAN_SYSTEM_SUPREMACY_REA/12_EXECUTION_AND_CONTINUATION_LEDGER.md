@@ -583,4 +583,25 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - `tests/cinema-model-store.test.ts`, 11 tests: store and read back; the re-written description; refused files and lengths; cross-project and cross-kind references; garbage collection and the grace period; the budget refused before reading; an SDK upload over HTTP to a test server that calls the upload handler, and the content type; the backup closure; the per-principal limit released after a failed and a completed upload, and the shared agent and workspace limits released after completed uploads.
   - Full local suite on AC power at `92abb62`: 1,408 tests, 1,405 pass, 0 fail, 3 POSIX-only skips.
 - **Not yet:** the worker's import (a model item still renders as a box), the Cinema page button and preview, tracking and aerial views. No test exercises the service's own routes in `server/main.ts` yet (flag, scopes, `Connection: close`, the GET route's served type).
+- **Merged as `08a59ec`** (PR #271; main's CI passed).
+
+**3D asset import, step 2b: Blender renders stored models, 2026-11-11:**
+- **The Blender scene** gains a model object: `{shape: "model", model: <digest>, position, rotation, scale}`, at most 8 in a render. A Cinema item that names a model becomes one; every other item is still a box.
+- **The worker:**
+  - A render naming a model the project does not hold is refused when asked for.
+  - Before Blender starts, each named model's stored copy is read, its SHA-256 checked against the digest, and the .glb check run again. It is then written to the attempt's `models` folder, which Blender can read but not write.
+- **The fixed script** imports each model with Blender's bundled glTF importer, with every option that matters for these files set explicitly (no WebP or KTX decoders, no scene extras; the bone and light options keep their defaults, as skins and lights are refused). It keeps only meshes and empties, fits the model to a 1 m box at the origin (the centre of its bounds, its largest side 1 m), and places it like a box, with its own materials.
+- **The .glb check and the stored copy** gain two bounds from the review: every embedded image's decoded size is read from its own header and bounded (8192 pixels a side, 64 Mpx a model, a 16-bit PNG counted four times), and models stored from now on carry no extras (Blender would copy them onto its objects as custom properties). The worker adds the models' texture pixels up over every placement and refuses a render over 128 Mpx before Blender starts; it counts each model copy at the 64 MiB maximum in the free-disk check.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender inside procd:
+  (Measured values below; the test asserts looser thresholds: more than 60 red or green pixels, wider or taller by 1.6 times, sizes within 10 %, centres within 3 px.)
+  - a red bar-shaped model renders with its own material and shape: 202 red pixels, 30 wide by 14 tall, where a grey box at the same place has none;
+  - the same bar fifty times larger inside the file renders at the same size (202 red pixels), because both fit a 1 m box;
+  - a bar tall along glTF's up axis, its vertices far from the origin and under a moved parent node, stands up (9 wide by 32 tall) and sits where the plain bar did (centre 80, 43.5 against 80.5, 44.5);
+  - a model coloured only by an embedded PNG texture renders green (138 green pixels, no red): the texture is decoded inside the sandbox;
+  - a model the project does not hold is refused when asked for;
+  - a stored copy changed on disk (same length) fails the render before Blender reads it;
+  - a model whose texture says 8192 x 2112, placed eight times (138 Mpx), fails the render before Blender starts.
+
+  A plain test checks the mapping from a Cinema item, the 8-model limit, and that a model object refuses a non-digest.
+- **Not yet:** the Cinema page button and preview (which will also exercise the service's model routes), tracking and aerial views.
 
