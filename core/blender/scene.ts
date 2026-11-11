@@ -104,6 +104,9 @@ export const BlenderSceneSchema = z
       .strict(),
     // The compositor's finish on every frame; all 0 (the default) is none at all.
     finish: Finish.default({ glow: 0, vignette: 0, dispersion: 0 }),
+    // "detail": a ground under the boxes, and fine, non-repeating detail on the ground and on
+    // every box (its colour kept). "plain" (the default) is the flat boxes every render had.
+    surface: z.enum(["plain", "detail"]).default("plain"),
     objects: z
       .array(
         z.discriminatedUnion("shape", [
@@ -162,6 +165,8 @@ export const BlenderRenderSettingsSchema = z
     lighting: z.enum(["morning", "golden", "night", "studio"]).optional(),
     // A finish (FINISHES); absent is none, as every render had before.
     finish: z.enum(["glow", "vignette", "film"]).optional(),
+    // A ground and fine surface detail (BlenderSceneSchema's surface); absent is plain.
+    surface: z.enum(["detail"]).optional(),
   })
   .strict();
 export type BlenderRenderSettings = z.infer<typeof BlenderRenderSettingsSchema>;
@@ -286,6 +291,7 @@ export function blenderSceneFromCinema(
       shake: s.shake ?? 0,
     },
     finish: { ...FINISHES[s.finish ?? "none"] },
+    surface: s.surface ?? "plain",
     light: {
       rotation: { ...LIGHTING[s.lighting ?? "neutral"].rotation },
       strength: LIGHTING[s.lighting ?? "neutral"].strength,
