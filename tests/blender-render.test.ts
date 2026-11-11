@@ -1479,13 +1479,27 @@ test(
               Math.abs(raw[i + 1] - raw[j + 1]) +
               Math.abs(raw[i + 2] - raw[j + 2]);
           }
+        const isRed = (i: number) =>
+          raw[i] > 60 && raw[i] > 2 * raw[i + 1] && raw[i] > 2 * raw[i + 2];
         let red = 0;
-        for (let i = 0; i < W * H * 3; i += 3)
-          if (raw[i] > 60 && raw[i] > 2 * raw[i + 1] && raw[i] > 2 * raw[i + 2])
+        // And how much neighbouring pixels inside the box differ (both of them box): the detail
+        // on the box itself.
+        let inside = 0;
+        let pairs = 0;
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 3;
+            if (!isRed(i)) continue;
             red++;
+            if (x > 0 && isRed(i - 3)) {
+              inside += Math.abs(raw[i] - raw[i - 3]);
+              pairs++;
+            }
+          }
         return {
           edges: Math.round(edges / (W * Math.ceil(H * 0.2))),
           red,
+          boxDetail: pairs ? +(inside / pairs).toFixed(1) : 0,
         };
       };
       const plain = await render();
@@ -1494,9 +1508,17 @@ test(
       // Plain: the bottom of the frame is empty background; detail: a ground with fine detail.
       assert.ok(plain.edges <= 2, JSON.stringify(plain));
       assert.ok(detail.edges >= 10, JSON.stringify(detail));
-      // The box is red in both.
+      // The box is red in both, darkened in patches with detail (most of its red stays).
       assert.ok(plain.red > 100, JSON.stringify(plain));
-      assert.ok(detail.red > 50, JSON.stringify(detail));
+      assert.ok(
+        detail.red >= 0.4 * plain.red,
+        JSON.stringify({ plain, detail }),
+      );
+      // And the detail is on the box itself, not only on the ground.
+      assert.ok(
+        detail.boxDetail >= plain.boxDetail + 2,
+        JSON.stringify({ plain, detail }),
+      );
     } finally {
       await supervisor.close();
       store.close();
