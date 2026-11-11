@@ -614,7 +614,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **The preview:**
   - reads each model back from the project by digest and fits it to a 1 m box at its middle, as the Blender render does;
   - shows a faint box until the model has loaded, and tries a failed load again at the next change or reopen;
-  - shares a loaded model between the items that show it, and frees it when none does (a project switch included);
+  - shares a loaded model between the items that show it, and frees it when none does, including after the next project's scene opens;
   - loads embedded images as `<img>` elements from `blob:` URLs, which the page's existing image policy allows. The page's policy is unchanged; the loader's default would have fetched them, and the connect policy refuses that.
 - **Saving:** the service frees a model no revision names after its grace period, so a save first stores again, from the person's own file, any model uploaded on the page more than 20 minutes earlier and not yet saved.
 - **SDK:** `cinemaModel` reads a stored model back.
