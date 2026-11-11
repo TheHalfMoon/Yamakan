@@ -510,10 +510,10 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
   The Blender scene's sun takes an optional `colour`, white when absent; like the boxes' and the sky's colours, it is passed to Blender as linear values, so it shows paler than its hex. Without a choice, the neutral light every render had before.
 - **The planner** now follows the light words. Only an aerial view is still listed as not followed.
-- **Evidence:** `tests/blender-render.test.ts` renders one still medium shot under each light with the real Blender. It measures only the lit boxes: every pixel unlike the sky, which each light also changes. In the run that passed (mean over the boxes, 0 to 255):
+- **Evidence:** `tests/blender-render.test.ts` renders one still medium shot under each light with the real Blender. It measures only the boxes: every pixel unlike the sky in the picture. In Cycles the sky also lights the boxes, so what is measured is each light (sun and sky together) on the boxes, not the sun alone. In the run that passed (mean over the boxes, 0 to 255):
   - night is darker than neutral (37 against 91);
   - studio is brighter (113);
-  - golden is warmer, red over blue (+58 against −2; under a white sun the same boxes are −2, so this is the sun's colour);
+  - golden is warmer, red over blue (+58 against −2 under the neutral light);
   - morning is cooler (−11);
   - each picture differs from the neutral one.
   
