@@ -17,6 +17,12 @@ export type CinemaProjectClient = {
     content: unknown;
     requestId: string;
   }): Promise<unknown>;
+  // 3D models (cinemaModels.ts): stored in the project, read back by digest.
+  uploadCinemaModel?(
+    projectId: string,
+    glb: Uint8Array,
+  ): Promise<{ digest: string }>;
+  cinemaModel?(projectId: string, digest: string): Promise<ArrayBuffer>;
 };
 
 export type CinemaSaveState =

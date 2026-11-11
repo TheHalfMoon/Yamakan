@@ -327,6 +327,24 @@ export class YamakanClient {
     }
     return value;
   }
+  /** Reads one of the project's stored Cinema 3D models by digest. */
+  async cinemaModel(projectId: string, digest: string): Promise<ArrayBuffer> {
+    const response = await this.#fetch(
+      `${this.#base}/api/v1/projects/${encodeURIComponent(projectId)}/cinema/models/${encodeURIComponent(digest)}`,
+      { headers: this.#headers() },
+    );
+    if (!response.ok) {
+      const value = await response.json().catch(() => null);
+      const e = value?.error;
+      throw new YamakanError(
+        e?.code ?? "INTERNAL",
+        e?.message ?? `Model read failed with HTTP ${response.status}.`,
+        Boolean(e?.retryable),
+        value?.requestId ?? null,
+      );
+    }
+    return response.arrayBuffer();
+  }
   /** Reads one of the project's Studio bitmaps by digest. */
   async studioBitmap(projectId: string, digest: string): Promise<Blob> {
     const response = await this.#fetch(

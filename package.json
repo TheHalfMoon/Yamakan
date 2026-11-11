@@ -50,6 +50,7 @@
     "qualify:agent-access": "node scripts/qualify-agent-access.mjs",
     "qualify:blender-slice": "node scripts/qualify-blender-e2e.mjs",
     "qualify:cinema-blender": "node scripts/qualify-cinema-blender.mjs",
+    "qualify:cinema-model": "node scripts/qualify-cinema-model.mjs",
     "qualify:prompt-library": "node scripts/qualify-prompt-library.mjs",
     "qualify:director-cinema": "node scripts/qualify-director-cinema.mjs",
     "qualify:cinema-activation": "node scripts/qualify-cinema-activation.mjs",

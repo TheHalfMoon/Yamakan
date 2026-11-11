@@ -223,6 +223,10 @@
     {
       "path": "src/cinema/BlenderRender.tsx",
       "reason": "Yamakan-authored Cinema page panel that starts, follows, cancels and places a Blender render through the SDK; new original code, not adapted or copied from a donor or from Blender."
+    },
+    {
+      "path": "src/cinema/cinemaModels.ts",
+      "reason": "Yamakan-authored 3D model import for the Cinema page (browser check with core/cinema/glb.ts, upload, a scene item naming the stored model, and a preview fitted as the Blender render fits it); new original code, not adapted or copied from a donor."
     }
   ],
   "excludedPaths": [

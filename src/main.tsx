@@ -1,3 +1,4 @@
+import "./zod-browser.ts";
 import React, {
   useMemo,
   useEffect,
