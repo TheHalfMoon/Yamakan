@@ -772,20 +772,29 @@ test(
       const shotId = "7f6e5d4c-3b2a-4190-8f7e-6d5c4b3a2918";
       const W = 64;
       const H = 36;
-      // The mean brightness and warmth (red over blue) of one frame, 0 to 255.
+      // The mean brightness and warmth (red over blue), 0 to 255, of the lit boxes only: every
+      // pixel unlike the sky (the top-left corner). The sky changes with each light too, so it is
+      // left out: what is measured is the sun on the boxes.
       const measure = (f: Uint8Array) => {
+        const sky = [f[0], f[1], f[2]];
         let r = 0;
         let g = 0;
         let b = 0;
+        let n = 0;
         for (let i = 0; i < W * H; i++) {
-          r += f[i * 3];
-          g += f[i * 3 + 1];
-          b += f[i * 3 + 2];
+          const px = [f[i * 3], f[i * 3 + 1], f[i * 3 + 2]];
+          if (Math.max(...px.map((v, k) => Math.abs(v - sky[k]))) <= 24)
+            continue;
+          r += px[0];
+          g += px[1];
+          b += px[2];
+          n++;
         }
-        const n = W * H;
+        assert.ok(n > 20, "the boxes are in the picture");
         return {
           brightness: (r + g + b) / (3 * n),
           warmth: (r - b) / n,
+          boxes: n,
           frame: f,
         };
       };
@@ -844,6 +853,7 @@ test(
             {
               brightness: Math.round(v.brightness),
               warmth: Math.round(v.warmth),
+              boxes: v.boxes,
             },
           ],
         ),

@@ -211,7 +211,24 @@ test("each light is a sun and a sky; no light is the neutral light every render 
       colour: LIGHTING[light].colour,
     });
   }
-  // Night is dim and studio is bright; golden is the warmest.
+  // Every light differs from the neutral one in its sun and its sky.
+  for (const light of Object.keys(
+    DIRECTIONS.light,
+  ) as (keyof typeof LIGHTING)[]) {
+    assert.notDeepEqual(
+      { ...LIGHTING[light], background: undefined },
+      { ...LIGHTING.neutral, background: undefined },
+      light,
+    );
+    assert.notEqual(LIGHTING[light].background, LIGHTING.neutral.background);
+  }
+  // Night is dim and studio is bright; golden's sun is the warmest (most red over blue).
   assert.ok(LIGHTING.night.strength < LIGHTING.neutral.strength);
   assert.ok(LIGHTING.studio.strength > LIGHTING.neutral.strength);
+  const warmth = (hex: string) =>
+    parseInt(hex.slice(1, 3), 16) - parseInt(hex.slice(5, 7), 16);
+  const warmest = (Object.keys(LIGHTING) as (keyof typeof LIGHTING)[]).sort(
+    (a, b) => warmth(LIGHTING[b].colour) - warmth(LIGHTING[a].colour),
+  )[0];
+  assert.equal(warmest, "golden");
 });

@@ -504,20 +504,20 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Blender lighting, 2026-11-11:**
 - **The render's light can now be chosen** (`lighting`: morning, golden, night, studio). Each is a sun (angle, strength, colour) and a sky behind the boxes:
   - **morning:** a lower, slightly weaker sun under a pale cool sky;
-  - **golden:** a low orange sun under a dusky sky;
+  - **golden:** a low warm sun (a peach light, as Blender takes the colour) under a dusky sky;
   - **night:** a faint blue light under a near-black sky;
   - **studio:** a high, bright white light against plain grey.
 
-  The Blender scene's sun takes an optional `colour`, white when absent. Without a choice, the neutral light every render had before.
+  The Blender scene's sun takes an optional `colour`, white when absent; like the boxes' and the sky's colours, it is passed to Blender as linear values, so it shows paler than its hex. Without a choice, the neutral light every render had before.
 - **The planner** now follows the light words. Only an aerial view is still listed as not followed.
-- **Evidence:** `tests/blender-render.test.ts` renders one still medium shot under each light with the real Blender. In the run that passed (mean over the frame, 0 to 255):
-  - night is darker than neutral (47 against 93);
+- **Evidence:** `tests/blender-render.test.ts` renders one still medium shot under each light with the real Blender. It measures only the lit boxes: every pixel unlike the sky, which each light also changes. In the run that passed (mean over the boxes, 0 to 255):
+  - night is darker than neutral (37 against 91);
   - studio is brighter (113);
-  - golden is warmer, red over blue (+59 against −10);
-  - morning is cooler (−30);
-  - each differs from the neutral picture.
-
-  The planner's tests check every light reaches the render's scene as the table says, and that no light is the old neutral one.
+  - golden is warmer, red over blue (+58 against −2; under a white sun the same boxes are −2, so this is the sun's colour);
+  - morning is cooler (−11);
+  - each picture differs from the neutral one.
+  
+  The planner's tests check every light reaches the render's scene as the table says, that each differs from the neutral one in sun and sky, and that golden's sun is the warmest.
 - **Also from the review of #266:**
   - the push and pull measure is now worded as the share of the picture that is not background;
   - the handheld check now requires no frame to change from the one before by more than half of what the whole shot does.

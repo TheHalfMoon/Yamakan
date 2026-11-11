@@ -1856,7 +1856,7 @@ export const commands = {
     mutation: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes: the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes, lens and an optional camera orbit, at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
+      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes: the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes and lens, optional camera moves (orbit, dolly, pan, a handheld sway) and an optional light (morning, golden, night, studio), at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
     input: z
       .object({
         projectId: Id,
