@@ -32,6 +32,8 @@ export function PromptLibrary({
   brief,
   use,
   presets,
+  revision = 0,
+  busy = false,
 }: {
   lang: Lang;
   t: Translate;
@@ -41,6 +43,8 @@ export function PromptLibrary({
   use: (prompt: string, how: "replace" | "add") => void;
   // The project's presets; absent where there is no project to keep them in.
   presets?: PresetsHost;
+  revision?: number;
+  busy?: boolean;
 }) {
   const hasPrompt = brief.trim() !== "";
   const [query, setQuery] = useState("");
@@ -92,7 +96,8 @@ export function PromptLibrary({
       : hasPrompt
         ? {
             templateId: null,
-            language: /\p{Script=Arabic}/u.test(brief) ? "ar" : "en",
+            // The language of the first letter: one Arabic name in English words is English.
+            language: /^\P{L}*\p{Script=Arabic}/u.test(brief) ? "ar" : "en",
             values: [],
             prompt: brief.trim(),
             suggestedName: t("presets.fromBrief"),
@@ -250,6 +255,8 @@ export function PromptLibrary({
           host={presets}
           candidate={candidate}
           use={(prompt) => use(prompt, "replace")}
+          revision={revision}
+          busy={busy}
         />
       ) : null}
       <p className="note" data-testid="prompt-library-credit">

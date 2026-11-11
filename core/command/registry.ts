@@ -2464,7 +2464,8 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      // One presets document per project, checked again under the write lock.
+      // One presets document per project, checked under the write lock (after a replay is
+      // answered from its receipt).
       const onlyOne = (documents: readonly { id: string; kind: string }[]) => {
         const other = documents.find(
           (d) => d.kind === "promptPresets" && d.id !== a.documentId,
@@ -2475,7 +2476,6 @@ export const commands = {
             `This project keeps its prompt presets in document ${other.id}; save to that one.`,
           );
       };
-      onlyOne(store.listDocuments(a.projectId));
       const project = await store.commitDocument(
         {
           projectId: a.projectId,

@@ -401,8 +401,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - or the brief's own words (no template).
 
   Names are unique without regard to case. Templates and fields are checked against the library.
-- **Saving:** only `yamakan.prompt.savePresets` (compare-and-swap; the one-document rule is checked again under the write lock). It is never staged or written by the generic commit.
-- **History:** part of the project's revisions, so undo, restore and backup carry presets. An earlier build refuses revisions that hold the new kind, as it does LUTs.
+- **Saving:** only `yamakan.prompt.savePresets` (compare-and-swap; the one-document rule is checked under the write lock, after a replay is answered from its receipt). It is never staged or written by the generic commit. Template ids and field names are kept for good, pinned by a test; the page saves a preset whose template is gone as the prompt it made.
+- **History:** part of the project's revisions, so undo, restore and backup carry presets; the panel reads them again when the revision moves. An earlier build refuses any revision that holds the new kind, so it cannot open such a project at all, as with LUTs.
 - **The page:** in the Prompt library panel, "Saved in this project":
   - keep the filled template, or the brief, by name;
   - use a preset (it replaces the brief);
@@ -416,4 +416,5 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
     - a second document refused;
     - library, field, duplicate and size checks;
     - the generic commit refused.
-  - `qualify:prompt-library` now also keeps a filled template as a preset, refuses a same-named one, and after a reload keeps the brief as a second. It uses one, removes the other, and reads the document back through the SDK.
+  - `qualify:prompt-library` now also keeps a filled template as a preset and refuses a same-named one. After a reload it keeps the brief as a second (stored without a template, in English), uses one and removes the other. It then saves a third, undoes it in the editor (the panel follows), saves again, and reads the document back through the SDK.
+- **Review:** the independent review found no High and two Medium issues, both fixed before the PR: the panel did not follow an undo, restore or another writer (it now reads again when the revision moves, and after a failed save), and a later library change could have locked a project's presets (ids and fields are now pinned, with the page's fallback). Its Lows are fixed too: busy editor, replay, language of a brief, case comparison, accessibility, byte ceiling (now 1 MiB) and Arabic spelling.

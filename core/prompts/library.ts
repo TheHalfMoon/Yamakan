@@ -130,6 +130,9 @@ export type PromptField = {
   default: Bilingual;
 };
 
+// A template's id and its fields' names never change and are never removed: projects keep them
+// in their presets (core/prompts/presets.ts). tests/prompt-library.test.ts pins them. A new
+// version of a template is a new id.
 export type PromptTemplate = {
   id: string;
   kind: "video" | "image";

@@ -14,6 +14,7 @@ import type { Project } from "../core/project.ts";
 import {
   PROMPT_PRESET_LIMITS,
   emptyPromptPresets,
+  withoutMissingTemplates,
   type PromptPreset,
   type PromptPresetsDocument,
 } from "../core/prompts/presets.ts";
@@ -258,4 +259,13 @@ test("presets are checked against the library, and only their own command saves 
   ).result as unknown[];
   assert.equal(listed.length, 0);
   await queue.close();
+});
+
+test("a preset whose template is gone is saved as the prompt it made", () => {
+  const gone = preset({ templateId: "yamakan.withdrawn" });
+  const kept = preset({ name: "Kept" });
+  assert.deepEqual(withoutMissingTemplates([gone, kept]), [
+    { ...gone, templateId: null, values: [] },
+    kept,
+  ]);
 });

@@ -397,6 +397,8 @@ export function CreateWorkspace(props: {
           t={t}
           brief={brief.prompt}
           presets={props.presets}
+          revision={props.revision}
+          busy={busy}
           use={(prompt, how) => {
             const base = brief.prompt
               .trim()

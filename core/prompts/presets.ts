@@ -15,8 +15,9 @@ import {
 export const PROMPT_PRESET_LIMITS = Object.freeze({
   presets: 50,
   nameChars: 80,
-  // 50 presets of 2,000 characters, with their fields, stay well under this.
-  documentBytes: 512 * 1024,
+  // 50 presets at their longest (a 2,000-character prompt and 16 values of 200 characters,
+  // all in Arabic, two bytes each in UTF-8) stay under this.
+  documentBytes: 1024 * 1024,
 });
 
 const Field = z
@@ -49,6 +50,20 @@ export const PromptPresetsDocumentSchema = z
   .strict();
 export type PromptPresetsDocument = z.infer<typeof PromptPresetsDocumentSchema>;
 
+/**
+ * A preset whose template the library no longer has stays as the prompt it made, with no
+ * template: what the page saves, so the project's presets can always be saved again even if a
+ * template were withdrawn (template ids and field names are kept; see core/prompts/library.ts).
+ */
+export const withoutMissingTemplates = (
+  presets: readonly PromptPreset[],
+): PromptPreset[] =>
+  presets.map((p) =>
+    p.templateId === null || promptTemplate(p.templateId)
+      ? p
+      : { ...p, templateId: null, values: [] },
+  );
+
 export const emptyPromptPresets = (): PromptPresetsDocument => ({
   format: "yamakan.prompt-presets",
   formatVersion: 1,
@@ -74,7 +89,8 @@ export function validatePromptPresets(value: unknown) {
   for (const preset of doc.presets) {
     if (ids.has(preset.id)) fail(`The preset id ${preset.id} is used twice.`);
     ids.add(preset.id);
-    const name = preset.name.toLocaleLowerCase();
+    // Without regard to case, the same in every locale.
+    const name = preset.name.toLowerCase();
     if (names.has(name)) fail(`Two presets are named ${preset.name}.`);
     names.add(name);
     const fields = preset.values.map((v) => v.field);

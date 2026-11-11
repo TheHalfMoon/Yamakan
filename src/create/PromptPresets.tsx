@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   PROMPT_PRESET_LIMITS,
   emptyPromptPresets,
+  withoutMissingTemplates,
   type PromptPreset,
   type PromptPresetsDocument,
 } from "../../core/prompts/presets.ts";
@@ -46,48 +47,73 @@ export function PromptPresets({
   host,
   candidate,
   use,
+  revision,
+  busy,
 }: {
   t: Translate;
   host: PresetsHost;
   candidate: PresetCandidate | null;
   use: (prompt: string) => void;
+  // The project's revision: an undo, a restore or another writer's save can change the
+  // presets, so they are read again when it moves.
+  revision: number;
+  // The editor is busy: nothing is saved until it is done.
+  busy: boolean;
 }) {
   const [kept, setKept] = useState<KeptPresets | null>(null);
   const [state, setState] = useState<"reading" | "ready" | "failed">("reading");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const notes = useId();
+  // The newest read wins; one started before a save does not overwrite what the save kept.
+  const reads = useRef(0);
+  const savingRef = useRef(false);
+  const reload = async () => {
+    const read = ++reads.current;
+    try {
+      const found = await host.load();
+      if (read !== reads.current) return;
+      setKept(found);
+      setState("ready");
+    } catch {
+      if (read === reads.current) setState("failed");
+    }
+  };
 
   useEffect(() => {
-    let current = true;
-    host
-      .load()
-      .then((found) => {
-        if (!current) return;
-        setKept(found);
-        setState("ready");
-      })
-      .catch(() => current && setState("failed"));
+    if (!savingRef.current) void reload();
     return () => {
-      current = false;
+      // Unmounted or moved on: a read in flight is no longer wanted.
+      reads.current++;
     };
-    // The page's one host for this project; read once.
-  }, []);
+    // The page's one host for this project.
+  }, [revision]);
 
   const presets = kept?.presets.presets ?? [];
   const write = async (next: PromptPreset[]) => {
     setSaving(true);
+    savingRef.current = true;
     setProblem(null);
+    reads.current++;
     try {
       const saved = await host.save({
         documentId: kept?.documentId ?? crypto.randomUUID(),
         expectedContentHash: kept?.contentHash ?? null,
-        presets: { ...(kept?.presets ?? emptyPromptPresets()), presets: next },
+        presets: {
+          ...(kept?.presets ?? emptyPromptPresets()),
+          presets: withoutMissingTemplates(next),
+        },
       });
       if (saved) setKept(saved);
-      else setProblem(t("presets.notSaved"));
+      else {
+        // Perhaps another version was saved meanwhile: read it, so the next try is against it.
+        setProblem(t("presets.notSaved"));
+        await reload();
+      }
       return saved !== null;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -95,8 +121,9 @@ export function PromptPresets({
     0,
     PROMPT_PRESET_LIMITS.nameChars,
   );
+  // As the service compares names: without regard to case, the same in every locale.
   const taken = presets.some(
-    (p) => p.name.toLocaleLowerCase() === chosenName.toLocaleLowerCase(),
+    (p) => p.name.trim().toLowerCase() === chosenName.trim().toLowerCase(),
   );
   const full = presets.length >= PROMPT_PRESET_LIMITS.presets;
 
@@ -122,14 +149,16 @@ export function PromptPresets({
               <bdi className="prompt-preset-name">{p.name}</bdi>
               <span
                 className="prompt-preset-text"
-                dir={p.language === "ar" ? "rtl" : "ltr"}
+                dir="auto"
                 lang={p.language}
+                title={p.prompt}
               >
                 {p.prompt}
               </span>
               <button
                 type="button"
                 data-testid="prompt-preset-use"
+                aria-label={t("presets.useNamed", { name: p.name })}
                 onClick={() => use(p.prompt)}
               >
                 {t("presets.use")}
@@ -137,7 +166,7 @@ export function PromptPresets({
               <button
                 type="button"
                 data-testid="prompt-preset-remove"
-                disabled={saving}
+                disabled={saving || busy || state !== "ready"}
                 aria-label={t("presets.removeNamed", { name: p.name })}
                 onClick={() => void write(presets.filter((q) => q.id !== p.id))}
               >
@@ -168,8 +197,14 @@ export function PromptPresets({
             type="button"
             data-testid="prompt-preset-save"
             disabled={
-              saving || state !== "ready" || !chosenName || taken || full
+              saving ||
+              busy ||
+              state !== "ready" ||
+              !chosenName ||
+              taken ||
+              full
             }
+            aria-describedby={taken || full ? notes : undefined}
             onClick={async () => {
               const { suggestedName: _unused, ...rest } = candidate;
               const ok = await write([
@@ -181,10 +216,11 @@ export function PromptPresets({
           >
             {t("presets.save")}
           </button>
-          {taken ? <small>{t("presets.taken")}</small> : null}
-          {full ? (
-            <small>
-              {t("presets.full", { limit: PROMPT_PRESET_LIMITS.presets })}
+          {taken || full ? (
+            <small id={notes}>
+              {taken
+                ? t("presets.taken")
+                : t("presets.full", { limit: PROMPT_PRESET_LIMITS.presets })}
             </small>
           ) : null}
         </div>
