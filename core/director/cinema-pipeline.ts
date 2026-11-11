@@ -80,13 +80,17 @@ export const RenderShotInputSchema = z
   })
   .strict();
 
-// The render's frame rate nearest the project's: Blender renders at 24, 25 or 30.
+// The render's frame rate for the project's: Blender renders at 24, 25 or 30, so a double rate
+// (48, 50, 59.94, 60) renders at its half, and the rest at the nearest.
 const renderFps = (rate: { num: number; den: number }): 24 | 25 | 30 => {
-  const fps = rate.num / rate.den;
+  const project = rate.num / rate.den;
+  const fps = project > 36 ? project / 2 : project;
   return ([24, 25, 30] as const).reduce((best, n) =>
     Math.abs(n - fps) < Math.abs(best - fps) ? n : best,
   );
 };
+// The longest a render may be (core/blender/scene.ts BLENDER_SCENE_LIMITS.maxFrames).
+const MAX_RENDER_FRAMES = 120;
 
 /**
  * Plans a story shot of a cinema-blender run as a Cinema scene and queues its Blender render.
@@ -126,11 +130,19 @@ export async function renderStoryShot(
   const direction = Object.fromEntries(
     Object.entries(a.direction).filter(([, v]) => v !== undefined),
   ) as Record<string, string>;
+  const seconds = shot.durationTicks / FLICKS_PER_SECOND;
+  const fps = renderFps(frameRateOf(project));
+  // Refused before anything runs: a render shorter than its shot could not be its take.
+  if (Math.ceil(seconds * fps - 1e-9) > MAX_RENDER_FRAMES)
+    throw new CommandError(
+      "VALIDATION",
+      `This shot lasts ${seconds.toFixed(2)} s; a Blender render here is at most ${MAX_RENDER_FRAMES} frames (${(MAX_RENDER_FRAMES / fps).toFixed(1)} s at ${fps} fps). Shorten the shot first.`,
+    );
   const plan = planCinemaShot({
     shotId: shot.id,
     direction,
-    seconds: shot.durationTicks / FLICKS_PER_SECOND,
-    fps: renderFps(frameRateOf(project)),
+    seconds,
+    fps,
   });
   const job = await queue.submitBlenderRender(
     run.projectId,

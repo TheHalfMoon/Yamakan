@@ -1072,16 +1072,38 @@ function App() {
         let why: string | null = t("status.working");
         void run(async () => {
           why = t("error.operation");
+          // A save that met a conflict stops here, so its notice and unapplied change stay;
+          // past it, the project is reopened whatever happens.
+          if (!(await save())) {
+            why = t("blender.placeUnsaved");
+            return;
+          }
           try {
-            if (!(await save())) {
-              why = t("blender.placeUnsaved");
-              return;
-            }
             // The render added its video to the project since the editor last read it: the
             // story is saved against the project as it is now (the editor's work is saved).
             const current = (await call("yamakan.project.open", {
               projectId: p.id,
             })) as Project;
+            // Which of the story's shots the timeline holds, decided before anything is written:
+            // none, and the story is assembled; this shot, and its clip shows the new take; some
+            // others only, and nothing is done (assembly would refuse a story partly placed).
+            const placed = new Set(
+              current.scenes.flatMap((sc) =>
+                (sc.shots ?? [])
+                  .filter((sh) => sh.clipIds.length > 0)
+                  .map((sh) => sh.id),
+              ),
+            );
+            const storyShots = next.story.scenes.flatMap((sc) =>
+              sc.shots.map((sh) => sh.id),
+            );
+            const onTimeline = placed.has(next.shotId);
+            if (!onTimeline && storyShots.some((id) => placed.has(id))) {
+              why = t("directorCinema.partlyPlaced");
+              return;
+            }
+            const track = current.tracks.find((x) => x.kind === "video");
+            if (!track) throw new Error(t("error.edit"));
             await call("yamakan.story.save", {
               projectId: p.id,
               expectedRevision: current.revision,
@@ -1089,24 +1111,17 @@ function App() {
               expectedContentHash: next.expectedContentHash,
               story: next.story,
             } as any);
-            const opened = (await call("yamakan.project.open", {
+            const saved = (await call("yamakan.project.open", {
               projectId: p.id,
             })) as Project;
-            const track = opened.tracks.find((x) => x.kind === "video");
-            if (!track) throw new Error(t("error.edit"));
-            try {
+            if (!onTimeline)
               await call("yamakan.story.assemble", {
                 projectId: p.id,
-                expectedRevision: opened.revision,
+                expectedRevision: saved.revision,
                 documentId: next.documentId,
                 trackId: track.id,
               });
-            } catch (e) {
-              // The story is on the timeline already: the shot's clip shows the new take.
-              if (
-                !/already on the timeline/.test(String((e as Error)?.message))
-              )
-                throw e;
+            else {
               const proposal = (await call("yamakan.take.proposeReplace", {
                 projectId: p.id,
                 documentId: next.documentId,
@@ -1119,11 +1134,13 @@ function App() {
                 proposal,
               } as any);
             }
-            accept(await call("yamakan.project.open", { projectId: p.id }));
-            await refresh();
             why = null;
           } catch (e) {
             why = e instanceof Error ? e.message : String(e);
+          } finally {
+            // Whatever got written, the editor and the panel go on from the project as it is.
+            accept(await call("yamakan.project.open", { projectId: p.id }));
+            await refresh();
           }
         }).finally(() => resolve(why));
       }),

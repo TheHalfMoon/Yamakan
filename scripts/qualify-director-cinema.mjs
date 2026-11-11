@@ -94,9 +94,11 @@ try {
   const capability = await client.call("yamakan.blender.capability", {});
   assert.equal(capability.available, true, capability.message);
 
-  // A project with a one-shot story, made through the SDK.
+  // A 23.976 fps project with a one-shot story, made through the SDK: the render (at 24) must
+  // still cover the shot, or the story would refuse it as the shot's take.
   const project = await client.call("yamakan.project.create", {
     name: "Director shot",
+    frameRate: { num: 24000, den: 1001 },
   });
   const storyDocumentId = randomUUID();
   const shotId = randomUUID();
@@ -117,7 +119,8 @@ try {
             {
               id: shotId,
               name: "Opening",
-              durationTicks: 705_600_000,
+              // 24 frames at 23.976 fps: 1.001 s.
+              durationTicks: (24 * 705_600_000 * 1001) / 24000,
               notes: "",
               referencePacks: [],
               takes: [],
@@ -216,6 +219,15 @@ try {
     const runId = await panel.getAttribute("data-run");
     await page.getByTestId("director-cinema-review").click();
     await waitStep("awaiting");
+    // The shot and direction stay as rendered until it is placed.
+    assert.equal(
+      await page.getByTestId("director-cinema-story-shot").isDisabled(),
+      true,
+    );
+    assert.equal(
+      await page.getByTestId("director-cinema-shot").isDisabled(),
+      true,
+    );
     // Not done before a person approves.
     assert.equal(
       (await client.call("yamakan.director.next", { runId })).kind,

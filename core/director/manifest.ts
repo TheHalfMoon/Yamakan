@@ -132,7 +132,13 @@ export const FRAMEWORK_SMOKE_MANIFEST: PipelineManifest = parsePipelineManifest(
 // file does not import them back.
 const OTHER_BUILTINS = new Map<string, PipelineManifest>();
 export function registerBuiltinManifest(manifest: PipelineManifest) {
-  OTHER_BUILTINS.set(manifest.name, manifest);
+  const parsed = parsePipelineManifest(manifest);
+  if (
+    parsed.name === FRAMEWORK_SMOKE_MANIFEST.name ||
+    OTHER_BUILTINS.has(parsed.name)
+  )
+    throw new Error(`The pipeline ${parsed.name} is registered already.`);
+  OTHER_BUILTINS.set(parsed.name, parsed);
 }
 
 export function builtinManifest(name: string): PipelineManifest {

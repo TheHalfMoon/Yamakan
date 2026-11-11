@@ -164,9 +164,11 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       color: b.color,
     })),
   };
+  // Never shorter than the shot: a take must cover its shot (a 23.976 fps shot rendered at 24
+  // takes the frame after). Kept within what a render may ask for.
   const frames = Math.max(
     1,
-    Math.min(120, Math.round(input.seconds * input.fps)),
+    Math.min(120, Math.ceil(input.seconds * input.fps - 1e-9)),
   );
   return {
     scene,

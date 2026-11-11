@@ -95,6 +95,15 @@ test("length and size are kept within what a render may ask for; bad input is re
   assert.equal(plan({}, 1).settings.frames, 30);
   assert.equal(plan({}, 10).settings.frames, 120);
   assert.equal(plan({}, 0.001).settings.frames, 1);
+  // Never shorter than the shot: 100 frames at 23.976 fps last 4.1708 s, rendered as 101 at 24.
+  const ntsc = planCinemaShot({
+    shotId: SHOT,
+    direction: {},
+    seconds: (100 * 1001) / 24000,
+    fps: 24,
+  });
+  assert.equal(ntsc.settings.frames, 101);
+  assert.ok(ntsc.settings.frames / 24 >= (100 * 1001) / 24000);
   assert.throws(() => plan({}, 0), /positive/);
   assert.throws(() => plan({}, Number.NaN), /positive/);
   assert.throws(() => plan({ shot: "extreme" }), /no shot choice extreme/);

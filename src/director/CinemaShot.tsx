@@ -83,6 +83,13 @@ export function CinemaShot({
     null,
   );
   const [problem, setProblem] = useState<string | null>(null);
+  // The shot and direction the render was made from: approval and placing are for these,
+  // whatever the lists show later.
+  const [target, setTarget] = useState<{
+    documentId: string;
+    shotId: string;
+    label: string;
+  } | null>(null);
 
   // The project's stories, read again when the project moves.
   useEffect(() => {
@@ -116,6 +123,7 @@ export function CinemaShot({
     if (!jobId) return;
     let current = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let misses = 0;
     const tick = async () => {
       try {
         const job = await call<Parameters<typeof blenderView>[0]>(
@@ -123,6 +131,7 @@ export function CinemaShot({
           { jobId },
         );
         if (!current) return;
+        misses = 0;
         const next = blenderView(job);
         setView(next);
         if (next.kind === "working") timer = setTimeout(tick, 1000);
@@ -131,13 +140,22 @@ export function CinemaShot({
             assets: { id: string; hash: string }[];
           }>("yamakan.project.open", { projectId });
           const asset = project.assets.find((a) => a.id === next.assetId);
-          if (current && asset) {
+          if (!current) return;
+          if (asset) {
             setMade({ assetId: asset.id, hash: asset.hash });
             setStep("rendered");
+          } else {
+            setProblem(t("blender.noVideo"));
+            setStep("idle");
           }
-        }
+        } else setStep("idle");
       } catch (e) {
-        if (current) setProblem(e instanceof Error ? e.message : String(e));
+        if (!current) return;
+        setProblem(e instanceof Error ? e.message : String(e));
+        // Tried again, more slowly; after a minute of misses the panel is free again.
+        if (++misses < 8)
+          timer = setTimeout(tick, Math.min(10000, 1000 * 2 ** misses));
+        else setStep("idle");
       }
     };
     void tick();
@@ -157,9 +175,11 @@ export function CinemaShot({
   };
   const choices = stories ? shotChoices(stories) : [];
   const chosen = choices.find((c) => `${c.documentId}/${c.shotId}` === choice);
-  const label = [
-    ...Object.entries(direction).map(([k, v]) => `${k} ${v}`),
-  ].join(", ");
+  const label = Object.entries(direction)
+    .map(([k, v]) => `${k} ${v}`)
+    .join(", ");
+  // From the render until it is placed (or fails), the shot and direction stay as they were.
+  const locked = step !== "idle" && step !== "placed";
 
   return (
     <section
@@ -181,7 +201,7 @@ export function CinemaShot({
           {t("directorCinema.shot")}
           <select
             value={choice}
-            disabled={step === "rendering"}
+            disabled={locked}
             data-testid="director-cinema-story-shot"
             onChange={(e) => setChoice(e.target.value)}
           >
@@ -201,7 +221,7 @@ export function CinemaShot({
             {t(`create.direction.${kind}`)}
             <select
               value={direction[kind] ?? ""}
-              disabled={step === "rendering"}
+              disabled={locked}
               data-testid={`director-cinema-${kind}`}
               onChange={(e) => {
                 const { [kind]: _gone, ...others } = direction;
@@ -226,7 +246,7 @@ export function CinemaShot({
         <button
           type="button"
           data-testid="director-cinema-render"
-          disabled={!chosen || step === "rendering" || step === "awaiting"}
+          disabled={!chosen || locked}
           onClick={() =>
             void act(async () => {
               if (!chosen) return;
@@ -238,6 +258,11 @@ export function CinemaShot({
               setRun({ id: started.id, version: started.version });
               setMade(null);
               setPlanned(null);
+              setTarget({
+                documentId: chosen.documentId,
+                shotId: chosen.shotId,
+                label,
+              });
               const answer = await call<{
                 job: { id: string };
                 followed: string[];
@@ -309,24 +334,31 @@ export function CinemaShot({
             {t("directorCinema.approve")}
           </button>
         ) : null}
-        {step === "approved" && made && run && chosen ? (
+        {step === "approved" && made && run && target ? (
           <button
             type="button"
             data-testid="director-cinema-place"
             onClick={() =>
               void act(async () => {
                 const kept = stories?.find(
-                  (s) => s.documentId === chosen.documentId,
+                  (s) => s.documentId === target.documentId,
                 );
                 if (!kept) throw new Error(t("directorCinema.storyGone"));
-                const takeId = crypto.randomUUID();
-                const next = withRenderedTake(kept.story, chosen.shotId, {
-                  id: takeId,
-                  assetId: made.assetId,
-                  outputHash: made.hash,
-                  label: `Blender: ${label || "default"}`,
-                });
-                if ("refused" in next)
+                // Already the shot's take (an earlier Place got that far): only the run is left.
+                const already = kept.story.scenes
+                  .flatMap((sc) => sc.shots)
+                  .find((sh) => sh.id === target.shotId)
+                  ?.takes.find((tk) => tk.lineage?.outputHash === made.hash);
+                const takeId = already?.id ?? crypto.randomUUID();
+                const next = already
+                  ? null
+                  : withRenderedTake(kept.story, target.shotId, {
+                      id: takeId,
+                      assetId: made.assetId,
+                      outputHash: made.hash,
+                      label: `Blender: ${target.label || "default"}`,
+                    });
+                if (next && "refused" in next)
                   throw new Error(
                     t(
                       next.refused === "full"
@@ -334,14 +366,16 @@ export function CinemaShot({
                         : "directorCinema.storyGone",
                     ),
                   );
-                const why = await host.place({
-                  documentId: kept.documentId,
-                  expectedContentHash: kept.contentHash,
-                  story: next,
-                  shotId: chosen.shotId,
-                  takeId,
-                });
-                if (why) throw new Error(why);
+                if (next) {
+                  const why = await host.place({
+                    documentId: kept.documentId,
+                    expectedContentHash: kept.contentHash,
+                    story: next,
+                    shotId: target.shotId,
+                    takeId,
+                  });
+                  if (why) throw new Error(why);
+                }
                 const done = await call<{ version: number }>(
                   "yamakan.director.advance",
                   {

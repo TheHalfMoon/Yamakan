@@ -434,7 +434,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 **Creative Director to Cinema and Blender, second part, 2026-11-11:** after the planner (PR #263, merged as `39ad5be`; main's CI passed).
 - **The `cinema-blender` pipeline:** `render`, which needs a person's approval, then `place`. It is defined in `core/director/cinema-pipeline.ts`. `builtinManifest` finds it through a small registration hook; that changes the donor `manifest.ts`, so its provenance record has the change and the new hash.
 - **`yamakan.director.renderShot`** (`render:execute`, no request IDs):
-  - plans a story shot of a `cinema-blender` run from its direction, at the render frame rate nearest the project's and the shot's length;
+  - plans a story shot of a `cinema-blender` run from its direction, at the project's frame rate (or its half for a double rate), never shorter than the shot (rounded up: a 23.976 fps shot at 24); a shot longer than a render may be (120 frames) is refused before anything runs;
   - queues the Blender render;
   - returns the planned scene and what was followed.
   
@@ -446,7 +446,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - Approve: browser session only;
   - Make it the shot's take and place it.
   
-  Placing works like a story save, against the current revision. The story is assembled the first time; afterwards the shot's clip switches to the new take, so the story is never placed twice.
+  Placing works like a story save, against the current revision. It decides from the timeline before writing anything: the story is assembled if none of it is there, the shot's clip switches to the new take if this shot is there, and a story with only other shots placed is refused. The shot and direction are locked from the render until it is placed. The approval is recorded on the run, not enforced at placing (the story and take commands do not consult the run).
 - **Evidence:**
   - `tests/director-cinema.test.ts`: the pipeline is registered and gated; its refusals; scope.
   - `tests/director-cinema-shot.test.ts`: the story helpers.
@@ -458,6 +458,13 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
     - Also checked: Arabic, no page errors, no outside requests.
 - **Not yet:**
   - the page shows no preview of the video before approval: the person watches it in the project's media;
-  - a story with only some shots on the timeline cannot be placed (assembly refuses it, and a shot not on the timeline has no clip to switch);
+  - a story with only some of its other shots on the timeline cannot be placed (it is refused, with the reason, before anything is written);
   - shot sizes beyond the fixed set, lighting, and camera moves other than an orbit;
   - the next Blender work: compositing, tracking, animation, 3D import.
+- **Review:** the independent review found no High security issue, one High correctness bug and four Medium ones, all fixed before the PR:
+  - placing failed at 23.976 fps and for shots over 4 to 5 seconds (the render was a frame short, or capped);
+  - an approved video could be placed on another shot chosen afterwards;
+  - a failed render left the panel stuck;
+  - a half-done place left the editor stale, and assembly-or-replace was decided by matching an error's English text.
+
+  The qualification now runs at 23.976 fps.
