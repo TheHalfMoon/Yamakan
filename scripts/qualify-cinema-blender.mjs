@@ -263,6 +263,15 @@ try {
     .waitFor();
   await page.getByRole("tab", { name: "Story", exact: true }).click();
   await page.getByTestId("cinema-blender").waitFor();
+  // The panel shows the move and light the running render was started with.
+  assert.equal(
+    await page.getByTestId("cinema-blender-move").inputValue(),
+    "push",
+  );
+  assert.equal(
+    await page.getByTestId("cinema-blender-light").inputValue(),
+    "studio",
+  );
   assert.ok(
     ["working", "done"].includes(
       await attr(page, "cinema-blender-state", "data-state"),

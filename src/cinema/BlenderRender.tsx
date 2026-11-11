@@ -36,7 +36,8 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // A render still running when the panel is unmounted (another project opened) is followed
 // again when the project's panel comes back.
-const running = new Map<string, string>();
+// It keeps the choices it was started with, so the panel shows them again.
+const running = new Map<string, { jobId: string; choices: BlenderChoices }>();
 
 /**
  * Render the project's saved Cinema scene with Blender, then place it on the timeline. Only a
@@ -57,10 +58,10 @@ export function BlenderRender({
   const [available, setAvailable] = useState<boolean | null>(null);
   const [unavailable, setUnavailable] = useState("");
   const [choices, setChoices] = useState<BlenderChoices>(
-    DEFAULT_BLENDER_CHOICES,
+    () => running.get(projectId)?.choices ?? DEFAULT_BLENDER_CHOICES,
   );
   const [jobId, setJobId] = useState<string | null>(
-    () => running.get(projectId) ?? null,
+    () => running.get(projectId)?.jobId ?? null,
   );
   const [view, setView] = useState<BlenderView | null>(() =>
     running.has(projectId) ? { kind: "working", percent: 0 } : null,
@@ -143,7 +144,7 @@ export function BlenderRender({
     setView({ kind: "working", percent: 0 });
     try {
       const job = await host.start(blenderSettings(choices));
-      running.set(projectId, job.id);
+      running.set(projectId, { jobId: job.id, choices });
       setJobId(job.id);
     } catch (e) {
       setView(null);
