@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   BLENDER_FPS,
-  BLENDER_ORBITS,
+  BLENDER_LIGHTS,
+  BLENDER_MOVES,
   BLENDER_QUALITY,
   BLENDER_SECONDS,
   BLENDER_SIZES,
@@ -13,6 +14,7 @@ import {
   type BlenderJob,
   type BlenderView,
 } from "./blenderRender.ts";
+import { DIRECTIONS } from "../../core/prompts/directions.ts";
 
 type Translate = (
   key: MessageKey,
@@ -34,7 +36,8 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // A render still running when the panel is unmounted (another project opened) is followed
 // again when the project's panel comes back.
-const running = new Map<string, string>();
+// It keeps the choices it was started with, so the panel shows them again.
+const running = new Map<string, { jobId: string; choices: BlenderChoices }>();
 
 /**
  * Render the project's saved Cinema scene with Blender, then place it on the timeline. Only a
@@ -55,10 +58,10 @@ export function BlenderRender({
   const [available, setAvailable] = useState<boolean | null>(null);
   const [unavailable, setUnavailable] = useState("");
   const [choices, setChoices] = useState<BlenderChoices>(
-    DEFAULT_BLENDER_CHOICES,
+    () => running.get(projectId)?.choices ?? DEFAULT_BLENDER_CHOICES,
   );
   const [jobId, setJobId] = useState<string | null>(
-    () => running.get(projectId) ?? null,
+    () => running.get(projectId)?.jobId ?? null,
   );
   const [view, setView] = useState<BlenderView | null>(() =>
     running.has(projectId) ? { kind: "working", percent: 0 } : null,
@@ -141,7 +144,7 @@ export function BlenderRender({
     setView({ kind: "working", percent: 0 });
     try {
       const job = await host.start(blenderSettings(choices));
-      running.set(projectId, job.id);
+      running.set(projectId, { jobId: job.id, choices });
       setJobId(job.id);
     } catch (e) {
       setView(null);
@@ -273,21 +276,37 @@ export function BlenderRender({
           </select>
         </label>
         <label>
-          {t("blender.orbit")}{" "}
+          {t("create.direction.movement")}{" "}
           <select
-            data-testid="cinema-blender-orbit"
-            value={choices.orbitDegrees}
+            data-testid="cinema-blender-move"
+            value={choices.move}
             disabled={working}
             onChange={(e) =>
-              choose(
-                "orbitDegrees",
-                Number(e.target.value) as BlenderChoices["orbitDegrees"],
-              )
+              choose("move", e.target.value as BlenderChoices["move"])
             }
           >
-            {BLENDER_ORBITS.map((o) => (
-              <option key={o} value={o}>
-                {t("blender.degrees", { n: o })}
+            {BLENDER_MOVES.map((m) => (
+              <option key={m} value={m}>
+                {DIRECTIONS.movement[m]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("create.direction.light")}{" "}
+          <select
+            data-testid="cinema-blender-light"
+            value={choices.light}
+            disabled={working}
+            onChange={(e) =>
+              choose("light", e.target.value as BlenderChoices["light"])
+            }
+          >
+            {BLENDER_LIGHTS.map((l) => (
+              <option key={l} value={l}>
+                {l === "neutral"
+                  ? t("blender.lightNeutral")
+                  : DIRECTIONS.light[l]}
               </option>
             ))}
           </select>
