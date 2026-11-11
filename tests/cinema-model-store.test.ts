@@ -20,6 +20,7 @@ import { creativeClosure } from "../core/recovery.ts";
 import { createEmptyStudioDocument } from "../core/studio.ts";
 import { PassThrough } from "node:stream";
 import type { IncomingMessage } from "node:http";
+import type { Principal } from "../core/command/registry.ts";
 import { principals } from "../server/api.ts";
 
 const bases: string[] = [];
@@ -482,4 +483,58 @@ test("model uploads held in memory are bounded per principal and released on eve
   c.end(bytes);
   d.end(bytes);
   assert.equal((await third).digest, (await fourth).digest);
+});
+
+test("agents share two model uploads, and the workspace checks four at once", async () => {
+  const { store, project } = await workspace();
+  const { bytes } = triangle();
+  const pending = () => {
+    const body = new PassThrough();
+    Object.assign(body, {
+      headers: {
+        "content-type": "model/gltf-binary",
+        "content-length": String(bytes.length),
+      },
+    });
+    return body;
+  };
+  const as = (id: Principal["id"], req: PassThrough) =>
+    uploadCinemaModel(
+      store,
+      { ...principals["local-client"], id },
+      project.id,
+      req as unknown as IncomingMessage,
+      true,
+    );
+  const open: { req: PassThrough; done: Promise<unknown> }[] = [];
+  const start = (id: Principal["id"]) => {
+    const req = pending();
+    open.push({ req, done: as(id, req) });
+  };
+  try {
+    start("agent:11111111-1111-4111-8111-111111111111");
+    start("agent:22222222-2222-4222-8222-222222222222");
+    // A third agent waits, whoever it is.
+    await refused(
+      as("agent:33333333-3333-4333-8333-333333333333", pending()),
+      "LIMIT_EXCEEDED",
+      /Too many model uploads/,
+    );
+    // The person and the local tools still have room, up to four in all.
+    start("browser-ui");
+    start("local-client");
+    await refused(
+      as("local-client", pending()),
+      "LIMIT_EXCEEDED",
+      /Too many model uploads/,
+    );
+  } finally {
+    // Every slot is given back, so later tests start clean.
+    for (const { req } of open) req.end(bytes);
+    for (const { done } of open) await done;
+  }
+  const last = pending();
+  const done = as("local-client", last);
+  last.end(bytes);
+  assert.equal(((await done) as { triangles: number }).triangles, 1);
 });

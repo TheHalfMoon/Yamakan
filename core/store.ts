@@ -2360,9 +2360,10 @@ export class ProjectStore {
       "3D model space is full; unused models are freed by garbage collection (hourly, an hour after they were last used).";
     if (overBudget(this.#database, null, declaredBytes))
       throw new CommandError("LIMIT_EXCEEDED", full);
-    // The whole file is needed to check it; it is read up to its declared length only, and
-    // kept as it arrives, so a stalled upload holds only what it has sent.
-    const chunks: Uint8Array[] = [];
+    // The whole file is needed to check it. It is read up to its declared length only, into
+    // one buffer that doubles as bytes arrive, so a stalled upload holds at most twice what it
+    // has sent, and a dripped one no per-piece overhead.
+    let file = Buffer.allocUnsafe(Math.min(declaredBytes, 1024 * 1024));
     let size = 0;
     for await (const chunk of source) {
       if (size + chunk.byteLength > declaredBytes)
@@ -2370,7 +2371,17 @@ export class ProjectStore {
           "VALIDATION",
           "The model is longer than its declared length.",
         );
-      chunks.push(chunk);
+      if (size + chunk.byteLength > file.length) {
+        const grown = Buffer.allocUnsafe(
+          Math.min(
+            declaredBytes,
+            Math.max(file.length * 2, size + chunk.byteLength),
+          ),
+        );
+        file.copy(grown, 0, 0, size);
+        file = grown;
+      }
+      file.set(chunk, size);
       size += chunk.byteLength;
     }
     if (size !== declaredBytes)
@@ -2380,12 +2391,14 @@ export class ProjectStore {
       );
     let checked: ReturnType<typeof canonicalGlb>;
     try {
-      checked = canonicalGlb(Buffer.concat(chunks, size));
+      checked = canonicalGlb(file.subarray(0, size));
     } catch (e) {
       if (e instanceof GlbError)
         throw new CommandError("VALIDATION", e.message);
       throw e;
     }
+    // Only the checked copy is kept while it is stored.
+    file = Buffer.alloc(0);
     const { bytes, summary } = checked;
     const release = await this.beginPublication(projectId);
     try {
