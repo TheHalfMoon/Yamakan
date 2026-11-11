@@ -1906,6 +1906,12 @@ export const commands = {
           blenderSceneFromCinema(scene, a.settings),
           a.name ?? "Blender render",
         );
+      // Over footage the camera is the solve's: a view would be ignored, so it is refused first.
+      if (a.settings.view)
+        throw new CommandError(
+          "VALIDATION",
+          "Over tracked footage the camera is the solve's; it takes no view.",
+        );
       const { track, assetId, assetHash } = await queue.trackFootage(
         a.projectId,
         a.plate.trackJobId,
