@@ -418,3 +418,15 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
     - the generic commit refused.
   - `qualify:prompt-library` now also keeps a filled template as a preset and refuses a same-named one. After a reload it keeps the brief as a second (stored without a template, in English), uses one and removes the other. It then saves a third, undoes it in the editor (the panel follows), saves again, and reads the document back through the SDK.
 - **Review:** the independent review found no High and two Medium issues, both fixed before the PR: the panel did not follow an undo, restore or another writer (it now reads again when the revision moves, and after a failed save), and a later library change could have locked a project's presets (ids and fields are now pinned, with the page's fallback). Its Lows are fixed too: busy editor, replay, language of a brief, case comparison, accessibility, byte ceiling (now 1 MiB) and Arabic spelling.
+
+**Creative Director to Cinema and Blender, first part, 2026-11-11:** after the prompt presets (PR #262, merged as `eec1887`; main's CI passed).
+- **The Director today only keeps records.** It runs no engine or job, its one pipeline is a smoke test, and its outputs are asset hashes. Connecting it to Cinema and Blender takes two bounded PRs.
+- **This one is the planner and render-by-scene:**
+  - `core/director/cinema-shot.ts` turns a shot's direction words (the Create page's, now in `core/prompts/directions.ts`) and length into a Cinema scene and Blender settings, deterministically.
+  - Shot size is how much of a fixed set is shown, because the render frames all that is shown. The lens is the focal length. `still` and `orbit` are the camera's movement.
+  - What the render cannot make yet (pan, push, pull, handheld, aerial, light) is listed as not followed.
+  - `yamakan.blender.render` takes an optional `documentId`, so a shot's own scene is rendered rather than the Cinema page's.
+- **Evidence:**
+  - `tests/cinema-shot-plan.test.ts` checks every combination for valid scenes and settings, the same each time; size by camera distance; lens; movement; and refusals.
+  - `tests/blender-render.test.ts` renders a planned medium orbit shot by document id with the real Blender, beside a lower-id decoy. The decoded video has the shot's blue subject and orange block, and it moves.
+- **Next PR:** a `cinema-blender` Director pipeline in the panel: plan, render, the human approval gate, then the take placed on the story and timeline.
