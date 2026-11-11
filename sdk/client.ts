@@ -295,6 +295,38 @@ export class YamakanClient {
     }
     return value;
   }
+  /** Stores one Cinema 3D model (.glb), checked whole; a scene item names it by digest. */
+  async uploadCinemaModel(
+    projectId: string,
+    glb: Uint8Array,
+  ): Promise<{
+    digest: string;
+    byteLength: number;
+    vertices: number;
+    triangles: number;
+    min: [number, number, number];
+    max: [number, number, number];
+  }> {
+    const response = await this.#fetch(
+      `${this.#base}/api/v1/projects/${encodeURIComponent(projectId)}/cinema/models`,
+      {
+        method: "POST",
+        headers: this.#headers({ "Content-Type": "model/gltf-binary" }),
+        body: glb as Uint8Array<ArrayBuffer>,
+      },
+    );
+    const value = await response.json().catch(() => null);
+    if (!response.ok || !value || "error" in value) {
+      const e = value?.error;
+      throw new YamakanError(
+        e?.code ?? "INTERNAL",
+        e?.message ?? `Model upload failed with HTTP ${response.status}.`,
+        Boolean(e?.retryable),
+        value?.requestId ?? null,
+      );
+    }
+    return value;
+  }
   /** Reads one of the project's Studio bitmaps by digest. */
   async studioBitmap(projectId: string, digest: string): Promise<Blob> {
     const response = await this.#fetch(

@@ -254,8 +254,16 @@ function validateScene(value: unknown): {
 } {
   const scene = parseScene3D(value);
   const ids = new Set<string>();
-  for (const item of scene.items) if (item.assetId) ids.add(item.assetId);
-  return { content: scene, assetIds: [...ids].sort(), objectDigests: [] };
+  const models = new Set<string>();
+  for (const item of scene.items) {
+    if (item.assetId) ids.add(item.assetId);
+    if (item.model) models.add(item.model);
+  }
+  return {
+    content: scene,
+    assetIds: [...ids].sort(),
+    objectDigests: [...models].sort(),
+  };
 }
 
 /**

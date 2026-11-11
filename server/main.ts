@@ -23,7 +23,11 @@ import {
   initializeRoot,
 } from "../core/paths.ts";
 import { authorize } from "../core/command/registry.ts";
-import { stageDocument, uploadStudioBitmap } from "./document-stage.ts";
+import {
+  stageDocument,
+  uploadCinemaModel,
+  uploadStudioBitmap,
+} from "./document-stage.ts";
 import { comfyBaseUrl } from "../core/engines/comfyui.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
@@ -498,6 +502,27 @@ const server = createServer(async (req, res) => {
         // Content-addressed: a digest's bytes never change.
         res.setHeader("Cache-Control", "private, max-age=3600, immutable");
         await media(file, "image/png");
+        return;
+      }
+      const models = /^\/api\/v1\/projects\/([^/]+)\/cinema\/models$/.exec(
+        url.pathname,
+      );
+      if (req.method === "POST" && models) {
+        res.setHeader("Connection", "close");
+        return json(
+          200,
+          await uploadCinemaModel(store, principal, models[1], req),
+        );
+      }
+      const model =
+        /^\/api\/v1\/projects\/([^/]+)\/cinema\/models\/([a-f0-9]{64})$/.exec(
+          url.pathname,
+        );
+      if (req.method === "GET" && model) {
+        authorize(principal, "yamakan.project.open");
+        const file = await store.cinemaModelFile(model[1], model[2]);
+        res.setHeader("Cache-Control", "private, max-age=3600, immutable");
+        await media(file, "model/gltf-binary");
         return;
       }
       // Reference preview: a frame (PNG) or short segment (MP4) of a stored

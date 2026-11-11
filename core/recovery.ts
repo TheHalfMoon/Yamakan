@@ -1476,9 +1476,14 @@ export function creativeClosure(db: DatabaseSync): Closure {
         "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
       )
     : null;
+  const cinemaModel = has(db, "cinema_models")
+    ? db.prepare(
+        "SELECT 1 FROM cinema_models WHERE project_id = ? AND digest = ?",
+      )
+    : null;
   const document = documentsTable
     ? db.prepare(
-        "SELECT bytes, object_digests FROM creative_documents WHERE hash = ?",
+        "SELECT kind, bytes, object_digests FROM creative_documents WHERE hash = ?",
       )
     : null;
   const projects = db
@@ -1523,6 +1528,8 @@ export function creativeClosure(db: DatabaseSync): Closure {
     };
     const media = referencedDigestsInRetention(db, projectId, canonicalAt);
     const bitmaps = new Set<string>();
+    // A Cinema scene's digests are 3D models; every other kind's are Studio bitmaps.
+    const models = new Set<string>();
     const documents = new Set<string>();
     for (const project of parsed.values())
       for (const ref of project?.documents ?? [])
@@ -1530,7 +1537,7 @@ export function creativeClosure(db: DatabaseSync): Closure {
     for (const hash of [...documents].sort()) {
       closure.documents++;
       const row = document?.get(hash) as
-        { bytes: Uint8Array; object_digests: string } | undefined;
+        { kind: string; bytes: Uint8Array; object_digests: string } | undefined;
       if (!row) {
         gap({ projectId, kind: "document", ref: hash, reason: "missing" });
         continue;
@@ -1549,13 +1556,17 @@ export function creativeClosure(db: DatabaseSync): Closure {
         gap({ projectId, kind: "document", ref: hash, reason: "unreadable" });
         continue;
       }
-      for (const digest of digests) bitmaps.add(String(digest));
+      for (const digest of digests)
+        (row.kind === "cinemaScene" ? models : bitmaps).add(String(digest));
     }
-    for (const digest of [...new Set([...media, ...bitmaps])].sort()) {
+    for (const digest of [
+      ...new Set([...media, ...bitmaps, ...models]),
+    ].sort()) {
       closure.objects++;
       if (
         !ready.get(projectId, digest) ||
-        (bitmaps.has(digest) && !studioBitmap?.get(projectId, digest))
+        (bitmaps.has(digest) && !studioBitmap?.get(projectId, digest)) ||
+        (models.has(digest) && !cinemaModel?.get(projectId, digest))
       )
         gap({ projectId, kind: "object", ref: digest, reason: "missing" });
     }

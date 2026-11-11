@@ -70,6 +70,11 @@ export const Scene3DItemSchema = z
     scale: Vec3Schema,
     /** Yamakan asset id (replaces interchange media_file_token). */
     assetId: Id.nullable(),
+    /** A 3D model this project holds (core/cinema/glb.ts), by the SHA-256 of its stored bytes. */
+    model: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     color: z.string().max(64).optional(),
     metalness: Finite.min(0).max(1).optional(),
     shininess: Finite.min(0).max(1_000).optional(),

@@ -130,6 +130,9 @@ function walk(value: Json, depth: number, count: { n: number }) {
     fail("The model's description is too large.");
   if (depth > GLB_LIMITS.jsonDepth)
     fail("The model's description is nested too deeply.");
+  // A number too large to hold (such as 1e400) would be written back as null.
+  if (typeof value === "number" && !Number.isFinite(value))
+    fail("The model's description has a number out of range.");
   if (Array.isArray(value)) for (const v of value) walk(v, depth + 1, count);
   else if (value && typeof value === "object")
     for (const [k, v] of Object.entries(value)) {
@@ -529,4 +532,39 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     min,
     max,
   };
+}
+
+/**
+ * Checks a .glb file and returns the copy Yamakan stores: the same binary data, with the
+ * description re-written from what this check parsed. Blender then reads only JSON this check
+ * has already read (no duplicate keys, no over-precise numbers, no padding tricks).
+ */
+export function canonicalGlb(file: Uint8Array): {
+  bytes: Uint8Array;
+  summary: GlbSummary;
+} {
+  checkGlb(file);
+  const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
+  const jsonLength = view.getUint32(12, true);
+  const parsed: unknown = JSON.parse(
+    new TextDecoder("utf-8", { fatal: true }).decode(
+      file.subarray(20, 20 + jsonLength),
+    ),
+  );
+  const text = new TextEncoder().encode(JSON.stringify(parsed));
+  const padded = Math.ceil(text.byteLength / 4) * 4;
+  const rest = file.subarray(20 + jsonLength);
+  const length = 20 + padded + rest.byteLength;
+  if (length > GLB_LIMITS.bytes) fail("The model is larger than 64 MiB.");
+  const out = new Uint8Array(length);
+  const header = new DataView(out.buffer);
+  header.setUint32(0, MAGIC, true);
+  header.setUint32(4, 2, true);
+  header.setUint32(8, length, true);
+  header.setUint32(12, padded, true);
+  header.setUint32(16, JSON_CHUNK, true);
+  out.fill(0x20, 20, 20 + padded);
+  out.set(text, 20);
+  out.set(rest, 20 + padded);
+  return { bytes: out, summary: checkGlb(out) };
 }
