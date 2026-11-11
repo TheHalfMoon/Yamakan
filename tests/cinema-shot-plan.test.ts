@@ -71,7 +71,7 @@ test("shot size is made by how much of the set is shown, the lens by the focal l
   assert.equal(plan().scene.camera.focalLengthMm, 35);
 });
 
-test("movement: still and orbit are followed; what the render cannot make is said, not faked", () => {
+test("every movement is followed as a camera move; what the render cannot make is said, not faked", () => {
   assert.equal(plan({ movement: "still" }).settings.orbitDegrees, 0);
   const orbit = plan({ movement: "orbit", shot: "wide", lens: "tele" });
   assert.equal(orbit.settings.orbitDegrees, 90);
@@ -81,14 +81,64 @@ test("movement: still and orbit are followed; what the render cannot make is sai
     "movement:orbit",
   ]);
   assert.deepEqual(orbit.notFollowed, []);
+  // Each movement is one camera move, and only that one.
+  const moves = Object.fromEntries(
+    Object.keys(DIRECTIONS.movement).map((movement) => {
+      const { orbitDegrees, dolly, panDegrees, shake } = plan({
+        movement,
+      }).settings;
+      return [movement, { orbitDegrees, dolly, panDegrees, shake }];
+    }),
+  );
+  assert.deepEqual(moves, {
+    still: {
+      orbitDegrees: 0,
+      dolly: undefined,
+      panDegrees: undefined,
+      shake: undefined,
+    },
+    pan: {
+      orbitDegrees: 0,
+      dolly: undefined,
+      panDegrees: 30,
+      shake: undefined,
+    },
+    push: {
+      orbitDegrees: 0,
+      dolly: 0.35,
+      panDegrees: undefined,
+      shake: undefined,
+    },
+    pull: {
+      orbitDegrees: 0,
+      dolly: -0.35,
+      panDegrees: undefined,
+      shake: undefined,
+    },
+    handheld: {
+      orbitDegrees: 0,
+      dolly: undefined,
+      panDegrees: undefined,
+      shake: 0.03,
+    },
+    orbit: {
+      orbitDegrees: 90,
+      dolly: undefined,
+      panDegrees: undefined,
+      shake: undefined,
+    },
+  });
   const rest = plan({ movement: "push", shot: "aerial", light: "golden" });
-  assert.equal(rest.settings.orbitDegrees, 0);
-  assert.deepEqual(rest.followed, []);
-  assert.deepEqual(rest.notFollowed, [
-    "shot:aerial",
-    "movement:push",
-    "light:golden",
-  ]);
+  assert.deepEqual(rest.followed, ["movement:push"]);
+  assert.deepEqual(rest.notFollowed, ["shot:aerial", "light:golden"]);
+  // The render takes each as given.
+  for (const movement of Object.keys(DIRECTIONS.movement)) {
+    const p = plan({ movement });
+    const camera = blenderSceneFromCinema(p.scene, p.settings).camera;
+    assert.equal(camera.dolly, p.settings.dolly ?? 0);
+    assert.equal(camera.panDegrees, p.settings.panDegrees ?? 0);
+    assert.equal(camera.shake, p.settings.shake ?? 0);
+  }
 });
 
 test("length and size are kept within what a render may ask for; bad input is refused", () => {

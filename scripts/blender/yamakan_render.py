@@ -12,7 +12,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Euler, Matrix, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 FORMAT = "yamakan.blender-scene/1"
 
@@ -126,11 +126,17 @@ def main():
             principled.inputs["Base Color"].default_value = (*rgb, 1.0)
         box.data.materials.append(material)
 
-    # The camera: its lens, where it starts, and an optional orbit around what it looks at.
+    # The camera: its lens, where it starts, and how it moves over the shot: around what it looks
+    # at (orbit), toward or away from it (dolly), turning where it stands (pan), and a steady
+    # handheld sway (shake). Every move is a fixed function of the frame: the same scene, the
+    # same shot.
     c = s["camera"]
     start = vec3(c["position"], -1000, 1000, "camera position")
     target = point(vec3(c["target"], -1000, 1000, "camera target"))
     orbit = math.radians(number(c["orbitDegrees"], -360, 360, "orbit"))
+    dolly = number(c.get("dolly", 0), -0.9, 0.9, "dolly")
+    pan = math.radians(number(c.get("panDegrees", 0), -90, 90, "pan"))
+    shake = number(c.get("shake", 0), 0, 0.1, "shake")
     lens = bpy.data.cameras.new("yamakan")
     lens.sensor_fit = "HORIZONTAL"
     lens.sensor_width = number(c["sensorWidthMm"], 1, 1000, "sensor width")
@@ -141,12 +147,31 @@ def main():
     scene.collection.objects.link(camera)
     scene.camera = camera
     first = point(start)
+    reach = max(0.001, (target - first).length)
     for frame in range(1, frames + 1):
         t = (frame - 1) / max(1, frames - 1)
         turn = Matrix.Translation(target) @ Matrix.Rotation(orbit * t, 4, "Z") @ Matrix.Translation(-target)
         where = (turn @ Vector((*first, 1.0))).xyz
+        # Toward the target (or away), a share of the way over the shot.
+        where = target + (where - target) * (1.0 - dolly * t)
+        # A sway of a few slow waves, the same every time, within shake x the distance.
+        if shake > 0:
+            sway = shake * reach
+            where = where + Vector((
+                sway * 0.6 * math.sin(2.3 * frame + 0.4),
+                sway * 0.6 * math.sin(1.7 * frame + 1.1),
+                sway * 0.4 * math.sin(2.9 * frame + 2.0),
+            ))
+        # Aimed at the target, then turned where it stands: from one side to the other.
+        aim = (target - where).to_track_quat("-Z", "Y")
+        if pan != 0:
+            aim = Quaternion((0.0, 0.0, 1.0), pan * (t - 0.5)) @ aim
+        # A hand also wavers the aim a little, side to side and up and down.
+        if shake > 0:
+            aim = Quaternion((0.0, 0.0, 1.0), shake * 1.2 * math.sin(1.9 * frame + 0.7)) @ aim
+            aim = aim @ Quaternion((1.0, 0.0, 0.0), shake * 0.8 * math.sin(2.6 * frame + 1.5))
         camera.location = where
-        camera.rotation_euler = (target - where).to_track_quat("-Z", "Y").to_euler()
+        camera.rotation_euler = aim.to_euler()
         camera.keyframe_insert(data_path="location", frame=frame)
         camera.keyframe_insert(data_path="rotation_euler", frame=frame)
 

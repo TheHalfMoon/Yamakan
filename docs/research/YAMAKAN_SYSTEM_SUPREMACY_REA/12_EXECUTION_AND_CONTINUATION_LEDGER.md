@@ -459,7 +459,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Not yet:**
   - the page shows no preview of the video before approval: the person watches it in the project's media;
   - a story with only some of its other shots on the timeline cannot be placed (it is refused, with the reason, before anything is written);
-  - shot sizes beyond the fixed set, lighting, and camera moves other than an orbit;
+  - shot sizes beyond the fixed set and lighting (camera moves: see below);
   - the next Blender work: compositing, tracking, animation, 3D import.
 - **Review:** the independent review found no High security issue, one High correctness bug and four Medium ones, all fixed before the PR:
   - placing failed at 23.976 fps and for shots over 4 to 5 seconds (the render was a frame short, or capped);
@@ -479,3 +479,23 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - Start over waits for an action in progress;
   - the clip-removed message now says how to bring the clip back: Undo if the removal was the last edit, else a revision restored from History (which may also take back the render's video). The editor has no control to remove a shot from the timeline's scenes;
   - while an action runs, the other actions wait, so a double click cannot start two.
+
+**Blender animation, camera moves, 2026-11-11:** after the Director pipeline (PRs #264 and #265, merged as `cea7159` and `91baa32`; main's CI passed on `cea7159`).
+- **The Blender scene's camera can now also** move toward or away from what it looks at (`dolly`), turn where it stands (`panDegrees`), and sway as if handheld (`shake`: position and aim, a fixed function of the frame, so the same scene renders the same shot). These sit beside the existing orbit. Each is optional and 0 when absent, so scenes made before are unchanged.
+- **The planner follows every movement word:**
+  - push and pull: a third of the distance;
+  - pan: 30 degrees;
+  - handheld: a sway of 3% of the distance.
+
+  Only an aerial view and the light choices are still listed as not followed.
+- **Evidence:** `tests/blender-render.test.ts` renders the same medium shot with each move using the real Blender, and measures the first and last frames:
+  - push: the subject's share of the picture grows (4.3% to 9.7% in the run that passed);
+  - pull: it shrinks (4.4% to 2.1%);
+  - pan: its middle slides across (0.25 to 0.74 of the width);
+  - handheld: the picture changes (6.6% of cells) while the subject keeps its size;
+  - still: nothing changes.
+
+  The planner's tests check each movement maps to exactly one camera move and reaches the render's scene as given.
+- **Not yet:**
+  - the Cinema page's Blender panel still offers only the orbit; the Director's shots get every move;
+  - aerial views, lighting choices, compositing, tracking and 3D import.
