@@ -522,3 +522,14 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - the push and pull measure is now worded as the share of the picture that is not background;
   - the handheld check now requires no frame to change from the one before by more than half of what the whole shot does.
 - **Not yet:** an aerial view; compositing, tracking and 3D import; the Cinema page's Blender panel offering moves and lights.
+- **Merged as `15c330e`** (PR #267; main's CI passed).
+
+**Cinema page: the Blender panel offers moves and lights, 2026-11-11:**
+- **Camera move:** the panel's camera-orbit choice is now a camera move (still, orbit, push, pull, pan, handheld).
+- **Light:** a new choice (neutral, morning, golden, night, studio).
+- **One mapping:** both use the Director's own mapping, `CAMERA_MOVES` (now exported from `core/director/cinema-shot.ts`) and the render's `LIGHTING`, so the same words give the same settings from either.
+- **Default unchanged:** the 90-degree orbit under the neutral light the panel rendered before.
+- **Followed renders:** a render followed after another project is opened shows the move and light it was started with.
+- **Evidence:**
+  - `tests/cinema-blender-panel.test.ts`: every choice is settings the service accepts, and each move and light matches the planner's settings.
+  - `qualify:cinema-blender` renders a push under the studio light chosen on the panel, and checks the choices are shown again after the project switch.
