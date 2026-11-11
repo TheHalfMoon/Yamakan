@@ -2273,6 +2273,54 @@ function App() {
                       (asset as unknown as { durationFrames: number })
                         .durationFrames * frameTicks
                     }
+                    presets={{
+                      // The project's one presets document, if it has one.
+                      load: async () => {
+                        const documents = (await call("yamakan.document.list", {
+                          projectId: p.id,
+                        })) as unknown as { id: string; kind: string }[];
+                        const ref = documents.find(
+                          (d) => d.kind === "promptPresets",
+                        );
+                        if (!ref) return null;
+                        const found = (await call("yamakan.document.get", {
+                          projectId: p.id,
+                          documentId: ref.id,
+                        })) as any;
+                        return {
+                          documentId: ref.id,
+                          contentHash: found.contentHash,
+                          presets: found.content,
+                        };
+                      },
+                      // As a story is saved: the editor's work first, then the presets against
+                      // the head, then the project reopened at its new revision.
+                      save: (next) =>
+                        new Promise((resolve) => {
+                          let kept: any = null;
+                          run(async () => {
+                            if (!(await save())) return;
+                            const answer = (await call(
+                              "yamakan.prompt.savePresets",
+                              {
+                                projectId: p.id,
+                                expectedRevision: head.current!.revision,
+                                ...next,
+                              },
+                            )) as any;
+                            kept = {
+                              documentId: next.documentId,
+                              contentHash: answer.document.contentHash,
+                              presets: next.presets,
+                            };
+                            accept(
+                              await call("yamakan.project.open", {
+                                projectId: p.id,
+                              }),
+                            );
+                          }).finally(() => resolve(kept));
+                        }),
+                    }}
                     loadStory={async () => {
                       const documents = (await call("yamakan.document.list", {
                         projectId: p.id,

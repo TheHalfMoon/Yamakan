@@ -394,3 +394,26 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - presets saved in the project: a document kind of their own, because a project holds at most 32 documents;
   - the Creative Director using the library;
   - a generation started from a library prompt. No engine runs here: the Kaggle GPU quota is spent until it resets.
+
+**Prompt presets kept with the project, 2026-11-11:** after the prompt library (PR #261, merged as `e22cf22`; main's CI passed).
+- **The document:** a `promptPresets` creative document, one per project (a project holds at most 32 documents). It holds up to 50 presets:
+  - a filled library template (its template, language, field values and prompt);
+  - or the brief's own words (no template).
+
+  Names are unique without regard to case. Templates and fields are checked against the library.
+- **Saving:** only `yamakan.prompt.savePresets` (compare-and-swap; the one-document rule is checked again under the write lock). It is never staged or written by the generic commit.
+- **History:** part of the project's revisions, so undo, restore and backup carry presets. An earlier build refuses revisions that hold the new kind, as it does LUTs.
+- **The page:** in the Prompt library panel, "Saved in this project":
+  - keep the filled template, or the brief, by name;
+  - use a preset (it replaces the brief);
+  - remove one.
+
+  Saving runs as a story save does: the editor's work first, then the presets against the head, then the project reopened.
+- **Evidence:**
+  - `tests/prompt-presets.test.ts` (a real store) covers:
+    - saving and reading back across a service restart;
+    - a stale hash refused;
+    - a second document refused;
+    - library, field, duplicate and size checks;
+    - the generic commit refused.
+  - `qualify:prompt-library` now also keeps a filled template as a preset, refuses a same-named one, and after a reload keeps the brief as a second. It uses one, removes the other, and reads the document back through the SDK.

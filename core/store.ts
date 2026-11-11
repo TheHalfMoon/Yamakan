@@ -1890,11 +1890,12 @@ export class ProjectStore {
       kind === "story" ||
       kind === "referencePack" ||
       kind === "captions" ||
-      kind === "lut"
+      kind === "lut" ||
+      kind === "promptPresets"
     )
       throw new CommandError(
         "VALIDATION",
-        "Stories, reference packs, caption tracks and LUTs are not staged; save them with their own commands.",
+        "Stories, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,

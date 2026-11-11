@@ -10,6 +10,11 @@ import {
   searchPrompts,
   type PromptLanguage,
 } from "../../core/prompts/library.ts";
+import {
+  PromptPresets,
+  type PresetCandidate,
+  type PresetsHost,
+} from "./PromptPresets.tsx";
 
 type Translate = (
   key: MessageKey,
@@ -24,15 +29,20 @@ type Translate = (
 export function PromptLibrary({
   lang,
   t,
-  hasPrompt,
+  brief,
   use,
+  presets,
 }: {
   lang: Lang;
   t: Translate;
-  // Whether the brief already has words, so adding is offered beside replacing.
-  hasPrompt: boolean;
+  // The brief's prompt: adding is offered beside replacing when it has words, and it can be
+  // kept as a preset.
+  brief: string;
   use: (prompt: string, how: "replace" | "add") => void;
+  // The project's presets; absent where there is no project to keep them in.
+  presets?: PresetsHost;
 }) {
+  const hasPrompt = brief.trim() !== "";
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [kind, setKind] = useState<"" | "video" | "image">("");
@@ -67,6 +77,27 @@ export function PromptLibrary({
       return null;
     }
   }, [template, language, values]);
+  // What Save as preset keeps: the filled template, else the brief's own words.
+  const candidate: PresetCandidate | null =
+    template && filled
+      ? {
+          templateId: template.id,
+          language,
+          values: Object.entries(values)
+            .filter(([, value]) => value.trim() !== "")
+            .map(([field, value]) => ({ field, value })),
+          prompt: filled,
+          suggestedName: template.title[lang],
+        }
+      : hasPrompt
+        ? {
+            templateId: null,
+            language: /\p{Script=Arabic}/u.test(brief) ? "ar" : "en",
+            values: [],
+            prompt: brief.trim(),
+            suggestedName: t("presets.fromBrief"),
+          }
+        : null;
   const choose = (templateId: string) => {
     if (templateId === chosen) return;
     setChosen(templateId);
@@ -212,6 +243,14 @@ export function PromptLibrary({
             ) : null}
           </div>
         </div>
+      ) : null}
+      {presets ? (
+        <PromptPresets
+          t={t}
+          host={presets}
+          candidate={candidate}
+          use={(prompt) => use(prompt, "replace")}
+        />
       ) : null}
       <p className="note" data-testid="prompt-library-credit">
         {t("library.credit")} <bdi>{YOUMIND_TAXONOMY_SOURCE.credit}</bdi>
