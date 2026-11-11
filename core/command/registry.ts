@@ -52,6 +52,7 @@ import {
 import {
   BlenderRenderSettingsSchema,
   blenderSceneFromCinema,
+  plateFromTrack,
 } from "../blender/scene.ts";
 import { BLENDER_PIN, blenderRuntime } from "../blender/runtime.ts";
 import { TrackLensSchema } from "../blender/track.ts";
@@ -1857,7 +1858,7 @@ export const commands = {
     mutation: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes: the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes and lens, optional camera moves (orbit, dolly, pan, a handheld sway) and an optional light (morning, golden, night, studio), at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
+      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes, optionally over tracked footage (plate: a finished camera track and its scale; the camera then follows the solve and the objects are composited over the video): the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes and lens, optional camera moves (orbit, dolly, pan, a handheld sway) and an optional light (morning, golden, night, studio), at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
     input: z
       .object({
         projectId: Id,
@@ -1866,6 +1867,16 @@ export const commands = {
         documentId: Id.optional(),
         settings: BlenderRenderSettingsSchema,
         name: z.string().min(1).max(120).optional(),
+        // Render over tracked footage (match-move): a finished camera track of this project,
+        // and how many metres one unit of its solve is. The scene's objects are then placed in
+        // the first tracked camera's frame (right, up, toward the viewer; metres).
+        plate: z
+          .object({
+            trackJobId: Id,
+            metresPerUnit: z.number().finite().positive().max(1000),
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
     run: async ({ store, queue }, a) => {
@@ -1889,10 +1900,40 @@ export const commands = {
         );
       const { bytes } = store.getDocument(a.projectId, ref.id);
       const scene = parseScene3D(JSON.parse(bytes.toString("utf8")));
+      if (!a.plate)
+        return queue.submitBlenderRender(
+          a.projectId,
+          blenderSceneFromCinema(scene, a.settings),
+          a.name ?? "Blender render",
+        );
+      const { track, assetId } = await queue.trackFootage(
+        a.projectId,
+        a.plate.trackJobId,
+      );
+      // The render's picture has the footage's shape, and is no longer than it.
+      if (
+        Math.abs(
+          a.settings.width / a.settings.height - track.width / track.height,
+        ) > 0.01
+      )
+        throw new CommandError(
+          "VALIDATION",
+          `A render over this footage has its shape (${track.width} x ${track.height}).`,
+        );
+      if (a.settings.frames > track.frames)
+        throw new CommandError(
+          "VALIDATION",
+          `This footage has ${track.frames} frames; the render asks for more.`,
+        );
       return queue.submitBlenderRender(
         a.projectId,
-        blenderSceneFromCinema(scene, a.settings),
-        a.name ?? "Blender render",
+        blenderSceneFromCinema(
+          scene,
+          a.settings,
+          plateFromTrack(track, a.settings.frames, a.plate.metresPerUnit),
+        ),
+        a.name ?? "Blender render over footage",
+        assetId,
       );
     },
   }),

@@ -664,4 +664,17 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Found, and stated as a limit:** a 20-degree orbit seen from this far (about 17 m from a few metres of boxes, a 35 mm lens) was solved at 0.64 px error as a 9.7-degree turn. A small turn and a sideways slide look nearly alike from far away (a known ambiguity of camera solving), so the test uses 40 degrees and the docs say footage needs enough motion.
 - **Limits, stated:** the solved turn read about 8 % low on the test clip (36.7 for 40 degrees). A camera that only turns where it stands gives a turn but no meaningful travel. The decoded-frame cache is capped at 1 GiB; total memory at 1920 x 1080 x 720 frames was not qualified.
 - **Not yet:** applying the solved camera (a matched Cinema camera, and 3D objects rendered over the footage), a page control, aerial views.
+- **Merged as `9fdd33f`** (PR #275; main's CI passed).
+
+**Blender match-move: objects over tracked footage, 2026-11-11:**
+- **The option:** `yamakan.blender.render` takes `plate: {trackJobId, metresPerUnit}`. The camera follows the track's solve, frame by frame (a frame the solve could not place takes the nearest before it), with the track's lens. Objects are placed in the first tracked camera's frame, in metres, and rendered with nothing behind them. The compositor puts them over the tracked video's frame at the same index.
+- **The worker** copies the tracked video read-only, as it does models. A plate needs the footage's shape and at most its frames, and allows no camera moves of its own, ground or finish.
+- **The probe first** (the separate Blender download only): headless compositing over a movie clip works in Blender 5.3 (Movie Clip node, Alpha Over, a transparent film), and the solved matrices apply directly to a camera.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender inside procd. The worker rendered an orbiting detail scene with a red marker box (the truth) and without it (the footage), tracked the footage, and rendered the marker over it with the solve:
+  - **the marker renders where the solved camera puts it** on every frame: 0.91 px mean and 1.32 px worst from its pinhole projection through the plate's own matrices and lens (the test asks for 3 px);
+  - **the footage behind it is the tracked video, frame for frame:** 1.93 levels mean difference away from the marker (the test asks for 4).
+
+  A plain test covers the plate's per-frame cameras: gaps held, metres, too-long and zero-scale refusals, and the scene refusing camera moves, ground or finish with a plate.
+- **Found, and stated:** placed by the real scene's geometry (its known camera and an orbit-derived scale), the marker drifts from where it truly was: 7 px on the first frame, rising to 34 px by the last, at 640 x 360. The solve's geometry differs a little from the truth (it read the 40-degree orbit as about 37). The first diagnostic run also showed that a brightness threshold had cut the marker's darker faces and moved its centre; the test now detects the marker by hue. The fix for drift is to place objects against tracked points, in the solve's own geometry, which is not yet offered.
+- **Not yet:** placement against tracked points (floor and origin from features), lighting matched to the footage, a page control, aerial views, object animation.
 

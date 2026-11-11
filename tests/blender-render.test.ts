@@ -9,6 +9,7 @@ import {
   BLENDER_SCENE_LIMITS,
   BlenderSceneSchema,
   blenderSceneFromCinema,
+  plateFromTrack,
 } from "../core/blender/scene.ts";
 import { blenderRuntime, blenderTreeDigests } from "../core/blender/runtime.ts";
 import { execute, Scopes } from "../core/command/registry.ts";
@@ -1808,3 +1809,326 @@ test(
     }
   },
 );
+
+test(
+  "objects rendered over tracked footage follow the solved camera, over the footage frame for frame",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-matchmove-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Match-move");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 640;
+      const H = 360;
+      const FRAMES = 36;
+      const boxes = [
+        { position: { x: -1.5, y: 0.5, z: -1 }, color: "#4a8ac8" },
+        { position: { x: 0, y: 0.5, z: 0 }, color: "#5ab05a" },
+        { position: { x: 1.5, y: 0.5, z: 1 }, color: "#c8b04a" },
+        { position: { x: 1, y: 0.5, z: -2 }, color: "#a04ac8" },
+        { position: { x: -1, y: 0.5, z: 2 }, color: "#4ac8c8" },
+      ];
+      const marker = {
+        position: { x: 0.6, y: 0.3, z: 1.4 },
+        scale: { x: 0.6, y: 0.6, z: 0.6 },
+        color: "#ff1010",
+      };
+      const shot = {
+        width: W,
+        height: H,
+        fps: 24 as const,
+        frames: FRAMES,
+        samples: 8,
+        orbitDegrees: 40,
+        surface: "detail" as const,
+      };
+      const render = async (
+        scene: ReturnType<typeof blenderSceneFromCinema>,
+        name: string,
+        plateAssetId?: string,
+      ) => {
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          name,
+          plateAssetId,
+        );
+        const done = await settled(supervisor, job.id, 900000);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        return /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+      };
+      const rawFrames = async (assetId: string) => {
+        const { file } = await store.assetFile(project.id, assetId);
+        return execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 28, timeout: 120000 },
+        );
+      };
+      // Every frame's red-pixel centroid, or null where there is none.
+      const centroids = async (assetId: string) => {
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 28, timeout: 120000 },
+        );
+        const out: ([number, number] | null)[] = [];
+        for (let f = 0; f < FRAMES; f++) {
+          let sx = 0;
+          let sy = 0;
+          let n = 0;
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) {
+              const i = (f * W * H + y * W + x) * 3;
+              if (
+                raw[i] > 25 &&
+                raw[i] > 2.2 * raw[i + 1] &&
+                raw[i] > 2.2 * raw[i + 2]
+              ) {
+                sx += x;
+                sy += y;
+                n++;
+              }
+            }
+          out.push(n >= 20 ? [sx / n, sy / n] : null);
+        }
+        return out;
+      };
+
+      // The truth (with the marker) and the footage (without it), from the same orbit.
+      const truthScene = blenderSceneFromCinema(
+        cinema([...boxes, marker]),
+        shot,
+      );
+      const plateScene = blenderSceneFromCinema(cinema(boxes), shot);
+      const truth = await render(truthScene, "truth");
+      const footage = await render(plateScene, "footage");
+      const lens = { focalLengthMm: 35, sensorWidthMm: 36 };
+      const trackJob = await supervisor.submitBlenderTrack(
+        project.id,
+        footage,
+        lens,
+      );
+      assert.equal(
+        (await settled(supervisor, trackJob.id, 900000)).state,
+        "COMPLETED",
+      );
+      const { track, assetId } = await supervisor.trackFootage(
+        project.id,
+        trackJob.id,
+      );
+      assert.equal(assetId, footage);
+
+      // The marker in the first camera's own frame (right, up, toward the viewer; metres),
+      // from the footage's known first camera.
+      const cam = plateScene.camera;
+      const sub = (a: { x: number; y: number; z: number }, b: typeof a) => [
+        a.x - b.x,
+        a.y - b.y,
+        a.z - b.z,
+      ];
+      const unit = (v: number[]) => {
+        const n = Math.hypot(...v);
+        return v.map((x) => x / n);
+      };
+      const cross = (a: number[], b: number[]) => [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      ];
+      const dot = (a: number[], b: number[]) =>
+        a.reduce((s, v, i) => s + v * b[i], 0);
+      const forward = unit(sub(cam.target, cam.position));
+      const right = unit(cross(forward, [0, 1, 0]));
+      const up = cross(right, forward);
+      const rel = sub(marker.position, cam.position);
+      const inCamera = {
+        x: dot(rel, right),
+        y: dot(rel, up),
+        z: -dot(rel, forward),
+      };
+      // The solve's scale from the known orbit: its chord in metres over the solved travel.
+      const radius = Math.hypot(
+        cam.position.x - cam.target.x,
+        cam.position.z - cam.target.z,
+      );
+      const chord = 2 * radius * Math.sin((20 * Math.PI) / 180);
+      const first = track.cameras[0].matrix;
+      const last = track.cameras.at(-1)!.matrix;
+      const travelled = Math.hypot(
+        last[3] - first[3],
+        last[7] - first[7],
+        last[11] - first[11],
+      );
+      const metresPerUnit = chord / travelled;
+
+      const overFootage = async (scale: number, name: string) => {
+        const scene = blenderSceneFromCinema(
+          cinema([{ ...marker, position: inCamera }]),
+          {
+            width: W,
+            height: H,
+            fps: 24,
+            frames: FRAMES,
+            samples: 8,
+            orbitDegrees: 0,
+          },
+          plateFromTrack(track, FRAMES, scale),
+        );
+        return render(scene, name, assetId);
+      };
+      const matched = await overFootage(metresPerUnit, "matched");
+      const plate = plateFromTrack(track, FRAMES, metresPerUnit);
+      // Where the marker's centre falls through each frame's solved camera (a pinhole with the
+      // track's lens, horizontal sensor fit), from the plate's own matrices.
+      const projected = plate.cameras.map((m) => {
+        const t = [m[3], m[7], m[11]];
+        const d = [inCamera.x - t[0], inCamera.y - t[1], inCamera.z - t[2]];
+        // Camera coordinates: Rᵀ·d (the rotation's columns are the camera's axes).
+        const c = [0, 1, 2].map(
+          (col) => m[col] * d[0] + m[4 + col] * d[1] + m[8 + col] * d[2],
+        );
+        const f = (plate.focalLengthMm / plate.sensorWidthMm) * W;
+        return [W / 2 + (f * c[0]) / -c[2], H / 2 - (f * c[1]) / -c[2]] as [
+          number,
+          number,
+        ];
+      });
+      const got = await centroids(matched);
+      const fromProjection = projected.map((e, i) =>
+        got[i] ? Math.hypot(e[0] - got[i]![0], e[1] - got[i]![1]) : Infinity,
+      );
+      // Away from the marker, the composited frames are the footage's frames.
+      const footageFrames = await rawFrames(footage);
+      const matchedFrames = await rawFrames(matched);
+      let diff = 0;
+      let counted = 0;
+      for (let f = 0; f < FRAMES; f++)
+        for (let y = 0; y < H; y += 2)
+          for (let x = 0; x < W; x += 2) {
+            const [px, py] = projected[f];
+            if (Math.hypot(x - px, y - py) < 60) continue;
+            const i = (f * W * H + y * W + x) * 3;
+            diff +=
+              Math.abs(footageFrames[i] - matchedFrames[i]) +
+              Math.abs(footageFrames[i + 1] - matchedFrames[i + 1]) +
+              Math.abs(footageFrames[i + 2] - matchedFrames[i + 2]);
+            counted += 3;
+          }
+      const background = diff / counted;
+      // For the record: the same marker placed by the true scene's geometry, against where it
+      // truly was. The solve's own geometry differs a little from the truth (it read a 40
+      // degree orbit as about 37), so placement by true geometry drifts; placing against tracked
+      // points is the next step.
+      const truthAt = await centroids(truth);
+      const fromTruth = truthAt.map((e, i) =>
+        e && got[i]
+          ? Math.hypot(e[0] - got[i]![0], e[1] - got[i]![1])
+          : Infinity,
+      );
+      const worst = Math.max(...fromProjection);
+      console.log(
+        "matchmove",
+        JSON.stringify({
+          metresPerUnit: +metresPerUnit.toFixed(4),
+          trackError: +track.averageErrorPixels.toFixed(3),
+          projectionMeanPx: +(
+            fromProjection.reduce((a, b) => a + b, 0) / FRAMES
+          ).toFixed(2),
+          projectionWorstPx: +worst.toFixed(2),
+          backgroundMeanLevels: +background.toFixed(2),
+          truthErrorsAt: [0, 12, 24, 35].map((i) => +fromTruth[i].toFixed(1)),
+        }),
+      );
+      // The marker renders where the solved camera puts it, on every frame.
+      assert.ok(worst <= 3, `worst ${worst} px from its projection`);
+      // And the footage behind it is the tracked video, frame for frame.
+      assert.ok(background <= 4, `background differs by ${background} levels`);
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+test("a plate gives every frame a solved camera, in metres, and refuses what it cannot take", () => {
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const at = (x: number) => [1, 0, 0, x, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  // A 12-frame track solved on frames 1-4, 6-12 (frame 5 missing).
+  const track = CameraTrackSchema.parse({
+    format: "yamakan.camera-track/1",
+    width: 640,
+    height: 360,
+    fps: 24,
+    frames: 12,
+    lens: { focalLengthMm: 35, sensorWidthMm: 36 },
+    tracks: 40,
+    averageErrorPixels: 0.5,
+    keyframes: [1, 8],
+    cameras: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12].map((frame) => ({
+      frame,
+      matrix: frame === 1 ? identity : at(frame / 10),
+    })),
+  });
+  const plate = plateFromTrack(track, 6, 2);
+  assert.equal(plate.cameras.length, 6);
+  // Translations in metres (2 per unit); the missing frame 5 holds frame 4's camera.
+  assert.deepEqual(
+    plate.cameras.map((m) => +m[3].toFixed(6)),
+    [0, 0.4, 0.6, 0.8, 0.8, 1.2],
+  );
+  assert.equal(plate.focalLengthMm, 35);
+  assert.throws(() => plateFromTrack(track, 13, 1), /no longer than/);
+  assert.throws(() => plateFromTrack(track, 6, 0), /positive/);
+  // A scene over footage: the camera makes no moves of its own, and there is no ground or finish.
+  const over = blenderSceneFromCinema(
+    cinema([{}]),
+    { ...settings, frames: 6 },
+    plate,
+  );
+  assert.equal(over.plate!.cameras.length, 6);
+  assert.equal(over.camera.focalLengthMm, 35);
+  for (const extra of [
+    { orbitDegrees: 30 },
+    { surface: "detail" as const },
+    { finish: "glow" as const },
+  ])
+    assert.throws(() =>
+      blenderSceneFromCinema(
+        cinema([{}]),
+        { ...settings, frames: 6, ...extra },
+        plate,
+      ),
+    );
+  // Every frame has its camera: a plate shorter than the render is refused.
+  assert.throws(() =>
+    blenderSceneFromCinema(cinema([{}]), { ...settings, frames: 7 }, plate),
+  );
+});
