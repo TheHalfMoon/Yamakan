@@ -604,4 +604,26 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
   A plain test checks the mapping from a Cinema item, the 8-model limit, and that a model object refuses a non-digest.
 - **Not yet:** the Cinema page button and preview (which will also exercise the service's model routes), tracking and aerial views.
+- **Merged as `d364530`** (PR #272; main's CI passed).
+
+**3D asset import, step 2c: the Cinema page, 2026-11-11:**
+- **"Add 3D model (.glb)"** on the Cinema page:
+  - checks the chosen file in the browser with the service's own .glb check, and shows its reason when it refuses;
+  - uploads the file to the open project and adds an item naming the stored model, unsaved until the person saves;
+  - adds at most 8 models, as many as one render takes. English and Arabic.
+- **The preview:**
+  - reads each model back from the project by digest and fits it to a 1 m box at its middle, as the Blender render does;
+  - shows a faint box until the model has loaded;
+  - loads embedded images as `<img>` elements from `blob:` URLs, which the page's existing image policy allows. The page's policy is unchanged; the loader's default would have fetched them, and the connect policy refuses that.
+- **SDK:** `cinemaModel` reads a stored model back.
+- **Evidence:**
+  - `tests/cinema-model-page.test.ts`, 5 tests: adding a model item (accepted by the scene schema); the 8-model and 200-object limits; the browser check and its reason; three.js loading and fitting (an offset, fifty-times-scaled bar fits the same 1 m box); English and Arabic strings.
+  - **`npm run qualify:cinema-model`**, with the real service, Microsoft Edge and the pinned Blender:
+    - the service's own routes refuse no session (401), another type (400, `Connection: close`) and an unknown model (404);
+    - a text file is refused on the page with the check's reason;
+    - a textured model chosen on the page is stored, named by a new item and shown with its texture (green pixels on the preview canvas 0 → 153), with nothing refused by the page's policy;
+    - the scene is saved, the page reloaded, and the model shown again from the project;
+    - the model is served back as `model/gltf-binary`, byte for byte the stored copy;
+    - rendered with Blender from the page (47 s), the model's texture is in the video (42 green pixels at 160 x 90; the check asks for more than 15).
+- **3D asset import is complete for still models:** check, store, place, preview, render. Tracking and aerial views are not started.
 
