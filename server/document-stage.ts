@@ -184,3 +184,63 @@ export async function uploadStudioBitmap(
 // Bitmap uploads in progress per principal (bodies stream to disk, so this
 // bounds open uploads and the GC deferral they cause, not memory).
 const bitmapUploads = new Map<string, number>();
+
+// POST /api/v1/projects/:projectId/cinema/models (3D asset import): one .glb
+// model into the project's object store, checked whole (core/cinema/glb.ts)
+// before it is stored. A Cinema scene item then names it by the returned
+// digest. Same order as bitmaps: flag, authorization, headers, then the body,
+// under the same deadline.
+export async function uploadCinemaModel(
+  store: ProjectStore,
+  principal: Principal,
+  projectId: string,
+  req: IncomingMessage,
+  enabled: boolean = creativeDocumentsEnabled(),
+  deadlineMs?: number,
+) {
+  if (!enabled) throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+  authorize(principal, "yamakan.document.commit");
+  if (header(req, "content-type") !== "model/gltf-binary")
+    throw new CommandError("VALIDATION", "3D models are model/gltf-binary.");
+  const length = header(req, "content-length");
+  if (!/^\d{1,9}$/.test(length) || Number(length) === 0)
+    throw new CommandError(
+      "VALIDATION",
+      "Model uploads require a Content-Length header.",
+    );
+  if (Number(length) > DOCUMENT_LIMITS.modelBytes)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      `A 3D model is at most ${DOCUMENT_LIMITS.modelBytes} bytes.`,
+    );
+  // Each model is held in memory while it is checked, so this bounds memory too.
+  const active = modelUploads.get(principal.id) ?? 0;
+  if (active >= DOCUMENT_LIMITS.activeModelUploadsPerPrincipal)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      "Too many model uploads in progress; wait for one to finish.",
+    );
+  modelUploads.set(principal.id, active + 1);
+  const timer = setTimeout(
+    () =>
+      req.destroy(
+        new CommandError("LIMIT_EXCEEDED", "The upload was too slow."),
+      ),
+    deadlineMs ?? stageDeadlineMs(Number(length)),
+  );
+  try {
+    return await store.importCinemaModel(
+      projectId,
+      req as AsyncIterable<Uint8Array>,
+      Number(length),
+      principal.id,
+    );
+  } finally {
+    clearTimeout(timer);
+    const left = (modelUploads.get(principal.id) ?? 1) - 1;
+    if (left > 0) modelUploads.set(principal.id, left);
+    else modelUploads.delete(principal.id);
+  }
+}
+
+const modelUploads = new Map<string, number>();

@@ -63,6 +63,7 @@ import type { DocumentRef } from "./documents.ts";
 import type { CommitContext as DocumentCommitContext } from "./story.ts";
 import { assertPlacementConsent } from "./continuity.ts";
 import { assertStudioImageLimits } from "./studio.ts";
+import { GlbError, canonicalGlb } from "./cinema/glb.ts";
 
 // A sealed staged upload as clients see it: never a host path.
 export type StagedDocumentReceipt = {
@@ -179,7 +180,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 17;
+export const WORKSPACE_SCHEMA_VERSION = 18;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -424,6 +425,20 @@ CREATE TABLE director_requests(
 `;
 // An agent token may end at a time the person chose when making it. A token made before this
 // step, or without one, does not end; revoking it still does.
+// Cinema 3D models (3D asset import): which content-addressed objects of a project are
+// checked .glb models (core/cinema/glb.ts), named by Cinema scene items by digest. Their
+// digests are kept in creative_documents.object_digests like Studio bitmaps'.
+const SCHEMA_V18 = `
+CREATE TABLE cinema_models(
+  project_id TEXT NOT NULL,
+  digest TEXT NOT NULL CHECK(length(digest) = 64),
+  byte_length INTEGER NOT NULL CHECK(byte_length > 0),
+  vertices INTEGER NOT NULL CHECK(vertices > 0),
+  triangles INTEGER NOT NULL CHECK(triangles >= 0),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(project_id, digest)
+) STRICT;
+`;
 const SCHEMA_V17 = `
 ALTER TABLE agent_tokens ADD COLUMN expires_at TEXT
   CHECK(expires_at IS NULL OR length(expires_at) = 24);
@@ -846,6 +861,7 @@ export class ProjectStore {
         SCHEMA_V15,
         SCHEMA_V16,
         SCHEMA_V17,
+        SCHEMA_V18,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
@@ -1423,6 +1439,9 @@ export class ProjectStore {
     const bitmap = db.prepare(
       "SELECT 1 FROM studio_bitmaps b JOIN asset_objects o ON o.project_id = b.project_id AND o.digest = b.digest WHERE b.project_id = ? AND b.digest = ? AND o.state = 'ready'",
     );
+    const model = db.prepare(
+      "SELECT 1 FROM cinema_models m JOIN asset_objects o ON o.project_id = m.project_id AND o.digest = m.digest WHERE m.project_id = ? AND m.digest = ? AND o.state = 'ready'",
+    );
     for (const ref of project.documents) {
       const row = read.get(ref.contentHash) as
         | {
@@ -1466,8 +1485,20 @@ export class ProjectStore {
           "VALIDATION",
           "Studio bitmaps must be image assets.",
         );
+      // A scene's models must be this project's stored models.
+      if (
+        ref.kind === "cinemaScene" &&
+        objectDigests.some((digest) => !model.get(project.id, digest))
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "A Cinema scene names a 3D model this project does not hold.",
+        );
       // Canvas bitmaps must be this project's stored Studio bitmaps.
-      if (objectDigests.some((digest) => !bitmap.get(project.id, digest)))
+      if (
+        ref.kind !== "cinemaScene" &&
+        objectDigests.some((digest) => !bitmap.get(project.id, digest))
+      )
         throw new CommandError(
           "VALIDATION",
           "A Studio canvas names a bitmap this project does not hold.",
@@ -2255,6 +2286,187 @@ export class ProjectStore {
       );
     return file;
   }
+  /**
+   * Stores one Cinema 3D model (.glb) in the project's content-addressed
+   * object store and registers it, so a Cinema scene item can name it by
+   * digest. The whole file is checked (core/cinema/glb.ts) before anything is
+   * stored, and what is stored is the checked copy with its description
+   * re-written from what the check parsed. Identical models are stored once;
+   * the registration happens inside the publication hold, so garbage
+   * collection never sees the object unregistered.
+   */
+  async importCinemaModel(
+    projectId: string,
+    source: AsyncIterable<Uint8Array>,
+    declaredBytes: number,
+    principalId?: string,
+  ): Promise<{
+    digest: string;
+    byteLength: number;
+    vertices: number;
+    triangles: number;
+    min: [number, number, number];
+    max: [number, number, number];
+  }> {
+    Id.parse(projectId);
+    if (!this.#head(projectId))
+      throw new CommandError("NOT_FOUND", "Project not found.");
+    if (
+      !Number.isSafeInteger(declaredBytes) ||
+      declaredBytes < 20 ||
+      declaredBytes > DOCUMENT_LIMITS.modelBytes
+    )
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        `A 3D model is a .glb file of at most ${DOCUMENT_LIMITS.modelBytes} bytes.`,
+      );
+    const free = this.#options.freeBytes
+      ? this.#options.freeBytes()
+      : (() => {
+          const space = statfsSync(this.root);
+          return Number(space.bavail) * Number(space.bsize);
+        })();
+    if (free < declaredBytes + RESOURCE_POLICY.enforced.diskReserveBytes)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Insufficient free disk space to store a 3D model.",
+      );
+    // The project's and the workspace's model budgets, checked before the
+    // upload is read and again when the model is registered.
+    const overBudget = (
+      db: DatabaseSync,
+      digest: string | null,
+      bytes: number,
+    ) => {
+      const used = db
+        .prepare(
+          "SELECT count(*) AS n, coalesce(sum(byte_length), 0) AS bytes FROM cinema_models WHERE project_id = ? AND digest IS NOT ?",
+        )
+        .get(projectId, digest) as { n: number; bytes: number };
+      const all = db
+        .prepare(
+          "SELECT coalesce(sum(byte_length), 0) AS bytes FROM cinema_models WHERE NOT (project_id = ? AND digest IS ?)",
+        )
+        .get(projectId, digest) as { bytes: number };
+      return (
+        used.n + 1 > budgetFor(DOCUMENT_LIMITS.projectModels, principalId) ||
+        used.bytes + bytes >
+          budgetFor(DOCUMENT_LIMITS.projectModelBytes, principalId) ||
+        all.bytes + bytes >
+          budgetFor(DOCUMENT_LIMITS.workspaceModelBytes, principalId)
+      );
+    };
+    const full =
+      "3D model space is full; unused models are freed by garbage collection (hourly, an hour after they were last used).";
+    if (overBudget(this.#database, null, declaredBytes))
+      throw new CommandError("LIMIT_EXCEEDED", full);
+    // The whole file is needed to check it; it is read up to its declared length only.
+    const file = Buffer.alloc(declaredBytes);
+    let size = 0;
+    for await (const chunk of source) {
+      if (size + chunk.byteLength > declaredBytes)
+        throw new CommandError(
+          "VALIDATION",
+          "The model is longer than its declared length.",
+        );
+      file.set(chunk, size);
+      size += chunk.byteLength;
+    }
+    if (size !== declaredBytes)
+      throw new CommandError(
+        "VALIDATION",
+        "A 3D model must be a complete .glb file of its declared length.",
+      );
+    let checked: ReturnType<typeof canonicalGlb>;
+    try {
+      checked = canonicalGlb(file);
+    } catch (e) {
+      if (e instanceof GlbError)
+        throw new CommandError("VALIDATION", e.message);
+      throw e;
+    }
+    const { bytes, summary } = checked;
+    const release = await this.beginPublication(projectId);
+    try {
+      await this.#ensureDirectories(projectId);
+      const stored = await (
+        await this.#objects(projectId)
+      ).put(
+        (async function* () {
+          yield bytes;
+        })(),
+      );
+      this.transaction((db) => {
+        const object = db
+          .prepare(
+            "SELECT state FROM asset_objects WHERE project_id = ? AND digest = ?",
+          )
+          .get(projectId, stored.sha256) as { state: string } | undefined;
+        if (object && object.state !== "ready")
+          throw new CommandError(
+            "RECOVERY_REQUIRED",
+            "This model's stored copy is quarantined; restore a verified backup.",
+          );
+        const known = db
+          .prepare(
+            "SELECT 1 FROM cinema_models WHERE project_id = ? AND digest = ?",
+          )
+          .get(projectId, stored.sha256);
+        if (!known && overBudget(db, stored.sha256, stored.byteLength))
+          throw new CommandError("LIMIT_EXCEEDED", full);
+        if (!object)
+          db.prepare(
+            "INSERT INTO asset_objects(project_id, digest, byte_length, state, generation) VALUES (?, ?, ?, 'ready', 1)",
+          ).run(projectId, stored.sha256, stored.byteLength);
+        db.prepare(
+          "INSERT INTO cinema_models(project_id, digest, byte_length, vertices, triangles, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(project_id, digest) DO UPDATE SET created_at = excluded.created_at",
+        ).run(
+          projectId,
+          stored.sha256,
+          stored.byteLength,
+          summary.vertices,
+          summary.triangles,
+          Date.now(),
+        );
+      });
+      return {
+        digest: stored.sha256,
+        byteLength: stored.byteLength,
+        vertices: summary.vertices,
+        triangles: summary.triangles,
+        min: summary.min,
+        max: summary.max,
+      };
+    } finally {
+      release();
+    }
+  }
+  // The stored file of one of this project's Cinema 3D models.
+  async cinemaModelFile(projectId: string, digest: string) {
+    Id.parse(projectId);
+    if (!/^[a-f0-9]{64}$/.test(digest))
+      throw new CommandError("NOT_FOUND", "Model not found.");
+    const row = this.#database
+      .prepare(
+        "SELECT m.byte_length FROM cinema_models m JOIN asset_objects o ON o.project_id = m.project_id AND o.digest = m.digest WHERE m.project_id = ? AND m.digest = ? AND o.state = 'ready'",
+      )
+      .get(projectId, digest) as { byte_length: number } | undefined;
+    if (!row) throw new CommandError("NOT_FOUND", "Model not found.");
+    const file = await this.file(
+      projectId,
+      "objects",
+      "sha256",
+      digest.slice(0, 2),
+      digest,
+    );
+    const info = await lstat(file).catch(() => null);
+    if (!info?.isFile() || info.size !== row.byte_length)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "A 3D model's stored copy is missing or damaged.",
+      );
+    return file;
+  }
   // Migration only (T3): import a project's verified history with its original
   // revision numbers into this workspace in one transaction. Refuses a project
   // that already exists; nothing is committed if any revision is invalid.
@@ -2587,20 +2799,22 @@ export class ProjectStore {
       }
     }
     await this.#collectHiddenVfrOriginals(report);
-    await this.#collectStudioBitmaps(report, graceMs, now);
+    await this.#collectNamedObjects(report, graceMs, now, "studio_bitmaps");
+    await this.#collectNamedObjects(report, graceMs, now, "cinema_models");
     return report;
   }
-  // Studio bitmaps no retained revision's document (and no sealed upload
-  // awaiting its commit) names, once older than the grace period: a save in
-  // progress uploads its bitmaps before committing the document.
-  async #collectStudioBitmaps(
+  // Studio bitmaps or Cinema models no retained revision's document (and no
+  // sealed upload awaiting its commit) names, once older than the grace
+  // period: a save in progress uploads them before committing the document.
+  async #collectNamedObjects(
     report: { objects: number; bytes: number },
     graceMs: number,
     now: number,
+    table: "studio_bitmaps" | "cinema_models",
   ) {
     const db = this.#database;
     const projects = db
-      .prepare("SELECT DISTINCT project_id FROM studio_bitmaps")
+      .prepare(`SELECT DISTINCT project_id FROM ${table}`)
       .all() as { project_id: string }[];
     for (const { project_id: projectId } of projects) {
       if (
@@ -2627,7 +2841,7 @@ export class ProjectStore {
         const stale = (
           inner
             .prepare(
-              "SELECT digest, byte_length FROM studio_bitmaps WHERE project_id = ? AND created_at < ?",
+              `SELECT digest, byte_length FROM ${table} WHERE project_id = ? AND created_at < ?`,
             )
             .all(projectId, now - graceMs) as {
             digest: string;
@@ -2637,9 +2851,7 @@ export class ProjectStore {
         const files: { digest: string; bytes: number }[] = [];
         for (const b of stale) {
           inner
-            .prepare(
-              "DELETE FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
-            )
+            .prepare(`DELETE FROM ${table} WHERE project_id = ? AND digest = ?`)
             .run(projectId, b.digest);
           // The same bytes may also be an imported asset's: keep them then.
           const shared = inner
@@ -2807,7 +3019,12 @@ export class ProjectStore {
           "SELECT 1 FROM studio_bitmaps WHERE project_id = ? AND digest = ?",
         )
         .get(projectId, version.digest);
-      if (shared || bitmap) return null;
+      const model = db
+        .prepare(
+          "SELECT 1 FROM cinema_models WHERE project_id = ? AND digest = ?",
+        )
+        .get(projectId, version.digest);
+      if (shared || bitmap || model) return null;
       db.prepare(
         "DELETE FROM asset_objects WHERE project_id = ? AND digest = ?",
       ).run(projectId, version.digest);

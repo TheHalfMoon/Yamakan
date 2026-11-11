@@ -668,6 +668,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
       Date.now(),
       Date.now() + 3_600_000,
     );
+    db.exec("DROP TABLE IF EXISTS cinema_models");
     db.exec("DROP TABLE IF EXISTS send_consent_covers");
     db.exec("DROP TABLE IF EXISTS asset_replacements");
     // Schema 17's column, so the upgrade adds it again (a refused upgrade never added it).
@@ -719,7 +720,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   const upgraded = new ProjectStore(c.root);
   handles.push(upgraded);
   await upgraded.initialize();
-  assert.equal(read("PRAGMA user_version").user_version, 17);
+  assert.equal(read("PRAGMA user_version").user_version, 18);
   const db = new DatabaseSync(file, { readOnly: true });
   try {
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);

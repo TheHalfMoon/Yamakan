@@ -29,6 +29,14 @@ export const DOCUMENT_LIMITS = Object.freeze({
   workspaceDocumentBytes: 4 * 1024 * 1024 * 1024,
   // Bitmap uploads one principal may have in progress at once.
   activeBitmapUploadsPerPrincipal: 2,
+  // Cinema 3D models (.glb, core/cinema/glb.ts): one model, a project's and the workspace's
+  // models, and uploads in progress. A model is checked whole, so it is held in memory while
+  // it is checked; at most two per principal.
+  modelBytes: 64 * 1024 * 1024,
+  projectModelBytes: 2 * 1024 * 1024 * 1024,
+  projectModels: 1_000,
+  workspaceModelBytes: 8 * 1024 * 1024 * 1024,
+  activeModelUploadsPerPrincipal: 2,
   // No principal holds more than one document's worth, and agents share
   // one more document's worth between them, so agents can never lock out
   // the person at the keyboard or the local CLI and SDK.
