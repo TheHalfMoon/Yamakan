@@ -270,7 +270,7 @@ test("compression, extra texture formats and unknown extensions are refused", ()
         KHR_draco_mesh_compression: { bufferView: 0, attributes: {} },
       };
     }),
-    /extension/,
+    /KHR_draco_mesh_compression/,
   );
 });
 
@@ -356,7 +356,7 @@ test("buffers, views and accessors that point outside the file are refused", () 
     changed((g) => {
       g.accessors[0].bufferView = 9;
     }),
-    /no buffer view/,
+    /not stored in the file/,
   );
   refused(
     changed((g) => {
@@ -422,18 +422,9 @@ test("meshes must be triangles with 3D float positions and finite bounds", () =>
     }),
     /3D floats/,
   );
-  refused(
-    changed((g) => {
-      delete g.accessors[0].max;
-    }),
-    /finite bounds/,
-  );
-  refused(
-    changed((g) => {
-      g.accessors[0].max = [1, 2, "x"];
-    }),
-    /finite bounds/,
-  );
+  const nan = triangleBin();
+  new DataView(nan.buffer).setFloat32(4, Number.NaN, true);
+  refused(glb(triangle(), nan), /not a number/);
   refused(
     changed((g) => {
       g.meshes = [];
@@ -549,4 +540,296 @@ test("vertex and triangle counts over the limits are refused before the indices 
     type: "SCALAR",
   };
   refused(glb(t, big), /too many triangles/);
+});
+
+test("the extent is measured from the positions, not taken from the file's word", () => {
+  const g = triangle() as Record<string, any>;
+  g.accessors[0].min = [-1e30, -1e30, -1e30];
+  g.accessors[0].max = [1e30, 1e30, 1e30];
+  const summary = checkGlb(glb(g));
+  assert.deepEqual(
+    [summary.min, summary.max],
+    [
+      [0, 0, 0],
+      [1, 2, 0],
+    ],
+  );
+});
+
+test("extensions are refused wherever they are declared, not only in the lists", () => {
+  const cases: [string, (g: Record<string, any>) => void][] = [
+    [
+      "EXT_meshopt_compression",
+      (g) => {
+        g.bufferViews[0].extensions = { EXT_meshopt_compression: {} };
+      },
+    ],
+    [
+      "KHR_texture_basisu",
+      (g) => {
+        g.textures = [{ extensions: { KHR_texture_basisu: { source: 0 } } }];
+      },
+    ],
+    [
+      "EXT_mesh_gpu_instancing",
+      (g) => {
+        g.nodes[0].extensions = {
+          EXT_mesh_gpu_instancing: { attributes: { TRANSLATION: 0 } },
+        };
+      },
+    ],
+    [
+      "KHR_materials_variants",
+      (g) => {
+        g.materials = [{ extensions: { KHR_materials_variants: {} } }];
+      },
+    ],
+    [
+      "KHR_draco_mesh_compression",
+      (g) => {
+        g.meshes[0].primitives[0].extensions = {
+          KHR_draco_mesh_compression: { bufferView: 0, attributes: {} },
+        };
+      },
+    ],
+    [
+      "whole file",
+      (g) => {
+        g.extensions = { KHR_materials_unlit: {} };
+      },
+    ],
+  ];
+  for (const [name, edit] of cases) refused(changed(edit), new RegExp(name));
+  // An allowed one on a material still passes.
+  const ok = triangle() as Record<string, any>;
+  ok.materials = [{ extensions: { KHR_materials_emissive_strength: {} } }];
+  ok.meshes[0].primitives[0].material = 0;
+  assert.equal(checkGlb(glb(ok)).materials, 1);
+});
+
+test("data that is not stored in the file, or overlaps, is refused", () => {
+  refused(
+    changed((g) => {
+      delete g.accessors[0].bufferView;
+    }),
+    /not stored in the file/,
+  );
+  // A huge zero-filled normal list beside a three-vertex triangle.
+  refused(
+    changed((g) => {
+      g.accessors.push({
+        componentType: 5126,
+        count: 10_000_000,
+        type: "MAT4",
+      });
+      g.meshes[0].primitives[0].attributes.NORMAL = 2;
+    }),
+    /not stored in the file/,
+  );
+  refused(
+    changed((g) => {
+      g.meshes[0].primitives[0].targets = [{ POSITION: 0 }];
+    }),
+    /morph targets/,
+  );
+  refused(
+    changed((g) => {
+      g.meshes[0].weights = [1];
+    }),
+    /morph targets/,
+  );
+  refused(
+    changed((g) => {
+      g.nodes[0].weights = [1];
+    }),
+    /morph targets/,
+  );
+  // Elements that overlap each other (a stride shorter than one position).
+  refused(
+    changed((g) => {
+      g.bufferViews[0].byteStride = 4;
+    }),
+    /overlap/,
+  );
+  refused(
+    changed((g) => {
+      g.accessors[1].byteOffset = 1;
+      g.bufferViews[1].byteLength = 8;
+    }),
+    /not aligned/,
+  );
+  refused(
+    changed((g) => {
+      g.bufferViews[1].byteStride = 4;
+      g.bufferViews[1].byteLength = 8;
+      g.accessors[1].count = 1;
+    }),
+    /indices are malformed/,
+  );
+});
+
+test("a part's other data must be known, in range and match its vertex count", () => {
+  refused(
+    changed((g) => {
+      g.meshes[0].primitives[0].attributes.JOINTS_0 = 0;
+    }),
+    /JOINTS_0/,
+  );
+  refused(
+    changed((g) => {
+      g.meshes[0].primitives[0].attributes.NORMAL = 99;
+    }),
+    /points at nothing/,
+  );
+  refused(
+    changed((g) => {
+      g.meshes[0].primitives[0].attributes.TEXCOORD_0 = "x";
+    }),
+    /points at nothing/,
+  );
+  // A normal list with one entry for a three-vertex part.
+  refused(
+    changed((g) => {
+      g.accessors.push({
+        bufferView: 0,
+        componentType: 5126,
+        count: 1,
+        type: "VEC3",
+      });
+      g.meshes[0].primitives[0].attributes.NORMAL = 2;
+    }),
+    /does not match its vertices/,
+  );
+  // The same stored data named by every attribute slot, counted for each use, past the limit.
+  const big = 1_500_000;
+  const bin = new Uint8Array(big * 12);
+  const shared = triangle() as Record<string, any>;
+  shared.buffers[0].byteLength = bin.byteLength;
+  shared.bufferViews = [{ buffer: 0, byteLength: bin.byteLength }];
+  shared.accessors = [
+    { bufferView: 0, componentType: 5126, count: big, type: "VEC3" },
+  ];
+  const slots = [0, 1, 2, 3, 4, 5, 6, 7];
+  shared.meshes = [
+    {
+      primitives: [
+        {
+          attributes: {
+            POSITION: 0,
+            NORMAL: 0,
+            ...Object.fromEntries(slots.map((i) => [`TEXCOORD_${i}`, 0])),
+            ...Object.fromEntries(slots.map((i) => [`COLOR_${i}`, 0])),
+          },
+        },
+      ],
+    },
+  ];
+  refused(glb(shared, bin), /more data than is taken/);
+});
+
+test("references between parts must point at something", () => {
+  const cases: [RegExp, (g: Record<string, any>) => void][] = [
+    [/node's mesh/, (g) => (g.nodes[0].mesh = 50)],
+    [/child points at nothing/, (g) => (g.nodes[0].children = [9])],
+    [/more than one parent/, (g) => (g.nodes[0].children = [0])],
+    [
+      /more than one parent/,
+      (g) => {
+        g.nodes.push({}, { children: [1] });
+        g.nodes[0].children = [1];
+      },
+    ],
+    [
+      /in a loop/,
+      (g) => {
+        g.nodes = [{ children: [1] }, { children: [0], mesh: 0 }];
+        g.scenes = [{ nodes: [] }];
+      },
+    ],
+    [
+      /nested too deeply/,
+      (g) => {
+        const length = GLB_LIMITS.nodeDepth + 2;
+        g.nodes = Array.from({ length }, (_, i) =>
+          i + 1 < length ? { children: [i + 1] } : { mesh: 0 },
+        );
+      },
+    ],
+    [/not a root/, (g) => (g.scenes[0].nodes = [77])],
+    [
+      /not a root/,
+      (g) => {
+        g.nodes = [{ children: [1] }, { mesh: 0 }];
+        g.scenes[0].nodes = [1];
+      },
+    ],
+    [/default scene/, (g) => (g.scene = 4)],
+    [/material/, (g) => (g.meshes[0].primitives[0].material = 33)],
+    [/texture's image/, (g) => (g.textures = [{ source: 99 }])],
+    [
+      /material's texture/,
+      (g) => {
+        g.materials = [
+          { pbrMetallicRoughness: { baseColorTexture: { index: 7 } } },
+        ];
+      },
+    ],
+    [
+      /material's texture/,
+      (g) => (g.materials = [{ normalTexture: { index: 0 } }]),
+    ],
+  ];
+  for (const [pattern, edit] of cases) refused(changed(edit), pattern);
+});
+
+test("type names that are not glTF's are refused, even ones every object has", () => {
+  for (const [componentType, type] of [
+    ["constructor", "toString"],
+    ["__proto__", "__proto__"],
+    ["5126", "VEC3"],
+    [5126, "hasOwnProperty"],
+  ])
+    refused(
+      changed((g) => {
+        g.accessors.push({
+          bufferView: 0,
+          componentType,
+          type,
+          count: 10_000_000,
+          byteOffset: 999_999,
+        });
+      }),
+      /unknown data type/,
+    );
+});
+
+test("a byte-order mark, a short image and the wrong argument type are refused", () => {
+  // The description starts with the UTF-8 byte-order mark; the JSON is otherwise unchanged.
+  const g = triangle();
+  const raw = glb(g);
+  const json = new TextEncoder().encode(JSON.stringify(g));
+  const jsonLength = Math.ceil((json.byteLength + 3) / 4) * 4;
+  const binStart = 20 + new DataView(raw.buffer).getUint32(12, true);
+  const binChunk = raw.subarray(binStart);
+  const out = new Uint8Array(20 + jsonLength + binChunk.byteLength);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546c67, true);
+  dv.setUint32(4, 2, true);
+  dv.setUint32(8, out.byteLength, true);
+  dv.setUint32(12, jsonLength, true);
+  dv.setUint32(16, 0x4e4f534a, true);
+  out.fill(0x20, 20, 20 + jsonLength);
+  out.set([0xef, 0xbb, 0xbf], 20);
+  out.set(json, 23);
+  out.set(binChunk, 20 + jsonLength);
+  refused(out, /not valid JSON/);
+  // The same file without the mark passes.
+  out.fill(0x20, 20, 23);
+  assert.equal(checkGlb(out).triangles, 1);
+
+  const short = triangle() as Record<string, any>;
+  short.bufferViews.push({ buffer: 0, byteOffset: 40, byteLength: 2 });
+  short.images = [{ bufferView: 2, mimeType: "image/png" }];
+  refused(glb(short), /not what it says/);
+  refused(new ArrayBuffer(64) as unknown as Uint8Array, /not a \.glb/);
 });

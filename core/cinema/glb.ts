@@ -2,9 +2,10 @@
 // (Blender integration, 3D asset import). Only binary glTF 2.0 (.glb) is taken, and only a
 // plain, self-contained one: one JSON chunk and at most one binary chunk, no reference to any
 // other file or URL, no data URIs, no compression or texture formats that would run extra
-// decoders, no skins, animations, cameras or lights, and every index and range inside the file.
-// What passes is counted and bounded; nothing here runs the model's contents. Pure: the browser
-// bundle can use it too.
+// decoders, no skins, animations, morph targets, cameras or lights, every reference between
+// its parts in range, and all data it describes stored in the file and bounded. What passes is
+// counted, and its extent is measured from the positions themselves; nothing here runs the
+// model's contents. Pure: the browser bundle can use it too.
 
 export const GLB_LIMITS = Object.freeze({
   bytes: 64 * 1024 * 1024,
@@ -12,14 +13,19 @@ export const GLB_LIMITS = Object.freeze({
   jsonDepth: 32,
   jsonValues: 200_000,
   nodes: 10_000,
+  nodeDepth: 64,
   meshes: 1_000,
   primitives: 10_000,
   materials: 256,
+  textures: 256,
+  samplers: 256,
   images: 32,
   imageBytes: 16 * 1024 * 1024,
   vertices: 2_000_000,
   triangles: 2_000_000,
   accessorCount: 10_000_000,
+  // Bytes the importer would read for every attribute and index list, counted per use.
+  decodedBytes: 256 * 1024 * 1024,
 });
 
 // Extensions that only describe materials or texture placement; none of them adds a decoder.
@@ -39,7 +45,7 @@ export type GlbSummary = {
   triangles: number;
   materials: number;
   images: number;
-  // The model's extent, from its positions' min and max (glTF requires them).
+  // The model's extent, measured from its positions.
   min: [number, number, number];
   max: [number, number, number];
 };
@@ -52,43 +58,34 @@ const MAGIC = 0x46546c67; // "glTF"
 const JSON_CHUNK = 0x4e4f534a; // "JSON"
 const BIN_CHUNK = 0x004e4942; // "BIN\0"
 
-const COMPONENT_BYTES: Record<number, number> = {
-  5120: 1,
-  5121: 1,
-  5122: 2,
-  5123: 2,
-  5125: 4,
-  5126: 4,
-};
-const TYPE_COMPONENTS: Record<string, number> = {
-  SCALAR: 1,
-  VEC2: 2,
-  VEC3: 3,
-  VEC4: 4,
-  MAT2: 4,
-  MAT3: 9,
-  MAT4: 16,
-};
+const COMPONENT_BYTES = new Map<unknown, number>([
+  [5120, 1],
+  [5121, 1],
+  [5122, 2],
+  [5123, 2],
+  [5125, 4],
+  [5126, 4],
+]);
+const TYPE_COMPONENTS = new Map<unknown, number>([
+  ["SCALAR", 1],
+  ["VEC2", 2],
+  ["VEC3", 3],
+  ["VEC4", 4],
+  ["MAT2", 4],
+  ["MAT3", 9],
+  ["MAT4", 16],
+]);
+// Vertex data a still mesh may carry; joints and weights belong to skins, which are refused.
+const ATTRIBUTE = /^(POSITION|NORMAL|TANGENT|TEXCOORD_[0-7]|COLOR_[0-7])$/;
+const TEXTURE_SLOTS = [
+  "baseColorTexture",
+  "metallicRoughnessTexture",
+  "normalTexture",
+  "occlusionTexture",
+  "emissiveTexture",
+];
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
-
-// Walks the parsed JSON once: bounded depth and size, and no "uri" anywhere (a reference to
-// another file, a URL or a data URI).
-function walk(value: Json, depth: number, count: { n: number }) {
-  if (++count.n > GLB_LIMITS.jsonValues)
-    fail("The model's description is too large.");
-  if (depth > GLB_LIMITS.jsonDepth)
-    fail("The model's description is nested too deeply.");
-  if (Array.isArray(value)) for (const v of value) walk(v, depth + 1, count);
-  else if (value && typeof value === "object")
-    for (const [k, v] of Object.entries(value)) {
-      if (k === "uri")
-        fail(
-          "The model refers to another file or a URL; only a self-contained .glb is taken.",
-        );
-      walk(v, depth + 1, count);
-    }
-}
 
 const isIndex = (v: unknown, length: number) =>
   Number.isInteger(v) && (v as number) >= 0 && (v as number) < length;
@@ -106,9 +103,40 @@ const nonNegInt = (v: unknown, what: string) =>
   Number.isInteger(v) && (v as number) >= 0
     ? (v as number)
     : fail(`The model's ${what} is not a whole number.`);
+const optIndex = (v: unknown, length: number, what: string) => {
+  if (v !== undefined && !isIndex(v, length))
+    fail(`The model's ${what} points at nothing.`);
+};
+
+// Walks the parsed JSON once: bounded depth and size, no "uri" anywhere (a reference to another
+// file, a URL or a data URI), and no extension outside the allowlist wherever it is declared.
+function walk(value: Json, depth: number, count: { n: number }) {
+  if (++count.n > GLB_LIMITS.jsonValues)
+    fail("The model's description is too large.");
+  if (depth > GLB_LIMITS.jsonDepth)
+    fail("The model's description is nested too deeply.");
+  if (Array.isArray(value)) for (const v of value) walk(v, depth + 1, count);
+  else if (value && typeof value === "object")
+    for (const [k, v] of Object.entries(value)) {
+      if (k === "uri")
+        fail(
+          "The model refers to another file or a URL; only a self-contained .glb is taken.",
+        );
+      if (k === "extensions") {
+        if (depth === 0) fail("The model uses extensions on the whole file.");
+        for (const name of Object.keys(obj(v)))
+          if (!GLB_EXTENSIONS.includes(name))
+            fail(
+              `The model uses ${name}, which is not taken (no compression or extra texture formats).`,
+            );
+      }
+      walk(v, depth + 1, count);
+    }
+}
 
 /** Checks a .glb file and returns what it holds, or throws a GlbError saying why it is refused. */
 export function checkGlb(file: Uint8Array): GlbSummary {
+  if (!(file instanceof Uint8Array)) fail("This is not a .glb file.");
   if (file.byteLength > GLB_LIMITS.bytes)
     fail("The model is larger than 64 MiB.");
   if (file.byteLength < 20) fail("This is not a .glb file.");
@@ -128,7 +156,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     20 + jsonLength > file.byteLength
   )
     fail("The model's description chunk is malformed or too large.");
-  let bin: Uint8Array | null = null;
+  let bin: Uint8Array = new Uint8Array(0);
   const afterJson = 20 + jsonLength;
   if (afterJson < file.byteLength) {
     if (afterJson + 8 > file.byteLength)
@@ -140,7 +168,11 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       fail("The model's binary chunk does not end the file.");
     bin = file.subarray(afterJson + 8, afterJson + 8 + binLength);
   }
+  const data = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
 
+  // A byte-order mark is refused: Blender's JSON reader would not take it.
+  if (file[20] === 0xef && file[21] === 0xbb && file[22] === 0xbf)
+    fail("The model's description is not valid JSON.");
   let gltf: Record<string, unknown>;
   try {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(
@@ -173,11 +205,11 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   const bufferLength = buffers.length
     ? nonNegInt(buffers[0].byteLength, "buffer length")
     : 0;
-  if (buffers.length && (!bin || bufferLength > bin.byteLength))
+  if (buffers.length && bufferLength > bin.byteLength)
     fail("The model's buffer is not its binary chunk.");
 
-  const views = arr(gltf.bufferViews).map(obj);
-  for (const v of views) {
+  const views = arr(gltf.bufferViews).map((raw) => {
+    const v = obj(raw);
     if (v.buffer !== 0 || !buffers.length)
       fail("A buffer view points outside the model.");
     const offset =
@@ -187,37 +219,51 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     const length = nonNegInt(v.byteLength, "buffer view length");
     if (offset + length > bufferLength)
       fail("A buffer view runs past the model's data.");
+    let stride: number | undefined;
     if (v.byteStride !== undefined) {
-      const stride = nonNegInt(v.byteStride, "buffer view stride");
+      stride = nonNegInt(v.byteStride, "buffer view stride");
       if (stride < 4 || stride > 252 || stride % 4 !== 0)
         fail("A buffer view has an invalid stride.");
     }
-  }
+    return { offset, length, stride };
+  });
 
-  const accessors = arr(gltf.accessors).map(obj);
-  for (const a of accessors) {
+  // Every accessor is stored in the file (no zero-filled ones), fits its view, and is aligned.
+  const accessors = arr(gltf.accessors).map((raw) => {
+    const a = obj(raw);
     if (a.sparse !== undefined)
       fail("The model uses sparse data, which is not taken for now.");
-    const size = COMPONENT_BYTES[a.componentType as number];
-    const components = TYPE_COMPONENTS[a.type as string];
-    if (!size || !components) fail("An accessor has an unknown data type.");
+    const size = COMPONENT_BYTES.get(a.componentType);
+    const components = TYPE_COMPONENTS.get(a.type);
+    if (size === undefined || components === undefined)
+      return fail("An accessor has an unknown data type.");
     const count = nonNegInt(a.count, "accessor count");
     if (count < 1 || count > GLB_LIMITS.accessorCount)
       fail("An accessor's count is out of range.");
-    if (a.bufferView === undefined) continue;
     if (!isIndex(a.bufferView, views.length))
-      fail("An accessor points at no buffer view.");
+      fail("An accessor's data is not stored in the file.");
     const bv = views[a.bufferView as number];
     const element = size * components;
-    const stride =
-      bv.byteStride === undefined ? element : (bv.byteStride as number);
+    const stride = bv.stride ?? element;
+    if (stride < element) fail("An accessor's elements overlap.");
     const offset =
       a.byteOffset === undefined
         ? 0
         : nonNegInt(a.byteOffset, "accessor offset");
-    if (offset + (count - 1) * stride + element > (bv.byteLength as number))
+    if ((bv.offset + offset) % size !== 0)
+      fail("An accessor's data is not aligned.");
+    if (offset + (count - 1) * stride + element > bv.length)
       fail("An accessor runs past its buffer view.");
-  }
+    return {
+      raw: a,
+      size,
+      count,
+      element,
+      stride,
+      start: bv.offset + offset,
+      viewStride: bv.stride,
+    };
+  });
 
   const images = arr(gltf.images).map(obj);
   if (images.length > GLB_LIMITS.images) fail("The model has too many images.");
@@ -227,10 +273,8 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     if (!isIndex(img.bufferView, views.length))
       fail("A model image is not stored inside the file.");
     const bv = views[img.bufferView as number];
-    const start = bv.byteOffset === undefined ? 0 : (bv.byteOffset as number);
-    const length = bv.byteLength as number;
-    if (length > GLB_LIMITS.imageBytes) fail("A model image is too large.");
-    const head = bin!.subarray(start, start + 4);
+    if (bv.length > GLB_LIMITS.imageBytes) fail("A model image is too large.");
+    const head = bin.subarray(bv.offset, bv.offset + Math.min(bv.length, 4));
     const png =
       head[0] === 0x89 &&
       head[1] === 0x50 &&
@@ -243,108 +287,155 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     )
       fail("A model image's bytes are not what it says it is.");
   }
-
-  const materials = arr(gltf.materials);
+  const samplers = arr(gltf.samplers).map(obj);
+  if (samplers.length > GLB_LIMITS.samplers)
+    fail("The model has too many samplers.");
+  const textures = arr(gltf.textures).map(obj);
+  if (textures.length > GLB_LIMITS.textures)
+    fail("The model has too many textures.");
+  for (const t of textures) {
+    if (!isIndex(t.source, images.length))
+      fail("A texture's image points at nothing.");
+    optIndex(t.sampler, samplers.length, "texture sampler");
+  }
+  const materials = arr(gltf.materials).map(obj);
   if (materials.length > GLB_LIMITS.materials)
     fail("The model has too many materials.");
-  const nodes = arr(gltf.nodes).map(obj);
-  if (nodes.length > GLB_LIMITS.nodes) fail("The model has too many nodes.");
-  for (const n of nodes) {
-    if (n.camera !== undefined || n.skin !== undefined)
-      fail("The model has cameras or skins; only still meshes are taken.");
-    if (obj(n.extensions ?? {}).KHR_lights_punctual !== undefined)
-      fail("The model has lights; only meshes are taken.");
+  for (const m of materials) {
+    const pbr = obj(m.pbrMetallicRoughness ?? {});
+    for (const slot of TEXTURE_SLOTS) {
+      const info = m[slot] ?? pbr[slot];
+      if (info === undefined) continue;
+      if (!isIndex(obj(info).index, textures.length))
+        fail("A material's texture points at nothing.");
+      if (obj(info).texCoord !== undefined)
+        nonNegInt(obj(info).texCoord, "texture coordinate set");
+    }
   }
-  if (!arr(gltf.scenes).length) fail("The model has no scene.");
 
+  // Meshes: triangle parts, attributes in the file with matching counts, nothing morphing.
   const meshes = arr(gltf.meshes).map(obj);
   if (!meshes.length) fail("The model has no mesh.");
   if (meshes.length > GLB_LIMITS.meshes) fail("The model has too many meshes.");
   let primitives = 0;
   let vertices = 0;
   let triangles = 0;
+  let decoded = 0;
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
-  for (const m of meshes)
+  const measured = new Set<number>();
+  const use = (index: number) => {
+    const a = accessors[index];
+    decoded += a.count * a.element;
+    if (decoded > GLB_LIMITS.decodedBytes)
+      fail("The model describes more data than is taken.");
+  };
+  for (const m of meshes) {
+    if (m.weights !== undefined) fail("The model has morph targets.");
     for (const p of arr(m.primitives).map(obj)) {
       if (++primitives > GLB_LIMITS.primitives)
         fail("The model has too many parts.");
       const mode = p.mode === undefined ? 4 : p.mode;
       if (mode !== 4) fail("Only triangle meshes are taken.");
-      if (p.extensions !== undefined && Object.keys(obj(p.extensions)).length)
-        fail(
-          "A mesh part uses an extension (such as compression), which is not taken.",
-        );
-      const position = obj(p.attributes).POSITION;
-      if (!isIndex(position, accessors.length))
+      if (p.targets !== undefined) fail("The model has morph targets.");
+      optIndex(p.material, materials.length, "mesh part's material");
+      const attributes = obj(p.attributes);
+      if (!isIndex(attributes.POSITION, accessors.length))
         fail("A mesh part has no positions.");
-      const pos = accessors[position as number];
-      if (
-        pos.type !== "VEC3" ||
-        pos.componentType !== 5126 ||
-        pos.bufferView === undefined
-      )
-        fail("A mesh part's positions are not 3D floats in the file.");
-      const pmin = arr(pos.min);
-      const pmax = arr(pos.max);
-      if (
-        pmin.length !== 3 ||
-        pmax.length !== 3 ||
-        ![...pmin, ...pmax].every((x) => Number.isFinite(x))
-      )
-        fail("A mesh part's positions have no finite bounds.");
-      for (let i = 0; i < 3; i++) {
-        min[i] = Math.min(min[i], pmin[i] as number);
-        max[i] = Math.max(max[i], pmax[i] as number);
+      const positionIndex = attributes.POSITION as number;
+      const pos = accessors[positionIndex];
+      if (pos.raw.type !== "VEC3" || pos.raw.componentType !== 5126)
+        fail("A mesh part's positions are not 3D floats.");
+      const count = pos.count;
+      for (const [name, index] of Object.entries(attributes)) {
+        if (!ATTRIBUTE.test(name))
+          fail(`A mesh part has ${name} data, which is not taken.`);
+        if (!isIndex(index, accessors.length))
+          fail("A mesh part's data points at nothing.");
+        if (accessors[index as number].count !== count)
+          fail("A mesh part's data does not match its vertices.");
       }
-      const count = pos.count as number;
+      const idx =
+        p.indices === undefined
+          ? undefined
+          : isIndex(p.indices, accessors.length)
+            ? accessors[p.indices as number]
+            : fail("A mesh part's indices point at nothing.");
+      if (
+        idx &&
+        (idx.raw.type !== "SCALAR" ||
+          ![5121, 5123, 5125].includes(idx.raw.componentType as number) ||
+          idx.viewStride !== undefined)
+      )
+        fail("A mesh part's indices are malformed.");
       vertices += count;
-      triangles += Math.floor(
-        (p.indices === undefined
-          ? count
-          : (accessors[p.indices as number]?.count as number)) / 3,
-      );
-      // Over the limits before any index is read.
+      triangles += Math.floor((idx ? idx.count : count) / 3);
+      // Over the limits before any data is read.
       if (vertices > GLB_LIMITS.vertices)
         fail("The model has too many vertices.");
       if (triangles > GLB_LIMITS.triangles)
         fail("The model has too many triangles.");
-      if (p.indices !== undefined) {
-        if (!isIndex(p.indices, accessors.length))
-          fail("A mesh part's indices point at nothing.");
-        const idx = accessors[p.indices as number];
-        if (
-          idx.type !== "SCALAR" ||
-          ![5121, 5123, 5125].includes(idx.componentType as number) ||
-          idx.bufferView === undefined
-        )
-          fail("A mesh part's indices are malformed.");
-        // Every index points at one of the part's own vertices.
-        const bv = views[idx.bufferView as number];
-        const size = COMPONENT_BYTES[idx.componentType as number];
-        const stride =
-          bv.byteStride === undefined ? size : (bv.byteStride as number);
-        const base =
-          (bv.byteOffset === undefined ? 0 : (bv.byteOffset as number)) +
-          (idx.byteOffset === undefined ? 0 : (idx.byteOffset as number));
-        const data = new DataView(
-          bin!.buffer,
-          bin!.byteOffset,
-          bin!.byteLength,
-        );
-        for (let i = 0; i < (idx.count as number); i++) {
-          const at = base + i * stride;
+      for (const index of Object.values(attributes)) use(index as number);
+      if (idx) use(p.indices as number);
+
+      // The extent comes from the positions themselves, each accessor read once.
+      if (!measured.has(positionIndex)) {
+        measured.add(positionIndex);
+        for (let i = 0; i < count; i++)
+          for (let c = 0; c < 3; c++) {
+            const x = data.getFloat32(pos.start + i * pos.stride + c * 4, true);
+            if (!Number.isFinite(x))
+              fail("A mesh part has a position that is not a number.");
+            if (x < min[c]) min[c] = x;
+            if (x > max[c]) max[c] = x;
+          }
+      }
+      // Every index points at one of the part's own vertices.
+      if (idx)
+        for (let i = 0; i < idx.count; i++) {
+          const at = idx.start + i * idx.size;
           const value =
-            size === 1
+            idx.size === 1
               ? data.getUint8(at)
-              : size === 2
+              : idx.size === 2
                 ? data.getUint16(at, true)
                 : data.getUint32(at, true);
           if (value >= count)
             fail("A mesh part's indices point past its vertices.");
         }
-      }
     }
+  }
+
+  // Nodes: in range, each with one parent at most, no loops, bounded depth, and no cameras,
+  // skins, lights or morph weights.
+  const nodes = arr(gltf.nodes).map(obj);
+  if (nodes.length > GLB_LIMITS.nodes) fail("The model has too many nodes.");
+  const parent = Array.from({ length: nodes.length }, () => -1);
+  nodes.forEach((n, i) => {
+    if (n.camera !== undefined || n.skin !== undefined)
+      fail("The model has cameras or skins; only still meshes are taken.");
+    if (n.weights !== undefined) fail("The model has morph targets.");
+    optIndex(n.mesh, meshes.length, "node's mesh");
+    for (const c of arr(n.children)) {
+      if (!isIndex(c, nodes.length)) fail("A node's child points at nothing.");
+      if (c === i || parent[c as number] !== -1)
+        fail("A node has more than one parent.");
+      parent[c as number] = i;
+    }
+  });
+  for (let i = 0; i < nodes.length; i++) {
+    let depth = 0;
+    for (let at = parent[i]; at !== -1; at = parent[at])
+      if (++depth > GLB_LIMITS.nodeDepth)
+        fail("The model's nodes are nested too deeply or in a loop.");
+  }
+  const scenes = arr(gltf.scenes).map(obj);
+  if (!scenes.length) fail("The model has no scene.");
+  optIndex(gltf.scene, scenes.length, "default scene");
+  for (const s of scenes)
+    for (const n of arr(s.nodes))
+      if (!isIndex(n, nodes.length) || parent[n as number] !== -1)
+        fail("A scene's node points at nothing or is not a root.");
 
   return {
     bytes: file.byteLength,
