@@ -580,7 +580,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Cleanup and backups:** garbage collection keeps models a retained revision names and frees the rest after the grace period, like Studio bitmaps. The backup closure checks a scene's digests as models (a review catch: it had counted them as missing bitmaps).
 - **SDK:** `uploadCinemaModel`.
 - **Evidence:**
-  - `tests/cinema-model-store.test.ts`, 11 tests: store and read back; the re-written description; refused files and lengths; cross-project and cross-kind references; garbage collection and the grace period; the budget refused before reading; an SDK upload over HTTP and the content type; the backup closure; every upload limit, released after a failed and a completed upload.
+  - `tests/cinema-model-store.test.ts`, 11 tests: store and read back; the re-written description; refused files and lengths; cross-project and cross-kind references; garbage collection and the grace period; the budget refused before reading; an SDK upload over HTTP to a test server that calls the upload handler, and the content type; the backup closure; the per-principal limit released after a failed and a completed upload, and the shared agent and workspace limits released after completed uploads.
   - Full local suite on AC power at `92abb62`: 1,408 tests, 1,405 pass, 0 fail, 3 POSIX-only skips.
-- **Not yet:** the worker's import (a model item still renders as a box), the Cinema page button and preview, tracking and aerial views.
+- **Not yet:** the worker's import (a model item still renders as a box), the Cinema page button and preview, tracking and aerial views. No test exercises the service's own routes in `server/main.ts` yet (flag, scopes, `Connection: close`, the GET route's served type).
 
