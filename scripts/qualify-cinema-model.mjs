@@ -288,12 +288,19 @@ try {
   });
   assert.equal(wrongType.status, 400);
   assert.equal(wrongType.headers.get("connection"), "close");
+  const anonymousRead = await fetch(`${models}/${"0".repeat(64)}`);
+  assert.equal(
+    anonymousRead.status,
+    401,
+    "a read without a session is refused",
+  );
   const unknown = await fetch(`${models}/${"0".repeat(64)}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   assert.equal(unknown.status, 404);
   step("service routes refuse no session, another type, and an unknown model", {
     anonymous: anonymous.status,
+    anonymousRead: anonymousRead.status,
     wrongType: wrongType.status,
     unknown: unknown.status,
   });
@@ -311,6 +318,20 @@ try {
   page.on("console", (m) => {
     if (/Content Security Policy|Refused to/i.test(m.text()))
       refusals.push(m.text());
+  });
+  // The page's own policy violations, as events (not only their console text).
+  await page.exposeFunction("yamakanPolicyRefused", (what) =>
+    refusals.push(String(what)),
+  );
+  await page.addInitScript(() =>
+    document.addEventListener("securitypolicyviolation", (e) =>
+      window.yamakanPolicyRefused(`${e.violatedDirective} ${e.blockedURI}`),
+    ),
+  );
+  const modelUploads = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.url().endsWith("/cinema/models"))
+      modelUploads.push(r.url());
   });
 
   await page.goto(launch);
@@ -338,6 +359,7 @@ try {
   await page.getByTestId("cinema-error").waitFor();
   const refusedText = await page.getByTestId("cinema-error").textContent();
   assert.match(refusedText, /cannot be used as a 3D model.*not a \.glb/);
+  assert.equal(modelUploads.length, 0, "a refused file is not uploaded");
   step("a file that is not a model is refused on the page", {
     message: refusedText.trim(),
   });
@@ -396,7 +418,17 @@ try {
     null,
     { timeout: 30000 },
   );
-  step("saved, reloaded, and shown again from the project");
+  await page.waitForTimeout(500);
+  const reloaded = join(root, "preview-reloaded.png");
+  await page.getByTestId("cinema-canvas").screenshot({ path: reloaded });
+  const greenReloaded = greenIn(reloaded);
+  assert.ok(
+    greenReloaded > 40,
+    `the reloaded preview shows the texture (${greenReloaded})`,
+  );
+  step("saved, reloaded, and shown again from the project with its texture", {
+    greenPixels: greenReloaded,
+  });
 
   // Served back as the project stored it.
   const served = await fetch(
@@ -413,6 +445,12 @@ try {
       .digest("hex"),
     digest,
   );
+  // Another project does not hold it.
+  const elsewhere = await fetch(
+    `${url}/api/v1/projects/${first.id}/cinema/models/${digest}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  assert.equal(elsewhere.status, 404, "another project does not serve it");
   step("served back as model/gltf-binary, byte for byte", {
     bytes: bytes.length,
   });

@@ -9,7 +9,9 @@ import {
   cinemaModelCount,
   cinemaModelName,
   cinemaModelProblem,
+  createModelCache,
   fitToMetre,
+  imageTextures,
   parseCinemaModel,
 } from "../src/cinema/cinemaModels.ts";
 import { freshCinemaScene } from "../src/cinema/cinemaProject.ts";
@@ -177,6 +179,55 @@ test("the model strings exist in English and Arabic", () => {
   const keys = Object.keys(en).filter(
     (k) => k.startsWith("cinema.model.") || k === "cinema.objects.addModel",
   );
-  assert.equal(keys.length, 8);
+  assert.equal(keys.length, 9);
   for (const key of keys) assert.ok((ar as Record<string, string>)[key], key);
+});
+
+test("a loaded model is shared while items show it, freed after the last, and a failed load retried", async () => {
+  const loads: string[] = [];
+  const freed: string[] = [];
+  const add = (v: string) => freed.push(v);
+  let fail = true;
+  const cache = createModelCache(async (key) => {
+    loads.push(key);
+    if (key === "p:bad" && fail) throw new Error("not reachable");
+    return key;
+  }, add);
+  const a = cache.acquire("p:one");
+  const b = cache.acquire("p:one");
+  assert.equal(await a, await b);
+  assert.deepEqual(loads, ["p:one"]);
+  cache.release("p:one");
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(freed, [], "still shown by one item");
+  cache.release("p:one");
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(freed, ["p:one"], "freed after the last");
+  assert.equal(cache.size(), 0);
+  await assert.rejects(cache.acquire("p:bad"));
+  fail = false;
+  assert.equal(await cache.acquire("p:bad"), "p:bad", "tried again");
+  assert.deepEqual(loads, ["p:one", "p:bad", "p:bad"]);
+  cache.acquire("q:two");
+  cache.clear();
+  await new Promise((r) => setImmediate(r));
+  const all: string[] = freed;
+  assert.ok(all.includes("q:two") && all.includes("p:bad"));
+});
+
+test("embedded images load as <img> elements, which the page's image policy allows", () => {
+  const manager = new THREE.LoadingManager();
+  const parser = { textureLoader: null as unknown, options: { manager } };
+  assert.equal(imageTextures(parser).name, "yamakan_image_textures");
+  assert.ok(parser.textureLoader instanceof THREE.TextureLoader);
+  assert.equal((parser.textureLoader as THREE.TextureLoader).manager, manager);
+});
+
+test("a model's name leaves out invisible format characters and is never cut inside one", () => {
+  assert.equal(cinemaModelName("\u202Egnp.exe.glb"), "gnp.exe");
+  assert.equal(cinemaModelName("a\u200Bb\uFEFF.glb"), "ab");
+  const long = "😀".repeat(130) + ".glb";
+  const name = cinemaModelName(long);
+  assert.equal(Array.from(name).length, 120);
+  assert.ok(!/[\uD800-\uDBFF]$/.test(name), "no half of a pair at the end");
 });

@@ -77,9 +77,75 @@ export function addCinemaModel(
   return { ...scene, items: [...scene.items, item] };
 }
 
-/** A file's name without its extension, as a model's name. */
+/**
+ * A file's name without its extension, as a model's name: invisible format characters (such as
+ * a right-to-left override) left out, at most 120 characters, never cut inside one.
+ */
 export const cinemaModelName = (fileName: string) =>
-  fileName.replace(/\.glb$/i, "").trim() || "Model";
+  Array.from(
+    fileName
+      .replace(/\p{Cf}/gu, "")
+      .replace(/\.glb$/i, "")
+      .trim(),
+  )
+    .slice(0, 120)
+    .join("")
+    .trim() || "Model";
+
+/** How long an uploaded, not yet saved model is left before a save stores it again. */
+export const CINEMA_MODEL_REFRESH_MS = 20 * 60 * 1000;
+
+/**
+ * The loader plugin that makes embedded images load as <img> elements from blob: URLs, which
+ * the page's image policy allows; three's default bitmap loader fetches them, which the page's
+ * connect policy refuses.
+ */
+export function imageTextures(parser: {
+  textureLoader: unknown;
+  options: { manager: THREE.LoadingManager };
+}) {
+  parser.textureLoader = new THREE.TextureLoader(parser.options.manager);
+  return { name: "yamakan_image_textures" };
+}
+
+/**
+ * Loaded models shared by the items that show them: each key is loaded once while anything
+ * uses it, and freed when the last user lets go. A load that fails is forgotten, so the next
+ * user tries again.
+ */
+export function createModelCache<T>(
+  load: (key: string) => Promise<T>,
+  dispose: (value: T) => void,
+) {
+  const entries = new Map<string, { value: Promise<T>; users: number }>();
+  return {
+    acquire(key: string): Promise<T> {
+      let entry = entries.get(key);
+      if (!entry) {
+        const value = load(key);
+        const made = { value, users: 0 };
+        entry = made;
+        entries.set(key, made);
+        value.catch(() => {
+          if (entries.get(key) === made) entries.delete(key);
+        });
+      }
+      entry.users++;
+      return entry.value;
+    },
+    release(key: string) {
+      const entry = entries.get(key);
+      if (!entry || --entry.users > 0) return;
+      entries.delete(key);
+      entry.value.then(dispose, () => {});
+    },
+    clear() {
+      for (const entry of entries.values()) entry.value.then(dispose, () => {});
+      entries.clear();
+    },
+    size: () => entries.size,
+  };
+}
 
 /**
  * Fits an object to a 1 m box centred at the origin: its bounds' middle at 0, its largest side
@@ -112,11 +178,7 @@ export async function parseCinemaModel(
 ): Promise<THREE.Group> {
   checkGlb(new Uint8Array(bytes));
   const loader = new GLTFLoader();
-  loader.register((parser) => {
-    // The default bitmap loader fetches blob: URLs, which the page's connect policy refuses.
-    parser.textureLoader = new THREE.TextureLoader(parser.options.manager);
-    return { name: "yamakan_image_textures" };
-  });
+  loader.register((parser) => imageTextures(parser) as never);
   const gltf = await loader.parseAsync(bytes, "");
   const root = gltf.scene;
   // Only meshes and the groups that hold them are shown, as in the render.

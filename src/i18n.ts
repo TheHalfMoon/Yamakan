@@ -528,6 +528,8 @@ const en = {
   "cinema.model.limit":
     "This scene has {n} 3D models, the most one render takes.",
   "cinema.model.needsProject": "Open a project to add a 3D model.",
+  "cinema.model.notAdded":
+    "The model was stored, but the scene could not take it just then. Add it again.",
   "cinema.objects.remove": "Remove object",
   "cinema.objects.boxName": "Box {n}",
   "cinema.objects.readout":
@@ -1244,8 +1246,8 @@ const ar: Record<MessageKey, string> = {
   "cinema.objects.bigger": "تكبير",
   "cinema.objects.smaller": "تصغير",
   "cinema.objects.add": "إضافة صندوق",
-  "cinema.objects.addModel": "إضافة نموذج ثلاثي الأبعاد (.glb)",
-  "cinema.model.tooLarge": "هذا النموذج أكبر من 64 ميغابايت.",
+  "cinema.objects.addModel": "إضافة نموذج ثلاثي الأبعاد \u2066(.glb)\u2069",
+  "cinema.model.tooLarge": "هذا النموذج أكبر من \u206664 MiB\u2069.",
   "cinema.model.refused": "لا يمكن استخدام هذا الملف نموذجاً ثلاثي الأبعاد:",
   "cinema.model.uploadFailed": "تعذّر حفظ النموذج:",
   "cinema.model.loadFailed": "تعذّر عرض نموذج ثلاثي الأبعاد:",
@@ -1253,6 +1255,8 @@ const ar: Record<MessageKey, string> = {
   "cinema.model.limit":
     "في هذا المشهد {n} نماذج ثلاثية الأبعاد، وهو أقصى ما يأخذه العرض الواحد.",
   "cinema.model.needsProject": "افتح مشروعاً لإضافة نموذج ثلاثي الأبعاد.",
+  "cinema.model.notAdded":
+    "حُفظ النموذج، لكن المشهد لم يتمكن من استقباله حينها. أضفه مرة أخرى.",
   "cinema.objects.remove": "إزالة العنصر",
   "cinema.objects.boxName": "صندوق {n}",
   "cinema.objects.readout":

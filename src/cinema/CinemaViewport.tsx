@@ -41,9 +41,12 @@ import {
   cinemaModelCount,
   cinemaModelName,
   cinemaModelProblem,
+  CINEMA_MODEL_REFRESH_MS,
+  createModelCache,
   disposeCinemaModel,
   parseCinemaModel,
 } from "./cinemaModels.ts";
+import { GLB_LIMITS } from "../../core/cinema/glb.ts";
 
 /** Browser-local scene shape (mirrors core Scene3D; validated server-side on save). */
 export type CinemaSceneLocal = {
@@ -204,7 +207,12 @@ export function CinemaViewport({
   const tRef = useRef(t);
   tRef.current = t;
   const modelInputRef = useRef<HTMLInputElement | null>(null);
-  const [modelBusy, setModelBusy] = useState(false);
+  // The project an upload is running for (the button waits only in that project).
+  const [modelBusyFor, setModelBusyFor] = useState<string | null>(null);
+  const modelBusy = modelBusyFor !== null && modelBusyFor === projectId;
+  // Models uploaded here and not yet saved, with when they were stored: the service frees an
+  // unnamed model after its grace period, so a save stores older ones again first.
+  const uploadedRef = useRef(new Map<string, number>());
   const [save, setSave] = useState<CinemaSaveState | null>(null);
   const [persistence, setPersistence] = useState<boolean | null>(null);
   const [turnedOff, setTurnedOff] = useState(false);
@@ -372,6 +380,20 @@ export function CinemaViewport({
     let from = revision.current;
     setSave({ state: "saving" });
     try {
+      const named = new Set(
+        scene.items.flatMap((item) => (item.model ? [item.model] : [])),
+      );
+      for (const [digest, at] of uploadedRef.current)
+        if (
+          named.has(digest) &&
+          Date.now() - at > CINEMA_MODEL_REFRESH_MS &&
+          client.cinemaModel &&
+          client.uploadCinemaModel
+        ) {
+          const bytes = await client.cinemaModel(projectId, digest);
+          await client.uploadCinemaModel(projectId, new Uint8Array(bytes));
+          uploadedRef.current.set(digest, Date.now());
+        }
       const commit = () =>
         saveProjectScene({
           client,
@@ -399,6 +421,8 @@ export function CinemaViewport({
         result = await commit();
       }
       onSaved?.(projectId, from, result.revision);
+      // Saved models are named by a revision now, which keeps them.
+      for (const digest of named) uploadedRef.current.delete(digest);
       if (documentIdRef.current !== documentId) return;
       revision.current = result.revision;
       savedHashRef.current = result.contentHash;
@@ -458,28 +482,18 @@ export function CinemaViewport({
     threeScene.add(new THREE.GridHelper(10, 10, 0x444444, 0x333333));
 
     const meshes = new Map<string, THREE.Object3D>();
-    // Each stored model, loaded once per project and shown as copies that share it.
-    const models = new Map<string, Promise<THREE.Group>>();
-    const loadModel = (digest: string) => {
-      const owner = projectIdRef.current;
+    // Each stored model, loaded once per project while an item shows it, freed after.
+    const models = createModelCache((key) => {
+      const [owner, digest] = key.split(":");
       const from = clientRef.current;
-      const key = `${owner}:${digest}`;
-      let loading = models.get(key);
-      if (!loading) {
-        loading =
-          owner && from?.cinemaModel
-            ? from.cinemaModel(owner, digest).then(parseCinemaModel)
-            : Promise.reject(new Error("No project holds this model here."));
-        models.set(key, loading);
-        // A failed load can be tried again (another open, another save).
-        loading.catch(() => models.delete(key));
-      }
-      return loading;
-    };
+      return owner && owner !== "null" && from?.cinemaModel
+        ? from.cinemaModel(owner, digest).then(parseCinemaModel)
+        : Promise.reject(new Error("No project holds this model here."));
+    }, disposeCinemaModel);
     const release = (object: THREE.Object3D) => {
       threeScene.remove(object);
       // Boxes and placeholders are this object's own; a loaded model's copy shares the
-      // project's loaded model, which is freed when the page closes.
+      // project's loaded model, which the cache frees when nothing shows it.
       const free = (o: THREE.Object3D) => {
         if (o.userData.shared) return;
         const mesh = o as THREE.Mesh;
@@ -490,14 +504,20 @@ export function CinemaViewport({
         for (const child of o.children) free(child);
       };
       free(object);
+      if (object.userData.cacheKey) models.release(object.userData.cacheKey);
     };
-    const kindOf = (o: THREE.Object3D) => (o.userData.model as string) ?? "";
+    // What an object shows: a box, or a model of this project (by project and digest).
+    const keyOf = (item: CinemaSceneLocal["items"][number]) =>
+      item.model ? `${projectIdRef.current}:${item.model}` : "";
+    const kindOf = (o: THREE.Object3D) =>
+      (o.userData.cacheKey as string | undefined) ?? "";
 
     const syncMeshes = (doc: CinemaSceneLocal) => {
       for (const [id, object] of meshes) {
         const item = doc.items.find((i) => i.id === id);
-        // Gone, or now another kind of object (another model, or a box): made again.
-        if (!item || (item.model ?? "") !== kindOf(object)) {
+        // Gone, now another kind of object (another model, a box, another project's), or a
+        // model that failed to load: made again (so it is tried again).
+        if (!item || keyOf(item) !== kindOf(object) || object.userData.failed) {
           release(object);
           meshes.delete(id);
         }
@@ -507,7 +527,8 @@ export function CinemaViewport({
         if (!mesh && item.model) {
           // A model: a faint box where it will be until it has loaded.
           const group = new THREE.Group();
-          group.userData.model = item.model;
+          const key = keyOf(item);
+          group.userData.cacheKey = key;
           const placeholder = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
             new THREE.MeshBasicMaterial({ color: 0x666666, wireframe: true }),
@@ -516,8 +537,7 @@ export function CinemaViewport({
           threeScene.add(group);
           meshes.set(item.id, group);
           mesh = group;
-          const digest = item.model;
-          loadModel(digest).then(
+          models.acquire(key).then(
             (template) => {
               if (meshes.get(item.id) !== group || cancelled) return;
               group.remove(placeholder);
@@ -530,6 +550,7 @@ export function CinemaViewport({
             },
             (e: unknown) => {
               if (meshes.get(item.id) !== group || cancelled) return;
+              group.userData.failed = true;
               setError(
                 `${tRef.current("cinema.model.loadFailed")} ${
                   e instanceof Error ? e.message : String(e)
@@ -660,8 +681,7 @@ export function CinemaViewport({
       controls.dispose();
       renderer.dispose();
       for (const object of meshes.values()) release(object);
-      for (const loading of models.values())
-        loading.then(disposeCinemaModel, () => {});
+      models.clear();
 
       if (renderer.domElement.parentElement === host) {
         host.removeChild(renderer.domElement);
@@ -686,30 +706,44 @@ export function CinemaViewport({
   // named by a new item (unsaved until the person saves the scene, like any edit).
   const receiveModel = async (file: File) => {
     const owner = projectId;
-    if (!owner || !client?.uploadCinemaModel) return;
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const problem = cinemaModelProblem(bytes);
-    if (problem) {
-      setError(
-        problem.detail ? `${t(problem.key)} ${problem.detail}` : t(problem.key),
-      );
+    if (!owner || !client?.uploadCinemaModel || modelBusyFor) return;
+    if (!cinemaCanEdit(saveRef.current)) return;
+    if (file.size > GLB_LIMITS.bytes) {
+      setError(t("cinema.model.tooLarge"));
       return;
     }
-    setModelBusy(true);
+    setModelBusyFor(owner);
     try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const problem = cinemaModelProblem(bytes);
+      if (problem) {
+        setError(
+          problem.detail
+            ? `${t(problem.key)} ${problem.detail}`
+            : t(problem.key),
+        );
+        return;
+      }
       const stored = await client.uploadCinemaModel(owner, bytes);
+      // Another project was opened meanwhile: the stored model is left unnamed, and freed.
       if (projectIdRef.current !== owner) return;
+      uploadedRef.current.set(stored.digest, Date.now());
+      if (cinemaModelCount(sceneRef.current) >= CINEMA_PAGE_MAX_MODELS) {
+        setError(t("cinema.model.limit", { n: CINEMA_PAGE_MAX_MODELS }));
+        return;
+      }
       const id = crypto.randomUUID();
       const next = editScene((s) =>
         addCinemaModel(s, cinemaModelName(file.name), stored.digest, id),
       );
       if (next) setSelectedId(id);
+      else setError(t("cinema.model.notAdded"));
     } catch (e) {
       setError(
         `${t("cinema.model.uploadFailed")} ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      setModelBusy(false);
+      setModelBusyFor((busy) => (busy === owner ? null : busy));
     }
   };
 
