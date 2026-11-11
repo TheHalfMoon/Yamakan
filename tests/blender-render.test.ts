@@ -1338,6 +1338,36 @@ test(
       assert.equal(textured.red, 0);
       assert.ok(textured.green > 60, JSON.stringify(textured));
 
+      // Textures are counted over the whole render: a model whose image says 8192 x 2112
+      // (17.3 Mpx, within one model's 64 Mi) placed eight times is 138 Mpx, more than a render's 128 Mi (134.2 million).
+      // It is refused before Blender starts; the image is never decoded (its header is all
+      // there is).
+      const header = Buffer.alloc(28);
+      Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13,
+      ]).copy(header);
+      header.write("IHDR", 12, "latin1");
+      header.writeUInt32BE(8192, 16);
+      header.writeUInt32BE(2112, 20);
+      header[24] = 8;
+      const heavy = await upload(redBar(1, { texture: header }));
+      const crowded = blenderSceneFromCinema(
+        cinema(
+          Array.from({ length: 8 }, (_, i) => ({
+            model: heavy,
+            position: { x: i, y: 0, z: 0 },
+          })),
+        ),
+        { ...settings, frames: 1 },
+      );
+      const over = await supervisor.submitBlenderRender(
+        project.id,
+        crowded,
+        "crowded",
+      );
+      const refusedRender = await settled(supervisor, over.id);
+      assert.equal(refusedRender.state, "FAILED");
+      assert.match(JSON.stringify(refusedRender), /128 megapixels/);
       // A model this project does not hold is refused when the render is asked for.
       const missing = blenderSceneFromCinema(
         cinema([{ model: "c".repeat(64) }]),

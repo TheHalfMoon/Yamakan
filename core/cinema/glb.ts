@@ -48,6 +48,8 @@ export type GlbSummary = {
   triangles: number;
   materials: number;
   images: number;
+  // Its images' decoded pixels, a 16-bit PNG's counted four times (it decodes to floats).
+  pixels: number;
   // The model's extent, measured from its positions.
   min: [number, number, number];
   max: [number, number, number];
@@ -130,7 +132,7 @@ const optIndex = (v: unknown, length: number, what: string) => {
 // file, a URL or a data URI), and no extension outside the allowlist wherever it is declared.
 // An image's width and height from its own header (PNG IHDR, or a JPEG frame marker), so a
 // small file that would decode to gigabytes is refused before anything decodes it.
-function imageSize(bytes: Uint8Array, png: boolean): [number, number] {
+function imageSize(bytes: Uint8Array, png: boolean): [number, number, number] {
   const at = (i: number) => (bytes[i] << 8) | bytes[i + 1];
   if (png) {
     const ihdr =
@@ -140,7 +142,9 @@ function imageSize(bytes: Uint8Array, png: boolean): [number, number] {
       bytes[15] === 0x52;
     if (bytes.length < 24 || !ihdr) fail("A model image has no size.");
     const view = new DataView(bytes.buffer, bytes.byteOffset, 24);
-    return [view.getUint32(16), view.getUint32(20)];
+    // The bit depth follows the size; 16 bits decode to floats, four times the memory.
+    const weight = bytes.length > 24 && bytes[24] === 16 ? 4 : 1;
+    return [view.getUint32(16), view.getUint32(20), weight];
   }
   // JPEG: walk the markers to the first frame header (SOF0-SOF15 but DHT, JPG and DAC).
   let i = 2;
@@ -158,7 +162,7 @@ function imageSize(bytes: Uint8Array, png: boolean): [number, number] {
       marker !== 0xc8 &&
       marker !== 0xcc
     )
-      return [at(i + 7), at(i + 5)];
+      return [at(i + 7), at(i + 5), 1];
     if (
       marker === 0xd8 ||
       (marker >= 0xd0 && marker <= 0xd7) ||
@@ -355,7 +359,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       (img.mimeType === "image/jpeg" && !jpeg)
     )
       fail("A model image's bytes are not what it says it is.");
-    const [width, height] = imageSize(
+    const [width, height, weight] = imageSize(
       bin.subarray(bv.offset, bv.offset + bv.length),
       png,
     );
@@ -366,7 +370,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       height > GLB_LIMITS.imageSide
     )
       fail("A model image is larger than 8192 pixels a side.");
-    pixels += width * height;
+    pixels += width * height * weight;
     if (pixels > GLB_LIMITS.imagePixels)
       fail("The model's images are too large together.");
   }
@@ -593,6 +597,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     triangles,
     materials: materials.length,
     images: images.length,
+    pixels,
     min,
     max,
   };

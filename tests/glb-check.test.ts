@@ -102,6 +102,7 @@ test("a plain triangle passes and is counted, with its extent", () => {
     triangles: 1,
     materials: 0,
     images: 0,
+    pixels: 0,
     min: [0, 0, 0],
     max: [1, 2, 0],
   });
@@ -1063,4 +1064,29 @@ test("an image's size is read from its header, and one too large to decode is re
     mimeType: "image/png",
   }));
   refused(glb(many, bin), /too large together/);
+});
+
+test("a model's texture pixels are counted, a 16-bit PNG four times", () => {
+  const withPng = (head: Uint8Array) => {
+    const bin = new Uint8Array(44 + 28);
+    bin.set(triangleBin());
+    bin.set(head, 44);
+    const g = triangle() as Record<string, any>;
+    g.buffers[0].byteLength = bin.byteLength;
+    g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: head.length });
+    g.images = [{ bufferView: 2, mimeType: "image/png" }];
+    return glb(g, bin);
+  };
+  const eight = new Uint8Array(25);
+  eight.set(pngHead(100, 10));
+  eight[24] = 8;
+  const sixteen = eight.slice();
+  sixteen[24] = 16;
+  assert.equal(checkGlb(withPng(eight)).pixels, 1000);
+  assert.equal(checkGlb(withPng(sixteen)).pixels, 4000);
+  // 16-bit at 4100 x 4100 is just over 16 Mpx, counted four times: over the limit.
+  const big = sixteen.slice();
+  new DataView(big.buffer).setUint32(16, 4100);
+  new DataView(big.buffer).setUint32(20, 4100);
+  refused(withPng(big), /too large together/);
 });

@@ -40,7 +40,11 @@ import {
 } from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { ENGINE_WORKER_PROFILE } from "./process/owner.ts";
-import { BlenderSceneSchema, blenderSceneModels } from "./blender/scene.ts";
+import {
+  BLENDER_SCENE_LIMITS,
+  BlenderSceneSchema,
+  blenderSceneModels,
+} from "./blender/scene.ts";
 import { checkGlb } from "./cinema/glb.ts";
 import { DOCUMENT_LIMITS } from "./document-ref.ts";
 import {
@@ -1262,6 +1266,7 @@ export class JobSupervisor {
     // again here, written beside the scene where Blender can read it but not write it.
     const models = path.join(dir, "models");
     await mkdir(models, { recursive: true });
+    const pixelsOf = new Map<string, number>();
     for (const digest of modelDigests) {
       const bytes = await readFile(
         await this.store.cinemaModelFile(row.project_id, digest),
@@ -1271,9 +1276,19 @@ export class JobSupervisor {
           "RECOVERY_REQUIRED",
           "A 3D model's stored copy does not match its digest; restore a verified backup.",
         );
-      checkGlb(bytes);
+      pixelsOf.set(digest, checkGlb(bytes).pixels);
       await writeFile(path.join(models, `${digest}.glb`), bytes);
     }
+    // Every model object is its own import, so its textures are decoded again: counted each time.
+    const pixels = scene.objects.reduce(
+      (sum, o) => sum + (o.shape === "model" ? pixelsOf.get(o.model)! : 0),
+      0,
+    );
+    if (pixels > BLENDER_SCENE_LIMITS.maxModelPixels)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "This render's 3D models hold more texture than one render can decode (128 megapixels in all, each model counted every time it is placed).",
+      );
     if (signal.aborted) throw new Error("Cancelled.");
     let said = "";
     let refusal = "";

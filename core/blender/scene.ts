@@ -20,8 +20,10 @@ export const BLENDER_SCENE_LIMITS = Object.freeze({
   maxFrames: 120,
   maxSamples: 32,
   maxObjects: 200,
-  // 3D models in one render: each is imported, so they are few.
+  // 3D models in one render: each is imported, so they are few; and their textures' decoded
+  // pixels over the whole render, each import counted (the worker's memory is bounded).
   maxModels: 8,
+  maxModelPixels: 128 * 1024 * 1024,
   maxMetres: 1000,
   maxScale: 100,
   fps: [24, 25, 30] as const,
