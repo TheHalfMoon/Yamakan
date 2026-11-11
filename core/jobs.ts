@@ -198,8 +198,14 @@ const BlenderPayload = z
     format: z.literal("blender/1"),
     scene: BlenderSceneSchema,
     name: z.string().min(1).max(120),
+    // The project video a plate's footage comes from (the tracked one), when the scene has one.
+    plateAssetId: Id.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (p) => !!p.scene.plate === !!p.plateAssetId,
+    "A plate comes with its footage, and footage only with a plate.",
+  );
 // A camera track of one of the project's videos (core/blender/track.ts).
 const TrackPayload = z
   .object({
@@ -1291,6 +1297,18 @@ export class JobSupervisor {
       );
     // Each 3D model the scene names: the project's stored copy, its bytes hashed and checked
     // again here, written beside the scene where Blender can read it but not write it.
+    // The footage behind a plate, copied like a model: Blender reads it, never writes it.
+    const plates = path.join(dir, "plate");
+    await mkdir(plates, { recursive: true });
+    if (payload.plateAssetId) {
+      const { file, asset } = await this.store.assetFile(
+        row.project_id,
+        payload.plateAssetId,
+      );
+      if (asset.kind !== "video")
+        throw new CommandError("VALIDATION", "A plate's footage is a video.");
+      await copyFile(file, path.join(plates, `clip.${asset.extension}`));
+    }
     const models = path.join(dir, "models");
     await mkdir(models, { recursive: true });
     const pixelsOf = new Map<string, number>();
@@ -1352,10 +1370,11 @@ export class JobSupervisor {
           sceneFile,
           frames,
           models,
+          plates,
         ],
         cwd: frames,
         writable: [frames],
-        readable: [runtime.install, BLENDER_SCRIPT, sceneFile, models],
+        readable: [runtime.install, BLENDER_SCRIPT, sceneFile, models, plates],
         memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
         signal,
         stderrLimit: 8000,
@@ -1532,12 +1551,31 @@ export class JobSupervisor {
 
   // Queues a Blender render of a scene. The made video joins the project as a new asset only
   // when the render, its encode and their checks have all succeeded.
-  async submitBlenderRender(projectId: string, scene: unknown, name: string) {
+  async submitBlenderRender(
+    projectId: string,
+    scene: unknown,
+    name: string,
+    // The tracked video behind a plate (match-move), when the scene has one.
+    plateAssetId?: string,
+  ) {
     if (this.#closing) throw new Error("Render queue is closing.");
     if (!this.#generation) await this.start();
     this.#current();
     const project = await this.store.load(projectId);
-    const payload = BlenderPayload.parse({ format: "blender/1", scene, name });
+    const payload = BlenderPayload.parse({
+      format: "blender/1",
+      scene,
+      name,
+      ...(plateAssetId ? { plateAssetId } : {}),
+    });
+    if (payload.plateAssetId) {
+      const footage = project.assets.find((a) => a.id === payload.plateAssetId);
+      if (!footage || footage.kind !== "video")
+        throw new CommandError(
+          "NOT_FOUND",
+          "This project holds no such video for the plate.",
+        );
+    }
     // A model the project does not hold is refused now, not when the render starts.
     for (const digest of blenderSceneModels(payload.scene))
       await this.store.cinemaModelFile(projectId, digest);
@@ -1680,6 +1718,17 @@ export class JobSupervisor {
     });
     this.#pump();
     return this.#view(row);
+  }
+
+  // A finished track of the project and the video it tracked: what a plate is made from.
+  async trackFootage(
+    projectId: string,
+    jobId: string,
+  ): Promise<{ track: CameraTrack; assetId: string }> {
+    const track = await this.trackResult(projectId, jobId);
+    const row = this.store.transaction((db) => this.#row(db, jobId))!;
+    const payload = TrackPayload.parse(safeJson(row.payload));
+    return { track, assetId: payload.assetId };
   }
 
   // The solved camera of a finished track, checked again as it is read.

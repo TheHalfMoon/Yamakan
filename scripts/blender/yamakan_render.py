@@ -5,8 +5,10 @@
 # Cycles on the CPU. It never runs code from the scene, the project or the person.
 #
 #   blender -b --factory-startup -Y --offline-mode -noaudio -t <threads> \
-#     --python yamakan_render.py -- <scene.json> <output folder> <models folder>
+#     --python yamakan_render.py -- <scene.json> <output folder> <models folder> <plate folder>
 #
+# The plate folder holds the tracked footage when the scene has a plate (match-move), as one
+# clip.<ext>, or nothing. Both folders are read, never written.
 # The models folder holds the 3D models the scene names, as <sha256>.glb: copies the worker has
 # hashed and checked (core/cinema/glb.ts), which this script can read but not write.
 import json
@@ -58,17 +60,20 @@ def colour(value, name):
 # The scene's coordinates are three.js's (Y up); Blender's world is Z up. A quarter turn about X
 # takes one to the other, and every transform passes through it whole.
 Y_UP_TO_Z_UP = Matrix.Rotation(math.radians(90), 4, "X")
+# The world the scene's coordinates are placed into: Blender's Z up, or, over tracked footage,
+# the solve's own frame (the first tracked camera's: Y up, looking down -Z), as it is.
+WORLD = [Y_UP_TO_Z_UP]
 
 
 def transform(position, rotation, scale):
     # three.js Euler "XYZ" is the matrix Rx·Ry·Rz, which is Blender's "ZYX".
     r = Euler(rotation, "ZYX").to_matrix().to_4x4()
     s = Matrix.Diagonal((*scale, 1.0))
-    return Y_UP_TO_Z_UP @ (Matrix.Translation(position) @ r @ s)
+    return WORLD[0] @ (Matrix.Translation(position) @ r @ s)
 
 
 def point(p):
-    return (Y_UP_TO_Z_UP @ Vector((*p, 1.0))).xyz
+    return (WORLD[0] @ Vector((*p, 1.0))).xyz
 
 
 DIGEST = re.compile(r"[a-f0-9]{64}")
@@ -135,13 +140,15 @@ def import_model(path, name):
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
-    if len(args) != 3:
-        fail("usage: -- <scene.json> <output folder> <models folder>")
-    scene_path, out, models = args
+    if len(args) != 4:
+        fail("usage: -- <scene.json> <output folder> <models folder> <plate folder>")
+    scene_path, out, models, plates = args
     if not os.path.isdir(out):
         fail("the output folder does not exist")
     if not os.path.isdir(models):
         fail("the models folder does not exist")
+    if not os.path.isdir(plates):
+        fail("the plate folder does not exist")
     with open(scene_path, "r", encoding="utf-8") as f:
         text = f.read(4 * 1024 * 1024 + 1)
     if len(text) > 4 * 1024 * 1024:
@@ -158,6 +165,32 @@ def main():
     objects = s["objects"]
     if not isinstance(objects, list) or len(objects) > 200:
         fail("objects is not a list of at most 200")
+
+    # Tracked footage (match-move): a solved camera for every frame, checked here as in the
+    # service, and the one clip in the plate folder.
+    plate = s.get("plate")
+    plate_clip = None
+    plate_cameras = []
+    if plate is not None:
+        if not isinstance(plate, dict) or set(plate) != {"focalLengthMm", "sensorWidthMm", "cameras"}:
+            fail("the plate is not as described")
+        number(plate["focalLengthMm"], 1, 1000, "plate focal length")
+        number(plate["sensorWidthMm"], 1, 100, "plate sensor width")
+        cams = plate["cameras"]
+        if not isinstance(cams, list) or len(cams) != frames:
+            fail("the plate has not one solved camera for every frame")
+        for i, m in enumerate(cams):
+            if not isinstance(m, list) or len(m) != 16:
+                fail("plate camera " + str(i) + " is not a 4 x 4 matrix")
+            values = [number(v, -1e6, 1e6, "plate camera") for v in m]
+            plate_cameras.append(Matrix([values[0:4], values[4:8], values[8:12], values[12:16]]))
+        names = os.listdir(plates)
+        if len(names) != 1 or not names[0].startswith("clip."):
+            fail("the plate folder does not hold one clip")
+        plate_clip = bpy.data.movieclips.load(os.path.join(plates, names[0]))
+        if plate_clip.frame_duration < frames:
+            fail("the footage is shorter than the render")
+        WORLD[0] = Matrix.Identity(4)
     if sum(1 for o in objects if isinstance(o, dict) and o.get("shape") == "model") > 8:
         fail("a render holds at most 8 3D models")
 
@@ -321,6 +354,14 @@ def main():
         camera.keyframe_insert(data_path="location", frame=frame)
         camera.keyframe_insert(data_path="rotation_euler", frame=frame)
 
+    # Over footage, the camera is the solve's for every frame instead.
+    if plate_clip is not None:
+        camera.animation_data_clear()
+        for frame, m in enumerate(plate_cameras, start=1):
+            camera.matrix_world = m
+            camera.keyframe_insert(data_path="location", frame=frame)
+            camera.keyframe_insert(data_path="rotation_euler", frame=frame)
+
     # One sun.
     l = s["light"]
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", type="SUN"))
@@ -376,6 +417,27 @@ def main():
         links.new(image, nodes.new("NodeGroupOutput").inputs[0])
         scene.compositing_node_group = tree
 
+    # Over footage: the render, with nothing behind its objects, over the clip's frame at the
+    # same index, scaled to the render's size. (A plate has no finish; the service refuses both.)
+    if plate_clip is not None:
+        if glow > 0 or vignette > 0 or dispersion > 0:
+            fail("a render over footage has no finish")
+        tree = bpy.data.node_groups.new("yamakan-plate", "CompositorNodeTree")
+        tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+        nodes, links = tree.nodes, tree.links
+        layers = nodes.new("CompositorNodeRLayers")
+        footage = nodes.new("CompositorNodeMovieClip")
+        footage.clip = plate_clip
+        fit = nodes.new("CompositorNodeScale")
+        fit.inputs["Type"].default_value = "Render Size"
+        links.new(footage.outputs["Image"], fit.inputs["Image"])
+        over = nodes.new("CompositorNodeAlphaOver")
+        colours = [i for i in over.inputs if i.type == "RGBA"]
+        links.new(fit.outputs["Image"], colours[0])
+        links.new(layers.outputs["Image"], colours[1])
+        links.new(over.outputs["Image"], nodes.new("NodeGroupOutput").inputs[0])
+        scene.compositing_node_group = tree
+
     # Cycles on the CPU, PNG frames into the output folder only.
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -387,7 +449,8 @@ def main():
     scene.render.fps_base = 1.0
     scene.frame_start = 1
     scene.frame_end = frames
-    scene.render.film_transparent = False
+    # Over footage nothing is drawn behind the objects: the footage is.
+    scene.render.film_transparent = plate_clip is not None
     # Colours as the project gives them (Blender's default view would tone them).
     scene.view_settings.view_transform = "Standard"
     scene.render.image_settings.file_format = "PNG"
