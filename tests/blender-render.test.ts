@@ -2247,3 +2247,90 @@ test("a render over footage needs its tracked video exactly, and the plate's own
     store.close();
   }
 });
+
+test(
+  "an aerial view looks down from high above: the ground near the camera shows its detail sharply",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-aerial-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Aerial");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 160;
+      const H = 90;
+      const render = async (view?: "aerial") => {
+        const scene = blenderSceneFromCinema(
+          cinema([
+            { position: { x: 0, y: 0.5, z: 0 }, color: "#cc2222" },
+            { position: { x: 2, y: 0.5, z: -1 }, color: "#2266cc" },
+          ]),
+          {
+            ...settings,
+            width: W,
+            height: H,
+            frames: 1,
+            samples: 8,
+            surface: "detail",
+            ...(view ? { view } : {}),
+          },
+        );
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          view ?? "level",
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        ).subarray(0, W * H * 3);
+        // How much neighbouring pixels differ across the top fifth. Both views see the ground
+        // there (the usual view already looks down 23 degrees), but from the usual view it is
+        // far off and its detail too fine to show; from above it is near and sharp.
+        let edges = 0;
+        for (let y = 0; y < Math.ceil(H * 0.2); y++)
+          for (let x = 1; x < W; x++) {
+            const i = (y * W + x) * 3;
+            const j = i - 3;
+            edges +=
+              Math.abs(raw[i] - raw[j]) +
+              Math.abs(raw[i + 1] - raw[j + 1]) +
+              Math.abs(raw[i + 2] - raw[j + 2]);
+          }
+        return Math.round(edges / (W * Math.ceil(H * 0.2)));
+      };
+      const level = await render();
+      const aerial = await render("aerial");
+      console.log("aerial", JSON.stringify({ level, aerial }));
+      // Looking down from above, the top of the frame is near ground, its detail sharp.
+      assert.ok(
+        aerial >= 3 * Math.max(level, 2),
+        JSON.stringify({ level, aerial }),
+      );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);

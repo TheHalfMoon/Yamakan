@@ -1844,7 +1844,7 @@ export const commands = {
     mutation: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "In a cinema-blender Director run: plan a story shot as a Cinema scene from its direction (shot size, movement, lens, light; what the render cannot make is listed as not followed) and queue its Blender render. Returns the job, the planned scene and what was followed; the video joins the project when the job succeeds.",
+      "In a cinema-blender Director run: plan a story shot as a Cinema scene from its direction (shot size, an aerial view included, movement, lens, light; a choice the render could not make would be listed as not followed) and queue its Blender render. Returns the job, the planned scene and what was followed; the video joins the project when the job succeeds.",
     input: RenderShotInputSchema,
     run: async ({ store, queue }, a) => {
       const runtime = await blenderRuntime();
@@ -1858,7 +1858,7 @@ export const commands = {
     mutation: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes, optionally over tracked footage (plate: a finished camera track and its scale; the camera then follows the solve and the objects are composited over the video): the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes and lens, optional camera moves (orbit, dolly, pan, a handheld sway) and an optional light (morning, golden, night, studio), at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
+      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes, optionally from above (view: aerial, about 70 degrees up), or over tracked footage (plate: a finished camera track and its scale; the camera then follows the solve and the objects are composited over the video): the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes and lens, optional camera moves (orbit, dolly, pan, a handheld sway) and an optional light (morning, golden, night, studio), at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
     input: z
       .object({
         projectId: Id,
@@ -1905,6 +1905,12 @@ export const commands = {
           a.projectId,
           blenderSceneFromCinema(scene, a.settings),
           a.name ?? "Blender render",
+        );
+      // Over footage the camera is the solve's: a view would be ignored, so it is refused first.
+      if (a.settings.view)
+        throw new CommandError(
+          "VALIDATION",
+          "Over tracked footage the camera is the solve's; it takes no view.",
         );
       const { track, assetId, assetHash } = await queue.trackFootage(
         a.projectId,
