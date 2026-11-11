@@ -2308,10 +2308,20 @@ function App() {
                                 ...next,
                               },
                             )) as any;
+                            // What the service stored (it trims names and prompts), when the
+                            // head still holds this version; else what was sent.
+                            const stored = (await call("yamakan.document.get", {
+                              projectId: p.id,
+                              documentId: next.documentId,
+                            })) as any;
                             kept = {
                               documentId: next.documentId,
                               contentHash: answer.document.contentHash,
-                              presets: next.presets,
+                              presets:
+                                stored.contentHash ===
+                                answer.document.contentHash
+                                  ? stored.content
+                                  : next.presets,
                             };
                             accept(
                               await call("yamakan.project.open", {
