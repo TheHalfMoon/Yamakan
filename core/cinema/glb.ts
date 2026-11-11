@@ -469,6 +469,12 @@ export function checkGlb(file: Uint8Array): GlbSummary {
         n.scale !== undefined)
     )
       fail("A node has both a matrix and a separate placement.");
+    // glTF matrices are placements only: the bottom row is 0, 0, 0, 1 (column-major).
+    if (n.matrix !== undefined) {
+      const m = n.matrix as number[];
+      if (m[3] !== 0 || m[7] !== 0 || m[11] !== 0 || m[15] !== 1)
+        fail("A node's matrix is not a placement.");
+    }
     if (n.rotation !== undefined) {
       const length = Math.hypot(...(n.rotation as number[]));
       if (Math.abs(length - 1) > 1e-3) fail("A node's rotation is not a unit.");
@@ -490,6 +496,8 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   for (let i = 0; i < nodes.length; i++) {
     let depth = 0;
     let scale = growth[i];
+    if (scale > TRANSFORM_LIMIT)
+      fail("The model's nodes enlarge it out of range.");
     for (let at = parent[i]; at !== -1; at = parent[at]) {
       if (++depth > GLB_LIMITS.nodeDepth)
         fail("The model's nodes are nested too deeply or in a loop.");

@@ -947,6 +947,22 @@ test("placement must be meaningful: unit rotations, one way of placing, bounded 
       },
     ],
   ];
+  refused(
+    changed((g) => {
+      g.nodes[0].matrix = [1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+    }),
+    /not a placement/,
+  );
+  refused(
+    changed((g) => {
+      g.nodes[0].matrix = [1e9, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    }),
+    /enlarge it out of range/,
+  );
+  // Zero scale is allowed: glTF uses it to hide a part.
+  const hidden = triangle() as Record<string, any>;
+  hidden.nodes[0].scale = [0, 0, 0];
+  assert.equal(checkGlb(glb(hidden)).meshes, 1);
   for (const [pattern, edit] of cases) refused(changed(edit), pattern);
 });
 
