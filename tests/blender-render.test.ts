@@ -2174,6 +2174,7 @@ test("a render over footage needs its tracked video exactly, and the plate's own
     // A plate without its footage, footage without a plate, or footage named without its hash.
     await assert.rejects(
       supervisor.submitBlenderRender(project.id, over, "no footage"),
+      /plate comes with its footage/,
     );
     await assert.rejects(
       supervisor.submitBlenderRender(
@@ -2183,6 +2184,7 @@ test("a render over footage needs its tracked video exactly, and the plate's own
         "00000000-0000-4000-8000-000000000000",
         hash,
       ),
+      /plate comes with its footage/,
     );
     await assert.rejects(
       supervisor.submitBlenderRender(
@@ -2191,6 +2193,7 @@ test("a render over footage needs its tracked video exactly, and the plate's own
         "no hash",
         "00000000-0000-4000-8000-000000000000",
       ),
+      /plate comes with its footage/,
     );
     // Footage the project does not hold.
     await assert.rejects(
@@ -2202,6 +2205,42 @@ test("a render over footage needs its tracked video exactly, and the plate's own
         hash,
       ),
       /no such video/,
+    );
+    // Footage the project holds, but not the version that was tracked (another content hash).
+    const clipFile = path.join(root, "clip.mp4");
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=160x90:rate=24",
+        "-t",
+        "1",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        clipFile,
+      ],
+      { windowsHide: true, timeout: 60000 },
+    );
+    const clip = (
+      await store.importAsset(project.id, "clip.mp4", readFileSync(clipFile))
+    ).asset;
+    assert.notEqual(clip.hash, hash);
+    await assert.rejects(
+      supervisor.submitBlenderRender(
+        project.id,
+        over,
+        "changed",
+        clip.id,
+        hash,
+      ),
+      /has changed since it was tracked/,
     );
   } finally {
     await supervisor.close();
