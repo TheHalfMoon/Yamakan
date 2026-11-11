@@ -631,4 +631,19 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - **Full local suite at `66c4e71`**, on AC power: 1,423 tests, 1,420 pass, 0 fail, 3 POSIX-only skips.
 - **Independent review:** no High; models reach the page only from the project's stored copy, and the texture hook works in three 0.171. Four Mediums fixed: loaded models are now freed when nothing shows them; a failed load is tried again; an upload that the scene could not take is now said, not dropped; and unsaved uploads older than 20 minutes are stored again before a save, from the person's own file (a second round found the first version read the copy back from the service, which fails once the service has freed it). The qualification's new policy-event check found zod's one-time `new Function` probe refused by the page's policy (zod catches it); the browser now tells zod not to probe (`jitless`), as the page allows no eval. Lows fixed: size checked before reading, the busy state kept to its project, names without invisible format characters, the Arabic file type and size isolated.
 - **3D asset import is complete for still models:** check, store, place, preview, render. Tracking and aerial views are not started.
+- **Merged as `d6b2d6f`** (PR #273; main's CI passed).
+
+**Blender tracking, groundwork, 2026-11-11:**
+- **Probe** (the separate Blender download only; the pinned install was never run):
+  - Headless Blender can track and solve. `-b` still has a window, so the clip operators run under a context override on an area switched to the clip editor.
+  - On a clip rendered for the probe with non-repeating detail (a probe scene, not this surface; 960 x 540, 36 frames, the camera moving 2 m sideways), it found 92 tracks and kept 82 after cleaning. The solve error was 0.24 px, and the recovered motion was purely sideways (direction 1.0, 0.0, 0.001 in the first camera's frame) with a 0.06° turn.
+  - On repeating checker squares it failed: the tracker confused look-alike corners.
+- **The detail surface:** a render's `surface: "detail"` adds a 2 km ground at the floor and fine, non-repeating detail, fixed in the world, on it and on every box. Each box keeps its colour, darkened in patches. Renders look better with it, and the worker can now render its own clips with known camera motion to qualify tracking inside the real sandbox.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender. The same red box, rendered plain and with detail:
+  - neighbouring-pixel difference across the bottom fifth: 0 plain (empty background) against 21 with detail (a textured ground);
+  - the box stays red, darkened in patches: 670 red pixels plain, 331 with detail (the test asks for at least 40 % of plain);
+  - the detail is on the box itself: neighbouring-pixel difference inside the box 1.7 plain against 5.1 with detail (the test asks for at least 2 more).
+
+  A plain test checks the mapping and refuses an unknown surface.
+- **Next:** the tracking job (a fixed script, a project video in, a solved camera out), qualified on a detail clip of known motion.
 

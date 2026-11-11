@@ -176,6 +176,69 @@ def main():
         background.inputs[0].default_value = (*bg, 1.0)
     world.color = bg
 
+    # The surface: plain (flat colours) or detail (a ground, and fine non-repeating detail on it
+    # and on every box, each box's colour kept).
+    surface = s.get("surface", "plain")
+    if surface not in ("plain", "detail"):
+        fail("surface is not plain or detail")
+    detail = None
+    if surface == "detail":
+        detail = bpy.data.node_groups.new("yamakan-detail", "ShaderNodeTree")
+        detail.interface.new_socket("Shade", in_out="OUTPUT", socket_type="NodeSocketColor")
+        out_node = detail.nodes.new("NodeGroupOutput")
+        # Laid out in the world, in metres: equally fine on the ground and on a box of any size
+        # or scale, and fixed in place while the camera moves (as tracking needs). Three
+        # octaves, so it does not shimmer at low sample counts.
+        geometry = detail.nodes.new("ShaderNodeNewGeometry")
+        noise = detail.nodes.new("ShaderNodeTexNoise")
+        noise.inputs["Scale"].default_value = 4.0
+        noise.inputs["Detail"].default_value = 3.0
+        detail.links.new(geometry.outputs["Position"], noise.inputs["Vector"])
+        ramp = detail.nodes.new("ShaderNodeValToRGB")
+        ramp.color_ramp.elements[0].position = 0.45
+        ramp.color_ramp.elements[0].color = (0.3, 0.3, 0.3, 1.0)
+        ramp.color_ramp.elements[1].position = 0.55
+        ramp.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
+        detail.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+        detail.links.new(ramp.outputs["Color"], out_node.inputs[0])
+
+    def surfaced(material, rgb):
+        # The colour as it is, or multiplied by the detail.
+        material.diffuse_color = (*rgb, 1.0)
+        tree = material.node_tree
+        principled = tree.nodes.get("Principled BSDF") if tree is not None else None
+        if principled is None:
+            if detail is not None:
+                fail("a material has no shader to carry the detail")
+            return
+        principled.inputs["Base Color"].default_value = (*rgb, 1.0)
+        if detail is None:
+            return
+        shade = tree.nodes.new("ShaderNodeGroup")
+        shade.node_tree = detail
+        mix = tree.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        # The mix node has a float, a vector and a colour socket of each name: the colour ones.
+        colours = [i for i in mix.inputs if i.type == "RGBA"]
+        factor = [i for i in mix.inputs if i.name == "Factor" and i.type == "VALUE"][0]
+        factor.default_value = 1.0
+        colours[0].default_value = (*rgb, 1.0)
+        tree.links.new(shade.outputs[0], colours[1])
+        result = [o for o in mix.outputs if o.type == "RGBA"][0]
+        tree.links.new(result, principled.inputs["Base Color"])
+
+    if detail is not None:
+        # The ground: the scene's floor (y = 0, Blender's z = 0), 2 km across so no edge shows
+        # however far the boxes spread, a light grey with the detail. It hides anything below
+        # the floor.
+        bpy.ops.mesh.primitive_plane_add(size=2000)
+        ground = bpy.context.active_object
+        ground.name = "ground"
+        ground_material = bpy.data.materials.new("ground")
+        surfaced(ground_material, [0.6, 0.6, 0.6])
+        ground.data.materials.append(ground_material)
+
     # Boxes, each with its own colour, and 3D models with their own materials.
     for i, item in enumerate(objects):
         if not isinstance(item, dict) or item.get("shape") not in ("box", "model"):
@@ -201,11 +264,7 @@ def main():
         box.name = "box-" + str(i)
         box.matrix_world = transform(position, rotation, scale)
         material = bpy.data.materials.new("box-" + str(i))
-        material.diffuse_color = (*rgb, 1.0)
-        tree = material.node_tree
-        principled = tree.nodes.get("Principled BSDF") if tree is not None else None
-        if principled is not None:
-            principled.inputs["Base Color"].default_value = (*rgb, 1.0)
+        surfaced(material, rgb)
         box.data.materials.append(material)
 
     # The camera: its lens, where it starts, and how it moves over the shot: around what it looks
