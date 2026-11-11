@@ -1105,8 +1105,18 @@ function App() {
               why = t("directorCinema.clipRemoved");
               return;
             }
-            // Already the shot's clip (an earlier Place got that far): nothing left to do here.
+            // A retry (the story was saved by an earlier Place) goes on only if the story still
+            // selects this take; else another take would be placed in its name.
+            const selected = next.story.scenes
+              .flatMap((sc) => sc.shots)
+              .find((sh) => sh.id === next.shotId)?.selectedTakeId;
+            if (!next.saveStory && selected !== next.takeId) {
+              why = t("directorCinema.takeChanged");
+              return;
+            }
+            // Already the shot's clip after an earlier Place saved the story: nothing left here.
             const showing =
+              !next.saveStory &&
               mine &&
               current.clips.some(
                 (c) =>

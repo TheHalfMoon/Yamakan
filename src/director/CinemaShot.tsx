@@ -169,12 +169,17 @@ export function CinemaShot({
     };
   }, [jobId]);
 
+  // An action in progress (start, ask, approve, place): Start over waits for it.
+  const [acting, setActing] = useState(false);
   const act = async (fn: () => Promise<void>) => {
     setProblem(null);
+    setActing(true);
     try {
       await fn();
     } catch (e) {
       setProblem(e instanceof Error ? e.message : String(e));
+    } finally {
+      setActing(false);
     }
   };
   const choices = stories ? shotChoices(stories) : [];
@@ -406,6 +411,7 @@ export function CinemaShot({
           <button
             type="button"
             data-testid="director-cinema-start-over"
+            disabled={acting}
             onClick={() => {
               setStep("idle");
               setTarget(null);

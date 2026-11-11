@@ -473,3 +473,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - a Place that keeps failing can be left with "Start over".
 
   The qualification now runs at 23.976 fps.
+- **Merged as `cea7159`** (PR #264; full suite 1,361 tests, 0 failed). Its second re-check left four Lows, fixed in the follow-up PR:
+  - the "already the shot's clip" shortcut is taken only after an earlier Place saved the story;
+  - a retry goes on only if the story still selects the render's take;
+  - Start over waits for an action in progress;
+  - the clip-removed message now points to Undo, since the editor has no control to remove a shot from the timeline's scenes.
