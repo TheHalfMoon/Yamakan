@@ -40,7 +40,8 @@ import {
 } from "./media.ts";
 import { mediaTools, workers } from "./process/workers.ts";
 import { ENGINE_WORKER_PROFILE } from "./process/owner.ts";
-import { BlenderSceneSchema } from "./blender/scene.ts";
+import { BlenderSceneSchema, blenderSceneModels } from "./blender/scene.ts";
+import { checkGlb } from "./cinema/glb.ts";
 import {
   BLENDER_PIN,
   BLENDER_SCRIPT,
@@ -1240,6 +1241,22 @@ export class JobSupervisor {
     await mkdir(encoded, { recursive: true });
     const sceneFile = path.join(dir, "scene.json");
     await writeFile(sceneFile, JSON.stringify(scene));
+    // Each 3D model the scene names: the project's stored copy, its bytes hashed and checked
+    // again here, written beside the scene where Blender can read it but not write it.
+    const models = path.join(dir, "models");
+    await mkdir(models, { recursive: true });
+    for (const digest of blenderSceneModels(scene)) {
+      const bytes = await readFile(
+        await this.store.cinemaModelFile(row.project_id, digest),
+      );
+      if (createHash("sha256").update(bytes).digest("hex") !== digest)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          "A 3D model's stored copy does not match its digest; restore a verified backup.",
+        );
+      checkGlb(bytes);
+      await writeFile(path.join(models, `${digest}.glb`), bytes);
+    }
     // Room for every frame at full size and the video, above the disk reserve.
     const frameBytes = scene.width * scene.height * 4;
     const need = scene.frames * frameBytes * 2 + 64 * 1024 * 1024;
@@ -1287,10 +1304,11 @@ export class JobSupervisor {
           "--",
           sceneFile,
           frames,
+          models,
         ],
         cwd: frames,
         writable: [frames],
-        readable: [runtime.install, BLENDER_SCRIPT, sceneFile],
+        readable: [runtime.install, BLENDER_SCRIPT, sceneFile, models],
         memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
         signal,
         stderrLimit: 8000,
@@ -1473,6 +1491,9 @@ export class JobSupervisor {
     this.#current();
     const project = await this.store.load(projectId);
     const payload = BlenderPayload.parse({ format: "blender/1", scene, name });
+    // A model the project does not hold is refused now, not when the render starts.
+    for (const digest of blenderSceneModels(payload.scene))
+      await this.store.cinemaModelFile(projectId, digest);
     const key = `blender-${createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32)}`;
     const row = this.store.transaction((db) => {
       this.#currentIn(db);

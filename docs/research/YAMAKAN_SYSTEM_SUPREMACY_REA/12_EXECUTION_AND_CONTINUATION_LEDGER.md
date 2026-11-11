@@ -583,4 +583,20 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - `tests/cinema-model-store.test.ts`, 11 tests: store and read back; the re-written description; refused files and lengths; cross-project and cross-kind references; garbage collection and the grace period; the budget refused before reading; an SDK upload over HTTP to a test server that calls the upload handler, and the content type; the backup closure; the per-principal limit released after a failed and a completed upload, and the shared agent and workspace limits released after completed uploads.
   - Full local suite on AC power at `92abb62`: 1,408 tests, 1,405 pass, 0 fail, 3 POSIX-only skips.
 - **Not yet:** the worker's import (a model item still renders as a box), the Cinema page button and preview, tracking and aerial views. No test exercises the service's own routes in `server/main.ts` yet (flag, scopes, `Connection: close`, the GET route's served type).
+- **Merged as `08a59ec`** (PR #271; main's CI passed).
+
+**3D asset import, step 2b: Blender renders stored models, 2026-11-11:**
+- **The Blender scene** gains a model object: `{shape: "model", model: <digest>, position, rotation, scale}`, at most 8 in a render. A Cinema item that names a model becomes one; every other item is still a box.
+- **The worker:**
+  - A render naming a model the project does not hold is refused when asked for.
+  - Before Blender starts, each named model's stored copy is read, its SHA-256 checked against the digest, and the .glb check run again. It is then written to the attempt's `models` folder, which Blender can read but not write.
+- **The fixed script** imports each model with Blender's bundled glTF importer, with every option that could reach further set explicitly (no WebP or KTX decoders, no custom properties from the file). It keeps only meshes and empties, fits the model to a 1 m box at the origin, and places it like a box, with its own materials.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender inside procd:
+  - a red bar-shaped model renders with its own material and shape: 202 red pixels, 30 wide by 14 tall, where a grey box at the same place has none;
+  - the same bar fifty times larger inside the file renders at the same size (202 red pixels), because both fit a 1 m box;
+  - a model the project does not hold is refused when asked for;
+  - a stored copy changed on disk (same length) fails the render before Blender reads it.
+
+  A plain test checks the mapping from a Cinema item, the 8-model limit, and that a model object refuses a non-digest.
+- **Not yet:** the Cinema page button and preview (which will also exercise the service's model routes), tracking and aerial views.
 

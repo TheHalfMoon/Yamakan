@@ -17,6 +17,7 @@ import {
   existsSync,
   linkSync,
   mkdirSync,
+  readFileSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -77,8 +78,8 @@ test("a Cinema scene becomes a bounded Blender scene aimed at its boxes", () => 
   // Hidden boxes are not rendered; the camera looks at the middle of the shown ones.
   assert.equal(scene.objects.length, 2);
   assert.deepEqual(scene.camera.target, { x: 3, y: 0, z: 0 });
-  assert.equal(scene.objects[0].colour, "#ab12cd");
-  assert.equal(scene.objects[1].colour, "#888888");
+  assert.equal((scene.objects[0] as { colour: string }).colour, "#ab12cd");
+  assert.equal((scene.objects[1] as { colour: string }).colour, "#888888");
   assert.equal(scene.camera.orbitDegrees, 90);
   assert.equal(scene.camera.focalLengthMm, 35);
   BlenderSceneSchema.parse(scene);
@@ -1029,6 +1030,242 @@ test(
         changedPercent(none.frame, vignette.frame) > 3,
         "the vignette looks like no finish",
       );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+// A red bar as a .glb: a box mesh 2 x 0.5 x 0.5 with its own red material; `scale` is a node
+// scale inside the file, which the fit to a 1 m box takes out.
+function redBar(scale = 1) {
+  const [hx, hy, hz] = [1, 0.25, 0.25];
+  const positions = [
+    [-hx, -hy, -hz],
+    [hx, -hy, -hz],
+    [hx, hy, -hz],
+    [-hx, hy, -hz],
+    [-hx, -hy, hz],
+    [hx, -hy, hz],
+    [hx, hy, hz],
+    [-hx, hy, hz],
+  ];
+  // prettier-ignore
+  const indices = [
+    0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4,
+    3, 7, 6, 3, 6, 2, 1, 2, 6, 1, 6, 5, 0, 4, 7, 0, 7, 3,
+  ];
+  const bin = Buffer.alloc(96 + 72);
+  positions.flat().forEach((v, i) => bin.writeFloatLE(v, i * 4));
+  indices.forEach((v, i) => bin.writeUInt16LE(v, 96 + i * 2));
+  const gltf = {
+    asset: { version: "2.0" },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [
+      { mesh: 0, ...(scale !== 1 ? { scale: [scale, scale, scale] } : {}) },
+    ],
+    meshes: [
+      {
+        primitives: [{ attributes: { POSITION: 0 }, indices: 1, material: 0 }],
+      },
+    ],
+    materials: [
+      {
+        pbrMetallicRoughness: {
+          baseColorFactor: [1, 0, 0, 1],
+          metallicFactor: 0,
+          roughnessFactor: 0.6,
+        },
+      },
+    ],
+    buffers: [{ byteLength: bin.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 96 },
+      { buffer: 0, byteOffset: 96, byteLength: 72 },
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 8,
+        type: "VEC3",
+        min: [-hx, -hy, -hz],
+        max: [hx, hy, hz],
+      },
+      { bufferView: 1, componentType: 5123, count: 36, type: "SCALAR" },
+    ],
+  };
+  const text = Buffer.from(JSON.stringify(gltf), "utf8");
+  const json = Buffer.alloc(Math.ceil(text.length / 4) * 4, 0x20);
+  text.copy(json);
+  const header = Buffer.alloc(28);
+  const length = 20 + json.length + 8 + bin.length;
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(length, 8);
+  header.writeUInt32LE(json.length, 12);
+  header.writeUInt32LE(0x4e4f534a, 16);
+  const binHeader = Buffer.alloc(8);
+  binHeader.writeUInt32LE(bin.length, 0);
+  binHeader.writeUInt32LE(0x004e4942, 4);
+  return Buffer.concat([header.subarray(0, 20), json, binHeader, bin]);
+}
+
+test("a Cinema item's model maps to a model object; a render holds at most eight", () => {
+  const digest = "a".repeat(64);
+  const scene = blenderSceneFromCinema(
+    cinema([{ model: digest, color: "#ff0000" }, {}]),
+    settings,
+  );
+  assert.deepEqual(
+    scene.objects.map((o) => o.shape),
+    ["model", "box"],
+  );
+  assert.equal((scene.objects[0] as { model: string }).model, digest);
+  assert.equal("colour" in scene.objects[0], false);
+  assert.throws(
+    () =>
+      BlenderSceneSchema.parse(
+        blenderSceneFromCinema(
+          cinema(Array.from({ length: 9 }, () => ({ model: digest }))),
+          settings,
+        ),
+      ),
+    /at most 8 3D models/,
+  );
+  assert.throws(() =>
+    BlenderSceneSchema.parse({
+      ...scene,
+      objects: [{ ...scene.objects[0], model: "../../etc/passwd" }],
+    }),
+  );
+});
+
+test(
+  "a stored 3D model renders with its own material and shape, fitted to a 1 m box",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-model-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Models");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 160;
+      const H = 90;
+      const upload = async (bytes: Buffer) =>
+        (
+          await store.importCinemaModel(
+            project.id,
+            (async function* () {
+              yield bytes;
+            })(),
+            bytes.length,
+          )
+        ).digest;
+      const small = await upload(redBar(1));
+      const large = await upload(redBar(50));
+      assert.notEqual(small, large);
+      // Red pixels in the first frame, and how far across and down they spread.
+      const render = async (
+        item: Partial<Scene3D["items"][number]>,
+        name: string,
+      ) => {
+        const scene = blenderSceneFromCinema(cinema([item]), {
+          ...settings,
+          width: W,
+          height: H,
+          frames: 1,
+          samples: 4,
+        });
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          name,
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        ).subarray(0, W * H * 3);
+        let red = 0;
+        let [x0, x1, y0, y1] = [W, -1, H, -1];
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 3;
+            const [r, g, b] = [raw[i], raw[i + 1], raw[i + 2]];
+            if (r > 90 && r > 2 * g && r > 2 * b) {
+              red++;
+              x0 = Math.min(x0, x);
+              x1 = Math.max(x1, x);
+              y0 = Math.min(y0, y);
+              y1 = Math.max(y1, y);
+            }
+          }
+        return { red, wide: x1 - x0 + 1, tall: y1 - y0 + 1 };
+      };
+      const box = await render({ color: "#888888" }, "box");
+      const model = await render({ model: small }, "model");
+      const scaled = await render({ model: large }, "scaled");
+      console.log("model", JSON.stringify({ box, model, scaled }));
+      // The grey box has no red; the model brings its own red material.
+      assert.equal(box.red, 0);
+      assert.ok(model.red > 60, `${model.red} red pixels`);
+      // A bar, wider than it is tall, as its mesh is (a box would be about as wide as tall).
+      assert.ok(model.wide > 1.6 * model.tall, JSON.stringify(model));
+      // Fifty times larger inside the file, the same size on screen: both fit a 1 m box.
+      assert.ok(
+        Math.abs(scaled.red - model.red) <= 0.1 * model.red,
+        JSON.stringify({ model, scaled }),
+      );
+
+      // A model this project does not hold is refused when the render is asked for.
+      const missing = blenderSceneFromCinema(
+        cinema([{ model: "c".repeat(64) }]),
+        settings,
+      );
+      await assert.rejects(
+        supervisor.submitBlenderRender(project.id, missing, "missing"),
+        /Model not found/,
+      );
+      // A stored copy changed on disk (same length) stops the render before Blender reads it.
+      const stored = await store.cinemaModelFile(project.id, small);
+      const bytes = readFileSync(stored);
+      bytes[bytes.length - 1] ^= 0xff;
+      writeFileSync(stored, bytes);
+      const tampered = blenderSceneFromCinema(cinema([{ model: small }]), {
+        ...settings,
+        frames: 1,
+      });
+      const job = await supervisor.submitBlenderRender(
+        project.id,
+        tampered,
+        "tampered",
+      );
+      const done = await settled(supervisor, job.id);
+      assert.equal(done.state, "FAILED");
+      assert.match(JSON.stringify(done), /does not match its digest/);
     } finally {
       await supervisor.close();
       store.close();
