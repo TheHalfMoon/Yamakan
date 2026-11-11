@@ -15,7 +15,7 @@ export type CinemaShotInput = {
   direction: ShotDirection;
   // How long the shot is; the render keeps within 120 frames.
   seconds: number;
-  fps: 24 | 30;
+  fps: 24 | 25 | 30;
   size?: { width: number; height: number };
   samples?: number;
 };

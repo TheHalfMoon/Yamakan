@@ -72,6 +72,7 @@ import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
 import type { BlenderHost } from "./cinema/BlenderRender.tsx";
+import type { CinemaShotHost } from "./director/CinemaShot.tsx";
 import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
@@ -1061,6 +1062,72 @@ function App() {
     await refresh();
     return null;
   };
+  // The Director's Cinema shot, placed: under the editor's busy state, the editor's work saved
+  // first, then the story with its new take, then the story on the timeline (assembled if none
+  // of it is there yet, else the shot's clip switched to the new take), then the project
+  // reopened.
+  const cinemaShotHost = (p: Project): CinemaShotHost => ({
+    place: (next) =>
+      new Promise((resolve) => {
+        let why: string | null = t("status.working");
+        void run(async () => {
+          why = t("error.operation");
+          try {
+            if (!(await save())) {
+              why = t("blender.placeUnsaved");
+              return;
+            }
+            // The render added its video to the project since the editor last read it: the
+            // story is saved against the project as it is now (the editor's work is saved).
+            const current = (await call("yamakan.project.open", {
+              projectId: p.id,
+            })) as Project;
+            await call("yamakan.story.save", {
+              projectId: p.id,
+              expectedRevision: current.revision,
+              documentId: next.documentId,
+              expectedContentHash: next.expectedContentHash,
+              story: next.story,
+            } as any);
+            const opened = (await call("yamakan.project.open", {
+              projectId: p.id,
+            })) as Project;
+            const track = opened.tracks.find((x) => x.kind === "video");
+            if (!track) throw new Error(t("error.edit"));
+            try {
+              await call("yamakan.story.assemble", {
+                projectId: p.id,
+                expectedRevision: opened.revision,
+                documentId: next.documentId,
+                trackId: track.id,
+              });
+            } catch (e) {
+              // The story is on the timeline already: the shot's clip shows the new take.
+              if (
+                !/already on the timeline/.test(String((e as Error)?.message))
+              )
+                throw e;
+              const proposal = (await call("yamakan.take.proposeReplace", {
+                projectId: p.id,
+                documentId: next.documentId,
+                shotId: next.shotId,
+                takeId: next.takeId,
+              })) as any;
+              await call("yamakan.take.apply", {
+                projectId: p.id,
+                expectedRevision: proposal.revision,
+                proposal,
+              } as any);
+            }
+            accept(await call("yamakan.project.open", { projectId: p.id }));
+            await refresh();
+            why = null;
+          } catch (e) {
+            why = e instanceof Error ? e.message : String(e);
+          }
+        }).finally(() => resolve(why));
+      }),
+  });
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
@@ -1093,6 +1160,7 @@ function App() {
         unsaved={Boolean(history?.past.length || unapplied)}
         assetName={(id) => p?.assets.find((x) => x.id === id)?.name ?? null}
         applyTake={applyTake}
+        cinemaShot={p ? cinemaShotHost(p) : undefined}
       />
     </>
   );

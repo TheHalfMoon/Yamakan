@@ -128,8 +128,17 @@ export const FRAMEWORK_SMOKE_MANIFEST: PipelineManifest = parsePipelineManifest(
   },
 );
 
+// Yamakan's other built-in pipelines register here (core/director/cinema-pipeline.ts), so this
+// file does not import them back.
+const OTHER_BUILTINS = new Map<string, PipelineManifest>();
+export function registerBuiltinManifest(manifest: PipelineManifest) {
+  OTHER_BUILTINS.set(manifest.name, manifest);
+}
+
 export function builtinManifest(name: string): PipelineManifest {
   if (name === "framework-smoke" || name === FRAMEWORK_SMOKE_MANIFEST.name)
     return FRAMEWORK_SMOKE_MANIFEST;
+  const other = OTHER_BUILTINS.get(name);
+  if (other) return other;
   throw new CommandError("NOT_FOUND", `Unknown pipeline manifest: ${name}`);
 }

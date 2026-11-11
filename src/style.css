@@ -1057,6 +1057,34 @@ footer {
   font-size: 0.9rem;
 }
 
+/* Director: a story shot planned, rendered with Blender, approved and placed. */
+.director-cinema {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-block: 14px;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.director-cinema-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.director-cinema-choices label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.director-cinema output,
+.director-cinema p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
 /* Agent access: tokens the person makes for agents. */
 .agent-access {
   display: grid;
