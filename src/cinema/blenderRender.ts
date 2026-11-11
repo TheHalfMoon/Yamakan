@@ -29,6 +29,9 @@ export const BLENDER_LIGHTS = [
   )[]),
 ] as const;
 
+// The compositor's finish (core/blender/scene.ts FINISHES); "none" is no compositing at all.
+export const BLENDER_FINISHES = ["none", "glow", "vignette", "film"] as const;
+
 export type BlenderChoices = {
   size: BlenderSize;
   seconds: (typeof BLENDER_SECONDS)[number];
@@ -36,6 +39,7 @@ export type BlenderChoices = {
   quality: BlenderQuality;
   move: (typeof BLENDER_MOVES)[number];
   light: (typeof BLENDER_LIGHTS)[number];
+  finish: (typeof BLENDER_FINISHES)[number];
 };
 
 export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
@@ -46,6 +50,7 @@ export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
   // A 90-degree orbit under the neutral light: what the panel rendered before moves and lights.
   move: "orbit",
   light: "neutral",
+  finish: "none",
 };
 
 /** The settings the service is sent: never more than 120 frames (4 s at 30 fps). */
@@ -60,6 +65,7 @@ export function blenderSettings(choices: BlenderChoices) {
     orbitDegrees: 0,
     ...CAMERA_MOVES[choices.move],
     ...(choices.light === "neutral" ? {} : { lighting: choices.light }),
+    ...(choices.finish === "none" ? {} : { finish: choices.finish }),
   };
 }
 

@@ -883,3 +883,155 @@ test(
     }
   },
 );
+
+test(
+  "the compositor's finish shows: glow brightens, a vignette darkens the corners, film does both",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-finish-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Finish");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 64;
+      const H = 36;
+      const plan = planCinemaShot({
+        shotId: "3d4e5f60-7182-49a0-8bcd-2e3f40516273",
+        direction: { shot: "medium", light: "studio" },
+        seconds: 1 / 24,
+        fps: 24,
+      });
+      // Mean brightness of the whole frame, of its four corner blocks, and of its middle block.
+      const measure = (f: Uint8Array) => {
+        const at = (x: number, y: number) => {
+          const i = (y * W + x) * 3;
+          return (f[i] + f[i + 1] + f[i + 2]) / 3;
+        };
+        const block = (x0: number, y0: number, w: number, h: number) => {
+          let sum = 0;
+          for (let y = y0; y < y0 + h; y++)
+            for (let x = x0; x < x0 + w; x++) sum += at(x, y);
+          return sum / (w * h);
+        };
+        const c = 6;
+        return {
+          all: block(0, 0, W, H),
+          corners:
+            (block(0, 0, c, c) +
+              block(W - c, 0, c, c) +
+              block(0, H - c, c, c) +
+              block(W - c, H - c, c, c)) /
+            4,
+          middle: block(W / 2 - c, H / 2 - c, 2 * c, 2 * c),
+          frame: f,
+        };
+      };
+      const render = async (
+        finish?: "glow" | "vignette" | "film",
+        fringeOnly = false,
+      ) => {
+        const scene = blenderSceneFromCinema(plan.scene, {
+          ...plan.settings,
+          width: 160,
+          height: 90,
+          samples: 4,
+          ...(finish ? { finish } : {}),
+        });
+        // The lens fringe alone, at its most, to see it apart from the glow and vignette.
+        if (fringeOnly)
+          scene.finish = { glow: 0, vignette: 0, dispersion: 0.1 };
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          scene,
+          fringeOnly ? "fringe" : (finish ?? "none"),
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-vf",
+            `scale=${W}:${H}`,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        );
+        return measure(raw.subarray(0, W * H * 3));
+      };
+      const none = await render();
+      const glow = await render("glow");
+      const vignette = await render("vignette");
+      const film = await render("film");
+      const fringe = await render(undefined, true);
+      // How far apart the colour channels are, over the picture: a lens fringe parts them at
+      // the boxes' edges.
+      const parted = (f: Uint8Array) => {
+        let sum = 0;
+        for (let i = 0; i < W * H; i++)
+          sum +=
+            Math.abs(f[i * 3] - f[i * 3 + 1]) +
+            Math.abs(f[i * 3 + 1] - f[i * 3 + 2]);
+        return sum / (W * H);
+      };
+      const seen = Object.fromEntries(
+        Object.entries({ none, glow, vignette, film }).map(([k, v]) => [
+          k,
+          {
+            all: Math.round(v.all),
+            corners: Math.round(v.corners),
+            middle: Math.round(v.middle),
+          },
+        ]),
+      );
+      console.log(
+        "finish",
+        JSON.stringify(seen),
+        "parted",
+        parted(none.frame).toFixed(2),
+        parted(fringe.frame).toFixed(2),
+      );
+      assert.ok(
+        parted(fringe.frame) > parted(none.frame) + 0.3,
+        `the fringe parts no colours: ${parted(none.frame)} against ${parted(fringe.frame)}`,
+      );
+      const falloff = (m: typeof none) => m.corners / Math.max(1, m.middle);
+      // The glow lifts the whole picture a little, most where the lit boxes are.
+      assert.ok(glow.all > none.all + 4, `glow: ${JSON.stringify(seen)}`);
+      assert.ok(glow.middle > none.middle + 4, `glow: ${JSON.stringify(seen)}`);
+      assert.ok(
+        falloff(vignette) < falloff(none) * 0.8,
+        `vignette: ${JSON.stringify(seen)}`,
+      );
+      assert.ok(
+        falloff(film) < falloff(none) * 0.9,
+        `film: ${JSON.stringify(seen)}`,
+      );
+      // Film's glow lifts the middle while its vignette lowers the corners.
+      assert.ok(film.middle > none.middle + 2, `film: ${JSON.stringify(seen)}`);
+      // The vignette changes whole cells of the picture, not just a shade.
+      assert.ok(
+        changedPercent(none.frame, vignette.frame) > 3,
+        "the vignette looks like no finish",
+      );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);

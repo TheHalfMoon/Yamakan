@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   BLENDER_FPS,
+  BLENDER_FINISHES,
   BLENDER_LIGHTS,
   BLENDER_MOVES,
   BLENDER_QUALITY,
@@ -12,7 +13,11 @@ import {
   blenderView,
   type BlenderChoices,
 } from "../src/cinema/blenderRender.ts";
-import { BlenderRenderSettingsSchema } from "../core/blender/scene.ts";
+import {
+  BlenderRenderSettingsSchema,
+  FINISHES,
+  blenderSceneFromCinema,
+} from "../core/blender/scene.ts";
 import { MESSAGES } from "../src/i18n.ts";
 import { CAMERA_MOVES, planCinemaShot } from "../core/director/cinema-shot.ts";
 import { DIRECTIONS } from "../core/prompts/directions.ts";
@@ -25,18 +30,20 @@ test("every choice the Cinema page offers is settings the service accepts", () =
           BLENDER_QUALITY,
         ) as BlenderChoices["quality"][])
           for (const move of BLENDER_MOVES)
-            for (const light of BLENDER_LIGHTS) {
-              const settings = blenderSettings({
-                size,
-                seconds,
-                fps,
-                quality,
-                move,
-                light,
-              });
-              assert.ok(settings.frames <= 120);
-              BlenderRenderSettingsSchema.parse(settings);
-            }
+            for (const light of BLENDER_LIGHTS)
+              for (const finish of BLENDER_FINISHES) {
+                const settings = blenderSettings({
+                  size,
+                  seconds,
+                  fps,
+                  quality,
+                  move,
+                  light,
+                  finish,
+                });
+                assert.ok(settings.frames <= 120);
+                BlenderRenderSettingsSchema.parse(settings);
+              }
 });
 
 test("the default render is the small, quick one, the orbit under the neutral light it always was", () => {
@@ -160,4 +167,25 @@ test("every movement word has its camera move, and the panel offers each", () =>
   assert.ok(
     Object.isFrozen(CAMERA_MOVES) && Object.isFrozen(CAMERA_MOVES.push),
   );
+});
+
+test("a finish reaches the render as the compositor's settings; none is no compositing at all", () => {
+  const scene = (finish: BlenderChoices["finish"]) =>
+    blenderSceneFromCinema(
+      planCinemaShot({
+        shotId: "2c3d4e5f-6071-4829-9abc-1d2e3f405162",
+        direction: {},
+        seconds: 1,
+        fps: 30,
+      }).scene,
+      blenderSettings({ ...DEFAULT_BLENDER_CHOICES, finish }),
+    );
+  assert.equal(blenderSettings(DEFAULT_BLENDER_CHOICES).finish, undefined);
+  assert.deepEqual(scene("none").finish, {
+    glow: 0,
+    vignette: 0,
+    dispersion: 0,
+  });
+  for (const finish of ["glow", "vignette", "film"] as const)
+    assert.deepEqual(scene(finish).finish, FINISHES[finish]);
 });

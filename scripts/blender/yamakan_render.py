@@ -188,6 +188,53 @@ def main():
     sun.rotation_euler = vec3(l["rotation"], -4 * math.pi, 4 * math.pi, "light rotation")
     scene.collection.objects.link(sun)
 
+    # The finish: a glow, a vignette and a lens's colour fringe, made by the compositor on every
+    # frame. With all three at 0 no compositor is set up at all, as before there was a finish.
+    f = s.get("finish", {})
+    if not isinstance(f, dict):
+        fail("finish is not an object")
+    glow = number(f.get("glow", 0), 0, 1, "glow")
+    vignette = number(f.get("vignette", 0), 0, 1, "vignette")
+    dispersion = number(f.get("dispersion", 0), 0, 0.1, "dispersion")
+    if glow > 0 or vignette > 0 or dispersion > 0:
+        tree = bpy.data.node_groups.new("yamakan-finish", "CompositorNodeTree")
+        tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+        nodes, links = tree.nodes, tree.links
+        image = nodes.new("CompositorNodeRLayers").outputs["Image"]
+        if glow > 0:
+            g = nodes.new("CompositorNodeGlare")
+            # Bloom from the lit parts upward (a threshold under the boxes' light), its spread
+            # wide and its strength the glow chosen.
+            g.inputs["Type"].default_value = "Bloom"
+            g.inputs["Threshold"].default_value = 0.25
+            g.inputs["Smoothness"].default_value = 0.5
+            g.inputs["Strength"].default_value = glow
+            links.new(image, g.inputs["Image"])
+            image = g.outputs["Image"]
+        if dispersion > 0:
+            d = nodes.new("CompositorNodeLensdist")
+            d.inputs["Dispersion"].default_value = dispersion
+            links.new(image, d.inputs["Image"])
+            image = d.outputs["Image"]
+        if vignette > 0:
+            mask = nodes.new("CompositorNodeEllipseMask")
+            mask.inputs["Size"].default_value = (0.9, 0.9)
+            soft = nodes.new("CompositorNodeBlur")
+            edge = max(2, int(width * 0.25))
+            soft.inputs["Size"].default_value = (edge, edge)
+            links.new(mask.outputs["Mask"], soft.inputs["Image"])
+            mix = nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.blend_type = "MULTIPLY"
+            colour_inputs = [i for i in mix.inputs if i.type == "RGBA"]
+            factor = [i for i in mix.inputs if i.name == "Factor" and i.type == "VALUE"][0]
+            factor.default_value = vignette
+            links.new(image, colour_inputs[0])
+            links.new(soft.outputs["Image"], colour_inputs[1])
+            image = [o for o in mix.outputs if o.type == "RGBA"][0]
+        links.new(image, nodes.new("NodeGroupOutput").inputs[0])
+        scene.compositing_node_group = tree
+
     # Cycles on the CPU, PNG frames into the output folder only.
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"

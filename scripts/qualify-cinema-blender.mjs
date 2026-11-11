@@ -242,9 +242,10 @@ try {
 
   // A full render, with its progress seen as it runs. Midway, another project is opened and
   // this one opened again: its panel follows the same render, and the editor is not reloaded
-  // when it finishes. It is a push under the studio light, chosen on the panel.
+  // when it finishes. It is a push under the studio light with the film finish, chosen on the panel.
   await page.getByTestId("cinema-blender-move").selectOption("push");
   await page.getByTestId("cinema-blender-light").selectOption("studio");
+  await page.getByTestId("cinema-blender-finish").selectOption("film");
   await page.getByTestId("cinema-blender-render").click();
   const seen = new Set();
   const started = Date.now();
@@ -271,6 +272,10 @@ try {
   assert.equal(
     await page.getByTestId("cinema-blender-light").inputValue(),
     "studio",
+  );
+  assert.equal(
+    await page.getByTestId("cinema-blender-finish").inputValue(),
+    "film",
   );
   assert.ok(
     ["working", "done"].includes(

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   BLENDER_FPS,
+  BLENDER_FINISHES,
   BLENDER_LIGHTS,
   BLENDER_MOVES,
   BLENDER_QUALITY,
@@ -307,6 +308,23 @@ export function BlenderRender({
                 {l === "neutral"
                   ? t("blender.lightNeutral")
                   : DIRECTIONS.light[l]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("blender.finish")}{" "}
+          <select
+            data-testid="cinema-blender-finish"
+            value={choices.finish}
+            disabled={working}
+            onChange={(e) =>
+              choose("finish", e.target.value as BlenderChoices["finish"])
+            }
+          >
+            {BLENDER_FINISHES.map((f) => (
+              <option key={f} value={f}>
+                {t(`blender.finish.${f}`)}
               </option>
             ))}
           </select>
