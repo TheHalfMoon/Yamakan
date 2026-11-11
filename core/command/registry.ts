@@ -196,6 +196,7 @@ import {
   promptTemplate,
   searchPrompts,
 } from "../prompts/library.ts";
+import { PromptPresetsDocumentSchema } from "../prompts/presets.ts";
 import {
   evaluateReviewIndependenceV1,
   type ReviewLineageV1,
@@ -533,6 +534,12 @@ export const commands = {
         throw new CommandError(
           "VALIDATION",
           "Caption tracks are saved with the yamakan.captions commands.",
+        );
+      // Prompt presets are checked against the library, one document per project.
+      if (a.kind === "promptPresets")
+        throw new CommandError(
+          "VALIDATION",
+          "Prompt presets are saved with yamakan.prompt.savePresets.",
         );
       // LUTs come only from a parsed .cube file (YU-023).
       if (a.kind === "lut")
@@ -2438,6 +2445,58 @@ export const commands = {
           e instanceof Error ? e.message : String(e),
         );
       }
+    },
+  }),
+  "yamakan.prompt.savePresets": define({
+    scope: "project:write",
+    mutation: true,
+    summary:
+      "Save the project's prompt presets (prompts kept with the project, each from a library template or written freely; at most 50) as a new revision. One presets document per project; read it with yamakan.document.list and yamakan.document.get. Compare-and-swap on expectedRevision and expectedContentHash (null for the project's first).",
+    input: z
+      .object({
+        projectId: Id,
+        expectedRevision: z.number().int().nonnegative(),
+        documentId: Id,
+        expectedContentHash: Sha256Hex.nullable(),
+        presets: PromptPresetsDocumentSchema,
+      })
+      .strict(),
+    run: async ({ store, principal, receipt }, a) => {
+      if (!creativeDocumentsEnabled())
+        throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      // One presets document per project, checked under the write lock (after a replay is
+      // answered from its receipt).
+      const onlyOne = (documents: readonly { id: string; kind: string }[]) => {
+        const other = documents.find(
+          (d) => d.kind === "promptPresets" && d.id !== a.documentId,
+        );
+        if (other)
+          throw new CommandError(
+            "VALIDATION",
+            `This project keeps its prompt presets in document ${other.id}; save to that one.`,
+          );
+      };
+      const project = await store.commitDocument(
+        {
+          projectId: a.projectId,
+          expectedRevision: a.expectedRevision,
+          documentId: a.documentId,
+          kind: "promptPresets",
+          schemaVersion: 1,
+          expectedContentHash: a.expectedContentHash,
+          source: { bytes: Buffer.from(JSON.stringify(a.presets), "utf8") },
+          principalId: principal.id,
+          verify: (c) => onlyOne(c.documents),
+        },
+        receipt,
+      );
+      return {
+        project,
+        // Of this result's revision: a replay's may not be the head.
+        document: store
+          .listDocumentsAt(a.projectId, project.revision)
+          .find((d) => d.id === a.documentId),
+      };
     },
   }),
   "yamakan.engines.capabilities": define({

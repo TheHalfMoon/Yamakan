@@ -803,6 +803,60 @@ footer {
   background: #111722;
   border-radius: 6px;
 }
+.prompt-presets {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.prompt-presets ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.prompt-presets li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 2px 8px;
+  align-items: center;
+}
+.prompt-preset-name {
+  grid-column: 1;
+  grid-row: 1;
+  font-weight: 600;
+}
+.prompt-preset-text {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prompt-presets li button {
+  grid-row: 1 / span 2;
+}
+.prompt-presets li button:nth-of-type(1) {
+  grid-column: 2;
+}
+.prompt-presets li button:nth-of-type(2) {
+  grid-column: 3;
+}
+.prompt-presets-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.prompt-presets-save label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .prompt-library-actions {
   display: flex;
   flex-wrap: wrap;

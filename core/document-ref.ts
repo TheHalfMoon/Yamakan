@@ -47,6 +47,8 @@ export const DocumentKind = z.enum([
   "captions",
   // YU-023: 3D color LUTs.
   "lut",
+  // The prompt library's presets kept with the project (one document per project).
+  "promptPresets",
 ]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
@@ -59,6 +61,7 @@ export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
     referencePack: 1,
     captions: 1,
     lut: 1,
+    promptPresets: 1,
   });
 
 export const DocumentRefSchema = z

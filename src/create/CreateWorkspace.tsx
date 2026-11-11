@@ -37,6 +37,7 @@ import {
 import { ElementsPanel, type ElementsApi } from "./ElementsPanel.tsx";
 import { PeoplePanel, type PeopleApi } from "./PeoplePanel.tsx";
 import { PromptLibrary } from "./PromptLibrary.tsx";
+import type { PresetsHost } from "./PromptPresets.tsx";
 import type { Lang } from "../i18n.ts";
 
 type Translate = (
@@ -97,6 +98,8 @@ export function CreateWorkspace(props: {
   t: Translate;
   // The page's language: the prompt library shows its titles in it.
   lang: Lang;
+  // The project's prompt presets.
+  presets?: PresetsHost;
   // Whether a generation could run here, from the service.
   checkEngine: () => Promise<EngineAnswer | null>;
   // What can be started from here, and how.
@@ -392,7 +395,10 @@ export function CreateWorkspace(props: {
         <PromptLibrary
           lang={props.lang}
           t={t}
-          hasPrompt={brief.prompt.trim() !== ""}
+          brief={brief.prompt}
+          presets={props.presets}
+          revision={props.revision}
+          busy={busy}
           use={(prompt, how) => {
             const base = brief.prompt
               .trim()

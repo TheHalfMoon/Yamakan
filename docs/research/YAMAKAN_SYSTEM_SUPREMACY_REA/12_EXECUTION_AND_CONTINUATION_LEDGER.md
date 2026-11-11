@@ -394,3 +394,27 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - presets saved in the project: a document kind of their own, because a project holds at most 32 documents;
   - the Creative Director using the library;
   - a generation started from a library prompt. No engine runs here: the Kaggle GPU quota is spent until it resets.
+
+**Prompt presets kept with the project, 2026-11-11:** after the prompt library (PR #261, merged as `e22cf22`; main's CI passed).
+- **The document:** a `promptPresets` creative document, one per project (a project holds at most 32 documents). It holds up to 50 presets:
+  - a filled library template (its template, language, field values and prompt);
+  - or the brief's own words (no template).
+
+  Names are unique without regard to case. Templates and fields are checked against the library.
+- **Saving:** only `yamakan.prompt.savePresets` (compare-and-swap; the one-document rule is checked under the write lock, after a replay is answered from its receipt). It is never staged or written by the generic commit. Template ids and field names are kept for good, pinned by a test; the page saves a preset whose template is gone as the prompt it made.
+- **History:** part of the project's revisions, so undo, restore and backup carry presets; the panel reads them again when the revision moves. An earlier build refuses any revision that holds the new kind, so it cannot open such a project at all, as with LUTs.
+- **The page:** in the Prompt library panel, "Saved in this project":
+  - keep the filled template, or the brief, by name;
+  - use a preset (it replaces the brief);
+  - remove one.
+
+  Saving runs as a story save does: the editor's work first, then the presets against the head, then the project reopened.
+- **Evidence:**
+  - `tests/prompt-presets.test.ts` (a real store) covers:
+    - saving and reading back across a service restart;
+    - a stale hash refused;
+    - a second document refused;
+    - library, field, duplicate and size checks;
+    - the generic commit refused.
+  - `qualify:prompt-library` now also keeps a filled template as a preset and refuses a same-named one. After a reload it keeps the brief as a second (stored without a template, in English), uses one and removes the other. It then saves a third, undoes it in the editor (the panel follows), saves again, and reads the document back through the SDK.
+- **Review:** the independent review found no High and two Medium issues, both fixed before the PR: the panel did not follow an undo, restore or another writer (it now reads again when the revision moves, and after a failed save), and a later library change could have locked a project's presets (ids and fields are now pinned, with the page's fallback). Its Lows are fixed too: busy editor, replay, language of a brief, case comparison, accessibility, byte ceiling (now 1 MiB) and Arabic spelling.

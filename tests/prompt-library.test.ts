@@ -274,3 +274,42 @@ test("a value loses invisible direction and joining marks, and a field given twi
     /given twice/,
   );
 });
+
+// Projects keep template ids and field names in their presets: none may change or go. A new
+// template may be added (with a new id, and added here).
+const PINNED: Record<string, string[]> = {
+  "yamakan.city-dawn-establishing": ["place"],
+  "yamakan.desert-road-aerial": ["subject"],
+  "yamakan.interior-room-reveal": ["place"],
+  "yamakan.orbit-hero": ["subject"],
+  "yamakan.push-in-detail": ["subject"],
+  "yamakan.tracking-walk": ["subject", "place"],
+  "yamakan.pull-back-reveal": ["subject", "place"],
+  "yamakan.handheld-chase": ["subject", "place"],
+  "yamakan.close-up-emotion": ["subject", "feeling"],
+  "yamakan.over-shoulder-dialogue": ["place"],
+  "yamakan.silhouette-sunset": ["subject", "place"],
+  "yamakan.rain-night-street": ["place"],
+  "yamakan.time-lapse-sky": ["place"],
+  "yamakan.ocean-waves-slow": ["place"],
+  "yamakan.forest-light": ["place"],
+  "yamakan.product-turntable": ["product", "colour"],
+  "yamakan.product-in-use": ["product", "place"],
+  "yamakan.title-card": ["texture"],
+  "yamakan.storyboard-frame": ["shot", "subject", "place"],
+  "yamakan.thumbnail-portrait": ["subject", "colour"],
+  "yamakan.game-prop": ["subject"],
+};
+test("template ids and field names are kept, as projects' presets name them", () => {
+  for (const [id, fields] of Object.entries(PINNED)) {
+    const t = PROMPT_TEMPLATES.find((x) => x.id === id);
+    assert.ok(t, `the template ${id} is gone`);
+    for (const f of fields)
+      assert.ok(
+        t!.fields.some((x) => x.name === f),
+        `the field ${f} of ${id} is gone`,
+      );
+  }
+  for (const t of PROMPT_TEMPLATES)
+    assert.ok(PINNED[t.id], `pin the new template ${t.id} here`);
+});

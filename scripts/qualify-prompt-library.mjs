@@ -5,7 +5,9 @@
  *   the service's yamakan.prompt.search and yamakan.prompt.fill through the SDK → the Create
  *   page's library: search in Arabic and English, a template's fields filled, its prompt put
  *   into the brief, another added, one written in Arabic replacing it, an over-long addition
- *   refused → the page in Arabic → the brief kept across a reload → no request leaves this
+ *   refused → the filled template kept as a project preset → the page in Arabic → after a
+ *   reload, the preset still there, the brief's own words kept as a second, one used and one
+ *   removed, and the project's presets document read back through the SDK → no request leaves this
  *   computer.
  *
  * Nothing here is mocked. The receipt is printed, and written only where
@@ -198,6 +200,23 @@ try {
   step("written in Arabic, replaced");
   if (shots) await library.screenshot({ path: join(shots, "library-en.png") });
 
+  // The filled template kept with the project, by name; a second of the same name is refused.
+  const presets = page.getByTestId("prompt-presets");
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="prompt-presets"]')
+        ?.getAttribute("data-state") === "ready",
+  );
+  await page.getByTestId("prompt-preset-name").fill("Orbit, Arabic");
+  await page.getByTestId("prompt-preset-save").click();
+  await presets.locator('[data-preset-name="Orbit, Arabic"]').waitFor();
+  await page.getByTestId("prompt-preset-name").fill("orbit, ARABIC");
+  assert.equal(await page.getByTestId("prompt-preset-save").isDisabled(), true);
+  await page.getByTestId("prompt-preset-name").fill("");
+  const orbitArabic = await preview.textContent();
+  step("a filled template kept as a preset; a same-named one refused");
+
   // Too long together: refused, the prompt unchanged.
   const long = "x".repeat(1990);
   await prompt.fill(long);
@@ -246,6 +265,107 @@ try {
     "A paper boat on a pond.",
   );
   step("brief kept across a reload");
+
+  // The preset is still there; the brief's own words are kept as a second; one is used, the
+  // other removed.
+  await library.locator("summary").click();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="prompt-presets"]')
+        ?.getAttribute("data-state") === "ready",
+  );
+  await presets.locator('[data-preset-name="Orbit, Arabic"]').waitFor();
+  assert.equal(
+    await page.getByTestId("prompt-preset-name").getAttribute("placeholder"),
+    "وصفي",
+  );
+  await page.getByTestId("prompt-preset-name").fill("Boat");
+  await page.getByTestId("prompt-preset-save").click();
+  await presets.locator('[data-preset-name="Boat"]').waitFor();
+  await presets
+    .locator('[data-preset-name="Orbit, Arabic"]')
+    .getByTestId("prompt-preset-use")
+    .click();
+  assert.equal(
+    await page.getByTestId("create-prompt").inputValue(),
+    orbitArabic,
+  );
+  // The brief's words kept as written: no template, and English (its first letter's language).
+  {
+    const project = (await client.call("yamakan.project.list", {})).find(
+      (x) => x.name === "Library",
+    );
+    const ref = (
+      await client.call("yamakan.document.list", { projectId: project.id })
+    ).find((d) => d.kind === "promptPresets");
+    const boat = (
+      await client.call("yamakan.document.get", {
+        projectId: project.id,
+        documentId: ref.id,
+      })
+    ).content.presets.find((x) => x.name === "Boat");
+    assert.deepEqual(
+      [boat.templateId, boat.language, boat.values, boat.prompt],
+      [null, "en", [], "A paper boat on a pond."],
+    );
+  }
+  await presets
+    .locator('[data-preset-name="Boat"]')
+    .getByTestId("prompt-preset-remove")
+    .click();
+  await page.waitForFunction(
+    () => !document.querySelector('[data-preset-name="Boat"]'),
+  );
+  if (shots) await library.screenshot({ path: join(shots, "presets-ar.png") });
+
+  // Undo takes back the last presets save; the panel follows, and saves again against it.
+  await page.getByTestId("prompt-preset-name").fill("Undone");
+  await page.getByTestId("prompt-preset-save").click();
+  await presets.locator('[data-preset-name="Undone"]').waitFor();
+  await page
+    .getByRole("button", {
+      name: "\u062a\u0631\u0627\u062c\u0639",
+      exact: true,
+    })
+    .first()
+    .click();
+  await page.waitForFunction(
+    () => !document.querySelector('[data-preset-name="Undone"]'),
+    null,
+    { timeout: 30000 },
+  );
+  await page.getByTestId("prompt-preset-name").fill("After undo");
+  await page.getByTestId("prompt-preset-save").click();
+  await presets.locator('[data-preset-name="After undo"]').waitFor();
+  assert.equal(await page.getByTestId("prompt-presets-problem").count(), 0);
+  step("an undo of a presets save is followed, and saving goes on");
+
+  // Read back from the service: one presets document, as the page left it.
+  const project = (await client.call("yamakan.project.list", {})).find(
+    (x) => x.name === "Library",
+  );
+  const documents = await client.call("yamakan.document.list", {
+    projectId: project.id,
+  });
+  const kept = documents.filter((d) => d.kind === "promptPresets");
+  assert.equal(kept.length, 1);
+  const read = await client.call("yamakan.document.get", {
+    projectId: project.id,
+    documentId: kept[0].id,
+  });
+  assert.deepEqual(
+    read.content.presets.map((x) => [x.name, x.templateId, x.language]),
+    [
+      ["Orbit, Arabic", "yamakan.orbit-hero", "ar"],
+      // Kept from the brief, which then held the Arabic orbit prompt.
+      ["After undo", null, "ar"],
+    ],
+  );
+  assert.equal(read.content.presets[0].prompt, orbitArabic);
+  step("presets kept across a reload, used, removed, and read back", {
+    presets: read.content.presets.length,
+  });
 
   assert.deepEqual(pageErrors, []);
   assert.deepEqual([...new Set(outside)], [], "requests left this computer");
