@@ -692,4 +692,16 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Independent review:** no High. Fixed: a view with tracked footage is refused rather than silently ignored; the render command's description names the view. Stated: from above, a pan turns about the vertical (a gimbal yaw), so it mostly turns the picture. Open: the real test's measure shows near ground in view, not the camera's angle directly (the plain test checks the 70 degrees). A second round found the command returned an internal error for a view with footage; it now refuses it as VALIDATION before looking up the track.
 - **Full suite:** clean at `4bf1644` on AC power (1,432 tests, 1,429 pass, 0 fail, 3 POSIX-only skips). The run before it failed 8 tests, all for lack of disk space: C: had 0.85 GB free. 645 leftover Yamakan test temp folders from this session's runs (about 2.65 GB, unchanged for over an hour) were removed, and nothing else was touched.
 - **Not yet:** a Cinema page control for the view (the planner and the render command offer it), and object animation.
+- **Merged as `4a8e1b5`** (PR #277, pinned to `333c141`; main's CI passed).
+
+**Object animation, 2026-11-11:**
+- **A Cinema scene item may carry `motion`:** its position, turn and size at the end of a shot. In a render it moves there from its own pose, the first frame to the last, easing in and out (Blender's default keyframes). A turn takes the shorter way round from its start. The format stays at version 1, since the field is optional.
+- **The Blender scene's boxes and models** carry it as `motion`, bounded like any pose. The fixed script keyframes position, turn and size at the first and last frames.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender. A red box moving 2 m sideways over 12 frames beside a still blue box:
+  - the red centre goes from 62.5 to 96.1 px, never going back;
+  - it is about halfway by the middle frames, and its first step (0.5 px) is smaller than its middle one (4.0 px), which is the easing;
+  - the blue box's centre spread is 0.15 px.
+
+  A plain test checks that motion reaches the render bounded (2,000 m becomes 1,000), that items without one have none, and that a malformed one is refused.
+- **Not yet:** a Cinema page control for motion, motion along a path (more than two poses), and the Director planning object motion from words.
 

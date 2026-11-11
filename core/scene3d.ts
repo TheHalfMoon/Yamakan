@@ -81,6 +81,18 @@ export const Scene3DItemSchema = z
     specular: Finite.min(0).max(1).optional(),
     locked: z.boolean().optional(),
     visible: z.boolean().optional(),
+    /**
+     * Where the item is at the end of a shot: it moves there from its own position, turn and
+     * size over the shot, easing in and out (a render's object animation).
+     */
+    motion: z
+      .object({
+        position: Vec3Schema,
+        rotation: Vec3Schema,
+        scale: Vec3Schema,
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type Scene3DItem = z.infer<typeof Scene3DItemSchema>;

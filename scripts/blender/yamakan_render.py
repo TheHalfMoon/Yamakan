@@ -76,6 +76,33 @@ def point(p):
     return (WORLD[0] @ Vector((*p, 1.0))).xyz
 
 
+def animate(obj, item, start, frames, name):
+    """Moves an object from its start pose (frame 1) to the item's motion (the last frame), easing
+    in and out (Blender's default keyframes). A turn takes the shorter way round."""
+    obj.matrix_world = start
+    if "motion" not in item:
+        return
+    m = item["motion"]
+    if not isinstance(m, dict) or set(m) != {"position", "rotation", "scale"}:
+        fail(name + "'s motion is not as described")
+    end = transform(
+        vec3(m["position"], -1000, 1000, name + " motion position"),
+        vec3(m["rotation"], -4 * math.pi, 4 * math.pi, name + " motion rotation"),
+        vec3(m["scale"], 0.001, 100, name + " motion scale"),
+    )
+    if frames < 2:
+        return
+    first = obj.rotation_euler.copy()
+    for path in ("location", "rotation_euler", "scale"):
+        obj.keyframe_insert(data_path=path, frame=1)
+    location, rotation, size = end.decompose()
+    obj.location = location
+    obj.rotation_euler = rotation.to_euler(first.order, first)
+    obj.scale = size
+    for path in ("location", "rotation_euler", "scale"):
+        obj.keyframe_insert(data_path=path, frame=frames)
+
+
 DIGEST = re.compile(r"[a-f0-9]{64}")
 
 
@@ -292,7 +319,14 @@ def main():
         rotation = vec3(item["rotation"], -4 * math.pi, 4 * math.pi, "rotation")
         scale = vec3(item["scale"], 0.001, 100, "scale")
         if item["shape"] == "model":
-            if set(item) != {"shape", "model", "position", "rotation", "scale"}:
+            if not {"shape", "model", "position", "rotation", "scale"} <= set(item) <= {
+                "shape",
+                "model",
+                "position",
+                "rotation",
+                "scale",
+                "motion",
+            }:
                 fail("object " + str(i) + " is not a model as described")
             digest = item["model"]
             if not isinstance(digest, str) or not DIGEST.fullmatch(digest):
@@ -301,13 +335,13 @@ def main():
             if not os.path.isfile(path):
                 fail("a 3D model the scene names was not provided")
             holder = import_model(path, "model-" + str(i))
-            holder.matrix_world = transform(position, rotation, scale)
+            animate(holder, item, transform(position, rotation, scale), frames, "object " + str(i))
             continue
         rgb = colour(item["colour"], "colour")
         bpy.ops.mesh.primitive_cube_add(size=1)
         box = bpy.context.active_object
         box.name = "box-" + str(i)
-        box.matrix_world = transform(position, rotation, scale)
+        animate(box, item, transform(position, rotation, scale), frames, "object " + str(i))
         material = bpy.data.materials.new("box-" + str(i))
         surfaced(material, rgb)
         box.data.materials.append(material)
