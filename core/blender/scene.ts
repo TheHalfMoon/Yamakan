@@ -322,6 +322,12 @@ export function blenderSceneFromCinema(
         ),
     );
   const back = Math.min(L.maxMetres / 10, reach);
+  // Over tracked footage the camera is the solve's: a view of its own would be ignored, so it
+  // is refused rather than dropped.
+  if (plate && s.view)
+    throw new Error(
+      "Over tracked footage the camera is the solve's; it takes no view.",
+    );
   const from = s.view === "aerial" ? AERIAL_DIRECTION : PREVIEW_DIRECTION;
   const angle = (n: number) => clamp(n, -4 * Math.PI, 4 * Math.PI);
   const size = (n: number) => clamp(Math.abs(n), 0.001, L.maxScale);

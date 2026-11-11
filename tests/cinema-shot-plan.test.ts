@@ -72,7 +72,7 @@ test("shot size is made by how much of the set is shown, the lens by the focal l
   assert.equal(plan().scene.camera.focalLengthMm, 35);
 });
 
-test("every movement is followed as a camera move; what the render cannot make is said, not faked", () => {
+test("every movement and shot size is followed; a choice the render could not make would be said, not faked", () => {
   assert.equal(plan({ movement: "still" }).settings.orbitDegrees, 0);
   const orbit = plan({ movement: "orbit", shot: "wide", lens: "tele" });
   assert.equal(orbit.settings.orbitDegrees, 90);
@@ -251,4 +251,24 @@ test("each light is a sun and a sky; no light is the neutral light every render 
     (a, b) => warmth(LIGHTING[b].colour) - warmth(LIGHTING[a].colour),
   )[0];
   assert.equal(warmest, "golden");
+});
+
+test("over tracked footage the camera is the solve's, so a view is refused, not ignored", () => {
+  const p = plan({ shot: "aerial" });
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const plate = {
+    focalLengthMm: 35,
+    sensorWidthMm: 36,
+    width: 320,
+    height: 180,
+    cameras: Array.from({ length: p.settings.frames }, () => identity),
+  };
+  assert.throws(
+    () => blenderSceneFromCinema(p.scene, p.settings, plate),
+    /takes no view/,
+  );
+  // Aerial with a pan is followed (from above it turns about the vertical).
+  const pan = plan({ shot: "aerial", movement: "pan" });
+  assert.deepEqual(pan.followed, ["shot:aerial", "movement:pan"]);
+  assert.equal(pan.settings.panDegrees, 30);
 });
