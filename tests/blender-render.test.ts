@@ -699,7 +699,11 @@ test(
           raw.subarray(i * size, (i + 1) * size),
         );
         assert.equal(all.length, frames);
-        return { first: all[0], last: all[frames - 1] };
+        // The most any frame changes from the one before: a sway, not a flicker.
+        let step = 0;
+        for (let i = 1; i < frames; i++)
+          step = Math.max(step, changedPercent(all[i - 1], all[i]));
+        return { first: all[0], last: all[frames - 1], step };
       };
       const results: Record<string, unknown> = {};
       const still = await render("still");
@@ -723,13 +727,24 @@ test(
         measure(handheld.first).share,
         measure(handheld.last).share,
       ];
-      // It moves, but the shot stays about the same size.
+      // It moves, slowly from frame to frame, and the shot stays about the same size.
       assert.ok(swayed > 0, `handheld changed ${swayed}%`);
+      assert.ok(
+        handheld.step <= Math.max(1, swayed),
+        `handheld: ${handheld.step}% from one frame to the next, ${swayed}% over the shot`,
+      );
       assert.ok(
         Math.abs(held[1] - held[0]) < 0.5 * held[0],
         `handheld: ${held}`,
       );
-      Object.assign(results, { pushed, pulled, panned, swayed, held });
+      Object.assign(results, {
+        pushed,
+        pulled,
+        panned,
+        swayed,
+        held,
+        handheldStep: handheld.step,
+      });
       console.log("camera moves", JSON.stringify(results));
     } finally {
       await supervisor.close();

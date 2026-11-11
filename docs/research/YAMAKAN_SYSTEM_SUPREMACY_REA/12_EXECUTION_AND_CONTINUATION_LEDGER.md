@@ -481,7 +481,7 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - while an action runs, the other actions wait, so a double click cannot start two.
 
 **Blender animation, camera moves, 2026-11-11:** after the Director pipeline (PRs #264 and #265, merged as `cea7159` and `91baa32`; main's CI passed on `cea7159`).
-- **The Blender scene's camera can now also** move toward or away from what it looks at (`dolly`), turn where it stands (`panDegrees`), and sway as if handheld (`shake`: position and aim, a fixed function of the frame, so the same scene renders the same shot). These sit beside the existing orbit. Each is optional and 0 when absent, so scenes made before are unchanged.
+- **The Blender scene's camera can now also** move toward or away from what it looks at (`dolly`), turn where it stands (`panDegrees`), and sway as if handheld (`shake`: position and aim in slow waves of about one a second, measured in seconds so it is the same at 24 and 30 fps, and a fixed function of time, so the same scene renders the same shot). These sit beside the existing orbit. Each is optional and 0 when absent, and a move at 0 does not touch the camera, so scenes made before render as they did.
 - **The planner follows every movement word:**
   - push and pull: a third of the distance;
   - pan: 30 degrees;
@@ -491,8 +491,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Evidence:** `tests/blender-render.test.ts` renders the same medium shot with each move using the real Blender, and measures the first and last frames:
   - push: the subject's share of the picture grows (4.3% to 9.7% in the run that passed);
   - pull: it shrinks (4.4% to 2.1%);
-  - pan: its middle slides across (0.25 to 0.74 of the width);
-  - handheld: the picture changes (6.6% of cells) while the subject keeps its size;
+  - pan: the middle of all that is shown (the subject and the near block) slides across, showing the camera turned (0.25 to 0.74 of the width);
+  - handheld: the picture changes over the shot while the subject keeps its size, and no frame changes from the one before by more than the whole shot does (a sway, not a flicker);
   - still: nothing changes.
 
   The planner's tests check each movement maps to exactly one camera move and reaches the render's scene as given.
