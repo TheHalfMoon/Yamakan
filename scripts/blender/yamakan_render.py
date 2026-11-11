@@ -190,7 +190,7 @@ def main():
 
     # The finish: a glow, a vignette and a lens's colour fringe, made by the compositor on every
     # frame. With all three at 0 no compositor is set up at all, as before there was a finish.
-    f = s.get("finish", {}) or {}
+    f = s.get("finish", {})
     if not isinstance(f, dict):
         fail("finish is not an object")
     glow = number(f.get("glow", 0), 0, 1, "glow")

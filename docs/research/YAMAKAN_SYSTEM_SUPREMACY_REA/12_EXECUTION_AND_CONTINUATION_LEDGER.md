@@ -548,7 +548,8 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Evidence:** `tests/blender-render.test.ts` renders one still shot with each finish using the real Blender, and measures the picture (0 to 255):
   - glow lifts the whole picture and most the middle, where the boxes are (all 113 to 123, middle 113 to 126);
   - the vignette darkens the corners against the middle (corners 113 to 78, middle unchanged at 113);
-  - film does both (corners 93, middle 119).
+  - film does both (corners 93, middle 119);
+  - the lens fringe alone, at its largest (dispersion 0.1), parts the colour channels (a mean channel difference of 3.13 to 3.71). Film uses 0.015, so its fringe is very slight and is not measured separately.
 
   The panel's tests check each finish reaches the render's scene as the table says, and that none is no compositing. `qualify:cinema-blender` chooses the film finish on the panel and checks it is kept through a project switch.
 - **Not yet:** tracking, 3D import, and aerial views. The Director's words have no finish (the panel and the commands offer it).

@@ -929,17 +929,24 @@ test(
           frame: f,
         };
       };
-      const render = async (finish?: "glow" | "vignette" | "film") => {
+      const render = async (
+        finish?: "glow" | "vignette" | "film",
+        fringeOnly = false,
+      ) => {
+        const scene = blenderSceneFromCinema(plan.scene, {
+          ...plan.settings,
+          width: 160,
+          height: 90,
+          samples: 4,
+          ...(finish ? { finish } : {}),
+        });
+        // The lens fringe alone, at its most, to see it apart from the glow and vignette.
+        if (fringeOnly)
+          scene.finish = { glow: 0, vignette: 0, dispersion: 0.1 };
         const job = await supervisor.submitBlenderRender(
           project.id,
-          blenderSceneFromCinema(plan.scene, {
-            ...plan.settings,
-            width: 160,
-            height: 90,
-            samples: 4,
-            ...(finish ? { finish } : {}),
-          }),
-          finish ?? "none",
+          scene,
+          fringeOnly ? "fringe" : (finish ?? "none"),
         );
         const done = await settled(supervisor, job.id);
         assert.equal(done.state, "COMPLETED", JSON.stringify(done));
@@ -971,6 +978,17 @@ test(
       const glow = await render("glow");
       const vignette = await render("vignette");
       const film = await render("film");
+      const fringe = await render(undefined, true);
+      // How far apart the colour channels are, over the picture: a lens fringe parts them at
+      // the boxes' edges.
+      const parted = (f: Uint8Array) => {
+        let sum = 0;
+        for (let i = 0; i < W * H; i++)
+          sum +=
+            Math.abs(f[i * 3] - f[i * 3 + 1]) +
+            Math.abs(f[i * 3 + 1] - f[i * 3 + 2]);
+        return sum / (W * H);
+      };
       const seen = Object.fromEntries(
         Object.entries({ none, glow, vignette, film }).map(([k, v]) => [
           k,
@@ -981,7 +999,17 @@ test(
           },
         ]),
       );
-      console.log("finish", JSON.stringify(seen));
+      console.log(
+        "finish",
+        JSON.stringify(seen),
+        "parted",
+        parted(none.frame).toFixed(2),
+        parted(fringe.frame).toFixed(2),
+      );
+      assert.ok(
+        parted(fringe.frame) > parted(none.frame) + 0.3,
+        `the fringe parts no colours: ${parted(none.frame)} against ${parted(fringe.frame)}`,
+      );
       const falloff = (m: typeof none) => m.corners / Math.max(1, m.middle);
       // The glow lifts the whole picture a little, most where the lit boxes are.
       assert.ok(glow.all > none.all + 4, `glow: ${JSON.stringify(seen)}`);
