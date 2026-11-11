@@ -54,6 +54,7 @@ import {
   blenderSceneFromCinema,
 } from "../blender/scene.ts";
 import { BLENDER_PIN, blenderRuntime } from "../blender/runtime.ts";
+import { TrackLensSchema } from "../blender/track.ts";
 import {
   listCinemaScenes,
   loadCinemaScene,
@@ -1894,6 +1895,34 @@ export const commands = {
         a.name ?? "Blender render",
       );
     },
+  }),
+  "yamakan.blender.track": define({
+    scope: "render:execute",
+    mutation: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "Queue a camera track (in the contained Blender worker) of one of the project's videos: Blender finds features, follows them through the clip and solves how the camera moved, given the lens it was shot with. The footage needs fine, non-repeating detail and some camera movement; a solve that fails or is not accurate enough is refused with its reason. Follow it with yamakan.job.status, then read the solved camera with yamakan.track.read.",
+    input: z
+      .object({
+        projectId: Id,
+        assetId: Id,
+        lens: TrackLensSchema,
+      })
+      .strict(),
+    run: async ({ queue }, a) => {
+      const runtime = await blenderRuntime();
+      if (!runtime.available)
+        throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+      return queue.submitBlenderTrack(a.projectId, a.assetId, a.lens);
+    },
+  }),
+  "yamakan.track.read": define({
+    scope: "job:read",
+    mutation: false,
+    summary:
+      "Read the solved camera of a finished camera track: per-frame camera matrices (Blender's reconstruction: the first solved camera is the identity, in an arbitrary scale), the lens, the features kept and the solve's average error in pixels.",
+    input: z.object({ jobId: Id }).strict(),
+    run: ({ queue }, a) => queue.trackResult(a.jobId),
   }),
   "yamakan.export.video": define({
     scope: "render:execute",
