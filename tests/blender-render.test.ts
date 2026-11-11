@@ -2134,3 +2134,77 @@ test("a plate gives every frame a solved camera, in metres, and refuses what it 
     blenderSceneFromCinema(cinema([{}]), { ...settings, frames: 7 }, plate),
   );
 });
+
+test("a render over footage needs its tracked video exactly, and the plate's own lens", async () => {
+  const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  const track = CameraTrackSchema.parse({
+    format: "yamakan.camera-track/1",
+    width: 160,
+    height: 90,
+    fps: 24,
+    frames: 10,
+    lens: { focalLengthMm: 35, sensorWidthMm: 36 },
+    tracks: 20,
+    averageErrorPixels: 0.5,
+    keyframes: [1, 8],
+    cameras: Array.from({ length: 10 }, (_, i) => ({
+      frame: i + 1,
+      matrix: identity,
+    })),
+  });
+  const plate = plateFromTrack(track, 2, 1);
+  assert.deepEqual([plate.width, plate.height], [160, 90]);
+  const over = blenderSceneFromCinema(cinema([{}]), settings, plate);
+  // The plate's lens is the camera's.
+  assert.throws(() =>
+    BlenderSceneSchema.parse({
+      ...over,
+      camera: { ...over.camera, focalLengthMm: 50 },
+    }),
+  );
+  const root = await mkdtemp(path.join(tmpdir(), "yamakan-plate-"));
+  bases.push(root);
+  const store = new ProjectStore(root);
+  await store.initialize();
+  const project = await store.create("Plate");
+  const supervisor = new JobSupervisor(store);
+  await supervisor.start();
+  try {
+    const hash = "a".repeat(64);
+    // A plate without its footage, footage without a plate, or footage named without its hash.
+    await assert.rejects(
+      supervisor.submitBlenderRender(project.id, over, "no footage"),
+    );
+    await assert.rejects(
+      supervisor.submitBlenderRender(
+        project.id,
+        blenderSceneFromCinema(cinema([{}]), settings),
+        "no plate",
+        "00000000-0000-4000-8000-000000000000",
+        hash,
+      ),
+    );
+    await assert.rejects(
+      supervisor.submitBlenderRender(
+        project.id,
+        over,
+        "no hash",
+        "00000000-0000-4000-8000-000000000000",
+      ),
+    );
+    // Footage the project does not hold.
+    await assert.rejects(
+      supervisor.submitBlenderRender(
+        project.id,
+        over,
+        "missing",
+        "00000000-0000-4000-8000-000000000000",
+        hash,
+      ),
+      /no such video/,
+    );
+  } finally {
+    await supervisor.close();
+    store.close();
+  }
+});

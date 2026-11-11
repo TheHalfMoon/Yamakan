@@ -83,7 +83,10 @@ def main():
         fail("the video has " + str(frames) + " frames; tracking takes 10 to " + str(max_frames))
     if not (64 <= width <= max_width and 64 <= height <= max_height):
         fail("the video is " + str(width) + " x " + str(height) + ", larger than tracking takes")
-    fps = float(clip.fps) if clip.fps else 24.0
+    # A render over this footage must match its frame rate, so an unknown rate is not guessed.
+    if not clip.fps:
+        fail("the video's frame rate cannot be read")
+    fps = float(clip.fps)
     # Tracking runs over the scene's frame range, which is 1 to 250 after a factory start: the
     # whole clip, then.
     scene = bpy.context.scene
