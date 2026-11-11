@@ -480,7 +480,7 @@ test(
           runId: run.id,
           storyDocumentId,
           shotId,
-          direction: { shot: "medium", movement: "orbit", light: "golden" },
+          direction: { shot: "medium", movement: "orbit", light: "studio" },
         })
       ).result as {
         job: { id: string };
@@ -489,8 +489,12 @@ test(
         scene: { items: unknown[] };
         settings: { frames: number; fps: number };
       };
-      assert.deepEqual(rendered.followed, ["shot:medium", "movement:orbit"]);
-      assert.deepEqual(rendered.notFollowed, ["light:golden"]);
+      assert.deepEqual(rendered.followed, [
+        "shot:medium",
+        "movement:orbit",
+        "light:studio",
+      ]);
+      assert.deepEqual(rendered.notFollowed, []);
       assert.equal(rendered.scene.items.length, 2);
       assert.deepEqual(
         [rendered.settings.frames, rendered.settings.fps],
@@ -730,7 +734,7 @@ test(
       // It moves, slowly from frame to frame, and the shot stays about the same size.
       assert.ok(swayed > 0, `handheld changed ${swayed}%`);
       assert.ok(
-        handheld.step <= Math.max(1, swayed),
+        handheld.step <= swayed / 2,
         `handheld: ${handheld.step}% from one frame to the next, ${swayed}% over the shot`,
       );
       assert.ok(
@@ -746,6 +750,133 @@ test(
         handheldStep: handheld.step,
       });
       console.log("camera moves", JSON.stringify(results));
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+test(
+  "each light changes the picture as it says: night darker, studio brighter, golden warmer, morning cooler",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-lighting-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Light");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const shotId = "7f6e5d4c-3b2a-4190-8f7e-6d5c4b3a2918";
+      const W = 64;
+      const H = 36;
+      // The mean brightness and warmth (red over blue), 0 to 255, of the lit boxes only: every
+      // pixel unlike the sky (the top-left corner). The sky changes with each light too, so it is
+      // left out: what is measured is the sun on the boxes.
+      const measure = (f: Uint8Array) => {
+        const sky = [f[0], f[1], f[2]];
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let n = 0;
+        for (let i = 0; i < W * H; i++) {
+          const px = [f[i * 3], f[i * 3 + 1], f[i * 3 + 2]];
+          if (Math.max(...px.map((v, k) => Math.abs(v - sky[k]))) <= 24)
+            continue;
+          r += px[0];
+          g += px[1];
+          b += px[2];
+          n++;
+        }
+        assert.ok(n > 20, "the boxes are in the picture");
+        return {
+          brightness: (r + g + b) / (3 * n),
+          warmth: (r - b) / n,
+          boxes: n,
+          frame: f,
+        };
+      };
+      const render = async (light?: string) => {
+        const plan = planCinemaShot({
+          shotId,
+          direction: light ? { shot: "medium", light } : { shot: "medium" },
+          seconds: 1 / 24,
+          fps: 24,
+        });
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          blenderSceneFromCinema(plan.scene, {
+            ...plan.settings,
+            width: 160,
+            height: 90,
+            samples: 4,
+          }),
+          light ?? "neutral",
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-vf",
+            `scale=${W}:${H}`,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        );
+        return measure(raw.subarray(0, W * H * 3));
+      };
+      const neutral = await render();
+      const morning = await render("morning");
+      const golden = await render("golden");
+      const night = await render("night");
+      const studio = await render("studio");
+      const seen = Object.fromEntries(
+        Object.entries({ neutral, morning, golden, night, studio }).map(
+          ([k, v]) => [
+            k,
+            {
+              brightness: Math.round(v.brightness),
+              warmth: Math.round(v.warmth),
+              boxes: v.boxes,
+            },
+          ],
+        ),
+      );
+      console.log("lighting", JSON.stringify(seen));
+      assert.ok(
+        night.brightness < neutral.brightness * 0.6,
+        JSON.stringify(seen),
+      );
+      assert.ok(studio.brightness > neutral.brightness, JSON.stringify(seen));
+      assert.ok(golden.warmth > neutral.warmth + 10, JSON.stringify(seen));
+      assert.ok(morning.warmth < neutral.warmth, JSON.stringify(seen));
+      // Each light makes a picture of its own.
+      for (const [name, other] of Object.entries({
+        morning,
+        golden,
+        night,
+        studio,
+      }))
+        assert.ok(
+          changedPercent(neutral.frame, other.frame) > 5,
+          `${name} looks like the neutral light`,
+        );
     } finally {
       await supervisor.close();
       store.close();

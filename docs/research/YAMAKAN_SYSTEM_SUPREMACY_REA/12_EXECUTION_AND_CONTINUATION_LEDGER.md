@@ -489,13 +489,36 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 
   Only an aerial view and the light choices are still listed as not followed.
 - **Evidence:** `tests/blender-render.test.ts` renders the same medium shot with each move using the real Blender, and measures the first and last frames:
-  - push: the subject's share of the picture grows (4.3% to 9.7% in the run that passed);
+  - push: the share of the picture that is not background (the subject and the near block) grows (4.3% to 9.7% in the run that passed);
   - pull: it shrinks (4.4% to 2.1%);
   - pan: the middle of all that is shown (the subject and the near block) slides across, showing the camera turned (0.25 to 0.74 of the width);
-  - handheld: the picture changes over the shot while the subject keeps its size, and no frame changes from the one before by more than the whole shot does (a sway, not a flicker);
+  - handheld: the picture changes over the shot while the subject keeps its size, and no frame changes from the one before by more than half of what the whole shot does (a sway, not a flicker; 0.5% against 4.1% in the run that passed);
   - still: nothing changes.
 
   The planner's tests check each movement maps to exactly one camera move and reaches the render's scene as given.
 - **Not yet:**
   - the Cinema page's Blender panel still offers only the orbit; the Director's shots get every move;
   - aerial views, lighting choices, compositing, tracking and 3D import.
+- **Merged as `08e611c`** (PR #266). The local full suite could not be run cleanly that day: with the PC on battery, timing-bound tests failed (3, then 7, the real Blender render among them). Every failing file passed on its own (52 tests), and CI's full suite passed. A clean local run on mains power is still owed.
+
+**Blender lighting, 2026-11-11:**
+- **The render's light can now be chosen** (`lighting`: morning, golden, night, studio). Each is a sun (angle, strength, colour) and a sky behind the boxes:
+  - **morning:** a lower, slightly weaker sun under a pale cool sky;
+  - **golden:** a low warm sun (a peach light, as Blender takes the colour) under a dusky sky;
+  - **night:** a faint blue light under a near-black sky;
+  - **studio:** a high, bright white light against plain grey.
+
+  The Blender scene's sun takes an optional `colour`, white when absent; like the boxes' and the sky's colours, it is passed to Blender as linear values, so it shows paler than its hex. Without a choice, the neutral light every render had before.
+- **The planner** now follows the light words. Only an aerial view is still listed as not followed.
+- **Evidence:** `tests/blender-render.test.ts` renders one still medium shot under each light with the real Blender. It measures only the boxes: every pixel unlike the sky in the picture. In Cycles the sky also lights the boxes, so what is measured is each light (sun and sky together) on the boxes, not the sun alone. In the run that passed (mean over the boxes, 0 to 255):
+  - night is darker than neutral (37 against 91);
+  - studio is brighter (113);
+  - golden is warmer, red over blue (+58 against −2 under the neutral light);
+  - morning is cooler (−11);
+  - each picture differs from the neutral one.
+  
+  The planner's tests check every light reaches the render's scene as the table says, that each differs from the neutral one in sun and sky, and that golden's sun is the warmest.
+- **Also from the review of #266:**
+  - the push and pull measure is now worded as the share of the picture that is not background;
+  - the handheld check now requires no frame to change from the one before by more than half of what the whole shot does.
+- **Not yet:** an aerial view; compositing, tracking and 3D import; the Cinema page's Blender panel offering moves and lights.
