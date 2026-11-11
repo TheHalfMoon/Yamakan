@@ -22,6 +22,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { crc32, deflateSync } from "node:zlib";
 import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
 import { toCommandError } from "../core/command/errors.ts";
@@ -1037,10 +1038,47 @@ test(
   },
 );
 
-// A red bar as a .glb: a box mesh 2 x 0.5 x 0.5 with its own red material; `scale` is a node
-// scale inside the file, which the fit to a 1 m box takes out.
-function redBar(scale = 1) {
-  const [hx, hy, hz] = [1, 0.25, 0.25];
+// A solid-colour PNG, for a model's own texture.
+function solidPng(rgb: [number, number, number], side = 4) {
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
+    const out = Buffer.alloc(8 + data.length + 4);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc32(body) >>> 0, 8 + data.length);
+    return out;
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(side, 0);
+  ihdr.writeUInt32BE(side, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2; // RGB
+  const row = Buffer.concat([
+    Buffer.from([0]),
+    ...Array.from({ length: side }, () => Buffer.from(rgb)),
+  ]);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(Buffer.concat(Array(side).fill(row)))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// A bar as a .glb: a box mesh of the given half sizes, red by its own material, or coloured
+// only by an embedded texture. `scale` is a node scale inside the file; `offset` moves the
+// vertices away from the origin; `parent` puts the mesh under a translated parent node. The
+// fit to a 1 m box takes all of these out.
+function redBar(
+  scale = 1,
+  {
+    half = [1, 0.25, 0.25] as [number, number, number],
+    offset = [0, 0, 0] as [number, number, number],
+    parent = false,
+    texture = null as Buffer | null,
+  } = {},
+) {
+  const [hx, hy, hz] = half;
   const positions = [
     [-hx, -hy, -hz],
     [hx, -hy, -hz],
@@ -1050,51 +1088,73 @@ function redBar(scale = 1) {
     [hx, -hy, hz],
     [hx, hy, hz],
     [-hx, hy, hz],
-  ];
+  ].map(([x, y, z]) => [x + offset[0], y + offset[1], z + offset[2]]);
   // prettier-ignore
   const indices = [
     0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4,
     3, 7, 6, 3, 6, 2, 1, 2, 6, 1, 6, 5, 0, 4, 7, 0, 7, 3,
   ];
-  const bin = Buffer.alloc(96 + 72);
+  // Positions (96 bytes), indices (72), texture coordinates (64), then the image.
+  const image = texture ?? Buffer.alloc(0);
+  const imageAt = 96 + 72 + 64;
+  const bin = Buffer.alloc(imageAt + Math.ceil(image.length / 4) * 4);
   positions.flat().forEach((v, i) => bin.writeFloatLE(v, i * 4));
   indices.forEach((v, i) => bin.writeUInt16LE(v, 96 + i * 2));
+  [0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1].forEach((v, i) =>
+    bin.writeFloatLE(v, 168 + i * 4),
+  );
+  image.copy(bin, imageAt);
+  const mesh = {
+    mesh: 0,
+    ...(scale !== 1 ? { scale: [scale, scale, scale] } : {}),
+  };
   const gltf = {
     asset: { version: "2.0" },
     scene: 0,
     scenes: [{ nodes: [0] }],
-    nodes: [
-      { mesh: 0, ...(scale !== 1 ? { scale: [scale, scale, scale] } : {}) },
-    ],
+    nodes: parent ? [{ translation: [3, -2, 1], children: [1] }, mesh] : [mesh],
     meshes: [
       {
-        primitives: [{ attributes: { POSITION: 0 }, indices: 1, material: 0 }],
+        primitives: [
+          {
+            attributes: texture
+              ? { POSITION: 0, TEXCOORD_0: 2 }
+              : { POSITION: 0 },
+            indices: 1,
+            material: 0,
+          },
+        ],
       },
     ],
     materials: [
       {
         pbrMetallicRoughness: {
-          baseColorFactor: [1, 0, 0, 1],
+          baseColorFactor: texture ? [1, 1, 1, 1] : [1, 0, 0, 1],
+          ...(texture ? { baseColorTexture: { index: 0 } } : {}),
           metallicFactor: 0,
           roughnessFactor: 0.6,
         },
       },
     ],
+    ...(texture
+      ? {
+          images: [{ bufferView: 3, mimeType: "image/png" }],
+          textures: [{ source: 0 }],
+        }
+      : {}),
     buffers: [{ byteLength: bin.length }],
     bufferViews: [
       { buffer: 0, byteOffset: 0, byteLength: 96 },
       { buffer: 0, byteOffset: 96, byteLength: 72 },
+      { buffer: 0, byteOffset: 168, byteLength: 64 },
+      ...(texture
+        ? [{ buffer: 0, byteOffset: imageAt, byteLength: image.length }]
+        : []),
     ],
     accessors: [
-      {
-        bufferView: 0,
-        componentType: 5126,
-        count: 8,
-        type: "VEC3",
-        min: [-hx, -hy, -hz],
-        max: [hx, hy, hz],
-      },
+      { bufferView: 0, componentType: 5126, count: 8, type: "VEC3" },
       { bufferView: 1, componentType: 5123, count: 36, type: "SCALAR" },
+      { bufferView: 2, componentType: 5126, count: 8, type: "VEC2" },
     ],
   };
   const text = Buffer.from(JSON.stringify(gltf), "utf8");
@@ -1210,11 +1270,13 @@ test(
           { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
         ).subarray(0, W * H * 3);
         let red = 0;
+        let green = 0;
         let [x0, x1, y0, y1] = [W, -1, H, -1];
         for (let y = 0; y < H; y++)
           for (let x = 0; x < W; x++) {
             const i = (y * W + x) * 3;
             const [r, g, b] = [raw[i], raw[i + 1], raw[i + 2]];
+            if (g > 90 && g > 2 * r && g > 2 * b) green++;
             if (r > 90 && r > 2 * g && r > 2 * b) {
               red++;
               x0 = Math.min(x0, x);
@@ -1223,7 +1285,14 @@ test(
               y1 = Math.max(y1, y);
             }
           }
-        return { red, wide: x1 - x0 + 1, tall: y1 - y0 + 1 };
+        return {
+          red,
+          green,
+          wide: x1 - x0 + 1,
+          tall: y1 - y0 + 1,
+          cx: (x0 + x1) / 2,
+          cy: (y0 + y1) / 2,
+        };
       };
       const box = await render({ color: "#888888" }, "box");
       const model = await render({ model: small }, "model");
@@ -1239,6 +1308,35 @@ test(
         Math.abs(scaled.red - model.red) <= 0.1 * model.red,
         JSON.stringify({ model, scaled }),
       );
+      // Tall along glTF's up axis, its vertices far from the origin, under a moved parent node:
+      // it stands up (taller than wide), and sits where the plain bar did.
+      const tall = await render(
+        {
+          model: await upload(
+            redBar(1, {
+              half: [0.25, 1, 0.25],
+              offset: [6, 0, 0],
+              parent: true,
+            }),
+          ),
+        },
+        "tall",
+      );
+      // Coloured only by an embedded PNG texture, decoded inside the sandbox.
+      const textured = await render(
+        {
+          model: await upload(redBar(1, { texture: solidPng([0, 220, 0]) })),
+        },
+        "textured",
+      );
+      console.log("model placed", JSON.stringify({ tall, textured }));
+      assert.ok(tall.tall > 1.6 * tall.wide, JSON.stringify(tall));
+      assert.ok(
+        Math.abs(tall.cx - model.cx) <= 3 && Math.abs(tall.cy - model.cy) <= 3,
+        JSON.stringify({ model, tall }),
+      );
+      assert.equal(textured.red, 0);
+      assert.ok(textured.green > 60, JSON.stringify(textured));
 
       // A model this project does not hold is refused when the render is asked for.
       const missing = blenderSceneFromCinema(

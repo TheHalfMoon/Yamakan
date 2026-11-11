@@ -42,6 +42,7 @@ import { mediaTools, workers } from "./process/workers.ts";
 import { ENGINE_WORKER_PROFILE } from "./process/owner.ts";
 import { BlenderSceneSchema, blenderSceneModels } from "./blender/scene.ts";
 import { checkGlb } from "./cinema/glb.ts";
+import { DOCUMENT_LIMITS } from "./document-ref.ts";
 import {
   BLENDER_PIN,
   BLENDER_SCRIPT,
@@ -1241,11 +1242,27 @@ export class JobSupervisor {
     await mkdir(encoded, { recursive: true });
     const sceneFile = path.join(dir, "scene.json");
     await writeFile(sceneFile, JSON.stringify(scene));
+    // Room for every frame at full size and the video, above the disk reserve.
+    const frameBytes = scene.width * scene.height * 4;
+    const modelDigests = blenderSceneModels(scene);
+    const need =
+      scene.frames * frameBytes * 2 +
+      64 * 1024 * 1024 +
+      modelDigests.length * DOCUMENT_LIMITS.modelBytes;
+    const space = await statfs(dir);
+    const free =
+      Number(space.bavail) * Number(space.bsize) -
+      RESOURCE_POLICY.enforced.diskReserveBytes;
+    if (free < need)
+      throw new CommandError(
+        "LIMIT_EXCEEDED",
+        "Insufficient free disk space for this render.",
+      );
     // Each 3D model the scene names: the project's stored copy, its bytes hashed and checked
     // again here, written beside the scene where Blender can read it but not write it.
     const models = path.join(dir, "models");
     await mkdir(models, { recursive: true });
-    for (const digest of blenderSceneModels(scene)) {
+    for (const digest of modelDigests) {
       const bytes = await readFile(
         await this.store.cinemaModelFile(row.project_id, digest),
       );
@@ -1257,18 +1274,6 @@ export class JobSupervisor {
       checkGlb(bytes);
       await writeFile(path.join(models, `${digest}.glb`), bytes);
     }
-    // Room for every frame at full size and the video, above the disk reserve.
-    const frameBytes = scene.width * scene.height * 4;
-    const need = scene.frames * frameBytes * 2 + 64 * 1024 * 1024;
-    const space = await statfs(dir);
-    const free =
-      Number(space.bavail) * Number(space.bsize) -
-      RESOURCE_POLICY.enforced.diskReserveBytes;
-    if (free < need)
-      throw new CommandError(
-        "LIMIT_EXCEEDED",
-        "Insufficient free disk space for this render.",
-      );
     if (signal.aborted) throw new Error("Cancelled.");
     let said = "";
     let refusal = "";

@@ -21,6 +21,9 @@ export const GLB_LIMITS = Object.freeze({
   samplers: 256,
   images: 32,
   imageBytes: 16 * 1024 * 1024,
+  // An image's size once decoded: each side, and all images' pixels together.
+  imageSide: 8192,
+  imagePixels: 64 * 1024 * 1024,
   vertices: 2_000_000,
   triangles: 2_000_000,
   accessorCount: 10_000_000,
@@ -125,6 +128,52 @@ const optIndex = (v: unknown, length: number, what: string) => {
 
 // Walks the parsed JSON once: bounded depth and size, no "uri" anywhere (a reference to another
 // file, a URL or a data URI), and no extension outside the allowlist wherever it is declared.
+// An image's width and height from its own header (PNG IHDR, or a JPEG frame marker), so a
+// small file that would decode to gigabytes is refused before anything decodes it.
+function imageSize(bytes: Uint8Array, png: boolean): [number, number] {
+  const at = (i: number) => (bytes[i] << 8) | bytes[i + 1];
+  if (png) {
+    const ihdr =
+      bytes[12] === 0x49 &&
+      bytes[13] === 0x48 &&
+      bytes[14] === 0x44 &&
+      bytes[15] === 0x52;
+    if (bytes.length < 24 || !ihdr) fail("A model image has no size.");
+    const view = new DataView(bytes.buffer, bytes.byteOffset, 24);
+    return [view.getUint32(16), view.getUint32(20)];
+  }
+  // JPEG: walk the markers to the first frame header (SOF0-SOF15 but DHT, JPG and DAC).
+  let i = 2;
+  while (i + 9 <= bytes.length) {
+    if (bytes[i] !== 0xff) fail("A model image has no size.");
+    const marker = bytes[i + 1];
+    if (marker === 0xff) {
+      i++;
+      continue;
+    }
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xc8 &&
+      marker !== 0xcc
+    )
+      return [at(i + 7), at(i + 5)];
+    if (
+      marker === 0xd8 ||
+      (marker >= 0xd0 && marker <= 0xd7) ||
+      marker === 0x01
+    ) {
+      i += 2;
+      continue;
+    }
+    const length = at(i + 2);
+    if (length < 2) fail("A model image has no size.");
+    i += 2 + length;
+  }
+  return fail("A model image has no size.");
+}
+
 function walk(value: Json, depth: number, count: { n: number }) {
   if (++count.n > GLB_LIMITS.jsonValues)
     fail("The model's description is too large.");
@@ -286,6 +335,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
 
   const images = arr(gltf.images).map(obj);
   if (images.length > GLB_LIMITS.images) fail("The model has too many images.");
+  let pixels = 0;
   for (const img of images) {
     if (img.mimeType !== "image/png" && img.mimeType !== "image/jpeg")
       fail("A model image is not PNG or JPEG.");
@@ -305,6 +355,20 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       (img.mimeType === "image/jpeg" && !jpeg)
     )
       fail("A model image's bytes are not what it says it is.");
+    const [width, height] = imageSize(
+      bin.subarray(bv.offset, bv.offset + bv.length),
+      png,
+    );
+    if (
+      width < 1 ||
+      height < 1 ||
+      width > GLB_LIMITS.imageSide ||
+      height > GLB_LIMITS.imageSide
+    )
+      fail("A model image is larger than 8192 pixels a side.");
+    pixels += width * height;
+    if (pixels > GLB_LIMITS.imagePixels)
+      fail("The model's images are too large together.");
   }
   const samplers = arr(gltf.samplers).map(obj);
   if (samplers.length > GLB_LIMITS.samplers)
@@ -537,7 +601,8 @@ export function checkGlb(file: Uint8Array): GlbSummary {
 /**
  * Checks a .glb file and returns the copy Yamakan stores: the same binary data, with the
  * description re-written from what this check parsed. Blender then reads only JSON this check
- * has already read (no duplicate keys, no over-precise numbers, no padding tricks).
+ * has already read (no duplicate keys, no over-precise numbers, no padding tricks), and no
+ * extras.
  */
 export function canonicalGlb(file: Uint8Array): {
   bytes: Uint8Array;
@@ -551,7 +616,13 @@ export function canonicalGlb(file: Uint8Array): {
       file.subarray(20, 20 + jsonLength),
     ),
   );
-  const text = new TextEncoder().encode(JSON.stringify(parsed));
+  // Extras are free-form data a model may carry; Blender would copy them onto its objects as
+  // custom properties, so the stored copy leaves them out.
+  const text = new TextEncoder().encode(
+    JSON.stringify(parsed, (key, value: unknown) =>
+      key === "extras" ? undefined : value,
+    ),
+  );
   const padded = Math.ceil(text.byteLength / 4) * 4;
   const rest = file.subarray(20 + jsonLength);
   const length = 20 + padded + rest.byteLength;

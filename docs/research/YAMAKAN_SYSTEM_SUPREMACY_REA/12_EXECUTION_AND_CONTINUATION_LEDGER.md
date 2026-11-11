@@ -590,10 +590,13 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **The worker:**
   - A render naming a model the project does not hold is refused when asked for.
   - Before Blender starts, each named model's stored copy is read, its SHA-256 checked against the digest, and the .glb check run again. It is then written to the attempt's `models` folder, which Blender can read but not write.
-- **The fixed script** imports each model with Blender's bundled glTF importer, with every option that could reach further set explicitly (no WebP or KTX decoders, no custom properties from the file). It keeps only meshes and empties, fits the model to a 1 m box at the origin, and places it like a box, with its own materials.
+- **The fixed script** imports each model with Blender's bundled glTF importer, with every option that could reach further set explicitly (no WebP or KTX decoders, no scene extras). It keeps only meshes and empties, fits the model to a 1 m box at the origin (the centre of its bounds, its largest side 1 m), and places it like a box, with its own materials.
+- **The .glb check and the stored copy** gain two bounds from the review: every embedded image's decoded size is read from its own header and bounded (8192 pixels a side, 64 Mpx in all), and the stored copy carries no extras (Blender would copy them onto its objects as custom properties).
 - **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender inside procd:
   - a red bar-shaped model renders with its own material and shape: 202 red pixels, 30 wide by 14 tall, where a grey box at the same place has none;
   - the same bar fifty times larger inside the file renders at the same size (202 red pixels), because both fit a 1 m box;
+  - a bar tall along glTF's up axis, its vertices far from the origin and under a moved parent node, stands up (9 wide by 32 tall) and sits where the plain bar did (centre 80, 43.5 against 80.5, 44.5);
+  - a model coloured only by an embedded PNG texture renders green (138 green pixels, no red): the texture is decoded inside the sandbox;
   - a model the project does not hold is refused when asked for;
   - a stored copy changed on disk (same length) fails the render before Blender reads it.
 

@@ -71,7 +71,7 @@ def point(p):
     return (Y_UP_TO_Z_UP @ Vector((*p, 1.0))).xyz
 
 
-DIGEST = re.compile(r"^[a-f0-9]{64}$")
+DIGEST = re.compile(r"[a-f0-9]{64}")
 
 
 def import_model(path, name):
@@ -81,7 +81,7 @@ def import_model(path, name):
     # Every option the importer takes that could reach further is set here, not left to its
     # defaults: no extra texture decoders, no custom properties from the file, nothing beyond
     # the objects themselves.
-    bpy.ops.import_scene.gltf(
+    result = bpy.ops.import_scene.gltf(
         filepath=path,
         import_pack_images=True,
         merge_vertices=False,
@@ -95,12 +95,16 @@ def import_model(path, name):
         import_merge_material_slots=True,
         import_point_as_pointcloud=False,
     )
+    if result != {"FINISHED"}:
+        fail("a 3D model could not be imported")
     created = [o for o in bpy.data.objects if o not in before]
     # Only meshes and the empties that group them; the check has already refused cameras,
     # lights and skins, and nothing else is kept even so.
     for o in [o for o in created if o.type not in ("MESH", "EMPTY")]:
         bpy.data.objects.remove(o, do_unlink=True)
-    created = [o for o in bpy.data.objects if o in set(created)]
+    kept = set(created)
+    created = [o for o in bpy.data.objects if o in kept]
+    kept = set(created)
     meshes = [o for o in created if o.type == "MESH"]
     if not meshes:
         fail("a 3D model holds no mesh")
@@ -109,8 +113,8 @@ def import_model(path, name):
     low = Vector([min(c[i] for c in corners) for i in range(3)])
     high = Vector([max(c[i] for c in corners) for i in range(3)])
     extent = max(high - low)
-    if not (extent > 0) or extent != extent:
-        fail("a 3D model has no size")
+    if not all(math.isfinite(v) for v in (*low, *high, extent)) or not extent > 0:
+        fail("a 3D model has no finite size")
     # The importer has already turned glTF's Y up into Blender's Z up; this turns it back, so
     # the empty's own transform (from the scene) does the one conversion, as for a box.
     fit = (
@@ -121,7 +125,7 @@ def import_model(path, name):
     holder = bpy.data.objects.new(name, None)
     bpy.context.scene.collection.objects.link(holder)
     for o in created:
-        if o.parent is None or o.parent not in created:
+        if o.parent is None or o.parent not in kept:
             world = o.matrix_world.copy()
             o.parent = holder
             o.matrix_parent_inverse = Matrix.Identity(4)
@@ -183,7 +187,7 @@ def main():
             if set(item) != {"shape", "model", "position", "rotation", "scale"}:
                 fail("object " + str(i) + " is not a model as described")
             digest = item["model"]
-            if not isinstance(digest, str) or not DIGEST.match(digest):
+            if not isinstance(digest, str) or not DIGEST.fullmatch(digest):
                 fail("object " + str(i) + " names no model")
             path = os.path.join(models, digest + ".glb")
             if not os.path.isfile(path):
