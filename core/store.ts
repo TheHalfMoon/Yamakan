@@ -425,11 +425,15 @@ CREATE TABLE director_requests(
 `;
 // An agent token may end at a time the person chose when making it. A token made before this
 // step, or without one, does not end; revoking it still does.
+const SCHEMA_V17 = `
+ALTER TABLE agent_tokens ADD COLUMN expires_at TEXT
+  CHECK(expires_at IS NULL OR length(expires_at) = 24);
+`;
 // Cinema 3D models (3D asset import): which content-addressed objects of a project are
 // checked .glb models (core/cinema/glb.ts), named by Cinema scene items by digest. Their
 // digests are kept in creative_documents.object_digests like Studio bitmaps'.
 const SCHEMA_V18 = `
-CREATE TABLE cinema_models(
+CREATE TABLE IF NOT EXISTS cinema_models(
   project_id TEXT NOT NULL,
   digest TEXT NOT NULL CHECK(length(digest) = 64),
   byte_length INTEGER NOT NULL CHECK(byte_length > 0),
@@ -438,10 +442,6 @@ CREATE TABLE cinema_models(
   created_at INTEGER NOT NULL,
   PRIMARY KEY(project_id, digest)
 ) STRICT;
-`;
-const SCHEMA_V17 = `
-ALTER TABLE agent_tokens ADD COLUMN expires_at TEXT
-  CHECK(expires_at IS NULL OR length(expires_at) = 24);
 `;
 // Story documents and reference packs (YU-031): the two document tables
 // accept the new kinds, and each story or pack version is recorded under
@@ -2360,8 +2360,9 @@ export class ProjectStore {
       "3D model space is full; unused models are freed by garbage collection (hourly, an hour after they were last used).";
     if (overBudget(this.#database, null, declaredBytes))
       throw new CommandError("LIMIT_EXCEEDED", full);
-    // The whole file is needed to check it; it is read up to its declared length only.
-    const file = Buffer.alloc(declaredBytes);
+    // The whole file is needed to check it; it is read up to its declared length only, and
+    // kept as it arrives, so a stalled upload holds only what it has sent.
+    const chunks: Uint8Array[] = [];
     let size = 0;
     for await (const chunk of source) {
       if (size + chunk.byteLength > declaredBytes)
@@ -2369,7 +2370,7 @@ export class ProjectStore {
           "VALIDATION",
           "The model is longer than its declared length.",
         );
-      file.set(chunk, size);
+      chunks.push(chunk);
       size += chunk.byteLength;
     }
     if (size !== declaredBytes)
@@ -2379,7 +2380,7 @@ export class ProjectStore {
       );
     let checked: ReturnType<typeof canonicalGlb>;
     try {
-      checked = canonicalGlb(file);
+      checked = canonicalGlb(Buffer.concat(chunks, size));
     } catch (e) {
       if (e instanceof GlbError)
         throw new CommandError("VALIDATION", e.message);

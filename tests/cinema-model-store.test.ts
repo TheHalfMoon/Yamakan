@@ -16,6 +16,10 @@ import { SCENE3D_FORMAT, SCENE3D_FORMAT_VERSION } from "../core/scene3d.ts";
 import { checkGlb } from "../core/cinema/glb.ts";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { uploadCinemaModel } from "../server/document-stage.ts";
+import { creativeClosure } from "../core/recovery.ts";
+import { createEmptyStudioDocument } from "../core/studio.ts";
+import { PassThrough } from "node:stream";
+import type { IncomingMessage } from "node:http";
 import { principals } from "../server/api.ts";
 
 const bases: string[] = [];
@@ -375,4 +379,107 @@ test("the SDK uploads a model over HTTP; the route takes only model/gltf-binary"
     ),
     (e: unknown) => e instanceof YamakanError && e.code === "VALIDATION",
   );
+});
+
+test("a number the description cannot write back is refused, not stored as null", async () => {
+  const { store, project } = await workspace();
+  const { gltf } = triangle();
+  const text = JSON.stringify(gltf).replace(
+    '"max":[1,2,0]',
+    '"max":[1e400,2,0]',
+  );
+  assert.ok(text.includes("1e400"));
+  const { bytes } = triangle(1, text);
+  await refused(
+    store.importCinemaModel(project.id, stream(bytes), bytes.length),
+    "VALIDATION",
+    /number out of range/,
+  );
+});
+
+test("a Studio canvas cannot name a model, and a backup counts a scene's model as held", async () => {
+  const { store, project, root } = await workspace();
+  const { bytes } = triangle();
+  const { digest } = await store.importCinemaModel(
+    project.id,
+    stream(bytes),
+    bytes.length,
+  );
+  const doc = createEmptyStudioDocument({ id: randomUUID(), name: "Board" });
+  const canvas = JSON.parse(doc.canvasJson);
+  canvas.document.stacks.raster = [
+    {
+      id: randomUUID(),
+      type: "raster_layer",
+      objects: [
+        { id: randomUUID(), type: "image", image: { imageName: digest } },
+      ],
+    },
+  ];
+  doc.canvasJson = JSON.stringify(canvas);
+  await refused(
+    store.commitDocument({
+      projectId: project.id,
+      expectedRevision: 0,
+      documentId: randomUUID(),
+      kind: "studio",
+      schemaVersion: 1,
+      expectedContentHash: null,
+      source: { bytes: Buffer.from(JSON.stringify(doc), "utf8") },
+    }),
+    "VALIDATION",
+    /does not hold/,
+  );
+  await commitScene(store, project.id, sceneWith([digest]), 0);
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"), {
+    readOnly: true,
+  });
+  try {
+    const closure = creativeClosure(db);
+    assert.equal(closure.gaps, 0, JSON.stringify(closure.reported));
+    assert.ok(closure.objects >= 1);
+  } finally {
+    db.close();
+  }
+});
+
+test("model uploads held in memory are bounded per principal and released on every path", async () => {
+  const { store, project } = await workspace();
+  const { bytes } = triangle();
+  // A request whose body has not arrived yet; ended or broken later.
+  const pending = () => {
+    const body = new PassThrough();
+    Object.assign(body, {
+      headers: {
+        "content-type": "model/gltf-binary",
+        "content-length": String(bytes.length),
+      },
+    });
+    return body;
+  };
+  const upload = (req: PassThrough) =>
+    uploadCinemaModel(
+      store,
+      principals["local-client"],
+      project.id,
+      req as unknown as IncomingMessage,
+      true,
+    );
+  const a = pending();
+  const b = pending();
+  const first = upload(a);
+  const second = upload(b);
+  await refused(upload(pending()), "LIMIT_EXCEEDED", /Too many model uploads/);
+  // One fails part-way, the other completes; both slots come back.
+  b.destroy(new Error("connection lost"));
+  await assert.rejects(second);
+  a.end(bytes);
+  assert.equal((await first).triangles, 1);
+  const c = pending();
+  const d = pending();
+  const third = upload(c);
+  const fourth = upload(d);
+  c.end(bytes);
+  d.end(bytes);
+  assert.equal((await third).digest, (await fourth).digest);
 });

@@ -213,14 +213,24 @@ export async function uploadCinemaModel(
       "LIMIT_EXCEEDED",
       `A 3D model is at most ${DOCUMENT_LIMITS.modelBytes} bytes.`,
     );
-  // Each model is held in memory while it is checked, so this bounds memory too.
+  // Each model is held in memory while it is checked, so these bound memory too:
+  // per principal, all agents together, and the whole workspace.
+  const agent = principal.id.startsWith("agent:");
   const active = modelUploads.get(principal.id) ?? 0;
-  if (active >= DOCUMENT_LIMITS.activeModelUploadsPerPrincipal)
+  if (
+    active >= DOCUMENT_LIMITS.activeModelUploadsPerPrincipal ||
+    (agent &&
+      modelUploadTotals.agents >=
+        DOCUMENT_LIMITS.activeModelUploadsForAgents) ||
+    modelUploadTotals.all >= DOCUMENT_LIMITS.activeModelUploads
+  )
     throw new CommandError(
       "LIMIT_EXCEEDED",
       "Too many model uploads in progress; wait for one to finish.",
     );
   modelUploads.set(principal.id, active + 1);
+  modelUploadTotals.all++;
+  if (agent) modelUploadTotals.agents++;
   const timer = setTimeout(
     () =>
       req.destroy(
@@ -240,7 +250,10 @@ export async function uploadCinemaModel(
     const left = (modelUploads.get(principal.id) ?? 1) - 1;
     if (left > 0) modelUploads.set(principal.id, left);
     else modelUploads.delete(principal.id);
+    modelUploadTotals.all--;
+    if (agent) modelUploadTotals.agents--;
   }
 }
 
 const modelUploads = new Map<string, number>();
+const modelUploadTotals = { all: 0, agents: 0 };

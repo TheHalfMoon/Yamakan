@@ -37,6 +37,10 @@ export const DOCUMENT_LIMITS = Object.freeze({
   projectModels: 1_000,
   workspaceModelBytes: 8 * 1024 * 1024 * 1024,
   activeModelUploadsPerPrincipal: 2,
+  // And across the workspace, since each is held in memory while it is checked: all agents
+  // share two, and no more than four are checked at once.
+  activeModelUploadsForAgents: 2,
+  activeModelUploads: 4,
   // No principal holds more than one document's worth, and agents share
   // one more document's worth between them, so agents can never lock out
   // the person at the keyboard or the local CLI and SDK.

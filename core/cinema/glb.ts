@@ -130,6 +130,9 @@ function walk(value: Json, depth: number, count: { n: number }) {
     fail("The model's description is too large.");
   if (depth > GLB_LIMITS.jsonDepth)
     fail("The model's description is nested too deeply.");
+  // A number too large to hold (such as 1e400) would be written back as null.
+  if (typeof value === "number" && !Number.isFinite(value))
+    fail("The model's description has a number out of range.");
   if (Array.isArray(value)) for (const v of value) walk(v, depth + 1, count);
   else if (value && typeof value === "object")
     for (const [k, v] of Object.entries(value)) {
