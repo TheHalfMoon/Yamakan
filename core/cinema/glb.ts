@@ -77,6 +77,21 @@ const TYPE_COMPONENTS = new Map<unknown, number>([
 ]);
 // Vertex data a still mesh may carry; joints and weights belong to skins, which are refused.
 const ATTRIBUTE = /^(POSITION|NORMAL|TANGENT|TEXCOORD_[0-7]|COLOR_[0-7])$/;
+// The data types each kind of vertex data may have (glTF 2.0, meshes).
+const ATTRIBUTE_TYPES: [RegExp, string[], number[]][] = [
+  [/^NORMAL$/, ["VEC3"], [5126]],
+  [/^TANGENT$/, ["VEC4"], [5126]],
+  [/^TEXCOORD_/, ["VEC2"], [5126, 5121, 5123]],
+  [/^COLOR_/, ["VEC3", "VEC4"], [5126, 5121, 5123]],
+];
+// A node's placement is bounded well inside float32, so Blender's transforms stay finite.
+const TRANSFORM_LIMIT = 1e9;
+const TRANSFORM_LENGTHS: [string, number][] = [
+  ["matrix", 16],
+  ["translation", 3],
+  ["rotation", 4],
+  ["scale", 3],
+];
 const TEXTURE_SLOTS = [
   "baseColorTexture",
   "metallicRoughnessTexture",
@@ -122,6 +137,7 @@ function walk(value: Json, depth: number, count: { n: number }) {
         fail(
           "The model refers to another file or a URL; only a self-contained .glb is taken.",
         );
+      // Stricter than glTF needs: an "extensions" key is checked even inside extras.
       if (k === "extensions") {
         if (depth === 0) fail("The model uses extensions on the whole file.");
         for (const name of Object.keys(obj(v)))
@@ -303,14 +319,15 @@ export function checkGlb(file: Uint8Array): GlbSummary {
     fail("The model has too many materials.");
   for (const m of materials) {
     const pbr = obj(m.pbrMetallicRoughness ?? {});
-    for (const slot of TEXTURE_SLOTS) {
-      const info = m[slot] ?? pbr[slot];
-      if (info === undefined) continue;
-      if (!isIndex(obj(info).index, textures.length))
-        fail("A material's texture points at nothing.");
-      if (obj(info).texCoord !== undefined)
-        nonNegInt(obj(info).texCoord, "texture coordinate set");
-    }
+    // Each slot is checked wherever it appears, so a valid copy cannot hide the one read.
+    for (const slot of TEXTURE_SLOTS)
+      for (const info of [m[slot], pbr[slot]]) {
+        if (info === undefined) continue;
+        if (!isIndex(obj(info).index, textures.length))
+          fail("A material's texture points at nothing.");
+        if (obj(info).texCoord !== undefined)
+          nonNegInt(obj(info).texCoord, "texture coordinate set");
+      }
   }
 
   // Meshes: triangle parts, attributes in the file with matching counts, nothing morphing.
@@ -332,6 +349,7 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   };
   for (const m of meshes) {
     if (m.weights !== undefined) fail("The model has morph targets.");
+    if (!arr(m.primitives).length) fail("A mesh has no parts.");
     for (const p of arr(m.primitives).map(obj)) {
       if (++primitives > GLB_LIMITS.primitives)
         fail("The model has too many parts.");
@@ -352,8 +370,16 @@ export function checkGlb(file: Uint8Array): GlbSummary {
           fail(`A mesh part has ${name} data, which is not taken.`);
         if (!isIndex(index, accessors.length))
           fail("A mesh part's data points at nothing.");
-        if (accessors[index as number].count !== count)
+        const a = accessors[index as number];
+        if (a.count !== count)
           fail("A mesh part's data does not match its vertices.");
+        for (const [pattern, types, components] of ATTRIBUTE_TYPES)
+          if (
+            pattern.test(name) &&
+            (!types.includes(a.raw.type as string) ||
+              !components.includes(a.raw.componentType as number))
+          )
+            fail(`A mesh part's ${name} data has the wrong type.`);
       }
       const idx =
         p.indices === undefined
@@ -416,6 +442,17 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       fail("The model has cameras or skins; only still meshes are taken.");
     if (n.weights !== undefined) fail("The model has morph targets.");
     optIndex(n.mesh, meshes.length, "node's mesh");
+    for (const [key, length] of TRANSFORM_LENGTHS) {
+      if (n[key] === undefined) continue;
+      const values = arr(n[key]);
+      if (
+        values.length !== length ||
+        !values.every(
+          (x) => typeof x === "number" && Math.abs(x) <= TRANSFORM_LIMIT,
+        )
+      )
+        fail(`A node's ${key} is malformed or out of range.`);
+    }
     for (const c of arr(n.children)) {
       if (!isIndex(c, nodes.length)) fail("A node's child points at nothing.");
       if (c === i || parent[c as number] !== -1)
@@ -432,10 +469,14 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   const scenes = arr(gltf.scenes).map(obj);
   if (!scenes.length) fail("The model has no scene.");
   optIndex(gltf.scene, scenes.length, "default scene");
-  for (const s of scenes)
-    for (const n of arr(s.nodes))
+  for (const s of scenes) {
+    const roots = arr(s.nodes);
+    for (const n of roots)
       if (!isIndex(n, nodes.length) || parent[n as number] !== -1)
         fail("A scene's node points at nothing or is not a root.");
+    if (new Set(roots).size !== roots.length)
+      fail("A scene lists the same node twice.");
+  }
 
   return {
     bytes: file.byteLength,

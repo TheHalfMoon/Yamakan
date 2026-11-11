@@ -701,13 +701,14 @@ test("a part's other data must be known, in range and match its vertex count", (
     /does not match its vertices/,
   );
   // The same stored data named by every attribute slot, counted for each use, past the limit.
-  const big = 1_500_000;
+  const big = 2_000_000;
   const bin = new Uint8Array(big * 12);
   const shared = triangle() as Record<string, any>;
   shared.buffers[0].byteLength = bin.byteLength;
   shared.bufferViews = [{ buffer: 0, byteLength: bin.byteLength }];
   shared.accessors = [
     { bufferView: 0, componentType: 5126, count: big, type: "VEC3" },
+    { bufferView: 0, componentType: 5126, count: big, type: "VEC2" },
   ];
   const slots = [0, 1, 2, 3, 4, 5, 6, 7];
   shared.meshes = [
@@ -717,7 +718,7 @@ test("a part's other data must be known, in range and match its vertex count", (
           attributes: {
             POSITION: 0,
             NORMAL: 0,
-            ...Object.fromEntries(slots.map((i) => [`TEXCOORD_${i}`, 0])),
+            ...Object.fromEntries(slots.map((i) => [`TEXCOORD_${i}`, 1])),
             ...Object.fromEntries(slots.map((i) => [`COLOR_${i}`, 0])),
           },
         },
@@ -832,4 +833,85 @@ test("a byte-order mark, a short image and the wrong argument type are refused",
   short.images = [{ bufferView: 2, mimeType: "image/png" }];
   refused(glb(short), /not what it says/);
   refused(new ArrayBuffer(64) as unknown as Uint8Array, /not a \.glb/);
+});
+
+test("a texture slot is checked wherever it appears, so a valid copy cannot hide another", () => {
+  const withTexture = (material: Record<string, unknown>) => {
+    const bin = new Uint8Array(48);
+    bin.set(triangleBin());
+    bin.set([0x89, 0x50, 0x4e, 0x47], 44);
+    const g = triangle() as Record<string, any>;
+    g.buffers[0].byteLength = 48;
+    g.bufferViews.push({ buffer: 0, byteOffset: 44, byteLength: 4 });
+    g.images = [{ bufferView: 2, mimeType: "image/png" }];
+    g.textures = [{ source: 0 }];
+    g.materials = [material];
+    return glb(g, bin);
+  };
+  assert.equal(
+    checkGlb(
+      withTexture({ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }),
+    ).images,
+    1,
+  );
+  refused(
+    withTexture({
+      baseColorTexture: { index: 0 },
+      pbrMetallicRoughness: { baseColorTexture: { index: 99 } },
+    }),
+    /material's texture/,
+  );
+  refused(
+    withTexture({
+      pbrMetallicRoughness: { metallicRoughnessTexture: { index: 0 } },
+      metallicRoughnessTexture: { index: 99 },
+    }),
+    /material's texture/,
+  );
+});
+
+test("a mesh with no parts is refused", () => {
+  refused(
+    changed((g) => {
+      g.meshes = [{ primitives: [] }];
+    }),
+    /no parts/,
+  );
+});
+
+test("vertex data must have the type glTF gives it", () => {
+  const extra = (name: string, type: string, componentType: number) =>
+    changed((g) => {
+      g.accessors.push({ bufferView: 0, componentType, count: 3, type });
+      g.meshes[0].primitives[0].attributes[name] = 2;
+    });
+  refused(extra("NORMAL", "MAT2", 5121), /NORMAL data has the wrong type/);
+  refused(extra("TANGENT", "VEC3", 5126), /TANGENT data has the wrong type/);
+  refused(extra("TEXCOORD_0", "VEC3", 5126), /TEXCOORD_0 data has/);
+  refused(extra("COLOR_0", "VEC2", 5126), /COLOR_0 data has/);
+  // The positions themselves serve as a valid normal list.
+  assert.equal(
+    checkGlb(
+      changed((g) => {
+        g.meshes[0].primitives[0].attributes.NORMAL = 0;
+      }),
+    ).vertices,
+    3,
+  );
+});
+
+test("node placement must be well formed and bounded; scene roots are listed once", () => {
+  const cases: [RegExp, (g: Record<string, any>) => void][] = [
+    [/matrix/, (g) => (g.nodes[0].matrix = [1, 0])],
+    [/scale/, (g) => (g.nodes[0].scale = [1e308, 1, 1])],
+    [/translation/, (g) => (g.nodes[0].translation = [0, 0, "x"])],
+    [/rotation/, (g) => (g.nodes[0].rotation = [0, 0, 0])],
+    [/same node twice/, (g) => (g.scenes[0].nodes = [0, 0])],
+  ];
+  for (const [pattern, edit] of cases) refused(changed(edit), pattern);
+  const placed = triangle() as Record<string, any>;
+  placed.nodes[0].translation = [1, 2, 3];
+  placed.nodes[0].rotation = [0, 0, 0, 1];
+  placed.nodes[0].scale = [2, 2, 2];
+  assert.equal(checkGlb(glb(placed)).meshes, 1);
 });
