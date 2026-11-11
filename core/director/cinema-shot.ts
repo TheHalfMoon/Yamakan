@@ -94,7 +94,20 @@ const SET_FOR_SIZE: Record<string, number> = {
   aerial: SET.length,
 };
 
-const ORBIT: Record<string, number> = { still: 0, orbit: 90 };
+// Each camera movement as the render makes it (core/blender/scene.ts): around the subject, a
+// push in or pull back of a third of the distance, a turn of 30 degrees where the camera stands,
+// and a slight handheld sway.
+const MOVES: Record<
+  string,
+  { orbitDegrees?: number; dolly?: number; panDegrees?: number; shake?: number }
+> = {
+  still: {},
+  orbit: { orbitDegrees: 90 },
+  push: { dolly: 0.35 },
+  pull: { dolly: -0.35 },
+  pan: { panDegrees: 30 },
+  handheld: { shake: 0.03 },
+};
 
 // A kind and a choice of the Create page's own, never one inherited from Object.
 const known = (kind: string, choice: unknown) =>
@@ -109,9 +122,10 @@ const derivedId = (shotId: string, n: number) =>
 /**
  * The Cinema scene and Blender settings for one shot. Shot size sets how much of the set is
  * shown (the render stands back to frame what is shown, whatever the lens, so the sizes hold
- * at a given lens: a long lens makes every size tighter); the lens sets the focal length; "still" and "orbit" set the camera's movement. Pan,
- * push, pull, handheld, an aerial view and the light choices are not something this render can
- * make yet, so they are listed in notFollowed (and the shot is planned without them).
+ * at a given lens: a long lens makes every size tighter); the lens sets the focal length; the
+ * movement is the camera's (still, orbit, push, pull, pan, handheld). An aerial view and the
+ * light choices are not something this render can make yet, so they are listed in notFollowed
+ * (and the shot is planned without them).
  */
 export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
   if (!UUID.test(input.shotId))
@@ -138,10 +152,10 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
     followed.push(`lens:${direction.lens}`);
   }
 
-  let orbitDegrees = 0;
+  let move: (typeof MOVES)[string] = {};
   if (direction.movement) {
-    if (Object.hasOwn(ORBIT, direction.movement)) {
-      orbitDegrees = ORBIT[direction.movement];
+    if (Object.hasOwn(MOVES, direction.movement)) {
+      move = MOVES[direction.movement];
       followed.push(`movement:${direction.movement}`);
     } else notFollowed.push(`movement:${direction.movement}`);
   }
@@ -178,7 +192,10 @@ export function planCinemaShot(input: CinemaShotInput): CinemaShotPlan {
       fps: input.fps,
       frames,
       samples: input.samples ?? 8,
-      orbitDegrees,
+      orbitDegrees: move.orbitDegrees ?? 0,
+      ...(move.dolly !== undefined ? { dolly: move.dolly } : {}),
+      ...(move.panDegrees !== undefined ? { panDegrees: move.panDegrees } : {}),
+      ...(move.shake !== undefined ? { shake: move.shake } : {}),
     },
     followed,
     notFollowed,

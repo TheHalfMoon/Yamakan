@@ -70,6 +70,13 @@ export const BlenderSceneSchema = z
         sensorWidthMm: Finite.min(1).max(1000),
         // Around the target over the shot, in degrees (0: the camera stays still).
         orbitDegrees: Finite.min(-360).max(360),
+        // Toward the target over the shot, as a share of its distance (a push in); below 0, away
+        // from it (a pull back).
+        dolly: Finite.min(-0.9).max(0.9).default(0),
+        // The camera turns where it stands, sweeping its view across the target, in degrees.
+        panDegrees: Finite.min(-90).max(90).default(0),
+        // A small, steady handheld sway, as a share of the distance (always the same for a scene).
+        shake: Finite.min(0).max(0.1).default(0),
       })
       .strict(),
     light: z
@@ -105,6 +112,10 @@ export const BlenderRenderSettingsSchema = z
     frames: z.number().int().min(1).max(L.maxFrames),
     samples: z.number().int().min(1).max(L.maxSamples),
     orbitDegrees: Finite.min(-360).max(360),
+    // Camera moves beside the orbit (see BlenderSceneSchema's camera); absent is none.
+    dolly: Finite.min(-0.9).max(0.9).optional(),
+    panDegrees: Finite.min(-90).max(90).optional(),
+    shake: Finite.min(0).max(0.1).optional(),
   })
   .strict();
 export type BlenderRenderSettings = z.infer<typeof BlenderRenderSettingsSchema>;
@@ -174,6 +185,9 @@ export function blenderSceneFromCinema(
       focalLengthMm: scene.camera.focalLengthMm,
       sensorWidthMm: scene.camera.sensorWidthMm,
       orbitDegrees: s.orbitDegrees,
+      dolly: s.dolly ?? 0,
+      panDegrees: s.panDegrees ?? 0,
+      shake: s.shake ?? 0,
     },
     light: { rotation: { x: -0.9, y: 0.4, z: 0 }, strength: 3 },
     objects: scene.items

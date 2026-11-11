@@ -25,7 +25,11 @@ import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
-import { boxColours, moved } from "../scripts/lib/frame-checks.ts";
+import {
+  boxColours,
+  changedPercent,
+  moved,
+} from "../scripts/lib/frame-checks.ts";
 import { planCinemaShot } from "../core/director/cinema-shot.ts";
 
 const bases: string[] = [];
@@ -610,6 +614,140 @@ test(
       assert.equal(moved(frames[0], frames[15], frames[29]).moved, true);
     } finally {
       await queue.close();
+      store.close();
+    }
+  },
+);
+
+test(
+  "camera moves are made: a push grows the subject, a pull shrinks it, a pan slides it, handheld sways",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-camera-moves-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Moves");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      // The same medium shot each time (the blue subject and the orange block), small and quick.
+      const shotId = "6e5d4c3b-2a19-4f8e-9d7c-6b5a49382716";
+      const W = 64;
+      const H = 36;
+      const frames = 12;
+      // The share of the picture that is not background (the colour of its top-left corner, as
+      // rendered), and the middle of it across.
+      const measure = (f: Uint8Array) => {
+        const background = [f[0], f[1], f[2]];
+        let shown = 0;
+        let across = 0;
+        for (let i = 0; i < W * H; i++) {
+          const d = Math.max(
+            Math.abs(f[i * 3] - background[0]),
+            Math.abs(f[i * 3 + 1] - background[1]),
+            Math.abs(f[i * 3 + 2] - background[2]),
+          );
+          if (d > 24) {
+            shown++;
+            across += (i % W) / W;
+          }
+        }
+        return { share: shown / (W * H), middle: shown ? across / shown : 0.5 };
+      };
+      const render = async (movement: string) => {
+        const plan = planCinemaShot({
+          shotId,
+          direction: { shot: "medium", movement },
+          seconds: frames / 24,
+          fps: 24,
+        });
+        const job = await supervisor.submitBlenderRender(
+          project.id,
+          blenderSceneFromCinema(plan.scene, {
+            ...plan.settings,
+            width: 160,
+            height: 90,
+            samples: 4,
+          }),
+          movement,
+        );
+        const done = await settled(supervisor, job.id);
+        assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+        const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+        const { file } = await store.assetFile(project.id, assetId);
+        const raw = execFileSync(
+          mediaTools().ffmpeg,
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            file,
+            "-vf",
+            `scale=${W}:${H}`,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+          ],
+          { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+        );
+        const size = W * H * 3;
+        const all = Array.from({ length: raw.length / size }, (_, i) =>
+          raw.subarray(i * size, (i + 1) * size),
+        );
+        assert.equal(all.length, frames);
+        // The most any frame changes from the one before: a sway, not a flicker.
+        let step = 0;
+        for (let i = 1; i < frames; i++)
+          step = Math.max(step, changedPercent(all[i - 1], all[i]));
+        return { first: all[0], last: all[frames - 1], step };
+      };
+      const results: Record<string, unknown> = {};
+      const still = await render("still");
+      assert.equal(changedPercent(still.first, still.last), 0);
+
+      const push = await render("push");
+      const pushed = [measure(push.first).share, measure(push.last).share];
+      assert.ok(pushed[1] > pushed[0] * 1.3, `push: ${pushed}`);
+
+      const pull = await render("pull");
+      const pulled = [measure(pull.first).share, measure(pull.last).share];
+      assert.ok(pulled[1] < pulled[0] / 1.3, `pull: ${pulled}`);
+
+      const pan = await render("pan");
+      const panned = [measure(pan.first).middle, measure(pan.last).middle];
+      assert.ok(Math.abs(panned[1] - panned[0]) > 0.15, `pan: ${panned}`);
+
+      const handheld = await render("handheld");
+      const swayed = changedPercent(handheld.first, handheld.last);
+      const held = [
+        measure(handheld.first).share,
+        measure(handheld.last).share,
+      ];
+      // It moves, slowly from frame to frame, and the shot stays about the same size.
+      assert.ok(swayed > 0, `handheld changed ${swayed}%`);
+      assert.ok(
+        handheld.step <= Math.max(1, swayed),
+        `handheld: ${handheld.step}% from one frame to the next, ${swayed}% over the shot`,
+      );
+      assert.ok(
+        Math.abs(held[1] - held[0]) < 0.5 * held[0],
+        `handheld: ${held}`,
+      );
+      Object.assign(results, {
+        pushed,
+        pulled,
+        panned,
+        swayed,
+        held,
+        handheldStep: handheld.step,
+      });
+      console.log("camera moves", JSON.stringify(results));
+    } finally {
+      await supervisor.close();
       store.close();
     }
   },
