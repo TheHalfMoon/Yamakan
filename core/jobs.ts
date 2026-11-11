@@ -198,13 +198,32 @@ const BlenderPayload = z
     format: z.literal("blender/1"),
     scene: BlenderSceneSchema,
     name: z.string().min(1).max(120),
+    // The project video a plate's footage comes from (the tracked one), and the content hash
+    // it was tracked at, when the scene has a plate.
+    plateAssetId: Id.optional(),
+    plateAssetHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (p) =>
+      !!p.scene.plate === !!p.plateAssetId &&
+      !!p.plateAssetId === !!p.plateAssetHash,
+    "A plate comes with its footage, and footage only with a plate.",
+  );
 // A camera track of one of the project's videos (core/blender/track.ts).
 const TrackPayload = z
   .object({
     format: z.literal("blender-track/1"),
     assetId: Id,
+    // The content hash of the video when it was asked to be tracked: the track and any render
+    // over its footage use exactly that video.
+    assetHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     lens: TrackLensSchema,
   })
   .strict();
@@ -1276,10 +1295,20 @@ export class JobSupervisor {
     // Room for every frame at full size and the video, above the disk reserve.
     const frameBytes = scene.width * scene.height * 4;
     const modelDigests = blenderSceneModels(scene);
+    // The footage behind a plate is the tracked video exactly, and its copy needs room too.
+    const footage = payload.plateAssetId
+      ? await this.store.assetFile(row.project_id, payload.plateAssetId)
+      : null;
+    if (footage && footage.asset.hash !== payload.plateAssetHash)
+      throw new CommandError(
+        "VALIDATION",
+        "The video has changed since it was tracked; track it again to render over it.",
+      );
     const need =
       scene.frames * frameBytes * 2 +
       64 * 1024 * 1024 +
-      modelDigests.length * DOCUMENT_LIMITS.modelBytes;
+      modelDigests.length * DOCUMENT_LIMITS.modelBytes +
+      (footage?.asset.bytes ?? 0);
     const space = await statfs(dir);
     const free =
       Number(space.bavail) * Number(space.bsize) -
@@ -1291,6 +1320,17 @@ export class JobSupervisor {
       );
     // Each 3D model the scene names: the project's stored copy, its bytes hashed and checked
     // again here, written beside the scene where Blender can read it but not write it.
+    // The footage behind a plate, copied like a model: Blender reads it, never writes it.
+    const plates = path.join(dir, "plate");
+    await mkdir(plates, { recursive: true });
+    if (footage) {
+      if (footage.asset.kind !== "video")
+        throw new CommandError("VALIDATION", "A plate's footage is a video.");
+      await copyFile(
+        footage.file,
+        path.join(plates, `clip.${footage.asset.extension}`),
+      );
+    }
     const models = path.join(dir, "models");
     await mkdir(models, { recursive: true });
     const pixelsOf = new Map<string, number>();
@@ -1352,10 +1392,11 @@ export class JobSupervisor {
           sceneFile,
           frames,
           models,
+          plates,
         ],
         cwd: frames,
         writable: [frames],
-        readable: [runtime.install, BLENDER_SCRIPT, sceneFile, models],
+        readable: [runtime.install, BLENDER_SCRIPT, sceneFile, models, plates],
         memoryBytes: ENGINE_WORKER_PROFILE.memoryBytes,
         signal,
         stderrLimit: 8000,
@@ -1532,12 +1573,38 @@ export class JobSupervisor {
 
   // Queues a Blender render of a scene. The made video joins the project as a new asset only
   // when the render, its encode and their checks have all succeeded.
-  async submitBlenderRender(projectId: string, scene: unknown, name: string) {
+  async submitBlenderRender(
+    projectId: string,
+    scene: unknown,
+    name: string,
+    // The tracked video behind a plate (match-move), and the hash it was tracked at.
+    plateAssetId?: string,
+    plateAssetHash?: string,
+  ) {
     if (this.#closing) throw new Error("Render queue is closing.");
     if (!this.#generation) await this.start();
     this.#current();
     const project = await this.store.load(projectId);
-    const payload = BlenderPayload.parse({ format: "blender/1", scene, name });
+    const payload = BlenderPayload.parse({
+      format: "blender/1",
+      scene,
+      name,
+      ...(plateAssetId ? { plateAssetId } : {}),
+      ...(plateAssetHash ? { plateAssetHash } : {}),
+    });
+    if (payload.plateAssetId) {
+      const footage = project.assets.find((a) => a.id === payload.plateAssetId);
+      if (!footage || footage.kind !== "video")
+        throw new CommandError(
+          "NOT_FOUND",
+          "This project holds no such video for the plate.",
+        );
+      if (footage.hash !== payload.plateAssetHash)
+        throw new CommandError(
+          "VALIDATION",
+          "The video has changed since it was tracked; track it again to render over it.",
+        );
+    }
     // A model the project does not hold is refused now, not when the render starts.
     for (const digest of blenderSceneModels(payload.scene))
       await this.store.cinemaModelFile(projectId, digest);
@@ -1601,12 +1668,14 @@ export class JobSupervisor {
     if (!this.#generation) await this.start();
     this.#current();
     const project = await this.store.load(projectId);
+    const found = project.assets.find((a) => a.id === Id.parse(assetId));
     const payload = TrackPayload.parse({
       format: "blender-track/1",
       assetId,
+      ...(found ? { assetHash: found.hash } : {}),
       lens,
     });
-    const asset = project.assets.find((a) => a.id === payload.assetId);
+    const asset = found;
     if (!asset)
       throw new CommandError("NOT_FOUND", "This project holds no such video.");
     if (asset.kind !== "video")
@@ -1682,6 +1751,22 @@ export class JobSupervisor {
     return this.#view(row);
   }
 
+  // A finished track of the project and the video it tracked: what a plate is made from.
+  async trackFootage(
+    projectId: string,
+    jobId: string,
+  ): Promise<{ track: CameraTrack; assetId: string; assetHash: string }> {
+    const track = await this.trackResult(projectId, jobId);
+    const row = this.store.transaction((db) => this.#row(db, jobId))!;
+    const payload = TrackPayload.parse(safeJson(row.payload));
+    if (!payload.assetHash)
+      throw new CommandError(
+        "VALIDATION",
+        "This track does not record which version of its video it tracked; track it again.",
+      );
+    return { track, assetId: payload.assetId, assetHash: payload.assetHash };
+  }
+
   // The solved camera of a finished track, checked again as it is read.
   async trackResult(projectId: string, jobId: string): Promise<CameraTrack> {
     const row = this.store.transaction((db) => this.#row(db, jobId));
@@ -1733,6 +1818,11 @@ export class JobSupervisor {
     );
     if (asset.kind !== "video")
       throw new CommandError("VALIDATION", "Only a video can be tracked.");
+    if (payload.assetHash && asset.hash !== payload.assetHash)
+      throw new CommandError(
+        "VALIDATION",
+        "The video has changed since it was asked to be tracked; track it again.",
+      );
     const dir = await this.store.file(
       row.project_id,
       "exports",

@@ -6,6 +6,7 @@
 // script converts them to Blender's Z-up world with whole matrices.
 import { z } from "zod";
 import type { Scene3D } from "../scene3d.ts";
+import type { CameraTrack } from "./track.ts";
 
 export const BLENDER_SCENE_FORMAT = "yamakan.blender-scene/1";
 
@@ -107,6 +108,25 @@ export const BlenderSceneSchema = z
     // "detail": a ground under the boxes, and fine, non-repeating detail on the ground and on
     // every box (its colour kept). "plain" (the default) is the flat boxes every render had.
     surface: z.enum(["plain", "detail"]).default("plain"),
+    // Tracked footage behind the objects (match-move): the solved camera for every frame and
+    // the lens it was solved with. With a plate, object positions are in the first tracked
+    // camera's own frame (right, up, toward the viewer; metres), the camera follows these
+    // matrices instead of moving by itself, and the footage is composited behind the render.
+    plate: z
+      .object({
+        focalLengthMm: Finite.min(1).max(1000),
+        sensorWidthMm: Finite.min(1).max(100),
+        // The footage's own size, checked against the clip the worker hands Blender.
+        width: z.number().int().min(16).max(8192),
+        height: z.number().int().min(16).max(8192),
+        // Camera-to-world, row-major, in metres: frame i + 1 is cameras[i].
+        cameras: z
+          .array(z.array(Finite.min(-1e6).max(1e6)).length(16))
+          .min(1)
+          .max(L.maxFrames),
+      })
+      .strict()
+      .optional(),
     objects: z
       .array(
         z.discriminatedUnion("shape", [
@@ -139,7 +159,23 @@ export const BlenderSceneSchema = z
         `A render holds at most ${L.maxModels} 3D models.`,
       ),
   })
-  .strict();
+  .strict()
+  .refine(
+    (scene) =>
+      !scene.plate ||
+      (scene.plate.cameras.length === scene.frames &&
+        scene.plate.focalLengthMm === scene.camera.focalLengthMm &&
+        scene.plate.sensorWidthMm === scene.camera.sensorWidthMm &&
+        scene.camera.orbitDegrees === 0 &&
+        scene.camera.dolly === 0 &&
+        scene.camera.panDegrees === 0 &&
+        scene.camera.shake === 0 &&
+        scene.surface === "plain" &&
+        scene.finish.glow === 0 &&
+        scene.finish.vignette === 0 &&
+        scene.finish.dispersion === 0),
+    "With tracked footage, every frame has its solved camera, the camera makes no moves of its own, and there is no ground or finish.",
+  );
 /** The stored models a render reads, each once. */
 export const blenderSceneModels = (scene: BlenderScene) => [
   ...new Set(
@@ -234,6 +270,8 @@ const colourOf = (value: string | undefined) =>
 export function blenderSceneFromCinema(
   scene: Scene3D,
   settings: BlenderRenderSettings,
+  // Tracked footage behind the objects (plateFromTrack); the camera then follows the solve.
+  plate?: BlenderScene["plate"],
 ): BlenderScene {
   const s = BlenderRenderSettingsSchema.parse(settings);
   const metres = (n: number) => clamp(n, -L.maxMetres, L.maxMetres);
@@ -283,8 +321,8 @@ export function blenderSceneFromCinema(
         y: metres(centre.y),
         z: metres(centre.z),
       },
-      focalLengthMm: scene.camera.focalLengthMm,
-      sensorWidthMm: scene.camera.sensorWidthMm,
+      focalLengthMm: plate?.focalLengthMm ?? scene.camera.focalLengthMm,
+      sensorWidthMm: plate?.sensorWidthMm ?? scene.camera.sensorWidthMm,
       orbitDegrees: s.orbitDegrees,
       dolly: s.dolly ?? 0,
       panDegrees: s.panDegrees ?? 0,
@@ -292,6 +330,7 @@ export function blenderSceneFromCinema(
     },
     finish: { ...FINISHES[s.finish ?? "none"] },
     surface: s.surface ?? "plain",
+    ...(plate ? { plate } : {}),
     light: {
       rotation: { ...LIGHTING[s.lighting ?? "neutral"].rotation },
       strength: LIGHTING[s.lighting ?? "neutral"].strength,
@@ -323,4 +362,43 @@ export function blenderSceneFromCinema(
           : { shape: "box" as const, ...placed, colour: colourOf(item.color) };
       }),
   });
+}
+
+/**
+ * The plate for a render of a track's first `frames` frames: a solved camera for every frame (a
+ * frame the solve could not place takes the nearest solved one before it, or after it at the
+ * start), its translation turned from the solve's units into metres.
+ */
+export function plateFromTrack(
+  track: CameraTrack,
+  frames: number,
+  metresPerUnit: number,
+): NonNullable<BlenderScene["plate"]> {
+  if (!(metresPerUnit > 0) || !Number.isFinite(metresPerUnit))
+    throw new Error(
+      "The plate's scale is a positive number of metres per unit.",
+    );
+  if (frames > track.frames)
+    throw new Error(
+      "A render over footage is no longer than the tracked clip.",
+    );
+  const solved = new Map(track.cameras.map((c) => [c.frame, c.matrix]));
+  const first = track.cameras[0].matrix;
+  let held = first;
+  const cameras: number[][] = [];
+  for (let frame = 1; frame <= frames; frame++) {
+    held = solved.get(frame) ?? held;
+    cameras.push(
+      held.map((v, i) =>
+        i === 3 || i === 7 || i === 11 ? v * metresPerUnit : v,
+      ),
+    );
+  }
+  return {
+    focalLengthMm: track.lens.focalLengthMm,
+    sensorWidthMm: track.lens.sensorWidthMm,
+    width: track.width,
+    height: track.height,
+    cameras,
+  };
 }
