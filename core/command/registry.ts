@@ -1838,10 +1838,13 @@ export const commands = {
     mutation: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Queue a Blender render (Cycles on the CPU, in a contained worker) of the project's saved Cinema scene: its boxes, lens and an optional camera orbit, at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
+      "Queue a Blender render (Cycles on the CPU, in a contained worker) of one of the project's saved Cinema scenes: the one named by documentId (a Director shot's own), or else the one the Cinema page opens. Its boxes, lens and an optional camera orbit, at the size, frame rate, length and samples given. The made video joins the project as a new asset when the job succeeds; follow it with yamakan.job.status.",
     input: z
       .object({
         projectId: Id,
+        // A Cinema scene of the project to render (a Director shot's own); without it, the
+        // scene the Cinema page opens.
+        documentId: Id.optional(),
         settings: BlenderRenderSettingsSchema,
         name: z.string().min(1).max(120).optional(),
       })
@@ -1850,15 +1853,20 @@ export const commands = {
       const runtime = await blenderRuntime();
       if (!runtime.available)
         throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
-      // The project's own saved scene: the one its Cinema page opens (lowest id).
-      const ref = store
+      const scenes = store
         .listDocuments(a.projectId)
-        .filter((d) => d.kind === "cinemaScene")
-        .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))[0];
+        .filter((d) => d.kind === "cinemaScene");
+      // The one named, or the project's own saved scene: the one its Cinema page opens
+      // (lowest id).
+      const ref = a.documentId
+        ? scenes.find((d) => d.id === a.documentId)
+        : scenes.sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))[0];
       if (!ref)
         throw new CommandError(
-          "VALIDATION",
-          "This project has no saved Cinema scene to render. Save one on the Cinema page first.",
+          a.documentId ? "NOT_FOUND" : "VALIDATION",
+          a.documentId
+            ? "This project has no Cinema scene with that id."
+            : "This project has no saved Cinema scene to render. Save one on the Cinema page first.",
         );
       const { bytes } = store.getDocument(a.projectId, ref.id);
       const scene = parseScene3D(JSON.parse(bytes.toString("utf8")));

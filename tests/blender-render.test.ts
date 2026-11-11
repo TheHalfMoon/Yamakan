@@ -23,6 +23,10 @@ import {
 import { execFileSync } from "node:child_process";
 import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
+import { toCommandError } from "../core/command/errors.ts";
+import { mediaTools } from "../core/process/workers.ts";
+import { boxColours, moved } from "../scripts/lib/frame-checks.ts";
+import { planCinemaShot } from "../core/director/cinema-shot.ts";
 
 const bases: string[] = [];
 after(async () => {
@@ -267,3 +271,122 @@ test("the commands say what is available, and refuse a project with no saved sce
   await queue.close();
   store.close();
 });
+
+test(
+  "a named Cinema scene is rendered, not the one the Cinema page opens",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-shot-render-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const queue = new JobSupervisor(store);
+    await queue.start();
+    try {
+      const ctx = {
+        store,
+        queue,
+        principal: {
+          id: "browser-ui" as const,
+          scopes: new Set(Scopes) as ReadonlySet<Scope>,
+        },
+      };
+      let project = await store.create("Shot");
+      // A decoy the Cinema page would open (the lowest id): one grey box, nothing blue or orange.
+      const decoy = planCinemaShot({
+        shotId: "6a1b2c3d-4e5f-4a6b-8c7d-8e9f0a1b2c3d",
+        direction: { shot: "close" },
+        seconds: 1,
+        fps: 30,
+      }).scene;
+      decoy.items[0].color = "#777777";
+      const commit = async (documentId: string, scene: unknown) => {
+        project = await store.commitDocument({
+          projectId: project.id,
+          expectedRevision: project.revision,
+          documentId,
+          kind: "cinemaScene",
+          schemaVersion: 1,
+          expectedContentHash: null,
+          source: { bytes: Buffer.from(JSON.stringify(scene), "utf8") },
+        });
+      };
+      await commit("00000000-0000-4000-8000-000000000001", decoy);
+      // The shot: a medium shot (the blue subject and the orange block), orbiting.
+      const shot = planCinemaShot({
+        shotId: "5f0d3c2a-8b1e-4c7d-9a6f-1e2d3c4b5a60",
+        direction: { shot: "medium", movement: "orbit" },
+        seconds: 1,
+        fps: 30,
+      });
+      const shotDocument = "ffffffff-ffff-4fff-8fff-000000000001";
+      await commit(shotDocument, shot.scene);
+
+      assert.equal(
+        toCommandError(
+          await execute(ctx, "yamakan.blender.render", {
+            projectId: project.id,
+            documentId: "ffffffff-ffff-4fff-8fff-000000000002",
+            settings: shot.settings,
+          }).catch((e) => e),
+        ).code,
+        "NOT_FOUND",
+      );
+      const job = (
+        await execute(ctx, "yamakan.blender.render", {
+          projectId: project.id,
+          documentId: shotDocument,
+          settings: shot.settings,
+          name: "Planned shot",
+        })
+      ).result as { id: string };
+      let done = queue.status(job.id);
+      for (
+        let t = 0;
+        t < 300000 &&
+        !["COMPLETED", "FAILED", "CANCELLED"].includes(done.state);
+        t += 250
+      ) {
+        await new Promise((r) => setTimeout(r, 250));
+        done = queue.status(job.id);
+      }
+      assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+      const asset = (await store.load(project.id)).assets.find(
+        (a) => a.name === "Planned shot.mp4",
+      );
+      assert.ok(asset);
+      const { file } = await store.assetFile(project.id, asset!.id);
+      const raw = execFileSync(
+        mediaTools().ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-i",
+          file,
+          "-vf",
+          "scale=64:36",
+          "-f",
+          "rawvideo",
+          "-pix_fmt",
+          "rgb24",
+          "-",
+        ],
+        { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+      );
+      const size = 64 * 36 * 3;
+      const frames = Array.from({ length: raw.length / size }, (_, i) =>
+        raw.subarray(i * size, (i + 1) * size),
+      );
+      assert.equal(frames.length, 30);
+      // The shot's own scene: its blue subject and orange block are there, which the decoy has not.
+      assert.deepEqual(boxColours(frames), { bluish: true, orangish: true });
+      // And the orbit moves the picture.
+      const motion = moved(frames[0], frames[15], frames[29]);
+      assert.equal(motion.moved, true, JSON.stringify(motion.motion));
+    } finally {
+      await queue.close();
+      store.close();
+    }
+  },
+);
