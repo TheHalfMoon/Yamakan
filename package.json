@@ -51,6 +51,7 @@
     "qualify:blender-slice": "node scripts/qualify-blender-e2e.mjs",
     "qualify:cinema-blender": "node scripts/qualify-cinema-blender.mjs",
     "qualify:prompt-library": "node scripts/qualify-prompt-library.mjs",
+    "qualify:director-cinema": "node scripts/qualify-director-cinema.mjs",
     "qualify:cinema-activation": "node scripts/qualify-cinema-activation.mjs",
     "qualify:director-activation": "node scripts/qualify-director-activation.mjs",
     "qualify:take-review": "node scripts/qualify-take-review.mjs",

@@ -1080,7 +1080,8 @@
     "imported": "core/director/manifest.ts",
     "sha256": "6d929fdb0a79e081b2c0fc06646acffb4c6060df4208a0bd4cdd693d0e3c65ec",
     "modifications": [
-      "Translated JSON Schema to zod; tools_available forced empty; added framework-smoke builtin."
+      "Translated JSON Schema to zod; tools_available forced empty; added framework-smoke builtin.",
+      "builtinManifest also finds Yamakan pipelines registered by registerBuiltinManifest (core/director/cinema-pipeline.ts), each parsed as a built-in is and registered once, 2026-11-11."
     ],
     "tests": [
       "tests/director-stages.test.ts"
@@ -1088,7 +1089,7 @@
     "license": "AGPL-3.0",
     "authorization": "public-licence",
     "owner": "director builder",
-    "importedSha256": "97733923daf9886cde14ff071e86f28d54d00c574dd6393c745e593dd21a0245"
+    "importedSha256": "773be7bb6032334d4b5c81dbd99f4f360526da35f37cb8763698bd23b1bc2afb"
   },
   {
     "source": "calesthio/OpenMontage",

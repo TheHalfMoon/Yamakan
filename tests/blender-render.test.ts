@@ -390,3 +390,227 @@ test(
     }
   },
 );
+
+test(
+  "a cinema-blender Director run: a story shot planned, rendered, approved by a person, and placed",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-director-shot-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const queue = new JobSupervisor(store);
+    await queue.start();
+    try {
+      const { loadRun, directorNext } =
+        await import("../core/director/runtime.ts");
+      const browser = {
+        store,
+        queue,
+        principal: {
+          id: "browser-ui" as const,
+          scopes: new Set(Scopes) as ReadonlySet<Scope>,
+        },
+      };
+      const agent = {
+        store,
+        queue,
+        principal: {
+          id: "agent:director-test" as const,
+          scopes: new Set([
+            "project:read",
+            "project:write",
+            "render:execute",
+            "job:read",
+          ]) as ReadonlySet<Scope>,
+        },
+      };
+      const created = (
+        await execute(browser, "yamakan.project.create", { name: "Director" })
+      ).result as { id: string; revision: number };
+      const projectId = created.id;
+      const shotId = "7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+      const storyDocumentId = "8d2e3f4a-5b6c-4d7e-9f8a-0b1c2d3e4f5a";
+      const sceneId = "9e3f4a5b-6c7d-4e8f-8a9b-1c2d3e4f5a6b";
+      const story = (takes: unknown[], selectedTakeId: string | null) => ({
+        format: "yamakan.story",
+        formatVersion: 1,
+        title: "Shots",
+        scenes: [
+          {
+            id: sceneId,
+            name: "Scene one",
+            shots: [
+              {
+                id: shotId,
+                name: "Opening",
+                durationTicks: 705_600_000,
+                notes: "",
+                referencePacks: [],
+                takes,
+                selectedTakeId,
+              },
+            ],
+          },
+        ],
+      });
+      const saved = (
+        await execute(browser, "yamakan.story.save", {
+          projectId,
+          expectedRevision: created.revision,
+          documentId: storyDocumentId,
+          expectedContentHash: null,
+          story: story([], null),
+        })
+      ).result as { document: { contentHash: string } };
+      const run = (
+        await execute(agent, "yamakan.director.start", {
+          projectId,
+          pipelineName: "cinema-blender",
+        })
+      ).result as { id: string };
+
+      // An agent may plan and render the shot.
+      const rendered = (
+        await execute(agent, "yamakan.director.renderShot", {
+          runId: run.id,
+          storyDocumentId,
+          shotId,
+          direction: { shot: "medium", movement: "orbit", light: "golden" },
+        })
+      ).result as {
+        job: { id: string };
+        followed: string[];
+        notFollowed: string[];
+        scene: { items: unknown[] };
+        settings: { frames: number; fps: number };
+      };
+      assert.deepEqual(rendered.followed, ["shot:medium", "movement:orbit"]);
+      assert.deepEqual(rendered.notFollowed, ["light:golden"]);
+      assert.equal(rendered.scene.items.length, 2);
+      assert.deepEqual(
+        [rendered.settings.frames, rendered.settings.fps],
+        [30, 30],
+      );
+      let done = queue.status(rendered.job.id);
+      for (
+        let t = 0;
+        t < 300000 &&
+        !["COMPLETED", "FAILED", "CANCELLED"].includes(done.state);
+        t += 250
+      ) {
+        await new Promise((r) => setTimeout(r, 250));
+        done = queue.status(rendered.job.id);
+      }
+      assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+      const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+      const asset = (await store.load(projectId)).assets.find(
+        (a) => a.id === assetId,
+      )!;
+      assert.equal(asset.name, "Opening.mp4");
+
+      // The render stage waits for a person: an agent cannot approve it.
+      await execute(agent, "yamakan.director.advance", {
+        runId: run.id,
+        stage: "render",
+        status: "awaiting_human",
+        outputHash: asset.hash,
+        expectedVersion: (await loadRun(store, run.id)).version,
+      });
+      await assert.rejects(
+        execute(agent, "yamakan.director.approve", {
+          runId: run.id,
+          stage: "render",
+          outputHash: asset.hash,
+          ttlMs: 60 * 60 * 1000,
+          expectedVersion: (await loadRun(store, run.id)).version,
+        }),
+      );
+      assert.equal((await directorNext(store, run.id)).kind, "blocked");
+      await execute(browser, "yamakan.director.approve", {
+        runId: run.id,
+        stage: "render",
+        outputHash: asset.hash,
+        ttlMs: 60 * 60 * 1000,
+        expectedVersion: (await loadRun(store, run.id)).version,
+      });
+      assert.deepEqual(await directorNext(store, run.id), {
+        kind: "stage",
+        stage: "place",
+      });
+
+      // Placed: the approved video becomes the shot's selected take, and the story goes on
+      // the timeline.
+      const takeId = "af4a5b6c-7d8e-4f9a-8b0c-2d3e4f5a6b7c";
+      await execute(browser, "yamakan.story.save", {
+        projectId,
+        expectedRevision: (await store.load(projectId)).revision,
+        documentId: storyDocumentId,
+        expectedContentHash: saved.document.contentHash,
+        story: story(
+          [
+            {
+              id: takeId,
+              assetId,
+              sourceStartTicks: 0,
+              lineage: {
+                label: "Blender: shot medium, orbit",
+                outputHash: asset.hash,
+                inputs: [],
+              },
+            },
+          ],
+          takeId,
+        ),
+      });
+      const before = await store.load(projectId);
+      const track = before.tracks.find((t) => t.kind === "video")!;
+      await execute(browser, "yamakan.story.assemble", {
+        projectId,
+        expectedRevision: before.revision,
+        documentId: storyDocumentId,
+        trackId: track.id,
+      });
+      const placed = await store.load(projectId);
+      assert.ok(placed.clips.some((c) => c.assetId === assetId));
+      await execute(agent, "yamakan.director.advance", {
+        runId: run.id,
+        stage: "place",
+        status: "completed",
+        outputHash: asset.hash,
+        expectedVersion: (await loadRun(store, run.id)).version,
+      });
+      assert.deepEqual(await directorNext(store, run.id), { kind: "done" });
+
+      // The video is the shot's planned scene: its blue subject and orange block, moving.
+      const { file } = await store.assetFile(projectId, assetId);
+      const raw = execFileSync(
+        mediaTools().ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-i",
+          file,
+          "-vf",
+          "scale=64:36",
+          "-f",
+          "rawvideo",
+          "-pix_fmt",
+          "rgb24",
+          "-",
+        ],
+        { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+      );
+      const size = 64 * 36 * 3;
+      const frames = Array.from({ length: raw.length / size }, (_, i) =>
+        raw.subarray(i * size, (i + 1) * size),
+      );
+      assert.deepEqual(boxColours(frames), { bluish: true, orangish: true });
+      assert.equal(moved(frames[0], frames[15], frames[29]).moved, true);
+    } finally {
+      await queue.close();
+      store.close();
+    }
+  },
+);

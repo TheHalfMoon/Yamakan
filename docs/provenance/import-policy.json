@@ -209,6 +209,10 @@
       "reason": "Yamakan-authored editing of the Cinema scene's placeholder boxes (add, remove, move, turn, resize) within core scene3d bounds; new original code, not adapted or copied from a donor."
     },
     {
+      "path": "core/director/cinema-pipeline.ts",
+      "reason": "Yamakan-authored cinema-blender Director pipeline: renders a story shot's planned Cinema scene with the Blender worker behind the person's approval; new original code, not adapted or copied from a donor or from Blender."
+    },
+    {
       "path": "core/director/cinema-shot.ts",
       "reason": "Yamakan-authored Creative Director planner that turns a shot's direction words into a Cinema scene and Blender render settings; new original code, not adapted or copied from a donor or from Blender."
     },

@@ -198,6 +198,10 @@ import {
 } from "../prompts/library.ts";
 import { PromptPresetsDocumentSchema } from "../prompts/presets.ts";
 import {
+  RenderShotInputSchema,
+  renderStoryShot,
+} from "../director/cinema-pipeline.ts";
+import {
   evaluateReviewIndependenceV1,
   type ReviewLineageV1,
 } from "../agents/lineage.ts";
@@ -1831,6 +1835,20 @@ export const commands = {
             reason: runtime.reason,
             message: runtime.message,
           };
+    },
+  }),
+  "yamakan.director.renderShot": define({
+    scope: "render:execute",
+    mutation: true,
+    refusesRequestId: NO_REPLAY,
+    summary:
+      "In a cinema-blender Director run: plan a story shot as a Cinema scene from its direction (shot size, movement, lens, light; what the render cannot make is listed as not followed) and queue its Blender render. Returns the job, the planned scene and what was followed; the video joins the project when the job succeeds.",
+    input: RenderShotInputSchema,
+    run: async ({ store, queue }, a) => {
+      const runtime = await blenderRuntime();
+      if (!runtime.available)
+        throw new CommandError("CAPABILITY_UNAVAILABLE", runtime.message);
+      return renderStoryShot(store, queue, a);
     },
   }),
   "yamakan.blender.render": define({

@@ -72,6 +72,7 @@ import { StudioCanvas } from "./studio/StudioCanvas.tsx";
 import type { StudioClient } from "./studio/host/persistence.ts";
 import { CinemaViewport } from "./cinema/CinemaViewport.tsx";
 import type { BlenderHost } from "./cinema/BlenderRender.tsx";
+import type { CinemaShotHost } from "./director/CinemaShot.tsx";
 import type { CinemaProjectClient } from "./cinema/cinemaProject.ts";
 import { DirectorPanel } from "./director/DirectorPanel.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./director/take-review.ts";
@@ -1061,6 +1062,109 @@ function App() {
     await refresh();
     return null;
   };
+  // The Director's Cinema shot, placed: under the editor's busy state, the editor's work saved
+  // first, then the story with its new take, then the story on the timeline (assembled if none
+  // of it is there yet, else the shot's clip switched to the new take), then the project
+  // reopened.
+  const cinemaShotHost = (p: Project): CinemaShotHost => ({
+    place: (next) =>
+      new Promise((resolve) => {
+        let why: string | null = t("status.working");
+        void run(async () => {
+          why = t("error.operation");
+          // A save that met a conflict stops here, so its notice and unapplied change stay;
+          // past it, the project is reopened whatever happens.
+          if (!(await save())) {
+            why = t("blender.placeUnsaved");
+            return;
+          }
+          try {
+            // The render added its video to the project since the editor last read it: the
+            // story is saved against the project as it is now (the editor's work is saved).
+            const current = (await call("yamakan.project.open", {
+              projectId: p.id,
+            })) as Project;
+            // Which of the story's shots the timeline holds, decided before anything is written
+            // and as assembly decides it (a shot is there while its id is, even with its clips
+            // removed): none, and the story is assembled; this shot, and its clip shows the new
+            // take; others only, or this shot without its clip, and nothing is done.
+            const there = new Map(
+              current.scenes.flatMap((sc) =>
+                (sc.shots ?? []).map((sh) => [sh.id, sh] as const),
+              ),
+            );
+            const mine = there.get(next.shotId);
+            const storyShots = next.story.scenes.flatMap((sc) =>
+              sc.shots.map((sh) => sh.id),
+            );
+            if (!mine && storyShots.some((id) => there.has(id))) {
+              why = t("directorCinema.partlyPlaced");
+              return;
+            }
+            if (mine && mine.clipIds.length === 0) {
+              why = t("directorCinema.clipRemoved");
+              return;
+            }
+            // Already the shot's clip (an earlier Place got that far): nothing left to do here.
+            const showing =
+              mine &&
+              current.clips.some(
+                (c) =>
+                  mine.clipIds.includes(c.id) && c.assetId === next.assetId,
+              );
+            if (showing) {
+              why = null;
+              return;
+            }
+            const track = current.tracks.find((x) => x.kind === "video");
+            if (!track) throw new Error(t("error.edit"));
+            // Saved unless an earlier Place saved it already.
+            if (next.saveStory)
+              await call("yamakan.story.save", {
+                projectId: p.id,
+                expectedRevision: current.revision,
+                documentId: next.documentId,
+                expectedContentHash: next.expectedContentHash,
+                story: next.story,
+              } as any);
+            const saved = (await call("yamakan.project.open", {
+              projectId: p.id,
+            })) as Project;
+            if (!mine)
+              await call("yamakan.story.assemble", {
+                projectId: p.id,
+                expectedRevision: saved.revision,
+                documentId: next.documentId,
+                trackId: track.id,
+              });
+            else {
+              const proposal = (await call("yamakan.take.proposeReplace", {
+                projectId: p.id,
+                documentId: next.documentId,
+                shotId: next.shotId,
+                takeId: next.takeId,
+              })) as any;
+              await call("yamakan.take.apply", {
+                projectId: p.id,
+                expectedRevision: proposal.revision,
+                proposal,
+              } as any);
+            }
+            why = null;
+          } catch (e) {
+            why = e instanceof Error ? e.message : String(e);
+          } finally {
+            // Whatever got written, the editor and the panel go on from the project as it is.
+            try {
+              accept(await call("yamakan.project.open", { projectId: p.id }));
+              await refresh();
+            } catch (e) {
+              why ??= e instanceof Error ? e.message : String(e);
+            }
+          }
+        }).finally(() => resolve(why));
+      }),
+  });
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
@@ -1093,6 +1197,7 @@ function App() {
         unsaved={Boolean(history?.past.length || unapplied)}
         assetName={(id) => p?.assets.find((x) => x.id === id)?.name ?? null}
         applyTake={applyTake}
+        cinemaShot={p ? cinemaShotHost(p) : undefined}
       />
     </>
   );

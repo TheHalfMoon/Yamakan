@@ -55,6 +55,12 @@ const validInput: Record<string, unknown> = {
   "yamakan.director.importLegacy": {},
   "yamakan.agent.create": { scopes: ["project:read"] },
   "yamakan.agent.revoke": { agentId: `agent:${randomUUID()}` },
+  "yamakan.director.renderShot": {
+    runId: id,
+    storyDocumentId: id,
+    shotId: id,
+    direction: {},
+  },
   "yamakan.blender.render": {
     projectId: id,
     settings: {

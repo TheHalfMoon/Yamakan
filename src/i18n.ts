@@ -163,6 +163,34 @@ const en = {
   "create.prompt": "Describe the shot",
   "create.promptHint": "A paper boat floats slowly along a calm stream.",
   "create.promptCount": "{count} of {limit} characters",
+  "directorCinema.title": "Render a story shot with Blender",
+  "directorCinema.note":
+    "The Director plans the shot as a Cinema scene from its direction and renders it on this computer. You approve the video before it becomes the shot's take and goes on the timeline.",
+  "directorCinema.noShots":
+    "This project has no story shots yet. Make a story on the Create page first.",
+  "directorCinema.shot": "Story shot",
+  "directorCinema.chooseShot": "Choose a shot",
+  "directorCinema.render": "Plan and render",
+  "directorCinema.sendForApproval": "Ask for approval",
+  "directorCinema.approve": "Approve the video",
+  "directorCinema.place": "Make it the shot's take and place it",
+  "directorCinema.followed": "Followed: {list}.",
+  "directorCinema.notFollowed":
+    "Not followed (the render cannot make these yet): {list}.",
+  "directorCinema.rendered":
+    "Rendered with Blender. Watch it in the project's media, then ask for approval.",
+  "directorCinema.awaiting": "Waiting for your approval.",
+  "directorCinema.approved": "Approved.",
+  "directorCinema.placed":
+    "Rendered with Blender. The video is the shot's take and is on the timeline.",
+  "directorCinema.partlyPlaced":
+    "Some of this story's other shots are on the timeline, but not this one. Place the story's shots together.",
+  "directorCinema.clipRemoved":
+    "This shot is on the timeline without its clip. Put its clip back, or remove the shot from the timeline's scenes, first.",
+  "directorCinema.startOver": "Start over (the video stays in the project)",
+  "directorCinema.storyGone": "The story or its shot is no longer there.",
+  "directorCinema.takesFull":
+    "This shot already has 8 takes, the most a shot keeps. Remove one first.",
   "presets.title": "Saved in this project",
   "presets.reading": "Reading the project's presets…",
   "presets.none":
@@ -852,6 +880,34 @@ const ar: Record<MessageKey, string> = {
   "create.prompt": "صف اللقطة",
   "create.promptHint": "قارب ورقي يطفو ببطء على جدول هادئ.",
   "create.promptCount": "{count} من {limit} حرفًا",
+  "directorCinema.title": "تصيير لقطة من القصة باستخدام Blender",
+  "directorCinema.note":
+    "يخطّط المخرج اللقطة مشهدًا سينمائيًا من إرشاداتها ويصيّرها على هذا الحاسوب. توافق أنت على الفيديو قبل أن يصبح لقطة مأخوذة للمشهد ويوضع على الخط الزمني.",
+  "directorCinema.noShots":
+    "لا توجد لقطات قصة في هذا المشروع بعد. أنشئ قصة في صفحة الإنشاء أولًا.",
+  "directorCinema.shot": "لقطة القصة",
+  "directorCinema.chooseShot": "اختر لقطة",
+  "directorCinema.render": "خطّط وصيِّر",
+  "directorCinema.sendForApproval": "اطلب الموافقة",
+  "directorCinema.approve": "وافق على الفيديو",
+  "directorCinema.place": "اجعله لقطة مأخوذة للمشهد وضعه",
+  "directorCinema.followed": "مُتّبع: {list}.",
+  "directorCinema.notFollowed":
+    "غير مُتّبع (لا يستطيع التصيير صنعه بعد): {list}.",
+  "directorCinema.rendered":
+    "صُيِّر باستخدام Blender. شاهده في وسائط المشروع، ثم اطلب الموافقة.",
+  "directorCinema.awaiting": "بانتظار موافقتك.",
+  "directorCinema.approved": "تمت الموافقة.",
+  "directorCinema.placed":
+    "صُيِّر باستخدام Blender. الفيديو هو اللقطة المأخوذة للمشهد وهو على الخط الزمني.",
+  "directorCinema.partlyPlaced":
+    "بعض لقطات هذه القصة الأخرى على الخط الزمني، لكن ليس هذه. ضع لقطات القصة معًا.",
+  "directorCinema.clipRemoved":
+    "هذه اللقطة على الخط الزمني دون مقطعها. أعد مقطعها، أو أزل اللقطة من مشاهد الخط الزمني أولًا.",
+  "directorCinema.startOver": "ابدأ من جديد (يبقى الفيديو في المشروع)",
+  "directorCinema.storyGone": "لم تعد القصة أو لقطتها موجودة.",
+  "directorCinema.takesFull":
+    "لهذه اللقطة 8 لقطات مأخوذة، وهو أقصى ما تحفظه اللقطة. احذف واحدة أولًا.",
   "presets.title": "محفوظة في هذا المشروع",
   "presets.reading": "جارٍ قراءة الأوصاف المحفوظة في المشروع…",
   "presets.none":

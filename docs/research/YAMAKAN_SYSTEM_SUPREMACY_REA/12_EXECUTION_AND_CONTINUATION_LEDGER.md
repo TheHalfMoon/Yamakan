@@ -430,3 +430,46 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
   - `tests/cinema-shot-plan.test.ts` checks every combination for valid scenes and settings, the same each time; size by camera distance; lens; movement; and refusals.
   - `tests/blender-render.test.ts` renders a planned medium orbit shot by document id with the real Blender, beside a lower-id decoy. The decoded video has the shot's blue subject and orange block, and it moves.
 - **Next PR:** a `cinema-blender` Director pipeline in the panel: plan, render, the human approval gate, then the take placed on the story and timeline.
+
+**Creative Director to Cinema and Blender, second part, 2026-11-11:** after the planner (PR #263, merged as `39ad5be`; main's CI passed).
+- **The `cinema-blender` pipeline:** `render`, which needs a person's approval, then `place`. It is defined in `core/director/cinema-pipeline.ts`. `builtinManifest` finds it through a small registration hook; that changes the donor `manifest.ts`, so its provenance record has the change and the new hash.
+- **`yamakan.director.renderShot`** (`render:execute`, no request IDs):
+  - plans a story shot of a `cinema-blender` run from its direction, at the project's frame rate (or its half for a double rate), never shorter than the shot (rounded up: a 23.976 fps shot at 24); a shot longer than a render may be (120 frames) is refused before anything runs;
+  - queues the Blender render;
+  - returns the planned scene and what was followed.
+  
+  The scene is made again from the shot and direction rather than saved, so no project document is spent on it.
+- **The Director panel**, Story tab's Director section, "Render a story shot with Blender":
+  - choose a story shot and its direction;
+  - Plan and render (followed and not-followed choices are shown);
+  - Ask for approval: the run waits;
+  - Approve: browser session only;
+  - Make it the shot's take and place it.
+  
+  Placing works like a story save, against the current revision. It decides from the timeline before writing anything: the story is assembled if none of it is there, the shot's clip switches to the new take if this shot is there, and a story with only other shots placed is refused. The shot and direction are locked from the render until it is placed. The approval is recorded on the run, not enforced at placing (the story and take commands do not consult the run).
+- **Evidence:**
+  - `tests/director-cinema.test.ts`: the pipeline is registered and gated; its refusals; scope.
+  - `tests/director-cinema-shot.test.ts`: the story helpers.
+  - `tests/blender-render.test.ts`, real Blender: an agent plans and renders a story shot; an agent's approval is refused; the browser approves; the take is selected; the story is assembled; the run is done; the video holds the planned scene and moves.
+  - `npm run qualify:director-cinema`, real browser, service and Blender: two passes on one shot.
+    - The first is placed by assembly.
+    - The second replaces the shot's clip: two takes, one clip, the old video no longer on the timeline.
+    - The SDK checks `blocked` before approval and `done` after placing.
+    - Also checked: Arabic, no page errors, no outside requests.
+- **Not yet:**
+  - the page shows no preview of the video before approval: the person watches it in the project's media;
+  - a story with only some of its other shots on the timeline cannot be placed (it is refused, with the reason, before anything is written);
+  - shot sizes beyond the fixed set, lighting, and camera moves other than an orbit;
+  - the next Blender work: compositing, tracking, animation, 3D import.
+- **Review:** the independent review found no High security issue, one High correctness bug and four Medium ones, all fixed before the PR:
+  - placing failed at 23.976 fps and for shots over 4 to 5 seconds (the render was a frame short, or capped);
+  - an approved video could be placed on another shot chosen afterwards;
+  - a failed render left the panel stuck;
+  - a half-done place left the editor stale, and assembly-or-replace was decided by matching an error's English text.
+
+  Its re-check found one new Medium in that fix: after a Place that saved the take but failed to put it on the timeline, a retry could record the shot as placed when it was not. Fixed before merging:
+  - "on the timeline" is now decided as assembly decides it (a shot is there while its id is, with or without clips), and a shot there without its clip is refused before anything is written;
+  - a retry still does the timeline step, and only skips saving the story again;
+  - a Place that keeps failing can be left with "Start over".
+
+  The qualification now runs at 23.976 fps.

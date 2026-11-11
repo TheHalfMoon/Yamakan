@@ -5,6 +5,7 @@ import {
 } from "../../core/director-flags.ts";
 import { MESSAGES, type MessageKey } from "../i18n.ts";
 import { TakeReview } from "./TakeReview.tsx";
+import { CinemaShot, type CinemaShotHost } from "./CinemaShot.tsx";
 import type { TakeApplyOutcome, TakeProposal } from "./take-review.ts";
 
 // What the capability calls each thing the Director does not do, in the page's words.
@@ -248,6 +249,8 @@ type Props = {
   unsaved?: boolean;
   assetName?: (assetId: string | null) => string | null;
   applyTake?: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
+  // Places a Director shot's approved render; absent where the page cannot.
+  cinemaShot?: CinemaShotHost;
 };
 
 /**
@@ -262,6 +265,7 @@ export function DirectorPanel({
   unsaved = false,
   assetName = () => null,
   applyTake = async () => ({ kind: "busy" }),
+  cinemaShot,
 }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
@@ -337,6 +341,16 @@ export function DirectorPanel({
           unsaved={unsaved}
           assetName={assetName}
           onApply={applyTake}
+        />
+      ) : null}
+      {projectId && cinemaShot ? (
+        <CinemaShot
+          key={`cinema-${projectId}`}
+          projectId={projectId}
+          revision={revision}
+          client={client}
+          host={cinemaShot}
+          t={t}
         />
       ) : null}
       <p>
