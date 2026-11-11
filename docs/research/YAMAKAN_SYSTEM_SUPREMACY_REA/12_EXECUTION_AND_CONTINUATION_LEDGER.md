@@ -619,8 +619,16 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Saving:** the service frees a model no revision names after its grace period, so a save first stores again, from the person's own file, any model uploaded on the page more than 20 minutes earlier and not yet saved.
 - **SDK:** `cinemaModel` reads a stored model back.
 - **Evidence:**
-  - `tests/cinema-model-page.test.ts`, 8 tests: adding a model item (accepted by the scene schema); the 8-model and 200-object limits; the browser check and its reason; three.js loading and fitting (an offset, fifty-times-scaled bar fits the same 1 m box); the shared-model cache (shared, freed after the last, a failed load tried again); the image-texture hook; names without invisible format characters, never cut inside one; English and Arabic strings.
-  - **`npm run qualify:cinema-model`**, with the real service, Microsoft Edge and the pinned Blender: QUALIFY_RESULTS
+  - `tests/cinema-model-page.test.ts`, 9 tests: adding a model item (accepted by the scene schema); the 8-model and 200-object limits; the browser check and its reason; three.js loading and fitting (an offset, fifty-times-scaled bar fits the same 1 m box); the shared-model cache (shared, freed after the last, a failed load tried again); the image-texture hook; names without invisible format characters, never cut inside one; English and Arabic strings; zod's no-compile setting loaded first.
+  - **`npm run qualify:cinema-model`** passed at `66c4e71` on a clean tree, with the real service, Microsoft Edge and the pinned Blender:
+    - the service's own routes refuse an upload and a read without a session (401 and 401), another type (400, `Connection: close`) and an unknown model (404);
+    - a text file is refused on the page with the check's reason, and nothing is uploaded;
+    - a textured model chosen on the page is stored, named by a new item and shown with its texture (green pixels on the preview canvas 0 → 153);
+    - the scene is saved, the page reloaded, and the model shown again from the project with its texture (153);
+    - the model is served back as `model/gltf-binary`, byte for byte the stored copy (1,136 bytes), and another project does not serve it (404);
+    - rendered with Blender from the page (47 s), the model's texture is in the video (42 green pixels at 160 x 90; the check asks for more than 15);
+    - the page's policy refused nothing, watched as security-policy events and console messages.
+  - **Full local suite at `66c4e71`**, on AC power: 1,423 tests, 1,420 pass, 0 fail, 3 POSIX-only skips.
 - **Independent review:** no High; models reach the page only from the project's stored copy, and the texture hook works in three 0.171. Four Mediums fixed: loaded models are now freed when nothing shows them; a failed load is tried again; an upload that the scene could not take is now said, not dropped; and unsaved uploads older than 20 minutes are stored again before a save, from the person's own file (a second round found the first version read the copy back from the service, which fails once the service has freed it). The qualification's new policy-event check found zod's one-time `new Function` probe refused by the page's policy (zod catches it); the browser now tells zod not to probe (`jitless`), as the page allows no eval. Lows fixed: size checked before reading, the busy state kept to its project, names without invisible format characters, the Arabic file type and size isolated.
 - **3D asset import is complete for still models:** check, store, place, preview, render. Tracking and aerial views are not started.
 

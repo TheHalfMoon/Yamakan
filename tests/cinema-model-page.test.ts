@@ -246,7 +246,7 @@ test("the page tells zod to validate without compiling, before anything else is 
     new URL("../src/main.tsx", import.meta.url),
     "utf8",
   );
-  assert.equal(main.split("\n")[0], 'import "./zod-browser.ts";');
+  assert.match(main, /^import "\.\/zod-browser\.ts";\r?\n/);
   await import("../src/zod-browser.ts");
   const { config } = await import("zod");
   assert.equal(config().jitless, true);
