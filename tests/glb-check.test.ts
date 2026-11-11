@@ -915,3 +915,54 @@ test("node placement must be well formed and bounded; scene roots are listed onc
   placed.nodes[0].scale = [2, 2, 2];
   assert.equal(checkGlb(glb(placed)).meshes, 1);
 });
+
+test("placement must be meaningful: unit rotations, one way of placing, bounded enlargement", () => {
+  const cases: [RegExp, (g: Record<string, any>) => void][] = [
+    [/not a unit/, (g) => (g.nodes[0].rotation = [0, 0, 0, 0])],
+    [
+      /both a matrix/,
+      (g) => {
+        g.nodes[0].matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        g.nodes[0].translation = [1, 0, 0];
+      },
+    ],
+    [
+      /enlarge it out of range/,
+      (g) => {
+        g.nodes = Array.from({ length: 4 }, (_, i) =>
+          i < 3 ? { children: [i + 1], scale: [1e4, 1, 1] } : { mesh: 0 },
+        );
+      },
+    ],
+    [
+      /enlarge it out of range/,
+      (g) => {
+        g.nodes = [
+          {
+            children: [1],
+            matrix: [1e8, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+          },
+          { mesh: 0, scale: [100, 1, 1] },
+        ];
+      },
+    ],
+  ];
+  for (const [pattern, edit] of cases) refused(changed(edit), pattern);
+});
+
+test("whole-number texture coordinates and colours must be marked normalized", () => {
+  const extra = (name: string, type: string, normalized?: boolean) =>
+    changed((g) => {
+      g.accessors.push({
+        bufferView: 0,
+        componentType: 5121,
+        count: 3,
+        type,
+        ...(normalized === undefined ? {} : { normalized }),
+      });
+      g.meshes[0].primitives[0].attributes[name] = 2;
+    });
+  refused(extra("COLOR_0", "VEC4"), /not normalized/);
+  refused(extra("TEXCOORD_0", "VEC2", false), /not normalized/);
+  assert.equal(checkGlb(extra("COLOR_0", "VEC4", true)).vertices, 3);
+});

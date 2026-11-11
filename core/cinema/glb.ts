@@ -380,6 +380,13 @@ export function checkGlb(file: Uint8Array): GlbSummary {
               !components.includes(a.raw.componentType as number))
           )
             fail(`A mesh part's ${name} data has the wrong type.`);
+        // Whole-number coordinates and colours are only meaningful as 0..1 (glTF).
+        if (
+          /^(TEXCOORD|COLOR)_/.test(name) &&
+          a.raw.componentType !== 5126 &&
+          a.raw.normalized !== true
+        )
+          fail(`A mesh part's ${name} data is not normalized.`);
       }
       const idx =
         p.indices === undefined
@@ -437,6 +444,8 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   const nodes = arr(gltf.nodes).map(obj);
   if (nodes.length > GLB_LIMITS.nodes) fail("The model has too many nodes.");
   const parent = Array.from({ length: nodes.length }, () => -1);
+  // How much each node can enlarge what is below it; multiplied down each chain.
+  const growth = Array.from({ length: nodes.length }, () => 1);
   nodes.forEach((n, i) => {
     if (n.camera !== undefined || n.skin !== undefined)
       fail("The model has cameras or skins; only still meshes are taken.");
@@ -453,6 +462,24 @@ export function checkGlb(file: Uint8Array): GlbSummary {
       )
         fail(`A node's ${key} is malformed or out of range.`);
     }
+    if (
+      n.matrix !== undefined &&
+      (n.translation !== undefined ||
+        n.rotation !== undefined ||
+        n.scale !== undefined)
+    )
+      fail("A node has both a matrix and a separate placement.");
+    if (n.rotation !== undefined) {
+      const length = Math.hypot(...(n.rotation as number[]));
+      if (Math.abs(length - 1) > 1e-3) fail("A node's rotation is not a unit.");
+    }
+    const enlarging =
+      n.matrix !== undefined
+        ? (n.matrix as number[]).slice(0, 12).map((x) => Math.abs(x) * 3)
+        : n.scale !== undefined
+          ? (n.scale as number[]).map(Math.abs)
+          : [];
+    growth[i] = Math.max(1, ...enlarging);
     for (const c of arr(n.children)) {
       if (!isIndex(c, nodes.length)) fail("A node's child points at nothing.");
       if (c === i || parent[c as number] !== -1)
@@ -462,9 +489,14 @@ export function checkGlb(file: Uint8Array): GlbSummary {
   });
   for (let i = 0; i < nodes.length; i++) {
     let depth = 0;
-    for (let at = parent[i]; at !== -1; at = parent[at])
+    let scale = growth[i];
+    for (let at = parent[i]; at !== -1; at = parent[at]) {
       if (++depth > GLB_LIMITS.nodeDepth)
         fail("The model's nodes are nested too deeply or in a loop.");
+      scale *= growth[at];
+      if (scale > TRANSFORM_LIMIT)
+        fail("The model's nodes enlarge it out of range.");
+    }
   }
   const scenes = arr(gltf.scenes).map(obj);
   if (!scenes.length) fail("The model has no scene.");
