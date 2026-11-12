@@ -1221,7 +1221,7 @@ const ar: Record<MessageKey, string> = {
   "blender.finish.film": "سينمائية (توهج، تظليل الأطراف، هالة لونية خفيفة)",
   "blender.view": "زاوية الرؤية",
   "blender.view.usual": "عادية (من أعلى قليلًا)",
-  "blender.view.aerial": "جوية (من أعلى، نظرًا إلى الأسفل)",
+  "blender.view.aerial": "جوية (من الأعلى، مطلّة إلى الأسفل)",
   "blender.surface": "السطح",
   "blender.surface.plain": "بسيط (كما كان)",
   "blender.surface.detail": "أرض وأسطح مفصّلة",

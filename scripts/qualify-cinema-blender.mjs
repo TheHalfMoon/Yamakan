@@ -297,11 +297,15 @@ try {
   );
   page.off("request", listen);
   assert.equal(sent.length, 1, `render requests: ${sent.length}`);
-  const settings = JSON.stringify(JSON.parse(sent[0]));
-  assert.match(settings, /"view":"aerial"/);
-  assert.match(settings, /"surface":"detail"/);
-  assert.match(settings, /"finish":"film"/);
-  assert.match(settings, /"lighting":"studio"/);
+  const body = JSON.parse(sent[0]);
+  assert.equal(body.operation, "yamakan.blender.render");
+  const settings = body.parameters.settings;
+  assert.equal(settings.view, "aerial");
+  assert.equal(settings.surface, "detail");
+  assert.equal(settings.finish, "film");
+  assert.equal(settings.lighting, "studio");
+  assert.ok(settings.dolly > 0, "the push moves the camera in");
+  assert.equal(body.parameters.plate, undefined);
   assert.ok(
     ["working", "done"].includes(
       await attr(page, "cinema-blender-state", "data-state"),
