@@ -264,10 +264,11 @@ def main():
         group = bpy.data.node_groups.new(name, "ShaderNodeTree")
         group.interface.new_socket("Shade", in_out="OUTPUT", socket_type="NodeSocketColor")
         out_node = group.nodes.new("NodeGroupOutput")
-        # Laid out in the world, in metres: equally fine on the ground and on a box of any size
-        # or scale, and fixed in place while the camera moves (as tracking needs); on a moving
-        # box, in its own coordinates, so it travels with the box. Three octaves, so it does not
-        # shimmer at low sample counts.
+        # Still things: laid out in the world, in metres, equally fine on the ground and on a
+        # box of any size or scale, and fixed in place while the camera moves (as tracking
+        # needs). A moving box: in its own unscaled coordinates, so the detail travels with it,
+        # and its density follows the box's size (stretched if the scale is uneven). Three
+        # octaves, so it does not shimmer at low sample counts.
         noise = group.nodes.new("ShaderNodeTexNoise")
         noise.inputs["Scale"].default_value = 4.0
         noise.inputs["Detail"].default_value = 3.0
