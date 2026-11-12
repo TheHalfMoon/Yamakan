@@ -26,6 +26,7 @@ import { execFileSync } from "node:child_process";
 import { crc32, deflateSync } from "node:zlib";
 import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
+import { parseScene3D } from "../core/scene3d.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import {
@@ -2354,6 +2355,37 @@ test("an item's motion reaches the render, bounded like its pose", () => {
   // Brought within the render's bounds, as a position is.
   assert.equal(moving.motion!.position.x, BLENDER_SCENE_LIMITS.maxMetres);
   assert.equal("motion" in scene.objects[1], false);
+  // A saved scene keeps an item's motion; a malformed one is refused.
+  const motion = {
+    position: { x: 1, y: 0.5, z: 0 },
+    rotation: { x: 0, y: 4 * Math.PI, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+  const saved = parseScene3D({
+    ...cinema([{ motion }]),
+  });
+  assert.deepEqual(saved.items[0].motion, motion);
+  assert.throws(() =>
+    parseScene3D(cinema([{ motion: { position: motion.position } as never }])),
+  );
+  // Two full turns stay two full turns in the render's scene (the script keyframes them as given).
+  const spun = blenderSceneFromCinema(cinema([{ motion }]), settings);
+  assert.equal(
+    (spun.objects[0] as { motion: { rotation: { y: number } } }).motion.rotation
+      .y,
+    4 * Math.PI,
+  );
+  // The camera frames where a moving item ends as well as where it starts.
+  const far = blenderSceneFromCinema(
+    cinema([
+      {
+        position: { x: 0, y: 0.5, z: 0 },
+        motion: { ...motion, position: { x: 20, y: 0.5, z: 0 } },
+      },
+    ]),
+    settings,
+  );
+  assert.equal(far.camera.target.x, 10);
   assert.throws(() =>
     BlenderSceneSchema.parse({
       ...scene,
@@ -2466,10 +2498,13 @@ test(
           0.15 * Math.abs(travel),
         "halfway at the middle",
       );
-      // Easing: the first step is smaller than the middle one.
+      // Easing: the first and the last step are each well under the middle one. (Coming
+      // nearer the camera alone would make the last step the larger, so this needs easing.)
+      const middleStep = Math.abs(reds[6] - reds[5]);
+      assert.ok(Math.abs(reds[1] - reds[0]) < 0.4 * middleStep, "eases in");
       assert.ok(
-        Math.abs(reds[1] - reds[0]) < Math.abs(reds[6] - reds[5]),
-        "eases in",
+        Math.abs(reds[FRAMES - 1] - reds[FRAMES - 2]) < 0.4 * middleStep,
+        "eases out",
       );
       assert.ok(
         Math.max(...blues) - Math.min(...blues) <= 1,

@@ -308,14 +308,21 @@ export function blenderSceneFromCinema(
   // Aimed at the middle of what is shown, from the preview's own direction (2.5, 2, 4), and
   // pulled back to take in how far the boxes spread.
   const shown = scene.items.filter((item) => item.visible !== false);
+  // Where each shown item is, at the start and (if it moves) at the end of the shot: the camera
+  // frames them all.
+  const poses = shown.flatMap((item) =>
+    item.motion
+      ? [item, { position: item.motion.position, scale: item.motion.scale }]
+      : [item],
+  );
   const centre = { x: 0, y: 0, z: 0 };
-  for (const item of shown) {
-    centre.x += item.position.x / shown.length;
-    centre.y += item.position.y / shown.length;
-    centre.z += item.position.z / shown.length;
+  for (const item of poses) {
+    centre.x += item.position.x / poses.length;
+    centre.y += item.position.y / poses.length;
+    centre.z += item.position.z / poses.length;
   }
   let reach = 1;
-  for (const item of shown)
+  for (const item of poses)
     reach = Math.max(
       reach,
       Math.hypot(

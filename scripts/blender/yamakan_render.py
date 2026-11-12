@@ -76,29 +76,36 @@ def point(p):
     return (WORLD[0] @ Vector((*p, 1.0))).xyz
 
 
-def animate(obj, item, start, frames, name):
-    """Moves an object from its start pose (frame 1) to the item's motion (the last frame), easing
-    in and out (Blender's default keyframes). A turn takes the shorter way round."""
-    obj.matrix_world = start
+def place(obj, root, position, rotation, scale):
+    """Puts an object under the world's parent with its own position, turn (the scene's order:
+    three.js "XYZ" is Blender's "ZYX") and size, exactly as transform() would place it."""
+    obj.parent = root
+    obj.matrix_parent_inverse = Matrix.Identity(4)
+    obj.rotation_mode = "ZYX"
+    obj.location = position
+    obj.rotation_euler = Euler(rotation, "ZYX")
+    obj.scale = scale
+
+
+def animate(obj, item, frames, name):
+    """Moves a placed object from its own pose (frame 1) to the item's motion (the last frame),
+    easing in and out (Blender's default keyframes). The values are the scene's own, keyframed
+    as given: a turn of two full turns is two full turns."""
     if "motion" not in item:
         return
     m = item["motion"]
     if not isinstance(m, dict) or set(m) != {"position", "rotation", "scale"}:
         fail(name + "'s motion is not as described")
-    end = transform(
-        vec3(m["position"], -1000, 1000, name + " motion position"),
-        vec3(m["rotation"], -4 * math.pi, 4 * math.pi, name + " motion rotation"),
-        vec3(m["scale"], 0.001, 100, name + " motion scale"),
-    )
+    position = vec3(m["position"], -1000, 1000, name + " motion position")
+    rotation = vec3(m["rotation"], -4 * math.pi, 4 * math.pi, name + " motion rotation")
+    scale = vec3(m["scale"], 0.001, 100, name + " motion scale")
     if frames < 2:
         return
-    first = obj.rotation_euler.copy()
     for path in ("location", "rotation_euler", "scale"):
         obj.keyframe_insert(data_path=path, frame=1)
-    location, rotation, size = end.decompose()
-    obj.location = location
-    obj.rotation_euler = rotation.to_euler(first.order, first)
-    obj.scale = size
+    obj.location = position
+    obj.rotation_euler = Euler(rotation, "ZYX")
+    obj.scale = scale
     for path in ("location", "rotation_euler", "scale"):
         obj.keyframe_insert(data_path=path, frame=frames)
 
@@ -253,28 +260,39 @@ def main():
     surface = s.get("surface", "plain")
     if surface not in ("plain", "detail"):
         fail("surface is not plain or detail")
-    detail = None
-    if surface == "detail":
-        detail = bpy.data.node_groups.new("yamakan-detail", "ShaderNodeTree")
-        detail.interface.new_socket("Shade", in_out="OUTPUT", socket_type="NodeSocketColor")
-        out_node = detail.nodes.new("NodeGroupOutput")
+    def detail_group(name, travels):
+        group = bpy.data.node_groups.new(name, "ShaderNodeTree")
+        group.interface.new_socket("Shade", in_out="OUTPUT", socket_type="NodeSocketColor")
+        out_node = group.nodes.new("NodeGroupOutput")
         # Laid out in the world, in metres: equally fine on the ground and on a box of any size
-        # or scale, and fixed in place while the camera moves (as tracking needs). Three
-        # octaves, so it does not shimmer at low sample counts.
-        geometry = detail.nodes.new("ShaderNodeNewGeometry")
-        noise = detail.nodes.new("ShaderNodeTexNoise")
+        # or scale, and fixed in place while the camera moves (as tracking needs); on a moving
+        # box, in its own coordinates, so it travels with the box. Three octaves, so it does not
+        # shimmer at low sample counts.
+        noise = group.nodes.new("ShaderNodeTexNoise")
         noise.inputs["Scale"].default_value = 4.0
         noise.inputs["Detail"].default_value = 3.0
-        detail.links.new(geometry.outputs["Position"], noise.inputs["Vector"])
-        ramp = detail.nodes.new("ShaderNodeValToRGB")
+        if travels:
+            coords = group.nodes.new("ShaderNodeTexCoord")
+            group.links.new(coords.outputs["Object"], noise.inputs["Vector"])
+        else:
+            geometry = group.nodes.new("ShaderNodeNewGeometry")
+            group.links.new(geometry.outputs["Position"], noise.inputs["Vector"])
+        ramp = group.nodes.new("ShaderNodeValToRGB")
         ramp.color_ramp.elements[0].position = 0.45
         ramp.color_ramp.elements[0].color = (0.3, 0.3, 0.3, 1.0)
         ramp.color_ramp.elements[1].position = 0.55
         ramp.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
-        detail.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
-        detail.links.new(ramp.outputs["Color"], out_node.inputs[0])
+        group.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+        group.links.new(ramp.outputs["Color"], out_node.inputs[0])
+        return group
 
-    def surfaced(material, rgb):
+    detail = None
+    moving_detail = None
+    if surface == "detail":
+        detail = detail_group("yamakan-detail", False)
+        moving_detail = detail_group("yamakan-detail-moving", True)
+
+    def surfaced(material, rgb, moving=False):
         # The colour as it is, or multiplied by the detail.
         material.diffuse_color = (*rgb, 1.0)
         tree = material.node_tree
@@ -287,7 +305,7 @@ def main():
         if detail is None:
             return
         shade = tree.nodes.new("ShaderNodeGroup")
-        shade.node_tree = detail
+        shade.node_tree = moving_detail if moving else detail
         mix = tree.nodes.new("ShaderNodeMix")
         mix.data_type = "RGBA"
         mix.blend_type = "MULTIPLY"
@@ -312,6 +330,11 @@ def main():
         ground.data.materials.append(ground_material)
 
     # Boxes, each with its own colour, and 3D models with their own materials.
+    # One parent carries the world's turn (Y up to Blender's Z up, or the solve's frame as it
+    # is); every object hangs under it with its own position, turn and size.
+    root = bpy.data.objects.new("yamakan-world", None)
+    scene.collection.objects.link(root)
+    root.matrix_world = WORLD[0]
     for i, item in enumerate(objects):
         if not isinstance(item, dict) or item.get("shape") not in ("box", "model"):
             fail("object " + str(i) + " is not a box or a model")
@@ -335,15 +358,17 @@ def main():
             if not os.path.isfile(path):
                 fail("a 3D model the scene names was not provided")
             holder = import_model(path, "model-" + str(i))
-            animate(holder, item, transform(position, rotation, scale), frames, "object " + str(i))
+            place(holder, root, position, rotation, scale)
+            animate(holder, item, frames, "object " + str(i))
             continue
         rgb = colour(item["colour"], "colour")
         bpy.ops.mesh.primitive_cube_add(size=1)
         box = bpy.context.active_object
         box.name = "box-" + str(i)
-        animate(box, item, transform(position, rotation, scale), frames, "object " + str(i))
+        place(box, root, position, rotation, scale)
+        animate(box, item, frames, "object " + str(i))
         material = bpy.data.materials.new("box-" + str(i))
-        surfaced(material, rgb)
+        surfaced(material, rgb, moving="motion" in item)
         box.data.materials.append(material)
 
     # The camera: its lens, where it starts, and how it moves over the shot: around what it looks
