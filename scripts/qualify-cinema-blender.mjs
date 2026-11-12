@@ -122,20 +122,32 @@ const percent = async (page) => {
   return Number(await bar.getAttribute("value"));
 };
 // Until the render has gone further than `past` percent, or finished.
-const waitProgress = (page, past = 0) =>
-  page.waitForFunction(
+// Waits for progress past `past` (or the render done). A failed render ends the wait at once,
+// with the page's own words, rather than after the timeout.
+const waitProgress = async (page, past = 0) => {
+  await page.waitForFunction(
     (p) =>
       Number(
         document
           .querySelector('[data-testid="cinema-blender-progress"]')
           ?.getAttribute("value") ?? -1,
       ) > p ||
-      document
-        .querySelector('[data-testid="cinema-blender-state"]')
-        ?.getAttribute("data-state") === "done",
+      ["done", "failed"].includes(
+        document
+          .querySelector('[data-testid="cinema-blender-state"]')
+          ?.getAttribute("data-state"),
+      ),
     past,
     { timeout: 300000 },
   );
+  const state = await page
+    .getByTestId("cinema-blender-state")
+    .getAttribute("data-state");
+  if (state === "failed")
+    throw new Error(
+      `the render failed: ${await page.getByTestId("cinema-blender").textContent()}`,
+    );
+};
 
 let browser;
 const receipt = {
