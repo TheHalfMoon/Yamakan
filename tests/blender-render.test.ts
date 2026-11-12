@@ -26,6 +26,7 @@ import { execFileSync } from "node:child_process";
 import { crc32, deflateSync } from "node:zlib";
 import { closeBlenderWorkers } from "../core/blender/worker.ts";
 import type { Scene3D } from "../core/scene3d.ts";
+import { parseScene3D } from "../core/scene3d.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import {
@@ -2327,6 +2328,187 @@ test(
       assert.ok(
         aerial >= 3 * Math.max(level, 2),
         JSON.stringify({ level, aerial }),
+      );
+    } finally {
+      await supervisor.close();
+      store.close();
+    }
+  },
+);
+
+test("an item's motion reaches the render, bounded like its pose", () => {
+  const scene = blenderSceneFromCinema(
+    cinema([
+      {
+        position: { x: -1, y: 0.5, z: 0 },
+        motion: {
+          position: { x: 2000, y: 0.5, z: 0 },
+          rotation: { x: 0, y: 1, z: 0 },
+          scale: { x: 2, y: 2, z: 2 },
+        },
+      },
+      {},
+    ]),
+    settings,
+  );
+  const moving = scene.objects[0] as { motion?: { position: { x: number } } };
+  // Brought within the render's bounds, as a position is.
+  assert.equal(moving.motion!.position.x, BLENDER_SCENE_LIMITS.maxMetres);
+  assert.equal("motion" in scene.objects[1], false);
+  // A saved scene keeps an item's motion; a malformed one is refused.
+  const motion = {
+    position: { x: 1, y: 0.5, z: 0 },
+    rotation: { x: 0, y: 4 * Math.PI, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+  const saved = parseScene3D({
+    ...cinema([{ motion }]),
+  });
+  assert.deepEqual(saved.items[0].motion, motion);
+  assert.throws(() =>
+    parseScene3D(cinema([{ motion: { position: motion.position } as never }])),
+  );
+  // Two full turns stay two full turns in the render's scene (the script keyframes them as given).
+  const spun = blenderSceneFromCinema(cinema([{ motion }]), settings);
+  assert.equal(
+    (spun.objects[0] as { motion: { rotation: { y: number } } }).motion.rotation
+      .y,
+    4 * Math.PI,
+  );
+  // The camera frames where a moving item ends as well as where it starts.
+  const far = blenderSceneFromCinema(
+    cinema([
+      {
+        position: { x: 0, y: 0.5, z: 0 },
+        motion: { ...motion, position: { x: 20, y: 0.5, z: 0 } },
+      },
+    ]),
+    settings,
+  );
+  assert.equal(far.camera.target.x, 10);
+  assert.throws(() =>
+    BlenderSceneSchema.parse({
+      ...scene,
+      objects: [
+        { ...scene.objects[0], motion: { position: { x: 0, y: 0, z: 0 } } },
+      ],
+    }),
+  );
+});
+
+test(
+  "an animated object moves across the shot, easing in and out, while a still one stays put",
+  real,
+  async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "yamakan-motion-"));
+    bases.push(root);
+    const store = new ProjectStore(root);
+    await store.initialize();
+    const project = await store.create("Motion");
+    const supervisor = new JobSupervisor(store);
+    await supervisor.start();
+    try {
+      const W = 160;
+      const H = 90;
+      const FRAMES = 12;
+      const scene = blenderSceneFromCinema(
+        cinema([
+          {
+            position: { x: -1, y: 0.5, z: 0 },
+            scale: { x: 0.6, y: 0.6, z: 0.6 },
+            color: "#dd2020",
+            motion: {
+              position: { x: 1, y: 0.5, z: 0 },
+              rotation: { x: 0, y: 0, z: 0 },
+              scale: { x: 0.6, y: 0.6, z: 0.6 },
+            },
+          },
+          {
+            position: { x: 0, y: 0.5, z: -2 },
+            scale: { x: 0.6, y: 0.6, z: 0.6 },
+            color: "#2040dd",
+          },
+        ]),
+        { ...settings, width: W, height: H, frames: FRAMES, samples: 4 },
+      );
+      const job = await supervisor.submitBlenderRender(
+        project.id,
+        scene,
+        "motion",
+      );
+      const done = await settled(supervisor, job.id);
+      assert.equal(done.state, "COMPLETED", JSON.stringify(done));
+      const assetId = /^asset:(.+)$/.exec(done.artifact ?? "")![1];
+      const { file } = await store.assetFile(project.id, assetId);
+      const raw = execFileSync(
+        mediaTools().ffmpeg,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-i",
+          file,
+          "-f",
+          "rawvideo",
+          "-pix_fmt",
+          "rgb24",
+          "-",
+        ],
+        { windowsHide: true, maxBuffer: 1 << 26, timeout: 60000 },
+      );
+      // Each frame's centre of the red box and of the blue one (by hue).
+      const centre = (f: number, red: boolean) => {
+        let sx = 0;
+        let n = 0;
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = (f * W * H + y * W + x) * 3;
+            const [r, g, b] = [raw[i], raw[i + 1], raw[i + 2]];
+            const hit = red
+              ? r > 40 && r > 2 * g && r > 2 * b
+              : b > 40 && b > 2 * r && b > 1.3 * g;
+            if (hit) {
+              sx += x + 0.5;
+              n++;
+            }
+          }
+        return n >= 10 ? sx / n : NaN;
+      };
+      const reds = Array.from({ length: FRAMES }, (_, f) => centre(f, true));
+      const blues = Array.from({ length: FRAMES }, (_, f) => centre(f, false));
+      console.log(
+        "motion",
+        JSON.stringify({
+          red: reds.map((v) => +v.toFixed(1)),
+          blueSpread: +(Math.max(...blues) - Math.min(...blues)).toFixed(2),
+        }),
+      );
+      // The red box travels steadily one way across the frame, about halfway by the middle frame
+      // (it eases in and out, so its middle is its fastest); the blue box does not move.
+      const travel = reds[FRAMES - 1] - reds[0];
+      assert.ok(Math.abs(travel) >= 20, `travelled ${travel} px`);
+      for (let f = 1; f < FRAMES; f++)
+        assert.ok(
+          (reds[f] - reds[f - 1]) * Math.sign(travel) >= -0.5,
+          `frame ${f + 1} went back`,
+        );
+      const middle = (reds[5] + reds[6]) / 2;
+      assert.ok(
+        Math.abs(middle - (reds[0] + reds[FRAMES - 1]) / 2) <=
+          0.15 * Math.abs(travel),
+        "halfway at the middle",
+      );
+      // Easing: the first and the last step are each well under the middle one. (Coming
+      // nearer the camera alone would make the last step the larger, so this needs easing.)
+      const middleStep = Math.abs(reds[6] - reds[5]);
+      assert.ok(Math.abs(reds[1] - reds[0]) < 0.4 * middleStep, "eases in");
+      assert.ok(
+        Math.abs(reds[FRAMES - 1] - reds[FRAMES - 2]) < 0.4 * middleStep,
+        "eases out",
+      );
+      assert.ok(
+        Math.max(...blues) - Math.min(...blues) <= 1,
+        "the still box stays",
       );
     } finally {
       await supervisor.close();

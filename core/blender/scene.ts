@@ -57,6 +57,12 @@ const Even = (min: number, max: number) =>
     .max(max)
     .refine((n) => n % 2 === 0, "Sizes are even, as the video encoder needs.");
 
+// An object's pose at the last frame: it moves there from its own over the shot, easing in and
+// out. A turn takes the shorter way round (within half a turn of its start, per axis).
+const Motion = z
+  .object({ position: Vec3, rotation: Angles, scale: Scale })
+  .strict();
+
 const Finish = z
   .object({
     // A soft bloom around the brightest parts of the picture.
@@ -137,6 +143,7 @@ export const BlenderSceneSchema = z
               rotation: Angles,
               scale: Scale,
               colour: Colour,
+              motion: Motion.optional(),
             })
             .strict(),
           // A project's stored 3D model (core/cinema/glb.ts) by its digest, fitted to a 1 m box
@@ -148,6 +155,7 @@ export const BlenderSceneSchema = z
               position: Vec3,
               rotation: Angles,
               scale: Scale,
+              motion: Motion.optional(),
             })
             .strict(),
         ]),
@@ -300,14 +308,21 @@ export function blenderSceneFromCinema(
   // Aimed at the middle of what is shown, from the preview's own direction (2.5, 2, 4), and
   // pulled back to take in how far the boxes spread.
   const shown = scene.items.filter((item) => item.visible !== false);
+  // Where each shown item is, at the start and (if it moves) at the end of the shot: the camera
+  // frames them all.
+  const poses = shown.flatMap((item) =>
+    item.motion
+      ? [item, { position: item.motion.position, scale: item.motion.scale }]
+      : [item],
+  );
   const centre = { x: 0, y: 0, z: 0 };
-  for (const item of shown) {
-    centre.x += item.position.x / shown.length;
-    centre.y += item.position.y / shown.length;
-    centre.z += item.position.z / shown.length;
+  for (const item of poses) {
+    centre.x += item.position.x / poses.length;
+    centre.y += item.position.y / poses.length;
+    centre.z += item.position.z / poses.length;
   }
   let reach = 1;
-  for (const item of shown)
+  for (const item of poses)
     reach = Math.max(
       reach,
       Math.hypot(
@@ -386,9 +401,35 @@ export function blenderSceneFromCinema(
             z: size(item.scale.z),
           },
         };
+        const motion = item.motion
+          ? {
+              motion: {
+                position: {
+                  x: metres(item.motion.position.x),
+                  y: metres(item.motion.position.y),
+                  z: metres(item.motion.position.z),
+                },
+                rotation: {
+                  x: angle(item.motion.rotation.x),
+                  y: angle(item.motion.rotation.y),
+                  z: angle(item.motion.rotation.z),
+                },
+                scale: {
+                  x: size(item.motion.scale.x),
+                  y: size(item.motion.scale.y),
+                  z: size(item.motion.scale.z),
+                },
+              },
+            }
+          : {};
         return item.model
-          ? { shape: "model" as const, model: item.model, ...placed }
-          : { shape: "box" as const, ...placed, colour: colourOf(item.color) };
+          ? { shape: "model" as const, model: item.model, ...placed, ...motion }
+          : {
+              shape: "box" as const,
+              ...placed,
+              colour: colourOf(item.color),
+              ...motion,
+            };
       }),
   });
 }

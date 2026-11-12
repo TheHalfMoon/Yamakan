@@ -692,4 +692,25 @@ Updated 2026-11-05. Main: `ddb60b65b350e851973c3103a6bd37a782a97de0`. Models and
 - **Independent review:** no High. Fixed: a view with tracked footage is refused rather than silently ignored; the render command's description names the view. Stated: from above, a pan turns about the vertical (a gimbal yaw), so it mostly turns the picture. Open: the real test's measure shows near ground in view, not the camera's angle directly (the plain test checks the 70 degrees). A second round found the command returned an internal error for a view with footage; it now refuses it as VALIDATION before looking up the track.
 - **Full suite:** clean at `4bf1644` on AC power (1,432 tests, 1,429 pass, 0 fail, 3 POSIX-only skips). The run before it failed 8 tests, all for lack of disk space: C: had 0.85 GB free. 645 leftover Yamakan test temp folders from this session's runs (about 2.65 GB, unchanged for over an hour) were removed, and nothing else was touched.
 - **Not yet:** a Cinema page control for the view (the planner and the render command offer it), and object animation.
+- **Merged as `4a8e1b5`** (PR #277, pinned to `333c141`; main's CI passed).
+
+**Object animation, 2026-11-11:**
+- **A Cinema scene item may carry `motion`:** its position, turn and size at the end of a shot. In a render it moves there from its own pose, the first frame to the last, easing in and out (Blender's default keyframes). Position, turn and size are keyframed as given, in the scene's own axes, under one parent that carries the world's turn, so a turn of up to two full turns per axis is kept (larger turns are cut to two, as a still pose's are). The format stays at version 1, since the field is optional. The camera frames where moving items end as well as where they start, and with the detail surface a moving box's detail travels with it.
+- **The Blender scene's boxes and models** carry it as `motion`, bounded like any pose. The fixed script keyframes position, turn and size at the first and last frames.
+- **Evidence:** `tests/blender-render.test.ts`, with the real pinned Blender. A red box moving 2 m sideways over 12 frames beside a still blue box:
+  - the red centre goes from 62.0 to 88.9 px, never going back by more than 0.5 px (the camera frames the end pose too, so it stands further back than in the first version, which measured 62.5 to 96.1);
+  - it is about halfway by the middle frames;
+  - its first and last steps (0.7 and 0.2 px) are each under 0.4 of the middle one (3.8 px). Coming nearer the camera alone would make the last step the larger, so this is the easing;
+  - the blue box's centre spread is 0.52 px (the test asks for 1).
+
+  A plain test checks that motion reaches the render bounded (2,000 m becomes 1,000), that items without one have none, that a malformed one is refused, that a saved scene keeps it, that two full turns reach the script's scene unchanged (no render checks a spin) and that the camera frames the end pose.
+- **Independent review:** no High. Mediums fixed:
+  - turns went through Blender's world angles, losing full spins; each object now hangs under one parent carrying the world's turn, with its own values keyframed as given;
+  - the camera framed only start positions;
+  - the detail texture slid over moving boxes; it now travels with them;
+  - the easing check would have passed without easing; both end steps are now checked.
+  Placing every object under that parent changes how all renders build objects, so the whole real-Blender file was re-run: 24 of 24 pass, and the surface, match-move and aerial tests measured the same values as before (measured values, not byte-identical frames).
+- **Re-check:** no new High or Medium. Lows taken: wording on turns, on the moving detail's density, and on "the same values"; the red box's travel (26.9 px) is closer to the test's 20 px floor than before.
+- **Full suite:** the local runs at `07b7155` and after failed only for lack of disk space. C: has about 1.9 GB free, and the rest is used by other projects on this PC, which were not touched. CI's run is the full-suite check for this PR.
+- **Not yet:** a Cinema page control for motion, motion along a path (more than two poses), and the Director planning object motion from words.
 
