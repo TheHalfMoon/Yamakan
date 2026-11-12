@@ -242,10 +242,20 @@ try {
 
   // A full render, with its progress seen as it runs. Midway, another project is opened and
   // this one opened again: its panel follows the same render, and the editor is not reloaded
-  // when it finishes. It is a push under the studio light with the film finish, chosen on the panel.
+  // when it finishes. It is a push under the studio light with the film finish, seen from the
+  // aerial view over the detailed surface, all chosen on the panel.
   await page.getByTestId("cinema-blender-move").selectOption("push");
   await page.getByTestId("cinema-blender-light").selectOption("studio");
   await page.getByTestId("cinema-blender-finish").selectOption("film");
+  await page.getByTestId("cinema-blender-view").selectOption("aerial");
+  await page.getByTestId("cinema-blender-surface").selectOption("detail");
+  // The settings the page sends the service, as sent.
+  const sent = [];
+  const listen = (request) => {
+    const body = request.postData() ?? "";
+    if (body.includes("yamakan.blender.render")) sent.push(body);
+  };
+  page.on("request", listen);
   await page.getByTestId("cinema-blender-render").click();
   const seen = new Set();
   const started = Date.now();
@@ -277,6 +287,21 @@ try {
     await page.getByTestId("cinema-blender-finish").inputValue(),
     "film",
   );
+  assert.equal(
+    await page.getByTestId("cinema-blender-view").inputValue(),
+    "aerial",
+  );
+  assert.equal(
+    await page.getByTestId("cinema-blender-surface").inputValue(),
+    "detail",
+  );
+  page.off("request", listen);
+  assert.equal(sent.length, 1, `render requests: ${sent.length}`);
+  const settings = JSON.stringify(JSON.parse(sent[0]));
+  assert.match(settings, /"view":"aerial"/);
+  assert.match(settings, /"surface":"detail"/);
+  assert.match(settings, /"finish":"film"/);
+  assert.match(settings, /"lighting":"studio"/);
   assert.ok(
     ["working", "done"].includes(
       await attr(page, "cinema-blender-state", "data-state"),
