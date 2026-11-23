@@ -2,7 +2,7 @@
 
 ## What was found
 
-- Step 0, by reading main `b0dbf50`: `shotClip` refused any shot with a clip count other than 1, with the same text when the shot had no clip at all, and `shows` asked for the take's exact in-point, so a clip trimmed at its start matched nothing. The gap is as the card says. A failing test run first was not made on the founder host, since tests that import media do not run there.
+- Step 0, by reading main `b0dbf50`: `shotClip` refused any shot with a clip count other than 1, with the same text when the shot had no clip at all, and `shows` asked for the take's exact in-point, so a clip trimmed at its start matched nothing. The gap is as the card says. A failing test run first was not made on the founder host, since tests that import media fail in this checkout, whose native helpers are not built.
 - Step 0, also by reading `core/timeline/operations.ts`: only `clip.split` adds a new clip to the list of a shot that already has one. `shot.add` and `shot.update` set the list as given, and deleting a clip removes it.
 - The card names `src/main.tsx`; by reading, it needs no edit, since the page takes the proposal as the service returns it.
 
