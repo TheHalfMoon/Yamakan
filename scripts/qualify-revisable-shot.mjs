@@ -2,7 +2,8 @@
  * MPR-101: a take's record, end to end in one temporary workspace with the real store, job
  * table and commands. A generation is started, followed, imported and saved as a take with
  * its record; the workspace is closed and opened again and the record is the same; a version
- * 1 story is read and saved as version 2.
+ * 1 story is read and saved as version 2. MPR-102: a generation made for a shot becomes a take
+ * of it as it is brought in, the timeline stays as it was, and what stops it is said.
  *
  * The engine is the in-process fake, and its one output is replaced by a test pattern made
  * with ffmpeg here: nothing in it is AI output. No network, no model, no spend.
@@ -10,7 +11,7 @@
  * What this host has is recorded first. What the run needs is unmeasured, so nothing is
  * refused for it; a missing ffmpeg or native helper ends BLOCKED, never PASS.
  *
- * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json]
+ * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json [MPR-102-receipt.json]]
  */
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -52,7 +53,19 @@ const receiptOut =
     ),
   );
 const root = mkdtempSync(join(tmpdir(), "yamakan-revisable-shot-"));
+const targetOut =
+  process.argv[3] ??
+  (process.argv[2]
+    ? null
+    : fileURLToPath(
+        new URL(
+          "../docs/evidence/ultimate/MPR-102-shot-target-receipt.json",
+          import.meta.url,
+        ),
+      ));
 const steps = [];
+// MPR-102's own, in a receipt of their own.
+const targetSteps = [];
 const step = (name, detail = {}) => {
   steps.push({ name, ...detail });
   console.log(`ok - ${name}`);
@@ -181,21 +194,22 @@ try {
     operation: "textToVideo",
     modelManifestHash: "b".repeat(64),
   };
-  const service = createGenerationService({
-    // The fake runs and follows the request; its output is the pattern.
-    adapter: {
-      ...fake,
-      enumerateArtifacts: async (ref) =>
-        (await fake.enumerateArtifacts(ref)).map((a) => ({
-          ...a,
-          byteLength: bytes.length,
-          sha256,
-        })),
-      readArtifact: async function* () {
-        for (let i = 0; i < bytes.length; i += 1024 * 1024)
-          yield new Uint8Array(bytes.subarray(i, i + 1024 * 1024));
-      },
+  // The fake runs and follows the request; its output is the pattern.
+  const serving = (engine) => ({
+    ...engine,
+    enumerateArtifacts: async (ref) =>
+      (await engine.enumerateArtifacts(ref)).map((x) => ({
+        ...x,
+        byteLength: bytes.length,
+        sha256,
+      })),
+    readArtifact: async function* () {
+      for (let i = 0; i < bytes.length; i += 1024 * 1024)
+        yield new Uint8Array(bytes.subarray(i, i + 1024 * 1024));
     },
+  });
+  const service = createGenerationService({
+    adapter: serving(fake),
     store: ctx.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
     ledger: ctx.queue.generationLedger(),
@@ -336,6 +350,148 @@ try {
   step(
     "a stored version 1 story is read, and saved as version 2 with every part kept",
   );
+
+  // MPR-102, in the same workspace: what a run leaves is the pattern, two seconds long.
+  const again = createGenerationService({
+    adapter: serving(createFakeEngineV2()),
+    store: ctx.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger: ctx.queue.generationLedger(),
+  });
+  ctx = { ...ctx, generation: { service: again, recipes: [recipe] } };
+  const shots = [0, 1, 2, 3].map((n) => ({
+    id: randomUUID(),
+    name: `Target ${n}`,
+    durationTicks: 60 * FRAME,
+    notes: "",
+    referencePacks: [],
+    takes: [],
+    selectedTakeId: null,
+  }));
+  const targets = randomUUID();
+  const sceneId = randomUUID();
+  const saveShots = async (list) => {
+    const held = (await call("yamakan.document.list", { projectId })).find(
+      (d) => d.id === targets,
+    );
+    return call("yamakan.story.save", {
+      projectId,
+      expectedRevision: await head(),
+      documentId: targets,
+      expectedContentHash: held?.contentHash ?? null,
+      story: {
+        format: "yamakan.story",
+        formatVersion: 2,
+        title: "Targets",
+        scenes: [{ id: sceneId, name: "One", shots: list }],
+      },
+    });
+  };
+  const storyNow = async () =>
+    (await call("yamakan.document.get", { projectId, documentId: targets }))
+      .content;
+  const timelineHash = async () => {
+    const { scenes, tracks, clips } = await call("yamakan.project.export", {
+      projectId,
+    });
+    return sha256Hex(canonicalJson({ scenes, tracks, clips }));
+  };
+  await saveShots(shots);
+  const begin = async (shot, durationFrames = 60) => {
+    const { generationId } = await call("yamakan.generation.start", {
+      projectId,
+      recipeId: recipe.id,
+      prompt: PROMPT,
+      seed: 7,
+      width: 704,
+      height: 480,
+      durationFrames,
+      target: { documentId: targets, shotId: shot.id },
+    });
+    await call("yamakan.generation.status", { generationId });
+    return generationId;
+  };
+  const bring = async (generationId) => {
+    const before = await timelineHash();
+    const answer = await call("yamakan.generation.import", { generationId });
+    assert.equal(await timelineHash(), before);
+    return { ...answer, timeline: before };
+  };
+  const targetStep = (name, detail) => {
+    targetSteps.push({ name, ...detail });
+    console.log(`ok - ${name}`);
+  };
+  const one = await bring(await begin(shots[0]));
+  assert.equal(one.take.appended, true);
+  const { record: made } = await call("yamakan.take.record", {
+    projectId,
+    documentId: targets,
+    shotId: shots[0].id,
+    takeId: one.take.takeId,
+  });
+  assert.equal(made.output.sha256, sha256);
+  targetStep(
+    "a run made for a shot is a take of it, and the cut is as it was",
+    {
+      timelineBeforeAndAfter: one.timeline,
+      recordHash: one.take.recordHash,
+    },
+  );
+  const running = await begin(shots[0]);
+  let now = await storyNow();
+  now.scenes[0].shots[0].name = "Renamed";
+  await saveShots(now.scenes[0].shots);
+  const two = await bring(running);
+  now = await storyNow();
+  assert.equal(two.take.appended, true);
+  assert.equal(now.scenes[0].shots[0].name, "Renamed");
+  assert.equal(now.scenes[0].shots[0].takes.length, 2);
+  targetStep("a shot renamed meanwhile keeps its name and gains the take", {
+    timelineBeforeAndAfter: two.timeline,
+  });
+  const orphan = await begin(shots[1]);
+  await saveShots(now.scenes[0].shots.filter((s) => s.id !== shots[1].id));
+  const three = await bring(orphan);
+  assert.equal(three.take.reason, "shot-gone");
+  assert.ok(
+    (await call("yamakan.project.open", { projectId })).assets.some(
+      (a) => a.id === three.assetId,
+    ),
+  );
+  targetStep("a shot removed meanwhile is said, and the video stays", {
+    timelineBeforeAndAfter: three.timeline,
+    reason: three.take.reason,
+    message: three.take.message,
+  });
+  for (let n = 0; n < 8; n++)
+    assert.equal((await bring(await begin(shots[2]))).take.appended, true);
+  await assert.rejects(begin(shots[2]), /already holds 8 takes/);
+  targetStep(
+    "eight takes fill a shot, and a ninth is refused before it starts",
+    {
+      timelineBeforeAndAfter: await timelineHash(),
+    },
+  );
+  const stopped = await begin(shots[3]);
+  const keep = again.keepTake;
+  again.keepTake = () => {
+    throw new Error("stopped between the story and the run's row");
+  };
+  await assert.rejects(
+    call("yamakan.generation.import", { generationId: stopped }),
+    /stopped between/,
+  );
+  again.keepTake = keep;
+  const four = await bring(stopped);
+  assert.equal(four.take.appended, true);
+  assert.equal(
+    (await storyNow()).scenes[0].shots.find((s) => s.id === shots[3].id).takes
+      .length,
+    1,
+  );
+  targetStep("a stop between the story and the run's row adds nothing twice", {
+    timelineBeforeAndAfter: four.timeline,
+  });
   passed = true;
 } catch (e) {
   // This receipt may be committed, and an error can hold a local path naming the user.
@@ -343,29 +499,27 @@ try {
   console.error(e);
 } finally {
   await shut().catch(() => {});
-  if (receiptOut)
-    writeFileSync(
-      receiptOut,
-      `${JSON.stringify(
-        {
-          task: "MPR-101",
-          head: execFileSync("git", ["rev-parse", "HEAD"], {
-            encoding: "utf8",
-          }).trim(),
-          dirty:
-            execFileSync("git", ["status", "--porcelain"], {
-              encoding: "utf8",
-            }).trim() !== "",
-          host,
-          outcome: passed ? "PASS" : blocked ? "BLOCKED" : "FAIL",
-          passed,
-          failure,
-          steps,
-        },
-        null,
-        2,
-      )}\n`,
-    );
+  // Read once, before either receipt is written.
+  const git = (...args) =>
+    execFileSync("git", args, { encoding: "utf8", windowsHide: true }).trim();
+  const common = {
+    head: git("rev-parse", "HEAD"),
+    dirty: git("status", "--porcelain") !== "",
+    host,
+    outcome: passed ? "PASS" : blocked ? "BLOCKED" : "FAIL",
+    passed,
+    failure,
+  };
+  for (const [out, task, its] of [
+    [receiptOut, "MPR-101", steps],
+    [targetOut, "MPR-102", targetSteps],
+  ])
+    if (out)
+      writeFileSync(
+        out,
+        `${JSON.stringify({ task, ...common, steps: its }, null, 2)}
+`,
+      );
   try {
     rmSync(root, {
       recursive: true,

@@ -118,7 +118,7 @@ revised from its own record, and the history of a shot can be read.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-101 | An immutable, hashed record of how each take was made | VERIFIED | none | FD-2 |
-| MPR-102 | A generation targets a story shot and appends its take on import | QUALIFICATION_READY | MPR-101 | none |
+| MPR-102 | A generation targets a story shot and appends its take on import | REVIEW_PENDING | MPR-101 | none |
 | MPR-103 | A revision draft read from a take; what changed between takes is recorded | WAITING_DEPENDENCIES | MPR-101, MPR-102 | FD-2 |
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
 | MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |

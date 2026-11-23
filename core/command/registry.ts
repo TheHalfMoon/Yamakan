@@ -89,6 +89,7 @@ import {
 import {
   createGenerationService,
   type GenerationRecipe,
+  type GenerationRecord,
 } from "../engines/generation.ts";
 import {
   createKaggleEngine,
@@ -153,10 +154,13 @@ import {
   buildRenderRecord,
   recordHashOf,
   type TakeRecord,
+  type RecipeFacts,
 } from "../take-record.ts";
 import {
   TAKE_LIMITS,
   TakeProposalInputSchema,
+  appendGeneratedTake,
+  assertGenerationTarget,
   assertTakeMedia,
   compareTakes,
   listTakes,
@@ -431,6 +435,15 @@ const generationRow = (ctx: CommandContext, id: string) =>
   generations.get(ctx.store)?.service.row(id) ??
   null;
 
+// What this build knows of a run's recipe; one it does not know is a local engine's.
+const generationFacts = (row: GenerationRecord): RecipeFacts =>
+  kaggleRecipeFacts(row.recipe) ?? {
+    route: "comfyui",
+    model: null,
+    fps: null,
+    steps: null,
+  };
+
 type WrittenRecord = {
   takeId: string;
   recordHash: string;
@@ -519,15 +532,7 @@ async function withRecords(
           "VALIDATION",
           "This generation did not make the take's media.",
         );
-      record = buildGenerationRecord(
-        row,
-        kaggleRecipeFacts(row.recipe) ?? {
-          route: "comfyui",
-          model: null,
-          fps: null,
-          steps: null,
-        },
-      );
+      record = buildGenerationRecord(row, generationFacts(row));
     } else {
       const asset = assets.find((x) => x.id === take.assetId);
       if (!asset)
@@ -2720,13 +2725,18 @@ export const commands = {
         // With a still: the person's word that it shows no real person whose consent to
         // send it is not recorded.
         noUnconsentedPerson: z.literal(true).optional(),
+        // The story shot its video is made for: bringing it in adds it to that shot's takes.
+        target: z.object({ documentId: Id, shotId: Id }).strict().optional(),
       })
       .strict(),
-    run: (ctx, { recipeId, ...request }) => {
+    run: async (ctx, { recipeId, ...request }) => {
       const generation = generationOf(ctx);
       const recipe = generation.recipes.find((r) => r.id === recipeId);
       if (!recipe)
         throw new CommandError("NOT_FOUND", "That recipe is not available.");
+      const { target } = request;
+      if (target)
+        await assertGenerationTarget(ctx.store, { ...request, target });
       return generation.service.start({ ...request, recipe });
     },
   }),
@@ -2783,6 +2793,9 @@ export const commands = {
           held: g.held === true,
           diagnostic: g.diagnostic,
           imported: g.imported,
+          // The shot it is made for, and whether its video became a take of it.
+          target: g.target ?? null,
+          take: g.take ?? null,
           // The project's media it was made from, as pinned before anything left.
           inputs: g.inputs,
         })),
@@ -2806,7 +2819,16 @@ export const commands = {
     summary:
       "Report a generation's state and, where the engine gives it, its progress.",
     input: z.object({ generationId: Id }).strict(),
-    run: (ctx, a) => generationOf(ctx).service.status(a.generationId),
+    run: async (ctx, a) => {
+      const { service } = generationOf(ctx);
+      const status = await service.status(a.generationId);
+      const row = service.row(a.generationId);
+      return {
+        ...status,
+        target: row?.target ?? null,
+        take: row?.take ?? null,
+      };
+    },
   }),
   "yamakan.generation.cancel": define({
     scope: "project:write",
@@ -2824,9 +2846,23 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it.",
+      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it. One made for a story shot is also added to that shot's takes, as a new version of the story, which ends the project's undo history; when it cannot be, the answer says why, and bringing it in again tries again.",
     input: z.object({ generationId: Id }).strict(),
-    run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
+    run: async (ctx, a) => {
+      const { service } = generationOf(ctx);
+      const imported = await service.importResult(a.generationId);
+      const row = service.row(a.generationId);
+      if (!row?.target) return { ...imported, take: null };
+      if (row.take?.appended) return { ...imported, take: row.take };
+      const take = await appendGeneratedTake(
+        ctx.store,
+        { ...row, target: row.target },
+        generationFacts(row),
+        ctx.principal.id,
+      );
+      service.keepTake(a.generationId, take);
+      return { ...imported, take };
+    },
   }),
   "yamakan.prompt.search": define({
     scope: "project:read",

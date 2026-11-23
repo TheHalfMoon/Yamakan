@@ -14,12 +14,32 @@ import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { CommandError } from "./command/errors.ts";
 import { Id } from "./project.ts";
-import { FLICKS_PER_SECOND, Ticks } from "./time.ts";
+import { FLICKS_PER_SECOND, Ticks, framesToTicks } from "./time.ts";
 import type { CanonicalProject } from "./canonical.ts";
 import type { DocumentRef } from "./document-ref.ts";
 import { applyBatch, applyOne, type Operation } from "./timeline/operations.ts";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
-import type { StoryDocument } from "./story.ts";
+import {
+  STORY_LIMITS,
+  parseStory,
+  verifyStory,
+  type StoryDocument,
+} from "./story.ts";
+import { verifyStoryContinuity } from "./continuity.ts";
+import { creativeDocumentsEnabled, DOCUMENTS_OFF } from "./documents.ts";
+import { DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
+import {
+  buildGenerationRecord,
+  recordHashOf,
+  type RecipeFacts,
+} from "./take-record.ts";
+import type {
+  GenerationRecord,
+  GenerationTarget,
+  TakeOutcome,
+} from "./engines/generation.ts";
+import type { ProjectStore } from "./store.ts";
+import { frameRateOf } from "./project.ts";
 
 export const TAKE_LIMITS = Object.freeze({
   // Takes compared at once (a shot holds at most 8).
@@ -623,4 +643,181 @@ export function shotWithTake(story: Story, shotId: string, takeId: string) {
       },
     ],
   };
+}
+
+// A generation made for a shot (MPR-102).
+
+const NO_STORY = "This project has no such story.";
+const NO_SHOT = "The story has no such shot.";
+const SHOT_FULL = `The shot already holds ${STORY_LIMITS.takesPerShot} takes; remove one before generating another.`;
+const seconds = (ticks: number) =>
+  String(Number((ticks / FLICKS_PER_SECOND).toFixed(2)));
+const tooShort = (shotTicks: number, takeTicks: number, what: string) =>
+  `The shot lasts ${seconds(shotTicks)} s and ${what} ${seconds(takeTicks)} s; ask for a longer take or shorten the shot.`;
+
+// The head's story of that id, or null when the project has none.
+function storyAt(store: ProjectStore, projectId: string, documentId: string) {
+  const ref = store
+    .listDocuments(projectId)
+    .find((d) => d.id === documentId && d.kind === "story");
+  if (!ref) return null;
+  const { ref: at, bytes } = store.getDocument(projectId, documentId);
+  return { ref: at, story: parseStory(JSON.parse(bytes.toString("utf8"))) };
+}
+const shotOf = (story: Story, shotId: string) =>
+  story.scenes.flatMap((sc) => sc.shots).find((shot) => shot.id === shotId);
+
+/** Refuses a target no take could be added to, before anything is recorded or sent. */
+export async function assertGenerationTarget(
+  store: ProjectStore,
+  request: {
+    projectId: string;
+    durationFrames: number;
+    target: GenerationTarget;
+  },
+) {
+  if (!creativeDocumentsEnabled())
+    throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+  const project = await store.load(request.projectId);
+  const held = storyAt(store, request.projectId, request.target.documentId);
+  if (!held) throw notFound(NO_STORY);
+  const shot = shotOf(held.story, request.target.shotId);
+  if (!shot) throw notFound(NO_SHOT);
+  if (shot.takes.length >= STORY_LIMITS.takesPerShot)
+    throw new CommandError("LIMIT_EXCEEDED", SHOT_FULL);
+  // An early word only: what an engine delivers is checked as it comes in.
+  const made = framesToTicks(request.durationFrames, frameRateOf(project));
+  if (made < shot.durationTicks)
+    throw invalid(tooShort(shot.durationTicks, made, "this request makes"));
+}
+
+/**
+ * Adds an imported run's video to the shot it was made for, as a take with its record, in a new
+ * version of the story as it is now. The shot's selection and the timeline are the person's and
+ * stay. Nothing here undoes the import: what stops the take is said, and may be tried again.
+ */
+export async function appendGeneratedTake(
+  store: ProjectStore,
+  row: GenerationRecord & { target: GenerationTarget },
+  facts: RecipeFacts,
+  principalId: string,
+): Promise<TakeOutcome> {
+  const { projectId, imported, target } = row;
+  const { documentId, shotId } = target;
+  if (!imported) throw invalid("This generation is not imported.");
+  const not = (
+    reason: Extract<TakeOutcome, { appended: false }>["reason"],
+    message: string,
+  ): TakeOutcome => ({ appended: false, reason, message });
+  if (!creativeDocumentsEnabled()) return not("story-refused", DOCUMENTS_OFF);
+  // A first try, and three more after a change made meanwhile.
+  for (let tries = 0; tries < 4; tries++) {
+    const project = await store.load(projectId);
+    const held = storyAt(store, projectId, documentId);
+    if (!held) return not("story-gone", NO_STORY);
+    const { ref, story } = held;
+    const shot = shotOf(story, shotId);
+    if (!shot) return not("shot-gone", NO_SHOT);
+    // Already here: an answer or a stop came between the story and the run's own row.
+    for (const take of shot.takes) {
+      if (take.recordHash === undefined) continue;
+      const { source } = store.takeRecord(
+        projectId,
+        documentId,
+        take.recordHash,
+      );
+      if (
+        source &&
+        "generationId" in source &&
+        source.generationId === row.generationId
+      )
+        return {
+          appended: true,
+          documentId,
+          shotId,
+          takeId: take.id,
+          recordHash: take.recordHash,
+          contentHash: ref.contentHash,
+          revision: project.revision,
+        };
+    }
+    if (shot.takes.length >= STORY_LIMITS.takesPerShot)
+      return not("shot-full", SHOT_FULL);
+    const asset = project.assets.find((a) => a.id === imported.assetId);
+    if (asset?.kind === "video") {
+      const made = framesToTicks(asset.durationFrames, frameRateOf(project));
+      if (made < shot.durationTicks)
+        return not(
+          "take-too-short",
+          tooShort(shot.durationTicks, made, "this take lasts"),
+        );
+    }
+    const record = buildGenerationRecord(row, facts);
+    const recordHash = recordHashOf(record);
+    const takeId = crypto.randomUUID();
+    const next: Story = {
+      ...story,
+      scenes: story.scenes.map((sc) => ({
+        ...sc,
+        shots: sc.shots.map((x) =>
+          x.id === shotId
+            ? {
+                ...x,
+                takes: [
+                  ...x.takes,
+                  {
+                    id: takeId,
+                    assetId: imported.assetId,
+                    sourceStartTicks: 0,
+                    lineage: {
+                      outputHash: imported.lineage.outputHash,
+                      inputs: imported.lineage.inputs,
+                    },
+                    recordHash,
+                  },
+                ],
+              }
+            : x,
+        ),
+      })),
+    };
+    try {
+      const saved = await store.commitDocument({
+        projectId,
+        expectedRevision: project.revision,
+        documentId,
+        kind: "story",
+        schemaVersion: DOCUMENT_SCHEMA_VERSIONS.story,
+        expectedContentHash: ref.contentHash,
+        source: { bytes: Buffer.from(JSON.stringify(next), "utf8") },
+        principalId,
+        attachments: [record],
+        // As a story's own save checks it. Every other take is the head's, which the hash
+        // above holds it to, so each keeps its record.
+        verify: (c) => {
+          verifyStory(next, c, documentId);
+          verifyStoryContinuity(next, c);
+        },
+      });
+      return {
+        appended: true,
+        documentId,
+        shotId,
+        takeId,
+        recordHash,
+        contentHash: store
+          .listDocumentsAt(projectId, saved.revision)
+          .find((d) => d.id === documentId)!.contentHash,
+        revision: saved.revision,
+      };
+    } catch (e) {
+      if (!(e instanceof CommandError)) throw e;
+      if (e.code === "REVISION_CONFLICT") continue;
+      return not("story-refused", e.message);
+    }
+  }
+  return not(
+    "busy",
+    "The story kept changing while the take was added; bring it in again.",
+  );
 }

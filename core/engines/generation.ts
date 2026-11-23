@@ -46,7 +46,33 @@ export type GenerationRequest = {
   // A person's word, with that still, that it shows no real person whose consent to send it
   // is not recorded. Nothing can tell who a picture shows, so it is asked for each run.
   noUnconsentedPerson?: true;
+  // The story shot its video is made for. The command has checked it.
+  target?: GenerationTarget;
 };
+export type GenerationTarget = { documentId: string; shotId: string };
+
+// Whether a targeted run's video became a take of its shot as it was brought in, and why not.
+export type TakeOutcome =
+  | {
+      appended: true;
+      documentId: string;
+      shotId: string;
+      takeId: string;
+      recordHash: string;
+      contentHash: string;
+      revision: number;
+    }
+  | {
+      appended: false;
+      reason:
+        | "story-gone"
+        | "shot-gone"
+        | "shot-full"
+        | "take-too-short"
+        | "story-refused"
+        | "busy";
+      message: string;
+    };
 
 // Where an imported video came from. A story's take can hold its output and inputs,
 // not the recipe, seed or prompt hash; a run elsewhere keeps these in its job record.
@@ -91,6 +117,10 @@ export type GenerationRecord = {
   diagnostic: string | null;
   videoSha256: string | null;
   imported: { assetId: string; lineage: GenerationLineage } | null;
+  // The shot it was made for, and whether its video is a take of it. Absent from a run made for
+  // no shot, and from older records.
+  target?: GenerationTarget;
+  take?: TakeOutcome;
   // Where the engine has it, as this workspace was set up when it left.
   remote?: string | null;
   // Said beside every later answer, across a restart.
@@ -496,6 +526,7 @@ export function createGenerationService(options: {
           ? { noUnconsentedPerson: request.noUnconsentedPerson === true }
           : {}),
         inputs: inputPins,
+        ...(request.target ? { target: request.target } : {}),
         executionRef: null,
         phase: "sending",
         remote: here,
@@ -646,6 +677,12 @@ export function createGenerationService(options: {
           ? {}
           : { diagnostic: stopNote(g) }),
       });
+    },
+
+    // What became of a targeted run's video as a take of its shot.
+    keepTake(id: string, take: TakeOutcome) {
+      tracked(id);
+      update(id, { take });
     },
 
     // The finished video joins the project as an asset, checked by its declared
