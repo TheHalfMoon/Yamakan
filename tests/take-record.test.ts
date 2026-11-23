@@ -1202,7 +1202,7 @@ test("a story at its limits stays inside documentBytes with record hashes", () =
     `shots of 8 takes that fit in ${STORY_LIMITS.documentBytes} bytes: ${most(false)} without record hashes, ${most(true)} with`,
   );
   assert.ok(made(most(true), true) <= STORY_LIMITS.documentBytes);
-  assert.ok(most(true) >= 75);
+  assert.deepEqual([most(false), most(true)], [109, 86]);
 });
 
 test("every query of the versions table names the kind it reads, or inserts", async () => {

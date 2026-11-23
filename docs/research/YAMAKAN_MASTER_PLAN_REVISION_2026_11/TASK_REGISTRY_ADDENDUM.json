@@ -878,7 +878,8 @@
         "A",
         "B"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 6b9fb8e (PR #291), c7c9929 (PR #292) and 399172af3a33b1f23398f2b9988cef8ee0687830 (PR #296, FD-2); qualify:revisable-shot and qualify:create-durable passed at 2fc6472 on GitHub's Linux machine (run 45215659043); the Blender arm is BLOCKED; docs/evidence/ultimate/MPR-101-take-record.md",
       "dependsOn": [],
       "legacy": [
         "stream:kaggle-create"
@@ -1043,7 +1044,7 @@
       "pillars": [
         "B"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101"
       ],
@@ -1570,7 +1571,7 @@
         "B",
         "C"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101"
       ],
@@ -1845,7 +1846,8 @@
       "pillars": [
         "A"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 60ccce5ed0994b21aecbfb286400856f37288d97 (PR #295); qualify:model-catalog passed at 5f511b5 on the founder host (docs/evidence/model-system/model-catalog.json); main's CI passed",
       "dependsOn": [],
       "legacy": [
         "YU-042",
@@ -1969,7 +1971,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -2577,7 +2579,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -2868,7 +2870,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -4541,7 +4543,7 @@
       "pillars": [
         "D"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101"
       ],
@@ -7168,7 +7170,7 @@
         "B",
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101",
         "MPR-201"
