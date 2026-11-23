@@ -94,3 +94,127 @@ The six checks that ask about those are UNAVAILABLE for the bridge, after their 
 - `spend`: none, but this computer's own time and power.
 - `download`: the model's files, put in place by a person before a recipe could be pinned. None is today, so there is no size to state.
 - `withdrawal`: its recipe is taken out of `PINNED_COMFY_RECIPES`. Nothing new starts. A run already started goes on in ComfyUI, which is the person's own program and is not stopped; this service forgets it when it ends.
+
+## The check
+
+`npm run qualify:engine-conformance`: **PASS** at `7ec07c0de62af7486b7dc01699ed3ac5f5d2f7e5`, on win32, with the in-process fake and the test files' own stand-ins. No network but loopback, no account, no download, no model and no spend.
+
+Operations compared with the contract: `textToVideo`, `imageToVideo`, `videoEdit`, `transcribe`, `enhance`.
+
+Adapter files not yet registered: `kaggle.ts`.
+
+| Adapter | Check | Result |
+|---|---|---|
+| fake | `refusal-sends-nothing` | PASS |
+| fake | `unlisted-role-refused` | PASS |
+| fake | `limits-held` | PASS |
+| fake | `status-parses` | PASS |
+| fake | `states-told-as-they-are` | PASS |
+| fake | `ended-failure-has-class` | PASS |
+| fake | `ref-usable-at-once` | PASS |
+| fake | `same-attempt-never-sent-twice` | PASS |
+| fake | `uncertain-sends-nothing-more` | PASS |
+| fake | `restart-reconciles-without-sending` | PASS |
+| fake | `unknown-ref-answered-honestly` | PASS |
+| fake | `cancel-never-overclaims` | PASS |
+| fake | `artifact-verified` | PASS |
+| fake | `corrupt-artifact-rejected` | PASS |
+| fake | `diagnostic-bounded` | PASS |
+| fake | `location-declared` | PASS |
+| fake | `row-before-send` | PASS |
+| fake | `ref-before-poll` | PASS |
+| fake | `uncertain-row-not-resent` | PASS |
+| fake | `continuing-stop-blocks-import` | PASS |
+| fake | `corrupt-result-not-imported` | PASS |
+| fake, stopped elsewhere | `refusal-sends-nothing` | PASS |
+| fake, stopped elsewhere | `unlisted-role-refused` | PASS |
+| fake, stopped elsewhere | `limits-held` | PASS |
+| fake, stopped elsewhere | `status-parses` | PASS |
+| fake, stopped elsewhere | `states-told-as-they-are` | PASS |
+| fake, stopped elsewhere | `ended-failure-has-class` | PASS |
+| fake, stopped elsewhere | `ref-usable-at-once` | PASS |
+| fake, stopped elsewhere | `same-attempt-never-sent-twice` | PASS |
+| fake, stopped elsewhere | `uncertain-sends-nothing-more` | PASS |
+| fake, stopped elsewhere | `restart-reconciles-without-sending` | PASS |
+| fake, stopped elsewhere | `unknown-ref-answered-honestly` | PASS |
+| fake, stopped elsewhere | `cancel-never-overclaims` | PASS |
+| fake, stopped elsewhere | `artifact-verified` | PASS |
+| fake, stopped elsewhere | `corrupt-artifact-rejected` | PASS |
+| fake, stopped elsewhere | `diagnostic-bounded` | PASS |
+| fake, stopped elsewhere | `location-declared` | PASS |
+| fake, stopped elsewhere | `row-before-send` | PASS |
+| fake, stopped elsewhere | `ref-before-poll` | PASS |
+| fake, stopped elsewhere | `uncertain-row-not-resent` | PASS |
+| fake, stopped elsewhere | `continuing-stop-blocks-import` | PASS |
+| fake, stopped elsewhere | `corrupt-result-not-imported` | PASS |
+| fake, going on elsewhere | `refusal-sends-nothing` | PASS |
+| fake, going on elsewhere | `unlisted-role-refused` | PASS |
+| fake, going on elsewhere | `limits-held` | PASS |
+| fake, going on elsewhere | `status-parses` | PASS |
+| fake, going on elsewhere | `states-told-as-they-are` | PASS |
+| fake, going on elsewhere | `ended-failure-has-class` | PASS |
+| fake, going on elsewhere | `ref-usable-at-once` | PASS |
+| fake, going on elsewhere | `same-attempt-never-sent-twice` | PASS |
+| fake, going on elsewhere | `uncertain-sends-nothing-more` | PASS |
+| fake, going on elsewhere | `restart-reconciles-without-sending` | PASS |
+| fake, going on elsewhere | `unknown-ref-answered-honestly` | PASS |
+| fake, going on elsewhere | `cancel-never-overclaims` | PASS |
+| fake, going on elsewhere | `artifact-verified` | PASS |
+| fake, going on elsewhere | `corrupt-artifact-rejected` | PASS |
+| fake, going on elsewhere | `diagnostic-bounded` | PASS |
+| fake, going on elsewhere | `location-declared` | PASS |
+| fake, going on elsewhere | `row-before-send` | PASS |
+| fake, going on elsewhere | `ref-before-poll` | PASS |
+| fake, going on elsewhere | `uncertain-row-not-resent` | PASS |
+| fake, going on elsewhere | `continuing-stop-blocks-import` | PASS |
+| fake, going on elsewhere | `corrupt-result-not-imported` | PASS |
+| bridge | `refusal-sends-nothing` | PASS |
+| bridge | `unlisted-role-refused` | PASS |
+| bridge | `limits-held` | PASS |
+| bridge | `status-parses` | PASS |
+| bridge | `states-told-as-they-are` | UNAVAILABLE: uncertainLanded: A version 1 engine is called in this process: its answer cannot be lost. uncertainNeverLanded: A version 1 engine is called in this process: its answer cannot be lost. lost: A version 1 engine keeps its jobs as long as the bridge its executions: none is lost without both. |
+| bridge | `ended-failure-has-class` | PASS |
+| bridge | `ref-usable-at-once` | PASS |
+| bridge | `same-attempt-never-sent-twice` | UNAVAILABLE: uncertainLanded: A version 1 engine is called in this process: its answer cannot be lost. uncertainNeverLanded: A version 1 engine is called in this process: its answer cannot be lost. |
+| bridge | `uncertain-sends-nothing-more` | UNAVAILABLE: uncertainLanded: A version 1 engine is called in this process: its answer cannot be lost. uncertainNeverLanded: A version 1 engine is called in this process: its answer cannot be lost. |
+| bridge | `restart-reconciles-without-sending` | PASS |
+| bridge | `unknown-ref-answered-honestly` | UNAVAILABLE: lost: A version 1 engine keeps its jobs as long as the bridge its executions: none is lost without both. |
+| bridge | `cancel-never-overclaims` | UNAVAILABLE: uncertainLanded: A version 1 engine is called in this process: its answer cannot be lost. uncertainNeverLanded: A version 1 engine is called in this process: its answer cannot be lost. lost: A version 1 engine keeps its jobs as long as the bridge its executions: none is lost without both. |
+| bridge | `artifact-verified` | PASS |
+| bridge | `corrupt-artifact-rejected` | PASS |
+| bridge | `diagnostic-bounded` | PASS |
+| bridge | `location-declared` | PASS |
+| bridge | `row-before-send` | PASS |
+| bridge | `ref-before-poll` | PASS |
+| bridge | `uncertain-row-not-resent` | UNAVAILABLE: uncertainLanded: A version 1 engine is called in this process: its answer cannot be lost. uncertainNeverLanded: A version 1 engine is called in this process: its answer cannot be lost. |
+| bridge | `continuing-stop-blocks-import` | PASS |
+| bridge | `corrupt-result-not-imported` | PASS |
+| comfyui | `refusal-sends-nothing` | PASS |
+| comfyui | `unlisted-role-refused` | PASS |
+| comfyui | `limits-held` | PASS |
+| comfyui | `status-parses` | PASS |
+| comfyui | `states-told-as-they-are` | PASS |
+| comfyui | `ended-failure-has-class` | PASS |
+| comfyui | `ref-usable-at-once` | PASS |
+| comfyui | `same-attempt-never-sent-twice` | PASS |
+| comfyui | `uncertain-sends-nothing-more` | PASS |
+| comfyui | `restart-reconciles-without-sending` | PASS |
+| comfyui | `unknown-ref-answered-honestly` | PASS |
+| comfyui | `cancel-never-overclaims` | PASS |
+| comfyui | `artifact-verified` | PASS |
+| comfyui | `corrupt-artifact-rejected` | PASS |
+| comfyui | `diagnostic-bounded` | PASS |
+| comfyui | `location-declared` | PASS |
+| comfyui | `row-before-send` | PASS |
+| comfyui | `ref-before-poll` | PASS |
+| comfyui | `uncertain-row-not-resent` | PASS |
+| comfyui | `continuing-stop-blocks-import` | PASS |
+| comfyui | `corrupt-result-not-imported` | PASS |
+
+| Offer | Machine-checked intake |
+|---|---|
+| `kaggle-wan22-ti2v-5b` | PASS |
+| `kaggle-wan22-ti2v-5b-first-frame` | PASS |
+| `kaggle-cogvideox-2b` | PASS |
+
+The same files' other tests: 74 of 74 passed.
