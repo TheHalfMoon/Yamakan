@@ -4604,7 +4604,7 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 | Dependencies | none |
 | Founder decisions | none |
 | Earlier plan items | SS-007 |
-| Evidence | Merged as 5306ea9166ecb2e9a1fc1c7497271344de6995e1 (PR #297, pinned to 4105406, which adds only the receipt to 49d0e48); qualify:agent-mcp passed at 49d0e48 on the founder host (docs/evidence/qualification/mpr-501-agent-mcp.json); main's CI passed |
+| Evidence | Merged as 5306ea9166ecb2e9a1fc1c7497271344de6995e1 (PR #297, pinned to 4105406, which adds only the receipt to 49d0e48); qualify:agent-mcp passed at 49d0e48 on the founder host (docs/evidence/qualification/mpr-501-agent-mcp.json), its cancelled call before it was sent; cancelling after the send is tested with a held test service; main's CI passed |
 
 **Goal.** An agent connected over MCP is shown exactly the tools its token can call, each marked truthfully as reading or changing (and destructive or not), and a request the client cancels stops cleanly instead of being ignored.
 

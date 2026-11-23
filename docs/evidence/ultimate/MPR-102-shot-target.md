@@ -51,7 +51,7 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 
 ## The real check
 
-`npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it ran on GitHub's Linux machine: **PASS at `29a170a`** (run 45228582330, `ubuntu-24.04`, no sandbox), with the MPR-101 steps before it. Its receipt is `MPR-102-shot-target-receipt.json`: five steps, each with the hash of the assembled cut before and after the import, which is one and the same. It is not evidence of the founder host.
+`npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it ran on GitHub's Linux machine: **PASS at `29a170a`** (run 45228582330, `ubuntu-24.04`, no sandbox), with the MPR-101 steps before it. Its receipt is `MPR-102-shot-target-receipt.json`: five steps with one hash of the assembled cut. It is compared before and after each import but the interrupted one, whose neighbours have the same; the fourth step is eight imports, and its hash is the one after them all. It is not evidence of the founder host.
 
 ## The card's Definition of Done
 
