@@ -1259,7 +1259,7 @@ Parts that wait on something outside engineering:
 | Dependencies | MPR-101 |
 | Founder decisions | none |
 | Earlier plan items | stream:kaggle-create |
-| Evidence | Merged as 277698477a12ab592fabe84a4313c76838461212 (PR #302, pinned to fc34f10); qualify:story-brief passed at 00d9a07 in real Edge on the founder host (docs/evidence/ultimate/MPR-106-story-brief-receipt.json) and at fc34f10 on GitHub's Linux machine; after 00d9a07 come only the write-up, main's documents and a wait in the check script; main's CI passed; the Arabic is unreviewed |
+| Evidence | Merged as 277698477a12ab592fabe84a4313c76838461212 (PR #302, pinned to fc34f10); qualify:story-brief passed at 00d9a07 in real Edge on the founder host (docs/evidence/ultimate/MPR-106-story-brief-receipt.json) and at fc34f10 on GitHub's Linux machine; no product code changes after 00d9a07: what comes is the receipt and the write-up, what main brought from PR #304 (documents, one test, one line of another check) and a wait in this check; main's CI passed; the reviewer accepted the intent's direction field; the Arabic is unreviewed |
 
 **Goal.** What a film is meant to be (its brief), what each scene says (its script) and what each shot is meant to show (its intent) are stored in the project's story document, inside its 256 KiB limit, so they survive a new browser, a backup and a restore, and an agent can read them. Text that today lives only in one browser is brought in once, by the person's own action.
 
@@ -1638,7 +1638,7 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 | Dependencies | MPR-201 |
 | Founder decisions | none |
 | Earlier plan items | YU-042, stream:kaggle-create, stream:comfyui |
-| Evidence | Merged as 245b0796b4ccda66272a74ecedf4d32d685c73b7 (PR #303, pinned to aa9edd7, which adds only the receipt to 003755e); qualify:capability-report passed at 003755e on the founder host (docs/evidence/model-system/capability-report.json), with a stand-in for the Kaggle CLI that was never started; main's CI passed; the Arabic messages are unreviewed and no page shows them |
+| Evidence | Merged as 245b0796b4ccda66272a74ecedf4d32d685c73b7 (PR #303, pinned to aa9edd7, which adds only the receipt to 003755e); qualify:capability-report passed at 003755e on the founder host (docs/evidence/model-system/capability-report.json), with a stand-in for the Kaggle CLI that was never started; main's CI passed; npm run test:studio passed at 245b079 on the founder host after the merge (its 5 node tests and 1,975 Studio tests); the Arabic messages are unreviewed and no page shows them |
 
 **Goal.** One command tells a person or an agent what each route can do with each model for each operation. Every cell says supported, unsupported or unverified, with where the answer comes from, its date, its limits and a reason code. The list of models a person can start is a projection of the same report, so the two cannot disagree.
 
