@@ -1847,3 +1847,42 @@ test("a run's video, saved as a take, carries the record of its run", async () =
   assert.deepEqual(record.usage, { wallMs: 2_000, quotaSeconds: null });
   assert.equal(record.request.seed, 5);
 });
+
+test("a run's answers say how it ended, and nothing of it while it goes on", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const g = service(f, adapter);
+  const ctx = {
+    ...f.ctx,
+    generation: { service: g, recipes: [recipe] },
+  } as CommandContext;
+  const { generationId } = await g.start(ask(f.projectId));
+  const answers = async () => {
+    const status = (
+      await execute(ctx, "yamakan.generation.status", { generationId })
+    ).result as Record<string, unknown>;
+    const [listed] = (
+      await execute(ctx, "yamakan.generation.list", { projectId: f.projectId })
+    ).result as Record<string, unknown>[];
+    return [status, listed!];
+  };
+  const fields = [
+    "failureClass",
+    "mayStillBeBilled",
+    "billedIn",
+    "retry",
+    "endedAt",
+  ];
+  state.status = "running";
+  for (const answer of await answers())
+    for (const field of fields) assert.ok(!(field in answer), field);
+  state.status = "failed";
+  for (const answer of await answers()) {
+    // This engine names no kind, and does not say it sends off this computer.
+    assert.equal(answer.failureClass, "unknown");
+    assert.equal(answer.mayStillBeBilled, false);
+    assert.equal(answer.billedIn, "none");
+    assert.equal(answer.retry, "afterChecking");
+    assert.equal(typeof answer.endedAt, "number");
+  }
+});

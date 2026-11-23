@@ -128,6 +128,15 @@ const stopService = () =>
     child.kill("SIGKILL");
   });
 
+// The line under a run that ended without a usable video, as the page has it.
+const saysEnd = async (page, kind, lines) => {
+  const line = page.getByTestId("create-run-class");
+  await line.waitFor({ timeout: 60_000 });
+  assert.equal(await line.getAttribute("data-class"), kind);
+  const text = (await line.textContent()).trim();
+  for (const words of lines) assert.ok(text.includes(words), text);
+};
+
 // One scene: a workspace of its own, since a send really does hold the notebook for minutes.
 async function scene(name, initial, play) {
   const folder = join(root, name);
@@ -364,6 +373,11 @@ try {
         await page.getByTestId("create-generate").textContent(),
         /It may still be running on Kaggle/,
       );
+      await saysEnd(page, "cancelled", [
+        "It was stopped, or is no longer followed.",
+        "It may still use your Kaggle GPU time.",
+        "You can try again when you want.",
+      ]);
       assert.equal(attempts(), 1);
       step(
         "a stop on a run under way stays after a reload, and says it may go on",
@@ -386,6 +400,12 @@ try {
         await page.getByTestId("create-run-note").textContent(),
         /failed on Kaggle/,
       );
+      // MPR-207: which kind of end, what it may have used, and what trying again takes.
+      await saysEnd(page, "providerRejected", [
+        "It was refused, or failed while it ran.",
+        "It may have used your Kaggle GPU time.",
+        "Trying again as it is may end the same way.",
+      ]);
       assert.match(
         await page.getByTestId("create-generate").textContent(),
         /No video came of this/,

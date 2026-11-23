@@ -26,6 +26,7 @@ import {
   type EngineContextV2,
   type EngineRequestV2,
   type ExecutionStatus,
+  type FailureClass,
   type RefusalReason,
 } from "./contract-v2.ts";
 
@@ -756,11 +757,16 @@ export function createComfyEngine(options: ComfyEngineOptions) {
     const status = await report(executionRef);
     if (!e || !enabled) return status;
     const at = now();
-    const fail = (diagnosticText: string, watch: boolean) => {
+    const fail = (
+      diagnosticText: string,
+      watch: boolean,
+      failureClass: FailureClass,
+    ) => {
       e.failed = {
         executionRef,
         state: "failed",
         diagnostic: diagnosticText,
+        failureClass,
       };
       // It may yet run or appear: stopped when it does, for as long as it can.
       if (watch) replaced.set(executionRef, at);
@@ -775,10 +781,12 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         ? fail(
             "The job passed its deadline; ComfyUI was asked to stop it.",
             false,
+            "timeout",
           )
         : fail(
             "The job passed its deadline, and ComfyUI could not be asked to stop it.",
             true,
+            "timeout",
           );
     }
     // Lost only when ComfyUI answered and does not know it: an outage says nothing
@@ -794,6 +802,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           ? "ComfyUI stopped reporting this job."
           : "ComfyUI never reported this job.",
         true,
+        "lostJob",
       );
     return status;
   }
@@ -814,17 +823,31 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           : [];
         const named = (type: string) =>
           messages.find((m) => Array.isArray(m) && m[0] === type)?.[1] as
-            { exception_message?: unknown } | undefined;
+            | { exception_message?: unknown; exception_type?: unknown }
+            | undefined;
         if (named("execution_interrupted"))
-          return { executionRef, state: "cancelled" };
+          return {
+            executionRef,
+            state: "cancelled",
+            failureClass: "cancelled",
+          };
         if (entry.status?.status_str === "error" || named("execution_error")) {
-          const reason = named("execution_error")?.exception_message;
+          const error = named("execution_error");
+          const reason = error?.exception_message;
           return {
             executionRef,
             state: "failed",
             diagnostic:
               diagnostic(typeof reason === "string" ? reason : undefined) ??
               "ComfyUI reported an error.",
+            // Its own name for the error, never its words.
+            failureClass:
+              typeof error?.exception_type === "string" &&
+              /(?:^|\.)(?:OutOfMemoryError|MemoryError)$/.test(
+                error.exception_type,
+              )
+                ? "resourceExhausted"
+                : "providerRejected",
           };
         }
         if (entry.status?.status_str !== "success")

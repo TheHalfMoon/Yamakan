@@ -19,6 +19,7 @@ import {
   type EngineAdapterV2,
   type EngineContextV2,
   type EngineRequestV2,
+  ExecutionStatusSchema,
 } from "../core/engines/contract-v2.ts";
 import {
   SERVER_RECIPES,
@@ -295,6 +296,58 @@ test("unsupported controls and outputs fail before any worker is spawned", async
   assert.equal(engine.spawned(), 1);
 });
 
+test("an answer that a run failed or was stopped names which kind of end it was, and no other answer does", () => {
+  for (const state of ["failed", "cancelled"])
+    for (const [failureClass, ok] of [
+      ["timeout", true],
+      ["unknown", true],
+      ["cancelled", true],
+      [undefined, false],
+      ["no such kind", false],
+      [null, false],
+    ] as const)
+      assert.equal(
+        ExecutionStatusSchema.safeParse({
+          executionRef: "r",
+          state,
+          ...(failureClass === undefined ? {} : { failureClass }),
+        }).success,
+        ok,
+        `${state} ${failureClass}`,
+      );
+  for (const state of ["queued", "running", "succeeded", "unknown"]) {
+    const answer = { executionRef: "r", state, progress: 0.5 };
+    assert.ok(ExecutionStatusSchema.safeParse(answer).success, state);
+    assert.ok(
+      !ExecutionStatusSchema.safeParse({ ...answer, failureClass: "unknown" })
+        .success,
+      state,
+    );
+  }
+  assert.ok(
+    !ExecutionStatusSchema.safeParse({ executionRef: "r", state: "lost" })
+      .success,
+  );
+});
+
+test("a failed execution names the kind it is given, and says unknown when it is given none", async () => {
+  for (const failureClass of [undefined, "timeout"] as const) {
+    const engine = createFakeEngineV2({
+      failExecutions: true,
+      ...(failureClass ? { failureClass } : {}),
+    });
+    const ran = await engine.submit(textToVideo(), context());
+    assert.ok("executionRef" in ran);
+    const status = await engine.status(ran.executionRef);
+    assert.equal(status.state, "failed");
+    assert.equal(
+      "failureClass" in status && status.failureClass,
+      failureClass ?? "unknown",
+    );
+    ExecutionStatusSchema.parse(status);
+  }
+});
+
 test("artifacts are read through bounded handles, and inputs are hash-checked streams", async () => {
   const engine = createFakeEngineV2({
     artifactBytes: 3 * ENGINE_V2_LIMITS.chunkBytes + 17,
@@ -391,8 +444,27 @@ test("v1 parity: the bridge lowers only server recipes and reports what the v2 f
   const probe = bridgeV1(createFakeEngine({ failProbe: true }));
   const failed = await probe.submit(textToVideo(), ctx);
   assert.ok("executionRef" in failed);
-  assert.equal((await probe.status(failed.executionRef)).state, "failed");
+  // Which kind, a version 1 engine does not say.
+  assert.deepEqual(
+    ((s) => [s.state, "failureClass" in s && s.failureClass])(
+      await probe.status(failed.executionRef),
+    ),
+    ["failed", "unknown"],
+  );
   assert.deepEqual(await probe.enumerateArtifacts(failed.executionRef), []);
+  // One that a version 1 engine says was stopped is that.
+  const v1 = createFakeEngine();
+  const stopping = bridgeV1({
+    ...v1,
+    status: async (id: string) => ({ id, state: "cancelled" }) as never,
+  });
+  const stopped = await stopping.submit(textToVideo(), context());
+  assert.ok("executionRef" in stopped);
+  const said = await stopping.status(stopped.executionRef);
+  assert.deepEqual(
+    [said.state, "failureClass" in said && said.failureClass],
+    ["cancelled", "cancelled"],
+  );
 });
 
 test("concurrent submits: an older generation never replaces a newer one, and one generation runs once", async () => {
@@ -581,8 +653,20 @@ test("a newer generation cancels the execution it replaces; unknown executions a
     ctx,
   );
   assert.ok("executionRef" in second);
-  assert.equal((await long.status(first.executionRef)).state, "cancelled");
+  const replaced = await long.status(first.executionRef);
+  assert.equal(replaced.state, "cancelled");
+  ExecutionStatusSchema.parse(replaced);
   assert.equal((await long.status(second.executionRef)).state, "running");
+  // Stopped on request, it says so too.
+  const asked = createFakeEngineV2({ stayRunning: true });
+  const running = await asked.submit(textToVideo({ attemptKey: "ask" }), ctx);
+  assert.ok("executionRef" in running);
+  await asked.requestCancel(running.executionRef);
+  const halted = await asked.status(running.executionRef);
+  assert.deepEqual(
+    [halted.state, "failureClass" in halted && halted.failureClass],
+    ["cancelled", "cancelled"],
+  );
   // A stuck older generation never holds up the newer one.
   const stuck = createFakeEngineV2({
     beforeInput: (r) =>

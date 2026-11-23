@@ -26,7 +26,10 @@ import {
   scriptWithBrief,
   type KaggleCli,
 } from "../core/engines/kaggle.ts";
-import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
+import {
+  ENGINE_CONTRACT_V2,
+  ExecutionStatusSchema,
+} from "../core/engines/contract-v2.ts";
 import { CREATE_MODELS } from "../src/create/create-model.ts";
 
 const folderRoot = mkdtempSync(path.join(tmpdir(), "kaggle-engine-test-"));
@@ -338,6 +341,7 @@ async function fetchedBy(extra?: string) {
   // Past the minutes when Kaggle may still answer for an earlier run.
   time = 10 * 60 * 1000;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   return { asked, answer };
 }
 
@@ -509,6 +513,7 @@ test("after a while, another run's result is a failure", async () => {
   )) as any;
   time = 10 * 60 * 1000;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /not this one/);
 });
@@ -540,7 +545,9 @@ test("a run that failed its own checks is a failure", async () => {
     request(),
     context as never,
   )) as any;
-  assert.equal((await k.engine.status(executionRef)).state, "failed");
+  const ended = await k.engine.status(executionRef);
+  assert.equal(ended.state, "failed");
+  assert.equal(ended.failureClass, "invalidArtifact");
 });
 
 test("a failed run says why, without its paths", async () => {
@@ -883,6 +890,8 @@ test("a killed run says so, from its log, without the log's words", async () => 
   const answer = await k.engine.status(executionRef);
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /killed the run/);
+  // Memory is the likely reason, not a known one.
+  assert.equal(answer.failureClass, "providerRejected");
   assert.ok(!answer.diagnostic!.includes("the prompt"));
 });
 
@@ -1235,6 +1244,7 @@ test("if privacy cannot be read after the push, the run goes on and says so", as
     context as never,
   )) as any;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   assert.equal(answer.state, "running");
   assert.match(answer.diagnostic!, /Could not confirm/);
 });
@@ -1405,7 +1415,9 @@ test("a video of the wrong length is refused", async () => {
     request(),
     context as never,
   )) as any;
-  assert.equal((await k.engine.status(executionRef)).state, "failed");
+  const ended = await k.engine.status(executionRef);
+  assert.equal(ended.state, "failed");
+  assert.equal(ended.failureClass, "invalidArtifact");
 });
 
 test("the CLI gets its settings, not this service's environment", () => {

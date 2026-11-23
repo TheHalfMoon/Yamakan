@@ -88,6 +88,7 @@ import {
 } from "../engines/comfyui.ts";
 import {
   createGenerationService,
+  outcomeOf,
   type GenerationRecipe,
   type GenerationRecord,
 } from "../engines/generation.ts";
@@ -2805,6 +2806,9 @@ export const commands = {
           held: g.held === true,
           diagnostic: g.diagnostic,
           imported: g.imported,
+          // For one that ended: when, and for one without a usable video, which kind of end, what
+          // it may have used and what trying again takes.
+          ...outcomeOf(g),
           // The shot it is made for, and whether its video became a take of it.
           target: g.target ?? null,
           take: g.take ?? null,
