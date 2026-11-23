@@ -123,7 +123,7 @@ revised from its own record, and the history of a shot can be read.
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
 | MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |
 | MPR-106 | Brief, scene scripts and shot intent stored in the story document | QUALIFICATION_READY | MPR-101 | none |
-| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | REVIEW_PENDING | MPR-101, MPR-102 | none |
+| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | VERIFIED | MPR-101, MPR-102 | none |
 
 Exit: MPR-101 to MPR-107 verified. One shot is generated or rendered onto its
 shot, revised from its own record, compared and replaced, and its history read,
@@ -239,7 +239,7 @@ and the supervised-agent measure, and only then decide the competitor arm.
 
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
-| MPR-801 | Benchmark protocol version 2 and its exact analysis; nothing is run | WAITING_DEPENDENCIES | MPR-101, MPR-107 | FD-3, FD-6, FD-7 |
+| MPR-801 | Benchmark protocol version 2 and its exact analysis; nothing is run | QUALIFICATION_READY | MPR-101, MPR-107 | FD-3, FD-6, FD-7 |
 | MPR-802 | The protocol frozen after a discarded pilot; the Yamakan-only baseline | WAITING_DEPENDENCIES | MPR-801, MPR-107, MPR-701 | FD-3 |
 | MPR-803 | The competitor arm, after FD-6 and a terms check | EXTERNAL_BLOCKED | MPR-801, MPR-802, MPR-405 | FD-3, FD-6, FD-7 |
 | MPR-805 | The supervised-agent measure with a scripted agent and a forced restart | WAITING_DEPENDENCIES | MPR-801, MPR-802, MPR-502, MPR-503, MPR-504, MPR-505, MPR-506 | none |
