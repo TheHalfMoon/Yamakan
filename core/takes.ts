@@ -479,6 +479,8 @@ export function proposeReplace(
   if (take.lineage && take.lineage.outputHash !== asset.hash)
     throw invalid("The take does not match its recorded media version.");
   const offsets = footageOffsets(project, clips, shot.takes);
+  // Which of the shot's clips each mapping is about, for a refusal's words.
+  const places: number[] = [];
   const mappings = clips.flatMap((clip, index) => {
     const takeOffsetTicks = asset.kind === "image" ? 0 : offsets[index]!;
     const to = {
@@ -487,13 +489,15 @@ export function proposeReplace(
       title: null,
       sourceStartTicks: take.sourceStartTicks + takeOffsetTicks,
     };
-    return clip.title === null &&
+    const there =
+      clip.title === null &&
       clip.assetId === to.assetId &&
-      clip.sourceStartTicks === to.sourceStartTicks
+      clip.sourceStartTicks === to.sourceStartTicks;
+    if (!there) places.push(index);
+    return there
       ? []
       : [
           {
-            index,
             clipId: clip.id,
             startTicks: clip.startTicks,
             durationTicks: clip.durationTicks,
@@ -513,18 +517,18 @@ export function proposeReplace(
     storyContentHash: ref.contentHash,
     shotId: shot.id,
     takeId: take.id,
-    mappings: mappings.map(({ index: _, ...m }) => m),
+    mappings,
   };
   const proposal = { ...body, proposalHash: sha256Hex(canonicalJson(body)) };
   // Refusals (a locked track, a retimed clip, unlinked sound, a take shorter
   // than the clip) come now, not at apply, and name the clip they are about.
   const operations = replaceOperations(proposal);
   if (!single)
-    mappings.forEach((m, i) => {
+    operations.forEach((operation, i) => {
       try {
-        applyOne(project, operations[i]!);
+        applyOne(project, operation);
       } catch (e) {
-        if (e instanceof CommandError) refuse(m.index, e.message);
+        if (e instanceof CommandError) refuse(places[i]!, e.message);
         throw e;
       }
     });

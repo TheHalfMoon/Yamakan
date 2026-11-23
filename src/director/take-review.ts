@@ -4,7 +4,7 @@
 
 export type TakeProposal = {
   format: "yamakan.take-proposal";
-  formatVersion: 1;
+  formatVersion: 2;
   projectId: string;
   revision: number;
   documentId: string;
@@ -15,6 +15,7 @@ export type TakeProposal = {
     clipId: string;
     startTicks: number;
     durationTicks: number;
+    takeOffsetTicks: number;
     from: {
       assetId: string | null;
       assetHash: string | null;

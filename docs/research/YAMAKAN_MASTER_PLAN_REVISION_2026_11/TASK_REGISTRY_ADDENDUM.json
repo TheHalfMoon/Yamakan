@@ -1445,7 +1445,7 @@
       "pillars": [
         "B"
       ],
-      "state": "QUALIFICATION_READY",
+      "state": "REVIEW_PENDING",
       "dependsOn": [
         "SS-006"
       ],

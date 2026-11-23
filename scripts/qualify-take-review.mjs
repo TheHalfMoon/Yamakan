@@ -23,6 +23,9 @@ execFileSync("npm", ["run", "build"], {
 });
 
 const receipt = process.argv[2] ?? null;
+// The split arm's own receipt (MPR-105), beside SS-006's.
+const splitReceiptFile = process.argv[3] ?? null;
+let splitReceipt = null;
 const root = mkdtempSync(join(tmpdir(), "yamakan-take-review-"));
 const port = 24381;
 const origin = `http://127.0.0.1:${port}`;
@@ -539,6 +542,112 @@ try {
   assert.deepEqual(external, []);
   assert.deepEqual(pageErrors, []);
   step("no external requests and no page errors");
+
+  // MPR-105: a shot whose clip was split and trimmed keeps its take replaceable, as one
+  // revision and one undo, and a refusal names the clip. This arm writes its own receipt and
+  // leaves the steps above, and SS-006's receipt, as they were.
+  const splitSteps = [];
+  const listed = await call("yamakan.take.list", {
+    projectId: project.id,
+    documentId: storyId,
+  });
+  const middle = listed.shots.find((s) => s.shotId === shots[1].id);
+  const held = middle.timeline.currentTakeId;
+  const target = held === middleNew.id ? middleOld : middleNew;
+  const whole = middle.timeline;
+  const pieceId = crypto.randomUUID();
+  const splitAt = whole.startTicks + Math.floor(whole.durationTicks / 2);
+  let state = await head();
+  const changed = await call("yamakan.project.applyBatch", {
+    projectId: project.id,
+    expectedRevision: state.revision,
+    operations: [
+      {
+        type: "clip.split",
+        clipId: whole.clipId,
+        atTicks: splitAt,
+        newClipId: pieceId,
+      },
+    ],
+  });
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Takes Revision/ })
+    .first()
+    .click();
+  await page.getByRole("heading", { name: "Takes", exact: true }).waitFor();
+  await page.getByRole("tab", { name: /Story|القصة/ }).click();
+  await page.locator("details.director > summary").click();
+  await page
+    .getByTestId("take-review")
+    .locator(`li[data-take="${target.id}"] [data-testid="take-review-open"]`)
+    .click();
+  await page.getByTestId("take-proposal").waitFor();
+  assert.equal(await page.getByTestId("take-proposal-clip").count(), 2);
+  assert.match(await page.getByTestId("take-proposal-count").innerText(), /2/);
+  splitSteps.push("a split shot's proposal has a row per clip");
+  await page.getByTestId("take-proposal-apply").click();
+  await page.getByTestId("take-notice-applied").waitFor();
+  state = await head();
+  const media = middle.takes.find((x) => x.id === target.id).assetId;
+  const pieces = [whole.clipId, pieceId].map((id) =>
+    state.clips.find((c) => c.id === id),
+  );
+  assert.deepEqual(
+    pieces.map((c) => c.assetId),
+    [media, media],
+  );
+  assert.deepEqual(
+    pieces.map((c) => c.startTicks),
+    [whole.startTicks, splitAt],
+  );
+  splitSteps.push("apply changes both clips' media and keeps their times");
+  const undone = await call("yamakan.project.undo", {
+    projectId: project.id,
+    expectedRevision: state.revision,
+  });
+  const back = (await head()).clips;
+  assert.deepEqual(
+    [whole.clipId, pieceId].map((id) => back.find((c) => c.id === id).assetId),
+    [whole.assetId, whole.assetId],
+  );
+  assert.ok(undone.revision > changed.revision);
+  splitSteps.push("one undo brings both clips back");
+  // A retimed piece is refused by name on the page.
+  await call("yamakan.project.applyBatch", {
+    projectId: project.id,
+    expectedRevision: (await head()).revision,
+    operations: [
+      {
+        type: "clip.setSpeed",
+        clipId: pieceId,
+        speed: { num: 1, den: 2 },
+      },
+    ],
+  });
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Takes Revision/ })
+    .first()
+    .click();
+  await page.getByRole("heading", { name: "Takes", exact: true }).waitFor();
+  await page.getByRole("tab", { name: /Story|القصة/ }).click();
+  await page.locator("details.director > summary").click();
+  await page
+    .getByTestId("take-review")
+    .locator(`li[data-take="${target.id}"] [data-testid="take-review-open"]`)
+    .click();
+  await page.getByTestId("take-notice-refused").waitFor();
+  assert.match(
+    await page.getByTestId("take-notice-refused").innerText(),
+    /Clip 2 of 2 of this shot: Reset the clip's speed before replacing its take\./,
+  );
+  splitSteps.push("a refusal names the clip");
+  assert.deepEqual(pageErrors, []);
+  splitReceipt = splitSteps;
+  step("a split shot's take is replaced, undone and refused by clip", {
+    split: splitSteps,
+  });
   passed = true;
 } finally {
   await browser?.close().catch(() => {});
@@ -555,6 +664,23 @@ try {
           passed,
           steps,
           serverError: serverError.slice(-1000),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  if (splitReceiptFile)
+    writeFileSync(
+      splitReceiptFile,
+      `${JSON.stringify(
+        {
+          task: "MPR-105",
+          head: execFileSync("git", ["rev-parse", "HEAD"], {
+            encoding: "utf8",
+          }).trim(),
+          host: process.platform,
+          passed: passed && splitReceipt !== null,
+          steps: splitReceipt ?? [],
         },
         null,
         2,
