@@ -990,6 +990,12 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         if (!recipe) return { refused: "RECIPE_UNKNOWN" };
         const refused = refusal(request, capabilityOf(recipe));
         if (refused) return { refused };
+        // A recipe has one place for a role.
+        if (
+          new Set(request.inputs.map((i) => i.role)).size !==
+          request.inputs.length
+        )
+          return { refused: "INPUT_UNSUPPORTED" };
         // The person started this process, and may have restarted it since the check.
         const start = await startProblem();
         if (start) {

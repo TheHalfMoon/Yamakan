@@ -139,6 +139,7 @@ export const TakeRecordSchema = z
               "source",
               "mask",
               "audio",
+              "reference",
               "plate",
             ]),
           })
