@@ -188,6 +188,13 @@ export function kaggleRecipeFacts(
   };
 }
 
+/** The longest a run of this recipe may take on Kaggle, which is the most it may use of it. */
+export const kaggleTimeout = (recipeId: string) => {
+  const recipe = KAGGLE_RECIPES.find((r) => r.id === recipeId);
+  if (!recipe)
+    throw new CommandError("VALIDATION", "That recipe is not known here.");
+  return recipe.timeoutSeconds;
+};
 export function kaggleRecipes(): GenerationRecipe[] {
   return offeredKaggleRecipes().map((r) => ({
     id: r.id,
@@ -217,12 +224,21 @@ export function scriptWithBrief(
   return lines.join("\n");
 }
 
-export type KaggleCli = (
-  args: string[],
-  timeoutMs: number,
-  // Stops the CLI (a download growing past what a run makes).
-  signal?: AbortSignal,
-) => Promise<{ stdout: string }>;
+export type KaggleCli = {
+  (
+    args: string[],
+    timeoutMs: number,
+    // Stops the CLI (a download growing past what a run makes).
+    signal?: AbortSignal,
+  ): Promise<{ stdout: string }>;
+  // Throws while nothing may be contacted (MPR-204): asked before every start of the CLI, and by
+  // a send before it writes anything.
+  mayConnect?: () => void;
+};
+// What the CLI was not started for, so that it is never taken for an answer of it.
+const refusedByGate = new WeakSet<object>();
+const gateClosed = (e: unknown) =>
+  typeof e === "object" && e !== null && refusedByGate.has(e);
 
 // What the CLI needs to find itself and its own settings, and nothing else of this
 // service's environment.
@@ -311,9 +327,22 @@ function endTree(child: ReturnType<typeof execFile>) {
   } else child.kill("SIGKILL");
 }
 
-export function kaggleCli(file: string): KaggleCli {
-  return (args, timeout, signal) =>
-    new Promise((resolve, reject) => {
+/** The one place the Kaggle CLI is started. It asks `mayConnect` first, every time. */
+export function kaggleCli(
+  file: string,
+  { mayConnect }: { mayConnect: () => void },
+): KaggleCli {
+  const asked = () => {
+    try {
+      mayConnect();
+    } catch (e) {
+      if (typeof e === "object" && e !== null) refusedByGate.add(e);
+      throw e;
+    }
+  };
+  const run: KaggleCli = async (args, timeout, signal) => {
+    asked();
+    return new Promise((resolve, reject) => {
       let timedOut = false;
       // The time limit ends the whole tree, as a stop does: a limit that ended only the
       // launcher would leave Python running, and no later stop could reach it.
@@ -345,6 +374,8 @@ export function kaggleCli(file: string): KaggleCli {
       );
       signal?.addEventListener("abort", () => endTree(child), { once: true });
     });
+  };
+  return Object.assign(run, { mayConnect: asked });
 }
 
 const REMOTE_STATES = /KernelWorkerStatus\.([A-Z_]+)/;
@@ -939,7 +970,10 @@ export function createKaggleEngine(options: {
         }
       }
       if (state === "ERROR") {
-        const left = await collect(run).catch(() => null);
+        const left = await collect(run).catch((e: unknown) => {
+          if (gateClosed(e)) throw e;
+          return null;
+        });
         const ours = left?.receipt.runId === run.runId;
         // Just after a push, this may still be what an earlier run came to.
         if (!ours && settling(run)) {
@@ -1022,7 +1056,9 @@ export function createKaggleEngine(options: {
         executionRef: run.runId,
         state: "unknown",
         diagnostic: diagnostic(
-          `${pastLimit(run) ? `${PAST_LIMIT} ` : ""}Could not get an answer from Kaggle: ${(e as Error).message}`,
+          gateClosed(e)
+            ? (e as Error).message
+            : `${pastLimit(run) ? `${PAST_LIMIT} ` : ""}Could not get an answer from Kaggle: ${(e as Error).message}`,
         ),
       };
     }
@@ -1193,13 +1229,17 @@ export function createKaggleEngine(options: {
     try {
       state = await remoteState(recipe);
     } catch (e) {
+      if (gateClosed(e)) throw e;
       // The CLI says this of any refusal, so it means new only when the account's own
       // list, which needs working credentials, does not hold it.
       const { message } = e as Error;
       const empty = EMPTY_NOTEBOOK.test(message);
       if (
         (empty || NO_SUCH_NOTEBOOK.test(message)) &&
-        (await listed(recipe).catch(() => true)) === false
+        (await listed(recipe).catch((why: unknown) => {
+          if (gateClosed(why)) throw why;
+          return true;
+        })) === false
       ) {
         // An empty one may have nothing to answer with, and that is not a no: only a no is.
         if (
@@ -1320,6 +1360,8 @@ export function createKaggleEngine(options: {
           "CAPABILITY_UNAVAILABLE",
           "A run of this model is already being sent to Kaggle.",
         );
+      // Before anything is written.
+      cli.mayConnect?.();
       pushing.add(recipe.id);
       sendingNow.add(request.attemptKey);
       let folder: string | null = null;
@@ -1421,7 +1463,12 @@ export function createKaggleEngine(options: {
       } catch (e) {
         // No answer is not a refusal: it may have arrived, and a second push would
         // replace it. It is followed like any other, and said to be uncertain.
-        if (sending && !sent && !wasRefused((e as Error).message)) {
+        if (
+          sending &&
+          !sent &&
+          !gateClosed(e) &&
+          !wasRefused((e as Error).message)
+        ) {
           if (folder)
             await rm(path.join(folder, "push"), HELD_FOR_A_MOMENT).catch(
               () => {},

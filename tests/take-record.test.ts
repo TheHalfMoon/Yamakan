@@ -29,6 +29,7 @@ import {
 } from "../core/documents.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   memoryLedger,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
@@ -1067,6 +1068,7 @@ test("a run's end is kept once, at its first terminal state", async () => {
   let state: "running" | "failed" = "running";
   const ledger = memoryLedger();
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       submit: async () => ({ executionRef: "r" }),
       status: async () => ({ executionRef: "r", state }),
@@ -1407,6 +1409,7 @@ test("a retry replays what its request committed, whatever has changed since", a
   const row = run(w, asset, { generationId: id() });
   ledger.begin(row);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {} as EngineAdapterV2,
     store: w.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -1548,6 +1551,7 @@ test("an end is stamped when first known, and an older row gains none", async ()
   let state: "running" | "succeeded" | "failed" = "running";
   const ledger = memoryLedger();
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({ executionRef: "r", state }),
       // Each answer takes a while.
@@ -1806,6 +1810,7 @@ test("a record holds what the run said of itself, beside what was asked", async 
   const row = run(w, asset, { imported: null, state: "running" });
   ledger.begin(row);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({ executionRef: "r", state: "succeeded" }),
       enumerateArtifacts: async () => [
@@ -1862,6 +1867,7 @@ test("what an import is the first to learn of a run is kept too", async () => {
   ledger.begin(row);
   const reported = engineReport({ seed: 4 });
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({ executionRef: "r", state: "succeeded" }),
       enumerateArtifacts: async () => [

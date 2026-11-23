@@ -95,6 +95,7 @@ import { MODEL_CATALOG } from "../engines/catalog.ts";
 import { ENGINE_ENABLED } from "../engines/contract.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   outcomeOf,
   type GenerationRecipe,
   type GenerationRecord,
@@ -102,9 +103,11 @@ import {
 import {
   createKaggleEngine,
   kaggleCli,
+  SCRIPT_BYTES,
   kaggleNetwork,
   kaggleRecipeFacts,
   kaggleRecipes,
+  kaggleTimeout,
   ledgerOptions,
   notebookUrl,
   offeredKaggleRecipes,
@@ -186,8 +189,11 @@ import {
   GatePurpose,
   GateRoute,
   approveGate,
+  consumeGates,
   listGateApprovals,
+  requireGate,
   revokeGate,
+  type GateAsk,
 } from "../gates.ts";
 import {
   fromEditView,
@@ -361,22 +367,49 @@ const capabilityReport = (
     localConfigured: ENGINE_ENABLED && ctx.modelRoot !== undefined,
   });
 const kaggleGenerations = new WeakMap<ProjectStore, Generation>();
+// What a person approves for the Kaggle route (MPR-204), under the network settings as they are.
+const kaggleAsk = (kind: "egress" | "spend", account: string): GateAsk => ({
+  kind,
+  route: "kaggle",
+  host: GATE_ROUTES.kaggle.host,
+  account,
+  purpose: "generation",
+  network: kaggleNetwork(process.env),
+});
 function generationOf(ctx: CommandContext): Generation {
   if (ctx.generation) return ctx.generation;
   if (ctx.kaggle) {
     let held = kaggleGenerations.get(ctx.store);
     if (!held) {
+      const { store } = ctx;
+      const { username } = ctx.kaggle;
       const ledger = ctx.queue.generationLedger();
       held = {
         service: createGenerationService({
           adapter: createKaggleEngine({
-            cli: kaggleCli(ctx.kaggle.cli),
-            username: ctx.kaggle.username,
+            cli: kaggleCli(ctx.kaggle.cli, {
+              mayConnect: () =>
+                void requireGate(store, kaggleAsk("egress", username)),
+            }),
+            username,
             ...ledgerOptions(ledger),
           }),
-          store: ctx.store,
+          store,
           resourcePolicyHash: RESOURCE_POLICY_HASH,
           ledger,
+          permit: ({ generationId, recipeId }) =>
+            void consumeGates(
+              store,
+              [
+                // At most the whole script; what a run really sends is MPR-203's to count.
+                { ask: kaggleAsk("egress", username), units: SCRIPT_BYTES },
+                {
+                  ask: kaggleAsk("spend", username),
+                  units: kaggleTimeout(recipeId),
+                },
+              ],
+              generationId,
+            ),
         }),
         recipes: kaggleRecipes(),
       };
@@ -397,6 +430,8 @@ function generationOf(ctx: CommandContext): Generation {
         adapter: createComfyEngine({ baseUrl: ctx.comfyUrl }),
         store: ctx.store,
         resourcePolicyHash: RESOURCE_POLICY_HASH,
+        // A ComfyUI on this computer: no approval is asked for it.
+        permit: noRemoteUse,
       }),
       recipes: PINNED_COMFY_RECIPES.filter(
         (r): r is typeof r & { operation: GenerationRecipe["operation"] } =>

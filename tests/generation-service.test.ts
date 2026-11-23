@@ -20,6 +20,7 @@ import { toCommandError } from "../core/command/errors.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   type GenerationRecipe,
 } from "../core/engines/generation.ts";
 import type {
@@ -160,6 +161,7 @@ const service = (
   adapter: EngineAdapterV2,
 ) =>
   createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store: f.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -192,6 +194,33 @@ test("a request takes the project's own frame rate and exact timing", async () =
     sent.output.kind === "video" ? sent.output.durationTicks : 0,
     29_429_400 * 24,
   );
+});
+
+test("a refused permit records nothing and sends nothing, and is asked once for a run, last of all", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  const asked: { generationId: string; recipeId: string }[] = [];
+  let refuse = true;
+  const g = createGenerationService({
+    permit: (run) => {
+      asked.push(run);
+      if (refuse) throw new CommandError("CAPABILITY_UNAVAILABLE", "Not now.");
+    },
+    adapter,
+    store: f.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+  });
+  // What is refused for another reason is not asked about.
+  await assert.rejects(g.start(ask(f.projectId, { firstFrameAssetId: "x" })));
+  assert.deepEqual(asked, []);
+  await assert.rejects(g.start(ask(f.projectId)), /Not now\./);
+  assert.equal(asked.length, 1);
+  assert.deepEqual(g.list(f.projectId), []);
+  assert.deepEqual(state.submitted, []);
+  refuse = false;
+  const { generationId } = await g.start(ask(f.projectId));
+  assert.deepEqual(asked.slice(1), [{ generationId, recipeId: recipe.id }]);
+  assert.equal(state.submitted.length, 1);
 });
 
 test("an engine's refusal reaches the person as a plain reason, and tracks nothing", async () => {
@@ -438,6 +467,7 @@ test("a still whose consent has expired is refused, as placing it would not be",
   const f = await fixture();
   const { state, adapter } = engine(f.video);
   const later = createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store: f.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -1763,6 +1793,7 @@ test("a run's video, saved as a take, carries the record of its run", async () =
   const { state, adapter } = engine(f.video);
   let now = 1_000;
   const g = createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store: f.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,

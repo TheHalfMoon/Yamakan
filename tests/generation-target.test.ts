@@ -19,6 +19,7 @@ import {
 import { CommandError, toCommandError } from "../core/command/errors.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   type GenerationRecipe,
   type GenerationRecord,
   type TakeOutcome,
@@ -98,6 +99,7 @@ async function workspace(root?: string) {
     ],
   } as unknown as EngineAdapterV2;
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,

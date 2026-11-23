@@ -30,7 +30,7 @@ test(
       `spawn(process.execPath,['-e',${JSON.stringify(child)},process.argv[1],process.argv[2]],{stdio:'ignore',detached:true});` +
       "setInterval(()=>{},1000)";
     const stop = new AbortController();
-    const running = kaggleCli(process.execPath)(
+    const running = kaggleCli(process.execPath, { mayConnect: () => {} })(
       ["-e", parent, beat, pidFile],
       60_000,
       stop.signal,
@@ -77,7 +77,10 @@ test(
       "setInterval(()=>{},1000)";
     try {
       await assert.rejects(
-        kaggleCli(process.execPath)(["-e", parent, beat, pidFile], 1500),
+        kaggleCli(process.execPath, { mayConnect: () => {} })(
+          ["-e", parent, beat, pidFile],
+          1500,
+        ),
         /Timed out/,
       );
       await sleep(800);

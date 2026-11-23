@@ -35,6 +35,7 @@ import {
 } from "../core/engines/contract-v2.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   memoryLedger,
   outcomeOf,
   type GenerationLedger,
@@ -152,6 +153,7 @@ async function workspace(
   const project = await store.create("Classes");
   const ledger = kept === "durable" ? queue.generationLedger() : kept;
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: adapterOf?.(root) ?? ({} as EngineAdapterV2),
     store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -701,6 +703,7 @@ test("a video that came in was made, though it is stopped as or after it comes",
   const after = row({ state: "succeeded", imported, endedAt: 5 });
   ledger.begin(after);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       requestCancel: async () => ({
         requested: false,
@@ -743,6 +746,7 @@ test("a stop during an import that still brings the video in gives way to the ru
     assets: [{ id: "asset", hash, kind: "video" }],
   })) as never;
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({ executionRef: "r", state: "succeeded" }),
       enumerateArtifacts: async () => {
@@ -827,6 +831,7 @@ test("the oldest rows are given no billing as they end either", async () => {
   const row = { ...ROW, projectId: w.project.id, remote: undefined };
   ledger.begin(row);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({
         executionRef: "r",
@@ -859,6 +864,7 @@ test("an import keeps the end that was already known", async () => {
     assets: [{ id: "asset", hash, kind: "video" }],
   })) as never;
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({ executionRef: "r", state: "succeeded" }),
       enumerateArtifacts: async () => {
@@ -915,6 +921,7 @@ test("a row from before gains nothing as it is stopped, dismissed or asked again
   ];
   for (const r of rows) ledger.begin(r);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       status: async () => ({
         executionRef: "r",
@@ -1021,6 +1028,7 @@ test("a row stored before failure classes reads as unknown, and one with a word 
   ];
   for (const r of rows) ledger.begin(r);
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: {} as EngineAdapterV2,
     store: w.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
