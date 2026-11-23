@@ -1172,3 +1172,34 @@ test("screen time counts per playing channel, so unmuting a second clip is new u
     REVOKED,
   );
 });
+
+test("a story saved in the older form and one in the newer both assemble", async () => {
+  const c = await workspace();
+  for (const formatVersion of [1, 2]) {
+    const board = story(c, null);
+    board.scenes[0].id = id();
+    for (const shot of board.scenes[0].shots) shot.id = id();
+    const storyId = id();
+    await saveStory(c, storyId, {
+      ...board,
+      formatVersion,
+    } as unknown as StoryDocument);
+    assert.equal(
+      c.store.getDocument(c.projectId, storyId).ref.schemaVersion,
+      2,
+    );
+    const before = await head(c);
+    const assembled = (
+      await execute(c.browser, "yamakan.story.assemble", {
+        projectId: c.projectId,
+        expectedRevision: before.revision,
+        documentId: storyId,
+        trackId: before.tracks.find((t) => t.kind === "video")!.id,
+      })
+    ).result as Project;
+    assert.equal(
+      assembled.clips.length - before.clips.length,
+      board.scenes[0].shots.length,
+    );
+  }
+});

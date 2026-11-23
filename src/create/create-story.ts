@@ -148,7 +148,8 @@ export type TakeRecordSource =
 export type TakeRecordRequest = { takeId: string; from: TakeRecordSource };
 
 // The records to ask for with a story that now holds this video: its take's, from the run
-// that made it, else from its receipt. A receipt that names no model has none to declare.
+// that made it, else from its receipt. A receipt that names no model, or whose prompt is too
+// long to record, has none to declare.
 export function recordRequests(
   story: CreateStory,
   assetId: string,
@@ -160,7 +161,7 @@ export function recordRequests(
     .find((t) => t.assetId === assetId);
   if (!take || take.recordHash) return [];
   if (generationId) return [{ takeId: take.id, from: { generationId } }];
-  if (!receipt.model) return [];
+  if (!receipt.model || receipt.wholePrompt === null) return [];
   return [
     {
       takeId: take.id,
@@ -168,7 +169,7 @@ export function recordRequests(
         declared: {
           model: receipt.model,
           ...(receipt.revision ? { revision: receipt.revision } : {}),
-          prompt: receipt.prompt,
+          prompt: receipt.wholePrompt ?? receipt.prompt,
           seed: receipt.seed,
           steps: receipt.steps,
           ...(receipt.licence ? { licence: receipt.licence } : {}),

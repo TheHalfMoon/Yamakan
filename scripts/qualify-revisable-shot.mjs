@@ -7,12 +7,24 @@
  * The engine is the in-process fake, and its one output is replaced by a test pattern made
  * with ffmpeg here: nothing in it is AI output. No network, no model, no spend.
  *
+ * What this host has is recorded first. What the run needs is unmeasured, so nothing is
+ * refused for it; a missing ffmpeg or native helper ends BLOCKED, never PASS.
+ *
  * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json]
  */
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statfsSync,
+  writeFileSync,
+} from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { freemem, loadavg, tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import { ProjectStore } from "../core/store.ts";
@@ -28,20 +40,113 @@ import { diagnostic } from "../core/engines/contract-v2.ts";
 import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { mediaTools } from "../core/process/workers.ts";
 
-const receiptOut = process.argv[2] ?? null;
+const receiptOut =
+  process.argv[2] ??
+  fileURLToPath(
+    new URL(
+      "../docs/evidence/ultimate/MPR-101-take-record-receipt.json",
+      import.meta.url,
+    ),
+  );
 const root = mkdtempSync(join(tmpdir(), "yamakan-revisable-shot-"));
 const steps = [];
 const step = (name, detail = {}) => {
   steps.push({ name, ...detail });
   console.log(`ok - ${name}`);
 };
+// Where core/process/owner.ts looks for it.
+const procd =
+  process.env.YAMAKAN_PROCD ||
+  fileURLToPath(
+    new URL(
+      "../native/procd/target/release/yamakan-procd.exe",
+      import.meta.url,
+    ),
+  );
 const FRAME = 23_520_000;
 // core/store.ts MAX_REVISION.
 const MAX_REVISION = 10_000;
 const PROMPT = "A test pattern, not a generated video.";
 let passed = false;
+let blocked = null;
 let failure = null;
 const open = [];
+
+// Windows only, and only a reading: null is not known.
+const onAcPower = () => {
+  if (process.platform !== "win32") return null;
+  try {
+    const said = execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).trim();
+    return said === "Online" ? true : said === "Offline" ? false : null;
+  } catch {
+    return null;
+  }
+};
+const disk = statfsSync(root);
+const host = {
+  platform: process.platform,
+  freeDiskBytes: Number(disk.bavail) * Number(disk.bsize),
+  freeMemoryBytes: freemem(),
+  onAcPower: onAcPower(),
+  // Windows reports none.
+  load: process.platform === "win32" ? null : loadavg(),
+  need: "unmeasured",
+};
+console.log(JSON.stringify(host));
+
+// The head's story as an older build stored it: its bytes, hash and version 1, named by a
+// head snapshot of its own. The service is closed.
+const asAnOlderBuildStored = (projectId, ref, story) => {
+  const bytes = Buffer.from(canonicalJson(story), "utf8");
+  const hash = sha256Hex(bytes);
+  const db = new DatabaseSync(join(root, "workspace", "workspace.sqlite"));
+  const head = db
+    .prepare(
+      "SELECT p.snapshot_hash AS hash, s.format AS format, s.bytes AS bytes FROM projects p JOIN snapshots s ON s.hash = p.snapshot_hash WHERE p.project_id = ?",
+    )
+    .get(projectId);
+  const was = Buffer.from(head.bytes).toString("utf8");
+  const project = JSON.parse(was);
+  assert.equal(JSON.stringify(project), was, "the snapshot keeps its form");
+  const named = project.documents.find((d) => d.id === ref.id);
+  named.contentHash = hash;
+  named.schemaVersion = 1;
+  const snapshot = Buffer.from(JSON.stringify(project), "utf8");
+  const next = sha256Hex(snapshot);
+  db.prepare(
+    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, 1, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
+  ).run(hash, bytes, bytes.length, ref.contentHash);
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) SELECT project_id, document_id, ?, revision FROM story_document_versions WHERE content_hash = ?",
+  ).run(hash, ref.contentHash);
+  db.prepare(
+    "INSERT INTO snapshots(hash, format, bytes, byte_length) VALUES (?, ?, ?, ?)",
+  ).run(next, head.format, snapshot, snapshot.length);
+  db.prepare(
+    "INSERT INTO snapshot_document_refs SELECT ?, document_hash FROM snapshot_document_refs WHERE snapshot_hash = ? AND document_hash <> ?",
+  ).run(next, head.hash, ref.contentHash);
+  db.prepare("INSERT INTO snapshot_document_refs VALUES (?, ?)").run(
+    next,
+    hash,
+  );
+  db.prepare("UPDATE projects SET snapshot_hash = ? WHERE project_id = ?").run(
+    next,
+    projectId,
+  );
+  db.prepare(
+    "UPDATE revisions SET snapshot_hash = ? WHERE project_id = ? AND snapshot_hash = ?",
+  ).run(next, projectId, head.hash);
+  db.close();
+  return hash;
+};
 
 const workspace = async () => {
   const store = new ProjectStore(join(root, "workspace"));
@@ -60,6 +165,18 @@ const shut = async () => {
 };
 
 try {
+  // Looked for before anything runs.
+  if (!existsSync(procd)) blocked = "The native helpers are not built.";
+  else
+    try {
+      execFileSync(mediaTools().ffmpeg, ["-version"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+    } catch {
+      blocked = "ffmpeg does not start on this host.";
+    }
+  if (blocked) throw new Error(blocked);
   const file = join(root, "pattern.mp4");
   execFileSync(
     mediaTools().ffmpeg,
@@ -208,19 +325,42 @@ try {
   old.scenes[0].shots[0].id = randomUUID();
   old.scenes[0].shots[0].takes[0].id = randomUUID();
   old.scenes[0].shots[0].selectedTakeId = old.scenes[0].shots[0].takes[0].id;
-  const upgraded = await call("yamakan.story.save", {
+  const first = await call("yamakan.story.save", {
     projectId,
     expectedRevision: await head(),
     documentId: second,
     expectedContentHash: null,
-    story: old,
+    story: { ...old, formatVersion: 2 },
+  });
+  await shut();
+  const oldHash = asAnOlderBuildStored(projectId, first.document, old);
+  ctx = await workspace();
+  const readOld = await call("yamakan.document.get", {
+    projectId,
+    documentId: second,
+  });
+  assert.equal(readOld.schemaVersion, 1);
+  assert.deepEqual(readOld.content, old);
+  const oldList = await call("yamakan.take.list", {
+    projectId,
+    documentId: second,
+  });
+  assert.equal(oldList.shots[0].takes[0].recordHash, null);
+  const upgraded = await call("yamakan.story.save", {
+    projectId,
+    expectedRevision: await head(),
+    documentId: second,
+    expectedContentHash: oldHash,
+    story: readOld.content,
   });
   assert.equal(upgraded.document.schemaVersion, 2);
   const content = (
     await call("yamakan.document.get", { projectId, documentId: second })
   ).content;
   assert.deepEqual(content, { ...old, formatVersion: 2 });
-  step("a version 1 story is saved as version 2 with every part kept");
+  step(
+    "a stored version 1 story is read, and saved as version 2 with every part kept",
+  );
   passed = true;
 } catch (e) {
   // This receipt may be committed, and an error can hold a local path naming the user.
@@ -241,7 +381,8 @@ try {
             execFileSync("git", ["status", "--porcelain"], {
               encoding: "utf8",
             }).trim() !== "",
-          host: process.platform,
+          host,
+          outcome: passed ? "PASS" : blocked ? "BLOCKED" : "FAIL",
           passed,
           failure,
           steps,
@@ -261,5 +402,11 @@ try {
     console.log(`note - left behind: ${root} (${e.code})`);
   }
 }
-console.log(passed ? "REVISABLE SHOT PASS" : "REVISABLE SHOT FAIL");
+console.log(
+  passed
+    ? "REVISABLE SHOT PASS"
+    : blocked
+      ? `REVISABLE SHOT BLOCKED: ${blocked}`
+      : "REVISABLE SHOT FAIL",
+);
 process.exit(passed ? 0 : 1);

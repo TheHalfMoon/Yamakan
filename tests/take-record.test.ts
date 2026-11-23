@@ -17,19 +17,28 @@ import {
 } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
-import { DOCUMENT_READ_VERSIONS, validateDocument } from "../core/documents.ts";
+import {
+  DOCUMENT_READ_VERSIONS,
+  DocumentRefSchema,
+  validateDocument,
+} from "../core/documents.ts";
 import {
   createGenerationService,
   memoryLedger,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
 import type { EngineAdapterV2 } from "../core/engines/contract-v2.ts";
-import { KAGGLE_RECIPES } from "../core/engines/kaggle.ts";
+import {
+  KAGGLE_RECIPES,
+  kaggleRecipeFacts,
+  kaggleRecipes,
+} from "../core/engines/kaggle.ts";
 import {
   STORY_LIMITS,
   StoryDocumentV1Schema,
   parseStory,
   storyTextBytes,
+  verifyStory,
   type StoryDocument,
 } from "../core/story.ts";
 import {
@@ -41,6 +50,7 @@ import {
   recordHashOf,
   type TakeRecord,
 } from "../core/take-record.ts";
+import { renderStoryShot } from "../core/director/cinema-pipeline.ts";
 import type { Asset, Project } from "../core/project.ts";
 
 const bases: string[] = [];
@@ -243,7 +253,9 @@ test("a generation's take record matches its ledger row and its own hash", async
   const row = run(w, asset, {
     recipe: {
       id: "kaggle-wan22-ti2v-5b-first-frame",
-      hash: "c".repeat(64),
+      hash: kaggleRecipes().find(
+        (r) => r.id === "kaggle-wan22-ti2v-5b-first-frame",
+      )!.hash,
       operation: "imageToVideo",
       modelManifestHash: sha256Hex(`${wan.model}@${wan.revision}`),
     },
@@ -622,9 +634,10 @@ test("a record the service did not write for a take is refused, and nothing is s
       ),
       SERVICE,
     );
-  // Removed, changed, its media changed, and one written over it.
+  // Removed, changed, its media changed, and (below) one written over it.
   for (const edit of [
     (takes: Take[]) => void delete takes[0]!.recordHash,
+    (takes: Take[]) => void (takes[0]!.recordHash = "e".repeat(64)),
     (takes: Take[]) => void (takes[0]!.assetId = b.id),
   ])
     assert.equal(await reason(save(w, documentId, changed(edit))), KEEPS);
@@ -980,4 +993,427 @@ test("a record's hash is its canonical JSON's, whatever the key order", () => {
     { ...record, extra: 1 },
   ])
     assert.equal(TakeRecordSchema.safeParse(bad).success, false);
+});
+
+test("a record is read only for the project and story that hold it", async () => {
+  const w = await workspace();
+  const asset = await video(w, "held");
+  const row = run(w, asset);
+  const documentId = id();
+  const t = take(asset);
+  const { records } = await save(w, documentId, story([t]), {
+    records: [{ takeId: t.id, from: { generationId: row.generationId } }],
+  });
+  const hash = records[0]!.recordHash;
+  assert.equal(
+    w.store.takeRecord(w.projectId, documentId, hash).output.sha256,
+    asset.hash,
+  );
+  const other = (
+    await execute(w.ctx, "yamakan.project.create", { name: "Other" })
+  ).result as Project;
+  for (const [project, document] of [
+    [w.projectId, id()],
+    [other.id, documentId],
+  ] as const)
+    assert.equal(
+      await reason((async () => w.store.takeRecord(project, document, hash))()),
+      "NOT_FOUND: The take has no generation record.",
+    );
+  // The shared verifier refuses one not held, for the commands that read a story.
+  const body = stored(w, documentId);
+  const project = await w.store.load(w.projectId);
+  const context = (held: boolean, attached?: Set<string>) => ({
+    db: null as never,
+    project,
+    documents: [],
+    held: () => held,
+    attached,
+    nowMs: 0,
+  });
+  verifyStory(body, context(true), documentId);
+  verifyStory(body, context(false, new Set([hash])), documentId);
+  assert.throws(
+    () => verifyStory(body, context(false), documentId),
+    /written by the service/,
+  );
+  // A copy of the story under another id keeps no record.
+  assert.equal(
+    await reason(save(w, id(), { ...body, title: "Copy" })),
+    "VALIDATION: A take's generation record is written by the service.",
+  );
+});
+
+test("a record is never a project document, staged, or written but with a story", async () => {
+  const w = await workspace();
+  assert.equal(
+    DocumentRefSchema.safeParse({
+      id: id(),
+      kind: "takeRecord",
+      schemaVersion: 1,
+      contentHash: "a".repeat(64),
+    }).success,
+    false,
+  );
+  const record = buildDeclaredRecord(
+    { model: "m", prompt: "p", seed: 1 },
+    "a".repeat(64),
+    [],
+  );
+  const bytes = Buffer.from(canonicalJson(record), "utf8");
+  const commit = (over: object) =>
+    reason(
+      (async () =>
+        w.store.commitDocument({
+          projectId: w.projectId,
+          expectedRevision: (await w.store.load(w.projectId)).revision,
+          documentId: id(),
+          kind: "takeRecord",
+          schemaVersion: 1,
+          expectedContentHash: null,
+          source: { bytes },
+          verify: () => {},
+          ...over,
+        } as Parameters<typeof w.store.commitDocument>[0]))(),
+    );
+  assert.equal(
+    await commit({}),
+    "VALIDATION: A take record is saved with its take.",
+  );
+  const scene = {
+    kind: "story",
+    schemaVersion: 2,
+    source: { bytes: Buffer.from(JSON.stringify(story([]))) },
+  };
+  assert.equal(await commit({ ...scene, attachments: [record] }), "ok");
+  assert.equal(
+    await commit({ ...scene, attachments: Array(9).fill(record) }),
+    "VALIDATION: Only a story's save writes take records, a few at a time.",
+  );
+  assert.equal(
+    await commit({
+      kind: "referencePack",
+      source: {
+        bytes: Buffer.from(
+          JSON.stringify({
+            format: "yamakan.reference-pack",
+            formatVersion: 1,
+            name: "P",
+            entries: [],
+          }),
+        ),
+      },
+      attachments: [record],
+    }),
+    "VALIDATION: Only a story's save writes take records, a few at a time.",
+  );
+  assert.match(
+    await reason(
+      (async () =>
+        w.store.reserveDocumentUpload({
+          projectId: w.projectId,
+          principalId: "browser-ui",
+          requestId: id(),
+          kind: "takeRecord",
+          schemaVersion: 1,
+          declaredBytes: bytes.length,
+          bodySha256: "a".repeat(64),
+        }))(),
+    ),
+    /^VALIDATION: Stories, take records/,
+  );
+  // A story over another kind of document is refused as that.
+  const packId = id();
+  await execute(w.ctx, "yamakan.pack.save", {
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId: packId,
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "P",
+      entries: [],
+    },
+  });
+  assert.equal(
+    await reason(save(w, packId, story([]))),
+    "VALIDATION: A document keeps its kind.",
+  );
+});
+
+test("a retry replays what its request committed, whatever has changed since", async () => {
+  const w = await workspace();
+  const before = (await w.store.load(w.projectId)).revision;
+  const asset = await video(w, "retried");
+  const t = take(asset);
+  const documentId = id();
+  const ledger = memoryLedger();
+  const row = run(w, asset, { generationId: id() });
+  ledger.begin(row);
+  const service = createGenerationService({
+    adapter: {} as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  const request = async (from: object) => ({
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId,
+    expectedContentHash: null,
+    story: story([t]),
+    records: [{ takeId: t.id, from }],
+  });
+  const local = run(w, asset);
+  await w.store.transaction((db) =>
+    db.prepare("DELETE FROM jobs WHERE job_id = ?").run(local.generationId),
+  );
+  ledger.begin(local);
+  const ctx = {
+    ...w.ctx,
+    requestId: id(),
+    generation: { service, recipes: [] },
+  } as CommandContext;
+  const sent = await request({ generationId: local.generationId });
+  const first = (await execute(ctx, "yamakan.story.save", sent))
+    .result as Saved;
+  assert.equal(first.records.length, 1);
+  // The run in this machine's memory is gone, and so is the media from the head.
+  const gone = { ...ctx, generation: undefined } as CommandContext;
+  const history = (
+    await execute(w.ctx, "yamakan.project.history", { projectId: w.projectId })
+  ).result as { headFingerprint: string };
+  await execute(w.ctx, "yamakan.project.restore", {
+    projectId: w.projectId,
+    revision: before,
+    expectedHeadFingerprint: history.headFingerprint,
+  });
+  const again = (await execute(gone, "yamakan.story.save", sent))
+    .result as Saved;
+  assert.deepEqual(again.records, first.records);
+  assert.equal(again.project.revision, first.project.revision);
+  assert.deepEqual(again.document, first.document);
+  // Another request under the same id is refused, and so is one for another document.
+  for (const other of [
+    { ...sent, story: { ...sent.story, title: "Other" } },
+    { ...sent, documentId: id() },
+  ])
+    assert.match(
+      await reason(execute(gone, "yamakan.story.save", other)),
+      /^IDEMPOTENCY_MISMATCH/,
+    );
+});
+
+test("a declared prompt appears in no row", async () => {
+  const w = await workspace();
+  const asset = await video(w, "declared");
+  const t = take(asset);
+  await execute({ ...w.ctx, requestId: id() }, "yamakan.story.save", {
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId: id(),
+    expectedContentHash: null,
+    story: story([t]),
+    records: [
+      {
+        takeId: t.id,
+        from: { declared: { model: "m", prompt: PROMPT, seed: 1 } },
+      },
+    ],
+  });
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"), {
+    readOnly: true,
+  });
+  const tables = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+    )
+    .all() as { name: string }[];
+  for (const { name } of tables)
+    for (const row of db.prepare(`SELECT * FROM ${name}`).all() as object[])
+      for (const v of Object.values(row))
+        assert.ok(
+          !(
+            v instanceof Uint8Array ? Buffer.from(v).toString() : String(v)
+          ).includes("zq-71-marker"),
+          name,
+        );
+  db.close();
+});
+
+test("what a recipe says is recorded only for the model version and script it is of", async () => {
+  const [known] = kaggleRecipes();
+  assert.deepEqual(kaggleRecipeFacts(known!), {
+    route: "kaggle",
+    model: { id: wan.model, revision: wan.revision, licence: wan.licence },
+    fps: wan.fps,
+    steps: wan.steps,
+  });
+  const older = kaggleRecipeFacts({ ...known!, hash: "a".repeat(64) });
+  assert.equal(older?.model?.id, wan.model);
+  assert.deepEqual([older?.fps, older?.steps], [null, null]);
+  assert.equal(
+    kaggleRecipeFacts({ ...known!, modelManifestHash: "a".repeat(64) }),
+    null,
+  );
+  assert.equal(kaggleRecipeFacts({ ...known!, id: "other" }), null);
+  // Through the command, a recipe this build does not know is a local engine's.
+  const w = await workspace();
+  const asset = await video(w, "local");
+  const row = run(w, asset, {
+    recipe: {
+      id: "local-graph",
+      hash: "d".repeat(64),
+      operation: "textToVideo",
+      modelManifestHash: "e".repeat(64),
+    },
+  });
+  const t = take(asset);
+  const documentId = id();
+  await save(w, documentId, story([t]), {
+    records: [{ takeId: t.id, from: { generationId: row.generationId } }],
+  });
+  const { record } = await read(w, documentId, stored(w, documentId));
+  assert.equal(record.route, "comfyui");
+  assert.equal(record.model?.id, "local-graph");
+});
+
+test("an end is stamped when first known, and an older row gains none", async () => {
+  const w = await workspace();
+  const asset = await video(w, "ended");
+  let now = 0;
+  let state: "running" | "succeeded" | "failed" = "running";
+  const ledger = memoryLedger();
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({ executionRef: "r", state }),
+      // Each answer takes a while.
+      enumerateArtifacts: async () => {
+        now += 500;
+        return [
+          {
+            handle: "o.mp4",
+            mediaType: "video/mp4",
+            byteLength: 10,
+            sha256: asset.hash,
+          },
+        ];
+      },
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+    now: () => now,
+  });
+  const begin = (over: Partial<GenerationRecord>) => {
+    const row = run(w, asset, {
+      endedAt: undefined,
+      importedAt: undefined,
+      imported: null,
+      state: "running",
+      ...over,
+    });
+    ledger.begin(row);
+    return row.generationId;
+  };
+  // The import is what learns of it: known before the video is read.
+  state = "succeeded";
+  now = 1_000;
+  const first = begin({});
+  await service.importResult(first);
+  assert.equal(service.row(first)?.endedAt, 1_000);
+  assert.equal(service.row(first)?.importedAt, 1_500);
+  // A row that ended before this field was kept does not gain the import's time.
+  const older = begin({ state: "succeeded" });
+  await service.importResult(older);
+  assert.equal(service.row(older)?.endedAt, undefined);
+  assert.equal(typeof service.row(older)?.importedAt, "number");
+  // One that seemed ended, went on and ended again keeps the first time.
+  const twice = begin({});
+  for (const [at, s] of [
+    [10_000, "failed"],
+    [11_000, "running"],
+    [12_000, "failed"],
+  ] as const) {
+    now = at;
+    state = s;
+    await service.status(twice);
+  }
+  assert.equal(service.row(twice)?.endedAt, 10_000);
+});
+
+test("a recorded take, and one of a version 1 story, are placed by apply", async () => {
+  for (const older of [false, true]) {
+    const w = await workspace();
+    const [a, b] = [await video(w, "first"), await video(w, "second")];
+    const documentId = id();
+    const takes = [take(a), take(b)];
+    const body = story(takes);
+    await save(
+      w,
+      documentId,
+      body,
+      older
+        ? {}
+        : {
+            records: takes.map((t) => ({
+              takeId: t.id,
+              from: { declared: { model: "m", prompt: "p", seed: 1 } },
+            })),
+          },
+    );
+    if (older)
+      asAnOlderBuildStored(w, documentId, { ...body, formatVersion: 1 });
+    const opened = await w.store.load(w.projectId);
+    await execute(w.ctx, "yamakan.story.assemble", {
+      projectId: w.projectId,
+      expectedRevision: opened.revision,
+      documentId,
+      trackId: opened.tracks.find((t) => t.kind === "video")!.id,
+    });
+    const proposal = (
+      await execute(w.ctx, "yamakan.take.proposeReplace", {
+        projectId: w.projectId,
+        documentId,
+        shotId: body.scenes[0]!.shots[0]!.id,
+        takeId: takes[1]!.id,
+      })
+    ).result as { revision: number };
+    const applied = (
+      await execute(w.ctx, "yamakan.take.apply", {
+        projectId: w.projectId,
+        expectedRevision: proposal.revision,
+        proposal,
+      })
+    ).result as Project;
+    assert.equal(applied.clips.at(-1)!.assetId, b.id, `older: ${older}`);
+  }
+});
+
+test("a shot of a version 1 story is planned for a render", async () => {
+  const w = await workspace();
+  const documentId = id();
+  const body = story([]);
+  await save(w, documentId, body);
+  asAnOlderBuildStored(w, documentId, { ...body, formatVersion: 1 });
+  const started = (
+    await execute(w.ctx, "yamakan.director.start", {
+      projectId: w.projectId,
+      pipelineName: "cinema-blender",
+    })
+  ).result as { id: string };
+  const planned = await renderStoryShot(
+    w.store,
+    {
+      submitBlenderRender: async () => ({ id: "job" }),
+    } as unknown as JobSupervisor,
+    {
+      runId: started.id,
+      storyDocumentId: documentId,
+      shotId: body.scenes[0]!.shots[0]!.id,
+      direction: {},
+    },
+  );
+  assert.equal(planned.shot.id, body.scenes[0]!.shots[0]!.id);
 });

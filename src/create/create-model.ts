@@ -203,7 +203,11 @@ export type RunReceipt = {
   // The project's media a run started here was made from, such as its first frame. A
   // receipt file brought in by hand names none.
   inputs?: { assetId: string; assetHash: string }[];
+  // The receipt's own prompt, where this page cut it: null when it is too long to record.
+  wholePrompt?: string | null;
 };
+// The longest prompt a take's record takes (core/engines/contract-v2.ts).
+export const DECLARED_PROMPT_LIMIT = 4000;
 
 export function parseReceipt(text: string): RunReceipt {
   let r: any;
@@ -236,6 +240,12 @@ export function parseReceipt(text: string): RunReceipt {
     steps: r.steps,
     sha256: r.sha256,
     licence: typeof r.license === "string" ? r.license.slice(0, 80) : null,
+    ...(r.prompt.length > PROMPT_LIMIT
+      ? {
+          wholePrompt:
+            r.prompt.length > DECLARED_PROMPT_LIMIT ? null : r.prompt,
+        }
+      : {}),
   };
 }
 

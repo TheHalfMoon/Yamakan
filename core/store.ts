@@ -1594,6 +1594,29 @@ export class ProjectStore {
         .get(receipt.principalId, projectId, receipt.requestId),
     );
   }
+  /**
+   * The version of a document that this request's commit left, for a retry of it:
+   * undefined when the request has committed nothing, null when its commit has no
+   * such document (it was another request).
+   */
+  committedDocument(
+    receipt: RequestReceipt,
+    projectId: string,
+    documentId: string,
+  ): DocumentRef | null | undefined {
+    const row = this.#database
+      .prepare(
+        "SELECT v.revision AS revision FROM command_receipts r JOIN revisions v ON v.receipt_id = r.id WHERE r.principal_id = ? AND r.project_id = ? AND r.request_id = ?",
+      )
+      .get(receipt.principalId, projectId, receipt.requestId) as
+      { revision: number } | undefined;
+    if (!row) return undefined;
+    return (
+      this.listDocumentsAt(projectId, row.revision).find(
+        (d) => d.id === documentId,
+      ) ?? null
+    );
+  }
   // The documents of one retained revision.
   listDocumentsAt(projectId: string, revision: number): DocumentRef[] {
     const row = this.#database
@@ -1650,10 +1673,12 @@ export class ProjectStore {
         "VALIDATION",
         "A take record is saved with its take.",
       );
-    // Older versions are read, and never written.
+    // Older versions are read, and never written; a retry of a request that an older
+    // build committed only replays.
     if (
       "bytes" in input.source &&
-      input.schemaVersion !== DOCUMENT_SCHEMA_VERSIONS[kind]
+      input.schemaVersion !== DOCUMENT_SCHEMA_VERSIONS[kind] &&
+      !(receipt && this.hasCommittedRequest(receipt, input.projectId))
     )
       throw new CommandError(
         "VALIDATION",

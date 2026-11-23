@@ -162,18 +162,24 @@ const sha256 = (data: string | Uint8Array) =>
 export const offeredKaggleRecipes = () =>
   KAGGLE_RECIPES.filter((r) => r.offered && existsSync(scriptOf(r)));
 
-/** What this build knows of a run's recipe, if it is one of these at this model version. */
+/**
+ * What this build knows of a run's recipe, if it is one of these at this model version. Its
+ * frame rate and steps are in its script, so they are known only of this build's own.
+ */
 export function kaggleRecipeFacts(
-  recipe: Pick<GenerationRecipe, "id" | "modelManifestHash">,
+  recipe: Pick<GenerationRecipe, "id" | "hash" | "modelManifestHash">,
 ): RecipeFacts | null {
   const r = KAGGLE_RECIPES.find((x) => x.id === recipe.id);
   if (!r || sha256(`${r.model}@${r.revision}`) !== recipe.modelManifestHash)
     return null;
+  const sameScript =
+    existsSync(scriptOf(r)) &&
+    sha256(readFileSync(scriptOf(r))) === recipe.hash;
   return {
     route: "kaggle",
     model: { id: r.model, revision: r.revision, licence: r.licence },
-    fps: r.fps,
-    steps: r.steps,
+    fps: sameScript ? r.fps : null,
+    steps: sameScript ? r.steps : null,
   };
 }
 

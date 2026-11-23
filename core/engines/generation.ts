@@ -80,8 +80,8 @@ export type GenerationRecord = {
   // may or may not have; it is checked, and never sent again.
   phase: "sending" | "sent";
   startedAt: number;
-  // When it first reached an end, and when its video was brought in. Absent from older
-  // records.
+  // When it was first known to have ended, and when its video was brought in. Absent from
+  // older records.
   endedAt?: number;
   importedAt?: number;
   state: ExecutionStatus["state"];
@@ -188,7 +188,11 @@ export function createGenerationService(options: {
     );
 
   // The moment a run is first known to have ended is kept with it, once.
-  const update = (id: string, change: Partial<GenerationRecord>) => {
+  const update = (
+    id: string,
+    change: Partial<GenerationRecord>,
+    known = clock(),
+  ) => {
     const before = ledger.read(id);
     const ends =
       change.state !== undefined &&
@@ -196,7 +200,7 @@ export function createGenerationService(options: {
       before &&
       !ENDED.has(before.state) &&
       before.endedAt === undefined;
-    ledger.update(id, ends ? { ...change, endedAt: clock() } : change);
+    ledger.update(id, ends ? { ...change, endedAt: known } : change);
   };
   const tracked = (id: string) => {
     const g = ledger.read(id);
@@ -230,6 +234,7 @@ export function createGenerationService(options: {
         "VALIDATION",
         "Only a finished generation can be imported.",
       );
+    const endKnown = clock();
     const artifacts = (await adapter.enumerateArtifacts(refOf(g))).filter(
       (a) => a.mediaType === "video/mp4",
     );
@@ -255,12 +260,16 @@ export function createGenerationService(options: {
               : createHash("sha256").update(g.prompt).digest("hex"),
         },
       };
-      update(id, {
-        imported,
-        importedAt: clock(),
-        phase: "sent",
-        state: "succeeded",
-      });
+      update(
+        id,
+        {
+          imported,
+          importedAt: clock(),
+          phase: "sent",
+          state: "succeeded",
+        },
+        endKnown,
+      );
       return imported;
     };
     // Brought in already, and the answer was lost or the service stopped before

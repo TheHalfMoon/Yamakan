@@ -387,6 +387,8 @@ test("hostile document bytes are refused before or during parsing", () => {
       (e: unknown) => e instanceof CommandError && e.code === code,
     );
   expect(() => validateDocument("studio", 2, ok), "VALIDATION");
+  // A story is read at both versions, and no other.
+  expect(() => validateDocument("story", 3, ok), "VALIDATION");
   expect(
     () =>
       validateDocument(

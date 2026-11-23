@@ -435,8 +435,50 @@ type WrittenRecord = {
   record: TakeRecord;
 };
 
-// The story with the records it asks for named on their takes. Every record is built from
-// what the service holds, so a retry of the request builds the same one.
+// What a retry of a save replays: the story that the request committed, under its own
+// version, and the records it named. Nothing is built again, since what a record is built
+// from may be gone or changed by now. The commit still checks the whole request.
+function committedStory(
+  store: ProjectStore,
+  receipt: RequestReceipt | undefined,
+  a: {
+    projectId: string;
+    documentId: string;
+    records?: z.infer<typeof RecordRequestSchema>[];
+  },
+) {
+  const ref =
+    receipt && store.committedDocument(receipt, a.projectId, a.documentId);
+  if (ref === undefined) return null;
+  if (ref?.kind !== "story")
+    throw new CommandError(
+      "IDEMPOTENCY_MISMATCH",
+      "Request ID was already used for a different request.",
+    );
+  const bytes = store.documentBytes(ref);
+  const story = parseStory(JSON.parse(bytes.toString("utf8")));
+  const hashOf = new Map(
+    story.scenes.flatMap((sc) =>
+      sc.shots.flatMap((shot) =>
+        shot.takes.map((t) => [t.id, t.recordHash] as const),
+      ),
+    ),
+  );
+  return {
+    story,
+    bytes,
+    schemaVersion: ref.schemaVersion,
+    attachments: [] as TakeRecord[],
+    records: (a.records ?? []).flatMap(({ takeId }) => {
+      const recordHash = hashOf.get(takeId);
+      return recordHash === undefined ? [] : [{ takeId, recordHash }];
+    }),
+    written: [] as WrittenRecord[],
+  };
+}
+
+// The story with the records it asks for named on their takes, each built from what the
+// service holds.
 async function withRecords(
   ctx: CommandContext,
   a: {
@@ -523,6 +565,21 @@ async function withRecords(
       })),
     },
     written,
+  };
+}
+
+async function builtStory(
+  ctx: CommandContext,
+  a: Parameters<typeof withRecords>[1],
+) {
+  const { story, written } = await withRecords(ctx, a);
+  return {
+    story,
+    written,
+    bytes: Buffer.from(JSON.stringify(story), "utf8"),
+    schemaVersion: DOCUMENT_SCHEMA_VERSIONS.story,
+    attachments: written.map((w) => w.record),
+    records: written.map(({ takeId, recordHash }) => ({ takeId, recordHash })),
   };
 }
 
@@ -790,27 +847,27 @@ export const commands = {
       const { store, principal, receipt } = ctx;
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
-      const { story, written } = await withRecords(ctx, a);
+      const { story, written, bytes, schemaVersion, attachments, records } =
+        committedStory(store, receipt, a) ?? (await builtStory(ctx, a));
       const project = await store.commitDocument(
         {
           projectId: a.projectId,
           expectedRevision: a.expectedRevision,
           documentId: a.documentId,
           kind: "story",
-          schemaVersion: DOCUMENT_SCHEMA_VERSIONS.story,
+          schemaVersion,
           expectedContentHash: a.expectedContentHash,
-          source: { bytes: Buffer.from(JSON.stringify(story), "utf8") },
+          source: { bytes },
           principalId: principal.id,
-          attachments: written.map((w) => w.record),
+          attachments,
           verify: (c) => {
-            verifyStory(story, c, a.documentId);
-            // Takes' continuity references stay traceable (no consent
-            // needed to keep history).
-            verifyStoryContinuity(story, c);
             assertRecordsKept(
               story,
               a.story.formatVersion,
-              c.documents.some((d) => d.id === a.documentId)
+              // Another kind of document is refused as that, by the commit.
+              c.documents.some(
+                (d) => d.id === a.documentId && d.kind === "story",
+              )
                 ? JSON.parse(
                     store
                       .getDocument(a.projectId, a.documentId)
@@ -819,6 +876,10 @@ export const commands = {
                 : null,
               written,
             );
+            verifyStory(story, c, a.documentId);
+            // Takes' continuity references stay traceable (no consent
+            // needed to keep history).
+            verifyStoryContinuity(story, c);
           },
         },
         receipt,
@@ -829,10 +890,7 @@ export const commands = {
         document: store
           .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
-        records: written.map(({ takeId, recordHash }) => ({
-          takeId,
-          recordHash,
-        })),
+        records,
       };
     },
   }),
