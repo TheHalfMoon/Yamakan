@@ -33,6 +33,8 @@ const validInput: Record<string, unknown> = {
     variants: [{ name: "wide", width: 1280, height: 720 }],
   },
   "yamakan.export.batchCancel": { projectId: id, batchId: "a".repeat(32) },
+  "yamakan.proxy.build": { projectId: id, assetId: id },
+  "yamakan.proxy.cancel": { projectId: id, assetId: id },
   "yamakan.job.cancel": { jobId: id },
   "yamakan.job.retry": { jobId: id },
   "yamakan.job.discard": { jobId: id },

@@ -68,7 +68,7 @@ export class YamakanClient {
     // every request: between two, the service can stop and another process take its port.
     this.#fetch = this.#token
       ? ((async (input: RequestInfo | URL, init?: RequestInit) => {
-          await this.#verify(raw);
+          await this.#verify(raw, init?.signal ?? undefined);
           return raw(input, init);
         }) as typeof fetch)
       : raw;
@@ -81,7 +81,7 @@ export class YamakanClient {
       return this.#base;
     }
   }
-  async #verify(raw: typeof fetch) {
+  async #verify(raw: typeof fetch, signal?: AbortSignal) {
     const key = await tokenKey(this.#token!);
     const nonce = newNonce();
     const url = `${this.#base}/api/v1/hello?id=${await serviceId(key)}&nonce=${nonce}`;
@@ -99,11 +99,17 @@ export class YamakanClient {
       error?: { code?: ErrorCode; message?: string; retryable?: boolean };
     } | null;
     try {
-      response = await raw(url, { method: "GET" });
+      response = await raw(url, {
+        method: "GET",
+        ...(signal ? { signal } : {}),
+      });
       value = await response.json().catch(() => null);
     } catch {
+      // Stopped by the caller, which is nothing the service did.
+      signal?.throwIfAborted();
       throw refused();
     }
+    signal?.throwIfAborted();
     // An unknown, revoked or ended token is refused as any call with it would be, in this
     // client's own words: nothing an unproven party says is passed on. The token was not sent.
     if (value?.error?.code === "UNAUTHENTICATED")
@@ -134,9 +140,14 @@ export class YamakanClient {
     operation: O,
     parameters: OperationInput<O>,
     requestId?: string,
+    // Stops waiting for the answer. What the service was already sent, it may still do.
+    options: { signal?: AbortSignal } = {},
   ): Promise<OperationResult<O>> {
+    const { signal } = options;
+    signal?.throwIfAborted();
     const response = await this.#fetch(`${this.#base}/api/v1/call`, {
       method: "POST",
+      ...(signal ? { signal } : {}),
       headers: this.#headers({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         apiVersion: 1,
@@ -147,6 +158,7 @@ export class YamakanClient {
       }),
     });
     const value = await response.json().catch(() => null);
+    signal?.throwIfAborted();
     if (!response.ok || !value || "error" in value) {
       const e = value?.error;
       throw new YamakanError(
@@ -363,21 +375,30 @@ export class YamakanClient {
     }
     return response.blob();
   }
-  async catalog(): Promise<{
+  async catalog(options: { signal?: AbortSignal } = {}): Promise<{
     apiVersion: number;
     service: string;
     tools: {
       name: Operation;
       scope: string;
       mutation: boolean;
+      humanOnly: boolean;
+      destructive: boolean;
+      // What a request id does: a mutation's is replayed or refused; a read keeps none.
+      requestId: "replayed" | "refused" | "none";
       summary: string;
       inputSchema: Record<string, unknown>;
     }[];
+    // The commands this client may not call, and why.
+    withheld: { name: Operation; reason: "scope" | "browser-only" }[];
   }> {
+    const { signal } = options;
     const response = await this.#fetch(`${this.#base}/api/v1/tools`, {
       headers: this.#headers(),
+      ...(signal ? { signal } : {}),
     });
     const value = await response.json().catch(() => null);
+    signal?.throwIfAborted();
     if (!response.ok || !value) {
       const e = value?.error;
       throw new YamakanError(
