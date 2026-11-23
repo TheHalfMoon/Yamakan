@@ -1,5 +1,7 @@
 # P10 release gate matrix
 
+> **Status, 2026-11-23, main 16d2175:** the engine and local-AI rows predate the founder decisions of 2026-11-05; release remains NO-GO. Kept as written for history. Current state: [current-state index](../../CURRENT_STATE_INDEX.md).
+
 Public release remains **NO-GO** until every mandatory row passes **and** the founder gives artifact-bound ship authorization (H5).
 
 | Gate | Owner | Pre-P10 | P10 engineering action | Blocks |

@@ -1,5 +1,7 @@
 # Agent-native command platform
 
+> **Status, 2026-11-23, main 16d2175:** a proposal; the MCP server, scoped agent tokens and the TypeScript SDK now exist, and no Python SDK does. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts](OPERATIONAL_CONTRACTS.md) own current scope and exact protocols. Earlier evidence remains bounded; no final implementation or founder approval is implied.
 
 All transports use one typed command service: UI, REST, CLI, MCP and TypeScript/Python SDKs share schema validation, scopes, revision checks, audit, consent and quotas. Core production does not require browser clicks. The legacy whole-project tool surface proves a path; granular scopes/full MCP are proposed work.

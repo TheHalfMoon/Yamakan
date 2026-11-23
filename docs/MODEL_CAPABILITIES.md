@@ -1,5 +1,7 @@
 # Versioned generation and capability contract
 
+> **Status, 2026-11-23, main 16d2175:** a proposal from before the generation work; the contract in code has five operations, not the thirteen listed. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts](OPERATIONAL_CONTRACTS.md) own current scope and exact protocols. Earlier evidence remains bounded; no final implementation or founder approval is implied.
 
 GenerationRequest v1 is an operation union, not a flat universal parameter list. Common fields: requestId, projectId/revision, operation, immutable input asset-version refs/hashes, prompt, optional seed, output spec, model/provider constraints, region/privacy policy, maximum cost, approved quote and consent refs. Callers cannot supply arbitrary worker paths/URLs.

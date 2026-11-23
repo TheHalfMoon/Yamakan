@@ -1,5 +1,7 @@
 # Capability, privacy and cost router
 
+> **Status, 2026-11-23, main 16d2175:** a proposal; the router still offers no network route, but generation can reach the network through the Kaggle route, which the router does not govern. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts](OPERATIONAL_CONTRACTS.md) own current scope and exact protocols. Earlier evidence remains bounded; no final implementation or founder approval is implied.
 
 Apply hard filters first: actual operation/conditioning support, rights/entitlement, user credentials, asset/region egress consent, output limits, hardware/readiness, quota and remaining budget. Rank eligible routes by measured quality, estimated total cost and latency; never trade away a required capability for price/popularity.
