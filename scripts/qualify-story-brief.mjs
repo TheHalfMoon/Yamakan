@@ -96,6 +96,8 @@ async function profile() {
       .trim(),
   );
   await page.waitForFunction(() => location.hash === "");
+  // The link is gone from the address before its session is there.
+  await page.waitForFunction(() => sessionStorage.getItem("yamakan.session"));
   // The harness's own calls, which are no save of the page's.
   const call = async (operation, parameters) => {
     const body = await page.evaluate(
