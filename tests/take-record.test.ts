@@ -51,6 +51,7 @@ import {
 } from "../core/story.ts";
 import {
   RECORD_HOLDS_PROMPT,
+  REVISION_FIELDS,
   TAKE_RECORD_LIMITS,
   TakeRecordSchema,
   buildDeclaredRecord,
@@ -303,6 +304,8 @@ test("a generation's take record matches its ledger row and its own hash", async
   assert.equal(record.operation, "imageToVideo");
   assert.deepEqual(record.request, {
     kind: "generation",
+    // FD-2: its words, and the hash that they match.
+    prompt: PROMPT,
     promptHash: sha256Hex(PROMPT),
     seed: 7,
     width: 704,
@@ -363,24 +366,49 @@ test("a row without its end, or of a recipe this build does not know, records wh
     manifestHash: "e".repeat(64),
     licence: null,
   });
-  // The prompt's words are in a record only when FD-2 says so; both forms are valid.
-  assert.equal(RECORD_HOLDS_PROMPT, false);
-  assert.ok(!("prompt" in record.request));
-  const open = buildGenerationRecord(
-    row,
-    { route: "comfyui", model: null, fps: null, steps: null },
-    true,
-  );
+  // The prompt's words are in a record as FD-2 was answered; one without them, as records were
+  // made before, is valid too.
+  assert.equal(RECORD_HOLDS_PROMPT, true);
   assert.equal(
-    open.request.kind === "generation" && open.request.prompt,
+    record.request.kind === "generation" && record.request.prompt,
     PROMPT,
   );
-  TakeRecordSchema.parse(open);
+  const facts = {
+    route: "comfyui" as const,
+    model: null,
+    fps: null,
+    steps: null,
+  };
+  const bare = buildGenerationRecord(row, facts, false);
+  assert.ok(!("prompt" in bare.request));
+  assert.equal(
+    bare.request.kind === "generation" && bare.request.promptHash,
+    sha256Hex(PROMPT),
+  );
+  TakeRecordSchema.parse(bare);
+  // A run with no prompt has none to hold.
+  const silent = buildGenerationRecord(
+    {
+      ...row,
+      prompt: null,
+      imported: {
+        ...row.imported!,
+        lineage: { ...row.imported!.lineage, promptHash: null },
+      },
+    },
+    facts,
+  );
+  assert.ok(!("prompt" in silent.request));
 });
 
-// The head's story as an older build left it: its bytes, hash and version 1, named by a head
+// The head's story as an older build left it: its bytes, hash and version, named by a head
 // snapshot of its own.
-function asAnOlderBuildStored(w: W, documentId: string, one: object) {
+function asAnOlderBuildStored(
+  w: W,
+  documentId: string,
+  one: object,
+  version = 1,
+) {
   const bytes = Buffer.from(canonicalJson(one), "utf8");
   const hash = sha256Hex(bytes);
   const ref = w.store
@@ -395,13 +423,13 @@ function asAnOlderBuildStored(w: W, documentId: string, one: object) {
   const was = Buffer.from(head.bytes).toString("utf8");
   const now = was
     .replace(ref.contentHash, hash)
-    .replace('"schemaVersion":2', '"schemaVersion":1');
-  assert.ok(now.includes(hash) && now.includes('"schemaVersion":1'));
+    .replace('"schemaVersion":2', `"schemaVersion":${version}`);
+  assert.ok(now.includes(hash) && now.includes(`"schemaVersion":${version}`));
   const snapshot = Buffer.from(now, "utf8");
   const next = sha256Hex(snapshot);
   db.prepare(
-    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, 1, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
-  ).run(hash, bytes, bytes.length, ref.contentHash);
+    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, ?, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
+  ).run(hash, version, bytes, bytes.length, ref.contentHash);
   db.prepare(
     "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) SELECT project_id, document_id, ?, revision FROM story_document_versions WHERE content_hash = ?",
   ).run(hash, ref.contentHash);
@@ -592,6 +620,17 @@ test("a declared record says so, and a retry of the request replays it", async (
   assert.equal(record.route, "receiptFile");
   assert.equal(record.source, null);
   assert.equal(record.output.sha256, asset.hash);
+  assert.deepEqual(record.request, {
+    kind: "generation",
+    prompt: PROMPT,
+    promptHash: sha256Hex(PROMPT),
+    seed: 3,
+    width: null,
+    height: null,
+    durationFrames: null,
+    fps: null,
+    steps: 20,
+  });
   assert.deepEqual(record.model, {
     id: "someone/model",
     revision: "r1",
@@ -605,15 +644,16 @@ test("a declared record says so, and a retry of the request replays it", async (
   });
 });
 
-test("a prompt appears in no receipt, revision or outbox row, nor in the record", async () => {
+test("a prompt is in its run's row and its take's record, and in no receipt, revision or outbox row", async () => {
   const w = await workspace();
   const asset = await video(w, "private");
   const row = run(w, asset);
   const t = take(asset);
+  const documentId = id();
   await execute({ ...w.ctx, requestId: id() }, "yamakan.story.save", {
     projectId: w.projectId,
     expectedRevision: (await w.store.load(w.projectId)).revision,
-    documentId: id(),
+    documentId,
     expectedContentHash: null,
     story: story([t]),
     records: [{ takeId: t.id, from: { generationId: row.generationId } }],
@@ -638,9 +678,87 @@ test("a prompt appears in no receipt, revision or outbox row, nor in the record"
       .all() as { name: string }[]
   ).map((r) => r.name);
   assert.ok(tables.includes("command_receipts"));
-  // Only the run's own ledger row.
-  assert.deepEqual(tables.filter(holds), ["jobs"]);
+  // The run's own ledger row, and the record.
+  assert.deepEqual(tables.filter(holds).sort(), ["creative_documents", "jobs"]);
+  assert.deepEqual(
+    (
+      db.prepare("SELECT kind, bytes FROM creative_documents").all() as {
+        kind: string;
+        bytes: Uint8Array;
+      }[]
+    )
+      .filter((r) => Buffer.from(r.bytes).toString().includes("zq-71-marker"))
+      .map((r) => r.kind),
+    ["takeRecord"],
+  );
   db.close();
+  // Nor does it leave with the project, its interchange file or its handoff.
+  for (const name of [
+    "yamakan.project.export",
+    "yamakan.project.exportOtio",
+    "yamakan.handoff.read",
+    "yamakan.progress.read",
+    "yamakan.project.history",
+    "yamakan.take.list",
+    "yamakan.document.list",
+  ]) {
+    const { result } = await execute(w.ctx, name, {
+      projectId: w.projectId,
+      ...(name === "yamakan.take.list" ? { documentId } : {}),
+    });
+    assert.ok(!JSON.stringify(result).includes("zq-71-marker"), name);
+  }
+});
+
+test("a record made before prompts were kept is read and kept as it is", async () => {
+  const w = await workspace();
+  const asset = await video(w, "older");
+  const t = take(asset);
+  const row = run(w, asset);
+  const documentId = id();
+  await save(w, documentId, story([t]), {
+    records: [{ takeId: t.id, from: { generationId: row.generationId } }],
+  });
+  const body = stored(w, documentId);
+  const now = await read(w, documentId, body);
+  // The same record as the build before this one wrote it.
+  const older = structuredClone(now.record);
+  assert.ok(older.request.kind === "generation" && older.request.prompt);
+  delete older.request.prompt;
+  const bytes = Buffer.from(canonicalJson(older), "utf8");
+  const recordHash = recordHashOf(older);
+  assert.notEqual(recordHash, now.recordHash);
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  db.prepare(
+    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, schema_version, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
+  ).run(recordHash, bytes, bytes.length, now.recordHash);
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) SELECT project_id, document_id, ?, revision FROM story_document_versions WHERE content_hash = ?",
+  ).run(recordHash, now.recordHash);
+  db.close();
+  const before = structuredClone(body);
+  before.scenes[0]!.shots[0]!.takes[0]!.recordHash = recordHash;
+  asAnOlderBuildStored(w, documentId, before, 2);
+  assert.deepEqual(await read(w, documentId, before), {
+    ...now,
+    recordHash,
+    record: older,
+  });
+  // A save keeps it, and gives its take no other.
+  await save(w, documentId, { ...before, title: "Renamed" });
+  assert.equal(
+    stored(w, documentId).scenes[0]!.shots[0]!.takes[0]!.recordHash,
+    recordHash,
+  );
+  assert.match(
+    await reason(
+      save(w, documentId, before, {
+        records: [{ takeId: t.id, from: { generationId: row.generationId } }],
+      }),
+    ),
+    /^VALIDATION/,
+  );
+  assert.equal((await read(w, documentId, before)).recordHash, recordHash);
 });
 
 test("a record the service did not write for a take is refused, and nothing is stored", async () => {
@@ -765,7 +883,7 @@ test("a generation of another project, not imported, or of other media is refuse
   db.close();
 });
 
-test("bounds: eight records, the prompt, unknown keys, and 16 KiB", async () => {
+test("bounds: eight records, the prompt and unknown keys, and the largest record fits", async () => {
   const w = await workspace();
   const asset = await video(w, "bounds");
   const takes = Array.from({ length: 8 }, () => take(asset));
@@ -789,17 +907,75 @@ test("bounds: eight records, the prompt, unknown keys, and 16 KiB", async () => 
     /^VALIDATION/,
   );
   assert.equal(await ask({ declared }, 8), "ok");
-  const record = buildDeclaredRecord(
-    { ...declared, prompt: "\u0000".repeat(4000) },
-    asset.hash,
-    [],
-    true,
+  // Nothing a person can write into a prompt stops its take's record from being kept.
+  for (const c of ["x", "\u0639", "\u6f22", "\u0000", "\ud800"])
+    assert.equal(
+      await ask({ declared: { ...declared, prompt: c.repeat(4000) } }),
+      "ok",
+      JSON.stringify(c),
+    );
+  // The largest record there can be: every part at its bound, of the widest characters.
+  const wide = (n: number) => "\u0000".repeat(n);
+  const whole = Number.MAX_SAFE_INTEGER;
+  const hash = "a".repeat(64);
+  const largest = TakeRecordSchema.parse({
+    format: "yamakan.take-record",
+    formatVersion: 1,
+    origin: "generation",
+    route: "comfyui",
+    source: { generationId: id() },
+    recipe: { id: wide(80), hash },
+    model: {
+      id: wide(200),
+      revision: wide(80),
+      manifestHash: hash,
+      licence: wide(80),
+    },
+    operation: "imageToVideo",
+    request: {
+      kind: "generation",
+      prompt: wide(4000),
+      promptHash: hash,
+      seed: whole,
+      width: whole,
+      height: whole,
+      durationFrames: whole,
+      fps: 2.2250738585072014e-308,
+      steps: whole,
+    },
+    inputs: Array.from({ length: TAKE_RECORD_LIMITS.inputs }, () => ({
+      assetId: id(),
+      assetHash: hash,
+      role: "firstFrame",
+    })),
+    output: { sha256: hash },
+    reported: {
+      model: {
+        id: `${"a".repeat(99)}/${"b".repeat(100)}`,
+        version: "v".repeat(80),
+      },
+      seed: whole,
+      runtime: {
+        python: "v".repeat(80),
+        torch: "v".repeat(80),
+        packages: Array.from({ length: 32 }, () => "p".repeat(80)),
+      },
+    },
+    timings: { startedAt: whole, endedAt: whole, importedAt: whole },
+    usage: { wallMs: whole, quotaSeconds: 2.2250738585072014e-308 },
+    derivedFromTakeId: id(),
+    derivedFromRecordHash: hash,
+    revisionNote: wide(TAKE_RECORD_LIMITS.revisionNote),
+    changedFields: [...REVISION_FIELDS],
+  });
+  const bytes = Buffer.from(canonicalJson(largest), "utf8");
+  assert.ok(
+    bytes.length > 35_000 && bytes.length <= TAKE_RECORD_LIMITS.recordBytes,
+    `${bytes.length}`,
   );
-  const bytes = Buffer.from(canonicalJson(record), "utf8");
-  assert.ok(bytes.length > TAKE_RECORD_LIMITS.recordBytes);
-  assert.throws(
-    () => validateDocument("takeRecord", 1, bytes),
-    /Canonical document exceeds 16384 bytes/,
+  assert.equal(
+    validateDocument("takeRecord", 1, bytes).hash,
+    recordHashOf(largest),
   );
 });
 
@@ -1254,7 +1430,7 @@ test("a retry replays what its request committed, whatever has changed since", a
     );
 });
 
-test("a declared prompt appears in no row", async () => {
+test("a declared prompt is in its take's record and in no other row", async () => {
   const w = await workspace();
   const asset = await video(w, "declared");
   const t = take(asset);
@@ -1279,15 +1455,22 @@ test("a declared prompt appears in no row", async () => {
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
     )
     .all() as { name: string }[];
+  const where: string[] = [];
   for (const { name } of tables)
     for (const row of db.prepare(`SELECT * FROM ${name}`).all() as object[])
       for (const v of Object.values(row))
-        assert.ok(
-          !(
-            v instanceof Uint8Array ? Buffer.from(v).toString() : String(v)
-          ).includes("zq-71-marker"),
-          name,
-        );
+        if (
+          (v instanceof Uint8Array
+            ? Buffer.from(v).toString()
+            : String(v)
+          ).includes("zq-71-marker")
+        )
+          where.push(
+            name === "creative_documents"
+              ? (row as { kind: string }).kind
+              : name,
+          );
+  assert.deepEqual(where, ["takeRecord"]);
   db.close();
 });
 

@@ -20,7 +20,7 @@ Every receipt names its commit and what the machine had first; three of the five
 The cards' lists of requirements were read for this; their other open items are in their own evidence files.
 
 - **MPR-010 is not met by this.** Its text names the Windows host, for the browser run and for a time to be measured. On GitHub's Windows machine it failed, and on the founder's computer it is BLOCKED. The pinned-take finding stays open.
-- **MPR-101:** FD-2 is not answered, and its Definition of Done asks for the answer to be on record. Its Blender arm is BLOCKED, which its text allows to be recorded so.
+- **MPR-101:** FD-2 was not answered when this was written, and its Definition of Done asks for the answer to be on record; it was answered later the same day ([evidence](MPR-101-take-record.md#fd-2-the-prompt-is-kept)). Its Blender arm is BLOCKED, which its text allows to be recorded so.
 - **MPR-105:** its text also has `qualify:director-cinema` run, to show that the Cinema placement needs no change. That needs Blender and is BLOCKED. Its Arabic string is unreviewed, and its departures from the card are listed in its evidence.
 
 The founder answered that a card whose text names no computer may be VERIFIED on results from GitHub's machine ([record](../../FOUNDER_DECISION_RECORD.md#2026-11-23-a-card-that-names-no-computer-may-be-verified-on-githubs-results)). That verifies none of them by itself.
