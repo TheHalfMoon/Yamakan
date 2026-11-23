@@ -26,6 +26,8 @@ export const ENGINE_V2_LIMITS = Object.freeze({
   deadlineMs: 6 * 60 * 60 * 1000,
   dimension: 8192,
   durationTicks: 705_600_000 * 60 * 10,
+  // Reference pictures in one request (OA-15).
+  references: 4,
 });
 
 const Sha256 = z.string().regex(/^[0-9a-f]{64}$/);
@@ -152,6 +154,16 @@ const input = <R extends string>(
     })
     .strict();
 
+// What a picture is for, when it is no frame of the video: what to look like. After the frames,
+// and only where an engine says it honours the role; none does (OA-15).
+const Reference = input("reference", ["image/png", "image/jpeg"]).omit({
+  atTicks: true,
+});
+const referencesFit = (inputs: readonly { role: string }[]) =>
+  inputs.filter((i) => i.role === "reference").length <=
+  ENGINE_V2_LIMITS.references;
+const REFERENCES = `At most ${ENGINE_V2_LIMITS.references} references.`;
+
 // One strict schema per operation: roles, counts and media are exact.
 export const EngineRequestV2Schema = z.discriminatedUnion("operation", [
   z
@@ -159,7 +171,7 @@ export const EngineRequestV2Schema = z.discriminatedUnion("operation", [
       ...common,
       operation: z.literal("textToVideo"),
       prompt: Prompt,
-      inputs: z.tuple([]),
+      inputs: z.array(Reference).max(ENGINE_V2_LIMITS.references, REFERENCES),
       output: VideoOutput,
     })
     .strict(),
@@ -169,11 +181,18 @@ export const EngineRequestV2Schema = z.discriminatedUnion("operation", [
       operation: z.literal("imageToVideo"),
       prompt: Prompt.optional(),
       inputs: z.union([
-        z.tuple([input("firstFrame", ["image/png", "image/jpeg"])]),
-        z.tuple([
-          input("firstFrame", ["image/png", "image/jpeg"]),
-          input("lastFrame", ["image/png", "image/jpeg"]),
-        ]),
+        z
+          .tuple([input("firstFrame", ["image/png", "image/jpeg"])], Reference)
+          .refine(referencesFit, REFERENCES),
+        z
+          .tuple(
+            [
+              input("firstFrame", ["image/png", "image/jpeg"]),
+              input("lastFrame", ["image/png", "image/jpeg"]),
+            ],
+            Reference,
+          )
+          .refine(referencesFit, REFERENCES),
       ]),
       output: VideoOutput,
     })

@@ -682,6 +682,24 @@ const en = {
     "This computer is not qualified for this operation, or its qualification has expired.",
   "engine.reason.RIGHTS_UNQUALIFIED":
     "The model's license does not allow this use.",
+  "engine.reason.CONTROL_UNSUPPORTED":
+    "This engine does not follow one of these settings.",
+  "engine.reason.OUTPUT_UNSUPPORTED":
+    "This engine does not make a video of this size, length or kind.",
+  "engine.reason.RECIPE_UNKNOWN": "This engine does not know this recipe.",
+  "engine.reason.INPUT_UNSUPPORTED":
+    "This engine does not use one of these inputs.",
+  "engine.reason.STALE_ATTEMPT": "A newer attempt has taken this one's place.",
+  "engine.reason.ATTEMPT_CONFLICT":
+    "This attempt was made with a different request.",
+  "engine.reason.INVALID_REQUEST": "The engine could not read this request.",
+  "engine.reason.NOT_QUALIFIED": "This has not been checked here yet.",
+  "engine.reason.OPERATION_NOT_OFFERED":
+    "Yamakan has no recipe for this with this model.",
+  "engine.reason.OFFER_RETIRED": "This is no longer offered.",
+  "engine.reason.ROUTE_NOT_CONFIGURED":
+    "This service was not set up to use that route.",
+  "engine.reason.MODEL_REFUSED": "This model was looked at and turned down.",
   "engine.available": "Available.",
   "engine.present":
     "The model files are in place; they are checked in full when the engine starts.",
@@ -1423,6 +1441,21 @@ const ar: Record<MessageKey, string> = {
   "engine.reason.HARDWARE_UNQUALIFIED":
     "هذا الحاسوب غير مؤهَّل لهذه العملية، أو انتهت صلاحية تأهيله.",
   "engine.reason.RIGHTS_UNQUALIFIED": "ترخيص النموذج لا يسمح بهذا الاستخدام.",
+  "engine.reason.CONTROL_UNSUPPORTED": "لا يتبع هذا المحرك أحد هذه الإعدادات.",
+  "engine.reason.OUTPUT_UNSUPPORTED":
+    "لا ينتج هذا المحرك فيديو بهذا المقاس أو الطول أو النوع.",
+  "engine.reason.RECIPE_UNKNOWN": "لا يعرف هذا المحرك هذه الوصفة.",
+  "engine.reason.INPUT_UNSUPPORTED": "لا يستخدم هذا المحرك أحد هذه المدخلات.",
+  "engine.reason.STALE_ATTEMPT": "حلّت محاولة أحدث محل هذه المحاولة.",
+  "engine.reason.ATTEMPT_CONFLICT": "أُجريت هذه المحاولة بطلب مختلف.",
+  "engine.reason.INVALID_REQUEST": "تعذر على المحرك قراءة هذا الطلب.",
+  "engine.reason.NOT_QUALIFIED": "لم يُفحص هذا هنا بعد.",
+  "engine.reason.OPERATION_NOT_OFFERED":
+    "ليس لدى يماكن وصفة لهذا مع هذا النموذج.",
+  "engine.reason.OFFER_RETIRED": "لم يعد هذا معروضًا.",
+  "engine.reason.ROUTE_NOT_CONFIGURED":
+    "لم تُعدّ هذه الخدمة لاستخدام ذلك المسار.",
+  "engine.reason.MODEL_REFUSED": "نُظر في هذا النموذج ورُفض.",
   "engine.available": "متاحة.",
   "engine.present": "ملفات النموذج في مكانها، وتُفحص كاملةً عند تشغيل المحرك.",
   "engine.op.textToVideo": "نص إلى فيديو",

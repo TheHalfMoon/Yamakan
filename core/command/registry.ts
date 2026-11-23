@@ -87,6 +87,13 @@ import {
   probeComfy,
 } from "../engines/comfyui.ts";
 import {
+  buildCapabilityReport,
+  projectGenerationOptions,
+  type LocalDiscovery,
+} from "../engines/capability-report.ts";
+import { MODEL_CATALOG } from "../engines/catalog.ts";
+import { ENGINE_ENABLED } from "../engines/contract.ts";
+import {
   createGenerationService,
   outcomeOf,
   type GenerationRecipe,
@@ -329,6 +336,19 @@ type Generation = {
   recipes: readonly GenerationRecipe[];
 };
 const generations = new WeakMap<ProjectStore, Generation>();
+// What each route can do here (MPR-202). What was set up says which routes are, and changes no
+// cell.
+const capabilityReport = (
+  ctx: CommandContext,
+  discovery: readonly LocalDiscovery[],
+) =>
+  buildCapabilityReport({
+    catalog: MODEL_CATALOG,
+    discovery,
+    kaggleConfigured: ctx.kaggle !== undefined,
+    comfyConfigured: ctx.comfyUrl !== undefined,
+    localConfigured: ENGINE_ENABLED && ctx.modelRoot !== undefined,
+  });
 const kaggleGenerations = new WeakMap<ProjectStore, Generation>();
 function generationOf(ctx: CommandContext): Generation {
   if (ctx.generation) return ctx.generation;
@@ -2825,27 +2845,31 @@ export const commands = {
     input: z.object({}).strict(),
     run: (ctx) => {
       const { kaggle } = ctx;
-      return {
-        route: kaggle ? ("kaggle" as const) : null,
-        models: kaggle
-          ? offeredKaggleRecipes().map((r) => ({
-              recipeId: r.id,
-              name: r.name,
-              operation: r.operation ?? ("textToVideo" as const),
-              model: r.model,
-              revision: r.revision,
-              licence: r.licence,
-              width: r.width,
-              height: r.height,
-              frames: r.frames,
-              fps: r.fps,
-              steps: r.steps,
-              expectedSeconds: r.expectedSeconds,
-              timeoutSeconds: r.timeoutSeconds,
-              notebook: notebookUrl(kaggle.username, r),
-            }))
-          : [],
-      };
+      // Chosen by the report. Discovery decides the local route alone, so it is not asked here.
+      return projectGenerationOptions(
+        capabilityReport(ctx, []),
+        kaggle
+          ? {
+              recipes: offeredKaggleRecipes(),
+              modelOf: (r) => ({
+                recipeId: r.id,
+                name: r.name,
+                operation: r.operation ?? ("textToVideo" as const),
+                model: r.model,
+                revision: r.revision,
+                licence: r.licence,
+                width: r.width,
+                height: r.height,
+                frames: r.frames,
+                fps: r.fps,
+                steps: r.steps,
+                expectedSeconds: r.expectedSeconds,
+                timeoutSeconds: r.timeoutSeconds,
+                notebook: notebookUrl(kaggle.username, r),
+              }),
+            }
+          : null,
+      );
     },
   }),
   "yamakan.generation.list": define({
@@ -3035,27 +3059,27 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Report which generative operations could run here and, if not, the plain reason (never downloads or installs).",
+      "Report which generative operations could run here and, if not, the plain reason; and, as `report`, what each route can do with each model for each operation: supported, unsupported or unverified, with its source, date, limits and reasons (never downloads or installs).",
     input: z.object({}).strict(),
-    run: async (ctx) => ({
-      operations:
-        // A status answer: presence, size and links, never every weight's
-        // content (an engine start verifies that).
-        (
-          await discoverEngineCapabilities({
-            modelRoot: ctx.modelRoot ?? null,
-            verifyHashes: false,
-          })
-        ).map((d) => ({
-          operation: d.operation,
-          available: d.capability.available,
-          verified: d.verified,
-          reason: d.capability.reason ?? null,
-          message: d.message,
-          version: d.version ?? null,
-          expiresAt: d.expiresAt ?? null,
-        })),
-    }),
+    run: async (ctx) => {
+      // A status answer: presence, size and links, never every weight's
+      // content (an engine start verifies that).
+      const operations = (
+        await discoverEngineCapabilities({
+          modelRoot: ctx.modelRoot ?? null,
+          verifyHashes: false,
+        })
+      ).map((d) => ({
+        operation: d.operation,
+        available: d.capability.available,
+        verified: d.verified,
+        reason: d.capability.reason ?? null,
+        message: d.message,
+        version: d.version ?? null,
+        expiresAt: d.expiresAt ?? null,
+      }));
+      return { operations, report: capabilityReport(ctx, operations) };
+    },
   }),
   "yamakan.director.start": define({
     scope: "project:write",
