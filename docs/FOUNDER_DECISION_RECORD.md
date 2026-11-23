@@ -263,3 +263,11 @@ Approval line in the packet's format:
 - **Taken to mean:** by the builder, not the founder's words: the kind is required of an engine's answer that a run failed or was stopped, and refused in any other; an engine that does not know says "unknown"; and an answer that breaks this is still read as "unknown" and not turned into an error of its own.
 - **Not put to the founder:** where MPR-202 puts the date and the sample size and what it counts as one measured fact, which are the builder's, in the card's text; and that the engine contract keeps its name although an answer now needs the kind.
 - **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.
+
+## 2026-11-23: Engine reports say sound and lengths, and a request may name references
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "May engine reports add audio and length ranges, and requests name references (OA-15)?", with the choices "Yes, add them" and "No, leave as is", the founder answered "Yes, add them". The founder was told that the builder recommended yes, since without it the app cannot tell beforehand that an engine lacks these; that it held MPR-202; that a report could say whether an engine makes sound and what range of lengths it allows, and a request could mark a picture as a reference; and that it adds fields only and turns nothing on. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** open amendment OA-15 of the master plan revision, in MPR-202, MPR-203 and the take record of MPR-101.
+- **Taken to mean:** by the builder, not the founder's words: a recipe that makes one length says it twice; a reference is a PNG or JPEG, at most four in a request, beside text or the frames; and a request with one is refused wherever no engine honours it, which is everywhere today.
+- **Not put to the founder:** which engine should take references first, and what consent a reference picture of a person needs; no command takes one, so nothing can be sent.
+- **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.

@@ -208,7 +208,7 @@ Verdict: yes with fixes. ME-1 must be settled before any Stage 6 local card.
 | Id | Severity | Finding | Disposition |
 |---|---|---|---|
 | ME-1 | BLOCKER | Image and speech operations had no owning card. | FIXED: MPR-220 adds `textToImage` and MPR-221 adds `textToSpeech`, each by the five intake steps of MPR-206. |
-| ME-2 | MAJOR | The capability report and preflight cannot describe references, audio output, controls or extension. | PARTLY FIXED: `limits` in MPR-202 has a `references` entry. The rest is OA-15. |
+| ME-2 | MAJOR | The capability report and preflight cannot describe references, audio output, controls or extension. | PARTLY FIXED: `limits` in MPR-202 has a `references` entry, and, by OA-15 (accepted on 2026-11-23), sound and a range of lengths; a request may name references. Controls and extension are still not described, as MPR-202's risks say. |
 | ME-3 | MAJOR | The worst-case figure is a waiting time used as a unit of spend. | LEFT OPEN: OA-1. MPR-203 states the limit under risks. |
 | ME-4 | MAJOR | The preflight hash changes when the run does not. | FIXED: the hash in MPR-203 covers the parts that define the run. |
 | ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101. A Kaggle run reports its script's own pins, model and the seed it was sent, not all that was installed, so a take still cannot be reproduced from its record. |
@@ -316,7 +316,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-12 | MPR-604, MPR-101 | The sample story has two shots with declared takes, so the first screen shows the revisable shot; MPR-604 then depends on MPR-101. | FM-8 | MPR-604 |
 | OA-13 | MPR-301 | MPR-301 depends on MPR-209, so that no Director work ships before the notices are right. | OM-1 | MPR-301 starts |
 | OA-14 | MPR-003 and every card with parts | The registry carries a state and an acceptance list for each part of a card. | OM-7, SA-10 | MPR-003 |
-| OA-15 | MPR-202, MPR-101, MPR-203 | The capability report gains `audioOut` and a range for `durationFrames`; requests gain a `reference` role. | ME-2 | MPR-202 |
+| OA-15 | MPR-202, MPR-101, MPR-203 | The capability report gains `audioOut` and a range for `durationFrames`; requests gain a `reference` role (accepted by the founder on 2026-11-23). | ME-2 | accepted |
 | OA-16 | MPR-101, MPR-201 | The take record gains the runtime lock, the provider's model id and version, and the seed the run reported (accepted by the founder on 2026-11-23; the amendment does not say what MPR-201 changes, so its text is as it was). | ME-5 | accepted |
 | OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size (accepted by the founder on 2026-11-23). | ME-6 | accepted |
 | OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted` (accepted by the founder on 2026-11-23). | ME-8 | accepted |

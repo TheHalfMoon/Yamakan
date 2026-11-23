@@ -1204,6 +1204,43 @@ test("a history entry naming a path outside the output folder is not an output",
   engine.close();
 });
 
+test("two pictures for the one place of a role are refused before anything is uploaded", async () => {
+  const r = recipe({
+    constraints: { ...recipe().constraints, roles: ["reference"] },
+    bindings: {
+      roles: { reference: { node: "sampler", input: "text" } },
+    },
+  });
+  const { f, engine } = await started(r);
+  const png = Buffer.from("real image bytes");
+  const reference = {
+    role: "reference",
+    asset: {
+      assetVersionId: "asset-1",
+      sha256: sha(png),
+      mediaType: "image/png" as const,
+    },
+  };
+  const submit = (n: number) =>
+    engine.submit(
+      request(r, {
+        attemptKey: `r${n}`,
+        controls: {},
+        inputs: Array.from({ length: n }, () => reference),
+      }),
+      {
+        async *openAsset() {
+          yield png;
+        },
+      },
+    );
+  assert.deepEqual(await submit(2), { refused: "INPUT_UNSUPPORTED" });
+  assert.equal(f.uploads.length, 0);
+  assert.ok("executionRef" in (await submit(1)));
+  assert.equal(f.uploads.length, 1);
+  engine.close();
+});
+
 test("an input is streamed, and one failing its hash is never submitted", async () => {
   const r = recipe({
     operation: "imageToVideo",
