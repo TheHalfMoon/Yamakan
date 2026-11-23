@@ -1,7 +1,7 @@
 // Starting a model on the person's own Kaggle GPU, and following it. Nothing runs
 // until they tick that their prompt may leave this machine and press the button, each
 // time. There is no percentage because Kaggle gives none: only a state and the time.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   choiceOf,
@@ -9,6 +9,8 @@ import {
   picturePins,
   startRequest,
   type RunReceipt,
+  outcomeLines,
+  type RunOutcome,
 } from "./create-model.ts";
 
 type Translate = (
@@ -56,7 +58,7 @@ export type RunRecord = {
   imported: { assetId: string } | null;
   // Absent from a service older than this page.
   inputs?: { assetId: string; assetHash: string }[];
-};
+} & RunOutcome;
 
 export type GenerationApi = {
   start: (request: {
@@ -70,11 +72,13 @@ export type GenerationApi = {
     firstFrameAssetId?: string;
     noUnconsentedPerson?: true;
   }) => Promise<{ generationId: string; uncertain?: string }>;
-  status: (generationId: string) => Promise<{
-    state: string;
-    diagnostic?: string;
-    imported: unknown;
-  }>;
+  status: (generationId: string) => Promise<
+    {
+      state: string;
+      diagnostic?: string;
+      imported: unknown;
+    } & RunOutcome
+  >;
   stop: (generationId: string) => Promise<unknown>;
   // Under the editor's busy state. The new asset, or null if it did not come in.
   bringIn: (generationId: string) => Promise<MadeAsset | null>;
@@ -146,6 +150,10 @@ export function GeneratePanel(props: {
   const [run, setRun] = useState<Run | null>(null);
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
+  // How it ended, where it ended without a usable video.
+  const [outcome, setOutcome] = useState<RunOutcome>({});
+  const shownRun = useRef<string | null>(null);
+  shownRun.current = run?.generationId ?? null;
   const [lost, setLost] = useState(false);
   // Each tick is for the exact choice it was given on: another model, recipe or picture
   // needs it again, whatever the person switched through since.
@@ -218,6 +226,7 @@ export function GeneratePanel(props: {
           setRun(asRun(latest));
           setState(latest.state);
           setNote(latest.diagnostic ?? "");
+          setOutcome(latest);
         }
       })
       .catch(() => {
@@ -239,6 +248,7 @@ export function GeneratePanel(props: {
         if (!current) return;
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
+        setOutcome(answer);
         // Its own result proves it arrived; a notebook's state does not.
         if (answer.state === "succeeded" || answer.state === "failed")
           setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
@@ -268,6 +278,7 @@ export function GeneratePanel(props: {
   }, [finished]);
 
   const start = async () => {
+    setOutcome({});
     setProblem("");
     setWorking(true);
     try {
@@ -321,6 +332,7 @@ export function GeneratePanel(props: {
     setRun(null);
     setState("queued");
     setNote("");
+    setOutcome({});
     setLost(false);
   };
 
@@ -474,16 +486,24 @@ export function GeneratePanel(props: {
           </p>
         </>
       )}
-      {note && (
-        <p
-          role="status"
-          className="note"
-          dir="auto"
-          data-testid="create-run-note"
-        >
-          {note}
-        </p>
-      )}
+      <div role="status">
+        {note && (
+          <p className="note" dir="auto" data-testid="create-run-note">
+            {note}
+          </p>
+        )}
+        {!run.held && !lost && outcome.failureClass !== undefined && (
+          <p
+            className="note"
+            data-testid="create-run-class"
+            data-class={outcome.failureClass}
+          >
+            {outcomeLines(outcome, Boolean(run.stopped) && !finished)
+              .map((key) => t(key))
+              .join(" ")}
+          </p>
+        )}
+      </div>
       {problem && (
         <p role="alert" className="create-problem">
           {problem}
@@ -506,7 +526,19 @@ export function GeneratePanel(props: {
             type="button"
             data-testid="create-run-stop"
             onClick={() => {
-              void api.stop(run.generationId).catch(() => {});
+              const { generationId } = run;
+              void api
+                .stop(generationId)
+                .then(() => api.list())
+                .then((all) => {
+                  // Of the run this page still shows.
+                  const ended = all.find(
+                    (r) => r.generationId === generationId,
+                  );
+                  if (shownRun.current === generationId)
+                    setOutcome(ended ?? {});
+                })
+                .catch(() => {});
               setRun({ ...run, stopped: true });
             }}
           >

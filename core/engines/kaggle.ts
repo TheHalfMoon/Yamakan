@@ -31,9 +31,11 @@ import {
   type AssetRef,
   type EngineAdapterV2,
   type EngineReport,
+  type FailureClass,
   type EngineContextV2,
   type ExecutionStatus,
 } from "./contract-v2.ts";
+import { refusedSubmit } from "./failures.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
 import type { RecipeFacts } from "../take-record.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
@@ -336,6 +338,20 @@ const REFUSED_PUSH =
   /\b(?:400|401|403|404|409|413|422|429)\s+(?:Client Error|Bad Request|Unauthorized|Forbidden|Not Found|Conflict|Payload Too Large|Request Entity Too Large|Unprocessable|Too Many Requests)|\bquota\b|\bmaximum (?:batch|gpu|number|session)|Kernel push error|Permission '[^']+' was denied|Authentication required to call the Kaggle API/i;
 const wasRefused = (message: string) =>
   !message.startsWith("Timed out.") && REFUSED_PUSH.test(message);
+// Which kind of refusal a push had, once it is known to be one (MPR-207).
+const QUOTA_REFUSAL =
+  /\bquota\b|\bmaximum (?:batch|gpu|number|session)|\b429\s+(?:Client Error|Too Many Requests)/i;
+const CREDENTIAL_REFUSAL =
+  /\b401\s+(?:Client Error|Unauthorized)|Authentication required to call the Kaggle API/i;
+const refusalClass = (message: string): FailureClass =>
+  QUOTA_REFUSAL.test(message)
+    ? "quotaExhausted"
+    : CREDENTIAL_REFUSAL.test(message)
+      ? "credentialRejected"
+      : "providerRejected";
+// How a run that ran out of memory names its own error, in its receipt.
+const OUT_OF_MEMORY =
+  /^(?:torch\.)?(?:cuda\.)?(?:OutOfMemoryError|MemoryError|_ArrayMemoryError):/;
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // What it said of the empty notebook a refused first push left, on 2026-11-07. Its list does not
 // hold that one either, so that list cannot prove a notebook is absent: this is only taken for
@@ -474,6 +490,7 @@ type Run = {
   video?: { file: string; artifact: Artifact };
   // What its receipt said of it, read before the receipt goes.
   reported?: EngineReport | null;
+  endedAs?: FailureClass;
   // Sent with no answer: nothing says it is running at all.
   uncertain?: boolean;
   // Sent from another Kaggle account: its notebook is not this one's to ask about.
@@ -690,24 +707,39 @@ export function createKaggleEngine(options: {
     if (!state) throw new Error("Kaggle gave no state for this run.");
     return state;
   };
-  const status = (run: Run): ExecutionStatus => ({
-    executionRef: run.runId,
-    state: run.ended ?? "unknown",
-    ...(run.endedWith ? { diagnostic: diagnostic(run.endedWith) } : {}),
-  });
+  const status = (run: Run): ExecutionStatus => {
+    const said = {
+      executionRef: run.runId,
+      ...(run.endedWith ? { diagnostic: diagnostic(run.endedWith) } : {}),
+    };
+    const state = run.ended ?? "unknown";
+    return state === "failed" || state === "cancelled"
+      ? { ...said, state, failureClass: run.endedAs ?? "unknown" }
+      : { ...said, state };
+  };
+  const succeeded = (run: Run): ExecutionStatus => {
+    run.ended = "succeeded";
+    return status(run);
+  };
   const end = (
     run: Run,
-    state: ExecutionStatus["state"],
-    message?: string,
+    state: "failed" | "cancelled",
+    message: string,
+    failureClass: FailureClass,
   ): ExecutionStatus => {
     run.ended = state;
     run.endedWith = message;
+    run.endedAs = failureClass;
     return status(run);
   };
   const settling = (run: Run) => now() - run.startedAt < PUSH_SETTLE_MS;
   const pastLimit = (run: Run) =>
     now() - run.startedAt >
     (run.recipe.timeoutSeconds + EXPIRY_GRACE_SECONDS) * 1000;
+  // A run Kaggle reports as failed. How it reports one that it ended at the time limit is not
+  // verified, so past the limit that is taken to be why.
+  const providerFailed = (run: Run): FailureClass =>
+    pastLimit(run) ? "timeout" : "providerRejected";
   const waiting = (run: Run): ExecutionStatus => ({
     executionRef: run.runId,
     state: "queued",
@@ -792,11 +824,16 @@ export function createKaggleEngine(options: {
       await rm(folder, { recursive: true, force: true });
       if (settling(run)) return waiting(run);
       await keepOnly(run);
-      return end(run, "failed", "Kaggle's latest run is not this one.");
+      return end(
+        run,
+        "failed",
+        "Kaggle's latest run is not this one.",
+        "lostJob",
+      );
     }
     const failed = async (message: string) => {
       await keepOnly(run);
-      return end(run, "failed", message);
+      return end(run, "failed", message, "invalidArtifact");
     };
     if (receipt.stage !== "done" || receipt.verified !== true)
       return failed(
@@ -837,7 +874,7 @@ export function createKaggleEngine(options: {
         sha256: hash,
       },
     };
-    return end(run, "succeeded");
+    return succeeded(run);
   }
 
   const ask = async (run: Run): Promise<ExecutionStatus> => {
@@ -875,7 +912,12 @@ export function createKaggleEngine(options: {
         } catch (e) {
           if (!(e instanceof Unreadable) || settling(run)) throw e;
           await keepOnly(run);
-          return end(run, "failed", "The run ended without a readable result.");
+          return end(
+            run,
+            "failed",
+            "The run ended without a readable result.",
+            "invalidArtifact",
+          );
         }
       }
       if (state === "ERROR") {
@@ -890,15 +932,26 @@ export function createKaggleEngine(options: {
         const killed = ours && (await logSaysKilled(left.folder));
         await keepOnly(run);
         if (left && !ours)
-          return end(run, "failed", "Kaggle's latest run is not this one.");
+          return end(
+            run,
+            "failed",
+            "Kaggle's latest run is not this one.",
+            "lostJob",
+          );
+        const error =
+          ours && typeof left.receipt.error === "string"
+            ? left.receipt.error
+            : null;
         return end(
           run,
           "failed",
-          ours && typeof left.receipt.error === "string"
-            ? left.receipt.error
-            : killed
+          error ??
+            (killed
               ? [WAS_KILLED, killedAt(left.receipt)].filter(Boolean).join(" ")
-              : "The run failed on Kaggle.",
+              : "The run failed on Kaggle."),
+          error !== null && OUT_OF_MEMORY.test(error)
+            ? "resourceExhausted"
+            : providerFailed(run),
         );
       }
       if (state === "CANCEL_REQUESTED" || state === "CANCEL_ACKNOWLEDGED") {
@@ -917,6 +970,7 @@ export function createKaggleEngine(options: {
           run,
           "cancelled",
           "Kaggle's latest run on this notebook was stopped there.",
+          "cancelled",
         );
       }
       return {
@@ -935,6 +989,7 @@ export function createKaggleEngine(options: {
             run,
             "failed",
             `${e.message} It was fetched ${FETCH_TRIES} times, and came no differently. Any result is still on its notebook, until a later run replaces it.`,
+            "invalidArtifact",
           );
         }
         run.refetchAt = now() + REFETCH_MS;
@@ -1136,8 +1191,10 @@ export function createKaggleEngine(options: {
           throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
         return;
       }
-      throw new CommandError(
-        "CAPABILITY_UNAVAILABLE",
+      throw refusedSubmit(
+        CREDENTIAL_REFUSAL.test((e as Error).message)
+          ? "credentialRejected"
+          : "refusedByPolicy",
         diagnostic(
           `Could not ask Kaggle whether this notebook is free: ${(e as Error).message}`,
         ) ?? "Could not ask Kaggle whether this notebook is free.",
@@ -1370,8 +1427,8 @@ export function createKaggleEngine(options: {
         }
         if (folder) await rm(folder, HELD_FOR_A_MOMENT).catch(() => {});
         if (e instanceof CommandError) throw e;
-        throw new CommandError(
-          "CAPABILITY_UNAVAILABLE",
+        throw refusedSubmit(
+          sending ? refusalClass((e as Error).message) : "refusedByPolicy",
           diagnostic(`Kaggle did not take the run: ${(e as Error).message}`) ??
             "Kaggle did not take the run.",
         );

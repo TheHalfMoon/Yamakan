@@ -89,8 +89,8 @@ them. Severity is the reviewer's own. The words in the last column mean:
 
 | Disposition | Findings | Of which blockers |
 |---|---|---|
-| FIXED | 49 | 6 |
-| PARTLY FIXED | 22 | 1 |
+| FIXED | 50 | 6 |
+| PARTLY FIXED | 21 | 1 |
 | STATED AS LIMIT | 5 | 1 |
 | LEFT OPEN | 7 | 1 |
 | ALREADY IN CARD | 1 | 0 |
@@ -212,9 +212,9 @@ Verdict: yes with fixes. ME-1 must be settled before any Stage 6 local card.
 | ME-3 | MAJOR | The worst-case figure is a waiting time used as a unit of spend. | LEFT OPEN: OA-1. MPR-203 states the limit under risks. |
 | ME-4 | MAJOR | The preflight hash changes when the run does not. | FIXED: the hash in MPR-203 covers the parts that define the run. |
 | ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101. A Kaggle run reports its script's own pins, model and the seed it was sent, not all that was installed, so a take still cannot be reproduced from its record. |
-| ME-6 | MAJOR | A capability cell's state follows paperwork, not measurement. | PARTLY FIXED: the conformance kit has more cases. `failureClass` stays optional and facts carry no date or sample size: OA-17. |
+| ME-6 | MAJOR | A capability cell's state follows paperwork, not measurement. | PARTLY FIXED: the conformance kit has more cases. OA-17 was accepted on 2026-11-23: an adapter must name a failure class (MPR-207), and MPR-202's text asks for a date and a sample size of each measured fact. |
 | ME-7 | MAJOR | The consistency study can pass on the anchor frame. | PARTLY FIXED: MPR-405 does not show or score frames before one quarter of the clip, and each task asks for a change of framing. The unit of analysis must be stated before any run. |
-| ME-8 | MINOR | The failure classes are too few. | PARTLY FIXED: MPR-210 classifies a 401 answer as `providerRejected`. Three more classes are OA-18. |
+| ME-8 | MINOR | The failure classes are too few. | FIXED: OA-18, accepted 2026-11-23: MPR-207 has eleven classes, and MPR-210 classifies a 401 answer as `credentialRejected`. |
 | ME-9 | MINOR | Thresholds for local weights had no measurement rule. | FIXED: MPR-220 and MPR-221 state how each figure is measured, and record BLOCKED otherwise. |
 
 ### 3.8 Systems architect
@@ -318,8 +318,8 @@ registry, the task program is rendered again, and the package check is run.
 | OA-14 | MPR-003 and every card with parts | The registry carries a state and an acceptance list for each part of a card. | OM-7, SA-10 | MPR-003 |
 | OA-15 | MPR-202, MPR-101, MPR-203 | The capability report gains `audioOut` and a range for `durationFrames`; requests gain a `reference` role. | ME-2 | MPR-202 |
 | OA-16 | MPR-101, MPR-201 | The take record gains the runtime lock, the provider's model id and version, and the seed the run reported (accepted by the founder on 2026-11-23; the amendment does not say what MPR-201 changes, so its text is as it was). | ME-5 | accepted |
-| OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size. | ME-6 | MPR-207 |
-| OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted`. | ME-8 | MPR-207 |
+| OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size (accepted by the founder on 2026-11-23). | ME-6 | accepted |
+| OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted` (accepted by the founder on 2026-11-23). | ME-8 | accepted |
 | OA-19 | MPR-203 | Preflight carries the route's licence state, so a person sees it before the run and not after. | Planner | MPR-203 |
 | OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs. | SE-4 | MPR-204 |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |
@@ -330,8 +330,8 @@ registry, the task program is rendered again, and the package check is run.
 The planner's view on timing (OA-1 to OA-22): OA-5 and OA-16 both change the take record that MPR-101 creates.
 The record is versioned and a later additive step is possible, but each is cheapest before
 MPR-101 merges. OA-4 and OA-8 answer the creative director's blocker and both land in MPR-302.
-OA-18 changes a closed list, so it is cheapest before MPR-207 fixes that list. The rest can wait
-for the card named.
+OA-18 changes a closed list, so it was cheapest before MPR-207 fixed that list, and it was accepted
+before it. The rest can wait for the card named.
 
 ### 5.2 Gaps with no owning card
 

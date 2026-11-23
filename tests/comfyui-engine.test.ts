@@ -9,6 +9,7 @@ import {
   ENGINE_CONTRACT_V2,
   readArtifactVerified,
   type EngineRequestV2,
+  ExecutionStatusSchema,
 } from "../core/engines/contract-v2.ts";
 import {
   PINNED_COMFY_RECIPES,
@@ -526,6 +527,7 @@ test("a job ComfyUI never reports is unknown for a while, then failed", async ()
   const lost = await engine.status(id);
   assert.equal(lost.state, "failed");
   assert.equal(lost.diagnostic, "ComfyUI never reported this job.");
+  assert.equal(lost.failureClass, "lostJob");
   engine.close();
 });
 
@@ -541,10 +543,9 @@ test("a job ComfyUI stops reporting fails from when it was last seen", async () 
   pass(900);
   assert.equal((await engine.status(id)).state, "unknown", "seen 900 ms ago");
   pass(200);
-  assert.equal(
-    (await engine.status(id)).diagnostic,
-    "ComfyUI stopped reporting this job.",
-  );
+  const gone = await engine.status(id);
+  assert.equal(gone.diagnostic, "ComfyUI stopped reporting this job.");
+  assert.equal("failureClass" in gone && gone.failureClass, "lostJob");
   engine.close();
 });
 
@@ -610,7 +611,9 @@ test("a job past its deadline is stopped, fails, and stays failed", async () => 
   f.queue.running = [id];
   assert.equal((await engine.status(id)).state, "running");
   pass(5001);
-  assert.equal((await engine.status(id)).state, "failed");
+  const late = await engine.status(id);
+  assert.equal(late.state, "failed");
+  assert.equal(late.failureClass, "timeout");
   f.queue.running = [];
   f.history[id] = { status: { status_str: "success" }, outputs: {} };
   assert.equal((await engine.status(id)).state, "failed", "stays failed");
@@ -1019,8 +1022,30 @@ test("status follows queue, history, and failure, with bounded diagnostics", asy
   const failed = await engine.status(id);
   assert.equal(failed.state, "failed");
   assert.equal(failed.diagnostic, "CUDA OOM at [path] and [url]");
+  // Its words are not its kind; its own name for the error is.
+  assert.equal(failed.failureClass, "providerRejected");
+  for (const [exception_type, kind] of [
+    ["torch.OutOfMemoryError", "resourceExhausted"],
+    ["MemoryError", "resourceExhausted"],
+    ["ValueError", "providerRejected"],
+    ["OutOfMemoryErrorAtAll", "providerRejected"],
+    ["NotAnOutOfMemoryError", "providerRejected"],
+    [5, "providerRejected"],
+  ] as const) {
+    f.history[id] = {
+      status: {
+        status_str: "error",
+        messages: [["execution_error", { exception_type }]],
+      },
+    } as never;
+    const failed = await engine.status(id);
+    assert.equal("failureClass" in failed && failed.failureClass, kind);
+    ExecutionStatusSchema.parse(failed);
+  }
   f.history[id] = { status: { messages: [["execution_interrupted", {}]] } };
-  assert.equal((await engine.status(id)).state, "cancelled");
+  const interrupted = await engine.status(id);
+  assert.equal(interrupted.state, "cancelled");
+  assert.equal(interrupted.failureClass, "cancelled");
   f.history[id] = { status: { status_str: "success" }, outputs: {} };
   assert.deepEqual(await engine.reconcile(id), {
     executionRef: id,

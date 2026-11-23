@@ -204,10 +204,14 @@ export function bridgeV1(
     const ref = ExecutionRef.parse(raw);
     if (!recipeOf.has(ref)) return { executionRef: ref, state: "unknown" };
     const s = await v1.status(ref);
+    const state = v1State(s.state, s.quarantined);
     return ExecutionStatusSchema.parse({
       executionRef: ref,
-      state: v1State(s.state, s.quarantined),
+      state,
       ...(s.error ? { diagnostic: diagnostic(s.error) } : {}),
+      // A version 1 engine says only that it failed, not how.
+      ...(state === "failed" ? { failureClass: "unknown" } : {}),
+      ...(state === "cancelled" ? { failureClass: "cancelled" } : {}),
     });
   };
   const artifactsOf = async (ref: string) => {

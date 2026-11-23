@@ -310,21 +310,45 @@ export function refusal(
 // Observations an adapter reports: bounded, never canonical job state (the
 // durable JobSupervisor owns that).
 const Diagnostic = z.string().max(ENGINE_V2_LIMITS.diagnosticChars);
-export const ExecutionStatusSchema = z
-  .object({
-    executionRef: Ref,
-    state: z.enum([
-      "queued",
-      "running",
-      "succeeded",
-      "failed",
-      "cancelled",
-      "unknown",
-    ]),
-    progress: z.number().min(0).max(1).optional(),
-    diagnostic: Diagnostic.optional(),
-  })
-  .strict();
+// The kinds of end without a usable video (MPR-207; core/engines/failures.ts says what each
+// means). An adapter names one only where its engine says so.
+export const FailureClass = z.enum([
+  "refusedByPolicy",
+  "quotaExhausted",
+  "credentialRejected",
+  "contentRefused",
+  "providerRejected",
+  "resourceExhausted",
+  "timeout",
+  "lostJob",
+  "invalidArtifact",
+  "cancelled",
+  "unknown",
+]);
+export type FailureClass = z.infer<typeof FailureClass>;
+
+const StatusParts = {
+  executionRef: Ref,
+  progress: z.number().min(0).max(1).optional(),
+  diagnostic: Diagnostic.optional(),
+};
+// An adapter that says a run failed or was stopped names which kind of end it was (OA-17): one
+// that does not know says "unknown". Any other answer names none.
+export const ExecutionStatusSchema = z.discriminatedUnion("state", [
+  z
+    .object({
+      ...StatusParts,
+      state: z.enum(["queued", "running", "succeeded", "unknown"]),
+    })
+    .strict(),
+  z
+    .object({
+      ...StatusParts,
+      state: z.enum(["failed", "cancelled"]),
+      failureClass: FailureClass,
+    })
+    .strict(),
+]);
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 export const CancellationSchema = z
   .object({
