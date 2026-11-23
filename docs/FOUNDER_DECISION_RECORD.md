@@ -199,7 +199,7 @@ Approval line in the packet's format:
 
 ## 2026-11-23: Building the master plan revision's cards
 
-- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "May I build the plan's cards, each behind its own gates?", the founder wrote: "Yes, build the cards". This is the answer the entry above records as missing. Chat instruction only: no signed approval and no founder GitHub review.
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "May I build the plan's cards, each behind its own gates?", the founder answered "Yes, build the cards". This is the answer the entry above records as missing. Chat instruction only: no signed approval and no founder GitHub review.
 - **Authorized scope:** building the cards of `docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11`, each as its own dependencies, gates and founder decisions allow.
 - **Still not authorized:** FD-2 to FD-11 are not decided by this entry, and the disposition of drafts 85 and 86 is still not decided. Models and providers stay off, spending zero, frozen resource limits stand, release NO-GO, and no weight download, installer, signing or human-only gate is authorized.
-- **Effect:** card MPR-003 may start on these words. It opens no gate: a card that needs a founder decision still waits for it.
+- **Effect:** the founder's-words condition of card MPR-003 (its step 4) is met by this entry; its dependency on MPR-001 is unchanged. It opens no gate: a card that needs a founder decision still waits for it.
