@@ -139,6 +139,7 @@ test("each command says whether it is destructive and what a request id does", (
       "yamakan.agent.revoke",
       "yamakan.consent.revoke",
       "yamakan.export.batchCancel",
+      "yamakan.gates.revoke",
       "yamakan.generation.cancel",
       "yamakan.generation.dismiss",
       "yamakan.job.cancel",
