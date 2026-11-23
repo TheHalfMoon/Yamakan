@@ -262,14 +262,14 @@ test("how a run ended is worded for every kind, in both languages", () => {
       for (const mayStillBeBilled of [true, false]) {
         const lines = outcomeLines({ failureClass, retry, mayStillBeBilled });
         assert.equal(lines.length, 3);
-        // Only a stopped run may still be going.
+        // Only a run that may still be going may still use it.
+        assert.equal(
+          outcomeLines({ failureClass, retry, mayStillBeBilled }, true)[1],
+          mayStillBeBilled ? "create.billStill" : "create.billNot",
+        );
         assert.equal(
           lines[1],
-          !mayStillBeBilled
-            ? "create.billNot"
-            : failureClass === "cancelled"
-              ? "create.billStill"
-              : "create.billMay",
+          mayStillBeBilled ? "create.billMay" : "create.billNot",
         );
         for (const lang of ["en", "ar"] as const)
           for (const key of lines) assert.ok(translate(lang, key).length > 5);

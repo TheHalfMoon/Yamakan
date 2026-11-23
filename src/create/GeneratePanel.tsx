@@ -498,7 +498,7 @@ export function GeneratePanel(props: {
             data-testid="create-run-class"
             data-class={outcome.failureClass}
           >
-            {outcomeLines(outcome)
+            {outcomeLines(outcome, Boolean(run.stopped) && !finished)
               .map((key) => t(key))
               .join(" ")}
           </p>

@@ -796,8 +796,8 @@ test("an uncertain send that then fails may have left, and what was said as it e
 test("an old row that failed while sending may have left, and of the oldest nothing is said of billing", () => {
   const old = { ...ROW, phase: "sending" as const, state: "failed" as const };
   assert.equal(outcomeOf(old).billedIn, "providerQuota");
-  // Refused, so taken off the list: it did not leave.
-  assert.equal(outcomeOf({ ...old, dismissed: true }).billedIn, "none");
+  // Taken off the list, by a refusal or by the person: which is not known.
+  assert.ok(!("billedIn" in outcomeOf({ ...old, dismissed: true })));
   const oldest = { ...old, remote: undefined };
   assert.equal(outcomeOf(oldest).failureClass, "unknown");
   assert.ok(!("billedIn" in outcomeOf(oldest)));
@@ -811,6 +811,65 @@ test("an old row that failed while sending may have left, and of the oldest noth
   } as never);
   assert.equal(odd.mayStillBeBilled, true);
   assert.ok(!("endedAt" in odd));
+});
+
+test("the oldest rows are given no billing as they end either", async () => {
+  const w = await workspace();
+  const ledger = memoryLedger();
+  const row = { ...ROW, projectId: w.project.id, remote: undefined };
+  ledger.begin(row);
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({
+        executionRef: "r",
+        state: "failed",
+        failureClass: "timeout",
+      }),
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  const answer = await service.status(row.generationId);
+  assert.equal(answer.failureClass, "timeout");
+  assert.equal(service.row(row.generationId)!.mayStillBeBilled, undefined);
+  assert.ok(!("billedIn" in answer));
+});
+
+test("an import keeps the end that was already known", async () => {
+  const hash = createHash("sha256").update("x").digest("hex");
+  const ledger = memoryLedger();
+  const w = await workspace(undefined, ledger);
+  const row = {
+    ...ROW,
+    projectId: w.project.id,
+    state: "succeeded" as const,
+    endedAt: 5,
+  };
+  ledger.begin(row);
+  w.store.exportProject = (async () => ({
+    assets: [{ id: "asset", hash, kind: "video" }],
+  })) as never;
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({ executionRef: "r", state: "succeeded" }),
+      enumerateArtifacts: async () => [
+        {
+          handle: "o.mp4",
+          mediaType: "video/mp4",
+          byteLength: 1,
+          sha256: hash,
+        },
+      ],
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+    now: () => 9_000,
+  });
+  await service.importResult(row.generationId);
+  assert.equal(service.row(row.generationId)!.endedAt, 5);
+  assert.equal(service.row(row.generationId)!.importedAt, 9_000);
 });
 
 test("a row from before gains nothing as it is stopped, dismissed or asked again", async () => {

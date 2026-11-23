@@ -285,7 +285,11 @@ const RETRY_LINES: Readonly<Record<string, MessageKey>> = Object.freeze({
 });
 
 /** What to say of it: which kind of end, what it may have used, and what trying again takes. */
-export function outcomeLines(o: RunOutcome): MessageKey[] {
+export function outcomeLines(
+  o: RunOutcome,
+  // Stopped here, and not known to have ended there.
+  mayStillRun = false,
+): MessageKey[] {
   if (o.failureClass === undefined) return [];
   const kind = Object.hasOwn(FAIL_LINES, o.failureClass)
     ? o.failureClass
@@ -299,8 +303,7 @@ export function outcomeLines(o: RunOutcome): MessageKey[] {
       : [
           !o.mayStillBeBilled
             ? ("create.billNot" as const)
-            : // Only a stopped run may still be going.
-              kind === "cancelled"
+            : mayStillRun
               ? ("create.billStill" as const)
               : ("create.billMay" as const),
         ]),

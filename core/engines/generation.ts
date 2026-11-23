@@ -158,17 +158,17 @@ export function outcomeOf(r: GenerationRecord): GenerationOutcome {
     (r.state === "failed" || r.state === "cancelled" || r.cancelled);
   if (!unmade) return ENDED.has(r.state) ? ended : {};
   const failureClass = readFailureClass(r.failureClass);
-  // An older row says nothing of it. One still listed may have left; and where it went is not
-  // known of the oldest, so nothing is said.
+  // An older row says nothing of it. One still listed may have left; of one that is not, and of
+  // the oldest, whose place is not known, nothing is said.
   const mayStillBeBilled =
     typeof r.mayStillBeBilled === "boolean"
       ? r.mayStillBeBilled
-      : r.remote === undefined
+      : r.remote === undefined || r.dismissed
         ? undefined
         : effectiveBilling({
             failureClass,
             remote: r.remote,
-            left: !r.dismissed || mayHaveLeft(r, r.recipe?.id ?? "", ""),
+            left: true,
             refusedAtSubmit: false,
           }).mayStillBeBilled;
   return {
@@ -288,12 +288,14 @@ export function createGenerationService(options: {
       end.failureClass = change.cancelled
         ? "cancelled"
         : (failureClass ?? "unknown");
-      end.mayStillBeBilled = effectiveBilling({
-        failureClass: end.failureClass,
-        remote: before.remote,
-        left: mayHaveLeft(before, before.recipe?.id ?? "", ""),
-        refusedAtSubmit,
-      }).mayStillBeBilled;
+      // Where the oldest rows went is not known, so nothing is said of it.
+      if (before.remote !== undefined)
+        end.mayStillBeBilled = effectiveBilling({
+          failureClass: end.failureClass,
+          remote: before.remote,
+          left: mayHaveLeft(before, before.recipe?.id ?? "", ""),
+          refusedAtSubmit: false,
+        }).mayStillBeBilled;
     } else if (change.imported && !before.imported && before.failureClass) {
       end.failureClass = undefined;
       end.mayStillBeBilled = undefined;
