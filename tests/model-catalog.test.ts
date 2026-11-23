@@ -872,6 +872,7 @@ test("each field has its form and its bound", () => {
       c.entries[0].identity.variant = x(32);
       c.entries[0].sourceUrl = url + x(300 - url.length);
       c.entries[0].offers[0].evidence = [`${path}${x(195 - path.length)}.json`];
+      c.entries[0].offers[0].limits.roles = ["reference"];
       c.entries[0].offers[0].limits.references = {
         count: 1_000_000,
         mediaTypes: ["image/png", "image/jpeg"],

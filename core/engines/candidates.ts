@@ -14,7 +14,14 @@ import { ACCEPTED_MODEL_LICENSES } from "./manifests.ts";
 export const ENGINE_CANDIDATES_FORMAT = "yamakan.engine-candidates";
 
 // The engine contract's input roles (EngineRequestV2Schema's inputs).
-const Role = z.enum(["firstFrame", "lastFrame", "source", "mask", "audio"]);
+const Role = z.enum([
+  "firstFrame",
+  "lastFrame",
+  "source",
+  "mask",
+  "audio",
+  "reference",
+]);
 
 const Sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 // Any revision is written down as given; only a full commit id is pinned.
