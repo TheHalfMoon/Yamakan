@@ -801,7 +801,7 @@ test("a refused apply writes no note, and no one else may write one", async () =
     }).success,
     "nor is it ever a project document",
   );
-  // The largest there can be is inside its bound.
+  // The largest there can be with a writer's id of letters is inside its bound.
   assert.equal(SHOT_HISTORY_LIMITS.noteBytes, 512);
   const largest = {
     ...note,

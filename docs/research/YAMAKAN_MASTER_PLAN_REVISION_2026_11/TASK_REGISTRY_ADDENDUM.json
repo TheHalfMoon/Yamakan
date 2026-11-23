@@ -1712,7 +1712,8 @@
         "B",
         "E"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 447b6a7d8458e00ee01b54084835d5e0cc433097 (PR #301, pinned to 2e59ea2, which adds only the receipt and its write-up to dc47876); qualify:revisable-shot passed at dc47876 on GitHub's Linux machine with a stand-in engine (docs/evidence/ultimate/MPR-107-shot-history-receipt.json); main's CI passed; nothing of it ran on the founder host but its tests",
       "dependsOn": [
         "MPR-101",
         "MPR-102"
@@ -7470,7 +7471,7 @@
         "D",
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101",
         "MPR-107"

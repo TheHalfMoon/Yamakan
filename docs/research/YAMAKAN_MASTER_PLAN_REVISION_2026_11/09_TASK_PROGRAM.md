@@ -64,7 +64,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
 | MPR-106 | 1 | QUALIFICATION_READY | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
-| MPR-107 | 1 | REVIEW_PENDING | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
+| MPR-107 | 1 | VERIFIED | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
 | MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
 | MPR-202 | 2 | QUALIFICATION_READY | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
@@ -105,7 +105,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-606 | 3 | WAITING_DEPENDENCIES | MPR-601, MPR-602, MPR-603, MPR-604 | Freeze Arabic interface strings and add the string review packet for H1 (unsigned) |
 | MPR-701 | 3 | QUALIFICATION_READY | MPR-101, MPR-201 | Write a provenance manifest beside every export and a readable report from it |
 | MPR-702 | 3 | WAITING_DEPENDENCIES | MPR-101, MPR-303, MPR-701 | Carry clip lineage in OTIO metadata and make the OTIO import proposal appliable |
-| MPR-801 | 5 | WAITING_DEPENDENCIES | MPR-101, MPR-107 | Pre-register workflow benchmark protocol v2 and its exact analysis; run nothing |
+| MPR-801 | 5 | QUALIFICATION_READY | MPR-101, MPR-107 | Pre-register workflow benchmark protocol v2 and its exact analysis; run nothing |
 | MPR-802 | 5 | WAITING_DEPENDENCIES | MPR-801, MPR-107, MPR-701 | Freeze protocol v2 after a discarded pilot and run the Yamakan-only baseline on Arm 0 |
 | MPR-803 | 5 | EXTERNAL_BLOCKED | MPR-801, MPR-802, MPR-405 | Run the competitor arm of the workflow benchmark after FD-6 and a terms check |
 | MPR-804 | 0 | EXTERNAL_BLOCKED | — | Run the full suite, Studio tests, native build and safe qualifiers on Windows CI |
@@ -1380,13 +1380,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B, E |
 | Dependencies | MPR-101, MPR-102 |
 | Founder decisions | none |
 | Earlier plan items | SS-016, YU-081, YU-090 |
+| Evidence | Merged as 447b6a7d8458e00ee01b54084835d5e0cc433097 (PR #301, pinned to 2e59ea2, which adds only the receipt and its write-up to dc47876); qualify:revisable-shot passed at dc47876 on GitHub's Linux machine with a stand-in engine (docs/evidence/ultimate/MPR-107-shot-history-receipt.json); main's CI passed; nothing of it ran on the founder host but its tests |
 
 **Goal.** One read command answers, for one shot, what was tried and what it cost: the takes the shot holds and how each was made, every generation or render attempted for it (failed and cancelled ones too), every take replacement applied to it (revision and principal), and totals. The answer is bounded and paged. It is the data SS-016 measures and the 'show the ledger' step of the Stage 1 demonstration.
 
@@ -6591,7 +6592,7 @@ Pre-registered measurement of the thesis, Windows CI, and the supervised-agent m
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 5 |
 | Track | 8 |
 | Pillars | B, D, E |
