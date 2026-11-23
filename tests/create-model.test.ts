@@ -262,23 +262,30 @@ test("how a run ended is worded for every kind, in both languages", () => {
       for (const mayStillBeBilled of [true, false]) {
         const lines = outcomeLines({ failureClass, retry, mayStillBeBilled });
         assert.equal(lines.length, 3);
+        // Only a stopped run may still be going.
         assert.equal(
           lines[1],
-          mayStillBeBilled ? "create.billMay" : "create.billNot",
+          !mayStillBeBilled
+            ? "create.billNot"
+            : failureClass === "cancelled"
+              ? "create.billStill"
+              : "create.billMay",
         );
         for (const lang of ["en", "ar"] as const)
           for (const key of lines) assert.ok(translate(lang, key).length > 5);
       }
   // Each kind has its own words.
-  const first = FailureClass.options.map(
-    (failureClass) => outcomeLines({ failureClass, retry: "whenWanted" })[0],
-  );
+  const first = FailureClass.options.map((failureClass) => {
+    // Where the billing is not known, nothing is said of it.
+    const lines = outcomeLines({ failureClass, retry: "whenWanted" });
+    assert.equal(lines.length, 2);
+    return lines[0];
+  });
   assert.equal(new Set(first).size, FailureClass.options.length);
   // Nothing of a run that has no kind, and an unknown word is not shown as one.
   assert.deepEqual(outcomeLines({}), []);
   assert.deepEqual(outcomeLines({ failureClass: "toString", retry: "odd" }), [
     "create.failUnknown",
-    "create.billNot",
     "create.retryAfterChecking",
   ]);
 });

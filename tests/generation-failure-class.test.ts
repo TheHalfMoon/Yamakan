@@ -37,6 +37,7 @@ import {
   createGenerationService,
   memoryLedger,
   outcomeOf,
+  type GenerationLedger,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
 import {
@@ -69,26 +70,55 @@ const HASH = createHash("sha256").update(VIDEO).digest("hex");
 const SCRIPT = "BRIEF = {}  # yamakan:brief\nprint(BRIEF)\n";
 const HOUR = 3_600_000;
 
+// A run under way on Kaggle, as it is stored.
+const ROW: GenerationRecord = {
+  generationId: "9b1f2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d",
+  projectId: "p",
+  recipe: kaggleRecipes()[0]!,
+  prompt: "go",
+  seed: 1,
+  width: 64,
+  height: 36,
+  durationFrames: 24,
+  firstFrameAssetId: null,
+  inputs: [],
+  executionRef: "r",
+  phase: "sent",
+  startedAt: 1,
+  state: "running",
+  diagnostic: null,
+  videoSha256: null,
+  imported: null,
+  remote: "kaggle:someone",
+  cancelled: false,
+  dismissed: false,
+};
+
 // A Kaggle that answers as it is told to, and what it was sent.
 function kaggle() {
   const world = {
     state: "RUNNING",
     push: "ok" as "ok" | string,
     ask: null as string | null,
+    script: null as string | null,
     leave: (_runId: string, _folder: string) => {},
     sent: 0,
     runId: "",
     now: 1_000_000,
+    beforeStatus: null as null | (() => Promise<void>),
+    beforePush: null as null | (() => Promise<void>),
   };
   const cli: KaggleCli = async (args) => {
     if (args[1] === "list") return { stdout: "Not found\n" };
     if (args[1] === "status") {
+      if (world.sent > 0) await world.beforeStatus?.();
       if (world.ask) throw new Error(world.ask);
       if (world.sent === 0)
         throw new Error("Permission 'kernels.get' was denied");
       return { stdout: `has status "KernelWorkerStatus.${world.state}"` };
     }
     if (args[1] === "push") {
+      await world.beforePush?.();
       world.sent++;
       const script = readFileSync(path.join(args[3]!, "run.py"), "utf8");
       const encoded = /b64decode\("([^"]+)"\)/.exec(script)![1]!;
@@ -110,7 +140,7 @@ function kaggle() {
 
 async function workspace(
   adapterOf?: (root: string) => EngineAdapterV2,
-  ledger = memoryLedger(),
+  kept: GenerationLedger | "durable" = memoryLedger(),
   now = () => Date.now(),
 ) {
   const root = temp("generation-class-");
@@ -120,6 +150,7 @@ async function workspace(
   const queue = new JobSupervisor(store);
   handles.push(queue);
   const project = await store.create("Classes");
+  const ledger = kept === "durable" ? queue.generationLedger() : kept;
   const service = createGenerationService({
     adapter: adapterOf?.(root) ?? ({} as EngineAdapterV2),
     store,
@@ -137,7 +168,7 @@ async function workspace(
 }
 
 // A project with a Kaggle engine over its stand-in, and one run started from it.
-async function onKaggle() {
+async function onKaggle(durable = false) {
   const k = kaggle();
   const w = await workspace(
     (root) =>
@@ -145,13 +176,16 @@ async function onKaggle() {
         cli: k.cli,
         username: "someone",
         folderRoot: root,
-        scriptFor: async () => SCRIPT,
+        scriptFor: async () => {
+          if (k.world.script) throw new Error(k.world.script);
+          return SCRIPT;
+        },
         download: async (_r, folder) => k.world.leave(k.world.runId, folder),
         now: () => k.world.now,
         watchMs: 10,
         stopGraceMs: 1000,
       }),
-    memoryLedger(),
+    durable ? "durable" : memoryLedger(),
     () => k.world.now,
   );
   const ask = {
@@ -247,6 +281,18 @@ test("a refused start is stored with its class, unlisted, and not billed", async
       "quotaExhausted",
     ],
     [{ push: "Maximum batch GPU session count reached" }, "quotaExhausted"],
+    [{ push: "Maximum GPU count reached" }, "quotaExhausted"],
+    [{ push: "Maximum number of runs reached" }, "quotaExhausted"],
+    [{ push: "Maximum session count reached" }, "quotaExhausted"],
+    [
+      { push: "Kernel push error: Maximum length of a title" },
+      "providerRejected",
+    ],
+    // A quota's words come before a credential's.
+    [
+      { push: "401 Client Error: Unauthorized: GPU quota reached" },
+      "quotaExhausted",
+    ],
     [
       { push: "401 Client Error: Unauthorized for url: x" },
       "credentialRejected",
@@ -262,6 +308,8 @@ test("a refused start is stored with its class, unlisted, and not billed", async
       "credentialRejected",
     ],
     [{ ask: "network down" }, "refusedByPolicy"],
+    // Before anything was sent, whatever its words.
+    [{ script: "GPU quota: 401 Client Error" }, "refusedByPolicy"],
   ] as const) {
     const w = await onKaggle();
     Object.assign(w.world, set);
@@ -370,6 +418,41 @@ test("every way a Kaggle run ends without a video has its class, and may still b
           error: "OutOfMemoryError: CUDA out of memory.",
         }),
       "resourceExhausted",
+      "afterChange",
+      0,
+    ],
+    [
+      "the interpreter's own name for it",
+      "ERROR",
+      (r: string, f: string) =>
+        receipt(f, { runId: r, stage: "failed", error: "MemoryError: x" }),
+      "resourceExhausted",
+      "afterChange",
+      0,
+    ],
+    [
+      "numpy's",
+      "ERROR",
+      (r: string, f: string) =>
+        receipt(f, {
+          runId: r,
+          stage: "failed",
+          error: "_ArrayMemoryError: x",
+        }),
+      "resourceExhausted",
+      "afterChange",
+      0,
+    ],
+    [
+      "the name later in the words",
+      "ERROR",
+      (r: string, f: string) =>
+        receipt(f, {
+          runId: r,
+          stage: "failed",
+          error: "ValueError: OutOfMemoryError: x",
+        }),
+      "providerRejected",
       "afterChange",
       0,
     ],
@@ -520,34 +603,266 @@ test("a run that worked has an end and no class", async () => {
   assert.equal(answer.endedAt, w.world.now);
   for (const field of ["failureClass", "mayStillBeBilled", "billedIn", "retry"])
     assert.ok(!(field in answer), field);
+  // Nothing is stored either, for what reads the row.
+  const row = w.service.row(generationId)!;
+  assert.equal(row.failureClass, undefined);
+  assert.equal(row.mayStillBeBilled, undefined);
 });
 
 test("a stopped run that goes on may still be billed, and the first end wins", async () => {
-  const w = await onKaggle();
-  const { generationId } = await w.start();
-  const stoppedAt = (w.world.now += 1000);
-  await w.service.cancel(generationId);
-  const said = {
-    failureClass: "cancelled",
-    mayStillBeBilled: true,
-    billedIn: "providerQuota",
-    retry: "whenWanted",
-    endedAt: stoppedAt,
-  };
-  assert.deepEqual(outcomeOf(w.service.row(generationId)!), said);
-  // It goes on there and reports a failure, then a result: the stop stands.
-  for (const state of ["ERROR", "COMPLETE"]) {
-    w.world.now += 1000;
-    w.world.state = state;
-    await w.service.status(generationId);
+  for (const durable of [false, true]) {
+    const w = await onKaggle(durable);
+    w.world.leave = (runId, folder) => {
+      writeFileSync(path.join(folder, wan.output), VIDEO);
+      receipt(folder, {
+        runId,
+        stage: "done",
+        verified: true,
+        frames: wan.frames,
+        sha256: HASH,
+      });
+    };
+    const { generationId } = await w.start();
+    const stoppedAt = (w.world.now += 1000);
+    await w.service.cancel(generationId);
+    const said = {
+      failureClass: "cancelled",
+      mayStillBeBilled: true,
+      billedIn: "providerQuota",
+      retry: "whenWanted",
+      endedAt: stoppedAt,
+    };
     assert.deepEqual(outcomeOf(w.service.row(generationId)!), said);
+    // It goes on there and finishes, with a result that names it: the stop stands.
+    w.world.now += HOUR;
+    w.world.state = "COMPLETE";
+    const answer = await w.service.status(generationId);
+    // The table is not asked again for a stopped run; the memory asks, and is told it finished.
+    assert.equal(answer.state, durable ? "queued" : "succeeded");
+    assert.deepEqual(outcomeOf(w.service.row(generationId)!), said);
+    await assert.rejects(w.service.importResult(generationId), /cancelled/i);
+    assert.equal(w.service.row(generationId)!.imported, null);
+    assert.equal(w.world.sent, 1);
   }
-  await assert.rejects(w.service.importResult(generationId), /cancelled/i);
   // Dismissed while it went on is stopped too.
   const other = await onKaggle();
   const run = await other.start();
   other.service.dismiss(run.generationId);
   assert.equal(other.service.row(run.generationId)!.failureClass, "cancelled");
+});
+
+test("a stop made as a status is asked stands, and that answer says so", async () => {
+  const w = await onKaggle(true);
+  const { generationId } = await w.start();
+  w.world.now += HOUR;
+  w.world.state = "ERROR";
+  let stopped = false;
+  w.world.beforeStatus = async () => {
+    if (stopped) return;
+    stopped = true;
+    await w.service.cancel(generationId);
+  };
+  const answer = await w.service.status(generationId);
+  assert.equal(stopped, true);
+  assert.equal(answer.failureClass, "cancelled");
+  assert.equal(w.service.row(generationId)!.failureClass, "cancelled");
+});
+
+test("a start refused as it was sent was refused, though it was stopped meanwhile", async () => {
+  const w = await onKaggle(true);
+  w.world.push = "Maximum weekly GPU quota of 30.00 hours reached.";
+  w.world.beforePush = async () => {
+    const [row] = w.service.list(w.project.id);
+    // Recorded, then asked of the adapter, which does not know the run yet.
+    await w.service.cancel(row!.generationId).catch(() => {});
+  };
+  await assert.rejects(w.start(), /quota/);
+  const [row] = rowsOf(w);
+  assert.equal(row!.cancelled, true);
+  assert.equal(row!.failureClass, "quotaExhausted");
+  assert.equal(row!.mayStillBeBilled, false);
+  assert.equal(outcomeOf(row!).billedIn, "none");
+});
+
+test("a video that came in was made, though it is stopped as or after it comes", async () => {
+  const w = await workspace();
+  const row = (over: Partial<GenerationRecord>) => ({ ...ROW, ...over });
+  // Stopped after: a class is not written over it, and none is said.
+  const ledger = memoryLedger();
+  const imported = { assetId: "a", lineage: {} as never };
+  const after = row({ state: "succeeded", imported, endedAt: 5 });
+  ledger.begin(after);
+  const service = createGenerationService({
+    adapter: {
+      requestCancel: async () => ({
+        requested: false,
+        localProcessExited: true,
+      }),
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  await service.cancel(after.generationId);
+  assert.equal(service.row(after.generationId)!.cancelled, true);
+  assert.equal(service.row(after.generationId)!.failureClass, undefined);
+  assert.deepEqual(outcomeOf(service.row(after.generationId)!), { endedAt: 5 });
+  // One stored so by a stop that raced it says none either.
+  assert.deepEqual(
+    outcomeOf(
+      row({
+        state: "succeeded",
+        imported,
+        cancelled: true,
+        failureClass: "cancelled",
+        mayStillBeBilled: true,
+        endedAt: 5,
+      }),
+    ),
+    { endedAt: 5 },
+  );
+});
+
+test("a stop during an import that still brings the video in gives way to the run's own end", async () => {
+  // The video is already the project's, so the import is only a record of it.
+  const hash = createHash("sha256").update("x").digest("hex");
+  let now = 1_000;
+  const ledger = memoryLedger();
+  const w = await workspace(undefined, ledger);
+  const row = { ...ROW, projectId: w.project.id };
+  ledger.begin(row);
+  w.store.exportProject = (async () => ({
+    assets: [{ id: "asset", hash, kind: "video" }],
+  })) as never;
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({ executionRef: "r", state: "succeeded" }),
+      enumerateArtifacts: async () => {
+        // Stopped after its end was known, and before its video was recorded.
+        now = 9_000;
+        await service.cancel(row.generationId);
+        return [
+          {
+            handle: "o.mp4",
+            mediaType: "video/mp4",
+            byteLength: 1,
+            sha256: hash,
+          },
+        ];
+      },
+      requestCancel: async () => ({
+        requested: false,
+        localProcessExited: true,
+      }),
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+    now: () => now,
+  });
+  await service.importResult(row.generationId);
+  const made = service.row(row.generationId)!;
+  assert.equal(made.imported?.assetId, "asset");
+  assert.equal(made.endedAt, 1_000);
+  assert.equal(made.failureClass, undefined);
+  assert.equal(made.mayStillBeBilled, undefined);
+});
+
+test("an uncertain send that then fails may have left, and what was said as it ended stands", async () => {
+  const w = await onKaggle();
+  w.world.push = "Timed out.";
+  const { generationId } = await w.start();
+  assert.equal(w.service.row(generationId)!.phase, "sending");
+  w.world.now += HOUR;
+  w.world.state = "ERROR";
+  w.world.leave = (runId, folder) =>
+    receipt(folder, { runId, stage: "failed", error: "ValueError: x" });
+  const answer = await w.service.status(generationId);
+  assert.equal(answer.state, "failed");
+  assert.equal(answer.mayStillBeBilled, true);
+  assert.equal(w.service.row(generationId)!.phase, "sending");
+  // Stored, so reading does not work it out again.
+  assert.equal(
+    outcomeOf({ ...w.service.row(generationId)!, dismissed: true }).billedIn,
+    "providerQuota",
+  );
+  assert.equal(
+    outcomeOf({ ...w.service.row(generationId)!, mayStillBeBilled: false })
+      .billedIn,
+    "none",
+  );
+});
+
+test("an old row that failed while sending may have left, and of the oldest nothing is said of billing", () => {
+  const old = { ...ROW, phase: "sending" as const, state: "failed" as const };
+  assert.equal(outcomeOf(old).billedIn, "providerQuota");
+  // Refused, so taken off the list: it did not leave.
+  assert.equal(outcomeOf({ ...old, dismissed: true }).billedIn, "none");
+  const oldest = { ...old, remote: undefined };
+  assert.equal(outcomeOf(oldest).failureClass, "unknown");
+  assert.ok(!("billedIn" in outcomeOf(oldest)));
+  assert.ok(!("mayStillBeBilled" in outcomeOf(oldest)));
+  // A stored value of another type is as if it were not there.
+  const odd = outcomeOf({
+    ...ROW,
+    state: "failed",
+    mayStillBeBilled: "no",
+    endedAt: { a: 1 },
+  } as never);
+  assert.equal(odd.mayStillBeBilled, true);
+  assert.ok(!("endedAt" in odd));
+});
+
+test("a row from before gains nothing as it is stopped, dismissed or asked again", async () => {
+  const w = await workspace();
+  const ledger = w.queue.generationLedger();
+  const rows = [
+    {
+      ...ROW,
+      generationId: crypto.randomUUID(),
+      projectId: w.project.id,
+      state: "failed" as const,
+    },
+    {
+      ...ROW,
+      generationId: crypto.randomUUID(),
+      projectId: w.project.id,
+      cancelled: true,
+    },
+    // A malformed one is still dismissed.
+    {
+      ...ROW,
+      generationId: crypto.randomUUID(),
+      projectId: w.project.id,
+      recipe: undefined as never,
+    },
+  ];
+  for (const r of rows) ledger.begin(r);
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({
+        executionRef: "r",
+        state: "failed",
+        failureClass: "timeout",
+      }),
+      requestCancel: async () => ({
+        requested: false,
+        localProcessExited: true,
+      }),
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  for (const r of rows.slice(0, 2)) {
+    await service.status(r.generationId);
+    await service.cancel(r.generationId);
+    service.dismiss(r.generationId);
+    assert.equal(ledger.read(r.generationId)!.failureClass, undefined);
+    assert.equal(ledger.read(r.generationId)!.endedAt, undefined);
+  }
+  service.dismiss(rows[2]!.generationId);
+  assert.equal(ledger.read(rows[2]!.generationId)!.dismissed, true);
 });
 
 test("a status without a class is unknown, never guessed from its words, and one with a class it should not have is not believed", async () => {

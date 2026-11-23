@@ -542,10 +542,9 @@ test("a job ComfyUI stops reporting fails from when it was last seen", async () 
   pass(900);
   assert.equal((await engine.status(id)).state, "unknown", "seen 900 ms ago");
   pass(200);
-  assert.equal(
-    (await engine.status(id)).diagnostic,
-    "ComfyUI stopped reporting this job.",
-  );
+  const gone = await engine.status(id);
+  assert.equal(gone.diagnostic, "ComfyUI stopped reporting this job.");
+  assert.equal(gone.failureClass, "lostJob");
   engine.close();
 });
 
@@ -1028,7 +1027,8 @@ test("status follows queue, history, and failure, with bounded diagnostics", asy
     ["torch.OutOfMemoryError", "resourceExhausted"],
     ["MemoryError", "resourceExhausted"],
     ["ValueError", "providerRejected"],
-    ["NotAnOutOfMemoryErrorAtAll", "providerRejected"],
+    ["OutOfMemoryErrorAtAll", "providerRejected"],
+    ["NotAnOutOfMemoryError", "providerRejected"],
     [5, "providerRejected"],
   ] as const) {
     f.history[id] = {

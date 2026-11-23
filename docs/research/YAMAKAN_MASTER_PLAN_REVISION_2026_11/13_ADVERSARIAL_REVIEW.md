@@ -330,8 +330,8 @@ registry, the task program is rendered again, and the package check is run.
 The planner's view on timing (OA-1 to OA-22): OA-5 and OA-16 both change the take record that MPR-101 creates.
 The record is versioned and a later additive step is possible, but each is cheapest before
 MPR-101 merges. OA-4 and OA-8 answer the creative director's blocker and both land in MPR-302.
-OA-18 changes a closed list, so it is cheapest before MPR-207 fixes that list. The rest can wait
-for the card named.
+OA-18 changes a closed list, so it was cheapest before MPR-207 fixed that list, and it was accepted
+before it. The rest can wait for the card named.
 
 ### 5.2 Gaps with no owning card
 

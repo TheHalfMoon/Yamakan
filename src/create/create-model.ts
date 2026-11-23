@@ -293,7 +293,17 @@ export function outcomeLines(o: RunOutcome): MessageKey[] {
   const retry = o.retry ?? "";
   return [
     FAIL_LINES[kind]!,
-    o.mayStillBeBilled ? "create.billMay" : "create.billNot",
+    // Where it is not known, nothing is said of it.
+    ...(o.mayStillBeBilled === undefined
+      ? []
+      : [
+          !o.mayStillBeBilled
+            ? ("create.billNot" as const)
+            : // Only a stopped run may still be going.
+              kind === "cancelled"
+              ? ("create.billStill" as const)
+              : ("create.billMay" as const),
+        ]),
     Object.hasOwn(RETRY_LINES, retry)
       ? RETRY_LINES[retry]!
       : "create.retryAfterChecking",

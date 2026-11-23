@@ -351,7 +351,7 @@ const refusalClass = (message: string): FailureClass =>
       : "providerRejected";
 // How a run that ran out of memory names its own error, in its receipt.
 const OUT_OF_MEMORY =
-  /^(?:torch\.)?(?:cuda\.)?(?:OutOfMemoryError|MemoryError):/;
+  /^(?:torch\.)?(?:cuda\.)?(?:OutOfMemoryError|MemoryError|_ArrayMemoryError):/;
 const NO_SUCH_NOTEBOOK = /Permission 'kernels\.get' was denied/;
 // What it said of the empty notebook a refused first push left, on 2026-11-07. Its list does not
 // hold that one either, so that list cannot prove a notebook is absent: this is only taken for
@@ -713,10 +713,15 @@ export function createKaggleEngine(options: {
     ...(run.endedWith ? { diagnostic: diagnostic(run.endedWith) } : {}),
     ...(run.endedAs ? { failureClass: run.endedAs } : {}),
   });
+  const succeeded = (run: Run): ExecutionStatus => {
+    run.ended = "succeeded";
+    return status(run);
+  };
   const end = (
     run: Run,
-    ...[state, message, failureClass]:
-      ["succeeded"] | ["failed" | "cancelled", string, FailureClass]
+    state: "failed" | "cancelled",
+    message: string,
+    failureClass: FailureClass,
   ): ExecutionStatus => {
     run.ended = state;
     run.endedWith = message;
@@ -865,7 +870,7 @@ export function createKaggleEngine(options: {
         sha256: hash,
       },
     };
-    return end(run, "succeeded");
+    return succeeded(run);
   }
 
   const ask = async (run: Run): Promise<ExecutionStatus> => {

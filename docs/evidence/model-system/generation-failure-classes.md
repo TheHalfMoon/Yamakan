@@ -1,5 +1,7 @@
 # Every ended generation says which kind of end it was (MPR-207)
 
+The results below are of the head that this file is part of, on the founder's Windows computer and in GitHub CI.
+
 ## What was found (step 0)
 
 By reading main `c7c9929`:
@@ -44,17 +46,29 @@ By reading main `c7c9929`:
 - **A killed run stays `providerRejected`,** as the card has it: its log shows that it was killed, and memory is the likely reason and not a known one. Only a run's own name for its error (`OutOfMemoryError`, `MemoryError`) is `resourceExhausted`, never its words.
 - **A credential refused at the question before a push** is `credentialRejected`. The card's rule for what is thrown before the push is `refusedByPolicy`; OA-18 came after it.
 - **A run that had succeeded and is then stopped** is `cancelled`, and keeps the time of its own end.
-- **`endedAt` of a stopped run** is the time of the stop. MPR-101 recorded only an end its engine reported; no such row can be recorded in a take, since a stopped run is not imported.
+- **`endedAt` of a stopped run** is the time of the stop. A stop that comes as a video is being brought in can be too late for it: the video is in, the run has no class, and its own end is the time kept, as MPR-101's record of it needs.
+- **The first end stands, with two exceptions:** that one, and a start refused as it was sent, which keeps its refusal though the person stopped it meanwhile, so that a quota refusal is not hidden.
+- **A run in this machine's memory** (ComfyUI) that seems to end and then goes on keeps the first kind and time.
+- **Nothing is said of billing** for the oldest rows, which do not hold where they went. A failed row from before this that is still listed is taken to have left.
+- **The page's words** do not repeat the card's: `billMay` is "may have used" and a stopped run has a line of its own (`create.billStill`), as only that one may still be going; the advice `afterChange` and `whenWanted` is worded so that it does not contradict the note beside it, which for a killed run says that the same settings have worked, and for a broken download that the result is on the notebook until a later run replaces it.
+- **The clock on Kaggle:** the line for `timeout` says when the run was seen, since a run that failed early and is first looked at after its limit is read as one that passed it.
+- **A 401 at the list of notebooks** before a push is not told apart, and one at the check that the notebook is private is `refusedByPolicy`.
 
 - **This file is written by hand.** The card has `scripts/qualify-kaggle-screens.mjs` write it, and that script does not read what the host has first (common contract rule 6); neither is done, since it has not run.
 
 ## Evidence
 
-- **On the founder host:** all 15 tests of `tests/generation-failure-class.test.ts` pass, over the real Kaggle adapter with its stand-in CLI (no network), with those of `tests/kaggle-engine.test.ts`, `tests/comfyui-engine.test.ts`, `tests/engines.test.ts` and `tests/create-model.test.ts`. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
-- **In GitHub CI only** (the native helpers are not built in this checkout): `tests/generation-service.test.ts`, and the parts of `tests/generation-durable.test.ts` that need media.
+- **On the founder host:** all 22 tests of `tests/generation-failure-class.test.ts` pass, some over the real job table, over the real Kaggle adapter with its stand-in CLI (no network), with those of `tests/kaggle-engine.test.ts`, `tests/comfyui-engine.test.ts`, `tests/engines.test.ts` and `tests/create-model.test.ts`. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
+- **In GitHub CI only** (the native helpers are not built in this checkout): `tests/generation-service.test.ts` (the fields on `status` and `list`), and the parts of `tests/generation-durable.test.ts` that need media.
+
+## Not covered by a test
+
+- Several of the card's sixteen named tests are in one test each, or under another name; its "wrong size" message (a video larger than 4 GiB) and ComfyUI's "could not be asked to stop it" have none.
+- The fields are not read through REST and MCP: `tests/parity.test.ts` compares the two transports' tools from the one registry. A failure on the ComfyUI route is not driven through the service; that an engine on this computer is never billed is tested with a stand-in.
 
 ## Not run, and not claimed
 
 - **`npm run qualify:kaggle-screens`,** whose scenes `failed` and `stop-running` now check the line, is syntax-checked and was not run: it needs the native helpers, a browser and a C# compiler. Its scenes' observations are therefore not here, and **the card is not complete.**
+- **OA-17** (`failureClass` becomes required in an adapter's answer, and measured facts carry a date) is open, with MPR-207 as its date; the field is optional here, as the card has it.
 - The optional look at a real Kaggle run was not made. **[ASSUMED]** items stay so: how Kaggle reports a run it ended at its time limit, so `timeout` there is taken from the clock; and that Kaggle counts a failed or stopped run's GPU time, so the wording says "may".
 - `npm run test:studio` and `npm run test:e2e` were not run here.

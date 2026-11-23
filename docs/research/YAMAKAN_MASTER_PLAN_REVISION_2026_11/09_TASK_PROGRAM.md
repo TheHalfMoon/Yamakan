@@ -3263,7 +3263,7 @@ Blocked outside engineering by:
 
 **Negative tests**
 
-- A wrong or revoked key gives a `providerRejected` failure (the MPR-207 enum has no credential class) whose diagnostic says the credential was refused, with no retry and no second submit.
+- A wrong or revoked key gives a `credentialRejected` failure (OA-18) whose diagnostic says the credential was refused, with no retry and no second submit.
 - A redirect, a response over the bound, or an artifact address on a host outside the allow-list is refused and the credential is not sent there.
 - A submit when the recorded spend cap would be exceeded by the estimate's worst case is refused before any call.
 - Removing the key during polling ends the attempt with a typed failure that keeps the job id and says the run may still be billed.

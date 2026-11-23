@@ -146,28 +146,41 @@ export type GenerationOutcome = {
   endedAt?: number;
 };
 
-/** How a run ended, for its answers: nothing while it goes on, and no kind for one that worked. */
+/**
+ * How a run ended, for its answers: nothing while it goes on, and no kind for one that worked. A
+ * stored value that is not of its type is as if it were not there.
+ */
 export function outcomeOf(r: GenerationRecord): GenerationOutcome {
-  const ended =
-    r.endedAt === undefined ? {} : ({ endedAt: r.endedAt } as const);
+  const ended = typeof r.endedAt === "number" ? { endedAt: r.endedAt } : {};
   if (r.held) return {};
-  if (r.state !== "failed" && r.state !== "cancelled" && !r.cancelled)
-    return ENDED.has(r.state) ? ended : {};
+  const unmade =
+    !r.imported &&
+    (r.state === "failed" || r.state === "cancelled" || r.cancelled);
+  if (!unmade) return ENDED.has(r.state) ? ended : {};
   const failureClass = readFailureClass(r.failureClass);
-  const { mayStillBeBilled } = effectiveBilling({
-    failureClass,
-    remote: r.remote,
-    left: mayHaveLeft(r, r.recipe?.id, ""),
-    // A refused start is never listed; what was said as it ended stands, below.
-    refusedAtSubmit: false,
-  });
+  // An older row says nothing of it. One still listed may have left; and where it went is not
+  // known of the oldest, so nothing is said.
+  const mayStillBeBilled =
+    typeof r.mayStillBeBilled === "boolean"
+      ? r.mayStillBeBilled
+      : r.remote === undefined
+        ? undefined
+        : effectiveBilling({
+            failureClass,
+            remote: r.remote,
+            left: !r.dismissed || mayHaveLeft(r, r.recipe?.id ?? "", ""),
+            refusedAtSubmit: false,
+          }).mayStillBeBilled;
   return {
     failureClass,
-    mayStillBeBilled: r.mayStillBeBilled ?? mayStillBeBilled,
-    billedIn:
-      (r.mayStillBeBilled ?? mayStillBeBilled)
-        ? ("providerQuota" as const)
-        : ("none" as const),
+    ...(mayStillBeBilled === undefined
+      ? {}
+      : {
+          mayStillBeBilled,
+          billedIn: mayStillBeBilled
+            ? ("providerQuota" as const)
+            : ("none" as const),
+        }),
     retry: FAILURE_CLASSES[failureClass].retry,
     ...ended,
   };
@@ -238,7 +251,9 @@ export function createGenerationService(options: {
     );
 
   // The one writer of how a run ended: its moment, its kind and what it may have used. The first
-  // end stands. A row from before this has none, and gains none.
+  // end stands, but for two: a start that was refused as it was sent was refused, whatever the
+  // person did meanwhile, and a video that came in was made, though a stop came as it did. A row
+  // from before this has none, and gains none.
   const update = (
     id: string,
     change: Partial<GenerationRecord>,
@@ -257,20 +272,33 @@ export function createGenerationService(options: {
     const after = { ...before, ...change };
     const ended = (r: GenerationRecord) => ENDED.has(r.state) || r.cancelled;
     const unmade = (r: GenerationRecord) =>
-      r.state === "failed" || r.state === "cancelled" || r.cancelled;
+      !r.imported &&
+      (r.state === "failed" || r.state === "cancelled" || r.cancelled);
     const end: Partial<GenerationRecord> = {};
     if (ended(after) && !ended(before) && before.endedAt === undefined)
       end.endedAt = known;
-    if (unmade(after) && !unmade(before) && before.failureClass === undefined) {
+    if (refusedAtSubmit) {
+      end.failureClass = failureClass ?? "unknown";
+      end.mayStillBeBilled = false;
+    } else if (
+      unmade(after) &&
+      !unmade(before) &&
+      before.failureClass === undefined
+    ) {
       end.failureClass = change.cancelled
         ? "cancelled"
         : (failureClass ?? "unknown");
       end.mayStillBeBilled = effectiveBilling({
         failureClass: end.failureClass,
         remote: before.remote,
-        left: mayHaveLeft(before, before.recipe.id, ""),
+        left: mayHaveLeft(before, before.recipe?.id ?? "", ""),
         refusedAtSubmit,
       }).mayStillBeBilled;
+    } else if (change.imported && !before.imported && before.failureClass) {
+      end.failureClass = undefined;
+      end.mayStillBeBilled = undefined;
+      // The stop's moment gives way to the run's own end.
+      if (!ENDED.has(before.state)) end.endedAt = known;
     }
     ledger.update(id, { ...change, ...end });
   };

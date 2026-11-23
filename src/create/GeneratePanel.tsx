@@ -1,7 +1,7 @@
 // Starting a model on the person's own Kaggle GPU, and following it. Nothing runs
 // until they tick that their prompt may leave this machine and press the button, each
 // time. There is no percentage because Kaggle gives none: only a state and the time.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import {
   choiceOf,
@@ -152,6 +152,8 @@ export function GeneratePanel(props: {
   const [note, setNote] = useState("");
   // How it ended, where it ended without a usable video.
   const [outcome, setOutcome] = useState<RunOutcome>({});
+  const shownRun = useRef<string | null>(null);
+  shownRun.current = run?.generationId ?? null;
   const [lost, setLost] = useState(false);
   // Each tick is for the exact choice it was given on: another model, recipe or picture
   // needs it again, whatever the person switched through since.
@@ -276,6 +278,7 @@ export function GeneratePanel(props: {
   }, [finished]);
 
   const start = async () => {
+    setOutcome({});
     setProblem("");
     setWorking(true);
     try {
@@ -483,28 +486,24 @@ export function GeneratePanel(props: {
           </p>
         </>
       )}
-      {note && (
-        <p
-          role="status"
-          className="note"
-          dir="auto"
-          data-testid="create-run-note"
-        >
-          {note}
-        </p>
-      )}
-      {!run.held && !lost && outcome.failureClass !== undefined && (
-        <p
-          role="status"
-          className="note"
-          data-testid="create-run-class"
-          data-class={outcome.failureClass}
-        >
-          {outcomeLines(outcome)
-            .map((key) => t(key))
-            .join(" ")}
-        </p>
-      )}
+      <div role="status">
+        {note && (
+          <p className="note" dir="auto" data-testid="create-run-note">
+            {note}
+          </p>
+        )}
+        {!run.held && !lost && outcome.failureClass !== undefined && (
+          <p
+            className="note"
+            data-testid="create-run-class"
+            data-class={outcome.failureClass}
+          >
+            {outcomeLines(outcome)
+              .map((key) => t(key))
+              .join(" ")}
+          </p>
+        )}
+      </div>
       {problem && (
         <p role="alert" className="create-problem">
           {problem}
@@ -531,11 +530,14 @@ export function GeneratePanel(props: {
               void api
                 .stop(generationId)
                 .then(() => api.list())
-                .then((all) =>
-                  setOutcome(
-                    all.find((r) => r.generationId === generationId) ?? {},
-                  ),
-                )
+                .then((all) => {
+                  // Of the run this page still shows.
+                  const ended = all.find(
+                    (r) => r.generationId === generationId,
+                  );
+                  if (shownRun.current === generationId)
+                    setOutcome(ended ?? {});
+                })
                 .catch(() => {});
               setRun({ ...run, stopped: true });
             }}
