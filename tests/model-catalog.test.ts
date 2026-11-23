@@ -105,7 +105,86 @@ test("the catalog parses, is frozen and stays inside its bounds", () => {
         )!.limits,
       );
   }
-  assert.equal(MODEL_CATALOG.refused[0].reason, "REMOTE_SERVICE_REFERENCE");
+});
+
+test("each model's identity, and the evidence of each offer, are what the repository holds", () => {
+  const receipt = (name: string) => `docs/evidence/ultimate/${name}.json`;
+  assert.deepEqual(
+    MODEL_CATALOG.entries.map((e) => [
+      e.id,
+      e.name,
+      ...Object.values(e.identity),
+      ...e.offers.map((o) => [o.route, o.recipeId, o.operation, ...o.evidence]),
+    ]),
+    [
+      [
+        "wan2.2-ti2v-5b-diffusers",
+        "Wan2.2-TI2V-5B",
+        "huggingface.co",
+        "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+        "b8fff7315c768468a5333511427288870b2e9635",
+        "diffusers",
+        [
+          "kaggle",
+          "kaggle-wan22-ti2v-5b",
+          "textToVideo",
+          receipt("kaggle-page-run-receipt"),
+        ],
+        [
+          "kaggle",
+          "kaggle-wan22-ti2v-5b-first-frame",
+          "imageToVideo",
+          receipt("kaggle-first-frame-page-run-receipt"),
+        ],
+        ["local", null, "textToVideo", EVIDENCE],
+        ["local", null, "imageToVideo", EVIDENCE],
+      ],
+      [
+        "cogvideox-2b-diffusers",
+        "CogVideoX-2b",
+        "huggingface.co",
+        "zai-org/CogVideoX-2b",
+        "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+        "diffusers",
+        [
+          "kaggle",
+          "kaggle-cogvideox-2b",
+          "textToVideo",
+          receipt("kaggle-cogvideox-page-run-receipt"),
+        ],
+        ["local", null, "textToVideo", EVIDENCE],
+      ],
+    ],
+  );
+  assert.deepEqual(MODEL_CATALOG.refused, [
+    {
+      id: "wan2.2-ti2v-5b-native",
+      identity: {
+        host: "huggingface.co",
+        model: "Wan-AI/Wan2.2-TI2V-5B",
+        revision: "921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+        variant: "native",
+      },
+      refusedAt: "2026-10-27",
+      reason: "REMOTE_SERVICE_REFERENCE",
+      note: "Its own source names a remote service (dashscope) for extending a prompt.",
+      evidence: [EVIDENCE],
+      sourceUrl:
+        "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B/tree/921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+    },
+  ]);
+  for (const entry of MODEL_CATALOG.entries)
+    for (const offer of entry.offers.filter((o) => o.route === "kaggle"))
+      for (const path of offer.evidence) {
+        const run = JSON.parse(readFileSync(at(path), "utf8"));
+        assert.equal(run.passed, true, path);
+        assert.equal(run.model, entry.identity.model, path);
+        assert.equal(
+          Boolean(run.picture),
+          offer.operation === "imageToVideo",
+          path,
+        );
+      }
 });
 
 test("the catalog's words for operations and roles are the contract's", () => {
@@ -170,6 +249,16 @@ test("every Kaggle recipe has one catalog offer with the same facts, and every k
   only(
     catalogDisagreements(
       listsLike((l) => {
+        l.kaggleRecipes.push(wan);
+      }),
+    ),
+    list,
+    wan.id,
+    "more than once",
+  );
+  only(
+    catalogDisagreements(
+      listsLike((l) => {
         l.kaggleRecipes.shift();
       }),
     ),
@@ -182,11 +271,11 @@ test("every Kaggle recipe has one catalog offer with the same facts, and every k
     catalogDisagreements(
       REAL,
       catalogLike((c) => {
-        c.entries[1].offers.push(c.entries[0].offers[0]);
+        c.entries[1].offers.push(c.entries[0].offers[1]);
       }),
     ),
     list,
-    wan.id,
+    KAGGLE_RECIPES[1].id,
     "2 Kaggle offers",
   );
   only(
@@ -228,11 +317,38 @@ test("the page's models agree with the catalog", () => {
     only(set({ [field]: value }), list, page.id, `${field} is `);
   assert.deepEqual(set({ licence: "apache-2.0" }), []);
   only(
-    set({ id: "Someone/Else" }),
+    catalogDisagreements(
+      listsLike((l) => {
+        l.createModels.push({ ...page, id: "Someone/Else" });
+      }),
+    ),
     list,
     "Someone/Else",
     "model has no Kaggle text offer",
   );
+  // What is offered from text is on the page, and each offer of it agrees.
+  only(
+    catalogDisagreements(
+      listsLike((l) => {
+        l.createModels.shift();
+      }),
+    ),
+    list,
+    page.id,
+    "not in this list",
+  );
+  const twice = catalogDisagreements(
+    REAL,
+    catalogLike((c) => {
+      c.entries[0].offers.push({
+        ...c.entries[0].offers[0],
+        recipeId: "kaggle-second",
+        limits: { ...c.entries[0].offers[0].limits, width: 1 },
+      });
+    }),
+  );
+  assert.equal(twice.length, 2);
+  assert.ok(twice.some((t) => t.startsWith(list) && t.includes("width is ")));
   // The page is checked against what is offered, where a retired revision is kept too.
   const older = catalogLike((c) => {
     const old = structuredClone(c.entries[0]);
@@ -252,6 +368,28 @@ test("the page's models agree with the catalog", () => {
     catalogDisagreements(REAL, older),
     CHECKED_LISTS.kaggleRecipes,
     "kaggle-older",
+  );
+  // A model that is not offered need not be on the page.
+  only(
+    catalogDisagreements(
+      REAL,
+      catalogLike((c) => {
+        c.entries.push({
+          ...c.entries[0],
+          id: "gone",
+          identity: { ...c.entries[0].identity, model: "Someone/Gone" },
+          offers: [
+            {
+              ...c.entries[0].offers[0],
+              recipeId: "kaggle-gone",
+              lifecycle: "retired",
+            },
+          ],
+        });
+      }),
+    ),
+    CHECKED_LISTS.kaggleRecipes,
+    "kaggle-gone",
   );
   // And against its own offer: not another operation's, nor another route's.
   for (const [route, operation, checked] of [
@@ -297,17 +435,86 @@ test("every candidate in the frozen evidence is a local candidate offer or a ref
       }),
     );
   const id = evidence.candidates[eligible].id;
-  only(model(eligible, { commit: "0".repeat(40) }), list, id, "revision");
-  only(model(eligible, { repo: "Someone/Else" }), list, id, "Someone/Else");
+  const blockedId = evidence.candidates[blocked].id;
+  const commit = "0".repeat(40);
+  only(model(eligible, { commit }), list, id, `revision ${commit}`);
+  only(model(eligible, { repo: "Some/Other" }), list, id, "model Some/Other");
   only(model(eligible, { license: "mit" }), list, id, "licence is ");
-  for (const over of [{ commit: "0".repeat(40) }, { repo: "Someone/Else" }])
-    only(
-      model(blocked, over),
-      list,
-      evidence.candidates[blocked].id,
-      "not refused",
+  only(
+    model(blocked, { commit }),
+    list,
+    blockedId,
+    `revision ${commit}`,
+    "not refused",
+  );
+  only(
+    model(blocked, { repo: "Some/Other" }),
+    list,
+    blockedId,
+    "model Some/Other",
+    "not refused",
+  );
+  const change = (i: number, over: object) =>
+    catalogDisagreements(
+      listsLike((l) => {
+        Object.assign(l.candidates[i], over);
+      }),
     );
-  for (const change of [
+  for (const [i, kind] of [
+    [eligible, "native"],
+    [blocked, "diffusers"],
+  ] as const)
+    only(
+      change(i, { runtime: { ...evidence.candidates[i].runtime, kind } }),
+      list,
+      evidence.candidates[i].id,
+      "variant is ",
+    );
+  // One that is refused and one that is not are never the other as well.
+  for (const status of ["blocked", "eligibleForQualification"] as const) {
+    const i = place(status);
+    const found = catalogDisagreements(
+      REAL,
+      catalogLike((c) => {
+        const from = evidence.candidates[i].model;
+        const identity = {
+          host: "huggingface.co",
+          model: from.repo,
+          revision: from.commit,
+          variant: "another",
+        };
+        if (status === "blocked")
+          c.entries.push({
+            ...c.entries[0],
+            id: "another",
+            identity,
+            offers: [],
+          });
+        else c.refused.push({ ...c.refused[0], id: "another", identity });
+      }),
+    );
+    only(found, list, evidence.candidates[i].id, `status is ${status}`);
+  }
+  const roles = change(eligible, {
+    operations: evidence.candidates[eligible].operations.map((o) =>
+      o.operation === "imageToVideo"
+        ? { ...o, roles: ["firstFrame", "lastFrame"] }
+        : o,
+    ),
+  });
+  only(roles, list, id, "roles of imageToVideo is ");
+  only(
+    change(eligible, {
+      operations: evidence.candidates[eligible].operations.filter(
+        (o) => o.operation !== "imageToVideo",
+      ),
+    }),
+    list,
+    id,
+    "imageToVideo",
+    "not its own",
+  );
+  for (const altered of [
     (c: ModelCatalog) => {
       c.entries[0].offers = c.entries[0].offers.filter(
         (o) => o.route !== "local" || o.operation !== "imageToVideo",
@@ -325,7 +532,7 @@ test("every candidate in the frozen evidence is a local candidate offer or a ref
     },
   ])
     only(
-      catalogDisagreements(REAL, catalogLike(change)),
+      catalogDisagreements(REAL, catalogLike(altered)),
       list,
       "imageToVideo",
       "not a local candidate",
@@ -399,6 +606,19 @@ test("a lookup finds the one entry or offer, and none it does not hold", () => {
   const { model, revision } = MODEL_CATALOG.refused[0].identity;
   assert.equal(catalogEntryFor(model, revision), undefined);
   assert.equal(catalogOfferFor("kaggle-none"), undefined);
+  // One of two variants would be a guess.
+  const both = parseModelCatalog(
+    catalogLike((c) => {
+      c.entries.push({
+        ...c.entries[0],
+        id: "another",
+        identity: { ...c.entries[0].identity, variant: "another" },
+        offers: [],
+      });
+    }),
+  );
+  assert.equal(both.entries.length, 3);
+  assert.equal(catalogEntryFor(wan.model, wan.revision, both), undefined);
 });
 
 test("a catalog with no exact identity, a double, or a refusal without its reason is refused", () => {
@@ -413,10 +633,6 @@ test("a catalog with no exact identity, a double, or a refusal without its reaso
     refused((c) => {
       c.entries[0].identity.revision = revision as string;
     }, /revision/);
-  for (const host of ["HuggingFace.co", "https://huggingface.co", "localhost"])
-    refused((c) => {
-      c.entries[0].identity.host = host;
-    }, /host/);
   refused((c) => {
     c.entries[1].identity = { ...c.entries[0].identity };
   }, /identity once/);
@@ -441,25 +657,6 @@ test("a catalog with no exact identity, a double, or a refusal without its reaso
   refused((c) => {
     c.entries[0].offers[0].evidence = [];
   }, /evidence/);
-  for (const path of [
-    "docs/evidence/../secret.json",
-    "/docs/evidence/x.json",
-    "docs/other/x.json",
-    "docs/evidence//x.json",
-    "docs/evidence/a/./x.json",
-  ])
-    refused((c) => {
-      c.entries[0].offers[0].evidence = [path];
-    }, /evidence/);
-  for (const url of [
-    "http://huggingface.co/a/b",
-    "https://user@huggingface.co/a/b",
-    "https://huggingface.co/a?b",
-    "https://huggingface.co/a#b",
-  ])
-    refused((c) => {
-      c.entries[0].sourceUrl = url;
-    }, /sourceUrl/);
   refused((c) => {
     c.entries[0].offers[0].recipeId = null;
   }, /no recipe/);
@@ -469,9 +666,204 @@ test("a catalog with no exact identity, a double, or a refusal without its reaso
   refused((c) => {
     c.entries[0].offers.push(c.entries[0].offers[2]);
   }, /candidate without a recipe/);
-  refused((c) => {
-    Object.assign(c.entries[0], { extra: 1 });
-  }, /extra/);
+});
+
+test("each field has its form and its bound", () => {
+  const [entry] = MODEL_CATALOG.entries;
+  const [refusal] = MODEL_CATALOG.refused;
+  const x = (n: number) => "x".repeat(n);
+  const url = "https://huggingface.co/";
+  const path = "docs/evidence/";
+  const urls = [
+    "",
+    "http://huggingface.co/a/b",
+    "https://user@huggingface.co/a/b",
+    "https://huggingface.co/a?b",
+    "https://huggingface.co/a#b",
+    "https://../a",
+    "https://a..b/a",
+    "https://127.0.0.1/a",
+    "https://localhost/a",
+    "https://huggingface.co/../a",
+    "https://huggingface.co//a",
+    "https://huggingface.co/",
+    url + x(301 - url.length),
+  ];
+  const paths = [
+    "",
+    "docs/evidence/",
+    "docs/evidence/folder",
+    "docs/evidence/x.",
+    "docs/evidence/a./x.json",
+    "docs/evidence/../secret.json",
+    "docs/evidence/a/./x.json",
+    "docs/evidence//x.json",
+    "docs/evidence/a//x.json",
+    "/docs/evidence/x.json",
+    "docs/other/x.json",
+    `${path}${x(196 - path.length)}.json`,
+  ];
+  const ids = ["", "Upper", "-x", "a b", "a/b", x(65)];
+  const texts = (max: number) => ["", " ", " a", "a ", x(max + 1)];
+  const dates = ["", "2026-13-01", "27-10-2026", "2026-10-27T00:00:00Z"];
+  const counts = [0, -1, 1.5, "1", 1_000_001, NaN];
+  const bad: [string, readonly unknown[], (c: ModelCatalog, v: any) => void][] =
+    [
+      ["format", ["yamakan.model-catalog/v2"], (c, v) => (c.format = v)],
+      ["id", ids, (c, v) => (c.entries[0].id = v)],
+      ["id", ids, (c, v) => (c.refused[0].id = v)],
+      ["recipeId", ids, (c, v) => (c.entries[0].offers[0].recipeId = v)],
+      ["name", texts(80), (c, v) => (c.entries[0].name = v)],
+      ["note", texts(300), (c, v) => (c.refused[0].note = v)],
+      [
+        "host",
+        [
+          "",
+          "HuggingFace.co",
+          "https://huggingface.co",
+          "localhost",
+          "127.0.0.1",
+          "a..b",
+          "-a.co",
+          "a-.co",
+          `${x(64)}.co`,
+          `${Array(5).fill(x(60)).join(".")}.co`,
+        ],
+        (c, v) => (c.entries[0].identity.host = v),
+      ],
+      [
+        "model",
+        [
+          "",
+          "Family",
+          "a/b/c",
+          "/b",
+          "a/",
+          "a b/c",
+          `${x(65)}/b`,
+          `a/${x(97)}`,
+        ],
+        (c, v) => (c.entries[0].identity.model = v),
+      ],
+      [
+        "variant",
+        ["", "Diffusers", "a b", "-a", x(33)],
+        (c, v) => (c.entries[0].identity.variant = v),
+      ],
+      [
+        "weightsLicence",
+        ["", "a b", x(41)],
+        (c, v) => (c.entries[0].licence.weightsLicence = v),
+      ],
+      ["sourceUrl", urls, (c, v) => (c.entries[0].licence.sourceUrl = v)],
+      ["sourceUrl", urls, (c, v) => (c.entries[0].sourceUrl = v)],
+      ["sourceUrl", urls, (c, v) => (c.refused[0].sourceUrl = v)],
+      ["verifiedAt", dates, (c, v) => (c.entries[0].licence.verifiedAt = v)],
+      ["verifiedAt", dates, (c, v) => (c.entries[0].verifiedAt = v)],
+      ["refusedAt", dates, (c, v) => (c.refused[0].refusedAt = v)],
+      ["reason", ["", "OTHER"], (c, v) => (c.refused[0].reason = v)],
+      ["evidence", paths, (c, v) => (c.refused[0].evidence = [v])],
+      [
+        "evidence",
+        [["docs/evidence/a.json", "docs/evidence/A.json"]],
+        (c, v) => (c.entries[0].offers[0].evidence = v),
+      ],
+      ["route", ["hosted"], (c, v) => (c.entries[0].offers[0].route = v)],
+      ["lifecycle", ["live"], (c, v) => (c.entries[0].offers[0].lifecycle = v)],
+      ["operation", ["sing"], (c, v) => (c.entries[0].offers[0].operation = v)],
+      [
+        "roles",
+        [["firstFrame", "firstFrame"], ["frame"]],
+        (c, v) => (c.entries[0].offers[0].limits.roles = v),
+      ],
+      ...(["width", "height", "frames", "fps", "steps", "promptWordsRead"].map(
+        (field) => [
+          field,
+          counts,
+          (c: ModelCatalog, v: any) => {
+            Object.assign(c.entries[0].offers[0].limits, { [field]: v });
+          },
+        ],
+      ) as any),
+      ...([
+        ["count", counts],
+        ["maxBytes", [0, -1, 1.5]],
+        [
+          "mediaTypes",
+          [[], [" "], ["image"], ["image/png", "image/png"], [`a/${x(40)}`]],
+        ],
+      ].map(([field, values]) => [
+        field,
+        values,
+        (c: ModelCatalog, v: any) => {
+          c.entries[0].offers[0].limits.references = {
+            count: 1,
+            mediaTypes: ["image/png"],
+            maxBytes: 1,
+            [field as string]: v,
+          };
+        },
+      ]) as any),
+    ];
+  for (const [field, values, set] of bad)
+    for (const value of values)
+      refused((c) => set(c, value), new RegExp(`"${field}"`));
+  // Nothing more than these fields, at any depth.
+  for (const inner of [
+    (c: ModelCatalog) => c,
+    (c: ModelCatalog) => c.entries[0],
+    (c: ModelCatalog) => c.entries[0].identity,
+    (c: ModelCatalog) => c.entries[0].licence,
+    (c: ModelCatalog) => c.entries[0].offers[0],
+    (c: ModelCatalog) => c.entries[0].offers[0].limits,
+    (c: ModelCatalog) => c.refused[0],
+  ])
+    refused((c) => {
+      Object.assign(inner(c), { extra: 1 });
+    }, /extra/);
+  // The longest and the plainest of each do pass.
+  parseModelCatalog(
+    catalogLike((c) => {
+      c.entries[0].name = x(80);
+      c.refused[0].note = x(300);
+      c.entries[0].identity.host = "models.example.co";
+      c.entries[0].identity.variant = x(32);
+      c.entries[0].sourceUrl = url + x(300 - url.length);
+      c.entries[0].offers[0].evidence = [`${path}${x(195 - path.length)}.json`];
+      c.entries[0].offers[0].limits.references = {
+        count: 1_000_000,
+        mediaTypes: ["image/png", "image/jpeg"],
+        maxBytes: 1,
+      };
+    }),
+  );
+  for (const reason of [
+    "REMOTE_SERVICE_REFERENCE",
+    "LICENCE_UNACCEPTED",
+    "ROUTE_RETIRED",
+    "ROUTE_PROHIBITED",
+    "INTERFACE_UNSUPPORTED",
+  ] as const)
+    parseModelCatalog(
+      catalogLike((c) => {
+        c.refused[0].reason = reason;
+      }),
+    );
+  // Another host, revision or variant is another identity.
+  for (const over of [
+    { host: "example.co" },
+    { revision: "0".repeat(40) },
+    { variant: "another" },
+  ])
+    parseModelCatalog(
+      catalogLike((c) => {
+        c.refused.push({
+          ...refusal,
+          id: "another",
+          identity: { ...entry.identity, ...over },
+        });
+      }),
+    );
 });
 
 test("a catalog past its bounds is refused", () => {

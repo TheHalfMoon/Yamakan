@@ -36,21 +36,36 @@ const ROLES = [
 ] as const satisfies readonly EngineRequestV2["inputs"][number]["role"][];
 
 const Id = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/);
-const Name = z.string().min(1).max(80);
+const words = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .max(max)
+    .refine((t) => t === t.trim(), "No space around it.");
 const Count = z.number().int().positive().max(1_000_000);
+// Whatever their letter case: a publisher's slug is one model, and Windows has one file.
 const unique = (values: readonly string[]) =>
-  new Set(values).size === values.length;
+  new Set(values.map((v) => v.toLowerCase())).size === values.length;
+// A name, never an address by number: its last part begins with a letter.
+const HOST =
+  "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?){0,8}\\.[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const plainSegments = (p: string) =>
+  !p.split("/").some((s) => s === "" || s === "." || s === "..");
 // A page that was read, never fetched by code: no account, query or fragment in it.
 const SourceUrl = z
   .string()
   .max(300)
-  .regex(/^https:\/\/[a-z0-9.-]+\/[A-Za-z0-9._~/-]+$/);
+  .regex(new RegExp(`^https://${HOST}/[A-Za-z0-9._~/-]+$`))
+  .refine(
+    (u) => plainSegments(u.slice("https://".length)),
+    "A page's plain address.",
+  );
 const EvidencePath = z
   .string()
   .max(200)
-  .regex(/^docs\/evidence\/[A-Za-z0-9_][A-Za-z0-9._/-]*$/)
+  .regex(/^docs\/evidence\/[A-Za-z0-9_][A-Za-z0-9._/-]*\.[a-z0-9]+$/)
   .refine(
-    (p) => !p.split("/").some((s) => s === "" || s === "." || s === ".."),
+    (p) => plainSegments(p) && !p.split("/").some((s) => s.endsWith(".")),
     "A file under docs/evidence.",
   );
 const Evidence = z
@@ -65,9 +80,7 @@ export const ModelIdentitySchema = z
     host: z
       .string()
       .max(253)
-      .regex(
-        /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/,
-      ),
+      .regex(new RegExp(`^${HOST}$`)),
     model: z
       .string()
       .regex(
@@ -113,8 +126,17 @@ export const CatalogOfferSchema = z
         references: z
           .object({
             count: Count,
-            mediaTypes: z.array(z.string().min(1).max(40)).min(1).max(8),
-            maxBytes: z.number().int().positive(),
+            mediaTypes: z
+              .array(
+                z
+                  .string()
+                  .max(40)
+                  .regex(/^[a-z]+\/[a-z0-9.+-]+$/),
+              )
+              .min(1)
+              .max(8)
+              .refine(unique, "Each media type once."),
+            maxBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
           })
           .strict()
           .nullable(),
@@ -132,7 +154,7 @@ export type CatalogOffer = z.infer<typeof CatalogOfferSchema>;
 export const CatalogEntrySchema = z
   .object({
     id: Id,
-    name: Name,
+    name: words(80),
     identity: ModelIdentitySchema,
     licence: CatalogLicenceSchema,
     offers: z.array(CatalogOfferSchema).max(MODEL_CATALOG_LIMITS.offers),
@@ -154,16 +176,15 @@ export const CatalogRefusalSchema = z
       "ROUTE_PROHIBITED",
       "INTERFACE_UNSUPPORTED",
     ]),
-    note: z.string().min(1).max(300),
+    note: words(300),
     evidence: Evidence,
     sourceUrl: SourceUrl,
   })
   .strict();
 export type CatalogRefusal = z.infer<typeof CatalogRefusalSchema>;
 
-// A publisher's slug is one model whatever its letter case.
 const identityKey = (i: ModelIdentity) =>
-  [i.host, i.model.toLowerCase(), i.revision, i.variant].join(" ");
+  [i.host, i.model, i.revision, i.variant].join(" ");
 
 export const ModelCatalogSchema = z
   .object({
@@ -361,8 +382,9 @@ export const MODEL_CATALOG: ModelCatalog = parseModelCatalog({
 export function catalogEntryFor(
   model: string,
   revision: string,
+  catalog: ModelCatalog = MODEL_CATALOG,
 ): CatalogEntry | undefined {
-  const found = MODEL_CATALOG.entries.filter(
+  const found = catalog.entries.filter(
     (e) => e.identity.model === model && e.identity.revision === revision,
   );
   return found.length === 1 ? found[0] : undefined;
@@ -398,7 +420,7 @@ export type CheckedLists = {
   modelPins: readonly Pick<ModelPin, "id" | "operation">[];
   candidates: readonly Pick<
     EngineCandidate,
-    "id" | "status" | "model" | "operations"
+    "id" | "status" | "model" | "operations" | "runtime"
   >[];
   createModels: readonly {
     id: string;
@@ -462,6 +484,15 @@ export function catalogDisagreements(
   );
   const onRoute = (route: CatalogOffer["route"], id: string) =>
     offers.filter((o) => o.offer.route === route && o.offer.recipeId === id);
+
+  for (const [list, items] of Object.entries(lists) as [
+    keyof CheckedLists,
+    readonly { id: string }[],
+  ][]) {
+    const ids = items.map((i) => i.id);
+    for (const id of new Set(ids.filter((v, i) => ids.indexOf(v) !== i)))
+      say(list, id, "it is listed more than once.");
+  }
 
   for (const recipe of lists.kaggleRecipes) {
     const list = "kaggleRecipes";
@@ -535,43 +566,67 @@ export function catalogDisagreements(
   for (const candidate of lists.candidates) {
     const list = "candidates";
     const { repo, commit, license } = candidate.model;
+    const blocked = candidate.status === "blocked";
     const is = (e: { identity: ModelIdentity }) =>
       e.identity.model === repo && e.identity.revision === commit;
-    if (candidate.status === "blocked") {
-      if (!catalog.refused.some(is))
-        say(
-          list,
-          candidate.id,
-          `it is blocked, and ${repo} at ${commit} is not refused in the catalog.`,
-        );
-      continue;
-    }
-    const entries = catalog.entries.filter(is);
-    if (entries.length === 0) {
+    const [mine, others, place] = blocked
+      ? ([catalog.refused, catalog.entries, "refused"] as const)
+      : ([catalog.entries, catalog.refused, "an entry"] as const);
+    if (others.some(is))
       say(
         list,
         candidate.id,
-        `model ${repo} at revision ${commit} is not in the catalog.`,
+        `its status is ${candidate.status}, and ${repo} at ${commit} is ${blocked ? "an entry" : "refused"} in the catalog.`,
+      );
+    const found = mine.filter(is);
+    if (found.length === 0) {
+      const named = mine.some((e) => e.identity.model === repo)
+        ? `revision ${commit} of ${repo}`
+        : `model ${repo}`;
+      say(list, candidate.id, `${named} is not ${place} in the catalog.`);
+      continue;
+    }
+    const matched = found.find(
+      (e) => e.identity.variant === candidate.runtime.kind,
+    );
+    if (!matched) {
+      differs(
+        list,
+        candidate.id,
+        "variant",
+        candidate.runtime.kind,
+        found[0].identity.variant,
       );
       continue;
     }
-    for (const entry of entries)
-      licenceDiffers(list, candidate.id, license, entry);
-    for (const { operation } of candidate.operations)
-      if (
-        !entries.some((e) =>
-          e.offers.some(
-            (o) =>
-              o.route === "local" &&
-              o.lifecycle === "candidate" &&
-              o.operation === operation,
-          ),
-        )
-      )
+    if (!("offers" in matched)) continue;
+    licenceDiffers(list, candidate.id, license, matched);
+    const offered = matched.offers.filter(
+      (o) => o.route === "local" && o.lifecycle === "candidate",
+    );
+    for (const { operation, roles } of candidate.operations) {
+      const offer = offered.find((o) => o.operation === operation);
+      if (!offer)
         say(
           list,
           candidate.id,
           `operation ${operation} is not a local candidate in the catalog.`,
+        );
+      else
+        differs(
+          list,
+          candidate.id,
+          `roles of ${operation}`,
+          [...roles].sort().join(", "),
+          [...offer.limits.roles].sort().join(", "),
+        );
+    }
+    for (const { operation } of offered)
+      if (!candidate.operations.some((o) => o.operation === operation))
+        say(
+          list,
+          candidate.id,
+          `operation ${operation} is a local candidate in the catalog and not its own.`,
         );
   }
 
@@ -583,25 +638,36 @@ export function catalogDisagreements(
         o.offer.route === "kaggle" &&
         o.offer.operation === "textToVideo",
     );
-    // A later revision may be offered beside a retired one.
-    const match =
-      mine.find((o) => o.offer.lifecycle === "offered") ?? mine.at(0);
-    if (!match) {
+    // Each text offer the page stands for; a retired one only where none is offered.
+    const now = mine.filter((o) => o.offer.lifecycle === "offered");
+    const matches = now.length > 0 ? now : mine.slice(0, 1);
+    if (matches.length === 0)
       say(list, model.id, "model has no Kaggle text offer in the catalog.");
-      continue;
+    for (const { entry, offer } of matches) {
+      differs(list, model.id, "name", model.name, entry.name);
+      licenceDiffers(list, model.id, model.licence, entry);
+      for (const size of SIZES)
+        differs(list, model.id, size, model[size], offer.limits[size]);
+      differs(
+        list,
+        model.id,
+        "readsAboutWords",
+        model.readsAboutWords,
+        offer.limits.promptWordsRead,
+      );
     }
-    const { entry, offer } = match;
-    differs(list, model.id, "name", model.name, entry.name);
-    licenceDiffers(list, model.id, model.licence, entry);
-    for (const size of SIZES)
-      differs(list, model.id, size, model[size], offer.limits[size]);
-    differs(
-      list,
-      model.id,
-      "readsAboutWords",
-      model.readsAboutWords,
-      offer.limits.promptWordsRead,
-    );
   }
+  for (const { entry, offer } of offers)
+    if (
+      offer.route === "kaggle" &&
+      offer.operation === "textToVideo" &&
+      offer.lifecycle === "offered" &&
+      !lists.createModels.some((m) => m.id === entry.identity.model)
+    )
+      say(
+        "createModels",
+        entry.identity.model,
+        "it is offered in the catalog and not in this list.",
+      );
   return found;
 }

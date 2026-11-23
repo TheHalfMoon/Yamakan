@@ -12,16 +12,6 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseEngineCandidates } from "../core/engines/candidates.ts";
-import {
-  CHECKED_LISTS,
-  MODEL_CATALOG,
-  catalogDisagreements,
-} from "../core/engines/catalog.ts";
-import { PINNED_COMFY_RECIPES } from "../core/engines/comfyui.ts";
-import { KAGGLE_RECIPES } from "../core/engines/kaggle.ts";
-import { PINNED_MODEL_MANIFESTS } from "../core/engines/manifests.ts";
-import { CREATE_MODELS } from "../src/create/create-model.ts";
 import { readHost } from "./qualify-host.mjs";
 
 // Before anything runs.
@@ -32,19 +22,55 @@ const head = git("rev-parse", "HEAD");
 const dirty = git("status", "--porcelain") !== "";
 
 const EVIDENCE = "docs/evidence/ultimate/engine-candidate-manifests.json";
-const bytes = readFileSync(new URL(`../${EVIDENCE}`, import.meta.url));
-const { candidates } = parseEngineCandidates(
-  JSON.parse(bytes.toString("utf8")),
-);
-const lists = {
-  kaggleRecipes: KAGGLE_RECIPES,
-  comfyRecipes: PINNED_COMFY_RECIPES,
-  modelPins: PINNED_MODEL_MANIFESTS,
-  candidates,
-  createModels: CREATE_MODELS,
-};
-const disagreements = catalogDisagreements(lists);
-const passed = disagreements.length === 0;
+// Loaded here, so that a catalog that does not parse is in the receipt as well.
+let failure = null;
+let checked = { passed: false };
+try {
+  const [
+    { parseEngineCandidates },
+    { CHECKED_LISTS, MODEL_CATALOG, catalogDisagreements },
+    { PINNED_COMFY_RECIPES },
+    { KAGGLE_RECIPES },
+    { PINNED_MODEL_MANIFESTS },
+    { CREATE_MODELS },
+  ] = await Promise.all([
+    import("../core/engines/candidates.ts"),
+    import("../core/engines/catalog.ts"),
+    import("../core/engines/comfyui.ts"),
+    import("../core/engines/kaggle.ts"),
+    import("../core/engines/manifests.ts"),
+    import("../src/create/create-model.ts"),
+  ]);
+  const bytes = readFileSync(new URL(`../${EVIDENCE}`, import.meta.url));
+  const lists = {
+    kaggleRecipes: KAGGLE_RECIPES,
+    comfyRecipes: PINNED_COMFY_RECIPES,
+    modelPins: PINNED_MODEL_MANIFESTS,
+    candidates: parseEngineCandidates(JSON.parse(bytes.toString("utf8")))
+      .candidates,
+    createModels: CREATE_MODELS,
+  };
+  const disagreements = catalogDisagreements(lists);
+  for (const line of disagreements) console.error(line);
+  checked = {
+    passed: disagreements.length === 0,
+    entries: MODEL_CATALOG.entries.length,
+    refusals: MODEL_CATALOG.refused.length,
+    lists: Object.entries(CHECKED_LISTS).map(([key, list]) => ({
+      list,
+      items: lists[key].length,
+      disagreements: disagreements.filter((d) => d.startsWith(`${list}: `)),
+    })),
+    evidence: {
+      path: EVIDENCE,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    },
+  };
+} catch (error) {
+  failure = error instanceof Error ? error.message : String(error);
+  console.error(failure);
+}
+const { passed, ...results } = checked;
 const receiptOut =
   process.argv[2] ??
   fileURLToPath(
@@ -64,22 +90,12 @@ writeFileSync(
       host,
       outcome: passed ? "PASS" : "FAIL",
       passed,
-      entries: MODEL_CATALOG.entries.length,
-      refusals: MODEL_CATALOG.refused.length,
-      lists: Object.entries(CHECKED_LISTS).map(([key, list]) => ({
-        list,
-        items: lists[key].length,
-        disagreements: disagreements.filter((d) => d.startsWith(`${list}: `)),
-      })),
-      evidence: {
-        path: EVIDENCE,
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-      },
+      failure,
+      ...results,
     },
     null,
     2,
   )}\n`,
 );
-for (const line of disagreements) console.error(line);
 console.log(passed ? "PASS" : "FAIL", receiptOut);
 process.exitCode = passed ? 0 : 1;

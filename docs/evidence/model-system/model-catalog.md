@@ -4,7 +4,7 @@
 
 ## What was there before
 
-At `124d04e` there was no catalog. A model's slug or revision is written in `KAGGLE_RECIPES`, `CREATE_MODELS` (slug only), the frozen candidates evidence, each `scripts/kaggle/*/run.py` and older receipts; `PINNED_COMFY_RECIPES` and `PINNED_MODEL_MANIFESTS` are empty. `tests/kaggle-engine.test.ts` ties the page's facts to the recipes, and each recipe to its script. Nothing tied any of them to the candidates evidence. `SERVER_RECIPES` in `core/engines/v1-bridge.ts` are stand-ins and name no model.
+At `124d04e` there was no catalog. Outside the plan, `git grep` finds a model's slug in `KAGGLE_RECIPES`, `CREATE_MODELS`, each `scripts/kaggle/*/run.py`, the frozen candidates evidence, older receipts and `first-ai-video.md`, the stand-in `scripts/fixtures/fake-kaggle.mjs`, `scripts/qualify-create-workspace.mjs` and tests (`create-model`, `create-story`, `take-record`). Of those, only the recipes, the scripts and the page's models are what a run or a person uses; `PINNED_COMFY_RECIPES` and `PINNED_MODEL_MANIFESTS` are empty. `tests/kaggle-engine.test.ts` ties the page's facts to the recipes, and each recipe to its script. Nothing tied any of them to the candidates evidence. `SERVER_RECIPES` in `core/engines/v1-bridge.ts` are stand-ins and name no model.
 
 ## What to know when reading it
 
@@ -15,7 +15,16 @@ At `124d04e` there was no catalog. A model's slug or revision is written in `KAG
 
 ## What the checks do beyond the card's list
 
-The page's name and `readsAboutWords`, a candidate's licence, a pin's operation, and an offer of a ComfyUI recipe or local pin that does not exist are compared too, since each is a fact held in two places. An identity is one whatever the letter case of its slug. Only a candidate may have no recipe, each offer names evidence, and a recipe is in one offer.
+Each of these is a fact held in two places, or a gap the review found:
+
+- the page's name and `readsAboutWords`, and that each model offered from text is on the page and agrees with each such offer;
+- a candidate's licence, its runtime kind as the identity's variant, its roles, that it is not both refused and an entry, and that the catalog has no local candidate operation it does not;
+- a pin's operation, and an offer of a ComfyUI recipe or a local pin that does not exist;
+- an item that a list holds twice.
+
+The schema is stricter than the card too: an identity is one whatever the letter case of its slug, only a candidate may have no recipe and then once on a route for an operation, a recipe is in one offer, each offer names evidence, an address is a plain page of a named host, and a text has no space around it.
+
+**For a later card:** the card's rule asks for a local `candidate` offer of each eligible candidate in the frozen evidence. When one is qualified, its candidate offer stays beside the qualified one, or that rule is changed with the evidence it reads; a report that shows one cell for each route and operation has to choose between them.
 
 ## What was not done
 
