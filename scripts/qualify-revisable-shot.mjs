@@ -894,6 +894,7 @@ try {
       clearTimeout(timer);
       reject(new Error(`MCP exited ${code}.`));
     });
+    spoken.once("error", reject);
     spoken.stdin.on("error", reject);
     spoken.stdin.write(
       `${JSON.stringify({
