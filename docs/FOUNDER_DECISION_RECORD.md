@@ -263,3 +263,10 @@ Approval line in the packet's format:
 - **Taken to mean:** by the builder, not the founder's words: the kind is required of an engine's answer that a run failed or was stopped, and refused in any other; an engine that does not know says "unknown"; and an answer that breaks this is still read as "unknown" and not turned into an error of its own.
 - **Not put to the founder:** where MPR-202 puts the date and the sample size and what it counts as one measured fact, which are the builder's, in the card's text; and that the engine contract keeps its name although an answer now needs the kind.
 - **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.
+
+## 2026-11-23: The brief form shows fullness, and proposals show names and timecodes
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "Should the brief form show fullness, not bytes, and proposals show names and timecodes (OA-10)?", with the choices "Yes, show names" and "No, leave as is", the founder answered "Yes, show names". The founder was told that the builder recommended yes, since people read how full something is and shot names more easily than bytes and ids; that it held MPR-106; and that it costs some interface text, whose Arabic would be unreviewed. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** open amendment OA-10 of the master plan revision, in MPR-106 and MPR-303.
+- **Taken to mean:** by the builder, not the founder's words: the form says how full the story is in whole percents of the nearer of its two limits, its text and the whole story; the service's own refusal keeps its byte counts; and a proposal's page looks up the names, while what is stored keeps ids and numbers.
+- **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.

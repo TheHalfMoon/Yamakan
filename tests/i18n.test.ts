@@ -9,6 +9,7 @@ import {
   placeholders,
   translate,
 } from "../src/i18n.ts";
+import { BRIEF_FIELDS, SHOT_FIELDS } from "../src/story/story-text.ts";
 
 test("every interface message exists in English and Arabic with the same placeholders", () => {
   const keys = Object.keys(MESSAGES.en).sort();
@@ -97,4 +98,31 @@ test("interface source writes direction controls as escapes, never as raw charac
         raw,
         name,
       );
+});
+
+test("the story form and Create's offer have their words in both languages (MPR-106)", () => {
+  const fields = [
+    ...BRIEF_FIELDS.map((name) => `words.brief.${name}`),
+    ...SHOT_FIELDS.map((name) => `words.shot.${name}`),
+    ...["conflict", "full", "languages", "failed"].map(
+      (why) => `words.refused.${why}`,
+    ),
+    ...["Title", "Shot", "Keep", "Later", "Never", "NotKept", "Undo"].map(
+      (x) => `create.draft${x}`,
+    ),
+  ];
+  for (const key of fields)
+    for (const lang of ["en", "ar"] as const)
+      assert.ok(Object.hasOwn(MESSAGES[lang], key), `${lang} ${key}`);
+  // How full a story is has no byte count (OA-10).
+  for (const key of ["words.used", "words.refused.full"] as const) {
+    assert.deepEqual(placeholders(MESSAGES.en[key]), ["percent"]);
+    assert.doesNotMatch(MESSAGES.en[key], /byte/i);
+  }
+  assert.equal(
+    translate("en", "words.refused.conflict"),
+    "The story changed elsewhere. Reload it; your text is kept here until you leave.",
+  );
+  // The model and the seed are said not to be kept.
+  assert.match(translate("en", "create.draftNotKept"), /model and the seed/);
 });

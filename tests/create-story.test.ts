@@ -38,7 +38,6 @@ test("what is written is a story the project accepts", () => {
   const story = add(null, video);
   assert.doesNotThrow(() => StoryDocumentSchema.parse(story));
   const shot = story.scenes[0].shots[0];
-  assert.equal(shot.notes, "A red kite.");
   assert.equal(shot.selectedTakeId, shot.takes[0].id);
   assert.equal(shot.takes[0].lineage.outputHash, hash);
   assert.equal(shot.durationTicks, 1000);
@@ -58,11 +57,49 @@ test("the extreme of what a receipt can hold is accepted too", () => {
   const take = story.scenes[0].shots[0];
   assert.match(take.takes[0].lineage.label, /^seed 7, steps 30, m+/);
   // No emoji is cut in half.
-  assert.ok(!/[\uD800-\uDBFF]$/.test(take.notes));
+  assert.equal(take.intent!.action!.length, 2_000);
+  assert.ok(!/[\uD800-\uDBFF]$/.test(take.intent!.action!));
   assert.ok(!/[\uD800-\uDBFF]…$/.test(take.name));
   // A blank first line still names the shot.
   const blank = add(null, { ...video, receipt: { ...receipt, prompt: "   " } });
   assert.doesNotThrow(() => StoryDocumentSchema.parse(blank));
+});
+
+test("a made video's prompt is written as the shot's action", () => {
+  const shot = add(null, video).scenes[0].shots[0];
+  assert.deepEqual(shot.intent, { action: "A red kite." });
+  assert.equal(shot.notes, "");
+  // A receipt that names an empty prompt leaves no intent behind.
+  const silent = add(null, { ...video, receipt: { ...receipt, prompt: "" } });
+  assert.doesNotThrow(() => StoryDocumentSchema.parse(silent));
+  assert.ok(!("intent" in silent.scenes[0].shots[0]));
+  assert.equal(madeRecords(silent)[hash].prompt, "");
+});
+
+test("made records read the action, and the note for older shots", () => {
+  const story = add(null, video);
+  const [shot] = story.scenes[0].shots;
+  const told = (over: object) =>
+    madeRecords({
+      ...story,
+      scenes: [{ ...story.scenes[0], shots: [{ ...shot, ...over }] }],
+    })[hash].prompt;
+  assert.equal(told({}), "A red kite.");
+  assert.equal(told({ intent: undefined, notes: "Before." }), "Before.");
+  assert.equal(
+    told({ intent: { framing: "wide" }, notes: "Before." }),
+    "Before.",
+  );
+  // What a person has made of the action is what is shown.
+  assert.equal(
+    told({ intent: { action: "Edited." }, notes: "Before." }),
+    "Edited.",
+  );
+  for (const odd of [
+    { intent: 7, notes: 7 },
+    { intent: { action: 7 }, notes: null },
+  ])
+    assert.equal(told(odd), "");
 });
 
 test("a record reads back by the stored file's hash", () => {

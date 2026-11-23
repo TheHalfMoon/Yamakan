@@ -119,7 +119,7 @@ approval log, not a review tool.
 | CD-5 | MAJOR | The shot list is approved with no cost figure beside it. | LEFT OPEN: OA-9. |
 | CD-6 | MAJOR | The marketing journey implies a team review that the product cannot hold. | FIXED: Journey 5 is retitled, and document 00 section 7 says there is one human principal and no second approver. |
 | CD-7 | MAJOR | The reason for a revision is not recorded. | PARTLY FIXED: OA-5, its record part accepted 2026-11-23 and the field in MPR-101; MPR-103 writes it. |
-| CD-8 | MINOR | Some surfaces speak to an engineer: byte counts, ids, hashes. | PARTLY FIXED: MPR-104 shows a level word and says before a save that undo history ends. Byte counts and ids in proposals are OA-10. |
+| CD-8 | MINOR | Some surfaces speak to an engineer: byte counts, ids, hashes. | PARTLY FIXED: MPR-104 shows a level word and says before a save that undo history ends. OA-10 was accepted on 2026-11-23: the brief form shows fullness and no byte count (MPR-106), and a proposal shows shot names and timecode and no id (MPR-303). |
 
 ### 3.2 Product strategist
 
@@ -311,7 +311,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-7 | MPR-402, MPR-403 | The order in which the two cards raise the story version is carried by a dependency, not kept by hand. | Dependency check, finding 3 | The second of the two starts |
 | OA-8 | MPR-302, MPR-301 | The approval prompt shows the stage's text and, when an approval is stale, the scene and shot ids that differ. | CD-2 | MPR-302 |
 | OA-9 | MPR-302 | The shot-list approval shows the summed estimated seconds; MPR-302 then depends on MPR-203. | CD-5 | MPR-302 |
-| OA-10 | MPR-106, MPR-303 | The brief form shows a plain fullness measure, not bytes, and a proposal shows shot names and timecode, not ids. | CD-8 | MPR-106 |
+| OA-10 | MPR-106, MPR-303 | The brief form shows a plain fullness measure, not bytes, and a proposal shows shot names and timecode, not ids (accepted by the founder on 2026-11-23). | CD-8 | accepted |
 | OA-11 | MPR-104 | The shot card shows the route's maximum clip length and marks a shot that is longer. | FM-5 | MPR-104 |
 | OA-12 | MPR-604, MPR-101 | The sample story has two shots with declared takes, so the first screen shows the revisable shot; MPR-604 then depends on MPR-101. | FM-8 | MPR-604 |
 | OA-13 | MPR-301 | MPR-301 depends on MPR-209, so that no Director work ships before the notices are right. | OM-1 | MPR-301 starts |

@@ -26,6 +26,7 @@ import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
 import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
 import { CREATE_STORY_TITLE } from "./create/create-story.ts";
+import { StoryBrief } from "./story/StoryBrief.tsx";
 import {
   WorkspacePanel,
   WorkspaceTabs,
@@ -2467,6 +2468,25 @@ function App() {
                         }
                       return null;
                     }}
+                    loadStories={async () => {
+                      const documents = (await call("yamakan.document.list", {
+                        projectId: p.id,
+                      })) as unknown as { id: string; kind: string }[];
+                      const stories = [];
+                      for (const ref of documents)
+                        if (ref.kind === "story") {
+                          const found = (await call("yamakan.document.get", {
+                            projectId: p.id,
+                            documentId: ref.id,
+                          })) as any;
+                          stories.push({
+                            documentId: ref.id,
+                            contentHash: found.contentHash as string,
+                            story: found.content,
+                          });
+                        }
+                      return stories;
+                    }}
                     reopenProject={() =>
                       run(async () => {
                         await save();
@@ -2710,6 +2730,29 @@ function App() {
                     <h2>{t("workspace.story")}</h2>
                     <p>{t("workspace.storyIntro")}</p>
                     {scenesPanel(p)}
+                    <StoryBrief
+                      key={p.id}
+                      projectId={p.id}
+                      revision={p.revision}
+                      client={{
+                        call: (operation, parameters) =>
+                          client.call(operation as never, parameters as never),
+                      }}
+                      t={t}
+                      unsaved={Boolean(history?.past.length || unapplied)}
+                      onSaved={documentSaved}
+                      onReload={() =>
+                        run(async () => {
+                          await save();
+                          accept(
+                            await call("yamakan.project.open", {
+                              projectId: p.id,
+                            }),
+                          );
+                        })
+                      }
+                      registerUnsaved={registerUnsaved}
+                    />
                   </section>
                 ) : (
                   emptyPanel()

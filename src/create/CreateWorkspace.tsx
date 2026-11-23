@@ -19,6 +19,13 @@ import {
 } from "./GeneratePanel.tsx";
 import { mediaUrl } from "../session.ts";
 import {
+  directionText,
+  draftOffer,
+  draftToIntent,
+  withIntent,
+  type TextStory,
+} from "../story/story-text.ts";
+import {
   CREATE_MODELS,
   DIRECTIONS,
   DIRECTION_KINDS,
@@ -91,6 +98,187 @@ export type KeptStory = {
   contentHash: string;
   story: CreateStory;
 };
+// A story of the project, as it is stored.
+export type ProjectStory = {
+  documentId: string;
+  contentHash: string;
+  story: TextStory & { title?: string };
+};
+
+// A draft that only this browser holds, offered once to be kept in the project's story. Nothing
+// is saved until the person picks a shot and says so.
+function DraftOffer(props: {
+  markerKey: string;
+  stored: string | null;
+  draft: CreateBrief;
+  revision: number;
+  busy: boolean;
+  t: Translate;
+  loadStories: () => Promise<ProjectStory[]>;
+  reopenProject: () => Promise<void>;
+  saveStory: (next: {
+    documentId: string;
+    expectedContentHash: string;
+    story: TextStory;
+  }) => Promise<unknown>;
+}) {
+  const { t, draft } = props;
+  const [answered, setAnswered] = useState(
+    () => kept(props.markerKey) !== null,
+  );
+  const [later, setLater] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [stories, setStories] = useState<ProjectStory[]>([]);
+  const [shotId, setShotId] = useState("");
+  const [said, setSaid] = useState<MessageKey | null>(null);
+  const [reads, setReads] = useState(0);
+  const possible = !answered && !later && Boolean(props.stored);
+  useEffect(() => {
+    if (!possible) return;
+    let current = true;
+    props
+      .loadStories()
+      .then((found) => {
+        if (current) setStories(found);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [possible, props.revision, reads]);
+  const offered =
+    possible &&
+    draftOffer(
+      props.stored,
+      stories.map((s) => s.story),
+      false,
+    );
+  if (!offered) return null;
+  const shots = stories.flatMap((s) =>
+    s.story.scenes.flatMap((scene) =>
+      scene.shots.map((shot) => ({ ...s, scene, shot })),
+    ),
+  );
+  const chosen = shots.find((s) => s.shot.id === shotId);
+  const intent = draftToIntent(draft);
+  const answer = () => {
+    keep(props.markerKey, true);
+    setAnswered(true);
+  };
+  const directions = directionText(intent.direction);
+  const held = chosen?.shot.intent;
+  // What saving would write over.
+  const replaced = [
+    held?.action,
+    ...(directions.length > 0 ? directionText(held?.direction) : []),
+  ].filter((words) => words);
+  return (
+    <div className="create-draft" data-testid="create-draft-offer">
+      <h3>{t("create.draftTitle")}</h3>
+      <p className="note">{t("create.draftNote")}</p>
+      <p
+        dir="auto"
+        className="create-draft-text"
+        data-testid="create-draft-text"
+      >
+        {intent.action ?? ""}
+      </p>
+      {picking && (
+        <>
+          <label className="create-field">
+            {t("create.draftShot")}
+            <select
+              data-testid="create-draft-shot"
+              value={shotId}
+              onChange={(e) => {
+                setShotId(e.target.value);
+                setSaid(null);
+              }}
+            >
+              <option value="">{t("create.draftChoose")}</option>
+              {shots.map(({ shot, scene, story }) => (
+                <option key={shot.id} value={shot.id}>
+                  {[story.title, scene.name, shot.name]
+                    .filter(Boolean)
+                    .join(" / ")}
+                </option>
+              ))}
+            </select>
+          </label>
+          {directions.length > 0 && (
+            <p className="note" data-testid="create-draft-direction">
+              {t("create.draftDirection", { choices: directions.join(", ") })}
+            </p>
+          )}
+          <p className="note">{t("create.draftNotKept")}</p>
+          {replaced.length > 0 && (
+            <p className="note" data-testid="create-draft-replaces" dir="auto">
+              {t("create.draftReplaces", { text: replaced.join(" · ") })}
+            </p>
+          )}
+          <p className="note">{t("create.draftUndo")}</p>
+        </>
+      )}
+      {said && (
+        <p role="alert" data-testid="create-draft-said">
+          {t(said)}
+        </p>
+      )}
+      <div className="create-draft-actions">
+        {picking ? (
+          <button
+            type="button"
+            data-testid="create-draft-save"
+            disabled={props.busy || !chosen || !intent.action}
+            onClick={async () => {
+              if (!chosen) return;
+              setSaid(null);
+              const saved = await props
+                .saveStory({
+                  documentId: chosen.documentId,
+                  expectedContentHash: chosen.contentHash,
+                  // What the shot's intent says besides stays.
+                  story: withIntent(chosen.story, chosen.shot.id, {
+                    ...chosen.shot.intent,
+                    ...intent,
+                  }),
+                })
+                .catch(() => null);
+              if (saved) return answer();
+              // Nothing was written. The stories are read again, so that a person who tries
+              // again sees what is there now.
+              setSaid("create.draftNotSaved");
+              setShotId("");
+              await props.reopenProject().catch(() => {});
+              setReads((n) => n + 1);
+            }}
+          >
+            {t("create.draftSave")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="create-draft-keep"
+            onClick={() => setPicking(true)}
+          >
+            {t("create.draftKeep")}
+          </button>
+        )}
+        <button
+          type="button"
+          data-testid="create-draft-later"
+          onClick={() => setLater(true)}
+        >
+          {t("create.draftLater")}
+        </button>
+        <button type="button" data-testid="create-draft-never" onClick={answer}>
+          {t("create.draftNever")}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function CreateWorkspace(props: {
   projectId: string;
@@ -120,6 +308,8 @@ export function CreateWorkspace(props: {
   ) => Promise<Asset | null | "busy">;
   // The project's Create story, and saving a new version of it.
   loadStory: () => Promise<KeptStory | null>;
+  // Every story of the project, for a draft to be kept in.
+  loadStories: () => Promise<ProjectStory[]>;
   saveStory: (next: {
     documentId: string;
     expectedContentHash: string | null;
@@ -134,7 +324,10 @@ export function CreateWorkspace(props: {
 }) {
   const { projectId, assets, placedAssetIds, busy, t } = props;
   const briefKey = `yamakan.create.brief.${projectId}`;
-  const [brief, setBrief] = useState(() => readBrief(kept(briefKey)));
+  // As the browser held it when this was opened: what is typed from here on is not a draft left
+  // behind.
+  const [storedDraft] = useState(() => kept(briefKey));
+  const [brief, setBrief] = useState(() => readBrief(storedDraft));
   const [keptStory, setKeptStory] = useState<KeptStory | null>(null);
   const [storyRead, setStoryRead] = useState<"reading" | "read" | "failed">(
     "reading",
@@ -383,6 +576,22 @@ export function CreateWorkspace(props: {
     <section className="create" data-testid="create-panel">
       <div className="create-composer">
         <h2>{t("workspace.create")}</h2>
+        <DraftOffer
+          markerKey={`yamakan.create.brief.offered.${projectId}`}
+          stored={storedDraft}
+          draft={brief}
+          revision={props.revision}
+          busy={busy}
+          t={t}
+          loadStories={props.loadStories}
+          reopenProject={props.reopenProject}
+          saveStory={(next) =>
+            props.saveStory({
+              ...next,
+              story: next.story as unknown as CreateStory,
+            })
+          }
+        />
         <div className="create-field">
           <label htmlFor="create-prompt">{t("create.prompt")}</label>
           <textarea
