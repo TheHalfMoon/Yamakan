@@ -50,7 +50,8 @@ import { ElementsPanel, type ElementsApi } from "./ElementsPanel.tsx";
 import { PeoplePanel, type PeopleApi } from "./PeoplePanel.tsx";
 import { PromptLibrary } from "./PromptLibrary.tsx";
 import type { PresetsHost } from "./PromptPresets.tsx";
-import type { Lang } from "../i18n.ts";
+import { formatDate, type Lang } from "../i18n.ts";
+import type { GatesApi } from "./Approvals.tsx";
 
 type Translate = (
   key: MessageKey,
@@ -368,6 +369,7 @@ export function CreateWorkspace(props: {
   // What can be started from here, and how.
   loadModels: () => Promise<readonly GenerateModel[]>;
   generation: GenerationApi;
+  gates: GatesApi;
   elements: ElementsApi;
   people: PeopleApi;
   projectFps: number;
@@ -859,6 +861,8 @@ export function CreateWorkspace(props: {
             findAsset={(id) => assets.find((x) => x.id === id)}
             fromPicture={fromPicture}
             stills={startingStills(assets)}
+            gates={props.gates}
+            moment={(ms) => formatDate(props.lang, new Date(ms).toISOString())}
           />
         ) : (
           <div className="create-engine" data-testid="create-engine">

@@ -2687,6 +2687,14 @@ function App() {
                           }).finally(() => resolve(kept));
                         }),
                     }}
+                    gates={{
+                      list: async () =>
+                        (await call("yamakan.gates.list", {})) as any,
+                      approve: (request) =>
+                        call("yamakan.gates.approve", request),
+                      revoke: (approvalId) =>
+                        call("yamakan.gates.revoke", { approvalId }),
+                    }}
                     generation={{
                       start: (request) =>
                         call("yamakan.generation.start", {

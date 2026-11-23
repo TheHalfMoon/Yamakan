@@ -190,6 +190,7 @@ import {
   GateRoute,
   approveGate,
   consumeGates,
+  gateState,
   listGateApprovals,
   requireGate,
   revokeGate,
@@ -2822,9 +2823,30 @@ export const commands = {
     mutation: false,
     humanOnly: true,
     summary:
-      "List the newest approvals for contacting a route's host and using its allowance, each with how it stands and what is left of it. Browser session only.",
+      "List the newest approvals for contacting a route's host and using its allowance, each with how it stands and what is left of it, and what the route set up here would ask for. Browser session only.",
     input: z.object({}).strict(),
-    run: ({ store }) => listGateApprovals(store, kaggleNetwork(process.env)),
+    run: ({ store, kaggle }) => ({
+      ...listGateApprovals(store, kaggleNetwork(process.env)),
+      route: kaggle
+        ? {
+            route: "kaggle" as const,
+            host: GATE_ROUTES.kaggle.host,
+            account: kaggle.username,
+            network: kaggleNetwork(process.env),
+            // The most that one run is counted as.
+            run: {
+              bytes: SCRIPT_BYTES,
+              seconds: Math.max(
+                0,
+                ...offeredKaggleRecipes().map((r) => r.timeoutSeconds),
+              ),
+            },
+            gates: (["egress", "spend"] as const).map((kind) =>
+              gateState(store, kaggleAsk(kind, kaggle.username)),
+            ),
+          }
+        : null,
+    }),
   }),
   "yamakan.gates.revoke": define({
     scope: "consent:revoke",

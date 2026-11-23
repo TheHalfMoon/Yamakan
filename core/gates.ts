@@ -427,7 +427,8 @@ export function listGateApprovals(
       .prepare(`SELECT ${COLUMNS} ${FROM} ORDER BY a.n DESC LIMIT ?`)
       .all(GATE_LIMITS.listed + 1) as Row[];
     const approvals: GateApproval[] = [];
-    let bytes = 64;
+    // Room for what a command says beside them.
+    let bytes = 2_048;
     for (const row of rows.slice(0, GATE_LIMITS.listed)) {
       const approval = approvalOf(db, row, network, nowMs);
       bytes += Buffer.byteLength(JSON.stringify(approval)) + 1;

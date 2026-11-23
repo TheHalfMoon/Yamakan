@@ -1,6 +1,7 @@
 // A person's generation, over an engine contract double: what start, status,
 // cancel and import refuse. `npm run qualify:comfyui-generation` runs the path
 // against a real ComfyUI.
+import { CommandError } from "../core/command/errors.ts";
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";

@@ -172,6 +172,36 @@ const en = {
   "create.notKept":
     "The video is in the project, but what its receipt says could not be saved with it.",
   "create.broughtIn": "Brought in {name}, with no receipt checked.",
+  "create.gatesTitle": "What you allow to be sent",
+  "create.gatesUnknown":
+    "What you have allowed could not be read. Nothing is sent without it.",
+  "create.gatesOpen": "You have allowed {runs} more runs.",
+  "create.gateContact":
+    "Contacting {host} as {account}, with your prompt and the script that runs it.",
+  "create.gateUse":
+    "{runs} runs on your Kaggle GPU allowance, each of at most {minutes} minutes.",
+  "create.gateUntil": "For {hours} hours from now, or until you take it back.",
+  "create.gateHosts": "The Kaggle CLI chooses the hosts it contacts.",
+  "create.gateProxy":
+    "A proxy is set for it. If that is changed, you are asked again.",
+  "create.gateCertificate":
+    "A certificate setting is set for it. If that is changed, you are asked again.",
+  "create.gateState.missing": "Nothing is sent until you allow it.",
+  "create.gateState.expired": "What you allowed has ended.",
+  "create.gateState.revoked": "You took back what you allowed.",
+  "create.gateState.exhausted": "What you allowed is used up.",
+  "create.gateState.voided":
+    "What was allowed before a restore no longer counts.",
+  "create.gateState.changed":
+    "A proxy or a certificate setting has come or gone since you allowed it.",
+  "create.gateRuns": "Runs",
+  "create.gateHours": "Hours",
+  "create.gateApprove": "Allow this",
+  "create.gateRevoke": "Take it back",
+  "create.gateGivenContact":
+    "Contacting {host} as {account}: {runs} runs left, until {until}.",
+  "create.gateGivenUse":
+    "Using the allowance of {host} as {account}: {runs} runs left, until {until}.",
   "create.draftTitle": "A draft only this browser holds",
   "create.draftNote":
     "Keep it in the project's story, where backups and other browsers have it too. It stays here as your working text either way.",
@@ -1012,6 +1042,31 @@ const ar: Record<MessageKey, string> = {
   "create.busy": "Yamakan مشغول، فلم يُحضر شيء. حاول مرة أخرى بعد قليل.",
   "create.notKept": "الفيديو في المشروع، لكن تعذر حفظ ما يذكره إيصاله معه.",
   "create.broughtIn": "أُحضر {name} دون التحقق من إيصال.",
+  "create.gatesTitle": "ما تسمح بإرساله",
+  "create.gatesUnknown": "تعذرت قراءة ما سمحت به. لا يُرسل شيء دونه.",
+  "create.gatesOpen": "سمحت بعدد تشغيلات متبقٍ: {runs}.",
+  "create.gateContact":
+    "الاتصال بـ {host} باسم {account}، مع وصفك والنص البرمجي الذي يشغّله.",
+  "create.gateUse":
+    "عدد تشغيلات على حصتك من معالجات Kaggle: {runs}، كل منها {minutes} دقيقة على الأكثر.",
+  "create.gateUntil": "لمدة {hours} ساعة من الآن، أو حتى تسحبه.",
+  "create.gateHosts": "أداة Kaggle هي التي تختار الخوادم التي تتصل بها.",
+  "create.gateProxy": "ضُبط لها وكيل شبكة. إن تغيّر ذلك فستُسأل مرة أخرى.",
+  "create.gateCertificate": "ضُبطت لها شهادة. إن تغيّر ذلك فستُسأل مرة أخرى.",
+  "create.gateState.missing": "لا يُرسل شيء حتى تسمح به.",
+  "create.gateState.expired": "انتهى ما سمحت به.",
+  "create.gateState.revoked": "سحبت ما سمحت به.",
+  "create.gateState.exhausted": "استُنفد ما سمحت به.",
+  "create.gateState.voided": "ما سُمح به قبل استعادة لم يعد يُحسب.",
+  "create.gateState.changed": "أُضيف إعداد وكيل أو شهادة أو أُزيل منذ سمحت به.",
+  "create.gateRuns": "عدد التشغيلات",
+  "create.gateHours": "الساعات",
+  "create.gateApprove": "أسمح بهذا",
+  "create.gateRevoke": "اسحبه",
+  "create.gateGivenContact":
+    "الاتصال بـ {host} باسم {account}: التشغيلات المتبقية {runs}، حتى {until}.",
+  "create.gateGivenUse":
+    "استخدام حصة {host} باسم {account}: التشغيلات المتبقية {runs}، حتى {until}.",
   "create.draftTitle": "مسودة لا توجد إلا في هذا المتصفح",
   "create.draftNote":
     "احفظها في قصة المشروع، حيث تشملها النسخ الاحتياطية والمتصفحات الأخرى. وتبقى هنا نص عملك في الحالتين.",

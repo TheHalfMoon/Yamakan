@@ -745,26 +745,55 @@ test("approve and revoke replay a request id and refuse a reused one with differ
 
 test("the list is bounded, newest first, with how each stands", async () => {
   const { call, store } = await workspace();
+  const network = kaggleNetwork(process.env);
+  const NONE = {
+    state: "missing",
+    approvalId: null,
+    expiresAt: null,
+    runsLeft: 0,
+    unitsLeft: 0,
+    uses: 0,
+  };
   assert.deepEqual(await call("yamakan.gates.list", {}), {
     approvals: [],
     more: false,
+    // What the route set up here would ask for, and how that stands.
+    route: {
+      route: "kaggle",
+      host: "kaggle.com",
+      account: "someone",
+      network,
+      run: {
+        bytes: SCRIPT_BYTES,
+        seconds: Math.max(
+          ...KAGGLE_RECIPES.filter((r) => r.offered).map(
+            (r) => r.timeoutSeconds,
+          ),
+        ),
+      },
+      gates: [
+        { kind: "egress", ...NONE },
+        { kind: "spend", ...NONE },
+      ],
+    },
   });
-  const network = kaggleNetwork(process.env);
+  assert.equal(
+    (await call("yamakan.gates.list", {}, { kaggle: undefined })).route,
+    null,
+  );
   const ids = Array.from(
     { length: 205 },
     () => give(store, { ...ASK, network }).id,
   ).reverse();
-  const { approvals, more } = await call("yamakan.gates.list", {});
+  const answer = await call("yamakan.gates.list", {});
+  const { approvals, more } = answer;
   assert.equal(more, true);
   assert.ok(approvals.length > 50 && approvals.length <= GATE_LIMITS.listed);
   assert.deepEqual(
     approvals.map((a: GateApproval) => a.id),
     ids.slice(0, approvals.length),
   );
-  assert.ok(
-    Buffer.byteLength(JSON.stringify({ approvals, more })) <=
-      GATE_LIMITS.listBytes,
-  );
+  assert.ok(Buffer.byteLength(JSON.stringify(answer)) <= GATE_LIMITS.listBytes);
   assert.ok(approvals.every((a: GateApproval) => a.state === "approved"));
   // By the index: one read of the place asked for.
   const plan = store.read((db) =>

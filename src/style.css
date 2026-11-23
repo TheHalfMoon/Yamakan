@@ -596,6 +596,22 @@ footer {
   flex-wrap: wrap;
   gap: 8px;
 }
+.create-gates {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #344156;
+  border-radius: 6px;
+  margin-block: 8px;
+  padding: 8px 12px 12px;
+}
+.create-gates h4,
+.create-gates p {
+  margin: 0;
+}
+.create-gates ul {
+  margin: 0;
+  padding-inline-start: 18px;
+}
 .create-draft {
   display: grid;
   gap: 8px;
