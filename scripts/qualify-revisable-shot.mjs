@@ -270,7 +270,8 @@ try {
   assert.deepEqual(record.recipe, { id: recipe.id, hash: recipe.hash });
   assert.equal(record.model.manifestHash, recipe.modelManifestHash);
   assert.equal(record.request.promptHash, sha256Hex(PROMPT));
-  assert.ok(!("prompt" in record.request), "FD-2 is not recorded as accepted");
+  // FD-2: the project keeps the words, and they match their hash.
+  assert.equal(record.request.prompt, PROMPT);
   assert.ok(record.timings.endedAt >= record.timings.startedAt);
   assert.ok(record.timings.importedAt >= record.timings.endedAt);
   step(

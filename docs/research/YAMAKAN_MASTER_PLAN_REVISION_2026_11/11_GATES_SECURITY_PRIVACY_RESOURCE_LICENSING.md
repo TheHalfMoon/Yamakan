@@ -102,7 +102,7 @@ its row stops and reports (section 10).
 
 | Card | New surface | Required control |
 |---|---|---|
-| MPR-101, MPR-106 | Prompt and brief text stored in the project | Text is data, never interpreted; a take record is capped at 16 KiB (MPR-101) and a story's brief, script and intent text at 96 KiB in total (MPR-106); hashes only in receipts and logs; FD-2 decides export behaviour |
+| MPR-101, MPR-106 | Prompt and brief text stored in the project | Text is data, never interpreted; a take record is capped at 40 KiB (MPR-101) and a story's brief, script and intent text at 96 KiB in total (MPR-106); hashes only in receipts and logs; FD-2 decides export behaviour |
 | MPR-203 | A preflight command that reports cost and destination | Makes no network call; estimates come from the catalog or from this service's own recorded runs; an unknown value is reported as unknown, never as zero |
 | MPR-204 | Approvals for egress, spend and download | An approval binds kind, route, host, account, purpose, expiry, a run limit and a unit limit, the granting principal and the workspace epoch, by exact match. It is recorded only through a human-only command, counted per use (not single use, and not bound to one request's inputs), and voided by a restore. Kind `download` cannot be recorded |
 | MPR-205 | The Kaggle route as a product path | No new variable passes to the CLI without a documented reason; the proxy and certificate exception is disclosed, never its values; credentials are never read by Yamakan; only a tested CLI version may submit; output is size-capped and verified before import; cancellation reports honestly that the remote run continues |
@@ -262,7 +262,7 @@ in Stage 5 or elsewhere, records the corner's render time as a result of its own
 The founder host has very little free disk. The policy keeps a 256 MiB reserve and refuses an
 import that would breach it. Cards that add stored data state a bound:
 
-- generation records are capped at 16 KiB each and are content-addressed, so identical requests
+- generation records are capped at 40 KiB each and are content-addressed, so identical requests
   are stored once (MPR-101);
 - the sample project is built locally from FFmpeg test patterns and is at most 64 MiB (MPR-604);
 - rejected takes and old revisions are kept, because history is the product; a retention policy is
