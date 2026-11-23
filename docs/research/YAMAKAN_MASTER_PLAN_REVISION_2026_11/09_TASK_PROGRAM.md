@@ -55,8 +55,8 @@ These rules apply to every card and are not repeated inside the cards.
 | Card | Stage | State | Depends on | Title |
 | --- | --- | --- | --- | --- |
 | MPR-001 | 0 | VERIFIED | — | Record plan adoption, point specs/CURRENT.md at the new frontier, settle PRs #85/#86 |
-| MPR-002 | 0 | REVIEW_PENDING | — | Add dated status banners and one current-state index for stale top-level documents |
-| MPR-003 | 0 | REVIEW_PENDING | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
+| MPR-002 | 0 | VERIFIED | — | Add dated status banners and one current-state index for stale top-level documents |
+| MPR-003 | 0 | VERIFIED | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | QUALIFICATION_READY | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
@@ -239,13 +239,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 0 |
 | Track | 0 |
 | Pillars | A, B, C, D, E |
 | Dependencies | none |
 | Founder decisions | none |
 | Earlier plan items | SS-019, ledger-12, stream:comfyui, stream:kaggle-create, stream:cinema, stream:blender |
+| Evidence | Merged as 4cd4bc03b45ea9ad93e569cca859d9808387fb34 (PR #287); the post-merge cold read on main 45b142d by a reviewer who did not write the index is in that pull request |
 
 **Goal.** A reader who opens the README or any top-level design document learns at once whether it still describes the product, and finds one index that says what the code does today and where to verify it.
 
@@ -359,13 +360,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 0 |
 | Track | 0 |
 | Pillars | A, B, C, D, E |
 | Dependencies | MPR-001 |
 | Founder decisions | none |
 | Earlier plan items | stream:comfyui, stream:kaggle-create, stream:consent, stream:security-check, stream:cinema, stream:blender, stream:prompt-library |
+| Evidence | Merged as 16d2175af2f814edd4ce071b34e70adb988f9707 (PR #285); main's qualify run 45139973985 and plan:check on a clean checkout at 45b142d (Windows) are in ledger 12 |
 
 **Goal.** The plan is checked on every pull request, a card's state stays true as work lands, and every founder-directed stream merged since the handoff has an identifier a card can cite.
 

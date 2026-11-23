@@ -486,7 +486,8 @@
         "D",
         "E"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 4cd4bc03b45ea9ad93e569cca859d9808387fb34 (PR #287); the post-merge cold read on main 45b142d by a reviewer who did not write the index is in that pull request",
       "dependsOn": [],
       "legacy": [
         "SS-019",
@@ -615,7 +616,8 @@
         "D",
         "E"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 16d2175af2f814edd4ce071b34e70adb988f9707 (PR #285); main's qualify run 45139973985 and plan:check on a clean checkout at 45b142d (Windows) are in ledger 12",
       "dependsOn": [
         "MPR-001"
       ],

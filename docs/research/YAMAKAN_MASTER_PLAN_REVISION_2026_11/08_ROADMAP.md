@@ -29,8 +29,9 @@ dates and no effort estimates, because none were measured.
   the founder's word to build; the cards are built under it, each behind its own
   gates and founder decisions.
 - Card states at the planning baseline: 14 `QUALIFICATION_READY`, 33
-  `WAITING_DEPENDENCIES`, 7 `EXTERNAL_BLOCKED`, 2 `DEFERRED`. MPR-003 adds the
-  two completion states (`REVIEW_PENDING`, `VERIFIED`) once the plan is adopted.
+  `WAITING_DEPENDENCIES`, 7 `EXTERNAL_BLOCKED`, 2 `DEFERRED`. MPR-003 added the
+  two completion states (`REVIEW_PENDING`, `VERIFIED`); the registry holds each
+  card's current state.
 - Every card obeys the common contract printed at the top of
   [09_TASK_PROGRAM.md](09_TASK_PROGRAM.md). Its first rule is that step 0 of a
   card re-checks live `main`; a gap that is already closed is recorded
@@ -91,9 +92,9 @@ documents, wire the plan check, settle one consent rule, and widen Windows CI.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-001 | Adoption recorded; one current frontier; PRs #85 and #86 settled | VERIFIED | none | FD-1 |
-| MPR-003 | Plan check in npm and CI; completion states; stream records verified | REVIEW_PENDING | MPR-001 | none |
-| MPR-002 | Dated status banners and one current-state index | QUALIFICATION_READY | none | none |
-| MPR-010 | The pinned-take path past consent revocation is closed, with a test | QUALIFICATION_READY | none | none |
+| MPR-003 | Plan check in npm and CI; completion states; stream records verified | VERIFIED | MPR-001 | none |
+| MPR-002 | Dated status banners and one current-state index | VERIFIED | none | none |
+| MPR-010 | The pinned-take path past consent revocation is closed, with a test | REVIEW_PENDING | none | none |
 | MPR-804 | Full suite, Studio tests, native build and safe qualifiers on Windows CI | EXTERNAL_BLOCKED | none | FD-8 |
 
 Exit: MPR-001 recorded; MPR-002, MPR-003 and MPR-010 verified; MPR-804 verified

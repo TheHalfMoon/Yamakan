@@ -26,7 +26,8 @@ wins and step 0 of the card records what was found.
   package does not change who decides anything.
 - The founder adopted the plan and authorised building its cards on 2026-11-23
   (two entries in `docs/FOUNDER_DECISION_RECORD.md`). Before that the System
-  Supremacy programme was the only task authority.
+  Supremacy programme was the only task authority; its cards keep their registry
+  and states.
 - Adoption makes this package the plan, and MPR-001 may then record it once the
   package is merged. Every other card, MPR-003 included, starts only if the
   founder's own quoted words authorise building and cover that card. If they do
