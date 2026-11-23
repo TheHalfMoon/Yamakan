@@ -6,7 +6,7 @@ The frontier is the [master plan revision](../docs/research/YAMAKAN_MASTER_PLAN_
 
 Standing limits: models and providers off unless a card's gate and a recorded founder decision allow, spending zero, release NO-GO, M export unqualified.
 
-Draft pull requests #85 (`7472a14e2eecea0620e0bb2d4422db8852421491`) and #86 (`caec7d9c225d430e1a42f8af8fd8eebc17c5317d`) are retired as superseded and kept as evidence; neither branch is deleted or merged. The package's own documents still carry their PROPOSED status line until MPR-003 lands.
+Draft pull requests #85 (`7472a14e2eecea0620e0bb2d4422db8852421491`) and #86 (`caec7d9c225d430e1a42f8af8fd8eebc17c5317d`) are open drafts and untouched; their disposition is not decided. The package's own documents still carry their PROPOSED status line until MPR-003 lands.
 
 ## Implementation under founder handoff (2026-11-04)
 
