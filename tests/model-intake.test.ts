@@ -63,7 +63,7 @@ const MACHINE: Record<
       ? null
       : "no full identity with an exact revision",
   licence: ({ licence: l }) =>
-    l && l.weightsLicence && /^https:\/\//.test(l.sourceUrl) && l.verifiedAt
+    l && l.weightsLicence && l.sourceUrl.startsWith("https://") && l.verifiedAt
       ? null
       : "no licence with its page and date",
   route: (_, offer) =>
