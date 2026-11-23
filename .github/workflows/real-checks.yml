@@ -1,27 +1,36 @@
 # The real checks (npm run qualify:*) that the founder's own computer cannot run today, on
-# GitHub's Linux machine: the real service, real FFmpeg and real Edge, which that machine has.
-# They run when a person starts them, or when a pull request changes one of them. Each prints its
-# receipt, which names the commit and the host. This adds checks and replaces none: nothing in
-# qualify.yml depends on it, and a check that cannot run here is a failure or BLOCKED, never a
-# pass. No model, no paid service and no secret is used.
+# GitHub's Linux machine, with the FFmpeg its packages have. The first uses the real store, job
+# table and commands in one process, with the stand-in engine; the other three use the real
+# service and the Microsoft Edge the machine has. They run when a person starts them, or when a
+# pull request changes this file or one of them (not when the product changes). Each prints its
+# receipt, which names the commit and what the machine had. This adds checks and replaces none:
+# nothing in qualify.yml depends on it, it is not to be made a required check (it does not run for
+# most pull requests), and a check that cannot run here is a failure or BLOCKED, never a pass. No
+# model, no paid service and no secret is used.
 #
-# Not on GitHub's Windows machine: every sandboxed worker ends there as it starts, with Windows
-# status 0xC0000142 (run 45190159942), and the sandbox is not loosened for it. So a pass here says
-# nothing of the Windows sandbox.
+# Not on GitHub's Windows machine: there, three tests of a sandboxed worker ended with Windows
+# status 0xC0000142 as it started, the media probe failed, and so did all four checks (run
+# 45190159942). The sandbox is not loosened for it. So a pass here says nothing of the Windows
+# sandbox: on Linux a media worker has none (core/process/owner.ts, "posix-unqualified").
 name: Real checks
 on:
   workflow_dispatch:
   pull_request:
     paths:
       - .github/workflows/real-checks.yml
+      - scripts/qualify-host.mjs
       - scripts/qualify-revisable-shot.mjs
       - scripts/qualify-create-durable.mjs
       - scripts/qualify-take-review.mjs
       - scripts/qualify-consent-gate.mjs
 permissions:
   contents: read
+# A newer commit's run replaces an older one's.
+concurrency:
+  group: real-checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  linux:
+  real-checks-linux:
     # As qualify.yml's own job: its FFmpeg is the one the tests know.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -56,15 +65,19 @@ jobs:
       - run: mkdir -p "$RUNNER_TEMP/receipts"
       - name: A take's record, end to end (MPR-101)
         if: ${{ !cancelled() }}
+        timeout-minutes: 10
         run: node scripts/qualify-revisable-shot.mjs "$RUNNER_TEMP/receipts/MPR-101-take-record.json"
       - name: A made video's record lasts, in real Edge (MPR-101)
         if: ${{ !cancelled() }}
+        timeout-minutes: 10
         run: node scripts/qualify-create-durable.mjs "$RUNNER_TEMP/receipts/create-durable.json"
       - name: Take review and a split shot, in real Edge (SS-006, MPR-105)
         if: ${{ !cancelled() }}
+        timeout-minutes: 10
         run: node scripts/qualify-take-review.mjs "$RUNNER_TEMP/receipts/take-review.json" "$RUNNER_TEMP/receipts/MPR-105-split-shot-replace.json"
       - name: Consent gate and a pinned take, in real Edge (MPR-010)
         if: ${{ !cancelled() }}
+        timeout-minutes: 10
         run: node scripts/qualify-consent-gate.mjs "$RUNNER_TEMP/receipts/consent-gate.json"
       - name: Print the receipts
         if: ${{ !cancelled() }}
