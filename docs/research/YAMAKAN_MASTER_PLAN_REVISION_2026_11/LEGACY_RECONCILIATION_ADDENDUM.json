@@ -736,7 +736,7 @@
         "MPR-003",
         "MPR-403"
       ],
-      "authority": "Not verified: no founder record entry was matched to this stream by the planning author.",
+      "authority": "Not verified: no founder record entry names issue #203 or this stream (read 2026-11-23). Issue #203 and pull requests #243, #244 and #248 show the work; #204, its first slice, was shut without merging.",
       "verification": "Pull request numbers read from the first-parent history of main; MPR-003 verifies the stream's records."
     },
     {

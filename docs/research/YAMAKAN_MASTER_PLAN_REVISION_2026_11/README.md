@@ -1,14 +1,14 @@
 # Yamakan Master Plan Revision, 2026-11
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
-This directory is a proposal to revise the Yamakan master plan. It changes no
-code, no test, no workflow and no existing document. It gives no one permission
-to build anything. The plan in force stays the System Supremacy programme
-(`docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json`) until the
-founder records an answer to FD-1 in
-[FOUNDER_DECISIONS_REQUESTED.md](FOUNDER_DECISIONS_REQUESTED.md).
+This directory revises the Yamakan master plan. The founder adopted it as the
+frontier on 2026-11-23, and building its cards, each behind its own gates
+(`docs/FOUNDER_DECISION_RECORD.md`); FD-2 to FD-11 are not decided. The earlier
+programme (`docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json`) keeps
+its registry. The documents below describe the package as it was proposed on its
+baseline; a card's current state is in its registry.
 
 ## 1. What the revision says, in one page
 

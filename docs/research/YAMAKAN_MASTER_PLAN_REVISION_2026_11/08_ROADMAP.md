@@ -1,6 +1,6 @@
 # Roadmap
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This document orders the 56 cards of the revision into seven stages, says what
@@ -25,10 +25,9 @@ dates and no effort estimates, because none were measured.
   may start when its own dependencies are verified and the order of FD-11
   permits it. Section 7 lists the cards that are expected to start earlier
   than their stage number suggests.
-- No card starts before MPR-001 records the answer to FD-1. Until then the
-  System Supremacy programme is the only task authority and this package is a
-  proposal.
-- Card states at this baseline: 14 `QUALIFICATION_READY`, 33
+- MPR-001 recorded the answer to FD-1 on 2026-11-23; the cards are built under
+  it, each behind its own gates and founder decisions.
+- Card states at the planning baseline: 14 `QUALIFICATION_READY`, 33
   `WAITING_DEPENDENCIES`, 7 `EXTERNAL_BLOCKED`, 2 `DEFERRED`. MPR-003 adds the
   two completion states (`REVIEW_PENDING`, `VERIFIED`) once the plan is adopted.
 - Every card obeys the common contract printed at the top of
@@ -90,8 +89,8 @@ documents, wire the plan check, settle one consent rule, and widen Windows CI.
 
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
-| MPR-001 | Adoption recorded; one current frontier; PRs #85 and #86 settled | EXTERNAL_BLOCKED | none | FD-1 |
-| MPR-003 | Plan check in npm and CI; completion states; stream records verified | WAITING_DEPENDENCIES | MPR-001 | none |
+| MPR-001 | Adoption recorded; one current frontier; PRs #85 and #86 settled | VERIFIED | none | FD-1 |
+| MPR-003 | Plan check in npm and CI; completion states; stream records verified | REVIEW_PENDING | MPR-001 | none |
 | MPR-002 | Dated status banners and one current-state index | QUALIFICATION_READY | none | none |
 | MPR-010 | The pinned-take path past consent revocation is closed, with a test | QUALIFICATION_READY | none | none |
 | MPR-804 | Full suite, Studio tests, native build and safe qualifiers on Windows CI | EXTERNAL_BLOCKED | none | FD-8 |

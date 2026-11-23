@@ -1,6 +1,6 @@
 # Current architecture assessment
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 What the code on `main` does today, as the starting point for

@@ -1,6 +1,6 @@
 # Task program
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This file is rendered from `TASK_REGISTRY_ADDENDUM.json` by `tools/render-task-program.mjs`.
@@ -54,9 +54,9 @@ These rules apply to every card and are not repeated inside the cards.
 
 | Card | Stage | State | Depends on | Title |
 | --- | --- | --- | --- | --- |
-| MPR-001 | 0 | EXTERNAL_BLOCKED | — | Record plan adoption, point specs/CURRENT.md at the new frontier, settle PRs #85/#86 |
+| MPR-001 | 0 | VERIFIED | — | Record plan adoption, point specs/CURRENT.md at the new frontier, settle PRs #85/#86 |
 | MPR-002 | 0 | QUALIFICATION_READY | — | Add dated status banners and one current-state index for stale top-level documents |
-| MPR-003 | 0 | WAITING_DEPENDENCIES | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
+| MPR-003 | 0 | REVIEW_PENDING | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
 | MPR-010 | 0 | QUALIFICATION_READY | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | QUALIFICATION_READY | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
@@ -119,13 +119,14 @@ Make the written record match the code and put the plan under a check that CI ru
 
 | Field | Value |
 | --- | --- |
-| State | EXTERNAL_BLOCKED |
+| State | VERIFIED |
 | Stage | 0 |
 | Track | 0 |
 | Pillars | A, B, C, D, E |
 | Dependencies | none |
 | Founder decisions | FD-1 |
 | Earlier plan items | SS-019 |
+| Evidence | Merged as 89f116f8f17b2ab6e415d4f1a5cea6b1e66c37df (PR #282, adoption) and 8b7a5a16af3d66153680358d789bc43ae4cbd834 (PR #284, the two drafts, shut on 2026-11-23 with branches kept) |
 
 **Goal.** Anyone who opens the repository finds one current frontier, one recorded founder instruction that makes the master plan revision the task authority, and a plain statement of what became of draft pull requests #85 and #86.
 
@@ -227,7 +228,7 @@ Make the written record match the code and put the plan under a check that CI ru
 - Closing a pull request is outward-facing. Mitigation: it is done only on the founder's instruction, branches are kept, and a closed pull request can be reopened.
 - Founder statements dated after the record's last entry are cited elsewhere (the ledger cites decisions made after 2026-11-10; by reading) but have no entry. Mitigation: this card does not backfill them from memory; it flags the gap to the founder.
 
-Blocked outside engineering by:
+Parts that wait on something outside engineering:
 
 - FD-1: the founder's instruction in chat adopting the revision as the frontier and stating the disposition of draft PRs #85 and #86.
 - The planning pull request that carries `docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11` must be merged to main first, which itself needs the founder's instruction.
@@ -358,7 +359,7 @@ Blocked outside engineering by:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | REVIEW_PENDING |
 | Stage | 0 |
 | Track | 0 |
 | Pillars | A, B, C, D, E |
