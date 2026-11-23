@@ -1757,3 +1757,93 @@ test("a restore over a damaged head does not bring back a still whose consent wa
   );
   assert.ok(restored.revision > placed.revision);
 });
+
+test("a run's video, saved as a take, carries the record of its run", async () => {
+  const f = await fixture();
+  const { state, adapter } = engine(f.video);
+  let now = 1_000;
+  const g = createGenerationService({
+    adapter,
+    store: f.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    now: () => now,
+  });
+  const ctx = {
+    ...f.ctx,
+    generation: { service: g, recipes: [recipe] },
+  } as CommandContext;
+  state.status = "running";
+  const { generationId } = await g.start(ask(f.projectId, { seed: 5 }));
+  now = 2_000;
+  await g.status(generationId);
+  assert.equal(g.row(generationId)?.endedAt, undefined);
+  state.status = "succeeded";
+  now = 3_000;
+  await g.status(generationId);
+  now = 4_000;
+  const made = await g.importResult(generationId);
+  // Its end is the first time it was known, and stays so.
+  assert.equal(g.row(generationId)?.endedAt, 3_000);
+  assert.equal(g.row(generationId)?.importedAt, 4_000);
+  const takeId = crypto.randomUUID();
+  const shotId = crypto.randomUUID();
+  const documentId = crypto.randomUUID();
+  const saved = (
+    await execute(ctx, "yamakan.story.save", {
+      projectId: f.projectId,
+      expectedRevision: (await f.store.load(f.projectId)).revision,
+      documentId,
+      expectedContentHash: null,
+      story: {
+        format: "yamakan.story",
+        formatVersion: 2,
+        title: "Made",
+        scenes: [
+          {
+            id: crypto.randomUUID(),
+            name: "One",
+            shots: [
+              {
+                id: shotId,
+                name: "Shot",
+                durationTicks: 24 * 29_429_400,
+                notes: "",
+                referencePacks: [],
+                takes: [
+                  { id: takeId, assetId: made.assetId, sourceStartTicks: 0 },
+                ],
+                selectedTakeId: takeId,
+              },
+            ],
+          },
+        ],
+      },
+      records: [{ takeId, from: { generationId } }],
+    })
+  ).result as { records: { recordHash: string }[] };
+  const { recordHash, record } = (
+    await execute(ctx, "yamakan.take.record", {
+      projectId: f.projectId,
+      documentId,
+      shotId,
+      takeId,
+    })
+  ).result as {
+    recordHash: string;
+    record: {
+      output: object;
+      timings: object;
+      usage: object;
+      request: { seed: number };
+    };
+  };
+  assert.equal(saved.records[0]!.recordHash, recordHash);
+  assert.deepEqual(record.output, { sha256: sha(f.video) });
+  assert.deepEqual(record.timings, {
+    startedAt: 1_000,
+    endedAt: 3_000,
+    importedAt: 4_000,
+  });
+  assert.deepEqual(record.usage, { wallMs: 2_000, quotaSeconds: null });
+  assert.equal(record.request.seed, 5);
+});

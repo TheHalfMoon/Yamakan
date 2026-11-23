@@ -58,7 +58,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-002 | 0 | VERIFIED | — | Add dated status banners and one current-state index for stale top-level documents |
 | MPR-003 | 0 | VERIFIED | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
-| MPR-101 | 1 | QUALIFICATION_READY | — | Record every take's generation or render request as an immutable, hashed take record |
+| MPR-101 | 1 | REVIEW_PENDING | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
 | MPR-103 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
@@ -616,7 +616,7 @@ Every take keeps its request; a generation lands on its shot; a take can be revi
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | A, B |

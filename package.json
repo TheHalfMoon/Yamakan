@@ -56,6 +56,7 @@
     "qualify:director-cinema": "node scripts/qualify-director-cinema.mjs",
     "qualify:cinema-activation": "node scripts/qualify-cinema-activation.mjs",
     "qualify:director-activation": "node scripts/qualify-director-activation.mjs",
+    "qualify:revisable-shot": "node scripts/qualify-revisable-shot.mjs",
     "qualify:take-review": "node scripts/qualify-take-review.mjs",
     "qualify:q11-jassub-eng": "node scripts/qualify-q11-jassub-eng.mjs",
     "qualify:bundle-r6": "node scripts/qualify-bundle-r6.mjs",
