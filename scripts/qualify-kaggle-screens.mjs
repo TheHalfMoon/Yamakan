@@ -236,7 +236,21 @@ async function scene(name, initial, play) {
   await page.getByRole("tab", { name: "Create", exact: true }).click();
   await page.getByTestId("create-panel").waitFor();
   await page.getByTestId("create-prompt").fill("A red kite.");
+  // What a person allows before anything is sent, through the page (MPR-204).
+  const allow = async () => {
+    const gates = page.getByTestId("create-gates");
+    await gates.waitFor();
+    if ((await gates.getAttribute("data-open")) === "true") return;
+    await page.getByTestId("create-gates-runs").fill("20");
+    await page.getByTestId("create-gates-approve").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-testid="create-gates"]')?.dataset.open ===
+        "true",
+    );
+  };
   const startRun = async () => {
+    await allow();
     await page.getByTestId("create-agree").check();
     await page.getByTestId("create-generate-start").click();
   };
