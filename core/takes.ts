@@ -315,6 +315,7 @@ export function listTakes(
               kind: asset?.kind ?? null,
               sourceStartTicks: t.sourceStartTicks,
               lineage: t.lineage ?? null,
+              recordHash: t.recordHash ?? null,
             };
           }),
         };

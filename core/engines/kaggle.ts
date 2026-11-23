@@ -33,6 +33,7 @@ import {
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import type { RecipeFacts } from "../take-record.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
 
 export type KaggleRecipe = {
@@ -160,6 +161,21 @@ const sha256 = (data: string | Uint8Array) =>
 
 export const offeredKaggleRecipes = () =>
   KAGGLE_RECIPES.filter((r) => r.offered && existsSync(scriptOf(r)));
+
+/** What this build knows of a run's recipe, if it is one of these at this model version. */
+export function kaggleRecipeFacts(
+  recipe: Pick<GenerationRecipe, "id" | "modelManifestHash">,
+): RecipeFacts | null {
+  const r = KAGGLE_RECIPES.find((x) => x.id === recipe.id);
+  if (!r || sha256(`${r.model}@${r.revision}`) !== recipe.modelManifestHash)
+    return null;
+  return {
+    route: "kaggle",
+    model: { id: r.model, revision: r.revision, licence: r.licence },
+    fps: r.fps,
+    steps: r.steps,
+  };
+}
 
 export function kaggleRecipes(): GenerationRecipe[] {
   return offeredKaggleRecipes().map((r) => ({

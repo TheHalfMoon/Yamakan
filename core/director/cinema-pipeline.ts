@@ -9,7 +9,7 @@ import { Id, frameRateOf } from "../project.ts";
 import type { ProjectStore } from "../store.ts";
 import type { JobSupervisor } from "../jobs.ts";
 import { FLICKS_PER_SECOND } from "../time.ts";
-import { StoryDocumentSchema } from "../story.ts";
+import { parseStory } from "../story.ts";
 import { blenderSceneFromCinema } from "../blender/scene.ts";
 import { DIRECTIONS } from "../prompts/directions.ts";
 import {
@@ -115,7 +115,7 @@ export async function renderStoryShot(
     .find((d) => d.id === a.storyDocumentId);
   if (!ref || ref.kind !== "story")
     throw new CommandError("NOT_FOUND", "This project has no such story.");
-  const story = StoryDocumentSchema.parse(
+  const story = parseStory(
     JSON.parse(
       store
         .getDocument(run.projectId, a.storyDocumentId)

@@ -61,25 +61,45 @@ export const DocumentKind = z.enum([
   "lut",
   // The prompt library's presets kept with the project (one document per project).
   "promptPresets",
+  // MPR-101: how a take was made, held by its take's hash. Never a project document.
+  "takeRecord",
 ]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
-// The schema version each kind is validated against today.
+// The schema version each kind is written with today.
 export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
   Object.freeze({
     studio: 1,
     cinemaScene: 1,
-    story: 1,
+    story: 2,
     referencePack: 1,
     captions: 1,
     lut: 1,
     promptPresets: 1,
+    takeRecord: 1,
   });
+
+// The versions of each kind this build reads (a stored document is never rewritten).
+export const DOCUMENT_READ_VERSIONS: Readonly<
+  Record<DocumentKind, readonly number[]>
+> = Object.freeze({
+  studio: [1],
+  cinemaScene: [1],
+  story: [1, 2],
+  referencePack: [1],
+  captions: [1],
+  lut: [1],
+  promptPresets: [1],
+  takeRecord: [1],
+});
 
 export const DocumentRefSchema = z
   .object({
     id: Id,
-    kind: DocumentKind,
+    kind: DocumentKind.refine(
+      (kind) => kind !== "takeRecord",
+      "A take record is not a project document.",
+    ),
     schemaVersion: z.number().int().min(1).max(1000),
     contentHash: z.string().regex(/^[a-f0-9]{64}$/),
   })

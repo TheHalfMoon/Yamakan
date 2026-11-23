@@ -161,7 +161,7 @@ test(
       ];
       const story: StoryDocument = {
         format: "yamakan.story",
-        formatVersion: 1,
+        formatVersion: 2,
         title: "A small revision",
         scenes: [{ id: randomUUID(), name: "One scene", shots }],
       };

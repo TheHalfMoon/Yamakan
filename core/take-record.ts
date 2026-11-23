@@ -1,0 +1,330 @@
+// Take records (MPR-101): how one take was made, as an immutable document of its own
+// that the take names by hash. The story holds the hash only, so it stays small; the
+// service writes every record from its own rows, except a declared one, which is a
+// person's receipt file and says so. Nothing here reaches a model or a network.
+import { z } from "zod";
+import { CommandError } from "./command/errors.ts";
+import { ENGINE_V2_LIMITS, Operation } from "./engines/contract-v2.ts";
+import type { GenerationRecord } from "./engines/generation.ts";
+import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
+import { Id } from "./project.ts";
+
+export const TAKE_RECORD_LIMITS = Object.freeze({
+  recordBytes: 16 * 1024,
+  inputs: 8,
+  changedFields: 16,
+  recordsPerSave: 8,
+});
+
+/**
+ * Whether a record holds the prompt's words, or only their hash. It stays off until
+ * FD-2 is recorded as accepted (docs/FOUNDER_DECISION_RECORD.md). Both are valid
+ * version 1 records.
+ */
+export const RECORD_HOLDS_PROMPT = false;
+
+// What a revision may change from the take it was made from.
+export const REVISION_FIELDS = [
+  "recipe",
+  "model",
+  "prompt",
+  "seed",
+  "width",
+  "height",
+  "durationFrames",
+  "fps",
+  "steps",
+  "firstFrame",
+  "inputs",
+] as const;
+
+const Sha256 = z.string().regex(/^[a-f0-9]{64}$/);
+const Whole = z.number().int().nonnegative();
+const Finite = z.number().finite();
+const Text = (max: number) => z.string().min(1).max(max);
+const Prompt = Text(ENGINE_V2_LIMITS.promptChars);
+
+const GenerationRequestSchema = z
+  .object({
+    kind: z.literal("generation"),
+    prompt: Prompt.optional(),
+    promptHash: Sha256.nullable(),
+    seed: Whole.nullable(),
+    width: Whole.nullable(),
+    height: Whole.nullable(),
+    durationFrames: Whole.nullable(),
+    fps: Finite.positive().nullable(),
+    steps: Whole.nullable(),
+  })
+  .strict();
+
+const RenderRequestSchema = z
+  .object({
+    kind: z.literal("render"),
+    blenderVersion: Text(40),
+    sceneFormat: Text(80),
+    sceneHash: Sha256,
+    width: Whole,
+    height: Whole,
+    fps: Finite.positive(),
+    frames: Whole,
+    samples: Whole,
+    camera: z.object({ focalLengthMm: Finite, sensorWidthMm: Finite }).strict(),
+    moves: z
+      .object({
+        orbitDegrees: Finite,
+        dolly: Finite.optional(),
+        panDegrees: Finite.optional(),
+        shake: Finite.optional(),
+      })
+      .strict(),
+    lighting: Text(40).optional(),
+    view: Text(40).optional(),
+    direction: z
+      .array(z.object({ kind: Text(40), choice: Text(40) }).strict())
+      .max(4)
+      .optional(),
+  })
+  .strict();
+
+export const TakeRecordSchema = z
+  .object({
+    format: z.literal("yamakan.take-record"),
+    formatVersion: z.literal(1),
+    origin: z.enum(["generation", "render", "declared"]),
+    route: z.enum(["kaggle", "comfyui", "blender", "receiptFile"]),
+    source: z
+      .union([
+        z.object({ generationId: Id }).strict(),
+        z.object({ jobId: Id }).strict(),
+      ])
+      .nullable(),
+    recipe: z
+      .object({ id: Text(80), hash: Sha256 })
+      .strict()
+      .nullable(),
+    model: z
+      .object({
+        id: Text(200),
+        revision: Text(80).nullable(),
+        manifestHash: Sha256.nullable(),
+        licence: Text(80).nullable(),
+      })
+      .strict()
+      .nullable(),
+    operation: z.union([Operation, z.literal("render")]),
+    request: z.discriminatedUnion("kind", [
+      GenerationRequestSchema,
+      RenderRequestSchema,
+    ]),
+    inputs: z
+      .array(
+        z
+          .object({
+            assetId: Id,
+            assetHash: Sha256,
+            role: z.enum([
+              "firstFrame",
+              "lastFrame",
+              "source",
+              "mask",
+              "audio",
+              "plate",
+            ]),
+          })
+          .strict(),
+      )
+      .max(TAKE_RECORD_LIMITS.inputs),
+    output: z.object({ sha256: Sha256 }).strict(),
+    // Epoch milliseconds; null is not known.
+    timings: z
+      .object({
+        startedAt: Whole.nullable(),
+        endedAt: Whole.nullable(),
+        importedAt: Whole.nullable(),
+      })
+      .strict(),
+    // null: not reported.
+    usage: z
+      .object({
+        wallMs: Whole.nullable(),
+        quotaSeconds: Finite.nonnegative().nullable(),
+      })
+      .strict(),
+    // The take this one revises, and that take's record, so the chain outlives the take.
+    derivedFromTakeId: Id.nullable(),
+    derivedFromRecordHash: Sha256.nullable(),
+    changedFields: z
+      .array(z.enum(REVISION_FIELDS))
+      .max(TAKE_RECORD_LIMITS.changedFields),
+  })
+  .strict()
+  .superRefine((r, ctx) => {
+    const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    const render = r.origin === "render";
+    if (
+      render !== (r.request.kind === "render") ||
+      render !== (r.operation === "render") ||
+      render !== (r.route === "blender")
+    )
+      fail("Only a render's record holds a render request.");
+    if ((r.origin === "declared") !== (r.route === "receiptFile"))
+      fail("Only a declared record comes from a receipt file.");
+    if (
+      (r.source !== null && "jobId" in r.source) !== render ||
+      (r.source === null) !== (r.origin === "declared")
+    )
+      fail("A take record names what it was made from.");
+    if (r.derivedFromRecordHash !== null && r.derivedFromTakeId === null)
+      fail("A record names the take it revises with its record.");
+    if (new Set(r.changedFields).size !== r.changedFields.length)
+      fail("A record names each changed field once.");
+  });
+export type TakeRecord = z.infer<typeof TakeRecordSchema>;
+
+/** A record's name: the SHA-256 of its canonical JSON, which is what is stored. */
+export const recordHashOf = (record: TakeRecord) =>
+  sha256Hex(canonicalJson(record));
+
+/** Pure validation of a parsed record (core/documents.ts bounds it first). */
+export function validateTakeRecord(value: unknown) {
+  const parsed = TakeRecordSchema.safeParse(value);
+  if (!parsed.success)
+    throw new CommandError(
+      "VALIDATION",
+      parsed.error.issues.map((i) => i.message).join("; ") ||
+        "Invalid take record.",
+    );
+  const content = parsed.data;
+  return {
+    content,
+    assetIds: [...new Set(content.inputs.map((i) => i.assetId))].sort(),
+    objectDigests: [],
+  };
+}
+
+// What the service knows of a recipe beside its ledger row.
+export type RecipeFacts = {
+  route: "kaggle" | "comfyui";
+  model: { id: string; revision: string | null; licence: string | null } | null;
+  fps: number | null;
+  steps: number | null;
+};
+
+/** The record of a generation whose video was imported, from its ledger row. */
+export function buildGenerationRecord(
+  row: GenerationRecord,
+  facts: RecipeFacts,
+  holdsPrompt: boolean = RECORD_HOLDS_PROMPT,
+): TakeRecord {
+  if (!row.imported)
+    throw new CommandError("VALIDATION", "This generation is not imported.");
+  const { lineage } = row.imported;
+  const endedAt = row.endedAt ?? null;
+  return TakeRecordSchema.parse({
+    format: "yamakan.take-record",
+    formatVersion: 1,
+    origin: "generation",
+    route: facts.route,
+    source: { generationId: row.generationId },
+    recipe: { id: row.recipe.id, hash: row.recipe.hash },
+    // Where nothing names the model, its recipe does.
+    model: {
+      id: facts.model?.id ?? row.recipe.id,
+      revision: facts.model?.revision ?? null,
+      manifestHash: row.recipe.modelManifestHash,
+      licence: facts.model?.licence ?? null,
+    },
+    operation: row.recipe.operation,
+    request: {
+      kind: "generation",
+      ...(holdsPrompt && row.prompt ? { prompt: row.prompt } : {}),
+      promptHash: lineage.promptHash,
+      seed: row.seed,
+      width: row.width,
+      height: row.height,
+      durationFrames: row.durationFrames,
+      fps: facts.fps,
+      steps: facts.steps,
+    },
+    inputs: row.inputs.map((i) => ({
+      assetId: i.assetId,
+      assetHash: i.assetHash,
+      // A first frame is the only input a run here takes today.
+      role: i.assetId === row.firstFrameAssetId ? "firstFrame" : "source",
+    })),
+    output: { sha256: lineage.outputHash },
+    timings: {
+      startedAt: row.startedAt,
+      endedAt,
+      importedAt: row.importedAt ?? null,
+    },
+    usage: {
+      wallMs: endedAt === null ? null : Math.max(0, endedAt - row.startedAt),
+      // No route reports its quota today.
+      quotaSeconds: null,
+    },
+    derivedFromTakeId: null,
+    derivedFromRecordHash: null,
+    changedFields: [],
+  });
+}
+
+export const DeclaredSchema = z
+  .object({
+    model: Text(200),
+    revision: Text(80).optional(),
+    prompt: Prompt,
+    seed: Whole,
+    steps: Whole.optional(),
+    licence: Text(80).optional(),
+  })
+  .strict();
+export type Declared = z.infer<typeof DeclaredSchema>;
+
+/** The record of a video brought in with a receipt file: its claims, not facts checked here. */
+export function buildDeclaredRecord(
+  declared: Declared,
+  outputHash: string,
+  inputs: readonly { assetId: string; assetHash: string }[],
+  holdsPrompt: boolean = RECORD_HOLDS_PROMPT,
+): TakeRecord {
+  return TakeRecordSchema.parse({
+    format: "yamakan.take-record",
+    formatVersion: 1,
+    origin: "declared",
+    route: "receiptFile",
+    source: null,
+    recipe: null,
+    model: {
+      id: declared.model,
+      revision: declared.revision ?? null,
+      manifestHash: null,
+      licence: declared.licence ?? null,
+    },
+    // A receipt file does not say; a take that names inputs was made from them.
+    operation: inputs.length ? "imageToVideo" : "textToVideo",
+    request: {
+      kind: "generation",
+      ...(holdsPrompt ? { prompt: declared.prompt } : {}),
+      promptHash: sha256Hex(declared.prompt),
+      seed: declared.seed,
+      width: null,
+      height: null,
+      durationFrames: null,
+      fps: null,
+      steps: declared.steps ?? null,
+    },
+    inputs: inputs.map((i) => ({
+      assetId: i.assetId,
+      assetHash: i.assetHash,
+      role: "source",
+    })),
+    output: { sha256: outputHash },
+    timings: { startedAt: null, endedAt: null, importedAt: null },
+    usage: { wallMs: null, quotaSeconds: null },
+    derivedFromTakeId: null,
+    derivedFromRecordHash: null,
+    changedFields: [],
+  });
+}

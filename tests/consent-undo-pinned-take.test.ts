@@ -160,7 +160,7 @@ function story(
   const take = id();
   return {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Night walk",
     scenes: [
       {

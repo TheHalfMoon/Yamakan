@@ -173,7 +173,7 @@ function story(
     takeB = id();
   return {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Night walk",
     scenes: [
       {
@@ -505,7 +505,7 @@ test("timings are on the project's frames at 24000/1001, and a long story assemb
   });
   const board = (shots: ReturnType<typeof card>[]): StoryDocument => ({
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Long",
     scenes: [
       { id: id(), name: "One", shots: shots.slice(0, 100) },

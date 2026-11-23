@@ -10,17 +10,19 @@ import { StudioDocumentSchema, parseStudioCanvasJson } from "./studio.ts";
 import type { StudioDocument } from "./studio.ts";
 import { parseScene3D } from "./scene3d.ts";
 import { STORY_LIMITS, validateReferencePack, validateStory } from "./story.ts";
+import { TAKE_RECORD_LIMITS, validateTakeRecord } from "./take-record.ts";
 import { CAPTION_LIMITS, validateCaptions } from "./captions.ts";
 import { LUT_DOCUMENT_BYTES, validateLut } from "./effects/color.ts";
 import {
   PROMPT_PRESET_LIMITS,
   validatePromptPresets,
 } from "./prompts/presets.ts";
-import { DOCUMENT_LIMITS, DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
+import { DOCUMENT_LIMITS, DOCUMENT_READ_VERSIONS } from "./document-ref.ts";
 import type { DocumentKind } from "./document-ref.ts";
 
 export {
   DOCUMENT_LIMITS,
+  DOCUMENT_READ_VERSIONS,
   DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   DocumentRefSchema,
@@ -276,7 +278,7 @@ export function validateDocument(
   schemaVersion: number,
   raw: Uint8Array,
 ): ValidatedDocument {
-  if (DOCUMENT_SCHEMA_VERSIONS[kind] !== schemaVersion)
+  if (!DOCUMENT_READ_VERSIONS[kind].includes(schemaVersion))
     throw new CommandError(
       "VALIDATION",
       `Unsupported ${kind} document schema version ${schemaVersion}.`,
@@ -293,14 +295,16 @@ export function validateDocument(
       : kind === "cinemaScene"
         ? validateScene(value)
         : kind === "story"
-          ? validateStory(value)
+          ? validateStory(value, schemaVersion)
           : kind === "captions"
             ? validateCaptions(value)
             : kind === "lut"
               ? validateLut(value)
               : kind === "promptPresets"
                 ? validatePromptPresets(value)
-                : validateReferencePack(value);
+                : kind === "takeRecord"
+                  ? validateTakeRecord(value)
+                  : validateReferencePack(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
   // Stories and reference packs have their own, smaller ceiling (YU-031).
   // Caption tracks too (YU-024).
@@ -313,7 +317,9 @@ export function validateDocument(
           ? LUT_DOCUMENT_BYTES
           : kind === "promptPresets"
             ? PROMPT_PRESET_LIMITS.documentBytes
-            : DOCUMENT_LIMITS.documentBytes;
+            : kind === "takeRecord"
+              ? TAKE_RECORD_LIMITS.recordBytes
+              : DOCUMENT_LIMITS.documentBytes;
   if (bytes.byteLength > limit)
     throw new CommandError(
       "LIMIT_EXCEEDED",
