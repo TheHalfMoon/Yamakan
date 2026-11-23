@@ -29,7 +29,7 @@ import {
   resetProxiesForTests,
   type ProxyStatus,
 } from "../core/media/proxies.ts";
-import { execute, Scopes } from "../core/command/registry.ts";
+import { catalog, execute, Scopes } from "../core/command/registry.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
 
 const ffmpeg = (args: string[]) =>
@@ -447,6 +447,22 @@ test("the proxy commands: status for readers, build and cancel need render right
     execute(all, "yamakan.proxy.build", { ...ids, path: "C:\\x.mp4" }),
     (e: unknown) =>
       e instanceof Error && toCommandError(e).code === "VALIDATION",
+  );
+  // Both change what the service is doing, so neither is a read, nor can be replayed.
+  for (const name of ["yamakan.proxy.build", "yamakan.proxy.cancel"]) {
+    assert.equal(catalog().find((c) => c.name === name)!.mutation, true);
+    await assert.rejects(
+      execute({ ...all, requestId: "proxy.1" }, name, ids),
+      (e: unknown) =>
+        e instanceof CommandError &&
+        e.code === "VALIDATION" &&
+        /cannot replay a request ID/.test(e.message),
+    );
+  }
+  assert.equal(
+    ((await execute(reader, "yamakan.proxy.status", ids)).result as ProxyStatus)
+      .state,
+    "absent",
   );
   await execute(all, "yamakan.proxy.build", ids);
   assert.equal((await settled(store, project.id, asset.id)).state, "ready");

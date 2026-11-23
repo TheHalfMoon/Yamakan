@@ -1,16 +1,16 @@
 {
   "task": "create-record-durability",
-  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "head": "2fc6472eb8023f4c9e452ebe9e44fd27f3ee7f48",
   "host": {
     "platform": "linux",
     "githubImage": "ubuntu24",
-    "freeDiskBytes": 90269687808,
-    "freeMemoryBytes": 15458852864,
+    "freeDiskBytes": 90269425664,
+    "freeMemoryBytes": 15310028800,
     "onAcPower": null,
     "load": [
-      0.81,
-      0.28,
-      0.1
+      1.32,
+      0.39,
+      0.14
     ],
     "need": "unmeasured"
   },
@@ -23,7 +23,7 @@
     },
     {
       "name": "trying again saves it once, with no duplicate",
-      "documentId": "2084c264-8c87-44da-980f-5eec0954b16b"
+      "documentId": "5bf4e66e-315c-4ad4-b7f7-f54860d3ce5a"
     },
     {
       "name": "its take has a declared record, in a version 2 story"

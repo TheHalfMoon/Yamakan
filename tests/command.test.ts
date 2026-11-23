@@ -7,13 +7,17 @@ import path from "node:path";
 import { z } from "zod";
 import {
   commands,
+  authorize,
+  browserScopes,
   catalog,
+  catalogFor,
+  cliScopes,
   execute,
   resolveOperation,
   RESOURCE_POLICY_HASH,
   Scopes,
 } from "../core/command/registry.ts";
-import type { Principal, Scope } from "../core/command/registry.ts";
+import type { Operation, Principal, Scope } from "../core/command/registry.ts";
 import { parseEnvelope } from "../core/command/envelope.ts";
 import { CommandError, toCommandError } from "../core/command/errors.ts";
 import { RESOURCE_POLICY } from "../core/command/policy.ts";
@@ -77,6 +81,90 @@ test("every command input is strict, bounded and free of executable or path para
     assert.ok(Scopes.includes(tool.scope as Scope));
     visit(tool.inputSchema, tool.name);
   }
+});
+
+test("what a principal is shown is what the gate lets it call", () => {
+  const agent = (...scopes: Scope[]): Principal => ({
+    id: "agent:test",
+    scopes: new Set(scopes),
+  });
+  const everyone: Principal[] = [
+    { id: "browser-ui", scopes: browserScopes() },
+    { id: "local-client", scopes: cliScopes() },
+    // Nobody is given these; the rule holds without it.
+    { id: "browser-ui", scopes: new Set() },
+    { id: "local-client", scopes: new Set(Scopes) },
+    agent(...Scopes),
+    agent(),
+    ...Scopes.map((s) => agent(s)),
+  ];
+  const all = catalog();
+  for (const p of everyone) {
+    const { tools, withheld } = catalogFor(p);
+    const shown = new Map(tools.map((t) => [t.name, t]));
+    const kept = new Map(withheld.map((w) => [w.name, w.reason]));
+    assert.equal(tools.length + withheld.length, all.length);
+    for (const entry of all) {
+      let refused = "";
+      try {
+        authorize(p, entry.name as Operation);
+      } catch (e) {
+        assert.ok(e instanceof CommandError && e.code === "SCOPE_DENIED");
+        refused = e.message;
+      }
+      assert.equal(shown.has(entry.name), refused === "", entry.name);
+      assert.equal(kept.has(entry.name), refused !== "", entry.name);
+      if (refused)
+        assert.equal(
+          kept.get(entry.name),
+          /browser session/.test(refused) ? "browser-only" : "scope",
+          entry.name,
+        );
+      else assert.deepEqual(shown.get(entry.name), entry);
+      if (p.id !== "browser-ui" && shown.has(entry.name))
+        assert.equal(entry.humanOnly, false, entry.name);
+    }
+  }
+  assert.deepEqual(catalogFor(everyone[0]), { tools: all, withheld: [] });
+  assert.deepEqual(catalogFor(agent()).tools, []);
+});
+
+test("each command says whether it is destructive and what a request id does", () => {
+  assert.deepEqual(
+    catalog()
+      .filter((c) => c.destructive)
+      .map((c) => c.name)
+      .sort(),
+    [
+      "yamakan.agent.revoke",
+      "yamakan.consent.revoke",
+      "yamakan.export.batchCancel",
+      "yamakan.generation.cancel",
+      "yamakan.generation.dismiss",
+      "yamakan.job.cancel",
+      "yamakan.job.discard",
+      "yamakan.proxy.cancel",
+      "yamakan.scene.save",
+      "yamakan.workspace.collectGarbage",
+    ],
+  );
+  for (const entry of catalog()) {
+    const c = commands[entry.name as Operation] as {
+      mutation: boolean;
+      humanOnly?: boolean;
+      refusesRequestId?: string;
+    };
+    assert.equal(entry.mutation, c.mutation, entry.name);
+    assert.equal(entry.humanOnly, c.humanOnly === true, entry.name);
+    if (entry.destructive) assert.ok(entry.mutation, entry.name);
+    assert.equal(
+      entry.requestId,
+      !c.mutation ? "none" : c.refusesRequestId ? "refused" : "replayed",
+      entry.name,
+    );
+  }
+  for (const name of ["yamakan.proxy.build", "yamakan.proxy.cancel"])
+    assert.equal(catalog().find((c) => c.name === name)!.requestId, "refused");
 });
 
 test("operations resolve canonical and legacy names only", () => {

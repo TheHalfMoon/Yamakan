@@ -113,6 +113,10 @@
       "reason": "Yamakan-authored failure classes: typed data and pure functions, no donor copy, no process, no network."
     },
     {
+      "path": "core/engines/catalog.ts",
+      "reason": "Yamakan-authored model catalog: typed data only, no donor copy, no process, no network."
+    },
+    {
       "path": "core/engines/generation.ts",
       "reason": "Yamakan-authored generation service over the engine contract; no donor copy."
     },

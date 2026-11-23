@@ -878,7 +878,8 @@
         "A",
         "B"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 6b9fb8e (PR #291), c7c9929 (PR #292) and 399172af3a33b1f23398f2b9988cef8ee0687830 (PR #296, FD-2); qualify:revisable-shot and qualify:create-durable passed at 2fc6472 on GitHub's Linux machine (run 45215659043); the Blender arm is BLOCKED; docs/evidence/ultimate/MPR-101-take-record.md",
       "dependsOn": [],
       "legacy": [
         "stream:kaggle-create"
@@ -931,7 +932,7 @@
         "docs/evidence/ultimate/MPR-101-take-record-receipt.json"
       ],
       "interfaces": [
-        "New document kind `takeRecord` in `DocumentKind` (`core/document-ref.ts`); document format `yamakan.take-record`, `formatVersion` 1. New file `core/take-record.ts` exports `TakeRecordSchema`, type `TakeRecord`, `TAKE_RECORD_LIMITS = { recordBytes: 16 * 1024, inputs: 8, changedFields: 16, recordsPerSave: 8 }`, `recordHashOf(record)` (SHA-256 of the canonical JSON), `buildGenerationRecord`, `buildRenderRecord`, `buildDeclaredRecord` and the switch `RECORD_HOLDS_PROMPT`. The name is `TakeRecord` because `GenerationRecord` already names the ledger row.",
+        "New document kind `takeRecord` in `DocumentKind` (`core/document-ref.ts`); document format `yamakan.take-record`, `formatVersion` 1. New file `core/take-record.ts` exports `TakeRecordSchema`, type `TakeRecord`, `TAKE_RECORD_LIMITS = { recordBytes: 40 * 1024, inputs: 8, changedFields: 16, recordsPerSave: 8 }`, `recordHashOf(record)` (SHA-256 of the canonical JSON), `buildGenerationRecord`, `buildRenderRecord`, `buildDeclaredRecord` and the switch `RECORD_HOLDS_PROMPT`. The name is `TakeRecord` because `GenerationRecord` already names the ledger row.",
         "`TakeRecord` fields (strict object, every string bounded, no host path): `format`; `formatVersion`; `origin` (`generation` | `render` | `declared`); `route` (`kaggle` | `comfyui` | `blender` | `receiptFile`, a closed list); `source` (`{generationId}` | `{jobId}` | null); `recipe` (`{id (at most 80 characters), hash}` | null); `model` (`{id (at most 200), revision (at most 80) | null, manifestHash | null, licence (at most 80) | null}` | null); `operation` (an `Operation` name of `core/engines/contract-v2.ts`, or `render`); `request`; `inputs` (at most 8 of `{assetId, assetHash, role}`, role one of `firstFrame`, `lastFrame`, `source`, `mask`, `audio`, `plate`); `output {sha256}`; `timings {startedAt, endedAt, importedAt}` (epoch milliseconds or null); `usage {wallMs, quotaSeconds}` (null means not reported); `derivedFromTakeId` (id or null) with `derivedFromRecordHash` (hash or null; the base take's record, so the chain survives the removal of the base take); `changedFields` (at most 16 names from the closed list `REVISION_FIELDS` = `recipe`, `model`, `prompt`, `seed`, `width`, `height`, `durationFrames`, `fps`, `steps`, `firstFrame`, `inputs`, exported from `core/take-record.ts`; always empty until MPR-103 writes it). By OA-5 and OA-16, accepted on 2026-11-23, also: `revisionNote` (1 to 500 characters, only beside a `derivedFromTakeId`, or null; null until MPR-103 writes it) and `reported`, what the run said of itself, only on a generation's record, or null: `{model {id (at most 200), version (at most 80) | null} | null, seed | null, runtime {python | null, torch | null, packages (at most 32 of at most 80) | null} | null}`, each of the form of such a name or not known. A Kaggle run's are its script's own: the packages it asks for, its model and the seed it was sent.",
         "`request` of a generation or declared record: `{kind: 'generation', prompt? (at most `ENGINE_V2_LIMITS.promptChars`, 4,000), promptHash | null, seed | null, width | null, height | null, durationFrames | null, fps | null, steps | null}`. `request` of a render record: `{kind: 'render', blenderVersion (from `BLENDER_PIN.version`), sceneFormat, sceneHash (SHA-256 of the canonical scene of the job payload), width, height, fps, frames, samples, camera {focalLengthMm, sensorWidthMm}, moves {orbitDegrees, dolly?, panDegrees?, shake?}, lighting?, view?, direction? (at most 4 kind and choice pairs)}`. The scene itself is not copied into the record.",
         "Story format version 2 (`core/story.ts`): `TakeSchema` gains optional `recordHash` (64 lower-case hex characters). Version 2 also defines the optional `brief`, scene `sceneText` and shot `intent` fields and the `STORY_LIMITS.textBytes` budget exactly as MPR-106 `interfaces` states them (schema and validation only; nothing writes them in this card). Exports: `StoryDocumentV1Schema`, `StoryDocumentSchema` (version 2, the form written), `StoredStorySchema` (either version) and the pure `upgradeStory(stored)`.",
@@ -957,7 +958,7 @@
         "Verify live main and confirm the gap: `TakeSchema` has no record field, `DOCUMENT_SCHEMA_VERSIONS.story` is 1, `DocumentKind` has no `takeRecord`, and no `yamakan.take.record` command exists. If a record already exists, record ALREADY_SATISFIED with file and symbol evidence and stop. Read the recorded answer to FD-2 and set `RECORD_HOLDS_PROMPT` to match (see step 2). Read, because they were not verified for this card: which commit paths call `verifyStory` (document revert, project restore), what the `asset_ids` column of a `creative_documents` row drives, and `verifyStoryContinuity`. Also confirm that `documentsPerProject` is enforced only on the canonical project's document references, so take-record rows do not count against it.",
         "Part a. Add `core/take-record.ts`: the schema, the limits, `recordHashOf`, and `buildGenerationRecord(row, recipeFacts, importedAt)`. Input pins come from the row's `inputs`; the only role known today is `firstFrame` (from `firstFrameAssetId`). `usage.wallMs` is `endedAt - startedAt` when both exist; `usage.quotaSeconds` is null because no route reports quota today.",
         "Part a. FD-2 switch: with `RECORD_HOLDS_PROMPT` true the record holds `request.prompt` and `promptHash`; with false it holds `promptHash` only and Create keeps writing the prompt to shot `notes` as today. Both forms are valid version 1 records, so a later change of the answer needs no format change. Build with false. Set true only after FD-2 is recorded as accepted.",
-        "Part a. `core/document-ref.ts` and `core/documents.ts`: add the kind, `DOCUMENT_READ_VERSIONS`, the read-set check and the per-version story dispatch in `validateDocument`, and the 16 KiB limit for a record. Keep `core/document-ref.ts` free of Node APIs. Add `kinds` to `yamakan.document.capability` and the `takeRecord` refusal to `yamakan.document.commit`.",
+        "Part a. `core/document-ref.ts` and `core/documents.ts`: add the kind, `DOCUMENT_READ_VERSIONS`, the read-set check and the per-version story dispatch in `validateDocument`, and the 40 KiB limit for a record. Keep `core/document-ref.ts` free of Node APIs. Add `kinds` to `yamakan.document.capability` and the `takeRecord` refusal to `yamakan.document.commit`.",
         "Part a. `core/story.ts`: split the schema into version 1 and version 2, add `upgradeStory` (sets the version; every new field is optional, so nothing else changes), make `validateStory` accept either stored form and return version 2 content, and add MPR-106's fields and text budget. In `verifyStory` add one rule: every `recordHash` named by a take is held for this story or attached in this commit.",
         "Part a. `core/store.ts` `commitDocument`: add `attachments` as stated in `interfaces`. Set a record row's `asset_ids` to its input and output asset ids, as a story row lists its takes' assets, once step 0 has confirmed what that column drives.",
         "Part a. `core/command/registry.ts`: `readStory` returns upgraded version 2 content; `yamakan.story.save` takes `StoredStorySchema`, refuses a version 1 body over a head that is already version 2, builds the records named in `records`, and enforces in the command (not in the shared verifier, so revert and restore keep working) that a take with a record keeps its `recordHash` and `assetId` and that a new `recordHash` is one this save wrote for that take. For `{generationId}` the row must belong to the project, be imported, and `imported.assetId` must be the take's asset. Add `yamakan.take.record` and `recordHash` on `yamakan.take.list`. Make `renderStoryShot`, the story reads inside `yamakan.story.assemble` and `yamakan.take.apply`, and the story loop of `assertPlacementConsent` in `core/continuity.ts` read through the same upgrading reader, so that a stored version 1 story is neither refused nor reported as damaged.",
@@ -988,7 +989,7 @@
         "A story save in which a take carries a `recordHash` the service did not write for that take (invented, or copied from another take) is refused with VALIDATION 'A take's generation record is written by the service.' and nothing is stored.",
         "A save that removes or changes the `recordHash` or the `assetId` of a take that has a record is refused with VALIDATION 'A take keeps its generation record.'.",
         "`records` naming a generation of another project, one that is not imported, or one whose imported asset is not the take's asset is refused (NOT_FOUND or VALIDATION) and neither the story nor any record is committed.",
-        "More than 8 `records`, a declared prompt over 4,000 characters, an unknown key, or a record over 16,384 bytes is refused.",
+        "More than 8 `records`, a declared prompt over 4,000 characters, an unknown key, or a record over 40,960 bytes is refused (with that limit, no record the schema allows is).",
         "A version 1 body saved over a version 2 head is refused with VALIDATION 'This story was saved in a newer format; read it again before saving.'.",
         "`yamakan.document.commit` with kind `takeRecord` is refused.",
         "With no recorded FD-2 answer, a saved record carries `promptHash` and no `prompt`."
@@ -999,8 +1000,8 @@
         "Part b: extend `scripts/qualify-director-cinema.mjs` to assert the placed take's record (`sceneHash`, frames, samples, Blender version). On a host without the pinned Blender this arm is BLOCKED, not PASS."
       ],
       "performanceCriteria": [
-        "Size arithmetic for the storage choice. Inline: a record is about 1 KiB of fixed fields plus a prompt of up to 4,000 UTF-16 units (about 8,000 bytes of Arabic, 12,000 bytes at worst), so 1 to 13 KiB; 200 shots x 8 takes = 1,600 records = about 1.56 to 20.3 MiB against `STORY_LIMITS.documentBytes` = 262,144 bytes, which is 6 to 80 times the limit; one shot with 8 takes of a 2,000-character Arabic prompt is already about 40 KiB, 15% of the document, and every later story version would keep another copy. By hash: `recordHash` costs about 80 canonical bytes per take, so 1,600 takes cost 128,000 bytes, 49% of the limit. Estimated, not measured; the limits test pins the numbers.",
-        "A record is at most 16,384 canonical bytes with at most 8 inputs and 16 changed fields; a save attaches at most 8 records. Worst case for one story: 1,600 x 16 KiB = 25.0 MiB against `DOCUMENT_LIMITS.workspaceDocumentBytes` (4 GiB).",
+        "Size arithmetic for the storage choice. Inline: a record is about 1 KiB of fixed fields plus a prompt of up to 4,000 UTF-16 units (about 8,000 bytes of Arabic, 12,000 bytes of CJK), so 1 to 13 KiB (measured since FD-2: a record is at most 35,304 bytes, for a prompt of control characters); 200 shots x 8 takes = 1,600 records = about 1.56 to 20.3 MiB against `STORY_LIMITS.documentBytes` = 262,144 bytes, which is 6 to 80 times the limit; one shot with 8 takes of a 2,000-character Arabic prompt is already about 40 KiB, 15% of the document, and every later story version would keep another copy. By hash: `recordHash` costs about 80 canonical bytes per take, so 1,600 takes cost 128,000 bytes, 49% of the limit. Estimated, not measured; the limits test pins the numbers.",
+        "A record is at most 40,960 canonical bytes with at most 8 inputs and 16 changed fields; a save attaches at most 8 records. Worst case for one story: 1,600 x 40 KiB = 62.5 MiB against `DOCUMENT_LIMITS.workspaceDocumentBytes` (4 GiB).",
         "`yamakan.story.save` stays one transaction; the hold checks are indexed point reads, at most 1,600 per save. `yamakan.take.record` reads one row by its hash.",
         "No new background work, timer or scheduler.",
         "The revisions one take spends (import, apply, undo) are counted in the evidence and stated against `MAX_REVISION` (10,000)."
@@ -1027,7 +1028,7 @@
         "Size of the change: this is large for one pull request. Split: part a (steps 1 to 8: record, storage, story version 2, generation and declared records, Create) and part b (steps 9 and 10: Blender record, recovery check), each under this id. Part a alone delivers the generation record.",
         "Alternatives rejected, recorded so a reviewer can reopen them: (1) inline in the story, which fails the size arithmetic; (2) one project document reference per record, which the cap of 32 documents rules out; (3) one companion record-set document per story, which is rewritten whole for every take with every version retained, nears the 8 MiB and 10,000-node document limits at 1,600 records and uses a document slot; (4) a dedicated `take_records` table added by the next free schema step, clearer in name than reusing `story_document_versions` but a schema step with its own upgrade test. Choose (4) only if review finds a reader of `story_document_versions` that does not filter by kind.",
         "The full 200 x 8 story does not fit `documentBytes` even today: a take with lineage is roughly 250 to 300 bytes, so 1,600 takes need about 400,000 bytes (estimated, not measured). With `recordHash` the ceiling is roughly 94 shots at 8 takes, or about 3.5 takes per shot at 200 shots. Mitigation: the limits test pins the real numbers and the existing limit refusal applies; raising `documentBytes` is a separate decision outside this card.",
-        "Records are never pruned, like story versions, so `withinDocumentBudget` can eventually refuse with its existing 'creative document space is full' message. Mitigation: the 16 KiB record limit; pruning stays out of scope.",
+        "Records are never pruned, like story versions, so `withinDocumentBudget` can eventually refuse with its existing 'creative document space is full' message. Mitigation: the 40 KiB record limit; pruning stays out of scope.",
         "FD-2: `yamakan.project.export` carries no document bytes today, so nothing in this card makes a prompt leave the workspace; the export carrier is MPR-701. Until FD-2 is recorded as accepted, `RECORD_HOLDS_PROMPT` is false and MPR-103 can prefill a prompt only from the ledger row or shot `notes`."
       ],
       "blockingExternalRequirements": [
@@ -1043,7 +1044,7 @@
       "pillars": [
         "B"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "REVIEW_PENDING",
       "dependsOn": [
         "MPR-101"
       ],
@@ -1570,7 +1571,7 @@
         "B",
         "C"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101"
       ],
@@ -1845,7 +1846,8 @@
       "pillars": [
         "A"
       ],
-      "state": "QUALIFICATION_READY",
+      "state": "VERIFIED",
+      "evidence": "Merged as 60ccce5ed0994b21aecbfb286400856f37288d97 (PR #295); qualify:model-catalog passed at 5f511b5 on the founder host (docs/evidence/model-system/model-catalog.json); main's CI passed",
       "dependsOn": [],
       "legacy": [
         "YU-042",
@@ -1969,7 +1971,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -2577,7 +2579,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -2868,7 +2870,7 @@
       "pillars": [
         "A"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-201"
       ],
@@ -4541,7 +4543,7 @@
       "pillars": [
         "D"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101"
       ],
@@ -5290,7 +5292,7 @@
       "pillars": [
         "E"
       ],
-      "state": "QUALIFICATION_READY",
+      "state": "REVIEW_PENDING",
       "dependsOn": [],
       "legacy": [
         "SS-007"
@@ -7168,7 +7170,7 @@
         "B",
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101",
         "MPR-201"

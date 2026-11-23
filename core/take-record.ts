@@ -17,7 +17,8 @@ import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { Id } from "./project.ts";
 
 export const TAKE_RECORD_LIMITS = Object.freeze({
-  recordBytes: 16 * 1024,
+  // Room for the largest record the schema below allows, a prompt of any characters included.
+  recordBytes: 40 * 1024,
   inputs: 8,
   changedFields: 16,
   revisionNote: 500,
@@ -25,11 +26,11 @@ export const TAKE_RECORD_LIMITS = Object.freeze({
 });
 
 /**
- * Whether a record holds the prompt's words, or only their hash. It stays off until
- * FD-2 is recorded as accepted (docs/FOUNDER_DECISION_RECORD.md). Both are valid
- * version 1 records.
+ * Whether a record holds the prompt's words, or only their hash. The founder accepted FD-2 for
+ * the project and its backups (docs/FOUNDER_DECISION_RECORD.md); an export is not that. Both
+ * are valid version 1 records, and one made before then keeps its hash alone.
  */
-export const RECORD_HOLDS_PROMPT = false;
+export const RECORD_HOLDS_PROMPT = true;
 
 // What a revision may change from the take it was made from.
 export const REVISION_FIELDS = [

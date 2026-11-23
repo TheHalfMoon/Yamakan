@@ -404,7 +404,7 @@ const server = createServer(async (req, res) => {
           new CommandError("UNAUTHENTICATED", "Authentication required."),
         );
       if (req.method === "GET" && url.pathname === "/api/v1/tools")
-        return json(200, api.catalog());
+        return json(200, api.catalog(principal));
       if (req.method === "POST" && url.pathname === "/api/v1/call") {
         if (!req.headers["content-type"]?.startsWith("application/json"))
           throw new CommandError("VALIDATION", "JSON content type required.");

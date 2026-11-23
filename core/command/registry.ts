@@ -90,6 +90,7 @@ import {
   createGenerationService,
   outcomeOf,
   type GenerationRecipe,
+  type GenerationRecord,
 } from "../engines/generation.ts";
 import {
   createKaggleEngine,
@@ -154,10 +155,13 @@ import {
   buildRenderRecord,
   recordHashOf,
   type TakeRecord,
+  type RecipeFacts,
 } from "../take-record.ts";
 import {
   TAKE_LIMITS,
   TakeProposalInputSchema,
+  appendGeneratedTake,
+  assertGenerationTarget,
   assertTakeMedia,
   compareTakes,
   listTakes,
@@ -305,6 +309,9 @@ type Definition<S extends z.ZodType, R> = {
   // A mutation that keeps no receipt says so. It refuses a request ID, because
   // a caller who sends one believes a retry is protected. The text says why.
   refusesRequestId?: string;
+  // It removes, stops or overwrites something that nothing here keeps a way back to. A change
+  // made as a revision is not that: the one before it stays.
+  destructive?: true;
   summary: string;
   input: S;
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
@@ -432,6 +439,15 @@ const generationRow = (ctx: CommandContext, id: string) =>
   generations.get(ctx.store)?.service.row(id) ??
   null;
 
+// What this build knows of a run's recipe; one it does not know is a local engine's.
+const generationFacts = (row: GenerationRecord): RecipeFacts =>
+  kaggleRecipeFacts(row.recipe) ?? {
+    route: "comfyui",
+    model: null,
+    fps: null,
+    steps: null,
+  };
+
 type WrittenRecord = {
   takeId: string;
   recordHash: string;
@@ -520,15 +536,7 @@ async function withRecords(
           "VALIDATION",
           "This generation did not make the take's media.",
         );
-      record = buildGenerationRecord(
-        row,
-        kaggleRecipeFacts(row.recipe) ?? {
-          route: "comfyui",
-          model: null,
-          fps: null,
-          steps: null,
-        },
-      );
+      record = buildGenerationRecord(row, generationFacts(row));
     } else {
       const asset = assets.find((x) => x.id === take.assetId);
       if (!asset)
@@ -2017,6 +2025,7 @@ export const commands = {
   "yamakan.workspace.collectGarbage": define({
     scope: "project:recover",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Remove crash leftovers older than an hour (unregistered media objects, temporary and staging files).",
@@ -2114,7 +2123,8 @@ export const commands = {
   }),
   "yamakan.proxy.build": define({
     scope: "render:execute",
-    mutation: false,
+    mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Start making a video asset's edit proxy for smooth preview (the original is unchanged and still exported).",
     input: z.object({ projectId: Id, assetId: Id }).strict(),
@@ -2122,7 +2132,9 @@ export const commands = {
   }),
   "yamakan.proxy.cancel": define({
     scope: "render:execute",
-    mutation: false,
+    mutation: true,
+    destructive: true,
+    refusesRequestId: NO_REPLAY,
     summary: "Stop a video asset's proxy build; a ready proxy stays.",
     input: z.object({ projectId: Id, assetId: Id }).strict(),
     run: ({ store }, a) => cancelProxy(store, a.projectId, a.assetId),
@@ -2335,6 +2347,7 @@ export const commands = {
   "yamakan.export.batchCancel": define({
     scope: "render:execute",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a batch's unfinished outputs; finished exports and the project are untouched.",
@@ -2353,6 +2366,7 @@ export const commands = {
   "yamakan.job.cancel": define({
     scope: "job:control",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary: "Request cancellation of a render job.",
     input: z.object({ jobId: Id }).strict(),
@@ -2377,6 +2391,7 @@ export const commands = {
   "yamakan.job.discard": define({
     scope: "job:control",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a job that needs reconciliation without changing project revisions.",
@@ -2393,6 +2408,7 @@ export const commands = {
   "yamakan.scene.save": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Validate, content-hash, and (when Cinema is enabled) persist a scene3d document.",
@@ -2588,6 +2604,7 @@ export const commands = {
   "yamakan.consent.revoke": define({
     scope: "consent:revoke",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     summary:
       "Revoke likeness consent and invalidate derived encodings. Browser session only.",
@@ -2721,13 +2738,18 @@ export const commands = {
         // With a still: the person's word that it shows no real person whose consent to
         // send it is not recorded.
         noUnconsentedPerson: z.literal(true).optional(),
+        // The story shot its video is made for: bringing it in adds it to that shot's takes.
+        target: z.object({ documentId: Id, shotId: Id }).strict().optional(),
       })
       .strict(),
-    run: (ctx, { recipeId, ...request }) => {
+    run: async (ctx, { recipeId, ...request }) => {
       const generation = generationOf(ctx);
       const recipe = generation.recipes.find((r) => r.id === recipeId);
       if (!recipe)
         throw new CommandError("NOT_FOUND", "That recipe is not available.");
+      const { target } = request;
+      if (target)
+        await assertGenerationTarget(ctx.store, { ...request, target });
       return generation.service.start({ ...request, recipe });
     },
   }),
@@ -2787,6 +2809,9 @@ export const commands = {
           // For one that ended: when, and for one without a usable video, which kind of end, what
           // it may have used and what trying again takes.
           ...outcomeOf(g),
+          // The shot it is made for, and whether its video became a take of it.
+          target: g.target ?? null,
+          take: g.take ?? null,
           // The project's media it was made from, as pinned before anything left.
           inputs: g.inputs,
         })),
@@ -2794,6 +2819,7 @@ export const commands = {
   "yamakan.generation.dismiss": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
@@ -2810,11 +2836,21 @@ export const commands = {
     summary:
       "Report a generation's state and, where the engine gives it, its progress.",
     input: z.object({ generationId: Id }).strict(),
-    run: (ctx, a) => generationOf(ctx).service.status(a.generationId),
+    run: async (ctx, a) => {
+      const { service } = generationOf(ctx);
+      const status = await service.status(a.generationId);
+      const row = service.row(a.generationId);
+      return {
+        ...status,
+        target: row?.target ?? null,
+        take: row?.take ?? null,
+      };
+    },
   }),
   "yamakan.generation.cancel": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
@@ -2828,9 +2864,23 @@ export const commands = {
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
-      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it.",
+      "Bring a finished generation's checked video into the project as an asset, with its lineage, from a browser session only. It reaches the timeline only when the person places it. One made for a story shot is also added to that shot's takes, as a new version of the story, which ends the project's undo history; when it cannot be, the answer says why, and bringing it in again tries again.",
     input: z.object({ generationId: Id }).strict(),
-    run: (ctx, a) => generationOf(ctx).service.importResult(a.generationId),
+    run: async (ctx, a) => {
+      const { service } = generationOf(ctx);
+      const imported = await service.importResult(a.generationId);
+      const row = service.row(a.generationId);
+      if (!row?.target) return { ...imported, take: null };
+      if (row.take?.appended) return { ...imported, take: row.take };
+      const take = await appendGeneratedTake(
+        ctx.store,
+        { ...row, target: row.target },
+        generationFacts(row),
+        ctx.principal.id,
+      );
+      service.keepTake(a.generationId, take);
+      return { ...imported, take };
+    },
   }),
   "yamakan.prompt.search": define({
     scope: "project:read",
@@ -3211,6 +3261,7 @@ export const commands = {
   "yamakan.agent.revoke": define({
     scope: "agent:revoke",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary: "Revoke an agent token. Requires the browser session.",
@@ -3242,18 +3293,26 @@ export function resolveOperation(name: unknown): Operation {
   return canonical as Operation;
 }
 
+// Who may call a command: the one rule of the gate (authorize) and of what is shown (catalogFor).
+export const mayCall = (
+  principal: Principal,
+  definition: { scope: Scope; humanOnly?: boolean },
+) =>
+  (!definition.humanOnly || principal.id === "browser-ui") &&
+  principal.scopes.has(definition.scope);
+
 export function authorize(principal: Principal, operation: Operation) {
-  const command = commands[operation];
+  const command = commands[operation] as Definition<z.ZodType, unknown>;
+  if (mayCall(principal, command)) return;
   if (command.humanOnly && principal.id !== "browser-ui")
     throw new CommandError(
       "SCOPE_DENIED",
       "This command requires the browser session.",
     );
-  if (!principal.scopes.has(command.scope))
-    throw new CommandError(
-      "SCOPE_DENIED",
-      `Principal ${principal.id} lacks scope ${command.scope}.`,
-    );
+  throw new CommandError(
+    "SCOPE_DENIED",
+    `Principal ${principal.id} lacks scope ${command.scope}.`,
+  );
 }
 
 export async function execute(
@@ -3287,15 +3346,42 @@ export async function execute(
   return { operation, result: await command.run({ ...ctx, receipt }, input) };
 }
 
+// What a request id does: a mutation's is replayed from its receipt or refused; a read keeps none.
+const requestIdOf = (c: { mutation: boolean; refusesRequestId?: string }) =>
+  !c.mutation ? "none" : c.refusesRequestId ? "refused" : "replayed";
+
 export function catalog() {
-  return Object.entries(commands).map(([name, c]) => ({
+  return (
+    Object.entries(commands) as [Operation, Definition<z.ZodType, unknown>][]
+  ).map(([name, c]) => ({
     name,
     scope: c.scope,
     mutation: c.mutation,
+    humanOnly: c.humanOnly === true,
+    destructive: c.destructive === true,
+    requestId: requestIdOf(c),
     summary: c.summary,
     legacyAlias: name.replace(/^yamakan\./, LEGACY_PREFIX),
     inputSchema: z.toJSONSchema(c.input),
   }));
+}
+
+/** What a principal may call, and the name of each command it may not, with why. */
+export function catalogFor(principal: Principal) {
+  const tools: ReturnType<typeof catalog> = [];
+  const withheld: { name: Operation; reason: "scope" | "browser-only" }[] = [];
+  for (const c of catalog())
+    if (mayCall(principal, c)) tools.push(c);
+    else
+      withheld.push({
+        name: c.name,
+        // As authorize says it: who must call comes before what they hold.
+        reason:
+          c.humanOnly && principal.id !== "browser-ui"
+            ? "browser-only"
+            : "scope",
+      });
+  return { tools, withheld };
 }
 
 // A caption track of the current revision (YU-024).
