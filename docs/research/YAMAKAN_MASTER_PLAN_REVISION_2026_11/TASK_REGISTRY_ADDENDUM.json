@@ -1845,7 +1845,7 @@
       "pillars": [
         "A"
       ],
-      "state": "QUALIFICATION_READY",
+      "state": "REVIEW_PENDING",
       "dependsOn": [],
       "legacy": [
         "YU-042",
