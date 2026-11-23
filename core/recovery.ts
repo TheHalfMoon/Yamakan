@@ -1451,6 +1451,21 @@ const has = (db: DatabaseSync, table: string) =>
     )
     .get(table) !== undefined;
 
+// The take records a stored story names. One whose scenes, shots or takes are no lists is an
+// error; what else is odd in it is not looked at here.
+function recordsNamed(bytes: Uint8Array): string[] {
+  const story = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+    scenes?: { shots?: { takes?: { recordHash?: unknown }[] }[] }[];
+  };
+  return (story.scenes ?? []).flatMap((scene) =>
+    (scene.shots ?? []).flatMap((shot) =>
+      (shot.takes ?? []).flatMap(({ recordHash }) =>
+        recordHash === undefined ? [] : [String(recordHash)],
+      ),
+    ),
+  );
+}
+
 export function creativeClosure(db: DatabaseSync): Closure {
   const closure: Closure = { documents: 0, objects: 0, gaps: 0, reported: [] };
   const gap = (g: ClosureGap) => {
@@ -1484,6 +1499,11 @@ export function creativeClosure(db: DatabaseSync): Closure {
   const document = documentsTable
     ? db.prepare(
         "SELECT kind, bytes, object_digests FROM creative_documents WHERE hash = ?",
+      )
+    : null;
+  const held = has(db, "story_document_versions")
+    ? db.prepare(
+        "SELECT 1 FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND v.document_id = ? AND v.content_hash = ? AND d.kind = 'takeRecord'",
       )
     : null;
   const projects = db
@@ -1531,9 +1551,18 @@ export function creativeClosure(db: DatabaseSync): Closure {
     // A Cinema scene's digests are 3D models; every other kind's are Studio bitmaps.
     const models = new Set<string>();
     const documents = new Set<string>();
+    // Each record by the stories that name it.
+    const records = new Map<string, Set<string>>();
+    const namedAs = new Map<string, Set<string>>();
     for (const project of parsed.values())
-      for (const ref of project?.documents ?? [])
+      for (const ref of project?.documents ?? []) {
         documents.add(ref.contentHash);
+        // Whatever kind a damaged snapshot says: the stored document's own decides below.
+        (
+          namedAs.get(ref.contentHash) ??
+          namedAs.set(ref.contentHash, new Set()).get(ref.contentHash)!
+        ).add(ref.id);
+      }
     for (const hash of [...documents].sort()) {
       closure.documents++;
       const row = document?.get(hash) as
@@ -1558,6 +1587,27 @@ export function creativeClosure(db: DatabaseSync): Closure {
       }
       for (const digest of digests)
         (row.kind === "cinemaScene" ? models : bitmaps).add(String(digest));
+      if (row.kind === "story")
+        try {
+          for (const name of recordsNamed(row.bytes))
+            for (const id of namedAs.get(hash) ?? [])
+              (
+                records.get(name) ?? records.set(name, new Set()).get(name)!
+              ).add(id);
+        } catch {
+          gap({ projectId, kind: "document", ref: hash, reason: "unreadable" });
+        }
+    }
+    // Every take record a retained story names is stored and held for it (MPR-101).
+    for (const [hash, stories] of [...records].sort(([a], [b]) =>
+      a < b ? -1 : 1,
+    )) {
+      const row = document?.get(hash) as { bytes: Uint8Array } | undefined;
+      // Held is also of the record's kind.
+      if (!row || ![...stories].every((id) => held?.get(projectId, id, hash)))
+        gap({ projectId, kind: "document", ref: hash, reason: "missing" });
+      else if (createHash("sha256").update(row.bytes).digest("hex") !== hash)
+        gap({ projectId, kind: "document", ref: hash, reason: "mismatch" });
     }
     for (const digest of [
       ...new Set([...media, ...bitmaps, ...models]),
