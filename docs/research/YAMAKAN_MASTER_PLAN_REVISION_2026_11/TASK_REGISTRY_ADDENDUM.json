@@ -262,10 +262,6 @@
   ],
   "pathsNotOnMain": [
     {
-      "path": "src/story",
-      "reason": "New directory created by MPR-104 for the shot cards."
-    },
-    {
       "path": "src/inspector",
       "reason": "New directory created by MPR-602 for the clip inspector controls."
     },
