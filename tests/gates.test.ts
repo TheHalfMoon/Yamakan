@@ -169,7 +169,7 @@ test("without an approval a gate is closed, and an approval binds kind, route, h
 });
 
 test("an approval lasts until it expires, and a revoked or an older epoch's one does not count", async () => {
-  const { store } = await workspace();
+  const { root, store } = await workspace();
   const { id } = give(store, ASK, { nowMs: 1_000, ttlMs: 60_000 });
   assert.equal(gateState(store, ASK, 60_999).state, "approved");
   assert.equal(gateState(store, ASK, 61_000).state, "expired");
@@ -224,6 +224,13 @@ test("an approval lasts until it expires, and a revoked or an older epoch's one 
   );
   give(store);
   assert.equal(gateState(store, ASK).state, "approved");
+  // One planted at an epoch to come is no more of this one.
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.prepare(
+    "INSERT INTO gate_approvals SELECT ?, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch + 1 FROM gate_approvals ORDER BY rowid DESC LIMIT 1",
+  ).run(crypto.randomUUID());
+  db.close();
+  assert.equal(gateState(store, ASK).state, "voided");
 });
 
 test("a proxy or a certificate setting that came or went closes an approval (OA-20)", async () => {
