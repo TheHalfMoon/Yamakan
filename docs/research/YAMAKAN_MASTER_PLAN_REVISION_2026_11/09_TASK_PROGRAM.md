@@ -58,21 +58,21 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-002 | 0 | VERIFIED | — | Add dated status banners and one current-state index for stale top-level documents |
 | MPR-003 | 0 | VERIFIED | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
-| MPR-101 | 1 | REVIEW_PENDING | — | Record every take's generation or render request as an immutable, hashed take record |
-| MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
+| MPR-101 | 1 | VERIFIED | — | Record every take's generation or render request as an immutable, hashed take record |
+| MPR-102 | 1 | QUALIFICATION_READY | MPR-101 | Let a generation target a story shot and append its take on import |
 | MPR-103 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
-| MPR-106 | 1 | WAITING_DEPENDENCIES | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
+| MPR-106 | 1 | QUALIFICATION_READY | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
-| MPR-201 | 2 | REVIEW_PENDING | — | Add one model catalog and check every existing model list against it |
-| MPR-202 | 2 | WAITING_DEPENDENCIES | MPR-201 | Report capabilities as three-state cells and project generation options from them |
+| MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
+| MPR-202 | 2 | QUALIFICATION_READY | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
 | MPR-204 | 2 | QUALIFICATION_READY | — | Add default-deny gates for egress, spend and download with recorded human approvals |
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
-| MPR-206 | 2 | WAITING_DEPENDENCIES | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
+| MPR-206 | 2 | QUALIFICATION_READY | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
 | MPR-207 | 2 | QUALIFICATION_READY | — | Record a typed failure class and end time on every ended generation |
-| MPR-208 | 2 | WAITING_DEPENDENCIES | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
+| MPR-208 | 2 | QUALIFICATION_READY | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
 | MPR-209 | 2 | WAITING_DEPENDENCIES | MPR-208 | Show notices, the AGPL source offer and the route licence in the UI; widen the SBOM |
 | MPR-210 | 2 | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | Define the hosted-provider profile of EngineAdapterV2 and prove it on a loopback fake |
 | MPR-211 | 6 | DEFERRED | MPR-201, MPR-210 | Qualify a Windows DPAPI credential vault for customer provider keys |
@@ -84,7 +84,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-303 | 2 | QUALIFICATION_READY | SS-006 | File, review and apply hash-bound edit proposals, with a propose-only agent mode |
 | MPR-304 | 3 | WAITING_DEPENDENCIES | MPR-301, MPR-202, MPR-501 | Add static MCP prompts and read-only, scope-filtered resources for the stage contract |
 | MPR-305 | 2 | WAITING_DEPENDENCIES | MPR-202 | Make yamakan.router.explain return a deterministic, reasoned route order |
-| MPR-401 | 4 | WAITING_DEPENDENCIES | MPR-101 | Record an entity, an approved anchor and variants on each reference pack |
+| MPR-401 | 4 | QUALIFICATION_READY | MPR-101 | Record an entity, an approved anchor and variants on each reference pack |
 | MPR-402 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-102, MPR-202, MPR-203, MPR-401, MPR-103 | Schedule entities per shot and report which references a route will receive |
 | MPR-403 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
 | MPR-404 | 4 | DEFERRED | MPR-202, MPR-206, MPR-403, MPR-203, MPR-204, MPR-507 | Emit Blender depth and normal control passes for control-capable routes |
@@ -103,7 +103,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-604 | 3 | QUALIFICATION_READY | — | Add first run: locally built sample project and an honest capability banner |
 | MPR-605 | 3 | QUALIFICATION_READY | — | Add a continuity journey test: one project through Create, Story, Edit, Finish and back |
 | MPR-606 | 3 | WAITING_DEPENDENCIES | MPR-601, MPR-602, MPR-603, MPR-604 | Freeze Arabic interface strings and add the string review packet for H1 (unsigned) |
-| MPR-701 | 3 | WAITING_DEPENDENCIES | MPR-101, MPR-201 | Write a provenance manifest beside every export and a readable report from it |
+| MPR-701 | 3 | QUALIFICATION_READY | MPR-101, MPR-201 | Write a provenance manifest beside every export and a readable report from it |
 | MPR-702 | 3 | WAITING_DEPENDENCIES | MPR-101, MPR-303, MPR-701 | Carry clip lineage in OTIO metadata and make the OTIO import proposal appliable |
 | MPR-801 | 5 | WAITING_DEPENDENCIES | MPR-101, MPR-107 | Pre-register workflow benchmark protocol v2 and its exact analysis; run nothing |
 | MPR-802 | 5 | WAITING_DEPENDENCIES | MPR-801, MPR-107, MPR-701 | Freeze protocol v2 after a discarded pilot and run the Yamakan-only baseline on Arm 0 |
@@ -616,13 +616,14 @@ Every take keeps its request; a generation lands on its shot; a take can be revi
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | A, B |
 | Dependencies | none |
 | Founder decisions | FD-2 |
 | Earlier plan items | stream:kaggle-create |
+| Evidence | Merged as 6b9fb8e (PR #291), c7c9929 (PR #292) and 399172af3a33b1f23398f2b9988cef8ee0687830 (PR #296, FD-2); qualify:revisable-shot and qualify:create-durable passed at 2fc6472 on GitHub's Linux machine (run 45215659043); the Blender arm is BLOCKED; docs/evidence/ultimate/MPR-101-take-record.md |
 
 **Goal.** Every generated or rendered take carries a complete, immutable record of how it was made, so a person can see it, repeat it and revise it later. The story document stays small because the take points to its record by hash.
 
@@ -761,7 +762,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
@@ -1250,7 +1251,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B, C |
@@ -1508,13 +1509,14 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
 | Dependencies | none |
 | Founder decisions | none |
 | Earlier plan items | YU-042, YU-043, stream:kaggle-create, stream:comfyui |
+| Evidence | Merged as 60ccce5ed0994b21aecbfb286400856f37288d97 (PR #295); qualify:model-catalog passed at 5f511b5 on the founder host (docs/evidence/model-system/model-catalog.json); main's CI passed |
 
 **Goal.** One typed catalog names every model Yamakan offers, is considering or has refused, by exact identity (host, model slug, revision, variant), with its operations, limits, licence facts, lifecycle and evidence. One test proves that every other model list in the repository agrees with it, and nothing a person sees changes.
 
@@ -1626,7 +1628,7 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
@@ -2157,7 +2159,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
@@ -2429,7 +2431,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
@@ -3951,7 +3953,7 @@ Reference management that says what a route will receive, one camera and render 
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 4 |
 | Track | 4 |
 | Pillars | D |
@@ -6314,7 +6316,7 @@ A provenance manifest beside every export and lineage that survives OpenTimeline
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 3 |
 | Track | 7 |
 | Pillars | A, B, E |

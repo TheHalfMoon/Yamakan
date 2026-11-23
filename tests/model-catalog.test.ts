@@ -391,6 +391,42 @@ test("the page's models agree with the catalog", () => {
     CHECKED_LISTS.kaggleRecipes,
     "kaggle-gone",
   );
+  // One whose only text offer is retired is still checked against it.
+  const retired = (width: number) =>
+    catalogDisagreements(
+      listsLike((l) => {
+        l.kaggleRecipes[0] = { ...KAGGLE_RECIPES[0], offered: false };
+        l.createModels[0] = { ...page, width };
+      }),
+      catalogLike((c) => {
+        c.entries[0].offers[0].lifecycle = "retired";
+      }),
+    );
+  assert.deepEqual(retired(page.width), []);
+  only(retired(1), list, page.id, "width is ");
+  // A text offer of another route is not the page's to show.
+  assert.deepEqual(
+    catalogDisagreements(
+      listsLike((l) => {
+        l.modelPins.push({ id: "pin-one", operation: "textToVideo" } as never);
+      }),
+      catalogLike((c) => {
+        c.entries.push({
+          ...c.entries[0],
+          id: "elsewhere",
+          identity: { ...c.entries[0].identity, model: "Someone/Elsewhere" },
+          offers: [
+            {
+              ...c.entries[0].offers[0],
+              route: "local",
+              recipeId: "pin-one",
+            },
+          ],
+        });
+      }),
+    ),
+    [],
+  );
   // And against its own offer: not another operation's, nor another route's.
   for (const [route, operation, checked] of [
     ["kaggle", "imageToVideo", "kaggleRecipes"],
@@ -817,6 +853,12 @@ test("each field has its form and its bound", () => {
     (c: ModelCatalog) => c.entries[0].offers[0],
     (c: ModelCatalog) => c.entries[0].offers[0].limits,
     (c: ModelCatalog) => c.refused[0],
+    (c: ModelCatalog) =>
+      (c.entries[0].offers[0].limits.references = {
+        count: 1,
+        mediaTypes: ["image/png"],
+        maxBytes: 1,
+      }),
   ])
     refused((c) => {
       Object.assign(inner(c), { extra: 1 });
