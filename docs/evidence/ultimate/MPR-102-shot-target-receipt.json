@@ -1,0 +1,46 @@
+{
+  "task": "MPR-102",
+  "head": "29a170ad7bbc728a5b34ccb424206bc1c8929958",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 93843251200,
+    "freeMemoryBytes": 15142277120,
+    "onAcPower": null,
+    "load": [
+      0.68,
+      0.32,
+      0.17
+    ],
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "a run made for a shot is a take of it, and the cut is as it was",
+      "timelineBeforeAndAfter": "bfd6125b22802975fd5ccb5d2cd00210ba9865bbaa536af1cc85ecf60c2067e1",
+      "recordHash": "1b2efae112102e57195bd019246e0cd061794b6222492b3a1b6f958c023de21d"
+    },
+    {
+      "name": "a shot renamed meanwhile keeps its name and gains the take",
+      "timelineBeforeAndAfter": "bfd6125b22802975fd5ccb5d2cd00210ba9865bbaa536af1cc85ecf60c2067e1"
+    },
+    {
+      "name": "a shot removed meanwhile is said, and the video stays",
+      "timelineBeforeAndAfter": "bfd6125b22802975fd5ccb5d2cd00210ba9865bbaa536af1cc85ecf60c2067e1",
+      "reason": "shot-gone",
+      "message": "The story has no such shot."
+    },
+    {
+      "name": "eight takes fill a shot, and a ninth is refused before it starts",
+      "timelineBeforeAndAfter": "bfd6125b22802975fd5ccb5d2cd00210ba9865bbaa536af1cc85ecf60c2067e1"
+    },
+    {
+      "name": "a stop between the story and the run's row adds nothing twice",
+      "timelineBeforeAndAfter": "bfd6125b22802975fd5ccb5d2cd00210ba9865bbaa536af1cc85ecf60c2067e1"
+    }
+  ]
+}
