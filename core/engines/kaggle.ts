@@ -601,6 +601,9 @@ export const ledgerOptions = (ledger: GenerationLedger) => ({
 export function createKaggleEngine(options: {
   cli: KaggleCli;
   username: string;
+  // Throws when what was counted for this run no longer stands (MPR-204): asked just before it
+  // is pushed, which can be minutes after it was counted.
+  mayPush?: (runId: string) => void;
   // Tests only.
   scriptFor?: (recipe: KaggleRecipe) => Promise<string>;
   download?: (
@@ -1244,7 +1247,10 @@ export function createKaggleEngine(options: {
         // An empty one may have nothing to answer with, and that is not a no: only a no is.
         if (
           empty &&
-          (await privacyOf(recipe, folder).catch(() => undefined)) === false
+          (await privacyOf(recipe, folder).catch((why: unknown) => {
+            if (gateClosed(why)) throw why;
+            return undefined;
+          })) === false
         )
           throw new CommandError("CAPABILITY_UNAVAILABLE", NOT_PRIVATE);
         return;
@@ -1268,7 +1274,8 @@ export function createKaggleEngine(options: {
     let answer: boolean;
     try {
       answer = await reportedPrivate(recipe, folder);
-    } catch {
+    } catch (e) {
+      if (gateClosed(e)) throw e;
       throw new CommandError(
         "CAPABILITY_UNAVAILABLE",
         "Could not confirm that this notebook is private, so nothing was sent.",
@@ -1432,6 +1439,7 @@ export function createKaggleEngine(options: {
             kernel_sources: [],
           }),
         );
+        options.mayPush?.(request.attemptKey);
         sending = true;
         const { stdout } = await cli(
           ["kernels", "push", "-p", push, "-t", String(recipe.timeoutSeconds)],

@@ -332,7 +332,12 @@ export type GateRouteInfo = {
   account: string;
   network: { proxyConfigured: boolean; certificateOverride: boolean };
   run: { bytes: number; seconds: number };
-  gates: { kind: GateKind; state: GateStateName; runsLeft: number }[];
+  gates: {
+    kind: GateKind;
+    state: GateStateName;
+    runsLeft: number;
+    uses: number;
+  }[];
 };
 export type GateApprovalRow = {
   id: string;
@@ -355,21 +360,52 @@ const HOUR_MS = 3_600_000;
 export const gatesOpen = (route: GateRouteInfo) =>
   route.gates.length === 2 && route.gates.every((g) => g.state === "approved");
 
+/** Whether a run that has left may be followed: an approval that is only used up still lets it. */
+export const contactOpen = (route: GateRouteInfo) =>
+  route.gates.some(
+    (g) =>
+      g.kind === "egress" &&
+      (g.state === "approved" || (g.state === "exhausted" && g.uses > 0)),
+  );
+/**
+ * The approvals that count, to be shown and taken back: the newest of each kind of this route's
+ * account, while it still allows anything or would again under its own settings. The service
+ * gives the newest first, and an older one never counts again.
+ */
+export function approvalsInForce({ approvals, route }: GateAnswer) {
+  if (!route) return [];
+  return (["egress", "spend"] as const).flatMap((kind) => {
+    const newest = approvals.find(
+      (a) =>
+        a.kind === kind && a.host === route.host && a.account === route.account,
+    );
+    return newest &&
+      (newest.state === "approved" ||
+        newest.state === "changed" ||
+        newest.state === "exhausted")
+      ? [newest]
+      : [];
+  });
+}
+
 export const validRuns = (runs: number) =>
   Number.isInteger(runs) && runs >= 1 && runs <= 1_000;
 export const validHours = (hours: number) =>
   Number.isInteger(hours) && hours >= 1 && hours <= 366 * 24;
 
-/** The two approvals that one press of the button records: contacting, and using. */
+/** The approvals that one press of the button records: contacting, and using unless only a run
+ * is to be followed. Under the network settings the person was shown. */
 export function approvalRequests(
   route: GateRouteInfo,
   { runs, hours }: { runs: number; hours: number },
+  kinds: readonly GateKind[] = ["egress", "spend"],
 ) {
   if (!validRuns(runs) || !validHours(hours))
     throw new Error("An approval is out of its range.");
-  return (["egress", "spend"] as const).map((kind) => ({
+  return kinds.map((kind) => ({
     kind,
     route: route.route,
+    network: route.network,
     host: route.host,
     account: route.account,
     purpose: "generation" as const,
@@ -386,15 +422,27 @@ type Line = { key: MessageKey; vars?: Record<string, string | number> };
 export function approvalLines(
   route: GateRouteInfo,
   { runs, hours }: { runs: number; hours: number },
+  kinds: readonly GateKind[] = ["egress", "spend"],
 ): Line[] {
   const { host, account, run } = route;
+  const minutes = Math.ceil(run.seconds / 60);
   return [
-    { key: "create.gateContact", vars: { host, account } },
-    {
-      key: "create.gateUse",
-      vars: { runs, minutes: Math.ceil(run.seconds / 60) },
-    },
+    ...(kinds.includes("spend")
+      ? [
+          {
+            key: "create.gateContact" as const,
+            vars: {
+              host,
+              account,
+              runs,
+              megabytes: Math.ceil(run.bytes / 1_000_000),
+            },
+          },
+          { key: "create.gateUse" as const, vars: { runs, minutes } },
+        ]
+      : [{ key: "create.gateFollow" as const, vars: { host, account } }]),
     { key: "create.gateUntil", vars: { hours } },
+    { key: "create.gateMayEnd", vars: { minutes } },
     { key: "create.gateHosts" },
     ...(route.network.proxyConfigured
       ? [{ key: "create.gateProxy" as const }]
@@ -405,10 +453,15 @@ export function approvalLines(
   ];
 }
 /** Why the page asks again, where there was an approval. */
-export const gateReasons = (route: GateRouteInfo): MessageKey[] => [
+export const gateReasons = (
+  route: GateRouteInfo,
+  kinds: readonly GateKind[] = ["egress", "spend"],
+): MessageKey[] => [
   ...new Set(
     route.gates.flatMap((g): MessageKey[] =>
-      g.state === "approved" ? [] : [`create.gateState.${g.state}`],
+      g.state === "approved" || !kinds.includes(g.kind)
+        ? []
+        : [`create.gateState.${g.state}`],
     ),
   ),
 ];

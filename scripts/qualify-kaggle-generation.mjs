@@ -161,7 +161,8 @@ try {
   const start = page.getByTestId("create-generate-start");
   await start.waitFor();
   assert.ok(await start.isDisabled(), "nothing starts until it is agreed to");
-  // What a person allows before anything is sent: one run and one hour, as the page proposes.
+  // What a person allows before anything is sent: one run, and the hours this may have to wait.
+  await page.getByTestId("create-gates-hours").fill("4");
   await page.getByTestId("create-gates-approve").click();
   await page.waitForFunction(
     () =>

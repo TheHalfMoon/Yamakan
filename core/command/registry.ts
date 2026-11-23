@@ -192,6 +192,7 @@ import {
   consumeGates,
   gateState,
   listGateApprovals,
+  requireCounted,
   requireGate,
   revokeGate,
   type GateAsk,
@@ -393,6 +394,12 @@ function generationOf(ctx: CommandContext): Generation {
                 void requireGate(store, kaggleAsk("egress", username)),
             }),
             username,
+            mayPush: (generationId) =>
+              requireCounted(
+                store,
+                [kaggleAsk("egress", username), kaggleAsk("spend", username)],
+                generationId,
+              ),
             ...ledgerOptions(ledger),
           }),
           store,
@@ -2778,6 +2785,14 @@ export const commands = {
             units: z.number().int().min(0).max(GATE_LIMITS.units),
           })
           .strict(),
+        // What the person was shown of the network settings; other ones are refused.
+        network: z
+          .object({
+            proxyConfigured: z.boolean(),
+            certificateOverride: z.boolean(),
+          })
+          .strict()
+          .optional(),
       })
       .strict(),
     run: async (ctx, a) => {
@@ -2799,6 +2814,12 @@ export const commands = {
           "VALIDATION",
           "An approval names the route's own host and the account it is set up with.",
         );
+      const network = kaggleNetwork(process.env);
+      if (a.network && canonicalJson(a.network) !== canonicalJson(network))
+        throw new CommandError(
+          "REVISION_CONFLICT",
+          "The network settings are not those that were shown; look again.",
+        );
       return approveGate(
         ctx.store,
         {
@@ -2808,7 +2829,7 @@ export const commands = {
             host: a.host,
             account: a.account,
             purpose: a.purpose,
-            network: kaggleNetwork(process.env),
+            network,
           },
           ttlMs: a.ttlMs,
           limit: a.limit,

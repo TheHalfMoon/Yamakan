@@ -218,6 +218,21 @@ test("a refused permit records nothing and sends nothing, and is asked once for 
   assert.equal(asked.length, 1);
   assert.deepEqual(g.list(f.projectId), []);
   assert.deepEqual(state.submitted, []);
+  // An answer still to come is none.
+  const late = createGenerationService({
+    permit: (async () => {
+      throw new Error("Too late to refuse.");
+    }) as unknown as () => void,
+    adapter,
+    store: f.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+  });
+  await assert.rejects(
+    late.start(ask(f.projectId)),
+    /A permit answers at once\./,
+  );
+  assert.deepEqual(late.list(f.projectId), []);
+  assert.deepEqual(state.submitted, []);
   refuse = false;
   const { generationId } = await g.start(ask(f.projectId));
   assert.deepEqual(asked.slice(1), [{ generationId, recipeId: recipe.id }]);

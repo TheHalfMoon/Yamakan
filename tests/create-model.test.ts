@@ -17,6 +17,9 @@ import {
   approvalRequests,
   gateReasons,
   gatesOpen,
+  approvalsInForce,
+  contactOpen,
+  type GateKind,
   type GateRouteInfo,
   type GateStateName,
   startingStills,
@@ -127,8 +130,8 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
     network: { proxyConfigured: false, certificateOverride: false },
     run: { bytes: 1_000_000, seconds: 5_401 },
     gates: [
-      { kind: "egress", state: "missing", runsLeft: 0 },
-      { kind: "spend", state: "missing", runsLeft: 0 },
+      { kind: "egress", state: "missing", runsLeft: 0, uses: 0 },
+      { kind: "spend", state: "missing", runsLeft: 0, uses: 0 },
     ],
   };
   assert.deepEqual(GATE_PROPOSAL, { runs: 1, hours: 1 });
@@ -138,10 +141,16 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
     account: "someone",
     purpose: "generation",
     ttlMs: 2 * 3_600_000,
+    // As the person was shown them.
+    network: { proxyConfigured: false, certificateOverride: false },
   };
   assert.deepEqual(approvalRequests(route, { runs: 3, hours: 2 }), [
     { ...base, kind: "egress", limit: { runs: 3, units: 3_000_000 } },
     { ...base, kind: "spend", limit: { runs: 3, units: 16_203 } },
+  ]);
+  // To follow a run, contacting alone.
+  assert.deepEqual(approvalRequests(route, { runs: 1, hours: 2 }, ["egress"]), [
+    { ...base, kind: "egress", limit: { runs: 1, units: 1_000_000 } },
   ]);
   for (const bad of [
     { runs: 0, hours: 1 },
@@ -158,10 +167,24 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
       translate(lang, key, vars),
     );
   const english = says(route, "en").join(" ");
-  for (const part of ["kaggle.com", "someone", "3", "91", "2 hours"])
+  for (const part of [
+    "kaggle.com",
+    "someone",
+    "the picture",
+    "1 MB for each of 3",
+    "allowance: 3",
+    "91",
+    "Hours from now: 2",
+  ])
     assert.ok(english.includes(part), part);
   assert.ok(english.includes("The Kaggle CLI chooses the hosts it contacts."));
-  assert.equal(says(route, "en").length, 4);
+  assert.equal(says(route, "en").length, 5);
+  const follow = approvalLines(route, { runs: 1, hours: 1 }, ["egress"]).map(
+    ({ key, vars }) => translate("en", key, vars),
+  );
+  assert.equal(follow.length, 4);
+  assert.match(follow.join(" "), /to ask how your run goes.*No other run\./);
+  assert.ok(!/allowance/.test(follow.join(" ")));
   for (const [network, key] of [
     [{ proxyConfigured: true, certificateOverride: false }, "create.gateProxy"],
     [
@@ -176,8 +199,8 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
   const gates = (a: GateStateName, b: GateStateName) => ({
     ...route,
     gates: [
-      { kind: "egress" as const, state: a, runsLeft: 1 },
-      { kind: "spend" as const, state: b, runsLeft: 1 },
+      { kind: "egress" as const, state: a, runsLeft: 1, uses: 0 },
+      { kind: "spend" as const, state: b, runsLeft: 1, uses: 0 },
     ],
   });
   assert.equal(gatesOpen(gates("approved", "approved")), true);
@@ -197,6 +220,68 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
     for (const lang of ["en", "ar"] as const)
       assert.ok(translate(lang, `create.gateState.${state}`).length > 5);
   }
+  // What still lets a run be followed, and which approvals can be taken back.
+  for (const [state, uses, follows] of [
+    ["approved", 0, true],
+    ["exhausted", 1, true],
+    ["exhausted", 0, false],
+    ["revoked", 1, false],
+    ["expired", 1, false],
+    ["voided", 1, false],
+    ["changed", 1, false],
+  ] as const)
+    assert.equal(
+      contactOpen({
+        ...route,
+        gates: [
+          { kind: "egress", state, runsLeft: 0, uses },
+          { kind: "spend", state: "approved", runsLeft: 1, uses: 0 },
+        ],
+      }),
+      follows,
+      state,
+    );
+  const row = (
+    id: string,
+    kind: GateKind,
+    state: GateStateName,
+    over: object = {},
+  ) => ({
+    id,
+    kind,
+    state,
+    host: "kaggle.com",
+    account: "someone",
+    expiresAt: 1,
+    runsLeft: 0,
+    ...over,
+  });
+  const inForce = (...approvals: ReturnType<typeof row>[]) =>
+    approvalsInForce({ approvals, route }).map((a) => a.id);
+  assert.deepEqual(
+    inForce(
+      row("1", "spend", "exhausted"),
+      row("2", "egress", "exhausted"),
+      row("3", "egress", "approved"),
+      row("4", "spend", "approved"),
+    ),
+    ["2", "1"],
+    "the newest of each, also used up",
+  );
+  assert.deepEqual(
+    inForce(row("1", "egress", "revoked"), row("2", "egress", "approved")),
+    [],
+    "an older one never counts again",
+  );
+  assert.deepEqual(
+    inForce(
+      row("1", "egress", "approved", { account: "another" }),
+      row("2", "egress", "changed"),
+      row("3", "spend", "expired"),
+    ),
+    ["2"],
+  );
+  assert.deepEqual(approvalsInForce({ approvals: [], route: null }), []);
   assert.equal(gatesOpen({ ...route, gates: [] }), false);
   assert.deepEqual(gateReasons(gates("approved", "approved")), []);
 });

@@ -1,5 +1,6 @@
 // MPR-204: the approvals without which nothing leaves this computer, uses a remote allowance or is
 // downloaded. The store, the commands and the authorisation are the real ones.
+import "./fixtures/own-temp.ts";
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
@@ -558,7 +559,9 @@ test("a person approves the route's own host and account, inside the bounds, and
     [{ limit: { runs: 1, units: -1 } }, "VALIDATION"],
     [{ limit: { runs: 1, units: 2 ** 40 + 1 } }, "VALIDATION"],
     [{ limit: { runs: 1, units: 1, euros: 1 } }, "VALIDATION"],
-    [{ network: PLAIN }, "VALIDATION"],
+    [{ network: { proxyConfigured: false } }, "VALIDATION"],
+    [{ network: { ...PLAIN, proxyConfigured: true } }, "REVISION_CONFLICT"],
+    [{ network: { ...PLAIN, certificateOverride: true } }, "REVISION_CONFLICT"],
     [{ nowMs: 0 }, "VALIDATION"],
   ] as const)
     assert.match(
@@ -856,6 +859,7 @@ const now = JSON.parse(fs.readFileSync(at("scene.json"), "utf8"));
 const folder = args[args.indexOf("-p") + 1];
 if (args[0] === "status") {
   if (!now.state) { process.stderr.write("Permission 'kernels.get' was denied"); process.exit(1); }
+  if (now.state === "EMPTY") { process.stderr.write("404 Client Error: Not Found for url: https://x/GetKernelSessionStatus"); process.exit(1); }
   process.stdout.write('has status "KernelWorkerStatus.' + now.state + '"');
 } else if (args[0] === "list") process.stdout.write("Not found");
 else if (args[0] === "push") {
@@ -889,6 +893,7 @@ else if (args[0] === "push") {
   };
   return {
     ...w,
+    here,
     ask,
     start,
     say,
@@ -1048,6 +1053,68 @@ test("an approval that closes stops every CLI call, the run stays unknown, and a
   });
 });
 
+test("what was counted for a run is asked about again before it is pushed", async () => {
+  // Taken back, over or under another network while the run is being prepared: any of the two.
+  for (const kind of ["egress", "spend"] as const)
+    for (const spoil of [
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "INSERT INTO gate_approval_revocations VALUES (?, 1, 'browser-ui')",
+          )
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "UPDATE gate_approvals SET granted_at = 1, expires_at = 2 WHERE id = ?",
+          )
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare("UPDATE gate_approvals SET epoch = epoch + 1 WHERE id = ?")
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "UPDATE gate_approvals SET proxy_configured = 1 - proxy_configured WHERE id = ?",
+          )
+          .run(id),
+      null,
+    ]) {
+      const r = await route();
+      await r.inside(async () => {
+        const [egress, spend] = await r.both({
+          limit: { runs: 1, units: 9e6 },
+        });
+        const { id } = kind === "egress" ? egress : spend;
+        const script = path.join(r.here, "kernels.js");
+        // The stand-in changes it as it is asked whether the notebook is free.
+        const spoiled = new DatabaseSync(path.join(r.root, "workspace.sqlite"));
+        writeFileSync(
+          script,
+          readFileSync(script, "utf8").replace(
+            'if (args[0] === "status") {',
+            'if (args[0] === "status") { fs.writeFileSync(at("asked"), ""); while (!fs.existsSync(at("go"))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);',
+          ),
+        );
+        const starting = answered(r.start());
+        while (!existsSync(path.join(r.here, "asked")))
+          await new Promise((done) => setTimeout(done, 20));
+        spoil?.(spoiled, id);
+        spoiled.close();
+        writeFileSync(path.join(r.here, "go"), "");
+        const answer = await starting;
+        // Used up by this very run is no matter.
+        if (!spoil) assert.equal(answer, "ok");
+        else {
+          assert.match(answer, /^CAPABILITY_UNAVAILABLE/);
+          assert.ok(!r.calls().includes("push"), `${kind} ${spoil}`);
+          assert.deepEqual(await r.list(), []);
+        }
+      });
+    }
+});
+
 test("an approval for another account, purpose or network starts no process", async () => {
   for (const spoil of [
     "UPDATE gate_approvals SET account = 'someone else'",
@@ -1147,34 +1214,50 @@ const sending = (attemptKey: string) =>
   }) as never;
 
 test("a gate that closes while a run is being sent is a refusal, never a run that may have left", async () => {
-  // Open for so many starts, and then not.
-  for (const open of [0, 1, 2, 3]) {
-    const r = await route();
-    await r.inside(async () => {
-      let left = open;
-      const folderRoot = await mkdtemp(path.join(tmpdir(), "yamakan-gates-f-"));
-      bases.push(folderRoot);
-      const engine = createKaggleEngine({
-        // The send asks once before anything is written, and once for each start.
-        cli: kaggleCli(process.execPath, {
-          mayConnect: () => {
-            if (left-- <= 0)
-              throw new CommandError("CAPABILITY_UNAVAILABLE", "Closed here.");
-          },
-        }),
-        username: "someone",
-        folderRoot,
+  // Open for so many starts, and then not: of a new notebook, of one that answers it is done, and
+  // of an empty one. Each is asked about in its own way before a push.
+  for (const [state, starts] of [
+    [null, 4],
+    ["COMPLETE", 4],
+    ["EMPTY", 5],
+  ] as const)
+    for (let open = 0; open < starts; open++) {
+      const r = await route();
+      r.say({ state });
+      await r.inside(async () => {
+        let left = open;
+        const folderRoot = await mkdtemp(
+          path.join(tmpdir(), "yamakan-gates-f-"),
+        );
+        bases.push(folderRoot);
+        const engine = createKaggleEngine({
+          // The send asks once before anything is written, and once for each start.
+          cli: kaggleCli(process.execPath, {
+            mayConnect: () => {
+              if (left-- <= 0)
+                throw new CommandError(
+                  "CAPABILITY_UNAVAILABLE",
+                  "Closed here.",
+                );
+            },
+          }),
+          username: "someone",
+          folderRoot,
+        });
+        const answer = await answered(
+          engine.submit(sending("run-a"), {} as never),
+        );
+        assert.equal(
+          answer,
+          "CAPABILITY_UNAVAILABLE: Closed here.",
+          `${state} ${open}`,
+        );
+        assert.ok(!r.calls().includes("push"), `${state} ${open}`);
+        // It is no run here, and nothing of it stays on disk.
+        assert.match(await answered(engine.status("run-a")), /^NOT_FOUND/);
+        assert.deepEqual(await readdir(folderRoot), []);
       });
-      const answer = await answered(
-        engine.submit(sending("run-a"), {} as never),
-      );
-      assert.equal(answer, "CAPABILITY_UNAVAILABLE: Closed here.", `${open}`);
-      assert.ok(!r.calls().includes("push"), `${open}`);
-      // It is no run here, and nothing of it stays on disk.
-      assert.match(await answered(engine.status("run-a")), /^NOT_FOUND/);
-      assert.deepEqual(await readdir(folderRoot), []);
-    });
-  }
+    }
 });
 
 test("a gate that closes between an answer and its output ends no run", async () => {
@@ -1223,34 +1306,45 @@ test("a gate that closes between an answer and its output ends no run", async ()
   });
 });
 
-test("outbound call sites are a closed list", async () => {
+test("the files with outbound call sites, and how many each has, are a closed list", async () => {
   // The service's own listening, ComfyUI on this computer, and the local service's own client.
-  const ALLOWED: Record<string, RegExp[]> = {
-    "core/engines/comfyui.ts": [/fetch\(/, /new WebSocket\(/],
-    "server/main.ts": [/node:http/],
-    "server/document-stage.ts": [/node:http/],
-    "mcp/main.ts": [/return fetch\(input, init\);/],
+  const ALLOWED: Record<string, [RegExp, number][]> = {
+    "core/engines/comfyui.ts": [
+      [/\bfetch\(/, 2],
+      [/new WebSocket\(/, 1],
+    ],
+    "server/main.ts": [[/node:http"/, 2]],
+    "server/document-stage.ts": [[/node:http"/, 1]],
+    "mcp/main.ts": [[/return fetch\(input, init\);/, 1]],
   };
   const OUTBOUND =
-    /\bfetch\s*\(|new\s+WebSocket\s*\(|new\s+EventSource\s*\(|["']node:(?:http|https|net|tls|dgram|http2|dns)(?:\/[a-z]+)?["']|["'](?:http|https|net|tls|dgram|http2|undici)["']|navigator\.sendBeacon/;
-  const found = new Set<string>();
+    /\bfetch\s*[(,;)]|=\s*(?:globalThis\.)?fetch\b|\.fetch\b|new\s+WebSocket\b|new\s+EventSource\b|["'](?:node:)?(?:http|https|net|tls|dgram|http2|dns|undici)(?:\/[a-z]+)?["']|navigator\.sendBeacon/;
+  const found: Record<string, number[]> = {};
   for (const [name, text] of await sources())
     for (const line of text.split("\n")) {
-      const code = line.replace(/^\s*(?:\/\/|\*).*$/, "");
+      const code = line
+        .replace(/^\s*(?:\/\/|\*).*$/, "")
+        .replace(/\s\/\/ .*$/, "");
       if (!OUTBOUND.test(code)) continue;
-      assert.ok(
-        ALLOWED[name]?.some((pattern) => pattern.test(code)),
-        `${name}: ${line.trim()}`,
+      const which = (ALLOWED[name] ?? []).findIndex(([pattern]) =>
+        pattern.test(code),
       );
-      found.add(name);
+      assert.ok(which >= 0, `${name}: ${line.trim()}`);
+      (found[name] ??= ALLOWED[name]!.map(() => 0))[which]!++;
     }
-  assert.deepEqual([...found].sort(), Object.keys(ALLOWED).sort());
+  assert.deepEqual(
+    found,
+    Object.fromEntries(
+      Object.entries(ALLOWED).map(([name, of]) => [name, of.map(([, n]) => n)]),
+    ),
+  );
   // The Kaggle CLI is started in one place, which asks first; a service cannot be made without
   // a permit, which is asked in one place.
   const all = await sources();
   const count = (pattern: RegExp) =>
     all.reduce((n, [, text]) => n + (text.match(pattern)?.length ?? 0), 0);
   assert.equal(count(/\bkaggleCli\(/g), 2, "its definition and one use");
-  assert.equal(count(/^\s+permit\(\{/gm), 1);
+  assert.equal(count(/= permit\(\{/g), 1);
+  assert.equal(count(/mayPush\?\.\(/g), 1);
   assert.equal(count(/consumeGates\(/g), 2, "its definition and one use");
 });

@@ -153,15 +153,6 @@ export function GeneratePanel(props: {
   const { prompt, seed, seedValid, t, api } = props;
   // How the approvals stand changes as a run is sent, refused, or asked about.
   const [asked, setAsked] = useState(0);
-  const approvals = (
-    <Approvals
-      api={props.gates}
-      t={t}
-      moment={props.moment}
-      busy={props.busy}
-      asked={asked}
-    />
-  );
   const [run, setRun] = useState<Run | null>(null);
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
@@ -383,10 +374,21 @@ export function GeneratePanel(props: {
     </a>
   );
 
+  const approvals = (
+    <Approvals
+      api={props.gates}
+      t={t}
+      moment={props.moment}
+      busy={props.busy}
+      following={following}
+      asked={asked}
+    />
+  );
   if (!run && !props.offered)
     return (
       <div className="create-generate" data-testid="create-generate">
         <h3>{t("create.engineTitle")}</h3>
+        {approvals}
         <p className="note" data-testid="create-not-from-here">
           {t("create.notFromHere")}
         </p>
@@ -493,7 +495,7 @@ export function GeneratePanel(props: {
       <p role="status" data-testid="create-run-state" data-state={state}>
         {t(line, { name: runModel.name })}
       </p>
-      {following && approvals}
+      {approvals}
       {following && (
         <>
           <progress aria-label={t(line, { name: runModel.name })} />

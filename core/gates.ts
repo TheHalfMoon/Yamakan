@@ -280,6 +280,33 @@ export function consumeGates(
   );
 }
 
+/**
+ * That what was counted for a use still stands: each approval it was counted on is neither
+ * revoked, over, of another epoch, nor given under other network settings. Used up is no matter.
+ */
+export function requireCounted(
+  store: ProjectStore,
+  asks: readonly GateAsk[],
+  useId: string,
+  nowMs = Date.now(),
+) {
+  store.read((db) => {
+    for (const ask of asks) {
+      const row = db
+        .prepare(
+          `SELECT ${COLUMNS} ${FROM} JOIN gate_approval_uses used ON used.approval_id = a.id WHERE used.use_id = ? AND a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.n DESC LIMIT 1`,
+        )
+        .get(useId, ask.kind, ask.route, ask.host, ask.account, ask.purpose) as
+        Row | undefined;
+      const state = row
+        ? readRow(db, row, ask.network, nowMs).state
+        : "missing";
+      if (state !== "approved" && state !== "exhausted")
+        throw refusal(ask, state);
+    }
+  });
+}
+
 export type GateApproval = {
   id: string;
   kind: GateKind;

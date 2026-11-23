@@ -623,7 +623,15 @@ export function createGenerationService(options: {
           assetHash: asset.sha256,
         }),
       );
-      permit({ generationId: id, recipeId: request.recipe.id });
+      // Asked and answered before anything else happens: an answer still to come is none.
+      const early: unknown = permit({
+        generationId: id,
+        recipeId: request.recipe.id,
+      });
+      if (early instanceof Promise) {
+        early.catch(() => {});
+        throw new Error("A permit answers at once.");
+      }
       // Recorded before anything leaves: a crash from here on leaves a record.
       ledger.begin({
         generationId: id,

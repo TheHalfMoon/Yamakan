@@ -257,8 +257,10 @@ class P { static int Main(string[] a) {
     "Nothing is sent until you allow it.",
     "kaggle.com",
     USERNAME,
-    "1 runs",
-    "1 hours",
+    "the picture",
+    "allowance: 1",
+    "Hours from now: 1",
+    "is not followed here until you allow it again",
     "The Kaggle CLI chooses the hosts it contacts.",
   ])
     assert.ok(asked.includes(part), `${part} in: ${asked}`);
@@ -318,13 +320,15 @@ class P { static int Main(string[] a) {
     await at("create-gates-runs").fill(bad);
     assert.equal(await at("create-gates-approve").isDisabled(), true, bad);
   }
-  await at("create-gates-runs").fill("2");
+  // As proposed: one run and one hour.
+  await at("create-gates-runs").fill("1");
   await at("create-gates-approve").click();
   await isOpen(true);
+  await at("create-gates-done").waitFor();
   const given = (await call("yamakan.gates.list", {})).approvals;
   assert.deepEqual(given.map((a) => [a.kind, a.limit.runs, a.state]).sort(), [
-    ["egress", 2, "approved"],
-    ["spend", 2, "approved"],
+    ["egress", 1, "approved"],
+    ["spend", 1, "approved"],
   ]);
   await startRun();
   await at("create-run-state").waitFor();
@@ -337,7 +341,16 @@ class P { static int Main(string[] a) {
   );
   assert.equal(calls().filter((c) => c === "kernels push").length, 1);
   const left = (await call("yamakan.gates.list", {})).approvals;
-  assert.ok(left.every((a) => a.runsLeft === 1));
+  assert.ok(left.every((a) => a.runsLeft === 0 && a.state === "exhausted"));
+  // Used up, they are still listed, to be taken back, and no other run is asked for.
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(
+        '[data-testid="create-gates-list"] li[data-state="exhausted"]',
+      ).length === 2,
+  );
+  assert.equal(await gates.getAttribute("data-needed"), "false");
+  assert.equal(await at("create-gates-approve").count(), 0);
   step(
     "one press approves both, the start is sent once, and one run is counted",
   );
@@ -347,7 +360,11 @@ class P { static int Main(string[] a) {
     .locator('[data-testid="create-gates-list"] li[data-kind="egress"]')
     .getByTestId("create-gates-revoke")
     .click();
-  await isOpen(false);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-gates"]')?.dataset.needed ===
+      "true",
+  );
   assert.equal(
     (await call("yamakan.gates.list", {})).approvals.find(
       (a) => a.id === egress.id,
@@ -370,14 +387,24 @@ class P { static int Main(string[] a) {
     "taken back, two intervals pass with no start of the stand-in, and the page says why",
   );
 
+  // Following asks for contacting alone, and for no other run.
+  assert.match(
+    await gates.innerText(),
+    /to ask how your run goes[^]*No other run\./,
+  );
+  assert.ok(!/allowance/.test(await at("create-gates-what").innerText()));
+  assert.equal(await at("create-gates-runs").count(), 0);
   await at("create-gates-approve").click();
-  await isOpen(true);
   await page.waitForFunction(
     () =>
       document.querySelector('[data-testid="create-run-state"]')?.dataset
         .state === "running",
     null,
     { timeout: 60_000 },
+  );
+  assert.deepEqual(
+    (await call("yamakan.gates.list", {})).approvals.map((a) => a.kind),
+    ["egress", "spend", "egress"],
   );
   assert.ok(calls().length > before);
   assert.equal(calls().filter((c) => c === "kernels push").length, 1);
@@ -393,7 +420,11 @@ class P { static int Main(string[] a) {
     .click();
   await page.getByRole("tab", { name: "Create", exact: true }).click();
   await gates.waitFor();
-  await isOpen(false);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-gates"]')?.dataset.needed ===
+      "true",
+  );
   const changed = await gates.innerText();
   assert.match(changed, /proxy or a certificate setting has come or gone/);
   assert.ok(!(await page.content()).includes("zq71"));
@@ -408,6 +439,14 @@ class P { static int Main(string[] a) {
   await page.reload();
   await page.getByRole("button", { name: /.+/ }).first().waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl");
+  await page
+    .locator(".project-list button, aside button")
+    .nth(1)
+    .click()
+    .catch(() => {});
+  if ((await gates.count()) === 0) await page.getByRole("tab").first().click();
+  await gates.waitFor();
+  assert.match(await gates.innerText(), /[\u0600-\u06ff]{3}/);
   step("the page turns right to left in Arabic, whose words are unreviewed");
   assert.deepEqual(external, []);
   assert.deepEqual(pageErrors, []);
