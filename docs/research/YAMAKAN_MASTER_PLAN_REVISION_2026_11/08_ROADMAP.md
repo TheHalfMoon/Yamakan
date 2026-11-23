@@ -118,12 +118,12 @@ revised from its own record, and the history of a shot can be read.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-101 | An immutable, hashed record of how each take was made | VERIFIED | none | FD-2 |
-| MPR-102 | A generation targets a story shot and appends its take on import | REVIEW_PENDING | MPR-101 | none |
-| MPR-103 | A revision draft read from a take; what changed between takes is recorded | WAITING_DEPENDENCIES | MPR-101, MPR-102 | FD-2 |
+| MPR-102 | A generation targets a story shot and appends its take on import | VERIFIED | MPR-101 | none |
+| MPR-103 | A revision draft read from a take; what changed between takes is recorded | QUALIFICATION_READY | MPR-101, MPR-102 | FD-2 |
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
 | MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |
 | MPR-106 | Brief, scene scripts and shot intent stored in the story document | QUALIFICATION_READY | MPR-101 | none |
-| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | WAITING_DEPENDENCIES | MPR-101, MPR-102 | none |
+| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | QUALIFICATION_READY | MPR-101, MPR-102 | none |
 
 Exit: MPR-101 to MPR-107 verified. One shot is generated or rendered onto its
 shot, revised from its own record, compared and replaced, and its history read,
@@ -160,10 +160,10 @@ agent surface with waits, approvals, budgets and an audit feed.
 | MPR-210 | The hosted-provider profile, proven on a loopback fake only | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | none |
 | MPR-303 | Hash-bound edit proposals; a propose-only agent mode | QUALIFICATION_READY | SS-006 | none |
 | MPR-305 | A deterministic, reasoned route order from the router | WAITING_DEPENDENCIES | MPR-202 | none |
-| MPR-501 | An honest MCP tool list: scope filter, mutation flags, cancellation | QUALIFICATION_READY | none | none |
-| MPR-502 | A bounded job wait and a revision event cursor | WAITING_DEPENDENCIES | MPR-501 | none |
-| MPR-503 | CLI and SDK act as an agent; generated CLI help; media import helpers | WAITING_DEPENDENCIES | MPR-501 | none |
-| MPR-504 | Hash-bound approval requests for human-only commands | WAITING_DEPENDENCIES | MPR-501 | none |
+| MPR-501 | An honest MCP tool list: scope filter, mutation flags, cancellation | VERIFIED | none | none |
+| MPR-502 | A bounded job wait and a revision event cursor | QUALIFICATION_READY | MPR-501 | none |
+| MPR-503 | CLI and SDK act as an agent; generated CLI help; media import helpers | QUALIFICATION_READY | MPR-501 | none |
+| MPR-504 | Hash-bound approval requests for human-only commands | QUALIFICATION_READY | MPR-501 | none |
 | MPR-505 | Per-agent budget envelopes enforced at approvals and gates | WAITING_DEPENDENCIES | MPR-504, MPR-203, MPR-204, MPR-507 | none |
 | MPR-506 | An append-only audit feed and a provenance trace | WAITING_DEPENDENCIES | MPR-502, MPR-101 | none |
 | MPR-507 | Blender worker in the memory budget; a fair queue; rerun from failed | QUALIFICATION_READY | none | none |

@@ -52,3 +52,14 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 ## The real check
 
 `npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it ran on GitHub's Linux machine: **PASS at `29a170a`** (run 45228582330, `ubuntu-24.04`, no sandbox), with the MPR-101 steps before it. Its receipt is `MPR-102-shot-target-receipt.json`: five steps, each with the hash of the assembled cut before and after the import, which is one and the same. It is not evidence of the founder host.
+
+## The card's Definition of Done
+
+| It asks for | Where it is |
+|---|---|
+| All cases of `tests/generation-target.test.ts`, the interrupted import among them | 13 tests, in main's CI |
+| Both evidence files, with the head and the host, and the unchanged timeline hash | This file and `MPR-102-shot-target-receipt.json` (`29a170a`, GitHub's `ubuntu-24.04`) |
+| Every `reason` with its text in the pull request | Pull request 299, and the table above |
+| That no screen sends a target until MPR-104 | Pull request 299, and above |
+
+The card names no computer, so by the founder's answer GitHub's results count. Not shown: anything on the founder host beyond the tests, a real model's run, or a person using it.
