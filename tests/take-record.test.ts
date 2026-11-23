@@ -7,9 +7,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { ProjectStore } from "../core/store.ts";
+import { ProjectStore, SNAPSHOT_FORMAT } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import {
+  API_VERSION,
   RESOURCE_POLICY_HASH,
   Scopes,
   execute,
@@ -1416,4 +1417,95 @@ test("a shot of a version 1 story is planned for a render", async () => {
     },
   );
   assert.equal(planned.shot.id, body.scenes[0]!.shots[0]!.id);
+});
+
+test("a retry of a save that an older build committed as version 1 replays it", async () => {
+  const w = await workspace();
+  const documentId = id();
+  const two = story([]);
+  const one = { ...two, formatVersion: 1 };
+  const ctx = { ...w.ctx, requestId: id() };
+  const request = {
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId,
+    expectedContentHash: null,
+    story: one,
+  };
+  const first = (await execute(ctx, "yamakan.story.save", request))
+    .result as Saved;
+  const old = asAnOlderBuildStored(w, documentId, one);
+  // What that build bound its receipt to: the same request, its version and its hash.
+  const bound = (schemaVersion: number, contentHash: string) =>
+    sha256Hex(
+      canonicalJson({
+        request: sha256Hex(
+          canonicalJson({
+            apiVersion: API_VERSION,
+            format: SNAPSHOT_FORMAT,
+            operation: "yamakan.story.save",
+            input: request,
+          }),
+        ),
+        documentId,
+        kind: "story",
+        schemaVersion,
+        expectedContentHash: null,
+        contentHash,
+        migration: null,
+      }),
+    );
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  const { request_digest } = db
+    .prepare("SELECT request_digest FROM command_receipts WHERE request_id = ?")
+    .get(ctx.requestId) as { request_digest: string };
+  assert.equal(request_digest, bound(2, first.document.contentHash));
+  db.prepare(
+    "UPDATE command_receipts SET request_digest = ? WHERE request_id = ?",
+  ).run(bound(1, old.hash), ctx.requestId);
+  db.close();
+  const again = (await execute(ctx, "yamakan.story.save", request))
+    .result as Saved;
+  assert.equal(again.project.revision, first.project.revision);
+  assert.equal(again.document.schemaVersion, 1);
+  assert.equal(again.document.contentHash, old.hash);
+  assert.deepEqual(again.records, []);
+  // Another request under that id still writes nothing.
+  assert.match(
+    await reason(
+      execute(ctx, "yamakan.story.save", {
+        ...request,
+        story: { ...one, title: "Other" },
+      }),
+    ),
+    /^IDEMPOTENCY_MISMATCH/,
+  );
+  assert.equal(
+    (await w.store.load(w.projectId)).revision,
+    first.project.revision,
+  );
+  // Nor does one whose commit left another kind of document under this id.
+  const packId = id();
+  const packCtx = { ...w.ctx, requestId: id() };
+  await execute(packCtx, "yamakan.pack.save", {
+    projectId: w.projectId,
+    expectedRevision: first.project.revision,
+    documentId: packId,
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "P",
+      entries: [],
+    },
+  });
+  assert.match(
+    await reason(
+      execute(packCtx, "yamakan.story.save", {
+        ...request,
+        documentId: packId,
+      }),
+    ),
+    /^IDEMPOTENCY_MISMATCH/,
+  );
 });
