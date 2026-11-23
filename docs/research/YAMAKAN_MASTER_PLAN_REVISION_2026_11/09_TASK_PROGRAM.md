@@ -63,10 +63,10 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-103 | 1 | QUALIFICATION_READY | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
-| MPR-106 | 1 | REVIEW_PENDING | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
+| MPR-106 | 1 | VERIFIED | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | VERIFIED | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
 | MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
-| MPR-202 | 2 | REVIEW_PENDING | MPR-201 | Report capabilities as three-state cells and project generation options from them |
+| MPR-202 | 2 | VERIFIED | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
 | MPR-204 | 2 | QUALIFICATION_READY | — | Add default-deny gates for egress, spend and download with recorded human approvals |
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
@@ -83,10 +83,10 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-302 | 3 | WAITING_DEPENDENCIES | MPR-301 | Replace the debug Director controls with a production plan view |
 | MPR-303 | 2 | QUALIFICATION_READY | SS-006 | File, review and apply hash-bound edit proposals, with a propose-only agent mode |
 | MPR-304 | 3 | WAITING_DEPENDENCIES | MPR-301, MPR-202, MPR-501 | Add static MCP prompts and read-only, scope-filtered resources for the stage contract |
-| MPR-305 | 2 | WAITING_DEPENDENCIES | MPR-202 | Make yamakan.router.explain return a deterministic, reasoned route order |
+| MPR-305 | 2 | QUALIFICATION_READY | MPR-202 | Make yamakan.router.explain return a deterministic, reasoned route order |
 | MPR-401 | 4 | QUALIFICATION_READY | MPR-101 | Record an entity, an approved anchor and variants on each reference pack |
 | MPR-402 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-102, MPR-202, MPR-203, MPR-401, MPR-103 | Schedule entities per shot and report which references a route will receive |
-| MPR-403 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
+| MPR-403 | 4 | QUALIFICATION_READY | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
 | MPR-404 | 4 | DEFERRED | MPR-202, MPR-206, MPR-403, MPR-203, MPR-204, MPR-507 | Emit Blender depth and normal control passes for control-capable routes |
 | MPR-405 | 4 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-401, MPR-402 | Build the consistency measurement harness with a local blind forced-choice study |
 | MPR-501 | 2 | VERIFIED | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
@@ -1252,13 +1252,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B, C |
 | Dependencies | MPR-101 |
 | Founder decisions | none |
 | Earlier plan items | stream:kaggle-create |
+| Evidence | Merged as 277698477a12ab592fabe84a4313c76838461212 (PR #302, pinned to fc34f10); qualify:story-brief passed at 00d9a07 in real Edge on the founder host (docs/evidence/ultimate/MPR-106-story-brief-receipt.json) and at fc34f10 on GitHub's Linux machine; no product code changes after 00d9a07: what comes is the receipt and the write-up, what main brought from PR #304 (documents, one test, one line of another check) and a wait in this check; main's CI passed; the reviewer accepted the intent's direction field; the Arabic is unreviewed |
 
 **Goal.** What a film is meant to be (its brief), what each scene says (its script) and what each shot is meant to show (its intent) are stored in the project's story document, inside its 256 KiB limit, so they survive a new browser, a backup and a restore, and an agent can read them. Text that today lives only in one browser is brought in once, by the person's own action.
 
@@ -1630,13 +1631,14 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
 | Dependencies | MPR-201 |
 | Founder decisions | none |
 | Earlier plan items | YU-042, stream:kaggle-create, stream:comfyui |
+| Evidence | Merged as 245b0796b4ccda66272a74ecedf4d32d685c73b7 (PR #303, pinned to aa9edd7, which adds only the receipt to 003755e); qualify:capability-report passed at 003755e on the founder host (docs/evidence/model-system/capability-report.json), with a stand-in for the Kaggle CLI that was never started; main's CI passed; npm run test:studio passed at 245b079 on the founder host after the merge (its 5 node tests and 1,975 Studio tests); the Arabic messages are unreviewed and no page shows them |
 
 **Goal.** One command tells a person or an agent what each route can do with each model for each operation. Every cell says supported, unsupported or unverified, with where the answer comes from, its date, its limits and a reason code. The list of models a person can start is a projection of the same report, so the two cannot disagree.
 
@@ -3837,7 +3839,7 @@ A planner and proposer over typed commands: a registered production pipeline, a 
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 3 |
 | Pillars | A, C |
@@ -4216,7 +4218,7 @@ Reference management that says what a route will receive, one camera and render 
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 4 |
 | Track | 4 |
 | Pillars | D |

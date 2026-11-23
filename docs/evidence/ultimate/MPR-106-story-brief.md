@@ -23,7 +23,7 @@ The model and the seed. They are said, before the save, not to be kept; a made v
 
 ## How it was read where the card leaves room
 
-- **The fifth intent field, `direction`,** is kept, as Create's choice ids. The Story page shows it in words and does not edit it; a choice no longer on the list is shown as it is. The reviewer accepts or removes it.
+- **The fifth intent field, `direction`,** is kept, as Create's choice ids. The Story page shows it in words and does not edit it; a choice no longer on the list is shown as it is. The independent reviewer accepted it.
 - **Fullness (OA-10)** is whole percents of the nearer of the two limits. The page counts the whole story as it would send it, without the hashes the service may add, so a story can be refused by the service a little before the page says 100; it is then said as too full.
 - **A field is saved on its own.** What was typed is kept beside what the story said when the typing began. After a reload the typed text goes on top of the story as it now is, every other field is the other writer's, and where both changed the same field the page shows what the story says now.
 - **Text typed for a scene or shot that is gone** is shown with the reason and is not saved, and a button discards what is not saved.
@@ -56,7 +56,7 @@ The model and the seed. They are said, before the save, not to be kept; a made v
 - **A nearly full story:** 93 percent; over by the paste: 103 percent, refused by the page in percents and by the service with its byte counts.
 - **Typing in a 200-shot story with 100 shots shown:** 6 ms in the middle of 30 keys and 7 ms at worst, from the key to the page as redrawn (criterion 50 ms).
 
-Two earlier runs failed and are kept in mind here. At `782e1fe`, after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed: the page was corrected, not the check. On GitHub at `7d1efeb`, `qualify:create-durable` still read a made video's prompt from the shot's notes, the place this card moves it from; it now reads `intent` and that the notes are empty.
+Three runs failed and are kept in mind here. At `782e1fe`, after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed: the page was corrected, not the check. On GitHub at `7d1efeb`, `qualify:create-durable` still read a made video's prompt from the shot's notes, the place this card moves it from; it now reads `intent` and that the notes are empty. On GitHub at `4571120`, this check's own first call came before its session was there; it now waits for that, and the receipt here was made before the wait was added.
 
 The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
 
