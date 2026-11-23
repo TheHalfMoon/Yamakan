@@ -310,6 +310,23 @@ export function refusal(
 // Observations an adapter reports: bounded, never canonical job state (the
 // durable JobSupervisor owns that).
 const Diagnostic = z.string().max(ENGINE_V2_LIMITS.diagnosticChars);
+// The kinds of end without a usable video (MPR-207; core/engines/failures.ts says what each
+// means). An adapter names one only where its engine says so.
+export const FailureClass = z.enum([
+  "refusedByPolicy",
+  "quotaExhausted",
+  "credentialRejected",
+  "contentRefused",
+  "providerRejected",
+  "resourceExhausted",
+  "timeout",
+  "lostJob",
+  "invalidArtifact",
+  "cancelled",
+  "unknown",
+]);
+export type FailureClass = z.infer<typeof FailureClass>;
+
 export const ExecutionStatusSchema = z
   .object({
     executionRef: Ref,
@@ -323,6 +340,7 @@ export const ExecutionStatusSchema = z
     ]),
     progress: z.number().min(0).max(1).optional(),
     diagnostic: Diagnostic.optional(),
+    failureClass: FailureClass.optional(),
   })
   .strict();
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;

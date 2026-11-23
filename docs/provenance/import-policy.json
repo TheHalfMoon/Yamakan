@@ -19,46 +19,31 @@
   "sourceNotices": [
     {
       "source": "LudwigKienle/ai-video-production-editor",
-      "notices": [
-        "notices/ai-video-production-editor-LICENSE"
-      ]
+      "notices": ["notices/ai-video-production-editor-LICENSE"]
     },
     {
       "source": "TheHalfMoon/Ninerr",
-      "notices": [
-        "notices/Ninerr-LICENSE"
-      ]
+      "notices": ["notices/Ninerr-LICENSE"]
     },
     {
       "source": "OpenCut-app/opencut-classic",
-      "notices": [
-        "notices/OpenCut-LICENSE"
-      ]
+      "notices": ["notices/OpenCut-LICENSE"]
     },
     {
       "source": "Vanilagy/mediabunny",
-      "notices": [
-        "notices/mediabunny-LICENSE"
-      ]
+      "notices": ["notices/mediabunny-LICENSE"]
     },
     {
       "source": "soundtouchjs",
-      "notices": [
-        "notices/soundtouchjs-LICENSE"
-      ]
+      "notices": ["notices/soundtouchjs-LICENSE"]
     },
     {
       "source": "ThaUnknown/jassub",
-      "notices": [
-        "notices/jassub-LICENSE",
-        "notices/jassub-NOTICE"
-      ]
+      "notices": ["notices/jassub-LICENSE", "notices/jassub-NOTICE"]
     },
     {
       "source": "D3voz/openjutsu",
-      "notices": [
-        "notices/openjutsu-LICENSE"
-      ]
+      "notices": ["notices/openjutsu-LICENSE"]
     },
     {
       "source": "storytold/artcraft",
@@ -77,36 +62,29 @@
     },
     {
       "source": "calesthio/OpenMontage",
-      "notices": [
-        "notices/OpenMontage-LICENSE"
-      ]
+      "notices": ["notices/OpenMontage-LICENSE"]
     },
     {
       "source": "invoke-ai/InvokeAI",
-      "notices": [
-        "notices/InvokeAI-LICENSE",
-        "notices/InvokeAI-NOTICE"
-      ]
+      "notices": ["notices/InvokeAI-LICENSE", "notices/InvokeAI-NOTICE"]
     },
     {
       "source": "TheHalfMoon/Gomrey",
-      "notices": [
-        "notices/Gomrey-LICENSE",
-        "notices/Gomrey-NOTICE"
-      ]
+      "notices": ["notices/Gomrey-LICENSE", "notices/Gomrey-NOTICE"]
     },
     {
       "source": "TheHalfMoon/Ascout",
-      "notices": [
-        "notices/Ascout-LICENSE",
-        "notices/Ascout-NOTICE"
-      ]
+      "notices": ["notices/Ascout-LICENSE", "notices/Ascout-NOTICE"]
     }
   ],
   "localFilesInDonorRoots": [
     {
       "path": "core/engines/kaggle.ts",
       "reason": "Yamakan-authored Kaggle adapter. Its only process is the person's own Kaggle CLI, an absolute path they configure, by execFile with fixed arguments; a prompt travels in a file, never an argument."
+    },
+    {
+      "path": "core/engines/failures.ts",
+      "reason": "Yamakan-authored failure classes: typed data and pure functions, no donor copy, no process, no network."
     },
     {
       "path": "core/engines/generation.ts",
@@ -322,12 +300,5 @@
     "core/render.ts",
     "core/engines/kaggle.ts"
   ],
-  "productionRoots": [
-    "core",
-    "server",
-    "cli",
-    "sdk",
-    "mcp",
-    "src"
-  ]
+  "productionRoots": ["core", "server", "cli", "sdk", "mcp", "src"]
 }

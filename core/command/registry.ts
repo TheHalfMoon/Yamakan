@@ -88,6 +88,7 @@ import {
 } from "../engines/comfyui.ts";
 import {
   createGenerationService,
+  outcomeOf,
   type GenerationRecipe,
 } from "../engines/generation.ts";
 import {
@@ -2783,6 +2784,9 @@ export const commands = {
           held: g.held === true,
           diagnostic: g.diagnostic,
           imported: g.imported,
+          // For one that ended: when, and for one without a usable video, which kind of end, what
+          // it may have used and what trying again takes.
+          ...outcomeOf(g),
           // The project's media it was made from, as pinned before anything left.
           inputs: g.inputs,
         })),

@@ -22,8 +22,15 @@ import {
   type EngineReport,
   type EngineRequestV2,
   type ExecutionStatus,
+  type FailureClass,
   type Operation,
 } from "./contract-v2.ts";
+import {
+  FAILURE_CLASSES,
+  effectiveBilling,
+  failureClassOf,
+  readFailureClass,
+} from "./failures.ts";
 import { engineReasonMessage } from "./reasons.ts";
 
 export type GenerationRecipe = {
@@ -81,9 +88,13 @@ export type GenerationRecord = {
   // may or may not have; it is checked, and never sent again.
   phase: "sending" | "sent";
   startedAt: number;
-  // When it was first known to have ended, and when its video was brought in. Absent from
-  // older records.
+  // When it was first known to have ended, or was stopped, and when its video was brought in.
+  // Absent from older records.
   endedAt?: number;
+  // For one that failed or was stopped: which kind, and whether it may still have used the
+  // person's quota. The first end stands.
+  failureClass?: FailureClass;
+  mayStillBeBilled?: boolean;
   importedAt?: number;
   // What the run said of itself, kept when it was first known to have succeeded.
   reported?: EngineReport;
@@ -125,6 +136,33 @@ export const mayHaveLeft = (
   r.recipe?.id === recipeId &&
   r.generationId !== except &&
   (r.phase === "sent" || r.state !== "failed");
+
+/** How a run ended, for its answers: nothing while it goes on, and no kind for one that worked. */
+export function outcomeOf(r: GenerationRecord) {
+  const ended =
+    r.endedAt === undefined ? {} : ({ endedAt: r.endedAt } as const);
+  if (r.held) return {};
+  if (r.state !== "failed" && r.state !== "cancelled" && !r.cancelled)
+    return ENDED.has(r.state) ? ended : {};
+  const failureClass = readFailureClass(r.failureClass);
+  const { mayStillBeBilled } = effectiveBilling({
+    failureClass,
+    remote: r.remote,
+    left: mayHaveLeft(r, r.recipe?.id, ""),
+    // A refused start is never listed; what was said as it ended stands, below.
+    refusedAtSubmit: false,
+  });
+  return {
+    failureClass,
+    mayStillBeBilled: r.mayStillBeBilled ?? mayStillBeBilled,
+    billedIn:
+      (r.mayStillBeBilled ?? mayStillBeBilled)
+        ? ("providerQuota" as const)
+        : ("none" as const),
+    retry: FAILURE_CLASSES[failureClass].retry,
+    ...ended,
+  };
+}
 
 // For an engine on this machine, whose runs do not outlive this service anyway.
 export function memoryLedger(): GenerationLedger {
@@ -190,20 +228,42 @@ export function createGenerationService(options: {
       }),
     );
 
-  // The moment a run is first known to have ended is kept with it, once.
+  // The one writer of how a run ended: its moment, its kind and what it may have used. The first
+  // end stands. A row from before this has none, and gains none.
   const update = (
     id: string,
     change: Partial<GenerationRecord>,
-    known = clock(),
+    {
+      known = clock(),
+      failureClass,
+      refusedAtSubmit = false,
+    }: {
+      known?: number;
+      failureClass?: FailureClass;
+      refusedAtSubmit?: boolean;
+    } = {},
   ) => {
     const before = ledger.read(id);
-    const ends =
-      change.state !== undefined &&
-      ENDED.has(change.state) &&
-      before &&
-      !ENDED.has(before.state) &&
-      before.endedAt === undefined;
-    ledger.update(id, ends ? { ...change, endedAt: known } : change);
+    if (!before) return ledger.update(id, change);
+    const after = { ...before, ...change };
+    const ended = (r: GenerationRecord) => ENDED.has(r.state) || r.cancelled;
+    const unmade = (r: GenerationRecord) =>
+      r.state === "failed" || r.state === "cancelled" || r.cancelled;
+    const end: Partial<GenerationRecord> = {};
+    if (ended(after) && !ended(before) && before.endedAt === undefined)
+      end.endedAt = known;
+    if (unmade(after) && !unmade(before) && before.failureClass === undefined) {
+      end.failureClass = change.cancelled
+        ? "cancelled"
+        : (failureClass ?? "unknown");
+      end.mayStillBeBilled = effectiveBilling({
+        failureClass: end.failureClass,
+        remote: before.remote,
+        left: mayHaveLeft(before, before.recipe.id, ""),
+        refusedAtSubmit,
+      }).mayStillBeBilled;
+    }
+    ledger.update(id, { ...change, ...end });
   };
   const tracked = (id: string) => {
     const g = ledger.read(id);
@@ -273,7 +333,7 @@ export function createGenerationService(options: {
           phase: "sent",
           state: "succeeded",
         },
-        endKnown,
+        { known: endKnown },
       );
       return imported;
     };
@@ -361,8 +421,11 @@ export function createGenerationService(options: {
         state: g.state,
         ...(g.diagnostic ? { diagnostic: g.diagnostic } : {}),
         imported: g.imported,
+        ...outcomeOf(g),
       };
-    const { state, progress, diagnostic } = await adapter.status(refOf(g));
+    const { state, progress, diagnostic, failureClass } = await adapter.status(
+      refOf(g),
+    );
     const change: Partial<GenerationRecord> = {
       state,
       diagnostic: diagnostic ?? null,
@@ -392,14 +455,16 @@ export function createGenerationService(options: {
         state: latest.state,
         ...(latest.diagnostic ? { diagnostic: latest.diagnostic } : {}),
         imported: latest.imported,
+        ...outcomeOf(latest),
       };
-    update(id, change);
+    update(id, change, { failureClass });
     return {
       generationId: id,
       state,
       ...(progress === undefined ? {} : { progress }),
       ...(diagnostic === undefined ? {} : { diagnostic }),
       imported: g.imported,
+      ...outcomeOf(tracked(id)),
     };
   }
 
@@ -547,21 +612,34 @@ export function createGenerationService(options: {
         )
         .catch((e: unknown) => {
           // Refused before anything was sent: it did not happen, so nothing is listed.
-          update(id, {
-            state: "failed",
-            dismissed: true,
-            diagnostic:
-              e instanceof Error ? e.message : "It could not be started.",
-          });
+          update(
+            id,
+            {
+              state: "failed",
+              dismissed: true,
+              diagnostic:
+                e instanceof Error ? e.message : "It could not be started.",
+            },
+            {
+              failureClass:
+                failureClassOf(e) ??
+                (e instanceof CommandError ? "refusedByPolicy" : "unknown"),
+              refusedAtSubmit: true,
+            },
+          );
           throw e;
         })
         .finally(() => sending.delete(id));
       if ("refused" in answer) {
-        update(id, {
-          state: "failed",
-          dismissed: true,
-          diagnostic: engineReasonMessage(answer.refused),
-        });
+        update(
+          id,
+          {
+            state: "failed",
+            dismissed: true,
+            diagnostic: engineReasonMessage(answer.refused),
+          },
+          { failureClass: "refusedByPolicy", refusedAtSubmit: true },
+        );
         // An upload refused because consent ended says that, not a general reason.
         permittedToSend(
           (inputs as unknown as { asset: AssetRef }[]).map(

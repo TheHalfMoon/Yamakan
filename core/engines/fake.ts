@@ -27,6 +27,7 @@ import type {
   EngineAdapterV2,
   EngineRequestV2,
   ExecutionStatus,
+  FailureClass,
   RefusalReason,
 } from "./contract-v2.ts";
 
@@ -193,6 +194,8 @@ export type FakeEngineV2Options = {
   artifactBytes?: number;
   // Fail the execution after spawning (an engine-side failure).
   failExecutions?: boolean;
+  // The kind a failed execution names, with failExecutions.
+  failureClass?: FailureClass;
   // Called before each input is read (tests hold one back to race another).
   beforeInput?: (request: EngineRequestV2) => Promise<void>;
   // Executions stay running (a long render) until cancelled.
@@ -329,6 +332,9 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
                 executionRef: ref,
                 state: "failed",
                 diagnostic: "Simulated engine failure.",
+                ...(options.failureClass
+                  ? { failureClass: options.failureClass }
+                  : {}),
               }
             : options.stayRunning
               ? { executionRef: ref, state: "running", progress: 0.5 }

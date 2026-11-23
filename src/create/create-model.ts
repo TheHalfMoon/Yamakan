@@ -65,6 +65,7 @@ import {
   DIRECTION_KINDS,
   type DirectionKind,
 } from "../../core/prompts/directions.ts";
+import type { MessageKey } from "../i18n.ts";
 
 export type CreateBrief = {
   prompt: string;
@@ -254,4 +255,47 @@ export async function sha256Of(data: ArrayBuffer) {
   return Array.from(new Uint8Array(digest), (b) =>
     b.toString(16).padStart(2, "0"),
   ).join("");
+}
+
+// How a run ended without a usable video, as the service says it.
+export type RunOutcome = {
+  failureClass?: string;
+  mayStillBeBilled?: boolean;
+  retry?: string;
+};
+
+const FAIL_LINES: Readonly<Record<string, MessageKey>> = Object.freeze({
+  refusedByPolicy: "create.failRefused",
+  quotaExhausted: "create.failQuota",
+  credentialRejected: "create.failCredential",
+  contentRefused: "create.failContent",
+  providerRejected: "create.failRejected",
+  resourceExhausted: "create.failResource",
+  timeout: "create.failTimeout",
+  lostJob: "create.failLost",
+  invalidArtifact: "create.failInvalid",
+  cancelled: "create.failCancelled",
+  unknown: "create.failUnknown",
+});
+const RETRY_LINES: Readonly<Record<string, MessageKey>> = Object.freeze({
+  afterChange: "create.retryAfterChange",
+  afterWaiting: "create.retryAfterWaiting",
+  afterChecking: "create.retryAfterChecking",
+  whenWanted: "create.retryWhenWanted",
+});
+
+/** What to say of it: which kind of end, what it may have used, and what trying again takes. */
+export function outcomeLines(o: RunOutcome): MessageKey[] {
+  if (o.failureClass === undefined) return [];
+  const kind = Object.hasOwn(FAIL_LINES, o.failureClass)
+    ? o.failureClass
+    : "unknown";
+  const retry = o.retry ?? "";
+  return [
+    FAIL_LINES[kind]!,
+    o.mayStillBeBilled ? "create.billMay" : "create.billNot",
+    Object.hasOwn(RETRY_LINES, retry)
+      ? RETRY_LINES[retry]!
+      : "create.retryAfterChecking",
+  ];
 }
