@@ -9,7 +9,7 @@ Outcome: the fix, not ALREADY_SATISFIED and not the accepted limit. The founder 
 
 ## Failing first, then passing (GitHub CI, Linux)
 
-The head at which each result was read is the commit named. Sandbox media tools do not start on the founder host, so no test that needs media ran on Windows; the eleven `commit point` tests, which need none, ran there and pass.
+The head at which each result was read is the commit named. No test that needs media ran to a result on Windows: the native helpers are not built in that checkout (see "Not run"); the eleven `commit point` tests, which need none, ran there and pass.
 
 - **`cfba77c`, tests only, run 45143721906:** the four return cases ended "accepted" where `VALIDATION` was expected: placing it directly, then undo, for a take in a shot that pins a pack linked to the revoked consent, and for a take whose lineage inputs are linked to it. The control for an expired consent failed because the test asked for an 8-second lifetime (the minimum is 60 seconds); it was corrected. Overall 1,371 tests passed, 6 failed, 66 skipped: the four return cases, the expired control, and the newer-consent control, which first asserts the refusal the fix adds. Each failing test stopped at its first assertion, so redo, media swap, restore and the agent were not seen failing in that run.
 - **`662ab88`, with the fix:** all nine tests of `tests/consent-undo-pinned-take.test.ts` passed, and so did the renamed test in `tests/story-packs.test.ts`. 1,376 passed, 1 failed: the `tests/take-replace.test.ts` case above, stopped on and then changed to the founder's rule.
@@ -24,5 +24,5 @@ The head at which each result was read is the commit named. Sandbox media tools 
 ## Not run, and not claimed
 
 - **`npm run qualify:consent-gate`: BLOCKED.** The scenario for a pinned take is in `scripts/qualify-consent-gate.mjs` and passes `node --check`, but it has never run. Media and render tests failed on the founder host at `3de9b10` with the native helpers built (ledger 12 lists them; the cause is likely, not proven). In the checkout this change was made in the helpers are not built, so its media tests stop earlier, at `The process owner is not built`, and say nothing about that block. The card is not complete.
-- **The Windows time of the two test files: BLOCKED** for the same reason. On Linux CI each new test took under one second.
+- **The Windows time of the media tests in the two test files: not measured,** since the helpers are not built in that checkout. On Linux CI each new test took under one second.
 - Not covered by a test here: trimming, unmuting, soloing, `take.apply` and assembly through this rule, and revoke staying human-only (existing tests cover that command).
