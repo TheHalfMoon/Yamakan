@@ -16,7 +16,11 @@ import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { writeFileSync, existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { ProjectStore, WORKSPACE_SCHEMA_VERSION } from "../core/store.ts";
+import {
+  ProjectStore,
+  WORKSPACE_SCHEMA_STEPS,
+  WORKSPACE_SCHEMA_VERSION,
+} from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes } from "../core/command/registry.ts";
 import { CommandError } from "../core/command/errors.ts";
@@ -433,7 +437,71 @@ test("a version 18 database gains the approval tables, empty, and keeps every ro
     );
   plant({});
   assert.throws(() => plant({}), /constraint/i);
+  // The same of the rows beside it.
+  const ID = "00000000-0000-4000-8000-000000000000";
+  write.exec("PRAGMA foreign_keys = ON");
+  for (const sql of [
+    "INSERT INTO gate_approval_revocations VALUES ('x', 1, 'browser-ui')",
+    `INSERT INTO gate_approval_revocations VALUES ('${ID}', 1, '')`,
+    `INSERT INTO gate_approval_revocations VALUES ('${ID}', 'soon', 'browser-ui')`,
+    "INSERT INTO gate_approval_uses VALUES ('x', 'u', 1, 1)",
+    `INSERT INTO gate_approval_uses VALUES ('${ID}', '', 1, 1)`,
+    `INSERT INTO gate_approval_uses VALUES ('${ID}', '${"u".repeat(81)}', 1, 1)`,
+    `INSERT INTO gate_approval_uses VALUES ('${ID}', 'u', -1, 1)`,
+    `INSERT INTO gate_approval_uses VALUES ('${ID}', 'u', 'much', 1)`,
+    "INSERT INTO gate_approvals(id) VALUES ('x')",
+  ])
+    assert.throws(() => write.exec(sql), /constraint|cannot store/i, sql);
+  write.exec(
+    `INSERT INTO gate_approval_revocations VALUES ('${ID}', 1, 'browser-ui')`,
+  );
+  write.exec(`INSERT INTO gate_approval_uses VALUES ('${ID}', 'u', 0, 1)`);
+  for (const sql of [
+    `INSERT INTO gate_approval_revocations VALUES ('${ID}', 2, 'browser-ui')`,
+    `INSERT INTO gate_approval_uses VALUES ('${ID}', 'u', 1, 1)`,
+  ])
+    assert.throws(() => write.exec(sql), /UNIQUE/, sql);
   write.close();
+});
+
+test("a database of every older version opens with the same approval tables", async () => {
+  assert.equal(WORKSPACE_SCHEMA_STEPS.length, WORKSPACE_SCHEMA_VERSION);
+  const tables = (file: string) => {
+    const db = new DatabaseSync(file, { readOnly: true });
+    try {
+      assert.equal(
+        (db.prepare("PRAGMA user_version").get() as { user_version: number })
+          .user_version,
+        WORKSPACE_SCHEMA_VERSION,
+      );
+      return db
+        .prepare(
+          "SELECT name, sql FROM sqlite_master WHERE name LIKE 'gate_%' ORDER BY name",
+        )
+        .all();
+    } finally {
+      db.close();
+    }
+  };
+  const { root, store } = await workspace();
+  store.close();
+  const fresh = tables(path.join(root, "workspace.sqlite"));
+  assert.equal(fresh.length, 4);
+  for (let version = 1; version < WORKSPACE_SCHEMA_VERSION; version++) {
+    const old = await mkdtemp(path.join(tmpdir(), "yamakan-db-old-"));
+    bases.push(old);
+    const file = path.join(old, "workspace.sqlite");
+    const db = new DatabaseSync(file, { enableForeignKeyConstraints: false });
+    for (const step of WORKSPACE_SCHEMA_STEPS.slice(0, version)) db.exec(step);
+    db.exec(`PRAGMA user_version = ${version}`);
+    db.close();
+    const opened = new ProjectStore(old);
+    handles.push(opened);
+    await opened.initialize();
+    await opened.create("After");
+    opened.close();
+    assert.deepEqual(tables(file), fresh, `from version ${version}`);
+  }
 });
 
 test("a damaged lock file is set aside and the lock is acquired", async () => {

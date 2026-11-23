@@ -256,29 +256,21 @@ const CLI_ENVIRONMENT = [
   "CURL_CA_BUNDLE",
   "SSL_CERT_FILE",
 ];
-// Of those, what sends the CLI another way, and what changes whom it believes. The CLI also gets
-// every KAGGLE_ name, and whether it reads this one is not known.
-const PROXY_SETTINGS = [
-  "HTTP_PROXY",
-  "HTTPS_PROXY",
-  "ALL_PROXY",
-  "http_proxy",
-  "https_proxy",
-  "all_proxy",
-  "KAGGLE_PROXY",
-];
-const CERTIFICATE_SETTINGS = [
-  "REQUESTS_CA_BUNDLE",
-  "CURL_CA_BUNDLE",
-  "SSL_CERT_FILE",
-];
+// Of those, what sends the CLI another way, and what changes whom it believes, whatever the case
+// of their letters: Windows reads them alike. The CLI also gets every KAGGLE_ name; which of them
+// it reads is not known, so one that looks like either counts.
+const PROXY_SETTING =
+  /^(?:(?:HTTP|HTTPS|ALL)_PROXY|KAGGLE_.*(?:PROXY|ENDPOINT|HOST|URL).*)$/i;
+const CERTIFICATE_SETTING =
+  /^(?:REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|SSL_CERT_FILE|KAGGLE_.*(?:SSL|CERT|CA_|VERIFY).*)$/i;
 /** Whether the CLI would be given a proxy or a certificate setting; never its value (OA-20). */
 export function kaggleNetwork(from: NodeJS.ProcessEnv): GateNetwork {
-  const env = kaggleCliEnvironment(from);
-  const any = (names: readonly string[]) => names.some((name) => env[name]);
+  const given = Object.entries(kaggleCliEnvironment(from))
+    .filter(([, value]) => value)
+    .map(([name]) => name);
   return {
-    proxyConfigured: any(PROXY_SETTINGS),
-    certificateOverride: any(CERTIFICATE_SETTINGS),
+    proxyConfigured: given.some((name) => PROXY_SETTING.test(name)),
+    certificateOverride: given.some((name) => CERTIFICATE_SETTING.test(name)),
   };
 }
 export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {

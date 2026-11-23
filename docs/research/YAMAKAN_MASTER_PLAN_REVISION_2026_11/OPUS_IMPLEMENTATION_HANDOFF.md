@@ -210,7 +210,7 @@ both be right.
   MPR-201, MPR-206, MPR-207, MPR-208, MPR-502. If one seems to need a table,
   stop and report it; the design in the card was chosen to avoid that.
 - A restored workspace is a new copy with a raised epoch. Gate approvals
-  (MPR-204) and pending approval requests (MPR-504) in it are void, and the
+  (MPR-204) are not in it, pending approval requests (MPR-504) are void, and the
   reservation of a void request stops counting (MPR-505). Spent budget rows
   and audit rows are those of the backup (MPR-505, MPR-506).
 

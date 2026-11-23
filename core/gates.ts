@@ -1,8 +1,9 @@
-// Default-deny gates (MPR-204): nothing leaves this computer, uses a remote allowance or is
-// downloaded unless a person has recorded an approval for exactly that route, host, account and
-// purpose, with an expiry and a limit. An approval is a row that is never changed; a revocation
-// and a use are rows of their own. A restore raises the epoch and so voids every approval. The
-// newest approval of a place is the one that counts, so revoking it closes the place.
+// Default-deny gates (MPR-204): a person's approvals of what leaves this computer, what uses a
+// remote allowance and what is downloaded, each for exactly one route, host, account and purpose,
+// with an expiry and a limit. The places that refuse without one ask here (part b). An approval
+// is a row that is never changed; a revocation and a use are rows of their own. A restore brings
+// none back, and one of another epoch is void. The newest approval of a place is the one that
+// counts, so revoking it closes the place.
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -117,7 +118,8 @@ function readRow(
         ? "voided"
         : row.revoked_at !== null
           ? "revoked"
-          : nowMs >= row.expires_at
+          : // Nor before it was given: this computer's clock was set back.
+            nowMs >= row.expires_at || nowMs < row.granted_at
             ? "expired"
             : !sameNetwork(networkOf(row), network)
               ? "changed"
@@ -135,6 +137,11 @@ function readRow(
   };
 }
 
+const wellFormed = (text: string) =>
+  !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(
+    text,
+  );
+
 const NONE = {
   state: "missing" as const,
   approvalId: null,
@@ -145,9 +152,12 @@ const NONE = {
 };
 
 function stateOf(db: DatabaseSync, ask: GateAsk, nowMs: number): GateReading {
+  // Stored text is UTF-8, where two halves of a character that is not one would be the same.
+  if (!wellFormed(ask.host) || !wellFormed(ask.account))
+    return { kind: ask.kind, ...NONE };
   const row = db
     .prepare(
-      `SELECT ${COLUMNS} ${FROM} WHERE a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.rowid DESC LIMIT 1`,
+      `SELECT ${COLUMNS} ${FROM} WHERE a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.n DESC LIMIT 1`,
     )
     .get(ask.kind, ask.route, ask.host, ask.account, ask.purpose) as
     Row | undefined;
@@ -170,7 +180,8 @@ const WHAT: Record<GateKind, string> = {
 };
 const WHY: Record<Exclude<GateState, "approved">, string> = {
   missing: "No one has approved",
-  expired: "The approval has expired for",
+  expired:
+    "The approval has expired, or this computer's clock is before it, for",
   revoked: "The approval was revoked for",
   exhausted: "The approval is used up for",
   voided: "The approval was voided by a restore for",
@@ -186,17 +197,21 @@ const refusal = (ask: GateAsk, state: Exclude<GateState, "approved">) =>
       : `${WHY[state]} ${WHAT[ask.kind]} ${ask.host} as ${ask.account}. A person approves it on the Create page first.`,
   );
 
-/** The approval that allows this now, or why there is none. */
+/**
+ * The approval that allows a contact now, or why there is none. It is not the check of a start:
+ * that is `consumeGates`, which counts. One for contacting that is only used up still allows
+ * following what was counted on it.
+ */
 export function requireGate(
   store: ProjectStore,
   ask: GateAsk,
   nowMs = Date.now(),
 ): GateReading & { approvalId: string } {
   const read = gateState(store, ask, nowMs);
-  // One that is only used up still allows what it was used for: following a run that has left.
   if (
     read.approvalId !== null &&
-    (read.state === "approved" || (read.state === "exhausted" && read.uses > 0))
+    (read.state === "approved" ||
+      (ask.kind === "egress" && read.state === "exhausted" && read.uses > 0))
   )
     return { ...read, approvalId: read.approvalId };
   throw refusal(ask, read.state as Exclude<GateState, "approved">);
@@ -212,25 +227,54 @@ export function consumeGates(
   useId: string,
   nowMs = Date.now(),
 ): string[] {
+  const places = asks.map(({ ask }) =>
+    JSON.stringify([ask.kind, ask.route, ask.host, ask.account, ask.purpose]),
+  );
+  if (
+    asks.length === 0 ||
+    new Set(places).size !== places.length ||
+    useId.length < 1 ||
+    useId.length > 80 ||
+    asks.some(({ units }) => !Number.isSafeInteger(units) || units < 0)
+  )
+    throw new CommandError("VALIDATION", "A use names each gate once.");
   return store.transaction((db) =>
     asks.map(({ ask, units }) => {
-      if (!Number.isSafeInteger(units) || units < 0)
-        throw new CommandError("VALIDATION", "A use is a whole number.");
       const read = stateOf(db, ask, nowMs);
       const used =
-        read.approvalId !== null &&
-        db
-          .prepare(
-            "SELECT 1 FROM gate_approval_uses WHERE approval_id = ? AND use_id = ?",
-          )
-          .get(read.approvalId, useId) !== undefined;
-      if (used && (read.state === "approved" || read.state === "exhausted"))
+        read.approvalId === null
+          ? undefined
+          : (db
+              .prepare(
+                "SELECT units FROM gate_approval_uses WHERE approval_id = ? AND use_id = ?",
+              )
+              .get(read.approvalId, useId) as { units: number } | undefined);
+      if (
+        used &&
+        (read.state === "approved" || read.state === "exhausted") &&
+        used.units === units
+      )
         return read.approvalId!;
       if (read.state !== "approved") throw refusal(ask, read.state);
+      if (used)
+        throw new CommandError(
+          "VALIDATION",
+          "The same use was counted with another amount.",
+        );
       if (units > read.unitsLeft) throw refusal(ask, "exhausted");
-      db.prepare(
-        "INSERT INTO gate_approval_uses(approval_id, use_id, units, used_at) VALUES (?, ?, ?, ?)",
-      ).run(read.approvalId, useId, units, nowMs);
+      const { changes } = db
+        .prepare(
+          "INSERT INTO gate_approval_uses(approval_id, use_id, units, used_at) VALUES (?, ?, ?, ?)",
+        )
+        .run(read.approvalId, useId, units, nowMs);
+      // Counted, and nothing before it lost: else none of this is written.
+      const after = stateOf(db, ask, nowMs);
+      if (
+        Number(changes) !== 1 ||
+        after.uses !== read.uses + 1 ||
+        after.unitsLeft !== read.unitsLeft - units
+      )
+        throw new CommandError("INTERNAL", "A use was not counted.");
       return read.approvalId!;
     }),
   );
@@ -305,7 +349,9 @@ export function approveGate(
   if (
     !whole(ttlMs, GATE_LIMITS.ttlMsLeast, GATE_LIMITS.ttlMsMost) ||
     !whole(limit.runs, 1, GATE_LIMITS.runs) ||
-    !whole(limit.units, 0, GATE_LIMITS.units)
+    !whole(limit.units, 0, GATE_LIMITS.units) ||
+    !wellFormed(ask.host) ||
+    !wellFormed(ask.account)
   )
     throw new CommandError("VALIDATION", "An approval is out of its range.");
   const now = input.nowMs ?? Date.now();
@@ -357,7 +403,15 @@ export function revokeGate(
       db.prepare(
         "INSERT INTO gate_approval_revocations(approval_id, revoked_at, principal_id) VALUES (?, ?, ?)",
       ).run(input.approvalId, now, input.principalId);
-      return approvalOf(db, { ...row, revoked_at: now }, input.network, now);
+      const stands = approvalOf(
+        db,
+        rowOf(db, input.approvalId)!,
+        input.network,
+        now,
+      );
+      if (stands.revokedAt !== now)
+        throw new CommandError("INTERNAL", "The approval was not revoked.");
+      return stands;
     }),
   );
 }
@@ -370,7 +424,7 @@ export function listGateApprovals(
 ): { approvals: GateApproval[]; more: boolean } {
   return store.read((db) => {
     const rows = db
-      .prepare(`SELECT ${COLUMNS} ${FROM} ORDER BY a.rowid DESC LIMIT ?`)
+      .prepare(`SELECT ${COLUMNS} ${FROM} ORDER BY a.n DESC LIMIT ?`)
       .all(GATE_LIMITS.listed + 1) as Row[];
     const approvals: GateApproval[] = [];
     let bytes = 64;

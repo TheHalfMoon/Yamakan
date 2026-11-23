@@ -39,6 +39,7 @@ import { inspectWal } from "./wal.ts";
 import { restrictToOwner } from "./process/access.ts";
 import { fromEditView, parseCanonical } from "./canonical.ts";
 import type { CanonicalProject } from "./canonical.ts";
+import { GATES_SCHEMA, GATES_TABLES } from "./gates-schema.ts";
 import type { ProjectStore, RequestReceipt } from "./store.ts";
 
 // Format 2 (YU-014) adds the legacy workspace files and the creative closure
@@ -76,6 +77,7 @@ const RESTORE_POLICY = [
   "Jobs active in the original (cancel requests included) wait for an explicit retry or discard; their attempts are failed.",
   "Staged document uploads are dropped; agent tokens are revoked.",
   "Director approvals are void and likeness consents need revalidation (new execution epoch).",
+  "Approvals of what leaves this computer are not restored; a person gives them again.",
   "Unverifiable media is quarantined, unverifiable legacy files are left out, and unresolved documents are reported; the restore receipt names each.",
 ];
 
@@ -766,7 +768,6 @@ const EPOCH_TABLES = [
   "consent_revalidations",
   "director_attempts",
   "director_requests",
-  "gate_approvals",
 ] as const;
 function fenceRestored(db: DatabaseSync): Fenced {
   const run = (sql: string, ...args: (string | number)[]) =>
@@ -842,14 +843,29 @@ function fenceRestored(db: DatabaseSync): Fenced {
         "The backup's database holds an epoch this workspace cannot go past.",
       );
     run("UPDATE director_epoch SET value = ? WHERE singleton = 1", highest + 1);
-    fenced.directorEpoch = (
-      db
-        .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
-        .get() as {
-        value: number;
-      }
-    ).value;
+    // Read back: a table with rules of its own could have let the change pass by.
+    const epochs = db.prepare("SELECT singleton, value FROM director_epoch");
+    const [{ singleton, value }, ...more] = epochs.all() as {
+      singleton: unknown;
+      value: unknown;
+    }[];
+    if (more.length || singleton !== 1 || value !== highest + 1)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "The backup's database holds an epoch this workspace cannot change.",
+      );
+    fenced.directorEpoch = value;
   }
+  // Approvals of what leaves this computer (MPR-204) are never restored: a person gives them
+  // again. Their tables go whatever they hold, at any version a backup claims, and are made
+  // again from this build's own step, or by the upgrade.
+  for (const table of GATES_TABLES)
+    if (has(db, table)) db.exec(`DROP TABLE ${table}`);
+  db.exec("DROP INDEX IF EXISTS gate_approvals_asked");
+  const { user_version: version } = db.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  };
+  if (version >= 19) db.exec(GATES_SCHEMA);
   return fenced;
 }
 

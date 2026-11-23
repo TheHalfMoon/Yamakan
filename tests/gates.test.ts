@@ -159,6 +159,12 @@ test("without an approval a gate is closed, and an approval binds kind, route, h
     { account: "someone else" },
     { account: "Someone" },
     { account: "" },
+    { account: "someone " },
+    { host: "kaggle.com " },
+    { host: "KAGGLE.COM" },
+    { route: "Kaggle" },
+    { account: "someone\uD800" },
+    { host: "kaggle.com\uDFFF" },
     { purpose: "qualification" },
   ])
     assert.match(
@@ -168,14 +174,39 @@ test("without an approval a gate is closed, and an approval binds kind, route, h
     );
 });
 
+test("half a character is not the one it would be stored as", async () => {
+  const { store } = await workspace();
+  // What both halves become in the database.
+  give(store, { ...ASK, account: "someone\uFFFD" });
+  for (const half of ["\uD800", "\uDFFF"])
+    for (const kind of ["egress", "spend"] as const)
+      assert.equal(
+        gateState(store, { ...ASK, kind, account: `someone${half}` }).state,
+        "missing",
+      );
+  assert.match(
+    reason(() => give(store, { ...ASK, account: "someone\uD800" })),
+    /^VALIDATION/,
+  );
+  // A whole one is as any other.
+  give(store, { ...ASK, account: "someone\u{1F600}" });
+  assert.equal(
+    gateState(store, { ...ASK, account: "someone\u{1F600}" }).state,
+    "approved",
+  );
+});
+
 test("an approval lasts until it expires, and a revoked or an older epoch's one does not count", async () => {
   const { root, store } = await workspace();
   const { id } = give(store, ASK, { nowMs: 1_000, ttlMs: 60_000 });
   assert.equal(gateState(store, ASK, 60_999).state, "approved");
   assert.equal(gateState(store, ASK, 61_000).state, "expired");
+  // A clock set back does not bring one to life before it was given.
+  assert.equal(gateState(store, ASK, 1_000).state, "approved");
+  assert.equal(gateState(store, ASK, 999).state, "expired");
   assert.match(
     reason(() => requireGate(store, ASK, 61_000)),
-    /The approval has expired for contacting kaggle\.com as someone/,
+    /The approval has expired, or this computer's clock is before it, for contacting kaggle\.com as someone/,
   );
   // The newest counts, whatever an older one says.
   const second = give(store);
@@ -227,7 +258,7 @@ test("an approval lasts until it expires, and a revoked or an older epoch's one 
   // One planted at an epoch to come is no more of this one.
   const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
   db.prepare(
-    "INSERT INTO gate_approvals SELECT ?, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch + 1 FROM gate_approvals ORDER BY rowid DESC LIMIT 1",
+    "INSERT INTO gate_approvals(id, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch) SELECT ?, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch + 1 FROM gate_approvals ORDER BY n DESC LIMIT 1",
   ).run(crypto.randomUUID());
   db.close();
   assert.equal(gateState(store, ASK).state, "voided");
@@ -266,6 +297,7 @@ test("a proxy or a certificate setting that came or went closes an approval (OA-
   assert.deepEqual(read({}), PLAIN);
   assert.deepEqual(read({ PATH: "x", NO_PROXY: "localhost" }), PLAIN);
   assert.deepEqual(read({ HTTPS_PROXY: "" }), PLAIN);
+  assert.deepEqual(read({ KAGGLE_CONFIG_DIR: "x", KAGGLE_KEY: "k" }), PLAIN);
   for (const name of [
     "HTTP_PROXY",
     "HTTPS_PROXY",
@@ -274,9 +306,17 @@ test("a proxy or a certificate setting that came or went closes an approval (OA-
     "https_proxy",
     "all_proxy",
     "KAGGLE_PROXY",
+    "KAGGLE_Proxy",
+    "KAGGLE_API_ENDPOINT",
   ])
     assert.deepEqual(read({ [name]: "http://u:p@h:1" }), PROXY, name);
-  for (const name of ["REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE"])
+  for (const name of [
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "SSL_CERT_FILE",
+    "KAGGLE_SSL_CA_CERT",
+    "KAGGLE_Verify_SSL",
+  ])
     assert.deepEqual(read({ [name]: "C:/x.pem" }), CERTIFICATE, name);
   assert.deepEqual(
     read({ ALL_PROXY: "socks5://h", SSL_CERT_FILE: "C:/x.pem" }),
@@ -327,11 +367,52 @@ test("a limit is counted before the send and never refunded, and the same genera
   assert.equal(use("three", 600, 40), "ok");
   for (const units of [-1, 1.5, Number.NaN, Number.MAX_VALUE])
     assert.match(use("x", units, 0), /^VALIDATION/, String(units));
+  // The same use with another amount is no repeat of it.
+  assert.match(use("three", 599, 40), /^CAPABILITY_UNAVAILABLE/);
+  // Asked for nothing, for the same gate twice, or by no proper name.
+  for (const [asks, id] of [
+    [[], "x"],
+    [
+      [
+        { ask: SPEND, units: 0 },
+        {
+          ask: { ...SPEND, network: { ...PLAIN, proxyConfigured: true } },
+          units: 0,
+        },
+      ],
+      "x",
+    ],
+    [[{ ask: SPEND, units: 0 }], ""],
+    [[{ ask: SPEND, units: 0 }], "x".repeat(81)],
+  ] as const)
+    assert.equal(
+      reason(() => consumeGates(store, [...asks], id)),
+      "VALIDATION: A use names each gate once.",
+    );
+  assert.deepEqual(left(), [0, 0, 1, 0]);
+  // An allowance that is used up is no permission to use it again.
+  assert.match(
+    reason(() => requireGate(store, SPEND)),
+    /The approval is used up for using the allowance/,
+  );
   // An approval of nothing, which nothing was counted on, allows nothing.
   give(store, ASK, { units: 0 });
   assert.match(
     reason(() => requireGate(store, ASK)),
     /The approval is used up/,
+  );
+  // A use of nothing is a use, and is counted once.
+  give(store, ASK, { runs: 3, units: 10 });
+  for (const n of [1, 2])
+    assert.equal(
+      reason(() => consumeGates(store, [{ ask: ASK, units: 0 }], "nothing")),
+      "ok",
+      String(n),
+    );
+  assert.equal(gateState(store, ASK).uses, 1);
+  assert.equal(
+    reason(() => consumeGates(store, [{ ask: ASK, units: 1 }], "nothing")),
+    "VALIDATION: The same use was counted with another amount.",
   );
   // A use is bound to its approval: revoking it ends even the same run's.
   const again = give(store, ASK);
@@ -393,7 +474,7 @@ test("a download approval cannot be recorded, nor one planted be used", async ()
   );
   for (const at of [epoch - 1, epoch, epoch + 1])
     db.prepare(
-      "INSERT INTO gate_approvals VALUES (?, 'download', 'kaggle', 'kaggle.com', 'someone', 'generation', 0, 0, 9, 9, 'bytes', 0, 9999999999999, 'browser-ui', ?)",
+      "INSERT INTO gate_approvals(id, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, 'download', 'kaggle', 'kaggle.com', 'someone', 'generation', 0, 0, 9, 9, 'bytes', 0, 9999999999999, 'browser-ui', ?)",
     ).run(crypto.randomUUID(), at);
   db.close();
   assert.equal(gateState(store, download).state, "missing");
@@ -443,6 +524,8 @@ test("a person approves the route's own host and account, inside the bounds, and
     [{ host: "" }, "VALIDATION"],
     [{ host: "k".repeat(254) }, "VALIDATION"],
     [{ account: "someone else" }, "VALIDATION"],
+    [{ account: "Someone" }, "VALIDATION"],
+    [{ account: "someone " }, "VALIDATION"],
     [{ account: "" }, "VALIDATION"],
     [{ account: "a".repeat(81) }, "VALIDATION"],
     [{ account: "C:\\Users\\someone" }, "VALIDATION"],
@@ -499,6 +582,62 @@ test("a person approves the route's own host and account, inside the bounds, and
     /^VALIDATION/,
   );
   assert.ok(ctx);
+});
+
+test("the commands read the network settings as they are when asked, and answer no value of them", async () => {
+  const { approve, call, store } = await workspace();
+  const SECRET = "http://user:secret-zq71@127.0.0.1:9";
+  const names = ["HTTPS_PROXY", "SSL_CERT_FILE"] as const;
+  const had = names.map((name) => process.env[name]);
+  const set = (proxy: boolean, certificate: boolean) => {
+    for (const [name, on] of [
+      ["HTTPS_PROXY", proxy],
+      ["SSL_CERT_FILE", certificate],
+    ] as const)
+      if (on) process.env[name] = SECRET;
+      else delete process.env[name];
+  };
+  try {
+    set(true, false);
+    const given = await approve({}, { requestId: "n.1" });
+    assert.deepEqual(given.network, {
+      proxyConfigured: true,
+      certificateOverride: false,
+    });
+    assert.equal(given.state, "approved");
+    const states = async () =>
+      (await call("yamakan.gates.list", {})).approvals.map(
+        (a: GateApproval) => a.state,
+      );
+    assert.deepEqual(await states(), ["approved"]);
+    set(true, true);
+    assert.deepEqual(await states(), ["changed"]);
+    set(false, false);
+    assert.deepEqual(await states(), ["changed"]);
+    const other = await approve({ kind: "spend" });
+    assert.deepEqual(other.network, {
+      proxyConfigured: false,
+      certificateOverride: false,
+    });
+    set(true, false);
+    assert.deepEqual(await states(), ["changed", "approved"]);
+    const revoked = await call("yamakan.gates.revoke", {
+      approvalId: given.id,
+    });
+    assert.deepEqual(revoked.network, given.network);
+    const text = store.read((db) =>
+      JSON.stringify([
+        db.prepare("SELECT * FROM gate_approvals").all(),
+        db.prepare("SELECT * FROM director_requests").all(),
+      ]),
+    );
+    for (const said of [text, JSON.stringify([given, other, revoked])])
+      assert.ok(!said.includes("zq71"));
+  } finally {
+    for (const [i, name] of names.entries())
+      if (had[i] === undefined) delete process.env[name];
+      else process.env[name] = had[i];
+  }
 });
 
 test("only a person at the browser approves, revokes or lists", async () => {
@@ -613,7 +752,7 @@ test("the list is bounded, newest first, with how each stands", async () => {
   const plan = store.read((db) =>
     db
       .prepare(
-        "EXPLAIN QUERY PLAN SELECT * FROM gate_approvals a WHERE a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.rowid DESC LIMIT 1",
+        "EXPLAIN QUERY PLAN SELECT * FROM gate_approvals a WHERE a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.n DESC LIMIT 1",
       )
       .all("egress", "kaggle", "kaggle.com", "someone", "generation"),
   ) as { detail: string }[];

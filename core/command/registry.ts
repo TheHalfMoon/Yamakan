@@ -2797,7 +2797,7 @@ export const commands = {
     destructive: true,
     humanOnly: true,
     summary:
-      "Revoke an approval, once and for good: nothing more is sent under it. Browser session only.",
+      "Revoke an approval, once and for good: it allows nothing more. Browser session only.",
     input: z.object({ approvalId: Id }).strict(),
     run: async ({ store, principal, receipt }, a) =>
       revokeGate(
