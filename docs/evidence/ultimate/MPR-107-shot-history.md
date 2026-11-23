@@ -40,6 +40,7 @@ At `b8c9f3b`, by reading: no `yamakan.shot.*` command, and a take replacement le
 - **`takeId` of a run or render whose row names none** is the take whose record says it made it, so a take saved by hand or a render placed on the shot is not lost.
 - **A render is always `sent`.** Nothing of it leaves this computer, so the question does not arise.
 - **A restored copy's run is `uncertain`** while it is unfinished and not dismissed: it belongs to the workspace it was copied from. A dismissed one is `cancelled`, as anywhere.
+- **"No prompt text" in the card's acceptance** is met for the prompt fields: no words are read from a run's or a record's prompt. A shot's name, a take's label and an engine's message are given as they are, and may hold some (below).
 - **Scan:** `shotAttemptRows` takes how many rows to read and no `before`: totals are over all of them, so a page is cut from what was read. The index finds the newest rows and only those payloads are read, one at a time.
 - **A job row whose payload does not read** is skipped, is not counted, and does not make `complete` false.
 - **The head's project is loaded,** where the card's performance text says no snapshot is: the card's own `current` (which take the cut shows, and its clips) cannot be read without it.
@@ -90,5 +91,5 @@ The volume arm, 2,000 runs of which 250 are the shot's and 300 notes: the slowes
 
 - A page cut to the size bound is tested with text of the widest characters, not with every field at its longest.
 - `tests/take-replace.test.ts` is unchanged: that the apply's result, receipt and undo step are as they were is in `tests/shot-history.test.ts` and in that file's own tests, which need media and run in CI.
-- The note's 512-byte ceiling is reached by no note with an ordinary id (a writer's id is at most 64 characters, as in the workspace's own table, and is plain letters, digits and marks; one of 64 control characters would pass the schema, make 686 bytes and be refused), so a larger ceiling would fail no test; its value is pinned.
+- The note's 512-byte ceiling is reached by no note with an ordinary id (a writer's id is at most 64 characters, as in the workspace's own table, and is plain letters, digits and marks; one of 64 control characters would pass the schema, make 686 bytes and be refused), so no test but the one that pins its value would fail with a larger one.
 - How long a scan takes with large payloads is held by no test. On the founder host, in memory, `shotAttemptRows` took 44 ms for 5,000 rows of 8 KB, 49 ms for 20,000 and 142 ms for 5,000 of 40 KB, where the query it had before (found by the review) took 207, 321 and 1,548 ms before any row was looked at.

@@ -1387,7 +1387,7 @@ Parts that wait on something outside engineering:
 | Dependencies | MPR-101, MPR-102 |
 | Founder decisions | none |
 | Earlier plan items | SS-016, YU-081, YU-090 |
-| Evidence | Merged as 447b6a7d8458e00ee01b54084835d5e0cc433097 (PR #301, pinned to 2e59ea2, which adds only the receipt and its write-up to dc47876); qualify:revisable-shot passed at dc47876 on GitHub's Linux machine with a stand-in engine (docs/evidence/ultimate/MPR-107-shot-history-receipt.json); main's CI passed; nothing of it ran on the founder host but its tests |
+| Evidence | Merged as 447b6a7d8458e00ee01b54084835d5e0cc433097 (PR #301, pinned to 2e59ea2, which adds only the receipt and its write-up to dc47876); qualify:revisable-shot passed at dc47876 on GitHub's Linux machine with a stand-in engine (docs/evidence/ultimate/MPR-107-shot-history-receipt.json); main's CI passed; acceptance's 'no prompt text' is met for the prompt fields, while a shot's name, a take's label and an engine's message may hold such words; nothing of it ran on the founder host but its tests and one in-memory timing |
 
 **Goal.** One read command answers, for one shot, what was tried and what it cost: the takes the shot holds and how each was made, every generation or render attempted for it (failed and cancelled ones too), every take replacement applied to it (revision and principal), and totals. The answer is bounded and paged. It is the data SS-016 measures and the 'show the ledger' step of the Stage 1 demonstration.
 
