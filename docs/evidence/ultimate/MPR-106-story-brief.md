@@ -56,6 +56,8 @@ An earlier run at `782e1fe` failed: after a reload, a reading that had begun wit
 
 The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
 
+The first run of the other real checks with this change failed at `7d1efeb`: `qualify:create-durable` still read a made video's prompt from the shot's notes, which is the place this card moves it from. The check now reads `intent.action` and that the notes are empty.
+
 ## Not covered
 
 - The offer and the form in Arabic are only checked to turn the page right to left.
