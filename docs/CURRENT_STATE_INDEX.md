@@ -102,7 +102,7 @@ Checked by reading only. CLOSED needs a path a reviewer can open; no row is CLOS
 | same | Timing results need AC power and a quiet machine | OPEN | a standing condition, not a defect that can be closed |
 | SS-012, SS-013 and undo, 2026-11-05 | Toolbar Undo can strand unsaved canvas or caption work | CHANGED | PR #180 (merged) makes it wait; `npm run qualify:undo-unsaved` and the receipt in `docs/evidence/ultimate/SS-013-captions.md` (read) describe real-Edge runs; CI does not run them, so not CLOSED |
 | same | Undo ends at a story, pack, migration, import or whole-project save | NOT RE-VERIFIED | the undo boundary rules in `src/main.tsx` and the store were not traced; a run is needed |
-| same | A take could return through undo after consent was revoked | CHANGED | PR #179 pins the behaviour with a test in `tests/story-packs.test.ts` and records it as the documented rule; the rule itself is owned by MPR-010 |
+| same | A take could return through undo after consent was revoked | CHANGED | PR #179 pins the behaviour with a test in `tests/story-packs.test.ts` and records it as the documented rule; MPR-010 reverses it on the founder's word of 2026-11-23, with `tests/consent-undo-pinned-take.test.ts` (its browser run is BLOCKED) |
 | same | Timed render tests fail on a loaded machine on battery | OPEN | a standing condition |
 | Undo, consent gate, keyboard editing, 2026-11-05 | `process owners sharing an input` failed once | NOT RE-VERIFIED | the cause was never established |
 | same | Timeline jumps by about 690 px when the preview finishes | NOT RE-VERIFIED | needs a browser |
@@ -125,7 +125,7 @@ Checked by reading only. CLOSED needs a path a reviewer can open; no row is CLOS
 | same | Native Arabic review, X-01, open for the new text | OPEN | X-01 is an external gate in the System Supremacy registry |
 | Generation hardening | Three Lows from PR #209's last review | NOT RE-VERIFIED | stale-tab cases that need two browser tabs; not traced by reading |
 | same | A new start can replace an uncollected result in three cases | NOT RE-VERIFIED | `core/engines/generation.ts` asks first before a new run; the three cases were not traced |
-| same | Preparing a picture can exceed the send's allowance | OPEN | `core/engines/kaggle.ts` `SEND_BOUND_MS` counts two questions and the push, and its own comment says opening the image 'can take minutes'; the ledger said to fix this before image-to-video was offered, and the first-frame recipe is `offered: true` |
+| same | Preparing a picture can exceed the send's allowance | OPEN | `core/engines/kaggle.ts` `SEND_BOUND_MS` counts two questions and the push, and its own comment says preparing the image 'can take minutes'; the ledger said to fix this before image-to-video was offered, and the first-frame recipe is `offered: true` |
 | same | An empty notebook told from a missing one by one status question | OPEN | `core/engines/kaggle.ts` (`EMPTY_NOTEBOOK`) still tells them by the refusal text and the account's list |
 | same | A Kaggle CLI that never returns blocks that model until restart | CHANGED | `core/engines/kaggle.ts` `endTree` in `kaggleCli` ends the whole process tree on the time limit (commit 8486f56); `tests/kaggle-cli-stop.test.ts` exists and was not run here |
 | same | The failure and stop screens ran only with a stand-in CLI | OPEN | `npm run qualify:kaggle-screens` exists and is not in `.github/workflows/qualify.yml` |

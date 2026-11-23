@@ -758,7 +758,7 @@ test("a version 12 workspace upgrades its document tables, keeping documents and
   assert.equal(upgraded.getDocument(c.projectId, storyId).ref.kind, "story");
 });
 
-test("a take with only a pinned pack can return after revocation, as any project media can", async () => {
+test("a take with only a pinned pack cannot return after revocation", async () => {
   const c = await workspace();
   const consent = await grant(c);
   const packId = id(),
@@ -786,36 +786,40 @@ test("a take with only a pinned pack can return after revocation, as any project
   });
   await execute(c.browser, "yamakan.consent.revoke", { consentId: consent.id });
   // ("a revoked consent refuses the pack and the assembly" covers assembly.)
-  // The take carries no continuity references, so its medium is not gated:
-  // undo brings it back...
-  const undone = await apply("yamakan.project.undo", {
-    projectId: c.projectId,
-    expectedRevision: removed.revision,
-  });
-  assert.ok(undone.clips.some((x) => x.id === shown.id));
-  // ...and so does an ordinary edit, so undo is no bypass of its own.
-  const again = await apply("yamakan.project.applyBatch", {
-    projectId: c.projectId,
-    expectedRevision: undone.revision,
-    operations: [{ type: "clip.remove", clipId: shown.id }],
-  });
-  const added = await apply("yamakan.project.applyBatch", {
-    projectId: c.projectId,
-    expectedRevision: again.revision,
-    operations: [
-      {
-        type: "clip.add",
-        clipId: id(),
-        trackId: shown.trackId,
-        assetId: shown.assetId,
-        title: null,
-        startTicks: 0,
-        durationTicks: FRAME,
-        sourceStartTicks: 0,
-      },
-    ],
-  });
-  assert.ok(added.clips.some((x) => x.assetId === shown.assetId));
+  // The take carries no continuity references, but its shot pins a pack linked
+  // to the consent, so its medium cannot be newly shown: undo is refused...
+  assert.match(
+    await failure(
+      apply("yamakan.project.undo", {
+        projectId: c.projectId,
+        expectedRevision: removed.revision,
+      }),
+    ),
+    REVOKED,
+  );
+  // ...and so is an ordinary edit, so undo is no bypass of its own.
+  assert.match(
+    await failure(
+      apply("yamakan.project.applyBatch", {
+        projectId: c.projectId,
+        expectedRevision: removed.revision,
+        operations: [
+          {
+            type: "clip.add",
+            clipId: id(),
+            trackId: shown.trackId,
+            assetId: shown.assetId,
+            title: null,
+            startTicks: 0,
+            durationTicks: FRAME,
+            sourceStartTicks: 0,
+          },
+        ],
+      }),
+    ),
+    REVOKED,
+  );
+  assert.equal((await head(c)).revision, removed.revision);
 });
 
 // A person's own media after their consent is revoked (founder's decision).
