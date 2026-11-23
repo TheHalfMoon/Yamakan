@@ -9,7 +9,7 @@
 ## What was built
 
 - The offset rule, proposal format version 2, one batch per replacement, refusals that name the clip, `timeline.clips` and `orphans` in `yamakan.take.list`, and a row per mapping on the review page.
-- **Beyond the card's file list:** `core/timeline/operations.ts` (below), the take passages of `docs/OPERATIONAL_CONTRACTS.md`, three summaries in `core/command/registry.ts`, two notes of `LEGACY_RECONCILIATION_ADDENDUM.json` that said version 1 stays readable, and the ledger's SS-011 note.
+- **Beyond the card's file list:** `core/timeline/operations.ts` (below), the take passages of `docs/OPERATIONAL_CONTRACTS.md`, three summaries in `core/command/registry.ts`, two notes of `LEGACY_RECONCILIATION_ADDENDUM.json` and a line of `OPUS_IMPLEMENTATION_HANDOFF.md` that said version 1 stays readable, the card's state in `TASK_REGISTRY_ADDENDUM.json` and its rendering in `09_TASK_PROGRAM.md`, the same host wording in MPR-010's evidence, and ledger 12 (SS-011, and PRs 288 and 289).
 
 ### Refusals that are new or changed
 
@@ -28,7 +28,7 @@ Where marked with a star, a shot of several clips gives the text after `Clip i o
 
 ### Where this differs from the card
 
-- **`core/timeline/operations.ts` is edited, and the card says it is not.** The card asks for three things that cannot all hold: the refusal `Clip 2 of 3 of this shot: Reset the clip's speed before replacing its take.`, no parsing of the batch's text, and no edit of that file, whose only exported apply puts `Operation 1 (clip.replaceMedia): ` before the reason. A small export, `applyOne`, gives the reason alone; the check at a batch's end moves, unchanged, into a function both use. No operation behaves differently and no file is added in that donor root.
+- **`core/timeline/operations.ts` is edited, and the card says it is not.** The card asks for three things that cannot all hold without copying the timeline's checks into `core/takes.ts`, where they could drift: the refusal `Clip 2 of 3 of this shot: Reset the clip's speed before replacing its take.`, no parsing of the batch's text, and no edit of that file, whose only exported apply puts `Operation 1 (clip.replaceMedia): ` before the reason. A small export, `applyOne`, gives the reason alone; the check at a batch's end moves, unchanged, into a function both use. No operation behaves differently and no file is added in that donor root.
 - **The last ambiguity rule is stricter than the card.** The card takes an exact in-point as the take shown, always. A later piece of one take can land exactly on another take's in-point in the same file, and would then be replaced at the wrong place without a word. It is refused instead. The first clip of a shot keeps the card's rule, so one gap stays: if the true first piece is removed, or the later piece is moved to the front, the piece at another take's in-point is still read as that take's beginning.
 - **Unlinked sound is found by its media,** so when several pieces use one file and the sound of one is unlinked, the first piece of that file is the one named. A test records this.
 
@@ -39,6 +39,6 @@ Where marked with a star, a shot of several clips gives the text after `Clip i o
 
 ## Not run, and not claimed
 
-- **`npm run qualify:take-review`: BLOCKED.** The split arm is in `scripts/qualify-take-review.mjs`, in a project of its own, with its own receipt (second argument), and runs after SS-006's scenario has its result. It passes `node --check` and has never run: media cannot be probed on the founder host since 2026-11-12 (ledger 12). `docs/evidence/ultimate/MPR-105-split-shot-replace-receipt.json` is therefore not written, and **the card is not complete.**
+- **`npm run qualify:take-review`: BLOCKED.** The split arm is in `scripts/qualify-take-review.mjs`, in a project of its own, with its own receipt (second argument), and runs after SS-006's scenario has its result. It passes `node --check` and has never run: media and render tests failed on the founder host at `3de9b10` with the native helpers built (ledger 12 lists them; the cause is likely, not proven), and no real run has been tried there since. In the checkout this change was made in the helpers are not built, so its media tests stop earlier, at `The process owner is not built`, and say nothing about that block. `docs/evidence/ultimate/MPR-105-split-shot-replace-receipt.json` is therefore not written, and **the card is not complete.**
 - `npm run qualify:director-cinema` was not run, for the same reason.
 - The Arabic string `take.count` is unreviewed (X-01).

@@ -23,6 +23,6 @@ The head at which each result was read is the commit named. Sandbox media tools 
 
 ## Not run, and not claimed
 
-- **`npm run qualify:consent-gate`: BLOCKED.** The scenario for a pinned take is in `scripts/qualify-consent-gate.mjs` and passes `node --check`, but it has never run. Media cannot be probed on the founder host since 2026-11-12 (ledger 12), so the card is not complete.
+- **`npm run qualify:consent-gate`: BLOCKED.** The scenario for a pinned take is in `scripts/qualify-consent-gate.mjs` and passes `node --check`, but it has never run. Media and render tests failed on the founder host at `3de9b10` with the native helpers built (ledger 12 lists them; the cause is likely, not proven), and no real run has been tried there since. In the checkout this change was made in the helpers are not built, so its media tests stop earlier, at `The process owner is not built`, and say nothing about that block. The card is not complete.
 - **The Windows time of the two test files: BLOCKED** for the same reason. On Linux CI each new test took under one second.
 - Not covered by a test here: trimming, unmuting, soloing, `take.apply` and assembly through this rule, and revoke staying human-only (existing tests cover that command).
