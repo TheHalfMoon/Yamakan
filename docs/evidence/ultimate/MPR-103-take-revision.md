@@ -45,6 +45,7 @@ At `6e0b5b6`, by reading: no `yamakan.take.revisionDraft`, no `derivedFromTakeId
 
 - **"A repeat may differ", not "will",** for a take without a seed: a Kaggle run that was sent none uses one that its brief fixes, so "will" is not true of it. The card says so now.
 - **The refusals of a wrong base are tested in `tests/take-revision.test.ts`,** not in `tests/generation-service.test.ts`, whose media this host cannot import. `tests/parity.test.ts` needed no change; the qualification makes the call over REST and over MCP.
+- **A `route` with nothing to offer** is `unavailable` with "No model is offered here.", which the card now has.
 - **One refusal more:** `revisionNote` without `derivedFromTakeId` is refused with "A revision note is of a run that revises a take."
 - **The length is compared as the page asks for it:** the model's own seconds at this project's frame rate, in whole frames.
 - **Changed and not listed by the card before:** `core/take-record.ts` (its steps name it), `core/shot-history.ts`, `tests/shot-history.test.ts`, `scripts/qualify-revisable-shot.mjs` (its qualification names it) and `docs/OPERATIONAL_CONTRACTS.md`, which its list now has, and `.github/workflows/real-checks.yml`, for one more receipt.
@@ -55,7 +56,7 @@ At `6e0b5b6`, by reading: no `yamakan.take.revisionDraft`, no `derivedFromTakeId
 
 - **A revision is a new generation.** The same request is not promised to give the same picture: whether these models repeat themselves was not verified.
 - **`startable` is not a promise.** It is only that nothing here is missing: an approval (MPR-204), a consent to send, a busy notebook, a full shot or the engine's own limits are asked when a run is started. A Kaggle model refuses a size that is not its own, so a draft with a `changed` size has to be started at the present one.
-- **Empty `changedFields` beside a base is an exact repeat,** except where the import's `notice` said that the base's record could not be read: then it is not known. The notice is in the import's answer (also when the same run is brought in again after a stop) and on the run's row, not in the record.
+- **Empty `changedFields` beside a base is an exact repeat,** except where the import's `notice` said that the base's record could not be read: then it is not known. The notice is in the import's answer (also when the same run is brought in again after a stop: there a base damaged since then makes it say so of a real repeat too) and on the run's row, not in the record.
 - **A damaged record of a take that is still in the shot refuses the import's take** (`story-refused`), as MPR-102 does, before any base is read.
 - **Where one record says a value and the other does not** (a script changed between a start and its import, so its frame rate is not known), that field counts as changed.
 - **The draft holds the prompt's words,** which a reader with `project:read` can read with the record. Those in a run's row come only with a record that holds their hash.

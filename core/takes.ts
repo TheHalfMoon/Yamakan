@@ -1085,7 +1085,8 @@ export async function appendGeneratedTake(
       return not("story-refused", refused.message);
     }
     if (there) {
-      // Said again where it was said: the record as it was written names no change.
+      // Whether it was written without reading the base is not kept, so it is said wherever it may
+      // have been: the record names no change, and the base cannot be read now.
       const { notice } = generatedRecord(store, row, facts);
       const unsaid =
         notice !== null &&

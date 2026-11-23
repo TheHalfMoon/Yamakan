@@ -588,7 +588,10 @@ async function withRecords(
       // Nothing here could say it, and a record is kept as it is written: the take can be saved
       // without one.
       if (made.notice !== null)
-        throw new CommandError("RECOVERY_REQUIRED", made.notice);
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          `${made.notice} Nothing was saved; the take can be saved without a record.`,
+        );
       record = made.record;
     } else {
       const asset = assets.find((x) => x.id === take.assetId);

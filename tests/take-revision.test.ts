@@ -1419,8 +1419,16 @@ test("a base taken out later is still named, and one that cannot be read is said
   };
   assert.equal(
     await byHand(second.generationId),
-    `RECOVERY_REQUIRED: ${noted.notice}`,
+    `RECOVERY_REQUIRED: ${noted.notice} Nothing was saved; the take can be saved without a record.`,
   );
+  // Nor is a row that names a base and no story that could hold its record.
+  const { target: _aim, ...aimless } = job(second.generationId);
+  keep(second.generationId, aimless);
+  assert.match(
+    await byHand(second.generationId),
+    /^RECOVERY_REQUIRED: What this run kept/,
+  );
+  keep(second.generationId, { ...aimless, target });
   // A row that says anything of its base comes in without one, and that is said.
   const said = job(second.generationId);
   for (const [n, derivedFrom] of [
