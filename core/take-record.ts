@@ -422,3 +422,30 @@ export function buildRenderRecord(
     changedFields: [],
   });
 }
+
+/** A note's canonical bytes, at most (MPR-107). */
+export const TAKE_REPLACEMENT_BYTES = 512;
+
+/** One take replacement as it was applied. Written by the apply, never changed, held by its story. */
+export const TakeReplacementSchema = z
+  .object({
+    format: z.literal("yamakan.take-replacement"),
+    formatVersion: z.literal(1),
+    documentId: Id,
+    shotId: Id,
+    // The take the shot showed, or null when its clips showed no one take.
+    fromTakeId: Id.nullable(),
+    toTakeId: Id,
+    clips: z.number().int().positive().max(64),
+    revision: z.number().int().nonnegative(),
+    principalId: z.string().min(1).max(80),
+  })
+  .strict();
+export type TakeReplacement = z.infer<typeof TakeReplacementSchema>;
+
+export function validateTakeReplacement(value: unknown) {
+  const parsed = TakeReplacementSchema.safeParse(value);
+  if (!parsed.success)
+    throw new CommandError("VALIDATION", "Invalid take replacement note.");
+  return { content: parsed.data, assetIds: [], objectDigests: [] };
+}

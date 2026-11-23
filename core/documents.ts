@@ -10,7 +10,12 @@ import { StudioDocumentSchema, parseStudioCanvasJson } from "./studio.ts";
 import type { StudioDocument } from "./studio.ts";
 import { parseScene3D } from "./scene3d.ts";
 import { STORY_LIMITS, validateReferencePack, validateStory } from "./story.ts";
-import { TAKE_RECORD_LIMITS, validateTakeRecord } from "./take-record.ts";
+import {
+  TAKE_RECORD_LIMITS,
+  TAKE_REPLACEMENT_BYTES,
+  validateTakeRecord,
+  validateTakeReplacement,
+} from "./take-record.ts";
 import { CAPTION_LIMITS, validateCaptions } from "./captions.ts";
 import { LUT_DOCUMENT_BYTES, validateLut } from "./effects/color.ts";
 import {
@@ -304,7 +309,9 @@ export function validateDocument(
                 ? validatePromptPresets(value)
                 : kind === "takeRecord"
                   ? validateTakeRecord(value)
-                  : validateReferencePack(value);
+                  : kind === "takeReplacement"
+                    ? validateTakeReplacement(value)
+                    : validateReferencePack(value);
   const bytes = Buffer.from(canonicalJson(content), "utf8");
   // Stories and reference packs have their own, smaller ceiling (YU-031).
   // Caption tracks too (YU-024).
@@ -319,7 +326,9 @@ export function validateDocument(
             ? PROMPT_PRESET_LIMITS.documentBytes
             : kind === "takeRecord"
               ? TAKE_RECORD_LIMITS.recordBytes
-              : DOCUMENT_LIMITS.documentBytes;
+              : kind === "takeReplacement"
+                ? TAKE_REPLACEMENT_BYTES
+                : DOCUMENT_LIMITS.documentBytes;
   if (bytes.byteLength > limit)
     throw new CommandError(
       "LIMIT_EXCEEDED",

@@ -123,6 +123,80 @@ const generationPayloads = (db: DatabaseSync) =>
       payload: string;
     }[]
   ).map((row) => safeJson(row.payload) as GenerationRecord);
+
+/** A run or render made for a shot, as its job row has it. The payload is only what was stored. */
+export type AttemptRow = {
+  seq: number;
+  kind: "generation" | "render";
+  id: string;
+  state: string;
+  payload: Record<string, unknown>;
+  error: string | null;
+  artifact: string | null;
+};
+
+/**
+ * The project's generation and render jobs that name a shot, newest first by the order their rows
+ * were made in (MPR-107): a job row is never deleted, so its number is not used again. Every
+ * payload is read as text that may say anything: one that does not read is skipped.
+ */
+export function shotAttemptRows(
+  db: DatabaseSync,
+  projectId: string,
+  target: { documentId: string; shotId: string },
+  most: number,
+) {
+  const read = db
+    .prepare(
+      "SELECT rowid AS seq, kind, job_id AS id, state, payload, error, artifact FROM jobs WHERE project_id = ? AND kind IN (?, 'blender-render') ORDER BY rowid DESC LIMIT ?",
+    )
+    .all(projectId, REMOTE_GENERATION, most + 1) as {
+    seq: number;
+    kind: string;
+    id: string;
+    state: string;
+    payload: string;
+    error: string | null;
+    artifact: string | null;
+  }[];
+  const rows: AttemptRow[] = [];
+  let untargeted = false;
+  let unlinkedRenders = false;
+  for (const row of read.slice(0, most)) {
+    const payload = safeJson(row.payload);
+    if (typeof payload !== "object" || payload === null) continue;
+    const said = payload as Record<string, unknown>;
+    const render = row.kind !== REMOTE_GENERATION;
+    if (!render && said.projectId !== projectId) continue;
+    const named = (render ? said.shot : said.target) as
+      { documentId?: unknown; shotId?: unknown } | null | undefined;
+    if (typeof named !== "object" || named === null) {
+      if (render) unlinkedRenders = true;
+      else untargeted = true;
+      continue;
+    }
+    if (
+      named.documentId !== target.documentId ||
+      named.shotId !== target.shotId
+    )
+      continue;
+    rows.push({
+      seq: row.seq,
+      kind: render ? "render" : "generation",
+      id: row.id,
+      state: row.state,
+      payload: said,
+      error: row.error,
+      artifact: row.artifact,
+    });
+  }
+  return {
+    rows,
+    untargeted,
+    unlinkedRenders,
+    complete: read.length <= most,
+  };
+}
 const generationJobState = (r: GenerationRecord): YamakanJobState => {
   if (r.imported) return "succeeded";
   if (r.cancelled || r.state === "cancelled") return "cancelled";

@@ -123,7 +123,7 @@ revised from its own record, and the history of a shot can be read.
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
 | MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |
 | MPR-106 | Brief, scene scripts and shot intent stored in the story document | QUALIFICATION_READY | MPR-101 | none |
-| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | QUALIFICATION_READY | MPR-101, MPR-102 | none |
+| MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | REVIEW_PENDING | MPR-101, MPR-102 | none |
 
 Exit: MPR-101 to MPR-107 verified. One shot is generated or rendered onto its
 shot, revised from its own record, compared and replaced, and its history read,

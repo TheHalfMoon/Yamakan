@@ -63,10 +63,10 @@ jobs:
       - name: The browser this machine has
         run: microsoft-edge --version
       - run: mkdir -p "$RUNNER_TEMP/receipts"
-      - name: A take's record, and a run made for a shot, end to end (MPR-101, MPR-102)
+      - name: A take's record, a run made for a shot and its history, end to end (MPR-101, MPR-102, MPR-107)
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        run: node scripts/qualify-revisable-shot.mjs "$RUNNER_TEMP/receipts/MPR-101-take-record.json" "$RUNNER_TEMP/receipts/MPR-102-shot-target.json"
+        run: node scripts/qualify-revisable-shot.mjs "$RUNNER_TEMP/receipts/MPR-101-take-record.json" "$RUNNER_TEMP/receipts/MPR-102-shot-target.json" "$RUNNER_TEMP/receipts/MPR-107-shot-history.json"
       - name: A made video's record lasts, in real Edge (MPR-101)
         if: ${{ !cancelled() }}
         timeout-minutes: 10
