@@ -300,7 +300,7 @@ characters.
 | Take without lineage | 115 |
 | Take with minimal lineage (`outputHash`, empty `inputs`), as written today | 219 |
 | With Create's label ("seed 7, steps 30, Wan-AI/Wan2.2-TI2V-5B-Diffusers") | about 281 |
-| Inline record: about 1 KiB of fixed fields [ASSUMED] + prompt (≤ 4,000 UTF-16 units, so ≤ 12,000 UTF-8 bytes), as MPR-101 estimates | about 1 to 13 KiB |
+| Inline record: about 1 KiB of fixed fields [ASSUMED] + prompt (≤ 4,000 UTF-16 units, so ≤ 12,000 UTF-8 bytes of text), as MPR-101 estimates; measured since, a record is at most 35,304 bytes (control characters) | about 1 to 13 KiB |
 | Reference by hash, `,"recordHash":"<64 hex>"` (the field MPR-101 adds) | 80 |
 
 At the story maximum, 200 shots × 8 takes = 1,600 takes:
@@ -326,8 +326,8 @@ MPR-101 as written settles each point:
 
 - The record is an immutable content-addressed object of its own document kind, named by hash from
   the take.
-- Each record is capped at 16 KiB (16,384 canonical bytes). At the maximum that is at most 25 MiB
-  per story (1,600 × 16,384 bytes).
+- Each record is capped at 40 KiB (40,960 canonical bytes). At the maximum that is at most 62.5 MiB
+  per story (1,600 × 40,960 bytes). It was 16 KiB until FD-2 was answered.
 - Its limits test reports how many shots and takes fit in the byte limit.
 - It weighed four storage alternatives. A dedicated table is rejected unless review finds a reader
   of story versions that does not filter by kind. A take-id index is not planned. The output hash
@@ -346,7 +346,7 @@ concurrent job.
 
 | Proposal (card) | Count bound | Byte bound | p95 target | Notes |
 |---|---|---|---|---|
-| Record read / revise draft (MPR-101, MPR-103) | 1 record, ≤ 8 inputs, ≤ 16 changed fields | ≤ 16 KiB | ≤ 100 ms (this document's target) | One row read by its hash |
+| Record read / revise draft (MPR-101, MPR-103) | 1 record, ≤ 8 inputs, ≤ 16 changed fields | ≤ 40 KiB | ≤ 100 ms (this document's target) | One row read by its hash |
 | Shot history (MPR-107) | ≤ 8 takes; ≤ 100 attempts per page, cursor | ≤ 128 KiB per answer | ≤ 250 ms, worst of 20 calls (the card's figure) | Totals come from a bounded scan: ≤ 5,000 job rows, ≤ 2,000 notes |
 | Preflight (MPR-203) | 1 request; ≤ 16 refusals | ≤ 64 KiB | ≤ 250 ms, local (this document's target) | Starts no process and opens no connection; reads ≤ 200 job rows |
 | Capability report (MPR-202) | today 30 cells; cap 960 cells (64 entries × 3 routes × 5 operations) and 32 refusals | ≤ 512 KiB | ≤ 250 ms (this document's target) | No network; refuses past either bound |
