@@ -19,11 +19,10 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  statfsSync,
   writeFileSync,
 } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { freemem, loadavg, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -39,6 +38,10 @@ import { createGenerationService } from "../core/engines/generation.ts";
 import { diagnostic } from "../core/engines/contract-v2.ts";
 import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { readHost } from "./qualify-host.mjs";
+
+// Before anything runs.
+const host = readHost();
 
 const receiptOut =
   process.argv[2] ??
@@ -54,7 +57,7 @@ const step = (name, detail = {}) => {
   steps.push({ name, ...detail });
   console.log(`ok - ${name}`);
 };
-// Where core/process/owner.ts looks for it.
+// Where core/process/owner.ts looks for it, on Windows. Elsewhere it needs none.
 const procd =
   process.env.YAMAKAN_PROCD ||
   fileURLToPath(
@@ -71,36 +74,6 @@ let passed = false;
 let blocked = null;
 let failure = null;
 const open = [];
-
-// Windows only, and only a reading: null is not known.
-const onAcPower = () => {
-  if (process.platform !== "win32") return null;
-  try {
-    const said = execFileSync(
-      "powershell",
-      [
-        "-NoProfile",
-        "-Command",
-        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus",
-      ],
-      { encoding: "utf8", windowsHide: true },
-    ).trim();
-    return said === "Online" ? true : said === "Offline" ? false : null;
-  } catch {
-    return null;
-  }
-};
-const disk = statfsSync(root);
-const host = {
-  platform: process.platform,
-  freeDiskBytes: Number(disk.bavail) * Number(disk.bsize),
-  freeMemoryBytes: freemem(),
-  onAcPower: onAcPower(),
-  // Windows reports none.
-  load: process.platform === "win32" ? null : loadavg(),
-  need: "unmeasured",
-};
-console.log(JSON.stringify(host));
 
 // The head's story as an older build stored it: its bytes, hash and version 1, named by a
 // head snapshot of its own. The service is closed.
@@ -166,7 +139,8 @@ const shut = async () => {
 
 try {
   // Looked for before anything runs.
-  if (!existsSync(procd)) blocked = "The native helpers are not built.";
+  if (process.platform === "win32" && !existsSync(procd))
+    blocked = "The native helpers are not built.";
   else
     try {
       execFileSync(mediaTools().ffmpeg, ["-version"], {
