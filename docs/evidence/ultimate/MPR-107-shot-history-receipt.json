@@ -1,0 +1,244 @@
+{
+  "task": "MPR-107",
+  "head": "dc47876610668f27b7572fa8aae89cd67249bc00",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 93841596416,
+    "freeMemoryBytes": 15345164288,
+    "onAcPower": null,
+    "load": [
+      0.72,
+      0.24,
+      0.14
+    ],
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "worstMs": 25.8,
+  "largestBytes": 56330,
+  "steps": [
+    {
+      "name": "one shot's history: two runs brought in, one failed, one stopped, a replacement and its undo",
+      "ledger": {
+        "documentId": "763e44ba-c308-4717-a84c-fd0138714567",
+        "shotId": "aad24c24-94e7-4cf1-b869-bb2e311c5b39",
+        "sceneId": "7b985e5f-79ad-4c19-b28b-3f9283c15d31",
+        "name": "Ledger",
+        "contentHash": "21c63d3d9e44ea3ebc0bb33660a8c4e53b9fd166521b60e99a790f801d99cd70",
+        "revision": 27,
+        "current": {
+          "selectedTakeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+          "shownTakeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+          "clips": [
+            {
+              "clipId": "24b51134-4b58-44c0-a586-70c095625501",
+              "startTicks": 1411200000,
+              "durationTicks": 1411200000,
+              "assetId": "940602b7-7f71-4b48-8b58-a3bfa74fa518",
+              "sourceStartTicks": 0,
+              "takeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+              "takeOffsetTicks": 0
+            }
+          ]
+        },
+        "takes": [
+          {
+            "takeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+            "kind": "video",
+            "label": null,
+            "selected": true,
+            "shown": true,
+            "recordHash": "61bbe8c875300f5877096941d7a085715cd1c3aadf892078bf7d7e700dc03c19",
+            "addedAtRevision": 21,
+            "origin": "generation",
+            "route": "comfyui",
+            "source": {
+              "generationId": "34295191-c17e-4487-9009-02318e73c839"
+            },
+            "summary": {
+              "recipeId": "qualify-pattern",
+              "modelId": "qualify-pattern",
+              "operation": "textToVideo",
+              "seed": 7,
+              "width": 704,
+              "height": 480,
+              "durationFrames": 60,
+              "fps": null,
+              "steps": null,
+              "promptHash": "1e117fffe15fe4530a8e5e794bc52e52668bdb58ece344413d40bc3db2b20180"
+            },
+            "timings": {
+              "startedAt": 1795461259350,
+              "endedAt": 1795461259477,
+              "importedAt": 1795461259478
+            },
+            "usage": {
+              "wallMs": 127,
+              "quotaSeconds": null
+            },
+            "derivedFromTakeId": null,
+            "changedFields": []
+          },
+          {
+            "takeId": "daf06447-6d5d-4383-ba2d-3d8efbb1d37b",
+            "kind": "video",
+            "label": null,
+            "selected": false,
+            "shown": false,
+            "recordHash": "213577e862ed6f870e2fb749fa24a99134845338e53bf06259b4194d283267d2",
+            "addedAtRevision": 23,
+            "origin": "generation",
+            "route": "comfyui",
+            "source": {
+              "generationId": "a3a4097d-3dc6-440d-b553-4c7002bfb0e5"
+            },
+            "summary": {
+              "recipeId": "qualify-pattern",
+              "modelId": "qualify-pattern",
+              "operation": "textToVideo",
+              "seed": 7,
+              "width": 704,
+              "height": 480,
+              "durationFrames": 60,
+              "fps": null,
+              "steps": null,
+              "promptHash": "1e117fffe15fe4530a8e5e794bc52e52668bdb58ece344413d40bc3db2b20180"
+            },
+            "timings": {
+              "startedAt": 1795461259483,
+              "endedAt": 1795461259623,
+              "importedAt": 1795461259681
+            },
+            "usage": {
+              "wallMs": 140,
+              "quotaSeconds": null
+            },
+            "derivedFromTakeId": null,
+            "changedFields": []
+          }
+        ],
+        "attempts": [
+          {
+            "seq": 17,
+            "kind": "generation",
+            "id": "c1428457-1d3c-4b0a-8482-c65623ab6860",
+            "route": null,
+            "outcome": "cancelled",
+            "sent": true,
+            "imported": false,
+            "recipeId": "qualify-pattern",
+            "startedAt": 1795461259808,
+            "endedAt": 1795461259917,
+            "wallMs": 109,
+            "quotaSeconds": null,
+            "takeId": null,
+            "takeInShot": false,
+            "derivedFromTakeId": null,
+            "diagnostic": "No longer followed here. The engine was not told to stop, and anything running there goes on until it ends."
+          },
+          {
+            "seq": 16,
+            "kind": "generation",
+            "id": "e600cb79-f929-4d79-b18d-0da608453cc9",
+            "route": null,
+            "outcome": "failed",
+            "sent": true,
+            "imported": false,
+            "recipeId": "qualify-pattern",
+            "startedAt": 1795461259685,
+            "endedAt": 1795461259807,
+            "wallMs": 122,
+            "quotaSeconds": null,
+            "takeId": null,
+            "takeInShot": false,
+            "derivedFromTakeId": null,
+            "diagnostic": "It failed, for this check."
+          },
+          {
+            "seq": 15,
+            "kind": "generation",
+            "id": "a3a4097d-3dc6-440d-b553-4c7002bfb0e5",
+            "route": "comfyui",
+            "outcome": "succeeded",
+            "sent": true,
+            "imported": true,
+            "recipeId": "qualify-pattern",
+            "startedAt": 1795461259483,
+            "endedAt": 1795461259623,
+            "wallMs": 140,
+            "quotaSeconds": null,
+            "takeId": "daf06447-6d5d-4383-ba2d-3d8efbb1d37b",
+            "takeInShot": true,
+            "derivedFromTakeId": null,
+            "diagnostic": null
+          },
+          {
+            "seq": 14,
+            "kind": "generation",
+            "id": "34295191-c17e-4487-9009-02318e73c839",
+            "route": "comfyui",
+            "outcome": "succeeded",
+            "sent": true,
+            "imported": true,
+            "recipeId": "qualify-pattern",
+            "startedAt": 1795461259350,
+            "endedAt": 1795461259477,
+            "wallMs": 127,
+            "quotaSeconds": null,
+            "takeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+            "takeInShot": true,
+            "derivedFromTakeId": null,
+            "diagnostic": null
+          }
+        ],
+        "next": null,
+        "replacements": [
+          {
+            "revision": 26,
+            "principalId": "browser-ui",
+            "fromTakeId": "4a403b3f-ef46-4324-964e-9e13d556ed2a",
+            "toTakeId": "daf06447-6d5d-4383-ba2d-3d8efbb1d37b",
+            "clips": 1
+          }
+        ],
+        "replacementTotal": 1,
+        "totals": {
+          "attempts": 4,
+          "succeeded": 2,
+          "failed": 1,
+          "cancelled": 1,
+          "running": 0,
+          "uncertain": 0,
+          "takes": 2,
+          "replacements": 1,
+          "wallMs": 498,
+          "wallMsUnknown": 0,
+          "quotaSeconds": 0,
+          "quotaUnknown": 4,
+          "complete": true
+        },
+        "gaps": [
+          "untargeted-attempts",
+          "earlier-replacements"
+        ]
+      }
+    },
+    {
+      "name": "twenty calls on 2,000 runs, 250 of them the shot's, and 300 notes",
+      "worstMs": 25.8,
+      "largestBytes": 56330,
+      "pages": [
+        100,
+        100,
+        50
+      ]
+    },
+    {
+      "name": "the service answers the same over REST and over MCP"
+    }
+  ]
+}

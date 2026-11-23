@@ -63,6 +63,14 @@ export const DocumentKind = z.enum([
   "promptPresets",
   // MPR-101: how a take was made, held by its take's hash. Never a project document.
   "takeRecord",
+  // MPR-107: a take replacement as it was applied, held for its story. Never a project document.
+  "takeReplacement",
+]);
+// Kinds that only the service writes, beside something else: no project document, and not saved
+// by themselves.
+export const SERVICE_KINDS: readonly string[] = Object.freeze([
+  "takeRecord",
+  "takeReplacement",
 ]);
 export type DocumentKind = z.infer<typeof DocumentKind>;
 
@@ -77,6 +85,7 @@ export const DOCUMENT_SCHEMA_VERSIONS: Readonly<Record<DocumentKind, number>> =
     lut: 1,
     promptPresets: 1,
     takeRecord: 1,
+    takeReplacement: 1,
   });
 
 // The versions of each kind this build reads (a stored document is never rewritten).
@@ -91,14 +100,15 @@ export const DOCUMENT_READ_VERSIONS: Readonly<
   lut: [1],
   promptPresets: [1],
   takeRecord: [1],
+  takeReplacement: [1],
 });
 
 export const DocumentRefSchema = z
   .object({
     id: Id,
     kind: DocumentKind.refine(
-      (kind) => kind !== "takeRecord",
-      "A take record is not a project document.",
+      (kind) => !SERVICE_KINDS.includes(kind),
+      "A take's record or replacement note is not a project document.",
     ),
     schemaVersion: z.number().int().min(1).max(1000),
     contentHash: z.string().regex(/^[a-f0-9]{64}$/),
