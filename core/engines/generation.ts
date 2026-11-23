@@ -19,6 +19,7 @@ import {
   ENGINE_V2_LIMITS,
   type AssetRef,
   type EngineAdapterV2,
+  type EngineReport,
   type EngineRequestV2,
   type ExecutionStatus,
   type Operation,
@@ -84,6 +85,8 @@ export type GenerationRecord = {
   // older records.
   endedAt?: number;
   importedAt?: number;
+  // What the run said of itself, kept when it was first known to have succeeded.
+  reported?: EngineReport;
   state: ExecutionStatus["state"];
   diagnostic: string | null;
   videoSha256: string | null;
@@ -244,6 +247,7 @@ export function createGenerationService(options: {
         "A generation must leave exactly one video to import.",
       );
     const [artifact] = artifacts;
+    const reported = adapter.reported?.(refOf(g)) ?? null;
     const finish = (assetId: string, outputHash: string) => {
       const imported = {
         assetId,
@@ -265,6 +269,7 @@ export function createGenerationService(options: {
         {
           imported,
           importedAt: clock(),
+          ...(reported ? { reported } : {}),
           phase: "sent",
           state: "succeeded",
         },
@@ -370,6 +375,9 @@ export function createGenerationService(options: {
         await adapter.enumerateArtifacts(refOf(g)).catch(() => [])
       ).filter((a) => a.mediaType === "video/mp4");
       change.videoSha256 = video?.sha256 ?? null;
+      // Kept now: what it was read from is gone after a restart.
+      const reported = adapter.reported?.(refOf(g));
+      if (reported) change.reported = reported;
     }
     if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
       change.diagnostic = diagnostic ?? g.diagnostic;

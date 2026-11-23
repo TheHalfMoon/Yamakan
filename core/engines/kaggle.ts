@@ -26,9 +26,11 @@ import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
   diagnostic,
+  engineReport,
   type Artifact,
   type AssetRef,
   type EngineAdapterV2,
+  type EngineReport,
   type EngineContextV2,
   type ExecutionStatus,
 } from "./contract-v2.ts";
@@ -470,6 +472,8 @@ type Run = {
   warning?: string;
   endedWith?: string;
   video?: { file: string; artifact: Artifact };
+  // What its receipt said of it, read before the receipt goes.
+  reported?: EngineReport;
   // Sent with no answer: nothing says it is running at all.
   uncertain?: boolean;
   // Sent from another Kaggle account: its notebook is not this one's to ask about.
@@ -820,6 +824,10 @@ export function createKaggleEngine(options: {
       throw new Garbled("The video is not the one its receipt names.");
     }
     await keepOnly(run, file);
+    run.reported = engineReport({
+      ...receipt,
+      version: receipt.revision,
+    });
     run.video = {
       file,
       artifact: {
@@ -1394,6 +1402,7 @@ export function createKaggleEngine(options: {
       const { video } = await runOf(ref);
       return video ? [video.artifact] : [];
     },
+    reported: (ref) => runs.get(ref)?.reported ?? null,
     async *readArtifact(ref, handle) {
       const { video } = await runOf(ref);
       if (!video || video.artifact.handle !== handle)

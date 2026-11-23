@@ -118,7 +118,7 @@ approval log, not a review tool.
 | CD-4 | MAJOR | With no language model, the director types every planning stage. | FIXED as a statement: document 00 section 2, Journey 4 of document 06 and a risk in MPR-604 say so. |
 | CD-5 | MAJOR | The shot list is approved with no cost figure beside it. | LEFT OPEN: OA-9. |
 | CD-6 | MAJOR | The marketing journey implies a team review that the product cannot hold. | FIXED: Journey 5 is retitled, and document 00 section 7 says there is one human principal and no second approver. |
-| CD-7 | MAJOR | The reason for a revision is not recorded. | LEFT OPEN: OA-5. |
+| CD-7 | MAJOR | The reason for a revision is not recorded. | PARTLY FIXED: OA-5, its record part accepted 2026-11-23 and the field in MPR-101; MPR-103 writes it. |
 | CD-8 | MINOR | Some surfaces speak to an engineer: byte counts, ids, hashes. | PARTLY FIXED: MPR-104 shows a level word and says before a save that undo history ends. Byte counts and ids in proposals are OA-10. |
 
 ### 3.2 Product strategist
@@ -211,7 +211,7 @@ Verdict: yes with fixes. ME-1 must be settled before any Stage 6 local card.
 | ME-2 | MAJOR | The capability report and preflight cannot describe references, audio output, controls or extension. | PARTLY FIXED: `limits` in MPR-202 has a `references` entry. The rest is OA-15. |
 | ME-3 | MAJOR | The worst-case figure is a waiting time used as a unit of spend. | LEFT OPEN: OA-1. MPR-203 states the limit under risks. |
 | ME-4 | MAJOR | The preflight hash changes when the run does not. | FIXED: the hash in MPR-203 covers the parts that define the run. |
-| ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | LEFT OPEN: OA-16. |
+| ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101, for runs whose engine reports them. |
 | ME-6 | MAJOR | A capability cell's state follows paperwork, not measurement. | PARTLY FIXED: the conformance kit has more cases. `failureClass` stays optional and facts carry no date or sample size: OA-17. |
 | ME-7 | MAJOR | The consistency study can pass on the anchor frame. | PARTLY FIXED: MPR-405 does not show or score frames before one quarter of the clip, and each task asks for a change of framing. The unit of analysis must be stated before any run. |
 | ME-8 | MINOR | The failure classes are too few. | PARTLY FIXED: MPR-210 classifies a 401 answer as `providerRejected`. Three more classes are OA-18. |
@@ -306,7 +306,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-2 | MPR-802, MPR-803 | Protocol v2.1 uses a fresh brief set, pinned by hash, that no operator has worked. | CR-3 | MPR-802 part a |
 | OA-3 | MPR-801, MPR-803 | A comparative label is allowed against configuration 2-R alone; a run against 2-W is descriptive. | CR-2 | MPR-803 |
 | OA-4 | MPR-302, MPR-104 | A stage can be sent back with a note of at most 240 characters, kept in the story. No new table. | CD-1 | MPR-302 |
-| OA-5 | MPR-101, MPR-103, MPR-104 | The take record gains `revisionNote`, and the shot card lists attempts from `yamakan.shot.history`. | CD-7 | MPR-101 merges |
+| OA-5 | MPR-101, MPR-103, MPR-104 | The take record gains `revisionNote` (accepted by the founder on 2026-11-23), and the shot card lists attempts from `yamakan.shot.history` (not put to the founder; open). | CD-7 | MPR-104 |
 | OA-6 | MPR-506 | The audit log has a row cap with a stated behaviour at the cap, and the card lists every mutating route that does not pass through `execute`. | SA-8 | MPR-506 |
 | OA-7 | MPR-402, MPR-403 | The order in which the two cards raise the story version is carried by a dependency, not kept by hand. | Dependency check, finding 3 | The second of the two starts |
 | OA-8 | MPR-302, MPR-301 | The approval prompt shows the stage's text and, when an approval is stale, the scene and shot ids that differ. | CD-2 | MPR-302 |
@@ -317,7 +317,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-13 | MPR-301 | MPR-301 depends on MPR-209, so that no Director work ships before the notices are right. | OM-1 | MPR-301 starts |
 | OA-14 | MPR-003 and every card with parts | The registry carries a state and an acceptance list for each part of a card. | OM-7, SA-10 | MPR-003 |
 | OA-15 | MPR-202, MPR-101, MPR-203 | The capability report gains `audioOut` and a range for `durationFrames`; requests gain a `reference` role. | ME-2 | MPR-202 |
-| OA-16 | MPR-101, MPR-201 | The take record gains the runtime lock, the provider's model id and version, and the seed the run reported. | ME-5 | MPR-101 merges |
+| OA-16 | MPR-101, MPR-201 | The take record gains the runtime lock, the provider's model id and version, and the seed the run reported (accepted by the founder on 2026-11-23; the amendment does not say what MPR-201 changes, so its text is as it was). | ME-5 | accepted |
 | OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size. | ME-6 | MPR-207 |
 | OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted`. | ME-8 | MPR-207 |
 | OA-19 | MPR-203 | Preflight carries the route's licence state, so a person sees it before the run and not after. | Planner | MPR-203 |
@@ -511,7 +511,8 @@ changes the reason given.
 1. Three blockers are not closed (CD-1, FM-1, OM-1). Is each acceptable as it stands, or should
    its amendment be made first: OA-4 and OA-8 for CD-1, OA-13 for OM-1? FM-1 has no amendment; it
    is a limit of what Stage 1 is.
-2. OA-5 and OA-16 change the take record. Should either be made before MPR-101 is built?
+2. OA-5 and OA-16 change the take record. Should either be made before MPR-101 is built? Answered
+   on 2026-11-23, before MPR-101 merged: both are recorded.
 3. The exit of Stage 1 needs three working editors or creative leads on the founder host. Can
    that be arranged? If not, the exit stays BLOCKED.
 4. MPR-010 reverses a consent rule that an earlier pull request kept on purpose. It proceeds under

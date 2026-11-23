@@ -28,7 +28,10 @@ import {
   memoryLedger,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
-import type { EngineAdapterV2 } from "../core/engines/contract-v2.ts";
+import {
+  engineReport,
+  type EngineAdapterV2,
+} from "../core/engines/contract-v2.ts";
 import {
   KAGGLE_RECIPES,
   kaggleRecipeFacts,
@@ -476,6 +479,29 @@ test("a version 1 story reads and saves as version 2 without losing a take", asy
         source: { bytes: old.bytes },
         verify: () => {},
       }),
+    ),
+    "VALIDATION: Unsupported story document schema version 1.",
+  );
+  // Nor for a request id that has committed nothing.
+  assert.equal(
+    await reason(
+      w.store.commitDocument(
+        {
+          projectId: w.projectId,
+          expectedRevision: (await w.store.load(w.projectId)).revision,
+          documentId: id(),
+          kind: "story",
+          schemaVersion: 1,
+          expectedContentHash: null,
+          source: { bytes: old.bytes },
+          verify: () => {},
+        },
+        {
+          principalId: "browser-ui",
+          requestId: id(),
+          digest: "a".repeat(64),
+        },
+      ),
     ),
     "VALIDATION: Unsupported story document schema version 1.",
   );
@@ -991,6 +1017,14 @@ test("a record's hash is its canonical JSON's, whatever the key order", () => {
     { ...record, source: { generationId: id() } },
     { ...record, derivedFromRecordHash: "c".repeat(64) },
     { ...record, changedFields: ["seed", "seed"] },
+    { ...record, revisionNote: "why" },
+    { ...record, revisionNote: "", derivedFromTakeId: id() },
+    {
+      ...record,
+      revisionNote: "x".repeat(501),
+      derivedFromTakeId: id(),
+    },
+    { ...record, reported: { model: null, seed: 1, runtime: null } },
     { ...record, extra: 1 },
   ])
     assert.equal(TakeRecordSchema.safeParse(bad).success, false);
@@ -1508,4 +1542,107 @@ test("a retry of a save that an older build committed as version 1 replays it", 
     ),
     /^IDEMPOTENCY_MISMATCH/,
   );
+});
+
+test("a record holds what the run said of itself, beside what was asked", async () => {
+  const w = await workspace();
+  const asset = await video(w, "said");
+  const said = {
+    model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    version: "b8fff7315c768468a5333511427288870b2e9635",
+    seed: 8,
+    python: "3.13.16",
+    torch: "2.11.0+cu130",
+    packages: ["diffusers==0.36.0", "transformers==4.57.1"],
+  };
+  const reported = engineReport(said);
+  assert.deepEqual(reported, {
+    model: { id: said.model, version: said.version },
+    seed: 8,
+    runtime: {
+      python: said.python,
+      torch: said.torch,
+      packages: said.packages,
+    },
+  });
+  let kept: typeof reported | null = reported;
+  const ledger = memoryLedger();
+  const row = run(w, asset, { imported: null, state: "running" });
+  ledger.begin(row);
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({ executionRef: "r", state: "succeeded" }),
+      enumerateArtifacts: async () => [
+        {
+          handle: "o.mp4",
+          mediaType: "video/mp4",
+          byteLength: 10,
+          sha256: asset.hash,
+        },
+      ],
+      // Once only, as an engine that is started again forgets it.
+      reported: () => {
+        const once = kept;
+        kept = null;
+        return once;
+      },
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  await service.status(row.generationId);
+  assert.deepEqual(service.row(row.generationId)?.reported, reported);
+  await service.importResult(row.generationId);
+  const ctx = {
+    ...w.ctx,
+    generation: { service, recipes: [] },
+  } as CommandContext;
+  const t = take(asset);
+  const documentId = id();
+  await save({ ...w, ctx }, documentId, story([t]), {
+    records: [{ takeId: t.id, from: { generationId: row.generationId } }],
+  });
+  const { record } = await read(w, documentId, stored(w, documentId));
+  assert.deepEqual(record.reported, reported);
+  // Asked for 7, it said 8: both are there.
+  assert.equal(record.request.kind === "generation" && record.request.seed, 7);
+  assert.equal(record.revisionNote, null);
+  // A run that said nothing, as one recorded before this did.
+  const silent = buildGenerationRecord(run(w, asset), {
+    route: "comfyui",
+    model: null,
+    fps: null,
+    steps: null,
+  });
+  assert.equal(silent.reported, null);
+});
+
+test("a run's word is taken only where it reads as a plain name", () => {
+  const none = { model: null, seed: null, runtime: null };
+  for (const [said, expected] of [
+    [{}, none],
+    [{ model: "C:\\Users\\someone\\model" }, none],
+    [{ model: "/home/someone/model" }, none],
+    [{ model: "https://example.com/x" }, none],
+    [{ model: "a/b\nc" }, none],
+    [{ model: "m".repeat(201) }, none],
+    [{ model: 5, seed: "7", packages: "x" }, none],
+    [{ seed: -1 }, none],
+    [{ seed: 1.5 }, none],
+    [{ packages: Array(33).fill("a==1") }, none],
+    [{ packages: ["a==1", "b @ /home/someone/b"] }, none],
+    [
+      { model: "a/b", version: "not a version" },
+      { ...none, model: { id: "a/b", version: null } },
+    ],
+    [
+      { packages: ["a==1"], python: "a b" },
+      {
+        ...none,
+        runtime: { python: null, torch: null, packages: ["a==1"] },
+      },
+    ],
+  ] as const)
+    assert.deepEqual(engineReport(said), expected, JSON.stringify(said));
 });

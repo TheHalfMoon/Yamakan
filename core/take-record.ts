@@ -4,7 +4,11 @@
 // person's receipt file and says so. Nothing here reaches a model or a network.
 import { z } from "zod";
 import { CommandError } from "./command/errors.ts";
-import { ENGINE_V2_LIMITS, Operation } from "./engines/contract-v2.ts";
+import {
+  ENGINE_V2_LIMITS,
+  EngineReportSchema,
+  Operation,
+} from "./engines/contract-v2.ts";
 import type { GenerationRecord } from "./engines/generation.ts";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { Id } from "./project.ts";
@@ -13,6 +17,7 @@ export const TAKE_RECORD_LIMITS = Object.freeze({
   recordBytes: 16 * 1024,
   inputs: 8,
   changedFields: 16,
+  revisionNote: 500,
   recordsPerSave: 8,
 });
 
@@ -137,6 +142,9 @@ export const TakeRecordSchema = z
       )
       .max(TAKE_RECORD_LIMITS.inputs),
     output: z.object({ sha256: Sha256 }).strict(),
+    // What the run itself said it used (OA-16), beside what was asked for above: its
+    // runtime lock, the provider's model id and version, and its seed. Null: it said nothing.
+    reported: EngineReportSchema.nullable(),
     // Epoch milliseconds; null is not known.
     timings: z
       .object({
@@ -155,6 +163,8 @@ export const TakeRecordSchema = z
     // The take this one revises, and that take's record, so the chain outlives the take.
     derivedFromTakeId: Id.nullable(),
     derivedFromRecordHash: Sha256.nullable(),
+    // Why this take revises that one, in the person's words (OA-5). MPR-103 writes it.
+    revisionNote: Text(TAKE_RECORD_LIMITS.revisionNote).nullable(),
     changedFields: z
       .array(z.enum(REVISION_FIELDS))
       .max(TAKE_RECORD_LIMITS.changedFields),
@@ -178,6 +188,10 @@ export const TakeRecordSchema = z
       fail("A take record names what it was made from.");
     if (r.derivedFromRecordHash !== null && r.derivedFromTakeId === null)
       fail("A record names the take it revises with its record.");
+    if (r.revisionNote !== null && r.derivedFromTakeId === null)
+      fail("A revision note is of a take that revises another.");
+    if (r.origin !== "generation" && r.reported !== null)
+      fail("Only a generation's run reports on itself.");
     if (new Set(r.changedFields).size !== r.changedFields.length)
       fail("A record names each changed field once.");
   });
@@ -255,6 +269,7 @@ export function buildGenerationRecord(
       role: i.assetId === row.firstFrameAssetId ? "firstFrame" : "source",
     })),
     output: { sha256: lineage.outputHash },
+    reported: row.reported ?? null,
     timings: {
       startedAt: row.startedAt,
       endedAt,
@@ -267,6 +282,7 @@ export function buildGenerationRecord(
     },
     derivedFromTakeId: null,
     derivedFromRecordHash: null,
+    revisionNote: null,
     changedFields: [],
   });
 }
@@ -322,10 +338,13 @@ export function buildDeclaredRecord(
       role: "source",
     })),
     output: { sha256: outputHash },
+    // Its claims are the request above.
+    reported: null,
     timings: { startedAt: null, endedAt: null, importedAt: null },
     usage: { wallMs: null, quotaSeconds: null },
     derivedFromTakeId: null,
     derivedFromRecordHash: null,
+    revisionNote: null,
     changedFields: [],
   });
 }
