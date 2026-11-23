@@ -585,8 +585,12 @@ test("a revoked reference consent refuses the replacement; the clip keeps its ta
   assert.equal(await code(apply(c, proposal)), "VALIDATION");
   assert.equal((await head(c)).revision, revision);
   assert.equal((await clipOf(c, shots[0].id)).assetId, c.imported.a.id);
-  // A shot that pins nothing can still change its take.
-  await apply(c, await propose(c, documentId, shots[1].id, t.b2));
+  // The same file is refused in a shot that pins nothing too: what is newly
+  // shown is the file, whichever shot asks (the founder's decision of 2026-11-23).
+  const other = await propose(c, documentId, shots[1].id, t.b2);
+  assert.match(await message(apply(c, other)), /consent was revoked/);
+  assert.equal((await head(c)).revision, revision);
+  assert.equal((await clipOf(c, shots[1].id)).assetId, c.imported.still.id);
 });
 
 test("take commands need the right scopes and refuse what is not a story shot", async () => {

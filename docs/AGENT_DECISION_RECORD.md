@@ -4,10 +4,10 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 
 ## 2026-11-23: a take made with a revoked person's references does not return
 
-- **Authority:** the founder's delegation "2026-11-07: Claude chooses on open product decisions", and card MPR-010 of the adopted plan. The founder has not been asked about this rule.
-- **Decision:** once a person's consent is revoked, a take is not newly presented on the timeline (by undo, redo, placing, swapping media or restore) if its shot pins a reference pack linked to that consent, or its recorded lineage inputs are media linked to it. The newest consent linked for that media decides, as it already does for the media itself.
+- **Authority:** the founder's delegation "2026-11-07: Claude chooses on open product decisions", and card MPR-010 of the adopted plan. The founder was asked about its widest effect and answered (see the [founder decision record](FOUNDER_DECISION_RECORD.md#2026-11-23-a-revoked-consent-covers-every-new-use-of-the-same-file)).
+- **Decision:** once a person's consent is revoked, a take is not newly presented on the timeline (by undo, redo, placing, swapping media or restore) if its shot pins a reference pack linked to that consent, or its recorded lineage inputs are media linked to it. What is matched is the file, not the shot: a file that is a linked take's output is refused in any shot and by any command. The newest consent linked for that media decides, as it already does for the media itself.
 - **Why:** a person who withdraws consent should not see a take made with their references come back, and a pin or a recorded input is the only record the project holds of that use.
-- **Cost:** a pin shows that a pack was attached to the shot, not that the take depicts the person, so some takes that show no one are refused. The way back is a newer consent saved in a pack version for that media.
+- **Cost:** a pin shows that a pack was attached to the shot, not that the take depicts the person, so some takes that show no one are refused, and a file shared between shots is unavailable in all of them. The way back is a newer consent saved in a pack version for that media.
 - **This reverses a rule:** PR #179 kept the opposite on purpose, and a test pinned it. The rule tightens consent and lifts none.
 - **Not decided by this:** media already on the timeline, which stays and can be moved and split; exports already made; expiry, which does not gate it.
 - **Change rule:** the founder can overturn this at any time, and a new entry records it.

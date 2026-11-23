@@ -1,0 +1,27 @@
+# A take made with a revoked person's references does not return (MPR-010)
+
+Outcome: the fix, not ALREADY_SATISFIED and not the accepted limit. The founder answered the one question the rule raised (founder decision record, 2026-11-23: "Yes, cover it").
+
+## What was found
+
+- Step 0, by reading main `4cd4bc0`: `assertPlacementConsent` matched a take only by `lineage.outputHash`, and only for takes with continuity references. The test "a take with only a pinned pack can return after revocation" in `tests/story-packs.test.ts` pinned that behaviour on purpose (PR #179).
+- The old rule also let `tests/take-replace.test.ts` switch a shot that pins nothing to a file which another shot's take pins. The commit point sees files, not shots, so the rule covers every new use of the file. The founder was shown this before choosing.
+
+## Failing first, then passing (GitHub CI, Linux)
+
+The head at which each result was read is the commit named. Sandbox media tools do not start on the founder host, so nothing here ran on Windows.
+
+- **`cfba77c`, tests only, run 45143721906:** the four return cases ended "accepted" where `VALIDATION` was expected: placing it directly, then undo, for a take in a shot that pins a pack linked to the revoked consent, and for a take whose lineage inputs are linked to it. The control for an expired consent failed because the test asked for an 8-second lifetime (the minimum is 60 seconds); it was corrected. Overall 1,371 tests passed, 6 failed, 66 skipped.
+- **`662ab88`, with the fix:** all nine tests of `tests/consent-undo-pinned-take.test.ts` passed, and so did the renamed test in `tests/story-packs.test.ts`. 1,376 passed, 1 failed: the `tests/take-replace.test.ts` case above, stopped on and then changed to the founder's rule.
+- **The final head:** its CI result is in the pull request.
+
+## Commands
+
+- `node --test tests/consent-undo-pinned-take.test.ts`, `node --test tests/story-packs.test.ts`, `node --test tests/continuity-consent.test.ts` ran only inside CI's `npm test`. `tests/continuity-consent.test.ts` is not edited.
+- On the founder host: `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run provenance:check`, `npm run plan:check` and `npm run brand:check` pass.
+
+## Not run, and not claimed
+
+- **`npm run qualify:consent-gate`: BLOCKED.** The scenario for a pinned take is in `scripts/qualify-consent-gate.mjs` and passes `node --check`, but it has never run. Media cannot be probed on the founder host since 2026-11-12 (ledger 12), so the card is not complete.
+- **The Windows time of the two test files: BLOCKED** for the same reason. On Linux CI each new test took under one second.
+- A damaged pinned pack refuses the take (it cannot say whom it links). No test covers that branch.
