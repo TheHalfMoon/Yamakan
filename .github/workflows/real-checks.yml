@@ -9,7 +9,7 @@
 # model, no paid service and no secret is used.
 #
 # Not on GitHub's Windows machine: there, three tests of a sandboxed worker ended with Windows
-# status 0xC0000142 as it started, the media probe failed, and so did all four checks (run
+# status 0xC0000142, the media probe failed, and so did all four checks (run
 # 45190159942). The sandbox is not loosened for it. So a pass here says nothing of the Windows
 # sandbox: on Linux a media worker has none (core/process/owner.ts, "posix-unqualified").
 name: Real checks

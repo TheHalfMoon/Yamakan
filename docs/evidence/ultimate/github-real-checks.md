@@ -13,13 +13,15 @@ Run 45197050458, commit `88063220f4ef0f22a03ed1324cab6c290f84a0a9`, on GitHub's 
 | `qualify:take-review`    | SS-006, MPR-105 | `take-review-github-receipt.json` and `MPR-105-split-shot-replace-receipt.json` | 14 and 4 |
 | `qualify:consent-gate`   | MPR-010         | `consent-undo-pinned-take-github-receipt.json`                                  | 4        |
 
-Every receipt names its commit and what the machine had first (`githubImage` is the image's short name). Two earlier runs passed too, at `140bbfb` (45192954429) and `110ca19` (45194764272); three of their receipts named no host, which the common contract asks for, so they are not the ones kept.
+Every receipt names its commit and what the machine had first; three of the five do not say whether the checkout was clean, which a fresh one is (`githubImage` is the image's short name). Two earlier runs passed too, at `140bbfb` (45192954429) and `110ca19` (45194764272); three of their receipts named no host, which the common contract asks for, so they are not the ones kept.
 
-## What each card still waits for
+## What each card still waits for, as far as it is known
+
+The cards' lists of requirements were read for this; their other open items are in their own evidence files.
 
 - **MPR-010 is not met by this.** Its text names the Windows host, for the browser run and for a time to be measured. On GitHub's Windows machine it failed, and on the founder's computer it is BLOCKED. The pinned-take finding stays open.
 - **MPR-101:** FD-2 is not answered, and its Definition of Done asks for the answer to be on record. Its Blender arm is BLOCKED, which its text allows to be recorded so.
-- **MPR-105:** its text also has `qualify:director-cinema` run, to show that the Cinema placement needs no change. That needs Blender and is BLOCKED.
+- **MPR-105:** its text also has `qualify:director-cinema` run, to show that the Cinema placement needs no change. That needs Blender and is BLOCKED. Its Arabic string is unreviewed, and its departures from the card are listed in its evidence.
 
 The founder answered that a card whose text names no computer may be VERIFIED on results from GitHub's machine ([record](../../FOUNDER_DECISION_RECORD.md#2026-11-23-a-card-that-names-no-computer-may-be-verified-on-githubs-results)). That verifies none of them by itself.
 

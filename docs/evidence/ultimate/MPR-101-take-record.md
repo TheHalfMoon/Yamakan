@@ -43,7 +43,7 @@ By reading the head this branch starts from:
 
 - **On the founder host, against the real store and commands:** the 28 tests that `tests/take-record.test.ts` had at `870cb5f` pass, with the catalog test of `tests/command.test.ts`, and all of `tests/create-story.test.ts`, `tests/create-model.test.ts` and `tests/kaggle-engine.test.ts` (a stand-in CLI, no network), among them a story stored as version 1 by an older build, opened, listed, assembled and saved as version 2. Their media are rows and ten bytes; no decoder is asked. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
 - **Measured:** in 262,144 bytes fit 109 shots of 8 takes without record hashes and 86 with. A record hash is 80 bytes of a take, as the card estimated. The card estimated 94 shots.
-- **Revisions one take spends:** 4 of `MAX_REVISION` (10,000): its media brought in, its story saved with the record, applied, and undone (`tests/take-record.test.ts`). Assembling the story first is one more, for the whole story.
+- **Revisions one take spends:** 4 of `MAX_REVISION` (10,000): its media brought in, its story saved with the record, applied, and undone (`tests/take-record.test.ts`, whose media is attached by the one commit that a real import also makes). Assembling the story first is one more, for the whole story.
 - **Media tests, in GitHub CI only:** a run started, followed, imported and saved with its record (`tests/generation-service.test.ts`), and a story saved in each form assembled (`tests/story-packs.test.ts`). Their result is the pull request's CI run at its head.
 
 The card's `document.commit` and `kinds` cases for `tests/creative-documents.test.ts` are in `tests/take-record.test.ts`.
