@@ -51,4 +51,4 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 
 ## The real check
 
-`npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it runs on GitHub's Linux machine with the pull request (`real-checks.yml`). Its receipt, `MPR-102-shot-target-receipt.json`, is added from that run.
+`npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it ran on GitHub's Linux machine: **PASS at `29a170a`** (run 45228582330, `ubuntu-24.04`, no sandbox), with the MPR-101 steps before it. Its receipt is `MPR-102-shot-target-receipt.json`: five steps, each with the hash of the assembled cut before and after the import, which is one and the same. It is not evidence of the founder host.
