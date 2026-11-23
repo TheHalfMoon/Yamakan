@@ -196,3 +196,10 @@ Approval line in the packet's format:
 - **Still not authorized:** building the cards is not stated in the founder's own words, so card MPR-003 is not met by this entry and the founder is asked first. FD-2 to FD-11 are not decided by this entry; FD-11's default applies. Models and providers stay off, spending zero, frozen resource limits stand, and no public release, installer, signing, weight download or human-only gate (Arabic review, UX acceptance, the Stage 1 editors) is authorized. Release stays NO-GO.
 - **Effect:** the revision is the frontier named in `specs/CURRENT.md`; the earlier programme's cards keep their registry and states. The package's documents keep their proposed status line until card MPR-003.
 - **Gap flagged, not filled:** founder statements after 2026-11-10, such as those of 2026-11-11 on Blender and YouMind, have no entry here. They are not written from memory.
+
+## 2026-11-23: Building the master plan revision's cards
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "May I build the plan's cards, each behind its own gates?", the founder wrote: "Yes, build the cards". This is the answer the entry above records as missing. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** building the cards of `docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11`, each as its own dependencies, gates and founder decisions allow.
+- **Still not authorized:** FD-2 to FD-11 are not decided by this entry, and the disposition of drafts 85 and 86 is still not decided. Models and providers stay off, spending zero, frozen resource limits stand, release NO-GO, and no weight download, installer, signing or human-only gate is authorized.
+- **Effect:** card MPR-003 may start on these words. It opens no gate: a card that needs a founder decision still waits for it.
