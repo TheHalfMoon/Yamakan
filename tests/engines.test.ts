@@ -30,6 +30,9 @@ import {
   bridgeV1,
   recipeHash,
 } from "../core/engines/v1-bridge.ts";
+import type { EngineAdapter, EngineStatus } from "../core/engines/contract.ts";
+import type { ProjectStore } from "../core/store.ts";
+import { engineConformance } from "./fixtures/engine-conformance.ts";
 
 const graph = {
   nodes: {
@@ -925,3 +928,116 @@ test("a stop that goes on says so", async () => {
     },
   );
 });
+
+// MPR-206: the conformance kit over the bridge. Its version 1 engine is the fake, put in each
+// state by what it says; each submit it takes is one send. It outlives a bridge, which after a
+// restart knows nothing of what another one started.
+const bridgeHarness = () => {
+  let v1 = createFakeEngine();
+  let over: Partial<EngineAdapter> = {};
+  let sent = 0;
+  let imported = 0;
+  let attempts = 0;
+  const says = (state: EngineStatus["state"]) => ({
+    status: async (id: string) => ({ id, state }),
+    cancel: async (id: string) => ({ id, state }),
+  });
+  const set = (of: (engine: EngineAdapter) => Partial<EngineAdapter>) => () => {
+    over = of(v1);
+  };
+  const make = (extra: { operation?: string } & object = {}) => {
+    const { operation, ...rest } = extra;
+    const of = { attemptKey: `conformance-${++attempts}`, ...rest };
+    return operation === "imageToVideo" ? imageToVideo(of) : textToVideo(of);
+  };
+  return {
+    reset: () => {
+      v1 = createFakeEngine();
+      over = {};
+      sent = 0;
+      imported = 0;
+    },
+    adapter: () =>
+      bridgeV1({
+        ...v1,
+        ...over,
+        submit: (r) => {
+          sent++;
+          return v1.submit(r);
+        },
+      }),
+    request: make,
+    refusedRequests: () => [
+      {
+        request: {
+          ...make({ operation: "imageToVideo" }),
+          inputs: [
+            { role: "firstFrame", asset: imageRef },
+            { role: "lastFrame", asset: imageRef },
+          ],
+        },
+        reason: "INPUT_UNSUPPORTED" as const,
+      },
+      {
+        request: { ...make(), controls: { guidance: 1 } },
+        reason: "CONTROL_UNSUPPORTED" as const,
+      },
+      {
+        request: { ...make(), recipeHash: zeros },
+        reason: "RECIPE_UNKNOWN" as const,
+      },
+      {
+        request: { ...make(), graph: { nodes: {} } },
+        reason: "INVALID_REQUEST" as const,
+      },
+    ],
+    context: () => context(),
+    sends: () => sent,
+    remote: "none" as const,
+    arrange: {
+      succeeded: set(() => ({})),
+      running: set(() => says("running")),
+      failed: set(() => says("failed")),
+      corruptArtifact: set((engine) => ({
+        outputs: async (id) =>
+          (await engine.outputs(id)).map((o) => ({ ...o, sha256: zeros })),
+      })),
+    },
+    unavailable: {
+      uncertainLanded:
+        "A version 1 engine is called in this process: its answer cannot be lost.",
+      uncertainNeverLanded:
+        "A version 1 engine is called in this process: its answer cannot be lost.",
+      lost: "A version 1 engine keeps its jobs as long as the bridge its executions: none is lost without both.",
+    },
+    service: {
+      store: {
+        exportProject: async () => ({
+          name: "Conformance",
+          output: { fps: { num: 30, den: 1 } },
+          assets: [],
+        }),
+        read: () => undefined,
+        importAsset: async () => {
+          imported++;
+          throw new Error("Nothing of these checks joins a store.");
+        },
+      } as unknown as ProjectStore,
+      request: {
+        projectId: "p",
+        recipe: {
+          id: "fake.textToVideo.v1",
+          hash: recipeHash(SERVER_RECIPES[0]!),
+          operation: "textToVideo" as const,
+          modelManifestHash: zeros,
+        },
+        prompt: "A lighthouse at dusk",
+        width: 640,
+        height: 360,
+        durationFrames: 60,
+      },
+      imports: () => imported,
+    },
+  };
+};
+engineConformance("bridge", bridgeHarness());

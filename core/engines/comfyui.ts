@@ -6,6 +6,7 @@
 // build pins no recipe, so nothing runs until one is qualified. Setup inspection
 // follows D3voz/openjutsu lib/setup.ts (MIT); see notices/openjutsu-LICENSE.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { CommandError } from "../command/errors.ts";
 import { ENGINE_ENABLED } from "./contract.ts";
 import {
   AttemptFence,
@@ -956,7 +957,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
 
   const known = (executionRef: string) => {
     const e = executions.get(executionRef);
-    if (!e) throw new Error("Unknown engine execution.");
+    if (!e) throw new CommandError("NOT_FOUND", "Unknown engine execution.");
     return e;
   };
 
@@ -1020,6 +1021,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
         listen();
         const promptId = randomUUID();
         let executionRef: unknown;
+        let uncertain: string | undefined;
         const prompt = buildGraph(recipe, request, uploaded);
         try {
           const res = await post("/prompt", {
@@ -1036,6 +1038,8 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           // until ComfyUI says otherwise, and the same generation replays it. A new
           // generation can still overlap a job enqueued this late.
           executionRef = promptId;
+          uncertain =
+            "ComfyUI's answer was lost, so the job may be there. It is followed, and not sent again.";
         }
         if (executionRef !== promptId) {
           await cancel(promptId);
@@ -1056,9 +1060,9 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           const stopped = await cancel(superseded);
           if (!stopped.remoteAcknowledged) replaced.set(superseded, now());
         }
-        return superseded === executionRef
-          ? { refused: "STALE_ATTEMPT" }
-          : { executionRef };
+        if (superseded === executionRef) return { refused: "STALE_ATTEMPT" };
+        const answer = { executionRef, ...(uncertain ? { uncertain } : {}) };
+        return answer;
       });
     },
     status: observe,

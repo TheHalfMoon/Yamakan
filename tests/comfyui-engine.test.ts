@@ -23,6 +23,8 @@ import {
 } from "../core/engines/comfyui.ts";
 import { ENGINE_ENABLED } from "../core/engines/contract.ts";
 import { execute, type CommandContext } from "../core/command/registry.ts";
+import type { ProjectStore } from "../core/store.ts";
+import { engineConformance } from "./fixtures/engine-conformance.ts";
 
 const sha = (b: Uint8Array | string) =>
   createHash("sha256").update(b).digest("hex");
@@ -401,7 +403,9 @@ test("an unreadable answer with nothing queued reports unknown, and does not cla
     return { status: 200, body: "not json" as unknown as object };
   };
   const answer = await engine.submit(request(r), context);
-  assert.deepEqual(answer, { executionRef: posted });
+  assert.ok("executionRef" in answer);
+  assert.equal(answer.executionRef, posted);
+  assert.match(answer.uncertain ?? "", /may be there/);
   const status = await engine.status(posted);
   assert.equal(status.state, "unknown");
   assert.deepEqual(await engine.enumerateArtifacts(posted), []);
@@ -736,7 +740,8 @@ test("a lost answer leaves the job followed, and the same attempt replays it", a
     return { status: 200, body: "not json" as unknown as object };
   };
   const first = await engine.submit(request(r), context);
-  assert.deepEqual(first, { executionRef: posted });
+  assert.ok("executionRef" in first && first.uncertain);
+  assert.equal(first.executionRef, posted);
   assert.equal((await engine.status(posted)).state, "queued");
   assert.deepEqual(await engine.submit(request(r), context), first);
   assert.equal(f.prompts.length, 1, "no second job");
@@ -1296,4 +1301,143 @@ test("an input is streamed, and one failing its hash is never submitted", async 
   assert.deepEqual(changed, { refused: "INVALID_REQUEST" });
   assert.equal(f.prompts.length, 1);
   engine.close();
+});
+
+// MPR-206: the conformance kit, over the server above put in each state. Each prompt it takes is
+// one send. What it holds outlives an adapter, so a new one over it is this service after a
+// restart.
+engineConformance("comfyui", async () => {
+  const f = await fake();
+  const r = recipe();
+  const engines: ReturnType<typeof createComfyEngine>[] = [];
+  let imported = 0;
+  let attempts = 0;
+  const file = { filename: "video.mp4", subfolder: "", type: "output" };
+  const ended = (status_str: string, messages: unknown[] = []) => ({
+    status: { status_str, completed: true, messages },
+    outputs: { "3": { images: [file] } },
+  });
+  // What becomes of a prompt, and whether its answer reaches the adapter.
+  const becomes =
+    (then: (id: string) => void, answered = true) =>
+    () => {
+      f.promptAnswer = (id) => {
+        then(id);
+        return answered
+          ? { status: 200, body: { prompt_id: id, number: 1, node_errors: {} } }
+          : { status: 200, body: "not json" as unknown as object };
+      };
+    };
+  const succeeds = (id: string) => {
+    f.history[id] = ended("success");
+  };
+  const make = (over: object = {}) =>
+    request(r, { attemptKey: `attempt-${++attempts}`, ...over });
+  const video = Buffer.alloc(4096, 7);
+  after(() => engines.forEach((e) => e.close()));
+  return {
+    reset: () => {
+      engines.splice(0).forEach((e) => e.close());
+      f.prompts.length = 0;
+      f.history = {};
+      f.queue = { running: [], pending: [] };
+      f.outputs = { "video.mp4": video };
+      f.promptAnswer = undefined;
+      imported = 0;
+    },
+    adapter: async () => {
+      const engine = createComfyEngine({
+        baseUrl: f.url,
+        recipes: [r],
+        enabled: true,
+      });
+      engines.push(engine);
+      assert.deepEqual(await engine.checkSetup(), []);
+      return engine;
+    },
+    request: (over) => make(over),
+    refusedRequests: () => [
+      {
+        request: make({
+          inputs: [
+            {
+              role: "reference",
+              asset: {
+                assetVersionId: "a",
+                sha256: "0".repeat(64),
+                mediaType: "image/png",
+              },
+            },
+          ],
+        }),
+        reason: "INPUT_UNSUPPORTED",
+      },
+      {
+        request: make({ controls: { cameraYaw: 1 } }),
+        reason: "CONTROL_UNSUPPORTED",
+      },
+      {
+        request: make({ recipeHash: "d".repeat(64) }),
+        reason: "RECIPE_UNKNOWN",
+      },
+      {
+        request: make({ graph: { nodes: {} } }),
+        reason: "INVALID_REQUEST",
+      },
+    ],
+    context: () => context,
+    sends: () => f.prompts.length,
+    remote: "none",
+    arrange: {
+      succeeded: becomes(succeeds),
+      running: becomes((id) => void f.queue.running.push(id)),
+      failed: becomes((id) => {
+        f.history[id] = ended("error", [
+          ["execution_error", { exception_message: "It did not run." }],
+        ]);
+      }),
+      uncertainLanded: becomes(succeeds, false),
+      uncertainNeverLanded: becomes(() => {}, false),
+      // Taken, and then in neither its queue nor its history.
+      lost: becomes(() => {}),
+      // Another file each time it is read: what was declared is not what is served.
+      corruptArtifact: becomes((id) => {
+        succeeds(id);
+        let reads = 0;
+        f.outputs = Object.defineProperty({}, "video.mp4", {
+          enumerable: true,
+          get: () => Buffer.alloc(4096, ++reads),
+        });
+      }),
+    },
+    unavailable: {},
+    service: {
+      store: {
+        exportProject: async () => ({
+          name: "Conformance",
+          output: { fps: { num: 24000, den: 1001 } },
+          assets: [],
+        }),
+        read: () => undefined,
+        importAsset: async () => {
+          imported++;
+          throw new Error("Nothing of these checks joins a store.");
+        },
+      } as unknown as ProjectStore,
+      request: {
+        projectId: "p",
+        recipe: {
+          id: r.id,
+          hash: comfyRecipeHash(r),
+          operation: "textToVideo",
+          modelManifestHash: r.modelManifestHash,
+        },
+        prompt: "a red door",
+        width: 640,
+        height: 360,
+        durationFrames: 48,
+      },
+      imports: () => imported,
+    },
+  };
 });
