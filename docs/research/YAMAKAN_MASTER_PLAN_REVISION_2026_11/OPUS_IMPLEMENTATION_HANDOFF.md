@@ -123,7 +123,7 @@ first. Items on one line may be built side by side.
 | 2 | MPR-102 | Extends the qualifier MPR-101 added. |
 | 3 | MPR-103, MPR-106, MPR-107 | Any order. All three touch files MPR-101 and MPR-102 changed; rebase between them. |
 | 4 | MPR-104 | The browser entry points. |
-| any | MPR-105 | Depends only on the verified SS-006. Take-proposal format version 2; version 1 proposals stay readable. |
+| any | MPR-105 | Depends only on the verified SS-006. Take-proposal format version 2; a version 1 proposal is refused as stale. |
 
 Stage 1 ends with the six-step demonstration in section 5 of
 [08_ROADMAP.md](08_ROADMAP.md), run on the founder host with the stand-in
