@@ -404,7 +404,7 @@ separate budget: 4 GiB of creative documents per workspace, checked in `core/sto
 | `referencePack` (existing kind) | Yes, as today | One pack per entity caps a project at about 30 entities beside one story | MPR-401 |
 
 Take records and replacement records are never pruned, so they count against the byte budget for
-the life of the workspace (MPR-101). The worst case the card computes for one story is 25.0 MiB.
+the life of the workspace (MPR-101). The worst case the card computes for one story is 62.5 MiB.
 
 ## 9. Authority map
 

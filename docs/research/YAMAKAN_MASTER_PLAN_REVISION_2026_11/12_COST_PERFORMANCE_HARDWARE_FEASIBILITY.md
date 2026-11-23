@@ -300,7 +300,7 @@ characters.
 | Take without lineage | 115 |
 | Take with minimal lineage (`outputHash`, empty `inputs`), as written today | 219 |
 | With Create's label ("seed 7, steps 30, Wan-AI/Wan2.2-TI2V-5B-Diffusers") | about 281 |
-| Inline record: about 1 KiB of fixed fields [ASSUMED] + prompt (≤ 4,000 UTF-16 units, so ≤ 12,000 UTF-8 bytes), as MPR-101 estimates | about 1 to 13 KiB |
+| Inline record: about 1 KiB of fixed fields [ASSUMED] + prompt (≤ 4,000 UTF-16 units, so ≤ 12,000 UTF-8 bytes of text), as MPR-101 estimates; measured since, a record is at most 35,304 bytes (control characters) | about 1 to 13 KiB |
 | Reference by hash, `,"recordHash":"<64 hex>"` (the field MPR-101 adds) | 80 |
 
 At the story maximum, 200 shots × 8 takes = 1,600 takes:

@@ -756,7 +756,7 @@ test("a record made before prompts were kept is read and kept as it is", async (
         records: [{ takeId: t.id, from: { generationId: row.generationId } }],
       }),
     ),
-    /^VALIDATION/,
+    /^VALIDATION: A take keeps its generation record\.$/,
   );
   assert.equal((await read(w, documentId, before)).recordHash, recordHash);
 });
@@ -907,14 +907,44 @@ test("bounds: eight records, the prompt and unknown keys, and the largest record
     /^VALIDATION/,
   );
   assert.equal(await ask({ declared }, 8), "ok");
-  // Nothing a person can write into a prompt stops its take's record from being kept.
-  for (const c of ["x", "\u0639", "\u6f22", "\u0000", "\ud800"])
-    assert.equal(
-      await ask({ declared: { ...declared, prompt: c.repeat(4000) } }),
-      "ok",
-      JSON.stringify(c),
-    );
-  // The largest record there can be: every part at its bound, of the widest characters.
+  // Nothing a person can write into a prompt stops all of it from being kept.
+  assert.equal(TAKE_RECORD_LIMITS.recordBytes, 40 * 1024);
+  for (const c of ["x", "\u0639", "\u6f22", "\u0000", "\ud800"]) {
+    // Its end tells a part of it from the whole.
+    const prompt = `${c.repeat(3999)}.`;
+    const made = await video(w, `made ${c.charCodeAt(0)}`);
+    const row = run(w, made, {
+      prompt,
+      imported: {
+        assetId: made.id,
+        lineage: {
+          outputHash: made.hash,
+          inputs: [],
+          recipeId: wan.id,
+          recipeHash: "a".repeat(64),
+          modelManifestHash: sha256Hex(`${wan.model}@${wan.revision}`),
+          seed: 7,
+          promptHash: sha256Hex(prompt),
+        },
+      },
+    });
+    for (const [media, from] of [
+      [made, { generationId: row.generationId }],
+      [asset, { declared: { ...declared, prompt } }],
+    ] as const) {
+      const documentId = id();
+      const t = take(media);
+      await save(w, documentId, story([t]), {
+        records: [{ takeId: t.id, from }],
+      });
+      const { record } = await read(w, documentId, stored(w, documentId));
+      assert.ok(record.request.kind === "generation");
+      assert.equal(record.request.prompt, prompt, JSON.stringify(c));
+      assert.equal(record.request.promptHash, sha256Hex(prompt));
+    }
+  }
+  // The largest record there can be, but for two bytes of how a fraction is printed: every part
+  // at its bound, of the widest characters.
   const wide = (n: number) => "\u0000".repeat(n);
   const whole = Number.MAX_SAFE_INTEGER;
   const hash = "a".repeat(64);
