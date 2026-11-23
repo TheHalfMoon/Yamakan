@@ -32,3 +32,17 @@ At `245b079`, by reading: no `gate_approvals` table, no `core/gates.ts` and no `
 - Real Kaggle: the optional real run of `qualify-kaggle-generation.mjs` needs FD-3 and quota, so it is BLOCKED. Its scripts ask for the approvals now; they were not run.
 - `qualify:kaggle-screens` was changed to approve through the page first. On the founder host its first eleven steps pass, the approvals among them, and it then stops where a video is brought in: the media worker does not start in that host's sandbox (ledger 12). It is not a PASS.
 - Two processes racing for one approval: one connection holding the database is tested, and two starts at once in one service.
+
+## The check
+
+`npm run qualify:gates`: **PASS** at `d46164c9eba84470413cabda9ed287808ccf272a`, with a clean checkout. Host: `{"platform":"win32","githubImage":null,"freeDiskBytes":13818011648,"freeMemoryBytes":4501905408,"onAcPower":true,"load":null,"need":"unmeasured"}`.
+
+- with no approval the page says what would be allowed, one run and one hour.
+- with no approval the start is refused on the page, and the stand-in was not started.
+- an agent's token is refused the approval and the list.
+- one press approves both, the start is sent once, and one run is counted.
+- taken back, two intervals pass with no start of the stand-in, and the page says why.
+- a new approval resumes following the same run, with no second push.
+- under a proxy that came since, nothing is contacted and the page asks again.
+- the page turns right to left in Arabic, whose words are unreviewed.
+- no external requests and no page errors.
