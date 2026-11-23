@@ -273,6 +273,31 @@ export const editsThatFit = (edits: Edits, story: TextStory): Edits =>
     Object.entries(edits).filter(([, e]) => fieldText(story, e.field) !== null),
   );
 
+/**
+ * What is still to save after `sent` was saved on `before`, which is now `after`: what was typed
+ * meanwhile, what a person meanwhile put back as it was before, and what has no place.
+ */
+export function leftAfterSave(
+  sent: Edits,
+  now: Edits,
+  before: TextStory,
+  after: TextStory,
+): Edits {
+  const left: Edits = {};
+  for (const [key, e] of Object.entries(now)) {
+    const says = fieldText(after, e.field);
+    if (says === null) left[key] = e;
+    else if (says !== e.now) left[key] = { ...e, was: says };
+  }
+  for (const [key, e] of Object.entries(sent)) {
+    const says = fieldText(after, e.field);
+    const was = fieldText(before, e.field);
+    if (!(key in now) && says !== null && was !== null && was !== says)
+      left[key] = { field: e.field, was: says, now: was };
+  }
+  return left;
+}
+
 /** Edits whose text the story holds differently from when they began, and what it says now. */
 export const changedUnder = (edits: Edits, story: TextStory) =>
   Object.values(edits).flatMap((e) => {

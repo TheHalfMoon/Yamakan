@@ -50,6 +50,7 @@ import {
   fullness,
   languagesFit,
   languagesOf,
+  leftAfterSave,
   stillToSave,
   textBytes,
   upTo,
@@ -977,4 +978,38 @@ test("a save whose answer is lost is asked for again as the same request, and sa
   assert.deepEqual(await says(undefined, "x"), { kind: "unknown" });
   const long = (await says("BUSY", "b".repeat(900))) as { message: string };
   assert.equal(long.message.length, 200);
+});
+
+test("what is typed or put back while a save runs is still to save after it", () => {
+  const { story, one, two } = told();
+  const action: Field = { at: "shot", id: one.id, name: "action" };
+  const tone: Field = { at: "brief", name: "tone" };
+  const script: Field = { at: "scene", id: story.scenes[0]!.id };
+  const gone: Field = { at: "shot", id: id(), name: "action" };
+  let sent: Edits = edit({}, story, action, "A");
+  sent = edit(sent, story, tone, "Loud");
+  sent = edit(sent, story, script, "More.");
+  sent = { ...sent, [fieldKey(gone)]: { field: gone, was: "", now: "Kept" } };
+  const after = withEdits(story, sent);
+  // Nothing more: only what has no place is left.
+  assert.deepEqual(Object.keys(leftAfterSave(sent, sent, story, after)), [
+    fieldKey(gone),
+  ]);
+  // One typed further, one put back as it was, one new, and the rest as sent.
+  let now = edit(sent, story, action, "A red kite");
+  now = edit(now, story, tone, "Quiet");
+  const dialogue: Field = { at: "shot", id: two.id, name: "dialogue" };
+  now = edit(now, story, dialogue, "Up!");
+  assert.ok(!(fieldKey(tone) in now));
+  const left = leftAfterSave(sent, now, story, after);
+  assert.deepEqual(left, {
+    [fieldKey(action)]: { field: action, was: "A", now: "A red kite" },
+    [fieldKey(tone)]: { field: tone, was: "Loud", now: "Quiet" },
+    [fieldKey(dialogue)]: { field: dialogue, was: "", now: "Up!" },
+    [fieldKey(gone)]: sent[fieldKey(gone)],
+  });
+  const next = withEdits(after, left);
+  assert.equal(fieldText(next, tone), "Quiet");
+  assert.equal(fieldText(next, action), "A red kite");
+  assert.equal(fieldText(next, script), "More.");
 });

@@ -16,6 +16,7 @@ import {
   fieldText,
   fullness,
   languagesFit,
+  leftAfterSave,
   stillToSave,
   withEdits,
   type Edits,
@@ -160,10 +161,14 @@ export function StoryBrief({
     latest.current = { ...latest.current, base: held };
     setBase(held);
   };
+  const typedIs = (next: Edits) => {
+    latest.current = { ...latest.current, edits: next };
+    setEdits(next);
+  };
   // Takes the story as it is. Typed text stays, on top of it.
   const adopt = (held: Held) => {
     hold(held);
-    setEdits((typed) => stillToSave(typed, held.story));
+    typedIs(stillToSave(latest.current.edits, held.story));
     setMoved(false);
   };
   useEffect(() => {
@@ -253,15 +258,7 @@ export function StoryBrief({
       // As sent, until it is read again as the service stored it.
       hold({ ...base, contentHash: outcome.contentHash, story: draft });
       // What was typed while it was being saved, and what had no place, is still there.
-      setEdits((now) => {
-        const left: Edits = {};
-        for (const [key, e] of Object.entries(now)) {
-          const says = fieldText(draft, e.field);
-          if (says === null) left[key] = e;
-          else if (sent[key]?.now !== e.now) left[key] = { ...e, was: says };
-        }
-        return left;
-      });
+      typedIs(leftAfterSave(sent, latest.current.edits, base.story, draft));
       setMoved(false);
       setRefused(null);
       setSavedOnce(true);
@@ -295,8 +292,7 @@ export function StoryBrief({
     }
   };
   const discard = () => {
-    latest.current = { ...latest.current, edits: {} };
-    setEdits({});
+    typedIs({});
     setRefused(null);
     setMoved(false);
     setDone("words.discarded");

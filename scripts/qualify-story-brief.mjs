@@ -512,6 +512,9 @@ try {
     await route.continue();
   });
   await at("story-text-save").click();
+  // The one being saved is put back as it was, and another is typed in.
+  const audienceBefore = merged.brief.audience;
+  await at("story-brief-audience").fill(audienceBefore);
   await at("story-brief-format").click();
   await page.keyboard.type("Typed ");
   release();
@@ -519,6 +522,7 @@ try {
   await page.keyboard.type("on");
   await page.unroute("**/api/v1/call");
   assert.match(await at("story-brief-format").inputValue(), /Typed on/);
+  assert.equal(await at("story-brief-audience").inputValue(), audienceBefore);
   assert.equal(await at("story-text-save").isDisabled(), false);
   await at("story-text-discard").click();
   assert.equal((await held()).content.brief.audience, "Everyone, twice");
