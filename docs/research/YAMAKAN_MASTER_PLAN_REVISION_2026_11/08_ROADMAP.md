@@ -60,6 +60,8 @@ This roadmap extends the System Supremacy programme. It does not replace it.
 FD-11 asks the founder to confirm this order. The default, if it is not
 decided, is that the implementation owner continues the current streams.
 
+0. Merge the planning pull request, on the founder's explicit word. MPR-001 needs the
+   package on `main`.
 1. Finish the in-flight Blender pull requests, #279 included. No card of this
    revision assumes #279 is merged; step 0 of each card finds out.
 2. Stage 0, so the written record and the checks are true before feature work.
@@ -89,13 +91,17 @@ documents, wire the plan check, settle one consent rule, and widen Windows CI.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-001 | Adoption recorded; one current frontier; PRs #85 and #86 settled | EXTERNAL_BLOCKED | none | FD-1 |
-| MPR-002 | Dated status banners and one current-state index | QUALIFICATION_READY | none | none |
 | MPR-003 | Plan check in npm and CI; completion states; stream records verified | WAITING_DEPENDENCIES | MPR-001 | none |
+| MPR-002 | Dated status banners and one current-state index | QUALIFICATION_READY | none | none |
 | MPR-010 | The pinned-take path past consent revocation is closed, with a test | QUALIFICATION_READY | none | none |
 | MPR-804 | Full suite, Studio tests, native build and safe qualifiers on Windows CI | EXTERNAL_BLOCKED | none | FD-8 |
 
 Exit: MPR-001 recorded; MPR-002, MPR-003 and MPR-010 verified; MPR-804 verified
 or recorded blocked on FD-8.
+
+Order: the planning pull request is merged first, on the founder's explicit word; then
+MPR-001, then MPR-003, then MPR-002 and MPR-010. Until MPR-003 lands, the package check
+refuses any card's listed new file, so no card that creates one may merge before it.
 
 Gates: qualification evidence becomes checkable (MPR-003, MPR-804); the consent
 undo path is closed (MPR-010). MPR-010 is decided under the existing delegation
@@ -128,7 +134,7 @@ founder run the demonstration on the founder host and their remarks are
 recorded; if this is not arranged it is recorded BLOCKED, never PASS.
 
 Gates: none new. FD-2 must be answered before MPR-101 stores request text. With
-the default answer (hashes only) Stage 1 still completes, but a revision draft
+the default answer (no prompt in the take record) Stage 1 still completes, but a revision draft
 cannot refill the prompt and the person types it again.
 
 Section 5 describes this stage as a demonstration.
@@ -390,7 +396,7 @@ later stage.
 | 0 | FD-1 | Whether any card starts at all (MPR-001) |
 | 0 | FD-8 | Whether MPR-804 runs the full suite on Windows CI |
 | 0 | FD-11 | The order of every later stage |
-| 1 | FD-2 | Whether a take record holds the prompt text or only its hash |
+| 1 | FD-2 | Whether a take record holds the prompt text or only its hash (the generation ledger already holds the text) |
 | 2 | FD-10 | Whether the second part of MPR-205 removes the account id from notebook metadata |
 | 3 | FD-2 | What the export manifest may carry (MPR-701) |
 | 3 | FD-3, FD-4 | What the first-run capability banner may say (MPR-604) |

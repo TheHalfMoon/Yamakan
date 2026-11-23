@@ -16,7 +16,7 @@ Those stay unauthorised whatever is decided below.
 | Id | Question | Recommended answer | Default if not decided | Cards that wait |
 |---|---|---|---|---|
 | FD-1 | Adopt this revision as the current plan, and close draft pull requests #85 and #86 as superseded evidence? | Yes to both | The System Supremacy programme stays the only authority; this package stays a proposal | MPR-001 and, through it, the start of every other card |
-| FD-2 | May the full generation request, prompt included, be stored in the project and travel with backups and, when the person chooses, with exports? | Yes in the project and backups; opt-in for exports | Hashes only, as today; "revise from a take" cannot refill the prompt | MPR-101, MPR-103, MPR-701 |
+| FD-2 | May the full generation request, prompt included, be stored in the project and travel with backups and, when the person chooses, with exports? | Yes in the project and backups; opt-in for exports | No prompt in the take record; the full prompts already kept in the generation ledger and the shot notes, and so in backups, stay as today; "revise from a take" cannot refill the prompt | MPR-101, MPR-103, MPR-701 |
 | FD-3 | Is the Kaggle route a product feature or a founder-only experiment? | Product feature marked experimental, after containment and a reading of Kaggle's terms | Founder-only, environment-gated, as today | MPR-404, MPR-405, MPR-604, MPR-801, MPR-802, MPR-803 (what they deliver) |
 | FD-4 | May small, permissively licensed weights be downloaded for local captions, voice and image, for qualification first? | Yes for captions and voice on this PC, qualification only; image later | No weights on the PC, as today | MPR-220, MPR-221; also MPR-404, MPR-405, MPR-604 |
 | FD-5 | May a legal review of customer-credential hosted providers start? | Yes, review only; no provider code that talks to a real service | No hosted provider work beyond the loopback fake | MPR-211, MPR-222; also MPR-404, MPR-405 |
@@ -31,7 +31,10 @@ Those stay unauthorised whatever is decided below.
 
 **Question.** Should this package become the planning authority beside the System Supremacy
 programme, and should draft pull requests #85 and #86 be closed as "superseded, retained as
-evidence"?
+evidence"? Two answers are asked for beside it and are not implied by it: may the planning pull
+request be merged (MPR-001 cannot start before the package is on `main`), and may the cards be
+built in the order of FD-11, each behind its own gates? An adoption that says nothing about these
+two adopts the plan and authorises neither.
 
 **Facts.** The current frontier pointer is the System Supremacy registry
 (`docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json`), adopted through pull request
@@ -57,19 +60,25 @@ section 8).
 **Question.** May Yamakan store the whole request that made a take (prompt, negative prompt,
 seed, parameters, references, model identity and route) as part of the project?
 
-**Facts.** Today the job ledger keeps a hash of the prompt (`core/engines/generation.ts`
-`GenerationLineage`), and the Create page separately writes the prompt into the shot's notes
-(`src/create/create-story.ts` `addMadeVideo`). Without the request, a take cannot be revised by
+**Facts.** Full prompts are already stored today. Starting a generation writes the whole
+`GenerationRecord`, prompt included, into the job ledger before anything is sent
+(`core/engines/generation.ts` `ledger.begin`; `core/jobs.ts` `generationLedger`, the `jobs.payload`
+column of the workspace database). A workspace backup is a copy of that database
+(`core/recovery.ts`), so backups carry those prompts. The Create page also writes the prompt, cut
+to 2,000 characters, into the shot's notes (`src/create/create-story.ts` `addMadeVideo`). Only the
+lineage of an imported video (`GenerationLineage`) keeps a hash alone. No take holds the request
+it was made from. Without the request, a take cannot be revised by
 changing one field, and an export cannot say what made a clip. A prompt can contain private
 detail, and consented likeness references are named by it.
 
 **Options.**
 
 1. Recommended. The request is stored with the take in the local project and is included in
-   backups. Receipts, logs and diagnostics keep hashes only, as now. An export manifest holds
+   backups. Command receipts, logs and diagnostics keep hashes only, as now. An export manifest holds
    hashes and ids only. The hash of the prompt is written only for an export the person opted in
    for, and prompt text appears only in the provenance report of such an export (MPR-701).
-2. Hashes only everywhere (today). MPR-103 can re-run a take unchanged but cannot show or edit
+2. No additional copy: the take record holds a hash only, and the ledger, the notes and backups
+   keep the prompts they keep today. MPR-103 can re-run a take unchanged but cannot show or edit
    what was asked.
 3. Readable request everywhere, including every export. Simplest, and the least private.
 
@@ -307,4 +316,4 @@ These were considered and are deliberately not put to the founder yet.
   today be put back by undo. Which rule closes that path is an open product decision of the kind
   the founder record entry of 2026-11-07 delegates. MPR-010 states both rules, recommends one and
   records the choice in the decision record the delegation names. The founder can overrule it;
-  no answer is needed for the card to proceed.
+  no answer is needed for the card to proceed. Document 13 section 7 says the same.

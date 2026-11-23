@@ -132,7 +132,7 @@ Invariants under test: REST/MCP parity (`tests/parity.test.ts`), receipt or requ
 | First-frame image-to-video | QUALIFIED | `kaggle-wan22-ti2v-5b-first-frame`; `core/engines/clean-image.ts`; `qualify:kaggle-first-frame`, `docs/evidence/ultimate/kaggle-first-frame-page-run-receipt.json` | `noUnconsentedPerson` per run; send consent for pack-linked images |
 | Record before send, follow after restart, never resend | QUALIFIED | `JobSupervisor.generationLedger()`; `tests/generation-durable.test.ts`; `qualify:create-durable`, `docs/evidence/ultimate/kaggle-restart-run-receipt.json` | which script wrote that receipt: not verified |
 | Stop a Kaggle run | STUB by necessity | `requestCancel` returns `remoteAcknowledged: false`; `job.cancel` refuses `remote-generation` | quota is used until the run ends |
-| Bring in a generated video | IN CODE | `yamakan.generation.import`; `bringIn` checks size and SHA-256 | prompt kept only as an unsalted hash in the job payload |
+| Bring in a generated video | IN CODE | `yamakan.generation.import`; `bringIn` checks size and SHA-256 | the lineage keeps the prompt only as an unsalted hash; the generation ledger row in `jobs.payload` keeps the full prompt |
 | Generate into an existing shot | ABSENT | `generation.start` input has no shot id; Create adds a shot to the "Made in Create" story | MPR-102 |
 | Prompt library and presets | IN CODE | `core/prompts/library.ts`, `core/prompts/presets.ts`; `yamakan.prompt.search`, `prompt.fill`, `prompt.savePresets`; `tests/prompt-library.test.ts` | `qualify:prompt-library` receipt not committed |
 | Estimate | STUB | `yamakan.generation.options` gives `expectedSeconds`, `timeoutSeconds` only | MPR-203 |
