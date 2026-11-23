@@ -30,6 +30,7 @@ import { creativeDocumentsEnabled, DOCUMENTS_OFF } from "./documents.ts";
 import { DOCUMENT_SCHEMA_VERSIONS } from "./document-ref.ts";
 import {
   buildGenerationRecord,
+  TAKE_RECORD_LIMITS,
   recordHashOf,
   type RecipeFacts,
   type TakeRecord,
@@ -742,30 +743,51 @@ export function generationBase(
   return { takeId, recordHash, ...(revisionNote ? { revisionNote } : {}) };
 }
 
+const BaseSchema = z
+  .object({
+    takeId: Id,
+    recordHash: Sha256,
+    revisionNote: z.string().min(1).max(TAKE_RECORD_LIMITS.revisionNote),
+  })
+  .partial({ revisionNote: true })
+  .strict();
+const BASE_UNREADABLE =
+  "The record of the take this one revises could not be read, so what changed from it is not recorded.";
+const BASE_UNKNOWN =
+  "What this run kept of the take it revises does not read, so nothing of it is recorded.";
+
 /**
  * The record of an imported run, beside the record of the take it revises. One that cannot be
- * read leaves what changed unsaid, which the notice says, and stops nothing.
+ * read leaves what changed unsaid, which the notice says.
  */
 export function generatedRecord(
   store: ProjectStore,
   row: GenerationRecord,
   facts: RecipeFacts,
 ): { record: TakeRecord; notice: string | null } {
+  const { derivedFrom: kept, ...bare } = row;
+  if (kept === undefined)
+    return { record: buildGenerationRecord(bare, facts), notice: null };
+  const documentId: unknown = row.target?.documentId;
+  const parsed = BaseSchema.safeParse(kept);
+  if (!parsed.success || typeof documentId !== "string")
+    return { record: buildGenerationRecord(bare, facts), notice: BASE_UNKNOWN };
+  const derivedFrom = parsed.data;
   let base: TakeRecord | null = null;
-  let notice: string | null = null;
-  if (row.derivedFrom)
-    try {
-      base = store.takeRecord(
-        row.projectId,
-        row.target?.documentId ?? "",
-        row.derivedFrom.recordHash,
-      );
-    } catch (e) {
-      if (toCommandError(e).code === "INTERNAL") throw e;
-      notice =
-        "The record of the take this one revises could not be read, so what changed from it is not recorded.";
-    }
-  return { record: buildGenerationRecord(row, facts, undefined, base), notice };
+  try {
+    base = store.takeRecord(row.projectId, documentId, derivedFrom.recordHash);
+  } catch (e) {
+    if (toCommandError(e).code === "INTERNAL") throw e;
+  }
+  return {
+    record: buildGenerationRecord(
+      { ...bare, derivedFrom },
+      facts,
+      undefined,
+      base,
+    ),
+    notice: base ? null : BASE_UNREADABLE,
+  };
 }
 
 // A model that can be started here today, and what it makes, where that is known.
@@ -854,7 +876,7 @@ export async function revisionDraft(
     const row = rowOf(record.source.generationId);
     if (
       row?.projectId === at.projectId &&
-      row.prompt !== null &&
+      typeof row.prompt === "string" &&
       sha256Hex(row.prompt) === request.promptHash
     )
       prompt = row.prompt;
@@ -885,6 +907,8 @@ export async function revisionDraft(
     message: string,
   ) => checks.push({ field, state, message });
   if (offer.reason !== null) check("route", "unavailable", offer.reason);
+  else if (!offer.recipes.length)
+    check("route", "unavailable", "No model is offered here.");
   else check("route", "ok", "Models can be started here.");
   const offered =
     recipe === null
@@ -904,6 +928,12 @@ export async function revisionDraft(
     );
   else if (!offered)
     check("recipe", "unavailable", "This model is no longer offered here.");
+  else if (offered.operation !== record.operation)
+    check(
+      "recipe",
+      "unavailable",
+      "This model no longer makes a video from a request of this kind.",
+    );
   else if (offered.hash !== recipe.hash)
     check(
       "recipe",
@@ -1054,7 +1084,13 @@ export async function appendGeneratedTake(
       if (refused.code === "INTERNAL") throw e;
       return not("story-refused", refused.message);
     }
-    if (there)
+    if (there) {
+      // Said again where it was said: the record as it was written names no change.
+      const { notice } = generatedRecord(store, row, facts);
+      const unsaid =
+        notice !== null &&
+        !store.takeRecord(projectId, documentId, there.recordHash!)
+          .changedFields.length;
       return {
         appended: true,
         documentId,
@@ -1063,7 +1099,9 @@ export async function appendGeneratedTake(
         recordHash: there.recordHash!,
         contentHash: ref.contentHash,
         revision,
+        ...(unsaid ? { notice } : {}),
       };
+    }
     if (shot.takes.length >= STORY_LIMITS.takesPerShot)
       return not("shot-full", SHOT_FULL);
     const asset = project.assets.find((a) => a.id === imported.assetId);

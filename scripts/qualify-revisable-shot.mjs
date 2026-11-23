@@ -1057,9 +1057,15 @@ try {
       said += String(chunk);
       const lines = said.split("\n");
       said = lines.pop();
-      for (const line of lines) {
-        const { id, result } = JSON.parse(line);
-        answers[id - 1] = JSON.parse(result.content[0].text);
+      try {
+        for (const line of lines) {
+          const { id, result } = JSON.parse(line);
+          if (id !== undefined)
+            answers[id - 1] = JSON.parse(result.content[0].text);
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        return reject(e);
       }
       if (answers[0] === undefined || answers[1] === undefined) return;
       clearTimeout(timer);

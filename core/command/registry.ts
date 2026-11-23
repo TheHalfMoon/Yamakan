@@ -584,7 +584,12 @@ async function withRecords(
           "VALIDATION",
           "This generation did not make the take's media.",
         );
-      record = generatedRecord(ctx.store, row, generationFacts(row)).record;
+      const made = generatedRecord(ctx.store, row, generationFacts(row));
+      // Nothing here could say it, and a record is kept as it is written: the take can be saved
+      // without one.
+      if (made.notice !== null)
+        throw new CommandError("RECOVERY_REQUIRED", made.notice);
+      record = made.record;
     } else {
       const asset = assets.find((x) => x.id === take.assetId);
       if (!asset)

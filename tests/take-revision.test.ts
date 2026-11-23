@@ -4,7 +4,7 @@
 // the project's, as its rows and ten bytes, so that no decoder is asked.
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
@@ -29,8 +29,14 @@ import type {
   EngineRequestV2,
 } from "../core/engines/contract-v2.ts";
 import { sha256Hex } from "../core/hash/canonical.ts";
-import { KAGGLE_RECIPES, kaggleRecipes } from "../core/engines/kaggle.ts";
+import {
+  KAGGLE_RECIPES,
+  kaggleCli,
+  kaggleRecipes,
+} from "../core/engines/kaggle.ts";
 import type { Asset, Project } from "../core/project.ts";
+import { revisionDraft } from "../core/takes.ts";
+import { FLICKS_PER_SECOND } from "../core/time.ts";
 import type { StoryDocument } from "../core/story.ts";
 import {
   REVISION_FIELDS,
@@ -287,24 +293,45 @@ const states = (d: Draft) =>
   Object.fromEntries(d.checks.map((c) => [c.field, c.state]));
 const said = (d: Draft, field: string) =>
   d.checks.find((c) => c.field === field)?.message;
-// The same workspace with nothing set up, and with a Kaggle CLI that notes that it ran.
+// The same workspace with nothing set up, and with a Kaggle CLI that can run: any program it
+// starts is counted, and an engine that is made asks for the ledger, which is counted too.
 const bare = (w: W) =>
   ({ ...w.ctx, generation: undefined }) as unknown as CommandContext;
-const withKaggle = async (w: W) => {
-  const ran = path.join(w.root, "the-cli-ran");
-  const cli = path.join(w.root, "kaggle.cmd");
-  await writeFile(cli, `@echo off\r\necho x > "${ran}"\r\n`);
+const withKaggle = (w: W) => {
+  let ledgers = 0;
+  const queue = new Proxy(w.queue, {
+    get: (held, name) => {
+      if (name === "generationLedger") ledgers++;
+      const value = Reflect.get(held, name, held);
+      return typeof value === "function" ? value.bind(held) : value;
+    },
+  });
   return {
     ctx: {
       ...w.ctx,
+      queue,
       generation: undefined,
-      kaggle: { cli, username: "someone" },
+      kaggle: { cli: process.execPath, username: "someone" },
     } as unknown as CommandContext,
-    ran: () => existsSync(ran),
+    ledgers: () => ledgers,
   };
 };
+const started = async (during: () => Promise<unknown>) => {
+  let n = 0;
+  const count = () => void n++;
+  subscribe("child_process", count);
+  try {
+    await during();
+  } finally {
+    unsubscribe("child_process", count);
+  }
+  return n;
+};
+
 // A take whose record is this one, as an import commits it.
-async function plant(w: W, target: Target, asset: Asset, record: TakeRecord) {
+async function plant(w: W, target: Target, asset: Asset, given: TakeRecord) {
+  // A part given as undefined is left out.
+  const record = TakeRecordSchema.parse(JSON.parse(JSON.stringify(given)));
   const ref = w.store
     .listDocuments(w.projectId)
     .find((d) => d.id === target.documentId)!;
@@ -669,6 +696,23 @@ test("a retired recipe and a changed recipe are told apart", async () => {
     [states(other).recipe, states(other).model, other.startable],
     ["ok", "changed", true],
   );
+  // The same name, for another kind of request.
+  w.recipes[0] = { ...recipe, operation: "imageToVideo" };
+  const turned = await draftOf(w, target, takeId);
+  assert.deepEqual(
+    [states(turned).recipe, turned.complete, turned.startable],
+    ["unavailable", true, false],
+  );
+  assert.equal(
+    said(turned, "recipe"),
+    "This model no longer makes a video from a request of this kind.",
+  );
+  w.recipes[0] = { ...recipe, id: "another" };
+  const gone = await draftOf(w, target, takeId);
+  assert.deepEqual(
+    [states(gone).route, states(gone).recipe, gone.startable],
+    ["ok", "unavailable", false],
+  );
   w.recipes.length = 0;
   const retired = await draftOf(w, target, takeId);
   assert.deepEqual(retired.draft, { ...REQUEST, firstFrameAssetId: null });
@@ -681,6 +725,10 @@ test("a retired recipe and a changed recipe are told apart", async () => {
     "This model is no longer offered here.",
   );
   assert.equal(states(retired).model, "unknown");
+  assert.deepEqual(
+    [states(retired).route, said(retired, "route")],
+    ["unavailable", "No model is offered here."],
+  );
   // With nothing set up the request is still read, and whether the model is offered is not said.
   const none = await draftOf(w, target, takeId, bare(w));
   assert.deepEqual(none.draft, { ...REQUEST, firstFrameAssetId: null });
@@ -702,7 +750,7 @@ test("a retired recipe and a changed recipe are told apart", async () => {
 
 test("a take of a Kaggle model is held to its present size and length, and no CLI is run", async () => {
   const { w, target } = await withShot();
-  const kaggle = await withKaggle(w);
+  const kaggle = withKaggle(w);
   const wan = KAGGLE_RECIPES[0]!;
   const [known] = kaggleRecipes();
   const asset = await media(w, "made");
@@ -787,7 +835,108 @@ test("a take of a Kaggle model is held to its present size and length, and no CL
     said(other, "durationFrames"),
     "The length this model makes is now 101 frames of this project; this take was asked for 30.",
   );
-  assert.equal(kaggle.ran(), false);
+});
+
+test("a length is compared in the project's own frames, and is at least one", async () => {
+  const w = await workspace();
+  w.projectId = (
+    (
+      await execute(w.ctx, "yamakan.project.create", {
+        name: "Film",
+        frameRate: { num: 24_000, den: 1001 },
+      })
+    ).result as Project
+  ).id;
+  const target = { documentId: id(), shotId: id() };
+  await save(
+    w,
+    target.documentId,
+    story([
+      shot({
+        id: target.shotId,
+        durationTicks: (FLICKS_PER_SECOND * 1001) / 1000,
+      }),
+    ]),
+  );
+  const asset = await media(w, "made");
+  const wan = KAGGLE_RECIPES[0]!;
+  const [known] = kaggleRecipes();
+  const record: TakeRecord = {
+    ...full(),
+    operation: "textToVideo",
+    recipe: { id: known!.id, hash: known!.hash },
+    inputs: [],
+    request: {
+      ...full().request,
+      // 81 frames at 24 a second, in frames of 23.976.
+      durationFrames: 80,
+    } as TakeRecord["request"],
+  };
+  const d = await draftOf(
+    w,
+    target,
+    await plant(w, target, asset, record),
+    withKaggle(w).ctx,
+  );
+  assert.equal(states(d).durationFrames, "ok");
+  const offer = {
+    reason: null,
+    recipes: [
+      { ...known!, makes: { width: 64, height: 36, frames: 1, fps: 1000 } },
+    ],
+  };
+  const short = await revisionDraft(
+    w.store,
+    { projectId: w.projectId, ...target, takeId: d.base.takeId },
+    offer,
+    () => null,
+  );
+  assert.equal(
+    short.checks.find((c) => c.field === "durationFrames")!.message,
+    "The length this model makes is now 1 frames of this project; this take was asked for 80.",
+  );
+  assert.equal(wan.fps, 24);
+});
+
+test("what a record does not hold is said of each part", async () => {
+  const { w, target } = await withShot();
+  const asset = await media(w, "made");
+  const record: TakeRecord = {
+    ...full(),
+    operation: "textToVideo",
+    recipe: { id: recipe.id, hash: recipe.hash },
+    inputs: [],
+  };
+  const drafted = async (over: Partial<TakeRecord>) =>
+    draftOf(w, target, await plant(w, target, asset, { ...record, ...over }));
+  const request = (over: object) =>
+    ({
+      request: { ...record.request, ...over } as TakeRecord["request"],
+    }) as Partial<TakeRecord>;
+  assert.equal((await drafted({})).complete, true);
+  for (const field of ["width", "height", "durationFrames"] as const) {
+    const d = await drafted(request({ [field]: null }));
+    assert.deepEqual(
+      [d.complete, d.startable, states(d)[field]],
+      [false, false, "unknown"],
+      field,
+    );
+  }
+  // A run sent without a prompt needs none again.
+  const silent = await drafted(
+    request({ prompt: undefined, promptHash: null }),
+  );
+  assert.deepEqual(
+    [silent.complete, silent.draft!.prompt, said(silent, "prompt")],
+    [true, null, "This take was made without a prompt."],
+  );
+  const unpinned = await drafted({
+    model: { ...record.model!, manifestHash: null },
+  });
+  assert.deepEqual(
+    [states(unpinned).model, unpinned.startable],
+    ["unknown", true],
+  );
 });
 
 test("a declared take gives a partial draft, a rendered take gives none", async () => {
@@ -914,6 +1063,12 @@ test("a hash-only record takes its prompt from the ledger row or says it cannot"
   const w2 = { ...w, projectId: other };
   const elsewhere = await media(w2, "else");
   const theirs = await start(w2, elsewhere, null);
+  const wordless = await start(w, asset, null);
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  db.prepare(
+    "UPDATE jobs SET payload = json_remove(payload, '$.prompt') WHERE job_id = ?",
+  ).run(wordless.generationId);
+  db.close();
   for (const [why, record] of [
     ["the row is gone", { ...hashOnly, source: { generationId: id() } }],
     [
@@ -922,6 +1077,10 @@ test("a hash-only record takes its prompt from the ledger row or says it cannot"
         ...hashOnly,
         request: { ...hashOnly.request, promptHash: sha256Hex("other") },
       },
+    ],
+    [
+      "the row holds no words",
+      { ...hashOnly, source: { generationId: wordless.generationId } },
     ],
     [
       "the row is another project's",
@@ -1120,15 +1279,43 @@ test("a draft is read from its own project's story, and reading it changes nothi
   };
   const before = await asIs();
   const asked = w.asked.length;
-  const kaggle = await withKaggle(w);
-  for (let n = 0; n < 5; n++) {
-    await draftOf(w, target, takeId);
-    await draftOf(w, target, takeId, bare(w));
-    await draftOf(w, target, takeId, kaggle.ctx);
-  }
+  const kaggle = withKaggle(w);
+  // The count sees the CLI that this would run.
+  assert.equal(
+    await started(() => kaggleCli(process.execPath)(["--version"], 20_000)),
+    1,
+  );
+  const programs = await started(async () => {
+    for (let n = 0; n < 5; n++) {
+      await draftOf(w, target, takeId);
+      await draftOf(w, target, takeId, bare(w));
+      await draftOf(w, target, takeId, kaggle.ctx);
+    }
+  });
   assert.equal(await asIs(), before);
   assert.equal(w.asked.length, asked, "no engine was asked");
-  assert.equal(kaggle.ran(), false, "no CLI was run");
+  assert.equal(programs, 0, "no CLI was run");
+  assert.equal(kaggle.ledgers(), 0, "no engine was made");
+  // A list of runs makes one, which the count sees.
+  await call(
+    w,
+    "yamakan.generation.list",
+    { projectId: w.projectId },
+    kaggle.ctx,
+  );
+  assert.ok(kaggle.ledgers() > 0);
+  // A change between the two reads is said, not mixed.
+  const load = w.store.load.bind(w.store);
+  w.store.load = async (projectId: string) => {
+    const held = await load(projectId);
+    w.store.load = load;
+    await save(w, id(), story([shot()]));
+    return held;
+  };
+  assert.equal(
+    await ask({}),
+    "REVISION_CONFLICT: The project changed while it was read; try again.",
+  );
 });
 
 test("a base taken out later is still named, and one that cannot be read is said", async () => {
@@ -1160,6 +1347,17 @@ test("a base taken out later is still named, and one that cannot be read is said
     "UPDATE creative_documents SET bytes = zeroblob(byte_length) WHERE hash = ?",
   ).run(base.recordHash);
   db.close();
+  // A failure of this service's own is not taken for one.
+  const takeRecord = w.store.takeRecord.bind(w.store);
+  w.store.takeRecord = (projectId, documentId, recordHash) => {
+    if (recordHash === base.recordHash) throw new Error("a fault");
+    return takeRecord(projectId, documentId, recordHash);
+  };
+  assert.match(
+    await reason(call(w, "yamakan.generation.import", second)),
+    /^INTERNAL/,
+  );
+  w.store.takeRecord = takeRecord;
   const { take: noted } = await call(w, "yamakan.generation.import", second);
   assert.equal(noted.appended, true);
   assert.equal(
@@ -1175,6 +1373,86 @@ test("a base taken out later is still named, and one that cannot be read is said
     ],
     [base.takeId, base.recordHash, []],
   );
+  // And again, when a stop came before the run's row kept it.
+  const db2 = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  const job = (runId: string) =>
+    JSON.parse(
+      (
+        db2.prepare("SELECT payload FROM jobs WHERE job_id = ?").get(runId) as {
+          payload: string;
+        }
+      ).payload,
+    );
+  const keep = (runId: string, row: object) =>
+    db2
+      .prepare("UPDATE jobs SET payload = ? WHERE job_id = ?")
+      .run(JSON.stringify(row), runId);
+  for (const [runId, notice] of [
+    [second.generationId, noted.notice],
+    [run.generationId, undefined],
+  ]) {
+    const { take: kept, ...row } = job(runId);
+    keep(runId, row);
+    const { take: again } = await call(w, "yamakan.generation.import", {
+      generationId: runId,
+    });
+    assert.deepEqual([again.takeId, again.notice], [kept.takeId, notice]);
+  }
+  // By hand no answer could say it, so it is refused.
+  const there = { documentId: id(), shotId: id() };
+  const byHand = async (runId: string) => {
+    const takeId = id();
+    const made = job(runId).imported.assetId;
+    return reason(
+      save(
+        w,
+        there.documentId,
+        story([
+          shot({
+            id: there.shotId,
+            takes: [{ id: takeId, assetId: made, sourceStartTicks: 0 }],
+          }),
+        ]),
+        { records: [{ takeId, from: { generationId: runId } }] },
+      ),
+    );
+  };
+  assert.equal(
+    await byHand(second.generationId),
+    `RECOVERY_REQUIRED: ${noted.notice}`,
+  );
+  // A row that says anything of its base comes in without one, and that is said.
+  const said = job(second.generationId);
+  for (const [n, derivedFrom] of [
+    {},
+    "str",
+    7,
+    null,
+    { takeId: base.takeId },
+    { takeId: "C:\\x", recordHash: base.recordHash },
+    { takeId: base.takeId, recordHash: "z" },
+    { ...said.derivedFrom, revisionNote: "x".repeat(501) },
+  ].entries()) {
+    const odd = await media(w, `odd ${n}`);
+    const started = await start(w, odd, target);
+    keep(started.generationId, { ...job(started.generationId), derivedFrom });
+    const { take: plain } = await call(w, "yamakan.generation.import", started);
+    assert.equal(
+      plain.notice,
+      "What this run kept of the take it revises does not read, so nothing of it is recorded.",
+      `${n}`,
+    );
+    const record = await recordOf(w, target, plain.takeId);
+    assert.deepEqual(
+      [record.derivedFromTakeId, record.revisionNote, record.changedFields],
+      [null, null, []],
+    );
+    assert.match(await byHand(started.generationId), /^RECOVERY_REQUIRED/);
+    const body = stored(w, target.documentId);
+    body.scenes[0]!.shots[0]!.takes = [];
+    await save(w, target.documentId, body);
+  }
+  db2.close();
 });
 
 test("a revision's video saved as a take by hand carries the same words of its base", async () => {
