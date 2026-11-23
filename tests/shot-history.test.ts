@@ -513,10 +513,18 @@ test("a row that says anything is held to its form and its length", async () => 
   const taken = id();
   const from = id();
   const rows = [
-    { take: { appended: true, takeId: taken }, derivedFromTakeId: from },
+    {
+      take: { appended: true, takeId: taken },
+      derivedFrom: { takeId: from, recordHash: "c".repeat(64) },
+    },
     { take: { appended: true, takeId: "z".repeat(300_000) } },
-    { derivedFromTakeId: "C:\\Users\\someone\\words of the prompt" },
-    { take: { appended: true, takeId: 7 }, derivedFromTakeId: {} },
+    {
+      derivedFrom: {
+        takeId: "C:\\Users\\someone\\words of the prompt",
+        revisionNote: "why, in words",
+      },
+    },
+    { take: { appended: true, takeId: 7 }, derivedFrom: { takeId: {} } },
     { recipe: { ...recipe, id: "r".repeat(300_000) } },
     // Cut at 200 in the middle of a pair.
     { diagnostic: `${"x".repeat(199)}\u{1F600}` },
