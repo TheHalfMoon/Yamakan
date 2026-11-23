@@ -26,13 +26,16 @@ import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
   diagnostic,
+  engineReport,
   type Artifact,
   type AssetRef,
   type EngineAdapterV2,
+  type EngineReport,
   type EngineContextV2,
   type ExecutionStatus,
 } from "./contract-v2.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import type { RecipeFacts } from "../take-record.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
 
 export type KaggleRecipe = {
@@ -160,6 +163,27 @@ const sha256 = (data: string | Uint8Array) =>
 
 export const offeredKaggleRecipes = () =>
   KAGGLE_RECIPES.filter((r) => r.offered && existsSync(scriptOf(r)));
+
+/**
+ * What this build knows of a run's recipe, if it is one of these at this model version. Its
+ * frame rate and steps are in its script, so they are known only of this build's own.
+ */
+export function kaggleRecipeFacts(
+  recipe: Pick<GenerationRecipe, "id" | "hash" | "modelManifestHash">,
+): RecipeFacts | null {
+  const r = KAGGLE_RECIPES.find((x) => x.id === recipe.id);
+  if (!r || sha256(`${r.model}@${r.revision}`) !== recipe.modelManifestHash)
+    return null;
+  const sameScript =
+    existsSync(scriptOf(r)) &&
+    sha256(readFileSync(scriptOf(r))) === recipe.hash;
+  return {
+    route: "kaggle",
+    model: { id: r.model, revision: r.revision, licence: r.licence },
+    fps: sameScript ? r.fps : null,
+    steps: sameScript ? r.steps : null,
+  };
+}
 
 export function kaggleRecipes(): GenerationRecipe[] {
   return offeredKaggleRecipes().map((r) => ({
@@ -448,6 +472,8 @@ type Run = {
   warning?: string;
   endedWith?: string;
   video?: { file: string; artifact: Artifact };
+  // What its receipt said of it, read before the receipt goes.
+  reported?: EngineReport | null;
   // Sent with no answer: nothing says it is running at all.
   uncertain?: boolean;
   // Sent from another Kaggle account: its notebook is not this one's to ask about.
@@ -798,6 +824,10 @@ export function createKaggleEngine(options: {
       throw new Garbled("The video is not the one its receipt names.");
     }
     await keepOnly(run, file);
+    run.reported = engineReport({
+      ...receipt,
+      version: receipt.revision,
+    });
     run.video = {
       file,
       artifact: {
@@ -1372,6 +1402,7 @@ export function createKaggleEngine(options: {
       const { video } = await runOf(ref);
       return video ? [video.artifact] : [];
     },
+    reported: (ref) => runs.get(ref)?.reported ?? null,
     async *readArtifact(ref, handle) {
       const { video } = await runOf(ref);
       if (!video || video.artifact.handle !== handle)

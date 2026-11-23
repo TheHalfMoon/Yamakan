@@ -207,7 +207,7 @@ plan.
 
 | Format | Change | Version the card gives | Card |
 |---|---|---|---|
-| Story document | Take `recordHash`; optional `brief`, scene `script`, shot `intent` | 2 | MPR-101 |
+| Story document | Take `recordHash`; optional `brief`, scene `sceneText`, shot `intent` | 2 | MPR-101 |
 | Story document | Uses the version 2 text fields. If MPR-101 merged without them, this card adds them | 2, or 3 as the fallback | MPR-106 |
 | Story document | Optional `variantId` on a shot's reference pin | "moves by one"; no number | MPR-402 |
 | Story document | Optional `setup` on a shot | "moves by one"; no number | MPR-403 |

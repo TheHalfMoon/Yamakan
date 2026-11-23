@@ -54,6 +54,7 @@ import {
   creativeDocumentsEnabled,
   DOCUMENTS_OFF,
   DOCUMENT_LIMITS,
+  DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   DocumentRefSchema,
   missingDocumentAssets,
@@ -61,6 +62,11 @@ import {
 } from "./documents.ts";
 import type { DocumentRef } from "./documents.ts";
 import type { CommitContext as DocumentCommitContext } from "./story.ts";
+import {
+  TAKE_RECORD_LIMITS,
+  TakeRecordSchema,
+  type TakeRecord,
+} from "./take-record.ts";
 import { assertPlacementConsent } from "./continuity.ts";
 import { assertStudioImageLimits } from "./studio.ts";
 import { GlbError, canonicalGlb } from "./cinema/glb.ts";
@@ -1588,6 +1594,29 @@ export class ProjectStore {
         .get(receipt.principalId, projectId, receipt.requestId),
     );
   }
+  /**
+   * The version of a document that this request's commit left, for a retry of it:
+   * undefined when the request has committed nothing, null when its commit has no
+   * such document (it was another request).
+   */
+  committedDocument(
+    receipt: RequestReceipt,
+    projectId: string,
+    documentId: string,
+  ): DocumentRef | null | undefined {
+    const row = this.#database
+      .prepare(
+        "SELECT v.revision AS revision FROM command_receipts r JOIN revisions v ON v.receipt_id = r.id WHERE r.principal_id = ? AND r.project_id = ? AND r.request_id = ?",
+      )
+      .get(receipt.principalId, projectId, receipt.requestId) as
+      { revision: number } | undefined;
+    if (!row) return undefined;
+    return (
+      this.listDocumentsAt(projectId, row.revision).find(
+        (d) => d.id === documentId,
+      ) ?? null
+    );
+  }
   // The documents of one retained revision.
   listDocumentsAt(projectId: string, revision: number): DocumentRef[] {
     const row = this.#database
@@ -1624,6 +1653,8 @@ export class ProjectStore {
       // Kind-specific checks against the head, inside the commit's own
       // transaction (YU-031 stories and reference packs).
       verify?: (context: DocumentCommitContext) => void;
+      // Take records written with the story that names them (MPR-101).
+      attachments?: readonly TakeRecord[];
       // A legacy source this commit migrates (YU-012), recorded atomically.
       migration?: {
         sourceKind: "cinema-sidecar";
@@ -1637,6 +1668,38 @@ export class ProjectStore {
     Id.parse(input.projectId);
     Id.parse(input.documentId);
     const kind = DocumentKind.parse(input.kind);
+    if (kind === "takeRecord")
+      throw new CommandError(
+        "VALIDATION",
+        "A take record is saved with its take.",
+      );
+    // Older versions are read, and never written; a retry of a request that an older
+    // build committed only replays.
+    if (
+      "bytes" in input.source &&
+      input.schemaVersion !== DOCUMENT_SCHEMA_VERSIONS[kind] &&
+      !(receipt && this.hasCommittedRequest(receipt, input.projectId))
+    )
+      throw new CommandError(
+        "VALIDATION",
+        `Unsupported ${kind} document schema version ${input.schemaVersion}.`,
+      );
+    const attachments = (input.attachments ?? []).map((record) =>
+      validateDocument(
+        "takeRecord",
+        DOCUMENT_SCHEMA_VERSIONS.takeRecord,
+        Buffer.from(canonicalJson(record), "utf8"),
+      ),
+    );
+    if (
+      attachments.length &&
+      (kind !== "story" ||
+        attachments.length > TAKE_RECORD_LIMITS.recordsPerSave)
+    )
+      throw new CommandError(
+        "VALIDATION",
+        "Only a story's save writes take records, a few at a time.",
+      );
     // Stories and packs are checked against the project and the consent
     // ledger on every commit; a caller that brings no check is refused.
     if (
@@ -1830,6 +1893,29 @@ export class ProjectStore {
                 validated.bytes,
                 validated.bytes.length,
               );
+              for (const record of attachments) {
+                withinDocumentBudget(
+                  db,
+                  record.hash,
+                  record.bytes.length,
+                  input.principalId,
+                );
+                db.prepare(
+                  "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
+                ).run(
+                  record.hash,
+                  record.kind,
+                  record.schemaVersion,
+                  JSON.stringify(record.assetIds),
+                  JSON.stringify(record.objectDigests),
+                  record.bytes,
+                  record.bytes.length,
+                );
+                // Held for this story, as its own versions are.
+                db.prepare(
+                  "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+                ).run(input.projectId, input.documentId, record.hash, revision);
+              }
               if (kind === "story" || kind === "referencePack")
                 db.prepare(
                   "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
@@ -1863,12 +1949,30 @@ export class ProjectStore {
           documents: this.listDocuments(input.projectId),
           held: (documentId, hash, kind) =>
             this.#held(input.projectId, documentId, hash, kind),
+          attached: new Set(attachments.map((record) => record.hash)),
           // Read under the write lock, so a consent cannot expire unseen.
           nowMs: Date.now(),
         });
         return { ...project, revision };
       },
     });
+  }
+  /** A take record this project holds for a story, checked against its name. */
+  takeRecord(projectId: string, documentId: string, recordHash: string) {
+    if (!this.#held(projectId, documentId, recordHash, "takeRecord"))
+      throw new CommandError("NOT_FOUND", "The take has no generation record.");
+    const row = this.#database
+      .prepare(
+        "SELECT bytes FROM creative_documents WHERE hash = ? AND kind = 'takeRecord'",
+      )
+      .get(recordHash) as { bytes: Uint8Array } | undefined;
+    const bytes = row && Buffer.from(row.bytes);
+    if (!bytes || sha256Hex(bytes) !== recordHash)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "A take's generation record is missing or damaged in the workspace; restore a verified backup.",
+      );
+    return TakeRecordSchema.parse(JSON.parse(bytes.toString("utf8")));
   }
   /** Whether this project committed this document version (read-only checks). */
   holdsDocument(
@@ -1922,11 +2026,12 @@ export class ProjectStore {
       kind === "referencePack" ||
       kind === "captions" ||
       kind === "lut" ||
-      kind === "promptPresets"
+      kind === "promptPresets" ||
+      kind === "takeRecord"
     )
       throw new CommandError(
         "VALIDATION",
-        "Stories, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
+        "Stories, take records, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,

@@ -356,6 +356,84 @@ export type EngineContextV2 = {
   openAsset(asset: AssetRef): AsyncIterable<Uint8Array>;
 };
 
+// What a run said of itself when it ended (OA-16): claims of the engine that ran it, not facts
+// checked here. Each part has the form of such a name, or is not known; a form is no proof
+// that it is one.
+const Version = z
+  .string()
+  .max(80)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._+-]*$/);
+export const EngineReportSchema = z
+  .object({
+    model: z
+      .object({
+        // A name, or an owner's: never a longer path.
+        id: z
+          .string()
+          .max(200)
+          .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)?$/)
+          .refine((id) => !id.includes("..")),
+        version: Version.nullable(),
+      })
+      .strict()
+      .nullable(),
+    seed: z.number().int().nonnegative().nullable(),
+    // The runtime lock, as far as a run says it: for a Kaggle run, the packages its script
+    // asks for, not all that was installed.
+    runtime: z
+      .object({
+        python: Version.nullable(),
+        torch: Version.nullable(),
+        packages: z
+          .array(
+            z
+              .string()
+              .max(80)
+              .regex(
+                /^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9._,-]+\])?((===|==|~=|!=|<=|>=|<|>)[A-Za-z0-9.+*!_-]+(,(===|==|~=|!=|<=|>=|<|>)[A-Za-z0-9.+*!_-]+)*)?$/,
+              ),
+          )
+          .max(32)
+          .nullable(),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+export type EngineReport = z.infer<typeof EngineReportSchema>;
+
+/** A run's report from what it left, each part known or null; null when it said nothing. */
+export function engineReport(said: {
+  model?: unknown;
+  version?: unknown;
+  seed?: unknown;
+  python?: unknown;
+  torch?: unknown;
+  packages?: unknown;
+}): EngineReport | null {
+  const shape = EngineReportSchema.shape;
+  const known = <T>(schema: z.ZodType<T>, value: unknown): T | null => {
+    const read = schema.safeParse(value);
+    return read.success ? read.data : null;
+  };
+  const runtime = {
+    python: known(Version, said.python),
+    torch: known(Version, said.torch),
+    packages: known(shape.runtime.unwrap().shape.packages, said.packages),
+  };
+  const report = {
+    model: known(shape.model.unwrap(), {
+      id: said.model,
+      version: known(Version, said.version),
+    }),
+    seed: known(shape.seed.unwrap(), said.seed),
+    runtime: Object.values(runtime).every((part) => part === null)
+      ? null
+      : runtime,
+  };
+  return Object.values(report).every((part) => part === null) ? null : report;
+}
+
 export type EngineAdapterV2 = {
   readonly contract: typeof ENGINE_CONTRACT_V2;
   capabilities(): CapabilityV2[];
@@ -375,6 +453,8 @@ export type EngineAdapterV2 = {
   status(executionRef: string): Promise<ExecutionStatus>;
   requestCancel(executionRef: string): Promise<Cancellation>;
   enumerateArtifacts(executionRef: string): Promise<Artifact[]>;
+  // What a succeeded run said of itself, where the engine keeps that.
+  reported?(executionRef: string): EngineReport | null;
   // An artifact's bytes in bounded chunks; the service re-hashes them.
   readArtifact(executionRef: string, handle: string): AsyncIterable<Uint8Array>;
   // After a restart: what is known about an execution, never a resubmit.

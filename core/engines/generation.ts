@@ -19,6 +19,7 @@ import {
   ENGINE_V2_LIMITS,
   type AssetRef,
   type EngineAdapterV2,
+  type EngineReport,
   type EngineRequestV2,
   type ExecutionStatus,
   type Operation,
@@ -80,6 +81,12 @@ export type GenerationRecord = {
   // may or may not have; it is checked, and never sent again.
   phase: "sending" | "sent";
   startedAt: number;
+  // When it was first known to have ended, and when its video was brought in. Absent from
+  // older records.
+  endedAt?: number;
+  importedAt?: number;
+  // What the run said of itself, kept when it was first known to have succeeded.
+  reported?: EngineReport;
   state: ExecutionStatus["state"];
   diagnostic: string | null;
   videoSha256: string | null;
@@ -183,6 +190,21 @@ export function createGenerationService(options: {
       }),
     );
 
+  // The moment a run is first known to have ended is kept with it, once.
+  const update = (
+    id: string,
+    change: Partial<GenerationRecord>,
+    known = clock(),
+  ) => {
+    const before = ledger.read(id);
+    const ends =
+      change.state !== undefined &&
+      ENDED.has(change.state) &&
+      before &&
+      !ENDED.has(before.state) &&
+      before.endedAt === undefined;
+    ledger.update(id, ends ? { ...change, endedAt: known } : change);
+  };
   const tracked = (id: string) => {
     const g = ledger.read(id);
     if (!g) throw new CommandError("NOT_FOUND", "Generation not found.");
@@ -215,6 +237,7 @@ export function createGenerationService(options: {
         "VALIDATION",
         "Only a finished generation can be imported.",
       );
+    const endKnown = clock();
     const artifacts = (await adapter.enumerateArtifacts(refOf(g))).filter(
       (a) => a.mediaType === "video/mp4",
     );
@@ -224,6 +247,7 @@ export function createGenerationService(options: {
         "A generation must leave exactly one video to import.",
       );
     const [artifact] = artifacts;
+    const reported = adapter.reported?.(refOf(g)) ?? null;
     const finish = (assetId: string, outputHash: string) => {
       const imported = {
         assetId,
@@ -240,7 +264,17 @@ export function createGenerationService(options: {
               : createHash("sha256").update(g.prompt).digest("hex"),
         },
       };
-      ledger.update(id, { imported, phase: "sent", state: "succeeded" });
+      update(
+        id,
+        {
+          imported,
+          importedAt: clock(),
+          ...(reported ? { reported } : {}),
+          phase: "sent",
+          state: "succeeded",
+        },
+        endKnown,
+      );
       return imported;
     };
     // Brought in already, and the answer was lost or the service stopped before
@@ -341,6 +375,9 @@ export function createGenerationService(options: {
         await adapter.enumerateArtifacts(refOf(g)).catch(() => [])
       ).filter((a) => a.mediaType === "video/mp4");
       change.videoSha256 = video?.sha256 ?? null;
+      // Kept now: what it was read from is gone after a restart.
+      const reported = adapter.reported?.(refOf(g));
+      if (reported) change.reported = reported;
     }
     if (g.phase === "sending" && state !== "failed" && state !== "succeeded")
       change.diagnostic = diagnostic ?? g.diagnostic;
@@ -356,7 +393,7 @@ export function createGenerationService(options: {
         ...(latest.diagnostic ? { diagnostic: latest.diagnostic } : {}),
         imported: latest.imported,
       };
-    ledger.update(id, change);
+    update(id, change);
     return {
       generationId: id,
       state,
@@ -510,7 +547,7 @@ export function createGenerationService(options: {
         )
         .catch((e: unknown) => {
           // Refused before anything was sent: it did not happen, so nothing is listed.
-          ledger.update(id, {
+          update(id, {
             state: "failed",
             dismissed: true,
             diagnostic:
@@ -520,7 +557,7 @@ export function createGenerationService(options: {
         })
         .finally(() => sending.delete(id));
       if ("refused" in answer) {
-        ledger.update(id, {
+        update(id, {
           state: "failed",
           dismissed: true,
           diagnostic: engineReasonMessage(answer.refused),
@@ -537,7 +574,7 @@ export function createGenerationService(options: {
         );
       }
       // Not knowing whether it arrived stays "sending": it is followed, not resent.
-      ledger.update(id, {
+      update(id, {
         executionRef: answer.executionRef,
         phase: answer.uncertain ? "sending" : "sent",
         // Stopped while it went: what that said still stands, and goes first.
@@ -571,7 +608,7 @@ export function createGenerationService(options: {
       // Already over: there is nothing to ask of the engine, and a refused run never left.
       // A finished one is still not to be brought in, as a stop always meant.
       if (ledger.remembersEnded && ENDED.has(g.state)) {
-        if (g.state === "succeeded") ledger.update(id, { cancelled: true });
+        if (g.state === "succeeded") update(id, { cancelled: true });
         return {
           requested: false,
           localProcessExited: true,
@@ -580,11 +617,11 @@ export function createGenerationService(options: {
           billingOutcome: "notApplicable" as const,
         };
       }
-      ledger.update(id, { cancelled: true });
+      update(id, { cancelled: true });
       const answer = await adapter.requestCancel(refOf(g));
       // The job list reads this: a cancelled job there must not read as a stopped run.
       if (answer.remoteOutcome !== "stopped" && !ENDED.has(g.state))
-        ledger.update(id, { diagnostic: stopNote(tracked(id)) });
+        update(id, { diagnostic: stopNote(tracked(id)) });
       return answer;
     },
 
@@ -594,12 +631,15 @@ export function createGenerationService(options: {
       return ledger.list(projectId).filter((g) => !g.dismissed);
     },
 
+    // One run's row as the ledger holds it, for the record of its take.
+    row: (id: string) => ledger.read(id),
+
     // Finished with here: it says nothing to the engine, and stops counting as work.
     dismiss(id: string) {
       const g = tracked(id);
       // A held copy's run stays held: this only takes it off the page.
-      if (g.held) return ledger.update(id, { dismissed: true });
-      ledger.update(id, {
+      if (g.held) return update(id, { dismissed: true });
+      update(id, {
         dismissed: true,
         ...(g.imported || g.state === "failed" ? {} : { cancelled: true }),
         ...(g.imported || g.cancelled || ENDED.has(g.state)

@@ -26,6 +26,7 @@ import { checkHandoff, HandoffSchema, readHandoff } from "../handoff.ts";
 import { readProgress } from "../progress.ts";
 import {
   CREATIVE_DOCUMENTS_ENABLED,
+  DOCUMENT_READ_VERSIONS,
   DOCUMENT_SCHEMA_VERSIONS,
   DocumentKind,
   creativeDocumentsEnabled,
@@ -92,6 +93,7 @@ import {
 import {
   createKaggleEngine,
   kaggleCli,
+  kaggleRecipeFacts,
   kaggleRecipes,
   ledgerOptions,
   notebookUrl,
@@ -131,7 +133,10 @@ import {
   ContinuityRefSchema,
   ReferencePackSchema,
   STORY_LIMITS,
-  StoryDocumentSchema,
+  StoredStorySchema,
+  parseStory,
+  upgradeStory,
+  type StoredStory,
   type StoryDocument,
   assembleOperations,
   assertOnFrames,
@@ -140,6 +145,14 @@ import {
   verifyReferencePack,
   verifyStory,
 } from "../story.ts";
+import {
+  DeclaredSchema,
+  TAKE_RECORD_LIMITS,
+  buildDeclaredRecord,
+  buildGenerationRecord,
+  recordHashOf,
+  type TakeRecord,
+} from "../take-record.ts";
 import {
   TAKE_LIMITS,
   TakeProposalInputSchema,
@@ -391,10 +404,226 @@ async function readStory(
       "The project changed while it was read; try again.",
     );
   return {
-    story: StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8"))),
+    story: parseStory(JSON.parse(bytes.toString("utf8"))),
     ref,
     canonical: fromEditView(head),
   };
+}
+
+// What a take's record is made from (MPR-101). A Blender job comes with part b.
+const RecordRequestSchema = z
+  .object({
+    takeId: Id,
+    from: z.union([
+      z.object({ generationId: Id }).strict(),
+      z.object({ declared: DeclaredSchema }).strict(),
+    ]),
+  })
+  .strict();
+
+// A run's row, wherever this service keeps it: the job table outlives the service and its
+// engine settings, and a run on this machine is kept in memory.
+const generationRow = (ctx: CommandContext, id: string) =>
+  ctx.generation?.service.row(id) ??
+  ctx.queue.generationLedger().read(id) ??
+  generations.get(ctx.store)?.service.row(id) ??
+  null;
+
+type WrittenRecord = {
+  takeId: string;
+  recordHash: string;
+  record: TakeRecord;
+};
+
+// What a retry of a save replays: the story that the request committed, under its own
+// version, and the records it named. Nothing is built again, since what a record is built
+// from may be gone or changed by now. The commit still checks the whole request.
+function committedStory(
+  store: ProjectStore,
+  receipt: RequestReceipt | undefined,
+  a: {
+    projectId: string;
+    documentId: string;
+    records?: z.infer<typeof RecordRequestSchema>[];
+  },
+) {
+  const ref =
+    receipt && store.committedDocument(receipt, a.projectId, a.documentId);
+  if (ref === undefined) return null;
+  if (ref?.kind !== "story")
+    throw new CommandError(
+      "IDEMPOTENCY_MISMATCH",
+      "Request ID was already used for a different request.",
+    );
+  const bytes = store.documentBytes(ref);
+  const story = parseStory(JSON.parse(bytes.toString("utf8")));
+  const hashOf = new Map(
+    story.scenes.flatMap((sc) =>
+      sc.shots.flatMap((shot) =>
+        shot.takes.map((t) => [t.id, t.recordHash] as const),
+      ),
+    ),
+  );
+  return {
+    story,
+    bytes,
+    schemaVersion: ref.schemaVersion,
+    attachments: [] as TakeRecord[],
+    records: (a.records ?? []).flatMap(({ takeId }) => {
+      const recordHash = hashOf.get(takeId);
+      return recordHash === undefined ? [] : [{ takeId, recordHash }];
+    }),
+    written: [] as WrittenRecord[],
+  };
+}
+
+// The story with the records it asks for named on their takes, each built from what the
+// service holds.
+async function withRecords(
+  ctx: CommandContext,
+  a: {
+    projectId: string;
+    story: StoredStory;
+    records?: z.infer<typeof RecordRequestSchema>[];
+  },
+): Promise<{ story: StoryDocument; written: WrittenRecord[] }> {
+  const story = upgradeStory(a.story);
+  if (!a.records?.length) return { story, written: [] };
+  const takes = new Map(
+    story.scenes.flatMap((sc) =>
+      sc.shots.flatMap((shot) => shot.takes.map((t) => [t.id, t] as const)),
+    ),
+  );
+  const assets = (await ctx.store.load(a.projectId)).assets;
+  const written = a.records.map(({ takeId, from }) => {
+    const take = takes.get(takeId);
+    if (!take)
+      throw new CommandError(
+        "VALIDATION",
+        "A record is for a take of this story.",
+      );
+    let record: TakeRecord;
+    if ("generationId" in from) {
+      const row = generationRow(ctx, from.generationId);
+      if (!row || row.projectId !== a.projectId)
+        throw new CommandError("NOT_FOUND", "Generation not found.");
+      if (!row.imported)
+        throw new CommandError(
+          "VALIDATION",
+          "This generation is not imported.",
+        );
+      if (row.imported.assetId !== take.assetId)
+        throw new CommandError(
+          "VALIDATION",
+          "This generation did not make the take's media.",
+        );
+      record = buildGenerationRecord(
+        row,
+        kaggleRecipeFacts(row.recipe) ?? {
+          route: "comfyui",
+          model: null,
+          fps: null,
+          steps: null,
+        },
+      );
+    } else {
+      const asset = assets.find((x) => x.id === take.assetId);
+      if (!asset)
+        throw new CommandError(
+          "VALIDATION",
+          "The take's media is not in this project.",
+        );
+      record = buildDeclaredRecord(
+        from.declared,
+        asset.hash,
+        take.lineage?.inputs ?? [],
+      );
+    }
+    return { takeId, recordHash: recordHashOf(record), record };
+  });
+  if (new Set(written.map((w) => w.takeId)).size !== written.length)
+    throw new CommandError("VALIDATION", "A take has one record.");
+  const hashOf = new Map(written.map((w) => [w.takeId, w.recordHash]));
+  return {
+    story: {
+      ...story,
+      scenes: story.scenes.map((sc) => ({
+        ...sc,
+        shots: sc.shots.map((shot) => ({
+          ...shot,
+          takes: shot.takes.map((t) => {
+            const recordHash = hashOf.get(t.id);
+            if (recordHash === undefined) return t;
+            if (t.recordHash !== undefined && t.recordHash !== recordHash)
+              throw new CommandError(
+                "VALIDATION",
+                "A take keeps its generation record.",
+              );
+            return { ...t, recordHash };
+          }),
+        })),
+      })),
+    },
+    written,
+  };
+}
+
+async function builtStory(
+  ctx: CommandContext,
+  a: Parameters<typeof withRecords>[1],
+) {
+  const { story, written } = await withRecords(ctx, a);
+  return {
+    story,
+    written,
+    bytes: Buffer.from(JSON.stringify(story), "utf8"),
+    schemaVersion: DOCUMENT_SCHEMA_VERSIONS.story,
+    attachments: written.map((w) => w.record),
+    records: written.map(({ takeId, recordHash }) => ({ takeId, recordHash })),
+  };
+}
+
+// Inside the commit: a take with a record keeps it and its media, and a record new to a
+// take is one this save wrote for it. Here and not in verifyStory, which other commands
+// run over stories that are not being saved.
+function assertRecordsKept(
+  story: StoryDocument,
+  savedAs: number,
+  before: unknown,
+  written: readonly WrittenRecord[],
+) {
+  const stored = before === null ? null : StoredStorySchema.parse(before);
+  if (stored?.formatVersion === 2 && savedAs === 1)
+    throw new CommandError(
+      "VALIDATION",
+      "This story was saved in a newer format; read it again before saving.",
+    );
+  const takesOf = (s: StoryDocument) =>
+    s.scenes.flatMap((sc) => sc.shots.flatMap((shot) => shot.takes));
+  const was = new Map(
+    stored ? takesOf(upgradeStory(stored)).map((t) => [t.id, t]) : [],
+  );
+  const wrote = new Map(written.map((w) => [w.takeId, w.recordHash]));
+  for (const take of takesOf(story)) {
+    const old = was.get(take.id);
+    if (
+      old?.recordHash !== undefined &&
+      (take.recordHash !== old.recordHash || take.assetId !== old.assetId)
+    )
+      throw new CommandError(
+        "VALIDATION",
+        "A take keeps its generation record.",
+      );
+    if (
+      take.recordHash !== undefined &&
+      old?.recordHash === undefined &&
+      wrote.get(take.id) !== take.recordHash
+    )
+      throw new CommandError(
+        "VALIDATION",
+        "A take's generation record is written by the service.",
+      );
+  }
 }
 
 const home = (ctx: CommandContext) =>
@@ -504,6 +733,16 @@ export const commands = {
     run: () => ({
       available: creativeDocumentsEnabled(),
       turnedOff: CREATIVE_DOCUMENTS_ENABLED && !creativeDocumentsEnabled(),
+      // The version of each kind this service writes, and those it reads.
+      kinds: Object.fromEntries(
+        DocumentKind.options.map((kind) => [
+          kind,
+          {
+            written: DOCUMENT_SCHEMA_VERSIONS[kind],
+            read: [...DOCUMENT_READ_VERSIONS[kind]],
+          },
+        ]),
+      ) as Record<DocumentKind, { written: number; read: number[] }>,
     }),
   }),
   "yamakan.document.commit": define({
@@ -528,6 +767,11 @@ export const commands = {
     run: async ({ store, principal, receipt }, a) => {
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      if (a.kind === "takeRecord")
+        throw new CommandError(
+          "VALIDATION",
+          "A take record is saved with its take.",
+        );
       // Stories and packs are checked against the project and the consent
       // ledger on every commit, so they are written only by their commands.
       if (a.kind === "story" || a.kind === "referencePack")
@@ -585,34 +829,57 @@ export const commands = {
     scope: "project:write",
     mutation: true,
     summary:
-      "Save a story document (scenes, shots and takes with stable ids and timings in ticks; shots pin reference pack versions) as a new revision. Compare-and-swap on expectedRevision and expectedContentHash (null for a new story).",
+      "Save a story document (scenes, shots and takes with stable ids and timings in ticks; shots pin reference pack versions) as a new revision, always in the newest story format. Compare-and-swap on expectedRevision and expectedContentHash (null for a new story). With records, the service also writes the record of how each named take was made (from an imported generation, or declared from a receipt) and the take names it by hash.",
     input: z
       .object({
         projectId: Id,
         expectedRevision: z.number().int().nonnegative(),
         documentId: Id,
         expectedContentHash: Sha256Hex.nullable(),
-        story: StoryDocumentSchema,
+        story: StoredStorySchema,
+        records: z
+          .array(RecordRequestSchema)
+          .max(TAKE_RECORD_LIMITS.recordsPerSave)
+          .optional(),
       })
       .strict(),
-    run: async ({ store, principal, receipt }, a) => {
+    run: async (ctx, a) => {
+      const { store, principal, receipt } = ctx;
       if (!creativeDocumentsEnabled())
         throw new CommandError("CAPABILITY_UNAVAILABLE", DOCUMENTS_OFF);
+      const { story, written, bytes, schemaVersion, attachments, records } =
+        committedStory(store, receipt, a) ?? (await builtStory(ctx, a));
       const project = await store.commitDocument(
         {
           projectId: a.projectId,
           expectedRevision: a.expectedRevision,
           documentId: a.documentId,
           kind: "story",
-          schemaVersion: 1,
+          schemaVersion,
           expectedContentHash: a.expectedContentHash,
-          source: { bytes: Buffer.from(JSON.stringify(a.story), "utf8") },
+          source: { bytes },
           principalId: principal.id,
+          attachments,
           verify: (c) => {
-            verifyStory(a.story, c);
+            assertRecordsKept(
+              story,
+              a.story.formatVersion,
+              // Another kind of document is refused as that, by the commit.
+              c.documents.some(
+                (d) => d.id === a.documentId && d.kind === "story",
+              )
+                ? JSON.parse(
+                    store
+                      .getDocument(a.projectId, a.documentId)
+                      .bytes.toString("utf8"),
+                  )
+                : null,
+              written,
+            );
+            verifyStory(story, c, a.documentId);
             // Takes' continuity references stay traceable (no consent
             // needed to keep history).
-            verifyStoryContinuity(a.story, c);
+            verifyStoryContinuity(story, c);
           },
         },
         receipt,
@@ -623,6 +890,7 @@ export const commands = {
         document: store
           .listDocumentsAt(a.projectId, project.revision)
           .find((d) => d.id === a.documentId),
+        records,
       };
     },
   }),
@@ -730,8 +998,8 @@ export const commands = {
               "VALIDATION",
               "This document is not a story.",
             );
-          story = StoryDocumentSchema.parse(JSON.parse(bytes.toString("utf8")));
-          verifyStory(story, c);
+          story = parseStory(JSON.parse(bytes.toString("utf8")));
+          verifyStory(story, c, a.documentId);
           // Each selected take is attached: its references' consents must
           // be usable now (YU-051).
           verifySelectedContinuity(story, c);
@@ -847,6 +1115,29 @@ export const commands = {
     run: async ({ store }, a) => {
       const { story, ref, canonical } = await readStory(store, a);
       return listTakes(story, ref, canonical);
+    },
+  }),
+  "yamakan.take.record": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read the record of how one take of a story was made: its route, recipe, model, request, inputs, output and times, checked against its hash.",
+    input: z
+      .object({ projectId: Id, documentId: Id, shotId: Id, takeId: Id })
+      .strict(),
+    run: async ({ store }, a) => {
+      const { story } = await readStory(store, a);
+      const take = shotWithTake(story, a.shotId, a.takeId).scenes[0]!.shots[0]!
+        .takes[0]!;
+      if (take.recordHash === undefined)
+        throw new CommandError(
+          "NOT_FOUND",
+          "The take has no generation record.",
+        );
+      return {
+        recordHash: take.recordHash,
+        record: store.takeRecord(a.projectId, a.documentId, take.recordHash),
+      };
     },
   }),
   "yamakan.take.compare": define({
@@ -968,12 +1259,10 @@ export const commands = {
               "The story changed since the proposal; propose it again.",
             );
           ref = read.ref;
-          story = StoryDocumentSchema.parse(
-            JSON.parse(read.bytes.toString("utf8")),
-          );
+          story = parseStory(JSON.parse(read.bytes.toString("utf8")));
           // The chosen take and the shot's reference pins, consents included.
           const one = shotWithTake(story, p.shotId, p.takeId);
-          verifyStory(one, c);
+          verifyStory(one, c, p.documentId);
           // And the references the take was made with, consents usable now
           // (YU-051): a check at attempt time is not an approval here.
           const continuity =

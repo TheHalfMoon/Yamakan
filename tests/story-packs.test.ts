@@ -173,7 +173,7 @@ function story(
     takeB = id();
   return {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Night walk",
     scenes: [
       {
@@ -505,7 +505,7 @@ test("timings are on the project's frames at 24000/1001, and a long story assemb
   });
   const board = (shots: ReturnType<typeof card>[]): StoryDocument => ({
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Long",
     scenes: [
       { id: id(), name: "One", shots: shots.slice(0, 100) },
@@ -1171,4 +1171,35 @@ test("screen time counts per playing channel, so unmuting a second clip is new u
     ),
     REVOKED,
   );
+});
+
+test("a story saved in the older form and one in the newer both assemble", async () => {
+  const c = await workspace();
+  for (const formatVersion of [1, 2]) {
+    const board = story(c, null);
+    board.scenes[0].id = id();
+    for (const shot of board.scenes[0].shots) shot.id = id();
+    const storyId = id();
+    await saveStory(c, storyId, {
+      ...board,
+      formatVersion,
+    } as unknown as StoryDocument);
+    assert.equal(
+      c.store.getDocument(c.projectId, storyId).ref.schemaVersion,
+      2,
+    );
+    const before = await head(c);
+    const assembled = (
+      await execute(c.browser, "yamakan.story.assemble", {
+        projectId: c.projectId,
+        expectedRevision: before.revision,
+        documentId: storyId,
+        trackId: before.tracks.find((t) => t.kind === "video")!.id,
+      })
+    ).result as Project;
+    assert.equal(
+      assembled.clips.length - before.clips.length,
+      board.scenes[0].shots.length,
+    );
+  }
 });

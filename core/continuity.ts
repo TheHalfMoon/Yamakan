@@ -29,7 +29,7 @@ import type { ConsentPurpose } from "./identity.ts";
 import {
   REFERENCE_CONSENT_PURPOSE,
   ReferencePackSchema,
-  StoryDocumentSchema,
+  parseStory,
   consentPurposeOf,
   type StoryDocument,
   type ContinuityRef,
@@ -692,9 +692,7 @@ export function assertPlacementConsent(
     if (sha256Hex(Buffer.from(bytes)) !== hash) throw damagedStory();
     let story: StoryDocument;
     try {
-      story = StoryDocumentSchema.parse(
-        JSON.parse(Buffer.from(bytes).toString("utf8")),
-      );
+      story = parseStory(JSON.parse(Buffer.from(bytes).toString("utf8")));
     } catch {
       throw damagedStory();
     }

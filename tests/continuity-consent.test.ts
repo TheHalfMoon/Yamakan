@@ -207,7 +207,7 @@ async function workspace() {
   const storyId = id();
   const story = (continuity: ContinuityRef[], withB = true): StoryDocument => ({
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "One shot",
     scenes: [
       {
@@ -627,7 +627,7 @@ test("assembling a story attaches its selected takes, so a revoked consent refus
   const takeId = crypto.randomUUID();
   const story: StoryDocument = {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Second",
     scenes: [
       {

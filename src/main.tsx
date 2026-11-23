@@ -2500,6 +2500,17 @@ function App() {
                               projectId: p.id,
                             }),
                           );
+                          // As the service stored it, with the records it wrote: a later
+                          // save must keep them.
+                          const stored = (await call("yamakan.document.get", {
+                            projectId: p.id,
+                            documentId: next.documentId,
+                          })) as any;
+                          kept = {
+                            documentId: next.documentId,
+                            contentHash: stored.contentHash,
+                            story: stored.content,
+                          };
                         }).finally(() => resolve(kept));
                       })
                     }

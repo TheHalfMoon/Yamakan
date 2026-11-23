@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { STORY_LIMITS, StoryDocumentSchema } from "../core/story.ts";
-import { addMadeVideo, madeRecords } from "../src/create/create-story.ts";
+import {
+  addMadeVideo,
+  madeRecords,
+  recordRequests,
+} from "../src/create/create-story.ts";
+import { parseReceipt } from "../src/create/create-model.ts";
 
 let counter = 0;
 const newId = () =>
@@ -155,4 +160,84 @@ test("a run from a picture is pinned to the version the page knows, and one with
   ]);
   assert.deepEqual(picturePins({ id: "gone" }, find), []);
   assert.deepEqual(picturePins(undefined, find), []);
+});
+
+test("a made video asks for its run's record, or declares its receipt", () => {
+  const story = add(null, video);
+  const takeId = story.scenes[0].shots[0].takes[0].id;
+  assert.deepEqual(recordRequests(story, video.assetId, receipt, "run"), [
+    { takeId, from: { generationId: "run" } },
+  ]);
+  assert.deepEqual(recordRequests(story, video.assetId, receipt), [
+    {
+      takeId,
+      from: {
+        declared: {
+          model: receipt.model,
+          revision: "r",
+          prompt: "A red kite.",
+          seed: 7,
+          steps: 30,
+          licence: "Apache-2.0",
+        },
+      },
+    },
+  ]);
+  // What a receipt leaves empty is left out, and without a model there is nothing to declare.
+  const [bare] = recordRequests(story, video.assetId, {
+    ...receipt,
+    revision: "",
+    licence: null,
+  });
+  assert.deepEqual(bare!.from, {
+    declared: {
+      model: receipt.model,
+      prompt: "A red kite.",
+      seed: 7,
+      steps: 30,
+    },
+  });
+  assert.deepEqual(
+    recordRequests(story, video.assetId, { ...receipt, model: "" }),
+    [],
+  );
+  // One already recorded, or not in the story, asks for nothing.
+  assert.deepEqual(recordRequests(story, newId(), receipt), []);
+  story.scenes[0].shots[0].takes[0].recordHash = hash;
+  assert.deepEqual(recordRequests(story, video.assetId, receipt), []);
+});
+
+test("a prompt this page cuts is declared whole, or not at all", () => {
+  const read = (prompt: string) =>
+    parseReceipt(
+      JSON.stringify({
+        ...receipt,
+        format: "yamakan.generation-receipt/v1",
+        stage: "done",
+        verified: true,
+        prompt,
+      }),
+    );
+  const declared = (prompt: string) => {
+    const r = read(prompt);
+    const [request] = recordRequests(
+      add(null, { ...video, receipt: r }),
+      video.assetId,
+      r,
+    );
+    return request && "declared" in request.from
+      ? request.from.declared.prompt.length
+      : null;
+  };
+  assert.deepEqual(
+    [2000, 2001, 4000, 4001].map((n) => declared("x".repeat(n))),
+    [2000, 2001, 4000, null],
+  );
+  assert.equal(read("x".repeat(3000)).prompt.length, 2000);
+});
+
+test("a story of the older form is written in the newer one", () => {
+  const older = { ...add(null, video), formatVersion: 1 };
+  const next = add(older, { ...video, assetId: newId() });
+  assert.doesNotThrow(() => StoryDocumentSchema.parse(next));
 });

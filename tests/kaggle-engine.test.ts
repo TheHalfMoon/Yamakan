@@ -1558,3 +1558,46 @@ test("a download stopped for a nearly full disk is fetched again once space is f
 
 test("a download that does not heed the stop is still not waited for", () =>
   stoppedWhileWriting(/readable result/, { grow: true, heedStop: false }));
+
+test("what a finished run's receipt says of it is kept, and nothing else of the receipt", async () => {
+  const k = kaggle(["RUNNING", "COMPLETE"], (runId, folder) => {
+    good(runId, folder);
+    const file = path.join(folder, "receipt.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        ...JSON.parse(readFileSync(file, "utf8")),
+        model: wan.model,
+        revision: wan.revision,
+        seed: 9,
+        python: "3.13.16",
+        torch: "2.11.0+cu130",
+        packages: ["diffusers==0.36.0"],
+        prompt: "the prompt",
+        gpus: ["/proc/driver"],
+      }),
+    );
+  });
+  const answer = await k.engine.submit(request(), context as never);
+  const ref = (answer as { executionRef: string }).executionRef;
+  assert.equal((await k.engine.status(ref)).state, "running");
+  assert.equal(k.engine.reported!(ref), null);
+  assert.equal((await k.engine.status(ref)).state, "succeeded");
+  assert.deepEqual(k.engine.reported!(ref), {
+    model: { id: wan.model, version: wan.revision },
+    seed: 9,
+    runtime: {
+      python: "3.13.16",
+      torch: "2.11.0+cu130",
+      packages: ["diffusers==0.36.0"],
+    },
+  });
+});
+
+test("a receipt that says nothing of its run is no failure", async () => {
+  const k = kaggle(["COMPLETE"], good);
+  const answer = await k.engine.submit(request(), context as never);
+  const ref = (answer as { executionRef: string }).executionRef;
+  assert.equal((await k.engine.status(ref)).state, "succeeded");
+  assert.equal(k.engine.reported!(ref), null);
+});

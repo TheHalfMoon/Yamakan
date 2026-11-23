@@ -387,6 +387,20 @@ test("hostile document bytes are refused before or during parsing", () => {
       (e: unknown) => e instanceof CommandError && e.code === code,
     );
   expect(() => validateDocument("studio", 2, ok), "VALIDATION");
+  // A story is read at both versions, and no other.
+  const story = (formatVersion: number) =>
+    bytes({
+      format: "yamakan.story",
+      formatVersion,
+      title: "Story",
+      scenes: [],
+    });
+  for (const version of [1, 2])
+    assert.ok(validateDocument("story", version, story(version)).hash);
+  assert.throws(
+    () => validateDocument("story", 3, story(2)),
+    /Unsupported story document schema version 3/,
+  );
   expect(
     () =>
       validateDocument(

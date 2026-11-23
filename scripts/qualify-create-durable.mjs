@@ -208,6 +208,14 @@ try {
   const listed = await service("yamakan.project.list", {});
   const projectId = (listed.projects ?? listed)[0].id;
 
+  // What the page itself asks for: the story saves, as they were sent.
+  const saves = [];
+  page.on("request", (r) => {
+    if (!r.url().endsWith("/api/v1/call")) return;
+    const body = JSON.parse(r.postData() ?? "{}");
+    if (body.operation === "yamakan.story.save") saves.push(body.parameters);
+  });
+
   // The save fails, once, as a service refusing or a lost answer would.
   let refused = 0;
   await page.route("**/api/v1/call", async (route) => {
@@ -256,6 +264,35 @@ try {
   assert.equal(now.shots[0].takes[0].lineage.outputHash, sha);
   const documentId = now.stories[0].id;
   step("trying again saves it once, with no duplicate", { documentId });
+
+  // MPR-101: the story is version 2, and the take's record says it is only declared.
+  const sent = saves.at(-1);
+  assert.equal(sent.story.formatVersion, 2);
+  assert.deepEqual(sent.records, [
+    {
+      takeId: now.shots[0].takes[0].id,
+      from: {
+        declared: {
+          model: "test-pattern",
+          revision: "none",
+          prompt: PROMPT,
+          seed: 11,
+          steps: 1,
+        },
+      },
+    },
+  ]);
+  assert.equal(now.stories[0].content.formatVersion, 2);
+  const declared = await service("yamakan.take.record", {
+    projectId,
+    documentId,
+    shotId: now.shots[0].id,
+    takeId: now.shots[0].takes[0].id,
+  });
+  assert.equal(declared.recordHash, now.shots[0].takes[0].recordHash);
+  assert.equal(declared.record.origin, "declared");
+  assert.equal(declared.record.output.sha256, sha);
+  step("its take has a declared record, in a version 2 story");
   await page.unroute("**/api/v1/call");
 
   // The save gets through and its answer is lost: the record exists, the page has not
@@ -318,6 +355,10 @@ try {
   now = await held(projectId);
   assert.equal(now.project.assets.length, 2, "no third asset");
   assert.equal(now.shots.length, 2, "no third shot");
+  assert.ok(
+    now.shots.every((shot) => shot.takes[0].recordHash),
+    "both takes keep their records",
+  );
   // The editor must have caught up, or its next change would be refused.
   await page
     .getByText(`Revision ${now.project.revision}`, { exact: true })

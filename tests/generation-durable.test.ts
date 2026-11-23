@@ -183,6 +183,10 @@ function kaggle() {
         frames: wan.frames,
         sha256: HASH,
         prompt: last.prompt,
+        model: wan.model,
+        revision: wan.revision,
+        seed: 7,
+        packages: ["diffusers==0.36.0"],
       }),
     );
   };
@@ -350,12 +354,21 @@ test("a finished video needs no second download after a restart", async () => {
   f.k.world.state = "COMPLETE";
   assert.equal((await f.s.service.status(id)).state, "succeeded");
   const downloads = f.k.world.downloads;
+  const { reported } = f.s.service.row(id)!;
+  // What its receipt said is kept, as the receipt is not.
+  assert.deepEqual(reported, {
+    model: { id: wan.model, version: wan.revision },
+    seed: 7,
+    runtime: { python: null, torch: null, packages: ["diffusers==0.36.0"] },
+  });
   // Kaggle's latest is now something else: its output could not be fetched again.
   await f.restart();
+  assert.deepEqual(f.s.service.row(id)!.reported, reported);
   f.k.world.down = true;
   const made = await f.s.service.importResult(id);
   assert.equal(made.lineage.outputHash, HASH);
   assert.equal(f.k.world.downloads, downloads);
+  assert.deepEqual(f.s.service.row(id)!.reported, reported);
   await f.s.close();
 });
 

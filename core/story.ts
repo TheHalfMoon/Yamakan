@@ -12,7 +12,7 @@ import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
 import { CommandError } from "./command/errors.ts";
 import { Id, frameRateOf, type Project } from "./project.ts";
-import type { DocumentRef } from "./document-ref.ts";
+import type { DocumentKind, DocumentRef } from "./document-ref.ts";
 import { Ticks, framesToTicks, ticksToFrames, type Rational } from "./time.ts";
 import type { CanonicalProject } from "./canonical.ts";
 import type { Operation } from "./timeline/operations.ts";
@@ -31,6 +31,9 @@ export const STORY_LIMITS = Object.freeze({
   inputsPerTake: 8,
   packsPerShot: 4,
   entriesPerPack: 64,
+  // UTF-8 bytes of the brief, the scene scripts and the shot intents together.
+  textBytes: 96 * 1024,
+  briefLanguages: 8,
 });
 
 const Name = z.string().trim().min(1).max(120);
@@ -82,6 +85,11 @@ const TakeSchema = z
   })
   .strict();
 
+// Version 2 (MPR-101): a take may name the record of how it was made.
+const TakeV2Schema = TakeSchema.extend({
+  recordHash: Sha256.optional(),
+}).strict();
+
 const PackPinSchema = z
   .object({
     documentId: Id,
@@ -109,7 +117,45 @@ const StorySceneSchema = z
   })
   .strict();
 
-export const StoryDocumentSchema = z
+// What both versions hold to.
+const checkStory = (
+  s: {
+    scenes: {
+      id: string;
+      shots: {
+        id: string;
+        takes: { id: string }[];
+        selectedTakeId: string | null;
+        referencePacks: { documentId: string }[];
+      }[];
+    }[];
+  },
+  ctx: { addIssue(issue: { code: "custom"; message: string }): void },
+) => {
+  const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+  const shots = s.scenes.flatMap((sc) => sc.shots);
+  if (shots.length > STORY_LIMITS.shots)
+    fail(`A story holds at most ${STORY_LIMITS.shots} shots.`);
+  const ids = [
+    ...s.scenes.map((x) => x.id),
+    ...shots.map((x) => x.id),
+    ...shots.flatMap((x) => x.takes.map((t) => t.id)),
+  ];
+  if (new Set(ids).size !== ids.length)
+    fail("Story identifiers must be unique.");
+  for (const shot of shots) {
+    if (
+      shot.selectedTakeId !== null &&
+      !shot.takes.some((t) => t.id === shot.selectedTakeId)
+    )
+      fail("A shot's selected take must be one of its takes.");
+    const pins = shot.referencePacks.map((p) => p.documentId);
+    if (new Set(pins).size !== pins.length)
+      fail("A shot pins each reference pack once.");
+  }
+};
+
+export const StoryDocumentV1Schema = z
   .object({
     format: z.literal("yamakan.story"),
     formatVersion: z.literal(1),
@@ -117,30 +163,122 @@ export const StoryDocumentSchema = z
     scenes: z.array(StorySceneSchema).max(STORY_LIMITS.scenes),
   })
   .strict()
-  .superRefine((s, ctx) => {
-    const fail = (message: string) => ctx.addIssue({ code: "custom", message });
-    const shots = s.scenes.flatMap((sc) => sc.shots);
-    if (shots.length > STORY_LIMITS.shots)
-      fail(`A story holds at most ${STORY_LIMITS.shots} shots.`);
-    const ids = [
-      ...s.scenes.map((x) => x.id),
-      ...shots.map((x) => x.id),
-      ...shots.flatMap((x) => x.takes.map((t) => t.id)),
-    ];
-    if (new Set(ids).size !== ids.length)
-      fail("Story identifiers must be unique.");
-    for (const shot of shots) {
-      if (
-        shot.selectedTakeId !== null &&
-        !shot.takes.some((t) => t.id === shot.selectedTakeId)
+  .superRefine(checkStory);
+
+// Version 2's text (MPR-106): what the film is meant to be, what each scene says and what
+// each shot is meant to show. Every field is optional; an empty one is left out.
+const Words = (max: number) => z.string().min(1).max(max);
+const someOf = (o: object) => Object.keys(o).length > 0;
+
+export const StoryBriefSchema = z
+  .object({
+    logline: Words(500).optional(),
+    audience: Words(300).optional(),
+    format: Words(120).optional(),
+    tone: Words(300).optional(),
+    languages: z
+      .array(
+        z
+          .string()
+          .min(2)
+          .max(35)
+          .regex(/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/),
       )
-        fail("A shot's selected take must be one of its takes.");
-      const pins = shot.referencePacks.map((p) => p.documentId);
-      if (new Set(pins).size !== pins.length)
-        fail("A shot pins each reference pack once.");
-    }
-  });
+      .min(1)
+      .max(STORY_LIMITS.briefLanguages)
+      .refine(
+        (tags) =>
+          new Set(tags.map((t) => t.toLowerCase())).size === tags.length,
+        "A brief names each language once.",
+      )
+      .optional(),
+  })
+  .strict()
+  .refine(someOf, "An empty brief is left out.");
+
+const Choice = z
+  .string()
+  .max(40)
+  .regex(/^[a-z0-9-]+$/);
+export const ShotIntentSchema = z
+  .object({
+    framing: Words(200).optional(),
+    movement: Words(200).optional(),
+    action: Words(2_000).optional(),
+    dialogue: Words(500).optional(),
+    // Create's direction choices, as they were chosen.
+    direction: z
+      .object({
+        shot: Choice.optional(),
+        movement: Choice.optional(),
+        lens: Choice.optional(),
+        light: Choice.optional(),
+      })
+      .strict()
+      .refine(someOf, "An empty direction is left out.")
+      .optional(),
+  })
+  .strict()
+  .refine(someOf, "An empty intent is left out.");
+
+const ShotV2Schema = ShotSchema.extend({
+  takes: z.array(TakeV2Schema).max(STORY_LIMITS.takesPerShot),
+  intent: ShotIntentSchema.optional(),
+}).strict();
+
+const StorySceneV2Schema = StorySceneSchema.extend({
+  shots: z.array(ShotV2Schema).max(STORY_LIMITS.shotsPerScene),
+  // Not "script", a name no command's input may have (tests/command.test.ts).
+  sceneText: Words(4_000).optional(),
+}).strict();
+
+/** The story as it is written: version 2. */
+export const StoryDocumentSchema = z
+  .object({
+    format: z.literal("yamakan.story"),
+    formatVersion: z.literal(2),
+    title: Name,
+    brief: StoryBriefSchema.optional(),
+    scenes: z.array(StorySceneV2Schema).max(STORY_LIMITS.scenes),
+  })
+  .strict()
+  .superRefine(checkStory);
 export type StoryDocument = z.infer<typeof StoryDocumentSchema>;
+
+/** A story as any build has stored it. */
+export const StoredStorySchema = z.discriminatedUnion("formatVersion", [
+  StoryDocumentV1Schema,
+  StoryDocumentSchema,
+]);
+export type StoredStory = z.infer<typeof StoredStorySchema>;
+
+/** A stored story in the form that is written. Version 2 only adds optional fields. */
+export const upgradeStory = (stored: StoredStory): StoryDocument =>
+  stored.formatVersion === 2 ? stored : { ...stored, formatVersion: 2 };
+
+/** A stored story's content, of either version, as version 2. */
+export const parseStory = (value: unknown): StoryDocument =>
+  upgradeStory(StoredStorySchema.parse(value));
+
+/** UTF-8 bytes of a story's brief, scripts and shot intents, without keys or punctuation. */
+export function storyTextBytes(story: StoryDocument): number {
+  const bytes = (value: unknown): number =>
+    typeof value === "string"
+      ? Buffer.byteLength(value, "utf8")
+      : value && typeof value === "object"
+        ? Object.values(value).reduce((n: number, v) => n + bytes(v), 0)
+        : 0;
+  return (
+    bytes(story.brief) +
+    story.scenes.reduce(
+      (n, sc) =>
+        n +
+        bytes(sc.sceneText) +
+        sc.shots.reduce((m, shot) => m + bytes(shot.intent), 0),
+      0,
+    )
+  );
+}
 
 export const REFERENCE_ROLES = [
   "character",
@@ -211,14 +349,25 @@ const schemaError = (e: unknown, what: string): never => {
   throw e;
 };
 
-/** Pure validation of a parsed story (core/documents.ts bounds it first). */
-export function validateStory(value: unknown) {
-  let content: StoryDocument;
+/**
+ * Pure validation of a parsed story (core/documents.ts bounds it first). As version 2, a
+ * version 1 story is accepted and its content is version 2; as version 1, which only
+ * names a stored document, the content stays as it is.
+ */
+export function validateStory(value: unknown, version = 2) {
+  let content: StoredStory;
   try {
-    content = StoryDocumentSchema.parse(value);
+    content =
+      version === 1 ? StoryDocumentV1Schema.parse(value) : parseStory(value);
   } catch (e) {
     return schemaError(e, "story");
   }
+  const text = storyTextBytes(upgradeStory(content));
+  if (text > STORY_LIMITS.textBytes)
+    throw new CommandError(
+      "LIMIT_EXCEEDED",
+      `The story's brief, scripts and shot intents hold ${text} bytes of text; the limit is ${STORY_LIMITS.textBytes}.`,
+    );
   const assetIds = new Set<string>();
   for (const sc of content.scenes)
     for (const shot of sc.shots)
@@ -252,8 +401,10 @@ export type CommitContext = {
   held: (
     documentId: string,
     contentHash: string,
-    kind: DocumentRef["kind"],
+    kind: DocumentKind,
   ) => boolean;
+  // The take records this commit writes beside the story, by hash.
+  attached?: ReadonlySet<string>;
   nowMs: number;
 };
 
@@ -282,10 +433,15 @@ export function assertOnFrames(ticks: number, rate: Rational, what: string) {
 /**
  * Inside the commit transaction: a story's timings are on the project's
  * frames, its takes are this project's stills or footage and fit their
- * source, and its pins name reference pack versions this project held
- * whose consents are still usable.
+ * source, its pins name reference pack versions this project held whose
+ * consents are still usable, and each take's record is held for the story
+ * (`documentId`) or written by this commit.
  */
-export function verifyStory(story: StoryDocument, c: CommitContext) {
+export function verifyStory(
+  story: StoryDocument,
+  c: CommitContext,
+  documentId: string,
+) {
   const rate = frameRateOf(c.project);
   // Each pinned version is read and checked once per commit.
   const checked = new Set<string>();
@@ -317,6 +473,15 @@ export function verifyStory(story: StoryDocument, c: CommitContext) {
           throw new CommandError(
             "VALIDATION",
             `Take of shot "${shot.name}" runs past the end of its source.`,
+          );
+        if (
+          take.recordHash !== undefined &&
+          !c.attached?.has(take.recordHash) &&
+          !c.held(documentId, take.recordHash, "takeRecord")
+        )
+          throw new CommandError(
+            "VALIDATION",
+            "A take's generation record is written by the service.",
           );
         if (take.lineage) {
           if (take.lineage.outputHash !== asset.hash)

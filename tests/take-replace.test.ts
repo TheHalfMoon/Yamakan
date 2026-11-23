@@ -180,7 +180,7 @@ function board(
   });
   const story: StoryDocument = {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "Three shots",
     scenes: [
       {
@@ -1020,7 +1020,7 @@ type Take = StoryDocument["scenes"][number]["shots"][number]["takes"][number];
 function storyOf(takes?: Take[]): StoryDocument {
   return {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: "One shot",
     scenes: [
       {
