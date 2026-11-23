@@ -149,7 +149,7 @@ agent surface with waits, approvals, budgets and an audit feed.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-201 | One model catalog; every existing model list checked against it | VERIFIED | none | none |
-| MPR-202 | Capabilities as supported, unsupported or unverified cells | QUALIFICATION_READY | MPR-201 | none |
+| MPR-202 | Capabilities as supported, unsupported or unverified cells | REVIEW_PENDING | MPR-201 | none |
 | MPR-203 | Preflight: estimate, egress disclosure and a hash that start checks | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | none |
 | MPR-204 | Default-deny gates with recorded human approvals | QUALIFICATION_READY | none | none |
 | MPR-205 | The Kaggle command-line route contained; quota facts stated | WAITING_DEPENDENCIES | MPR-204, MPR-207 | FD-10 (second part only) |
