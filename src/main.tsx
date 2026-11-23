@@ -1137,6 +1137,13 @@ function App() {
                 documentId: next.documentId,
                 expectedContentHash: next.expectedContentHash,
                 story: next.story,
+                ...(next.jobId
+                  ? {
+                      records: [
+                        { takeId: next.takeId, from: { jobId: next.jobId } },
+                      ],
+                    }
+                  : {}),
               } as any);
             const saved = (await call("yamakan.project.open", {
               projectId: p.id,

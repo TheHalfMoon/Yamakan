@@ -1451,6 +1451,20 @@ const has = (db: DatabaseSync, table: string) =>
     )
     .get(table) !== undefined;
 
+// The take records a stored story names, or an error where it does not read as one.
+function recordsNamed(bytes: Uint8Array): string[] {
+  const story = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+    scenes?: { shots?: { takes?: { recordHash?: unknown }[] }[] }[];
+  };
+  return (story.scenes ?? []).flatMap((scene) =>
+    (scene.shots ?? []).flatMap((shot) =>
+      (shot.takes ?? []).flatMap(({ recordHash }) =>
+        recordHash === undefined ? [] : [String(recordHash)],
+      ),
+    ),
+  );
+}
+
 export function creativeClosure(db: DatabaseSync): Closure {
   const closure: Closure = { documents: 0, objects: 0, gaps: 0, reported: [] };
   const gap = (g: ClosureGap) => {
@@ -1531,6 +1545,7 @@ export function creativeClosure(db: DatabaseSync): Closure {
     // A Cinema scene's digests are 3D models; every other kind's are Studio bitmaps.
     const models = new Set<string>();
     const documents = new Set<string>();
+    const records = new Set<string>();
     for (const project of parsed.values())
       for (const ref of project?.documents ?? [])
         documents.add(ref.contentHash);
@@ -1558,6 +1573,21 @@ export function creativeClosure(db: DatabaseSync): Closure {
       }
       for (const digest of digests)
         (row.kind === "cinemaScene" ? models : bitmaps).add(String(digest));
+      if (row.kind === "story")
+        try {
+          for (const name of recordsNamed(row.bytes)) records.add(name);
+        } catch {
+          gap({ projectId, kind: "document", ref: hash, reason: "unreadable" });
+        }
+    }
+    // Every take record a retained story names (MPR-101).
+    for (const hash of [...records].sort()) {
+      const row = document?.get(hash) as
+        { kind: string; bytes: Uint8Array } | undefined;
+      if (row?.kind !== "takeRecord")
+        gap({ projectId, kind: "document", ref: hash, reason: "missing" });
+      else if (createHash("sha256").update(row.bytes).digest("hex") !== hash)
+        gap({ projectId, kind: "document", ref: hash, reason: "mismatch" });
     }
     for (const digest of [
       ...new Set([...media, ...bitmaps, ...models]),

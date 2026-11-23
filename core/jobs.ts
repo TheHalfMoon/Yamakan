@@ -193,7 +193,7 @@ const ExportPayload = z
   .strict();
 // A Blender render (Blender integration, first slice): the scene the fixed script renders and
 // the name the made video joins the project under.
-const BlenderPayload = z
+export const BlenderPayload = z
   .object({
     format: z.literal("blender/1"),
     scene: BlenderSceneSchema,
@@ -204,6 +204,12 @@ const BlenderPayload = z
     plateAssetHash: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    // The story shot it was planned for, and the direction it was planned from (MPR-101).
+    shot: z.object({ documentId: Id, shotId: Id }).strict().optional(),
+    direction: z
+      .record(z.string().min(1).max(40), z.string().min(1).max(40))
+      .refine((d) => Object.keys(d).length <= 4)
       .optional(),
   })
   .strict()
@@ -731,6 +737,21 @@ export class JobSupervisor {
       }
     }
     return this.batchStatus(projectId, batchId);
+  }
+
+  /** A finished Blender render of this project: what it rendered, and the asset it made. */
+  blenderRender(projectId: string, jobId: string) {
+    const row = this.store.read((db) => this.#row(db, jobId));
+    if (!row || row.kind !== "blender-render" || row.project_id !== projectId)
+      throw new CommandError("NOT_FOUND", "Render not found.");
+    const payload = BlenderPayload.safeParse(safeJson(row.payload));
+    if (row.state !== "succeeded" || !payload.success)
+      throw new CommandError("VALIDATION", "This render is not finished.");
+    return {
+      jobId,
+      payload: payload.data,
+      assetId: /^asset:(.+)$/.exec(row.artifact ?? "")?.[1] ?? null,
+    };
   }
 
   status(jobId: string) {
@@ -1580,6 +1601,11 @@ export class JobSupervisor {
     // The tracked video behind a plate (match-move), and the hash it was tracked at.
     plateAssetId?: string,
     plateAssetHash?: string,
+    // The story shot and direction it is planned from.
+    from?: {
+      shot: { documentId: string; shotId: string };
+      direction: Record<string, string>;
+    },
   ) {
     if (this.#closing) throw new Error("Render queue is closing.");
     if (!this.#generation) await this.start();
@@ -1591,6 +1617,7 @@ export class JobSupervisor {
       name,
       ...(plateAssetId ? { plateAssetId } : {}),
       ...(plateAssetHash ? { plateAssetHash } : {}),
+      ...(from ? { shot: from.shot, direction: from.direction } : {}),
     });
     if (payload.plateAssetId) {
       const footage = project.assets.find((a) => a.id === payload.plateAssetId);

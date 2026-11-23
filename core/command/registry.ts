@@ -150,6 +150,7 @@ import {
   TAKE_RECORD_LIMITS,
   buildDeclaredRecord,
   buildGenerationRecord,
+  buildRenderRecord,
   recordHashOf,
   type TakeRecord,
 } from "../take-record.ts";
@@ -410,12 +411,13 @@ async function readStory(
   };
 }
 
-// What a take's record is made from (MPR-101). A Blender job comes with part b.
+// What a take's record is made from (MPR-101).
 const RecordRequestSchema = z
   .object({
     takeId: Id,
     from: z.union([
       z.object({ generationId: Id }).strict(),
+      z.object({ jobId: Id }).strict(),
       z.object({ declared: DeclaredSchema }).strict(),
     ]),
   })
@@ -533,11 +535,20 @@ async function withRecords(
           "VALIDATION",
           "The take's media is not in this project.",
         );
-      record = buildDeclaredRecord(
-        from.declared,
-        asset.hash,
-        take.lineage?.inputs ?? [],
-      );
+      if ("jobId" in from) {
+        const render = ctx.queue.blenderRender(a.projectId, from.jobId);
+        if (render.assetId !== asset.id)
+          throw new CommandError(
+            "VALIDATION",
+            "This render did not make the take's media.",
+          );
+        record = buildRenderRecord(render, asset.hash);
+      } else
+        record = buildDeclaredRecord(
+          from.declared,
+          asset.hash,
+          take.lineage?.inputs ?? [],
+        );
     }
     return { takeId, recordHash: recordHashOf(record), record };
   });
@@ -829,7 +840,7 @@ export const commands = {
     scope: "project:write",
     mutation: true,
     summary:
-      "Save a story document (scenes, shots and takes with stable ids and timings in ticks; shots pin reference pack versions) as a new revision, always in the newest story format. Compare-and-swap on expectedRevision and expectedContentHash (null for a new story). With records, the service also writes the record of how each named take was made (from an imported generation, or declared from a receipt) and the take names it by hash.",
+      "Save a story document (scenes, shots and takes with stable ids and timings in ticks; shots pin reference pack versions) as a new revision, always in the newest story format. Compare-and-swap on expectedRevision and expectedContentHash (null for a new story). With records, the service also writes the record of how each named take was made (from an imported generation, a finished Blender render, or declared from a receipt) and the take names it by hash.",
     input: z
       .object({
         projectId: Id,

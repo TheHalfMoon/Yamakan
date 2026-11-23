@@ -29,8 +29,9 @@ export type CinemaShotHost = {
     saveStory: boolean;
     shotId: string;
     takeId: string;
-    // The video the shot's clip must show.
+    // The video the shot's clip must show, and the render that made it.
     assetId: string;
+    jobId: string | null;
   }): Promise<string | null>;
 };
 
@@ -388,6 +389,7 @@ export function CinemaShot({
                   shotId: target.shotId,
                   takeId,
                   assetId: made.assetId,
+                  jobId,
                 });
                 if (why) throw new Error(why);
                 const done = await call<{ version: number }>(

@@ -10,6 +10,9 @@ import {
   Operation,
 } from "./engines/contract-v2.ts";
 import type { GenerationRecord } from "./engines/generation.ts";
+import { BLENDER_PIN } from "./blender/runtime.ts";
+import { LIGHTING } from "./blender/scene.ts";
+import type { BlenderPayload } from "./jobs.ts";
 import { canonicalJson, sha256Hex } from "./hash/canonical.ts";
 import { Id } from "./project.ts";
 
@@ -340,6 +343,72 @@ export function buildDeclaredRecord(
     output: { sha256: outputHash },
     // Its claims are the request above.
     reported: null,
+    timings: { startedAt: null, endedAt: null, importedAt: null },
+    usage: { wallMs: null, quotaSeconds: null },
+    derivedFromTakeId: null,
+    derivedFromRecordHash: null,
+    revisionNote: null,
+    changedFields: [],
+  });
+}
+
+/** The record of a finished Blender render, from its job row. The scene itself stays there. */
+export function buildRenderRecord(
+  render: { jobId: string; payload: z.output<typeof BlenderPayload> },
+  outputHash: string,
+): TakeRecord {
+  const { scene, direction, plateAssetId, plateAssetHash } = render.payload;
+  const { camera } = scene;
+  const light = direction?.light;
+  return TakeRecordSchema.parse({
+    format: "yamakan.take-record",
+    formatVersion: 1,
+    origin: "render",
+    route: "blender",
+    source: { jobId: render.jobId },
+    recipe: null,
+    model: null,
+    operation: "render",
+    request: {
+      kind: "render",
+      // The only version a render here runs on.
+      blenderVersion: BLENDER_PIN.version,
+      sceneFormat: scene.format,
+      sceneHash: sha256Hex(canonicalJson(scene)),
+      width: scene.width,
+      height: scene.height,
+      fps: scene.fps,
+      frames: scene.frames,
+      samples: scene.samples,
+      camera: {
+        focalLengthMm: camera.focalLengthMm,
+        sensorWidthMm: camera.sensorWidthMm,
+      },
+      moves: {
+        orbitDegrees: camera.orbitDegrees,
+        dolly: camera.dolly,
+        panDegrees: camera.panDegrees,
+        shake: camera.shake,
+      },
+      // As the planner reads the direction (core/director/cinema-shot.ts).
+      ...(light && Object.hasOwn(LIGHTING, light) ? { lighting: light } : {}),
+      ...(direction?.shot === "aerial" ? { view: "aerial" } : {}),
+      ...(direction && Object.keys(direction).length
+        ? {
+            direction: Object.entries(direction).map(([kind, choice]) => ({
+              kind,
+              choice,
+            })),
+          }
+        : {}),
+    },
+    inputs:
+      plateAssetId && plateAssetHash
+        ? [{ assetId: plateAssetId, assetHash: plateAssetHash, role: "plate" }]
+        : [],
+    output: { sha256: outputHash },
+    reported: null,
+    // The job path keeps no times.
     timings: { startedAt: null, endedAt: null, importedAt: null },
     usage: { wallMs: null, quotaSeconds: null },
     derivedFromTakeId: null,
