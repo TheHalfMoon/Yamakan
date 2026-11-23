@@ -1178,6 +1178,24 @@ function App() {
         }).finally(() => resolve(why));
       }),
   });
+  // Saving a story's words, from the Story page and from Create's offer (MPR-106).
+  const storyHost = (project: Project) => ({
+    client: {
+      call: (
+        operation: string,
+        parameters: Record<string, unknown>,
+        requestId?: string,
+      ) => client.call(operation as never, parameters as never, requestId),
+    },
+    unsaved: Boolean(history?.past.length || unapplied),
+    onSaved: documentSaved,
+    // A save that met a conflict stops here, so its notice and unapplied change stay.
+    onReload: () =>
+      run(async () => {
+        if (unapplied || !(await save())) return;
+        accept(await call("yamakan.project.open", { projectId: project.id }));
+      }),
+  });
   const cinemaPanel = (active = true) => (
     <>
       <h2>{t("cinema.title")}</h2>
@@ -2487,6 +2505,7 @@ function App() {
                         }
                       return stories;
                     }}
+                    storyHost={storyHost(p)}
                     reopenProject={() =>
                       run(async () => {
                         await save();
@@ -2734,23 +2753,8 @@ function App() {
                       key={p.id}
                       projectId={p.id}
                       revision={p.revision}
-                      client={{
-                        call: (operation, parameters) =>
-                          client.call(operation as never, parameters as never),
-                      }}
                       t={t}
-                      unsaved={Boolean(history?.past.length || unapplied)}
-                      onSaved={documentSaved}
-                      onReload={() =>
-                        run(async () => {
-                          await save();
-                          accept(
-                            await call("yamakan.project.open", {
-                              projectId: p.id,
-                            }),
-                          );
-                        })
-                      }
+                      {...storyHost(p)}
                       registerUnsaved={registerUnsaved}
                     />
                   </section>

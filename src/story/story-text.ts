@@ -267,6 +267,12 @@ export const stillToSave = (edits: Edits, story: TextStory): Edits =>
     ),
   );
 
+/** The edits that have a place in the story. */
+export const editsThatFit = (edits: Edits, story: TextStory): Edits =>
+  Object.fromEntries(
+    Object.entries(edits).filter(([, e]) => fieldText(story, e.field) !== null),
+  );
+
 /** Edits whose text the story holds differently from when they began, and what it says now. */
 export const changedUnder = (edits: Edits, story: TextStory) =>
   Object.values(edits).flatMap((e) => {

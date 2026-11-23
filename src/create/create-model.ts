@@ -176,7 +176,10 @@ export function readBrief(raw: string | null): CreateBrief {
   try {
     const kept = JSON.parse(raw);
     if (typeof kept?.prompt === "string")
-      brief.prompt = kept.prompt.slice(0, PROMPT_LIMIT);
+      // Never half a character.
+      brief.prompt = kept.prompt
+        .slice(0, PROMPT_LIMIT)
+        .replace(/[\uD800-\uDBFF]$/, "");
     if (CREATE_MODELS.some((m) => m.id === kept?.modelId))
       brief.modelId = kept.modelId;
     if (validSeed(kept?.seed)) brief.seed = kept.seed;

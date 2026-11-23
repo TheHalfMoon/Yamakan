@@ -76,7 +76,7 @@ test("a made video's prompt is written as the shot's action", () => {
   assert.equal(madeRecords(silent)[hash].prompt, "");
 });
 
-test("made records read the action, and the note for older shots", () => {
+test("made records read the action, and for older shots the note, which stays what it was", () => {
   const story = add(null, video);
   const [shot] = story.scenes[0].shots;
   const told = (over: object) =>
@@ -90,11 +90,13 @@ test("made records read the action, and the note for older shots", () => {
     told({ intent: { framing: "wide" }, notes: "Before." }),
     "Before.",
   );
-  // What a person has made of the action is what is shown.
+  // Words kept for an older shot do not take its prompt's place in the list.
   assert.equal(
-    told({ intent: { action: "Edited." }, notes: "Before." }),
-    "Edited.",
+    told({ intent: { action: "Kept since." }, notes: "Before." }),
+    "Before.",
   );
+  // A newer shot's action is the shot's own text, whoever wrote it last: the page says so.
+  assert.equal(told({ intent: { action: "Edited." } }), "Edited.");
   for (const odd of [
     { intent: 7, notes: 7 },
     { intent: { action: 7 }, notes: null },

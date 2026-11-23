@@ -273,6 +273,10 @@ try {
   assert.equal(JSON.parse(await stored(draftKey)).prompt, DRAFT);
   step("a save against a story that moved on writes nothing and asks again");
 
+  assert.match(
+    await page.getByTestId("create-draft-said").innerText(),
+    /changed elsewhere/,
+  );
   await page.waitForFunction(
     () =>
       document.querySelector('[data-testid="create-draft-shot"]')?.value === "",
@@ -282,6 +286,7 @@ try {
   await page.getByTestId("create-draft-shot").selectOption(kite.id);
   await page.getByTestId("create-draft-save").click();
   await offer.waitFor({ state: "detached" });
+  await page.getByTestId("create-draft-saved").waitFor();
   assert.deepEqual((await shotIn(kite.id)).intent, {
     framing: "wide",
     action: DRAFT,
@@ -494,6 +499,131 @@ try {
     "a stale save writes nothing, keeps the text, and saves on top after a reload",
   );
 
+  // A second save without a reload, of what was typed after the first.
+  await at("story-brief-audience").fill("Everyone, twice");
+  await at("story-text-save").click();
+  await at("story-text-done").waitFor();
+  assert.equal((await held()).content.brief.audience, "Everyone, twice");
+  step("a second save follows the first, and the page says it is saved");
+
+  // The service saves, and the answer is lost: the page asks again for the same request.
+  let lose = 1;
+  await page.route("**/api/v1/call", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}");
+    if (body.operation !== "yamakan.story.save" || lose-- <= 0)
+      return route.continue();
+    await route.fetch();
+    await route.abort("connectionreset");
+  });
+  const revisionBefore = await head();
+  await at("story-brief-tone").fill("Louder");
+  await at("story-text-save").click();
+  await at("story-text-done").waitFor();
+  assert.equal(await head(), revisionBefore + 1, "it was saved once");
+  assert.equal((await held()).content.brief.tone, "Louder");
+  step("a save whose answer is lost is saved once and said as saved");
+  lose = 2;
+  await at("story-brief-tone").fill("Loudest");
+  await at("story-text-save").click();
+  await at("story-text-refused").waitFor();
+  assert.equal(
+    await at("story-text-refused").getAttribute("data-why"),
+    "unknown",
+  );
+  assert.equal(await at("story-brief-tone").inputValue(), "Loudest");
+  await page.unroute("**/api/v1/call");
+  await at("story-text-reload").click();
+  await at("story-text-done").waitFor();
+  await at("story-text-refused").waitFor({ state: "detached" });
+  assert.equal(await at("story-text-save").isDisabled(), true, "it was saved");
+  assert.equal((await held()).content.brief.tone, "Loudest");
+  step(
+    "one lost twice is said as not known, and a reload shows that it is there",
+  );
+
+  // Undo waits for typed text, and text for a shot that is gone is kept and not saved.
+  await at("story-brief-tone").fill("Not saved");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.waitForTimeout(500);
+  assert.equal(await at("story-brief-tone").inputValue(), "Not saved");
+  assert.equal((await held()).content.brief.tone, "Loudest");
+  await at("story-text-discard").click();
+  assert.equal(await at("story-brief-tone").inputValue(), "Loudest");
+  if ((await at("story-shot-action").count()) !== 2)
+    await open(scenes[0].id).click();
+  await handsAction.fill("For a shot that will be gone");
+  const whole = await held();
+  await call("yamakan.story.save", {
+    projectId,
+    expectedRevision: await head(),
+    documentId,
+    expectedContentHash: whole.contentHash,
+    story: {
+      ...whole.content,
+      scenes: whole.content.scenes.map((s) =>
+        s.id === scenes[0].id ? { ...s, shots: [s.shots[0]] } : s,
+      ),
+    },
+  });
+  await at("story-text-save").click();
+  await at("story-text-refused").waitFor();
+  await at("story-text-reload").click();
+  await at("story-text-done").waitFor();
+  assert.match(
+    await at("story-text-under").innerText(),
+    /no longer in the story[^]*For a shot that will be gone/,
+  );
+  assert.equal(await at("story-text-save").isDisabled(), true);
+  const revisionGone = await head();
+  await at("story-text-discard").click();
+  await at("story-text-under").waitFor({ state: "detached" });
+  assert.equal(await head(), revisionGone);
+  const back = await held();
+  await call("yamakan.story.save", {
+    projectId,
+    expectedRevision: await head(),
+    documentId,
+    expectedContentHash: back.contentHash,
+    story: whole.content,
+  });
+  await openStory();
+  step(
+    "undo waits for typed text, and text for a shot that is gone is kept, not saved",
+  );
+
+  // A second story of the project is a story of its own.
+  const otherId = crypto.randomUUID();
+  await call("yamakan.story.save", {
+    projectId,
+    expectedRevision: await head(),
+    documentId: otherId,
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 2,
+      title: "Other",
+      scenes: [
+        { id: crypto.randomUUID(), name: "Only", shots: [shot("Only")] },
+      ],
+    },
+  });
+  await openStory();
+  await at("story-text-which").selectOption(otherId);
+  assert.equal(await at("story-brief-tone").inputValue(), "");
+  await at("story-brief-tone").fill("Of the other");
+  assert.equal(await at("story-text-which").isDisabled(), true);
+  await at("story-text-save").click();
+  await at("story-text-done").waitFor();
+  assert.equal(
+    (await call("yamakan.document.get", { projectId, documentId: otherId }))
+      .content.brief.tone,
+    "Of the other",
+  );
+  assert.equal((await held()).content.brief.tone, "Loudest");
+  await openStory();
+  await at("story-text-which").selectOption(documentId);
+  step("each of two stories is read and saved as itself");
+
   await at("story-brief-languages").fill("ar, ar");
   const atLanguages = sent.length;
   await at("story-text-save").click();
@@ -502,7 +632,7 @@ try {
     "languages",
   );
   assert.equal(sent.length, atLanguages);
-  await at("story-brief-languages").fill("ar, en-GB");
+  await at("story-text-discard").click();
   step("a repeated language is said, and nothing is sent");
 
   // Nearly full, then pasted over.
@@ -529,6 +659,7 @@ try {
     story: fullStory,
   });
   await openStory();
+  await at("story-text-which").selectOption(documentId);
   const nearly = Number(
     await at("story-text-used").getAttribute("data-percent"),
   );

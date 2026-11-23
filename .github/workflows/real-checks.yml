@@ -71,6 +71,10 @@ jobs:
         if: ${{ !cancelled() }}
         timeout-minutes: 10
         run: node scripts/qualify-create-durable.mjs "$RUNNER_TEMP/receipts/create-durable.json"
+      - name: The brief, scripts and shot texts of a story, in real Edge (MPR-106)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: node scripts/qualify-story-brief.mjs "$RUNNER_TEMP/receipts/MPR-106-story-brief.json"
       - name: Take review and a split shot, in real Edge (SS-006, MPR-105)
         if: ${{ !cancelled() }}
         timeout-minutes: 10

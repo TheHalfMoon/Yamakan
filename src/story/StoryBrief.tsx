@@ -3,12 +3,14 @@
 // the story; typing sends nothing.
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
+import { saveStory, type SaveOutcome, type StoryClient } from "./save-story.ts";
 import {
   SHOT_FIELDS,
   TEXT_LIMITS,
   changedUnder,
   directionText,
   edit,
+  editsThatFit,
   fieldKey,
   fieldText,
   fullness,
@@ -20,9 +22,6 @@ import {
   type TextStory,
 } from "./story-text.ts";
 
-type Client = {
-  call: (operation: string, args: Record<string, unknown>) => Promise<unknown>;
-};
 type Translate = (
   key: MessageKey,
   vars?: Record<string, string | number>,
@@ -32,7 +31,10 @@ type Held = {
   contentHash: string;
   story: TextStory & { title: string };
 };
-type Refusal = "conflict" | "full" | "languages" | "failed";
+// Why the last save wrote nothing, as far as is known.
+type Refusal =
+  | { why: "full" | "languages" | "unknown" | "gone" }
+  | { why: "failed"; message: string | null };
 
 const BRIEF = [
   { name: "logline", rows: 2, limit: TEXT_LIMITS.logline },
@@ -93,9 +95,10 @@ export function StoryBrief({
 }: {
   projectId: string;
   revision: number;
-  client: Client;
+  client: StoryClient;
   t: Translate;
-  // Saving moves the project on, so the editor's own edits come first.
+  // Saving moves the project on, and reloading replaces what the editor holds, so the editor's
+  // own edits come first.
   unsaved: boolean;
   onSaved: (projectId: string, from: number, to: number) => void;
   // The editor goes on from the project as it now is.
@@ -107,6 +110,9 @@ export function StoryBrief({
   const [edits, setEdits] = useState<Edits>({});
   const [openScene, setOpenScene] = useState<string | null>(null);
   const [refused, setRefused] = useState<Refusal | null>(null);
+  // The story is no longer as the page took it, and there is text typed on top.
+  const [moved, setMoved] = useState(false);
+  const [done, setDone] = useState<MessageKey | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedOnce, setSavedOnce] = useState(false);
   const [reads, setReads] = useState(0);
@@ -116,12 +122,17 @@ export function StoryBrief({
   latest.current = { base, edits };
   // A read that began before a later save or reload is not shown.
   const ticket = useRef(0);
+  const shown = useRef<HTMLDivElement | null>(null);
 
   useEffect(
     () => registerUnsaved(() => Object.keys(latest.current.edits).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  // A button that held focus may be gone or off: what came of it takes it.
+  useEffect(() => {
+    if (done || refused) shown.current?.focus();
+  }, [done, refused]);
   const read = async (): Promise<Held[]> => {
     const refs = (await caller.current.call("yamakan.document.list", {
       projectId,
@@ -150,6 +161,7 @@ export function StoryBrief({
   const adopt = (held: Held) => {
     hold(held);
     setEdits((typed) => stillToSave(typed, held.story));
+    setMoved(false);
   };
   useEffect(() => {
     const mine = ++ticket.current;
@@ -162,11 +174,10 @@ export function StoryBrief({
         // Nothing typed: the page shows the story as it is. Otherwise the person is told, and
         // reloads when they want to.
         if (Object.keys(typed).length === 0) {
-          const next = same ?? found[0] ?? null;
-          hold(next);
-          setRefused(null);
-        } else if (same?.contentHash !== held?.contentHash)
-          setRefused("conflict");
+          hold(same ?? found[0] ?? null);
+          setMoved(false);
+        } else if (!same) setRefused({ why: "gone" });
+        else if (same.contentHash !== held?.contentHash) setMoved(true);
       })
       .catch(() => {
         if (mine === ticket.current) setStories((known) => known ?? "unknown");
@@ -178,7 +189,8 @@ export function StoryBrief({
   const onText = useCallback((field: Field, text: string) => {
     const { base: held } = latest.current;
     if (!held) return;
-    setRefused((r) => (r === "conflict" ? r : null));
+    setRefused((r) => (r?.why === "unknown" || r?.why === "gone" ? r : null));
+    setDone(null);
     setEdits((typed) => edit(typed, held.story, field, text));
   }, []);
   const draft = useMemo(
@@ -197,64 +209,57 @@ export function StoryBrief({
   if (!base || !draft || !full)
     return <p data-testid="story-text-none">{t("words.none")}</p>;
 
-  const dirty = Object.keys(edits).length > 0;
+  const typed = Object.keys(edits).length > 0;
+  // Text for a scene or a shot that is gone cannot be saved.
+  const toSave = Object.keys(editsThatFit(edits, base.story)).length > 0;
   const value = (field: Field) =>
     edits[fieldKey(field)]?.now ?? fieldText(base.story, field) ?? "";
   const under = changedUnder(edits, base.story);
 
   const save = async () => {
+    setDone(null);
     if (!languagesFit(value({ at: "brief", name: "languages" })))
-      return setRefused("languages");
-    if (full.tooFull) return setRefused("full");
+      return setRefused({ why: "languages" });
+    if (full.tooFull) return setRefused({ why: "full" });
     setSaving(true);
     setRefused(null);
     const sent = edits;
-    try {
-      const answer = (await client.call("yamakan.story.save", {
-        projectId,
-        expectedRevision: revision,
-        documentId: base.documentId,
-        expectedContentHash: base.contentHash,
-        story: draft,
-      })) as {
-        project?: { revision?: number };
-        document: { contentHash: string };
-      };
-      setSavedOnce(true);
+    const outcome: SaveOutcome = await saveStory(client, {
+      projectId,
+      expectedRevision: revision,
+      documentId: base.documentId,
+      expectedContentHash: base.contentHash,
+      story: draft,
+    });
+    if (outcome.kind === "saved") {
       ticket.current++;
       // As sent, until it is read again as the service stored it.
-      const held = {
-        ...base,
-        contentHash: answer.document.contentHash,
-        story: draft,
-      };
-      hold(held);
-      // What was typed while it was being saved is still to save.
-      setEdits((typed) => {
+      hold({ ...base, contentHash: outcome.contentHash, story: draft });
+      // What was typed while it was being saved, and what had no place, is still there.
+      setEdits((now) => {
         const left: Edits = {};
-        for (const [key, e] of Object.entries(typed))
-          if (sent[key]?.now !== e.now)
-            left[key] = { ...e, was: fieldText(draft, e.field) ?? "" };
+        for (const [key, e] of Object.entries(now)) {
+          const says = fieldText(draft, e.field);
+          if (says === null) left[key] = e;
+          else if (sent[key]?.now !== e.now) left[key] = { ...e, was: says };
+        }
         return left;
       });
-      if (typeof answer.project?.revision === "number")
-        onSaved(projectId, revision, answer.project.revision);
+      setMoved(false);
+      setRefused(null);
+      setSavedOnce(true);
+      setDone("words.saved");
+      onSaved(projectId, revision, outcome.revision);
       setReads((n) => n + 1);
-    } catch (e) {
-      const { code } = e as { code?: unknown };
-      setRefused(
-        code === "REVISION_CONFLICT"
-          ? "conflict"
-          : code === "LIMIT_EXCEEDED"
-            ? "full"
-            : "failed",
-      );
-    } finally {
-      setSaving(false);
-    }
+    } else if (outcome.kind === "conflict") setMoved(true);
+    else if (outcome.kind === "refused")
+      setRefused({ why: "failed", message: outcome.message });
+    else setRefused({ why: outcome.kind });
+    setSaving(false);
   };
   const reload = async () => {
     setSaving(true);
+    setDone(null);
     try {
       await onReload();
       ticket.current++;
@@ -264,12 +269,21 @@ export function StoryBrief({
       if (same) {
         adopt(same);
         setRefused(null);
-      } else setRefused("failed");
+        setDone("words.reloaded");
+      } else setRefused({ why: "gone" });
     } catch {
-      setRefused("failed");
+      setRefused({ why: "failed", message: null });
     } finally {
       setSaving(false);
     }
+  };
+  const discard = () => {
+    latest.current = { ...latest.current, edits: {} };
+    setEdits({});
+    setRefused(null);
+    setMoved(false);
+    setDone("words.discarded");
+    setReads((n) => n + 1);
   };
 
   const label = (field: Field) =>
@@ -278,6 +292,7 @@ export function StoryBrief({
       : field.at === "scene"
         ? t("words.script")
         : t(`words.shot.${field.name}`);
+  const why = refused?.why ?? (moved ? "conflict" : null);
   return (
     <section
       className="story-words"
@@ -291,10 +306,14 @@ export function StoryBrief({
           <select
             data-testid="story-text-which"
             value={base.documentId}
-            disabled={dirty || saving}
+            disabled={typed || saving}
             onChange={(e) => {
               const next = stories.find((s) => s.documentId === e.target.value);
-              if (next) hold(next);
+              if (!next) return;
+              hold(next);
+              setRefused(null);
+              setMoved(false);
+              setDone(null);
             }}
           >
             {stories.map((s) => (
@@ -396,7 +415,7 @@ export function StoryBrief({
         {t("words.used", { percent: full.percent })}
       </p>
       {!savedOnce && <p className="note">{t("words.endsUndo")}</p>}
-      {unsaved && dirty && (
+      {unsaved && (typed || why) && (
         <p data-testid="story-text-save-first">{t("words.saveFirst")}</p>
       )}
       {under.length > 0 && (
@@ -410,30 +429,49 @@ export function StoryBrief({
           ))}
         </ul>
       )}
-      {refused && (
-        <p role="alert" data-testid="story-text-refused" data-why={refused}>
-          {refused === "full"
-            ? t("words.refused.full", { percent: full.percent })
-            : t(`words.refused.${refused}`)}
-        </p>
-      )}
+      <div ref={shown} tabIndex={-1}>
+        {why && (
+          <p role="alert" data-testid="story-text-refused" data-why={why}>
+            {refused?.why === "failed" && refused.message
+              ? t("words.refused.said", { message: refused.message })
+              : why === "full"
+                ? t("words.refused.full", { percent: full.percent })
+                : t(`words.refused.${why}`)}
+          </p>
+        )}
+        {done && (
+          <p role="status" data-testid="story-text-done">
+            {t(done)}
+          </p>
+        )}
+      </div>
       <div className="story-words-actions">
         <button
           type="button"
           data-testid="story-text-save"
-          disabled={!dirty || saving || unsaved}
+          disabled={!toSave || saving || unsaved}
           onClick={() => void save()}
         >
           {t("words.save")}
         </button>
-        {refused === "conflict" && (
+        {(moved || refused?.why === "unknown") && (
           <button
             type="button"
             data-testid="story-text-reload"
-            disabled={saving}
+            disabled={saving || unsaved}
             onClick={() => void reload()}
           >
             {t("words.reload")}
+          </button>
+        )}
+        {typed && (
+          <button
+            type="button"
+            data-testid="story-text-discard"
+            disabled={saving}
+            onClick={discard}
+          >
+            {t("words.discard")}
           </button>
         )}
       </div>

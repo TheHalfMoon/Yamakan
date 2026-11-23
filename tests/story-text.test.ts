@@ -22,7 +22,8 @@ import {
   storyTextBytes,
   type StoryDocument,
 } from "../core/story.ts";
-import { canonicalJson } from "../core/hash/canonical.ts";
+import { DatabaseSync } from "node:sqlite";
+import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import type { Project } from "../core/project.ts";
 import { CREATE_MODELS, emptyBrief } from "../src/create/create-model.ts";
 import {
@@ -32,6 +33,7 @@ import {
 } from "../src/create/create-story.ts";
 import { pinElement, unpinElement } from "../src/create/create-elements.ts";
 import { withRenderedTake } from "../src/director/cinemaShot.ts";
+import { saveStory } from "../src/story/save-story.ts";
 import {
   BRIEF_FIELDS,
   SHOT_FIELDS,
@@ -42,6 +44,7 @@ import {
   draftOffer,
   draftToIntent,
   edit,
+  editsThatFit,
   fieldKey,
   fieldText,
   fullness,
@@ -129,7 +132,56 @@ async function workspace() {
       (await execute(ctx, "yamakan.document.get", { projectId, documentId }))
         .result as { content: StoryDocument }
     ).content;
-  return { ctx, store, projectId, save, read };
+  return { root, ctx, store, projectId, save, read };
+}
+
+// The head's story as an older build left it: its bytes, hash and version 1, named by a head
+// snapshot of its own.
+function asAnOlderBuildStored(
+  w: Awaited<ReturnType<typeof workspace>>,
+  documentId: string,
+  one: object,
+) {
+  const bytes = Buffer.from(canonicalJson(one), "utf8");
+  const hash = sha256Hex(bytes);
+  const ref = w.store
+    .listDocuments(w.projectId)
+    .find((d) => d.id === documentId)!;
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  const head = db
+    .prepare(
+      "SELECT p.snapshot_hash AS hash, s.format AS format, s.bytes AS bytes FROM projects p JOIN snapshots s ON s.hash = p.snapshot_hash WHERE p.project_id = ?",
+    )
+    .get(w.projectId) as { hash: string; format: string; bytes: Uint8Array };
+  const snapshot = Buffer.from(
+    Buffer.from(head.bytes)
+      .toString("utf8")
+      .replace(ref.contentHash, hash)
+      .replace('"schemaVersion":2', '"schemaVersion":1'),
+    "utf8",
+  );
+  const next = sha256Hex(snapshot);
+  db.prepare(
+    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, 1, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
+  ).run(hash, bytes, bytes.length, ref.contentHash);
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) SELECT project_id, document_id, ?, revision FROM story_document_versions WHERE content_hash = ?",
+  ).run(hash, ref.contentHash);
+  db.prepare(
+    "INSERT INTO snapshots(hash, format, bytes, byte_length) VALUES (?, ?, ?, ?)",
+  ).run(next, head.format, snapshot, snapshot.length);
+  db.prepare("INSERT INTO snapshot_document_refs VALUES (?, ?)").run(
+    next,
+    hash,
+  );
+  db.prepare("UPDATE projects SET snapshot_hash = ? WHERE project_id = ?").run(
+    next,
+    w.projectId,
+  );
+  db.prepare(
+    "UPDATE revisions SET snapshot_hash = ? WHERE project_id = ? AND snapshot_hash = ?",
+  ).run(next, w.projectId, head.hash);
+  db.close();
 }
 const refused = async (p: Promise<unknown>) => {
   try {
@@ -485,13 +537,59 @@ test("the offer shows once and only with a draft and a story", () => {
 test("saving text into a version 1 story upgrades it without changing a take", async () => {
   const w = await workspace();
   const documentId = id();
-  const s = story([shot({ notes: "The prompt of before." })]);
-  const one = { ...s, formatVersion: 1 as const };
-  await w.save(documentId, one);
-  const told = withBrief(asText(one as never), { tone: "dry" });
+  // A still of the project, as its rows: a take needs no more.
+  const still = Buffer.from("a still   ");
+  const asset = {
+    id: id(),
+    name: "a.png",
+    kind: "image" as const,
+    hash: sha256Hex(still),
+    extension: "png" as const,
+    bytes: 10,
+    durationFrames: 1,
+    width: 64,
+    height: 36,
+    hasAudio: false,
+  };
+  await w.store.attachAsset(w.projectId, asset as never, (db) => {
+    db.prepare(
+      "INSERT INTO asset_objects(project_id, digest, byte_length, state, generation) VALUES (?, ?, 10, 'ready', 1)",
+    ).run(w.projectId, asset.hash);
+    db.prepare(
+      "INSERT INTO asset_versions(version_id, project_id, digest, probe) VALUES (?, ?, ?, '{}')",
+    ).run(asset.id, w.projectId, asset.hash);
+  });
+  const take = {
+    id: id(),
+    assetId: asset.id,
+    sourceStartTicks: 0,
+    lineage: { label: "seed 3", outputHash: asset.hash, inputs: [] },
+  };
+  const s = story([
+    shot({
+      notes: "The prompt of before.",
+      takes: [take],
+      selectedTakeId: take.id,
+    }),
+  ]);
+  await w.save(documentId, s);
+  const { formatVersion: _2, ...rest } = s;
+  asAnOlderBuildStored(w, documentId, { ...rest, formatVersion: 1 });
+  assert.equal(
+    w.store.listDocuments(w.projectId).find((d) => d.id === documentId)!
+      .schemaVersion,
+    1,
+  );
+  const read = await w.read(documentId);
+  const told = withBrief(asText(read), { tone: "dry" });
   assert.equal(told.formatVersion, 2);
   await w.save(documentId, told);
   assert.deepEqual(await w.read(documentId), { ...s, brief: { tone: "dry" } });
+  assert.equal(
+    w.store.listDocuments(w.projectId).find((d) => d.id === documentId)!
+      .schemaVersion,
+    2,
+  );
 });
 
 test("what is no brief or intent is refused, and nothing is saved", async () => {
@@ -645,6 +743,8 @@ test("edits hold on while the story moves on, and one put back is no edit", () =
     withEdits(gone, { [fieldKey(action)]: edits[fieldKey(action)]! }),
     gone,
   );
+  assert.deepEqual(Object.keys(editsThatFit(edits, gone)), ["brief:tone"]);
+  assert.equal(Object.keys(editsThatFit(edits, moved)).length, 2);
   assert.deepEqual(
     changedUnder(edits, gone).map((e) => [e.now, e.says]),
     [
@@ -747,4 +847,134 @@ test("the page's other writers of a story keep its words", () => {
     words(unpinElement(pinned as never, one.id, pin.documentId)),
     said,
   );
+});
+
+test("a save whose answer is lost is asked for again as the same request, and said as it is", async () => {
+  const w = await workspace();
+  const documentId = id();
+  await w.save(documentId, story([shot()]));
+  const lost = new TypeError("fetch failed");
+  // The service's own answers, as the page's client gives them.
+  const client = (
+    lose: (n: number) => boolean,
+    over?: (n: number) => Promise<unknown>,
+  ) => {
+    const asked: (string | undefined)[] = [];
+    return {
+      asked,
+      call: async (
+        operation: string,
+        args: Record<string, unknown>,
+        requestId?: string,
+      ) => {
+        asked.push(requestId);
+        const n = asked.length;
+        if (over) return over(n);
+        try {
+          const { result } = await execute(
+            { ...w.ctx, requestId } as CommandContext,
+            operation,
+            args,
+          );
+          if (lose(n)) throw lost;
+          return result;
+        } catch (e) {
+          if (e === lost) throw e;
+          const c = toCommandError(e);
+          throw Object.assign(new Error(c.message), {
+            code: c.code,
+            requestId: "r",
+          });
+        }
+      },
+    };
+  };
+  const held = () =>
+    w.store.listDocuments(w.projectId).find((d) => d.id === documentId)!;
+  const args = async (text: string) => ({
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId,
+    expectedContentHash: held().contentHash,
+    story: withBrief(asText(await w.read(documentId)), { tone: text }),
+  });
+  // Lost once: it landed once, and the second answer is of the same save.
+  const before = (await w.store.load(w.projectId)).revision;
+  const once = client((n) => n === 1);
+  const outcome = await saveStory(once, await args("dry"));
+  assert.deepEqual(outcome, {
+    kind: "saved",
+    revision: before + 1,
+    contentHash: held().contentHash,
+  });
+  assert.equal(once.asked.length, 2);
+  assert.ok(once.asked[0] && once.asked[0] === once.asked[1]);
+  assert.equal((await w.store.load(w.projectId)).revision, before + 1);
+  // Lost twice: not known.
+  const twice = client(() => true);
+  assert.deepEqual(await saveStory(twice, await args("wet")), {
+    kind: "unknown",
+  });
+  assert.equal(twice.asked.length, 2);
+  // A refusal is asked for once, and said as what it is.
+  const stale = client(() => false);
+  assert.deepEqual(
+    await saveStory(stale, {
+      ...(await args("x")),
+      expectedContentHash: "0".repeat(64),
+    }),
+    { kind: "conflict" },
+  );
+  assert.equal(stale.asked.length, 1);
+  const tooFull = await args("x");
+  const full = client(() => false);
+  assert.deepEqual(
+    await saveStory(full, {
+      ...tooFull,
+      story: {
+        ...tooFull.story,
+        scenes: Array.from({ length: 30 }, () => ({
+          id: id(),
+          name: "S",
+          sceneText: "x".repeat(4_000),
+          shots: [],
+        })),
+      },
+    }),
+    { kind: "full" },
+  );
+  const says = async (code: string | undefined, message: string, r = "r") =>
+    saveStory(
+      client(
+        () => false,
+        () =>
+          Promise.reject(
+            Object.assign(new Error(message), { code, requestId: r }),
+          ),
+      ),
+      tooFull,
+    );
+  // A limit that is not the story's own is not said as a full story.
+  const disk = "Insufficient free disk space to commit a revision.";
+  assert.deepEqual(await says("LIMIT_EXCEEDED", disk), {
+    kind: "refused",
+    message: disk,
+  });
+  assert.deepEqual(
+    await says("LIMIT_EXCEEDED", "Canonical document exceeds 262144 bytes."),
+    { kind: "full" },
+  );
+  // A schema's issues and an unknown fault are not shown.
+  for (const code of ["VALIDATION", "INTERNAL", "FORBIDDEN"])
+    assert.deepEqual(await says(code, "[{path: C:/x}]"), {
+      kind: "refused",
+      message: null,
+    });
+  // A code without the service's request is no answer of it.
+  assert.deepEqual(await says("UNAVAILABLE", "x", null as never), {
+    kind: "unknown",
+  });
+  assert.deepEqual(await says(undefined, "x"), { kind: "unknown" });
+  const long = (await says("BUSY", "b".repeat(900))) as { message: string };
+  assert.equal(long.message.length, 200);
 });

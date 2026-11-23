@@ -42,6 +42,8 @@ export type CreateStory = {
 export type MadeRecord = {
   // What the receipt said: its claims, not facts this checked.
   label: string;
+  // The shot's own text: the prompt it was made with, and since MPR-106 what a person has made
+  // of it. Not a claim of the receipt.
   prompt: string;
   // The stored file was converted on the way in, so it is not what was checked.
   converted: boolean;
@@ -191,11 +193,13 @@ export function madeRecords(story: unknown): Record<string, MadeRecord> {
           label: label.endsWith(CONVERTED)
             ? label.slice(0, -CONVERTED.length)
             : label,
+          // A shot made before MPR-106 keeps its prompt in its notes; one made since has none
+          // there.
           prompt:
-            typeof shot.intent?.action === "string"
-              ? shot.intent.action
-              : typeof shot.notes === "string"
-                ? shot.notes
+            typeof shot.notes === "string" && shot.notes !== ""
+              ? shot.notes
+              : typeof shot.intent?.action === "string"
+                ? shot.intent.action
                 : "",
           converted: label.endsWith(CONVERTED),
         };

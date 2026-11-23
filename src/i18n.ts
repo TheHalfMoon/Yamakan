@@ -182,8 +182,12 @@ const en = {
     "These words become what the shot shows. The model and the seed are not kept here; a made video's own record has them.",
   "create.draftReplaces": "It replaces what the shot says now: {text}",
   "create.draftUndo": "Saving the story ends the timeline's undo history.",
-  "create.draftNotSaved":
-    "It was not saved, and nothing changed. The story may have changed elsewhere; choose the shot again.",
+  "create.draftConflict":
+    "It was not saved: the story or the project changed elsewhere. Choose the shot again.",
+  "create.draftUnknown":
+    "Whether it was saved is not known. The stories were read again: choose the shot to see what it says.",
+  "create.draftNotSaved": "It was not saved, and nothing changed.",
+  "create.draftSaved": "Kept in the story.",
   "create.draftSave": "Save in the story",
   "create.draftKeep": "Keep it in the story",
   "create.draftLater": "Not now",
@@ -196,6 +200,7 @@ const en = {
   "create.receiptMatchedOriginal":
     "This project's record says the original file's hash matched its receipt when it came in. This is a converted copy.",
   "create.receiptSays": "The receipt says:",
+  "create.shotSays": "The shot's text:",
   "create.prompt": "Describe the shot",
   "create.promptHint": "A paper boat floats slowly along a calm stream.",
   "create.promptCount": "{count} of {limit} characters",
@@ -337,6 +342,15 @@ const en = {
     "The languages were not understood. Use up to eight different tags such as ar, en-GB.",
   "words.refused.failed":
     "It was not saved. Your text is kept here until you leave.",
+  "words.refused.said": "It was not saved: {message}",
+  "words.refused.unknown":
+    "Whether it was saved is not known. Reload the story to see; your text is kept here until you leave.",
+  "words.refused.gone":
+    "This story is no longer in the project. Your text is kept here until you leave or discard it.",
+  "words.saved": "Saved in the story.",
+  "words.reloaded": "The story as it now is, with your text on top.",
+  "words.discard": "Discard what is not saved",
+  "words.discarded": "What was not saved is discarded.",
   "workspace.finishIntro":
     "Output, the export job and agent tools. Export from the toolbar; the job shows in every workspace.",
   "workspace.output": "Output {size}, {seconds} s",
@@ -990,8 +1004,12 @@ const ar: Record<MessageKey, string> = {
     "يصبح هذا النص ما تعرضه اللقطة. لا يُحفظ النموذج ولا البذرة هنا؛ فهما في سجل الفيديو المنتَج.",
   "create.draftReplaces": "يحل محل ما تقوله اللقطة الآن: {text}",
   "create.draftUndo": "حفظ القصة ينهي سجل التراجع في المخطط الزمني.",
-  "create.draftNotSaved":
-    "لم تُحفظ ولم يتغير شيء. ربما تغيرت القصة في مكان آخر؛ اختر اللقطة مرة أخرى.",
+  "create.draftConflict":
+    "لم تُحفظ: تغيرت القصة أو المشروع في مكان آخر. اختر اللقطة مرة أخرى.",
+  "create.draftUnknown":
+    "لا يُعرف إن كانت قد حُفظت. قُرئت القصص مرة أخرى: اختر اللقطة لترى ما تقوله.",
+  "create.draftNotSaved": "لم تُحفظ ولم يتغير شيء.",
+  "create.draftSaved": "حُفظت في القصة.",
   "create.draftSave": "احفظ في القصة",
   "create.draftKeep": "احفظها في القصة",
   "create.draftLater": "ليس الآن",
@@ -1003,6 +1021,7 @@ const ar: Record<MessageKey, string> = {
     "يذكر سجل هذا المشروع أن بصمة هذا الملف طابقت إيصاله عند إحضاره.",
   "create.receiptMatchedOriginal":
     "يذكر سجل هذا المشروع أن بصمة الملف الأصلي طابقت إيصاله عند إحضاره. هذه نسخة محوّلة.",
+  "create.shotSays": "نص اللقطة:",
   "create.receiptSays": "يذكر الإيصال:",
   "create.prompt": "صف اللقطة",
   "create.promptHint": "قارب ورقي يطفو ببطء على جدول هادئ.",
@@ -1141,6 +1160,15 @@ const ar: Record<MessageKey, string> = {
   "words.refused.languages":
     "لم تُفهم اللغات. استخدم حتى ثمانية رموز مختلفة مثل ar, en-GB.",
   "words.refused.failed": "لم تُحفظ. ويبقى نصك هنا حتى تغادر.",
+  "words.refused.said": "لم تُحفظ: {message}",
+  "words.refused.unknown":
+    "لا يُعرف إن كانت قد حُفظت. أعد تحميل القصة لترى؛ ويبقى نصك هنا حتى تغادر.",
+  "words.refused.gone":
+    "لم تعد هذه القصة في المشروع. ويبقى نصك هنا حتى تغادر أو تتخلى عنه.",
+  "words.saved": "حُفظ في القصة.",
+  "words.reloaded": "القصة كما هي الآن، ونصك فوقها.",
+  "words.discard": "التخلي عما لم يُحفظ",
+  "words.discarded": "تُرك ما لم يُحفظ.",
   "workspace.finishIntro":
     "المُخرَج ومهمة التصدير وأدوات الوكلاء. صدّر من شريط الأدوات؛ تظهر المهمة في كل مساحة عمل.",
   "workspace.output": "المُخرَج {size}، {seconds} ث",

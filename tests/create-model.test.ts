@@ -78,6 +78,8 @@ test("a hostile stored draft is read as one that a shot's intent accepts", () =>
       prompt: "\u{1F600}".repeat(5000),
       direction: { shot: "wide", lens: "made-up", __proto__: "x", light: 7 },
     }),
+    // Cut in the middle of a character.
+    JSON.stringify({ prompt: `x${"\u{1F600}".repeat(5000)}` }),
     JSON.stringify({ prompt: { toString: "x" }, direction: "wide" }),
     JSON.stringify({ prompt: "x", direction: { movement: "../../secret" } }),
     JSON.stringify([1]),
@@ -91,6 +93,11 @@ test("a hostile stored draft is read as one that a shot's intent accepts", () =>
         stored.slice(0, 80),
       );
     assert.ok(!("modelId" in intent) && !("seed" in intent));
+    assert.doesNotMatch(
+      intent.action ?? "",
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/,
+      stored.slice(0, 80),
+    );
   }
   assert.deepEqual(
     draftToIntent(

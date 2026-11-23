@@ -104,9 +104,15 @@ test("the story form and Create's offer have their words in both languages (MPR-
   const fields = [
     ...BRIEF_FIELDS.map((name) => `words.brief.${name}`),
     ...SHOT_FIELDS.map((name) => `words.shot.${name}`),
-    ...["conflict", "full", "languages", "failed"].map(
-      (why) => `words.refused.${why}`,
-    ),
+    ...[
+      "conflict",
+      "full",
+      "languages",
+      "failed",
+      "said",
+      "unknown",
+      "gone",
+    ].map((why) => `words.refused.${why}`),
     ...["Title", "Shot", "Keep", "Later", "Never", "NotKept", "Undo"].map(
       (x) => `create.draft${x}`,
     ),
