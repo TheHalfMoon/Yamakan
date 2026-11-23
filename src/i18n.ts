@@ -193,22 +193,23 @@ const en = {
   "create.gateState.expired": "What you allowed has ended.",
   "create.gateState.revoked": "You took back what you allowed.",
   "create.gateState.exhausted":
-    "The runs you allowed are used up. A run that was sent is still followed.",
+    "No run can be sent under it: what it allowed is used up.",
   "create.gateState.voided":
     "What was allowed before a restore no longer counts.",
   "create.gateState.changed":
     "A proxy or a certificate setting has come or gone since you allowed it.",
   "create.gateRuns": "Runs",
   "create.gateHours": "Hours",
+  "create.gateFollows": "A run that was sent is followed under it.",
   "create.gateApprove": "Allow this",
   "create.gateApproveContact": "Allow following it",
   "create.gatesGiven": "Allowed.",
   "create.gatesTaken": "Taken back.",
   "create.gateRevoke": "Take it back",
   "create.gateGivenContact":
-    "Contacting {host} as {account}: {runs} runs left, until {until}.",
+    "Contacting {host} as {account}. Runs left: {runs}. Until {until}.",
   "create.gateGivenUse":
-    "Using the allowance of {host} as {account}: {runs} runs left, until {until}.",
+    "Using the allowance of {host} as {account}. Runs left: {runs}. Until {until}.",
   "create.draftTitle": "A draft only this browser holds",
   "create.draftNote":
     "Keep it in the project's story, where backups and other browsers have it too. It stays here as your working text either way.",
@@ -1068,11 +1069,12 @@ const ar: Record<MessageKey, string> = {
   "create.gateState.expired": "انتهى ما سمحت به.",
   "create.gateState.revoked": "سحبت ما سمحت به.",
   "create.gateState.exhausted":
-    "استُنفدت التشغيلات التي سمحت بها. ويستمر متابعة تشغيل أُرسل.",
+    "لا يمكن إرسال تشغيل بموجبه: استُنفد ما سمح به.",
   "create.gateState.voided": "ما سُمح به قبل استعادة لم يعد يُحسب.",
   "create.gateState.changed": "أُضيف إعداد وكيل أو شهادة أو أُزيل منذ سمحت به.",
   "create.gateRuns": "عدد التشغيلات",
   "create.gateHours": "الساعات",
+  "create.gateFollows": "يُتابَع بموجبه تشغيل أُرسل.",
   "create.gateApprove": "أسمح بهذا",
   "create.gateApproveContact": "أسمح بمتابعته",
   "create.gatesGiven": "سُمح به.",

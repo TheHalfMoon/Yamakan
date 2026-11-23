@@ -3,7 +3,8 @@
 // with an expiry and a limit. The places that refuse without one ask here (part b). An approval
 // is a row that is never changed; a revocation and a use are rows of their own. A restore brings
 // none back, and one of another epoch is void. The newest approval of a place is the one that
-// counts, so revoking it closes the place.
+// is asked about, so revoking it closes the place to every new contact and every new run; a run
+// that was counted on an older one asks about that one once more before it is pushed.
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -65,6 +66,9 @@ export type GateReading = {
   unitsLeft: number;
   // What was counted on it so far.
   uses: number;
+  // Whether a run that has left may be followed under it: an approval for contacting that is
+  // open, that a run was counted on, or that was given for following alone, with no bytes to send.
+  follows: boolean;
 };
 
 const unitOf = (kind: GateKind) => (kind === "spend" ? "seconds" : "bytes");
@@ -134,6 +138,10 @@ function readRow(
     runsLeft,
     unitsLeft,
     uses: row.runs,
+    follows:
+      row.kind === "egress" &&
+      (state === "approved" ||
+        (state === "exhausted" && (row.runs > 0 || row.limit_units === 0))),
   };
 }
 
@@ -149,6 +157,7 @@ const NONE = {
   runsLeft: 0,
   unitsLeft: 0,
   uses: 0,
+  follows: false,
 };
 
 function stateOf(db: DatabaseSync, ask: GateAsk, nowMs: number): GateReading {
@@ -208,11 +217,7 @@ export function requireGate(
   nowMs = Date.now(),
 ): GateReading & { approvalId: string } {
   const read = gateState(store, ask, nowMs);
-  if (
-    read.approvalId !== null &&
-    (read.state === "approved" ||
-      (ask.kind === "egress" && read.state === "exhausted" && read.uses > 0))
-  )
+  if (read.approvalId !== null && (read.state === "approved" || read.follows))
     return { ...read, approvalId: read.approvalId };
   throw refusal(ask, read.state as Exclude<GateState, "approved">);
 }

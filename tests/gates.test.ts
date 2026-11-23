@@ -30,6 +30,11 @@ import {
 import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
 import { CommandError } from "../core/command/errors.ts";
 import {
+  approvalRequests,
+  contactOpen,
+  gatesOpen,
+} from "../src/create/create-model.ts";
+import {
   GATE_LIMITS,
   approveGate,
   consumeGates,
@@ -149,6 +154,7 @@ test("without an approval a gate is closed, and an approval binds kind, route, h
     runsLeft: 0,
     unitsLeft: 0,
     uses: 0,
+    follows: false,
   });
   assert.equal(
     reason(() => requireGate(store, ASK)),
@@ -414,10 +420,22 @@ test("a limit is counted before the send and never refunded, and the same genera
     reason(() => requireGate(store, SPEND)),
     /The approval is used up for using the allowance/,
   );
-  // An approval of nothing, which nothing was counted on, allows nothing.
+  // One with no bytes to send is for following alone: contact, and no run.
   give(store, ASK, { units: 0 });
-  assert.match(
+  assert.equal(
     reason(() => requireGate(store, ASK)),
+    "ok",
+  );
+  assert.deepEqual(
+    [gateState(store, ASK).state, gateState(store, ASK).follows],
+    ["exhausted", true],
+  );
+  assert.match(use("six", 1, 0), /The approval is used up for contacting/);
+  // A limit that nothing was counted on, and that is no such one, allows nothing.
+  give(store, SPEND, { units: 0 });
+  assert.equal(gateState(store, SPEND).follows, false);
+  assert.match(
+    reason(() => requireGate(store, SPEND)),
     /The approval is used up/,
   );
   // A use of nothing is a use, and is counted once.
@@ -756,6 +774,7 @@ test("the list is bounded, newest first, with how each stands", async () => {
     runsLeft: 0,
     unitsLeft: 0,
     uses: 0,
+    follows: false,
   };
   assert.deepEqual(await call("yamakan.gates.list", {}), {
     approvals: [],
@@ -1113,6 +1132,33 @@ test("what was counted for a run is asked about again before it is pushed", asyn
         }
       });
     }
+});
+
+test("allowing a run to be followed lets no other be sent, whatever is left of the allowance", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    const [egress] = await r.both({ limit: { runs: 3, units: 9e6 } });
+    const id = await r.start();
+    await r.ask("yamakan.gates.revoke", { approvalId: egress.id });
+    const { route: here } = await r.ask("yamakan.gates.list", {});
+    // What the page sends while a run is followed.
+    const [request, ...more] = approvalRequests(here, { runs: 1, hours: 1 }, [
+      "egress",
+    ]);
+    assert.deepEqual(more, []);
+    await r.ask("yamakan.gates.approve", request!);
+    assert.equal((await r.status(id)).state, "running");
+    const { route: after } = await r.ask("yamakan.gates.list", {});
+    assert.equal(contactOpen(after), true);
+    assert.equal(gatesOpen(after), false);
+    const before = r.calls().filter((c) => c === "push").length;
+    assert.match(
+      await answered(r.start("kaggle-cogvideox-2b")),
+      /^CAPABILITY_UNAVAILABLE: The approval is used up for contacting/,
+    );
+    assert.equal(r.calls().filter((c) => c === "push").length, before);
+    assert.equal((await r.list()).length, 1);
+  });
 });
 
 test("an approval for another account, purpose or network starts no process", async () => {

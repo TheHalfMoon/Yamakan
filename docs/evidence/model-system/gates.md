@@ -12,8 +12,8 @@ At `245b079`, by reading: no `gate_approvals` table, no `core/gates.ts` and no `
 - **`consumeGates`** counts both gates of a run in one transaction, where the card had one call for each.
 - **A refusal while a run is being sent** is told apart from an answer of the CLI by the error itself, so that it is never taken for a run that may have left, nor an ended run for a failed one.
 - **The page starts the run even with no approval,** and shows the service's refusal: the service decides, not the page.
-- **One press records both approvals.** They are two commands: if the second fails, the first stands, is listed and can be taken back. To follow a run only contacting is asked for, so no other run is allowed by it.
-- **The page lists the newest approval of each kind,** also when its runs are used up, since it still lets a run be followed until it ends; an older one never counts again. What the person was shown of the network settings is sent with the approval, and other ones are refused.
+- **One press records both approvals.** They are two commands: if the second fails, the first stands, is listed and can be taken back. To follow a run only contacting is asked for, with no bytes to send, so no run can be sent under it, whatever is left of the allowance.
+- **The page lists the newest approval of each kind,** also when its runs are used up, since it still lets a run be followed until it ends; no new run or contact is allowed by an older one. What the person was shown of the network settings is sent with the approval, and other ones are refused.
 - **The page proposes one run and one hour.** A run may take an hour and wait in a queue before it; when the hour ends it goes on at Kaggle and is followed no more until a person approves again, which the page says before the press.
 - **OA-20** closes an approval for every contact under other network settings, and putting them back opens it again.
 
@@ -32,17 +32,3 @@ At `245b079`, by reading: no `gate_approvals` table, no `core/gates.ts` and no `
 - Real Kaggle: the optional real run of `qualify-kaggle-generation.mjs` needs FD-3 and quota, so it is BLOCKED. Its scripts ask for the approvals now; they were not run.
 - `qualify:kaggle-screens` was changed to approve through the page first. On the founder host its first eleven steps pass, the approvals among them, and it then stops where a video is brought in: the media worker does not start in that host's sandbox (ledger 12). It is not a PASS.
 - Two processes racing for one approval: one connection holding the database is tested, and two starts at once in one service.
-
-## The check
-
-`npm run qualify:gates`: **PASS** at `04628a573450d5b264c05c66f6e5b2916c4fb871`, with a clean checkout. Host: `{"platform":"win32","githubImage":null,"freeDiskBytes":13820829696,"freeMemoryBytes":4462768128,"onAcPower":true,"load":null,"need":"unmeasured"}`.
-
-- with no approval the page says what would be allowed, one run and one hour.
-- with no approval the start is refused on the page, and the stand-in was not started.
-- an agent's token is refused the approval and the list.
-- one press approves both, the start is sent once, and one run is counted.
-- taken back, two intervals pass with no start of the stand-in, and the page says why.
-- a new approval resumes following the same run, with no second push.
-- under a proxy that came since, nothing is contacted and the page asks again.
-- the page turns right to left in Arabic, whose words are unreviewed.
-- no external requests and no page errors.

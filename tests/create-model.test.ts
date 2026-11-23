@@ -130,8 +130,8 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
     network: { proxyConfigured: false, certificateOverride: false },
     run: { bytes: 1_000_000, seconds: 5_401 },
     gates: [
-      { kind: "egress", state: "missing", runsLeft: 0, uses: 0 },
-      { kind: "spend", state: "missing", runsLeft: 0, uses: 0 },
+      { kind: "egress", state: "missing", runsLeft: 0, follows: false },
+      { kind: "spend", state: "missing", runsLeft: 0, follows: false },
     ],
   };
   assert.deepEqual(GATE_PROPOSAL, { runs: 1, hours: 1 });
@@ -150,7 +150,8 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
   ]);
   // To follow a run, contacting alone.
   assert.deepEqual(approvalRequests(route, { runs: 1, hours: 2 }, ["egress"]), [
-    { ...base, kind: "egress", limit: { runs: 1, units: 1_000_000 } },
+    // With no bytes: no run can be sent under it.
+    { ...base, kind: "egress", limit: { runs: 1, units: 0 } },
   ]);
   for (const bad of [
     { runs: 0, hours: 1 },
@@ -199,8 +200,8 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
   const gates = (a: GateStateName, b: GateStateName) => ({
     ...route,
     gates: [
-      { kind: "egress" as const, state: a, runsLeft: 1, uses: 0 },
-      { kind: "spend" as const, state: b, runsLeft: 1, uses: 0 },
+      { kind: "egress" as const, state: a, runsLeft: 1, follows: false },
+      { kind: "spend" as const, state: b, runsLeft: 1, follows: false },
     ],
   });
   assert.equal(gatesOpen(gates("approved", "approved")), true);
@@ -221,25 +222,20 @@ test("what a person approves is said and asked for as one (MPR-204)", () => {
       assert.ok(translate(lang, `create.gateState.${state}`).length > 5);
   }
   // What still lets a run be followed, and which approvals can be taken back.
-  for (const [state, uses, follows] of [
-    ["approved", 0, true],
-    ["exhausted", 1, true],
-    ["exhausted", 0, false],
-    ["revoked", 1, false],
-    ["expired", 1, false],
-    ["voided", 1, false],
-    ["changed", 1, false],
+  for (const [egress, spend, open] of [
+    [true, false, true],
+    [false, true, false],
+    [false, false, false],
   ] as const)
     assert.equal(
       contactOpen({
         ...route,
         gates: [
-          { kind: "egress", state, runsLeft: 0, uses },
-          { kind: "spend", state: "approved", runsLeft: 1, uses: 0 },
+          { kind: "egress", state: "exhausted", runsLeft: 0, follows: egress },
+          { kind: "spend", state: "approved", runsLeft: 1, follows: spend },
         ],
       }),
-      follows,
-      state,
+      open,
     );
   const row = (
     id: string,

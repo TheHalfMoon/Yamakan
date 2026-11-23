@@ -349,6 +349,11 @@ class P { static int Main(string[] a) {
         '[data-testid="create-gates-list"] li[data-state="exhausted"]',
       ).length === 2,
   );
+  const listed = await at("create-gates-list").innerText();
+  assert.equal(
+    listed.match(/A run that was sent is followed under it/g)?.length,
+    1,
+  );
   assert.equal(await gates.getAttribute("data-needed"), "false");
   assert.equal(await at("create-gates-approve").count(), 0);
   step(

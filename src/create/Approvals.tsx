@@ -188,11 +188,14 @@ export function Approvals(props: {
                 {
                   host: a.host,
                   account: a.account,
-                  runs: a.runsLeft,
+                  runs: a.state === "exhausted" ? 0 : a.runsLeft,
                   until: props.moment(a.expiresAt),
                 },
               )}{" "}
-              {a.state !== "approved" && t(`create.gateState.${a.state}`)}
+              {a.state !== "approved" && t(`create.gateState.${a.state}`)}{" "}
+              {a.kind === "egress" &&
+                a.state === "exhausted" &&
+                t("create.gateFollows")}
             </span>{" "}
             <button
               type="button"

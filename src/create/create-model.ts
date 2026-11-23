@@ -336,7 +336,8 @@ export type GateRouteInfo = {
     kind: GateKind;
     state: GateStateName;
     runsLeft: number;
-    uses: number;
+    // Whether a run that has left may be followed under it.
+    follows: boolean;
   }[];
 };
 export type GateApprovalRow = {
@@ -360,17 +361,13 @@ const HOUR_MS = 3_600_000;
 export const gatesOpen = (route: GateRouteInfo) =>
   route.gates.length === 2 && route.gates.every((g) => g.state === "approved");
 
-/** Whether a run that has left may be followed: an approval that is only used up still lets it. */
+/** Whether a run that has left may be followed. */
 export const contactOpen = (route: GateRouteInfo) =>
-  route.gates.some(
-    (g) =>
-      g.kind === "egress" &&
-      (g.state === "approved" || (g.state === "exhausted" && g.uses > 0)),
-  );
+  route.gates.some((g) => g.kind === "egress" && g.follows);
 /**
  * The approvals that count, to be shown and taken back: the newest of each kind of this route's
  * account, while it still allows anything or would again under its own settings. The service
- * gives the newest first, and an older one never counts again.
+ * gives the newest first, and no new run or contact is allowed by an older one.
  */
 export function approvalsInForce({ approvals, route }: GateAnswer) {
   if (!route) return [];
@@ -412,7 +409,10 @@ export function approvalRequests(
     ttlMs: hours * HOUR_MS,
     limit: {
       runs,
-      units: runs * (kind === "egress" ? route.run.bytes : route.run.seconds),
+      // With no bytes to send, it is for following alone: no run can be counted on it.
+      units: kinds.includes("spend")
+        ? runs * (kind === "egress" ? route.run.bytes : route.run.seconds)
+        : 0,
     },
   }));
 }
