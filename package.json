@@ -48,6 +48,7 @@
     "qualify:q10": "node scripts/qualify-q10-studio.mjs",
     "qualify:studio-activation": "node scripts/qualify-studio-activation.mjs",
     "qualify:quality-lab": "node scripts/qualify-quality-lab.mjs",
+    "qualify:agent-mcp": "node scripts/qualify-agent-mcp.mjs",
     "qualify:agent-access": "node scripts/qualify-agent-access.mjs",
     "qualify:blender-slice": "node scripts/qualify-blender-e2e.mjs",
     "qualify:cinema-blender": "node scripts/qualify-cinema-blender.mjs",

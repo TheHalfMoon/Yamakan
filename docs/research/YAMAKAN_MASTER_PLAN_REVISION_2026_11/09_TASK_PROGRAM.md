@@ -89,7 +89,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-403 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
 | MPR-404 | 4 | DEFERRED | MPR-202, MPR-206, MPR-403, MPR-203, MPR-204, MPR-507 | Emit Blender depth and normal control passes for control-capable routes |
 | MPR-405 | 4 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-401, MPR-402 | Build the consistency measurement harness with a local blind forced-choice study |
-| MPR-501 | 2 | QUALIFICATION_READY | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
+| MPR-501 | 2 | REVIEW_PENDING | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
 | MPR-502 | 2 | WAITING_DEPENDENCIES | MPR-501 | Add a bounded job wait and a revision event cursor for agents |
 | MPR-503 | 2 | WAITING_DEPENDENCIES | MPR-501 | Let the CLI and SDK act as an agent, generate CLI help, and add media import helpers |
 | MPR-504 | 2 | WAITING_DEPENDENCIES | MPR-501 | Add hash-bound approval requests so an agent can ask a person to run a human-only command |
@@ -4596,7 +4596,7 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 2 |
 | Track | 5 |
 | Pillars | E |
