@@ -1,0 +1,55 @@
+{
+  "task": "MPR-501",
+  "gitHead": "d7f52e3dfc9e33e0b81ff2bf6872ced1823a5a8e",
+  "dirty": false,
+  "host": {
+    "platform": "win32",
+    "githubImage": null,
+    "freeDiskBytes": 13626654720,
+    "freeMemoryBytes": 2209316864,
+    "onAcPower": false,
+    "load": null,
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "a person makes a read-only token and a wider one on the page"
+    },
+    {
+      "name": "each token's MCP list is the service's own for it, with its marks",
+      "reader": {
+        "token": "reader",
+        "tools": 46,
+        "commands": 46,
+        "withheldByScope": 58,
+        "browserOnly": 13,
+        "changing": 0,
+        "destructive": 0
+      },
+      "wider": {
+        "token": "wider",
+        "tools": 96,
+        "commands": 95,
+        "withheldByScope": 9,
+        "browserOnly": 13,
+        "changing": 47,
+        "destructive": 5
+      }
+    },
+    {
+      "name": "a withheld tool is refused as over REST, and an unknown one unknown"
+    },
+    {
+      "name": "a call cancelled in flight, before it is sent, is not done or answered"
+    },
+    {
+      "name": "a proxy build refuses a request id"
+    },
+    {
+      "name": "after a restart the same MCP processes list the same"
+    }
+  ]
+}
