@@ -18,6 +18,8 @@ import {
 import { FailureClass } from "../core/engines/contract-v2.ts";
 import { FAILURE_CLASSES } from "../core/engines/failures.ts";
 import { translate } from "../src/i18n.ts";
+import { ShotIntentSchema } from "../core/story.ts";
+import { draftToIntent } from "../src/story/story-text.ts";
 
 const receipt = {
   format: "yamakan.generation-receipt/v1",
@@ -68,6 +70,46 @@ test("a kept brief is read as untrusted", () => {
   assert.equal(brief.modelId, CREATE_MODELS[0].id);
   assert.equal(brief.seed, 42);
   assert.deepEqual(brief.direction, { shot: "wide" });
+});
+
+test("a hostile stored draft is read as one that a shot's intent accepts", () => {
+  for (const stored of [
+    JSON.stringify({
+      prompt: "\u{1F600}".repeat(5000),
+      direction: { shot: "wide", lens: "made-up", __proto__: "x", light: 7 },
+    }),
+    // Cut in the middle of a character.
+    JSON.stringify({ prompt: `x${"\u{1F600}".repeat(5000)}` }),
+    JSON.stringify({ prompt: { toString: "x" }, direction: "wide" }),
+    JSON.stringify({ prompt: "x", direction: { movement: "../../secret" } }),
+    JSON.stringify([1]),
+    "null",
+    "{",
+  ]) {
+    const intent = draftToIntent(readBrief(stored));
+    if (Object.keys(intent).length > 0)
+      assert.ok(
+        ShotIntentSchema.safeParse(intent).success,
+        stored.slice(0, 80),
+      );
+    assert.ok(!("modelId" in intent) && !("seed" in intent));
+    assert.doesNotMatch(
+      intent.action ?? "",
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/,
+      stored.slice(0, 80),
+    );
+  }
+  assert.deepEqual(
+    draftToIntent(
+      readBrief(
+        JSON.stringify({
+          prompt: "x",
+          direction: { shot: "wide", lens: "no" },
+        }),
+      ),
+    ),
+    { action: "x", direction: { shot: "wide" } },
+  );
 });
 
 test("seeds are whole numbers a model can take", () => {

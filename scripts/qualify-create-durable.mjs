@@ -263,7 +263,9 @@ try {
   assert.equal(now.project.assets.length, 1, "no second asset");
   assert.equal(now.shots.length, 1, "one shot");
   assert.equal(await page.getByTestId("create-video").count(), 1);
-  assert.equal(now.shots[0].notes, PROMPT);
+  // What the shot is meant to show, since MPR-106; before it, the shot's notes.
+  assert.deepEqual(now.shots[0].intent, { action: PROMPT });
+  assert.equal(now.shots[0].notes, "");
   assert.equal(now.shots[0].takes[0].assetId, now.project.assets[0].id);
   assert.equal(now.shots[0].takes[0].lineage.outputHash, sha);
   const documentId = now.stories[0].id;

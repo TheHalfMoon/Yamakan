@@ -26,6 +26,7 @@ import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
 import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
 import { CREATE_STORY_TITLE } from "./create/create-story.ts";
+import { StoryBrief } from "./story/StoryBrief.tsx";
 import {
   WorkspacePanel,
   WorkspaceTabs,
@@ -1175,6 +1176,25 @@ function App() {
             }
           }
         }).finally(() => resolve(why));
+      }),
+  });
+  // Saving a story's words, from the Story page and from Create's offer (MPR-106).
+  const storyHost = (project: Project) => ({
+    client: {
+      call: (
+        operation: string,
+        parameters: Record<string, unknown>,
+        requestId?: string,
+      ) => client.call(operation as never, parameters as never, requestId),
+    },
+    unsaved: Boolean(history?.past.length || unapplied),
+    onSaved: documentSaved,
+    // A save that met a conflict stops here, so its notice and unapplied change stay.
+    onReload: () =>
+      run(async () => {
+        if (head.current?.id !== project.id || unapplied) return;
+        if (!(await save()) || head.current?.id !== project.id) return;
+        accept(await call("yamakan.project.open", { projectId: project.id }));
       }),
   });
   const cinemaPanel = (active = true) => (
@@ -2467,6 +2487,26 @@ function App() {
                         }
                       return null;
                     }}
+                    loadStories={async () => {
+                      const documents = (await call("yamakan.document.list", {
+                        projectId: p.id,
+                      })) as unknown as { id: string; kind: string }[];
+                      const stories = [];
+                      for (const ref of documents)
+                        if (ref.kind === "story") {
+                          const found = (await call("yamakan.document.get", {
+                            projectId: p.id,
+                            documentId: ref.id,
+                          })) as any;
+                          stories.push({
+                            documentId: ref.id,
+                            contentHash: found.contentHash as string,
+                            story: found.content,
+                          });
+                        }
+                      return stories;
+                    }}
+                    storyHost={storyHost(p)}
                     reopenProject={() =>
                       run(async () => {
                         await save();
@@ -2710,6 +2750,14 @@ function App() {
                     <h2>{t("workspace.story")}</h2>
                     <p>{t("workspace.storyIntro")}</p>
                     {scenesPanel(p)}
+                    <StoryBrief
+                      key={p.id}
+                      projectId={p.id}
+                      revision={p.revision}
+                      t={t}
+                      {...storyHost(p)}
+                      registerUnsaved={registerUnsaved}
+                    />
                   </section>
                 ) : (
                   emptyPanel()
