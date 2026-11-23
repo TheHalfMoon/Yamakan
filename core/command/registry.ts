@@ -168,7 +168,9 @@ import {
   proposeReplace,
   replaceOperations,
   shotWithTake,
+  shownTake,
 } from "../takes.ts";
+import { SHOT_HISTORY_LIMITS, shotHistory } from "../shot-history.ts";
 import {
   fromEditView,
   parseCanonical,
@@ -792,6 +794,11 @@ export const commands = {
           "VALIDATION",
           "A take record is saved with its take.",
         );
+      if (a.kind === "takeReplacement")
+        throw new CommandError(
+          "VALIDATION",
+          "A take replacement is noted as it is applied.",
+        );
       // Stories and packs are checked against the project and the consent
       // ledger on every commit, so they are written only by their commands.
       if (a.kind === "story" || a.kind === "referencePack")
@@ -1137,6 +1144,49 @@ export const commands = {
       return listTakes(story, ref, canonical);
     },
   }),
+  "yamakan.shot.history": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read what was tried for one story shot and what it cost: the takes it holds and how each was made, every generation or render attempted for it (failed, stopped and dismissed ones too), the take replacements applied to it, and totals, a page of attempts at a time. What no row says is null or a named gap. No words are taken from a run's or a record's prompt, but a shot's name, a take's label and an engine's own message are given as they are. Changes nothing.",
+    input: z
+      .object({
+        projectId: Id,
+        documentId: Id,
+        shotId: Id,
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(SHOT_HISTORY_LIMITS.attempts)
+          .optional(),
+        before: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(Number.MAX_SAFE_INTEGER)
+          .optional(),
+      })
+      .strict(),
+    run: async ({ store }, a) => {
+      const { story, ref, canonical } = await readStory(store, a);
+      return store.read((db) =>
+        shotHistory(
+          db,
+          {
+            projectId: a.projectId,
+            story,
+            ref,
+            canonical,
+            readRecord: (recordHash) =>
+              store.takeRecord(a.projectId, a.documentId, recordHash),
+          },
+          a.shotId,
+          { limit: a.limit, before: a.before },
+        ),
+      );
+    },
+  }),
   "yamakan.take.record": define({
     scope: "project:read",
     mutation: false,
@@ -1243,6 +1293,7 @@ export const commands = {
       }
       let story: StoryDocument | null = null;
       let ref: DocumentRef | null = null;
+      let from: string | null = null;
       return store.applyOperations(
         a.projectId,
         a.expectedRevision,
@@ -1262,6 +1313,7 @@ export const commands = {
               "REVISION_CONFLICT",
               "The proposal no longer matches the project; propose it again.",
             );
+          from = shownTake(story!, canonical, p.shotId);
           return replaceOperations(again);
         },
         principal.id,
@@ -1298,6 +1350,17 @@ export const commands = {
             assertTakeMedia(c.db, a.projectId, asset);
           }
         },
+        (revision) => ({
+          format: "yamakan.take-replacement",
+          formatVersion: 1,
+          documentId: p.documentId,
+          shotId: p.shotId,
+          fromTakeId: from,
+          toTakeId: p.takeId,
+          clips: p.mappings.length,
+          revision,
+          principalId: principal.id,
+        }),
       );
     },
   }),

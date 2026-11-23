@@ -3,7 +3,9 @@
  * table and commands. A generation is started, followed, imported and saved as a take with
  * its record; the workspace is closed and opened again and the record is the same; a version
  * 1 story is read and saved as version 2. MPR-102: a generation made for a shot becomes a take
- * of it as it is brought in, the timeline stays as it was, and what stops it is said.
+ * of it as it is brought in, the timeline stays as it was, and what stops it is said. MPR-107:
+ * one shot's history says what was tried for it, the same over REST and MCP from the service
+ * started on this workspace, and stays inside its time and size on a project with many runs.
  *
  * The engine is the in-process fake, and its one output is replaced by a test pattern made
  * with ffmpeg here: nothing in it is AI output. No network, no model, no spend.
@@ -11,9 +13,10 @@
  * What this host has is recorded first. What the run needs is unmeasured, so nothing is
  * refused for it; a missing ffmpeg or native helper ends BLOCKED, never PASS.
  *
- * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json [MPR-102-receipt.json]]
+ * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json [MPR-102-receipt.json [MPR-107-receipt.json]]]
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, fork, spawn } from "node:child_process";
+import { once } from "node:events";
 import { createHash, randomUUID } from "node:crypto";
 import {
   existsSync,
@@ -39,6 +42,7 @@ import { createGenerationService } from "../core/engines/generation.ts";
 import { diagnostic } from "../core/engines/contract-v2.ts";
 import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { YamakanClient } from "../sdk/client.ts";
 import { readHost } from "./qualify-host.mjs";
 
 // Before anything runs.
@@ -63,7 +67,22 @@ const targetOut =
           import.meta.url,
         ),
       ));
+const historyOut =
+  process.argv[4] ??
+  (process.argv[2]
+    ? null
+    : fileURLToPath(
+        new URL(
+          "../docs/evidence/ultimate/MPR-107-shot-history-receipt.json",
+          import.meta.url,
+        ),
+      ));
 const steps = [];
+const historySteps = [];
+const measured = { worstMs: null, largestBytes: null };
+// The service and the MCP server, while they run.
+let served;
+let spoken;
 // MPR-102's own, in a receipt of their own.
 const targetSteps = [];
 const step = (name, detail = {}) => {
@@ -164,27 +183,31 @@ try {
       blocked = "ffmpeg does not start on this host.";
     }
   if (blocked) throw new Error(blocked);
-  const file = join(root, "pattern.mp4");
-  execFileSync(
-    mediaTools().ffmpeg,
-    [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-f",
-      "lavfi",
-      "-i",
-      "testsrc2=size=704x480:rate=30:duration=2",
-      "-pix_fmt",
-      "yuv420p",
-      "-c:v",
-      "libx264",
-      file,
-    ],
-    { windowsHide: true },
-  );
-  const bytes = readFileSync(file);
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const pattern = (name, source) => {
+    const file = join(root, name);
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `${source}=size=704x480:rate=30:duration=2`,
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        file,
+      ],
+      { windowsHide: true },
+    );
+    const bytes = readFileSync(file);
+    return { bytes, sha256: createHash("sha256").update(bytes).digest("hex") };
+  };
+  const onePattern = pattern("pattern.mp4", "testsrc2");
+  const { sha256 } = onePattern;
 
   let ctx = await workspace();
   const fake = createFakeEngineV2();
@@ -195,15 +218,16 @@ try {
     modelManifestHash: "b".repeat(64),
   };
   // The fake runs and follows the request; its output is the pattern.
-  const serving = (engine) => ({
+  const serving = (engine, output = () => onePattern) => ({
     ...engine,
     enumerateArtifacts: async (ref) =>
       (await engine.enumerateArtifacts(ref)).map((x) => ({
         ...x,
-        byteLength: bytes.length,
-        sha256,
+        byteLength: output().bytes.length,
+        sha256: output().sha256,
       })),
     readArtifact: async function* () {
+      const { bytes } = output();
       for (let i = 0; i < bytes.length; i += 1024 * 1024)
         yield new Uint8Array(bytes.subarray(i, i + 1024 * 1024));
     },
@@ -359,6 +383,8 @@ try {
     ledger: ctx.queue.generationLedger(),
   });
   ctx = { ...ctx, generation: { service: again, recipes: [recipe] } };
+  // MPR-106: what the first is meant to show.
+  const meant = { action: "A red kite.", direction: { shot: "wide" } };
   const shots = [0, 1, 2, 3].map((n) => ({
     id: randomUUID(),
     name: `Target ${n}`,
@@ -367,6 +393,7 @@ try {
     referencePacks: [],
     takes: [],
     selectedTakeId: null,
+    ...(n === 0 ? { intent: meant } : {}),
   }));
   const targets = randomUUID();
   const sceneId = randomUUID();
@@ -451,6 +478,33 @@ try {
       recordHash: one.take.recordHash,
     },
   );
+  // MPR-106: the words and the take leave each other as they are.
+  const [meantShot] = (await storyNow()).scenes[0].shots;
+  assert.deepEqual(meantShot.intent, meant);
+  const saidAgain = {
+    ...meant,
+    action: "A red kite, higher.",
+    dialogue: "Up!",
+  };
+  await saveShots(
+    (await storyNow()).scenes[0].shots.map((s) =>
+      s.id === meantShot.id ? { ...s, intent: saidAgain } : s,
+    ),
+  );
+  const [nowSaid] = (await storyNow()).scenes[0].shots;
+  assert.deepEqual(nowSaid, { ...meantShot, intent: saidAgain });
+  assert.deepEqual(
+    await call("yamakan.take.record", {
+      projectId,
+      documentId: targets,
+      shotId: meantShot.id,
+      takeId: one.take.takeId,
+    }),
+    { recordHash: one.take.recordHash, record: made },
+  );
+  step(
+    "a take added to a shot keeps its intent, and a new intent keeps the take's record (MPR-106)",
+  );
   const running = await begin(shots[0]);
   let now = await storyNow();
   now.scenes[0].shots[0].name = "Renamed";
@@ -506,12 +560,367 @@ try {
   targetStep("a stop between the story and the run's row adds nothing twice", {
     timelineBeforeAndAfter: four.timeline,
   });
+
+  // MPR-107, on a shot of its own: two runs brought in, one that fails, one that is stopped, a
+  // replacement and its undo.
+  const historyStep = (name, detail) => {
+    historySteps.push({ name, ...detail });
+    console.log(`ok - ${name}`);
+  };
+  let ends = "succeeded";
+  // The second run makes other media, so that a replacement changes what the clip shows.
+  const otherPattern = pattern("second.mp4", "smptebars");
+  let makes = onePattern;
+  const engine = createFakeEngineV2();
+  const ledgered = createGenerationService({
+    adapter: {
+      ...serving(engine, () => makes),
+      status: async (ref) => {
+        const said = await engine.status(ref);
+        return ends === "failed"
+          ? {
+              executionRef: ref,
+              state: "failed",
+              failureClass: "timeout",
+              diagnostic: "It failed, for this check.",
+            }
+          : ends === "running"
+            ? { executionRef: ref, state: "running" }
+            : said;
+      },
+    },
+    store: ctx.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger: ctx.queue.generationLedger(),
+  });
+  ctx = { ...ctx, generation: { service: ledgered, recipes: [recipe] } };
+  const told = {
+    id: randomUUID(),
+    name: "Ledger",
+    durationTicks: 60 * FRAME,
+    notes: "",
+    referencePacks: [],
+    takes: [],
+    selectedTakeId: null,
+  };
+  const ledgerStory = randomUUID();
+  const ledgerScene = randomUUID();
+  const saveTold = async (shot) => {
+    const held = (await call("yamakan.document.list", { projectId })).find(
+      (d) => d.id === ledgerStory,
+    );
+    return call("yamakan.story.save", {
+      projectId,
+      expectedRevision: await head(),
+      documentId: ledgerStory,
+      expectedContentHash: held?.contentHash ?? null,
+      story: {
+        format: "yamakan.story",
+        formatVersion: 2,
+        title: "Ledger",
+        scenes: [{ id: ledgerScene, name: "One", shots: [shot] }],
+      },
+    });
+  };
+  await saveTold(told);
+  const goes = async (how) => {
+    ends = how;
+    const { generationId } = await call("yamakan.generation.start", {
+      projectId,
+      recipeId: recipe.id,
+      prompt: PROMPT,
+      seed: 7,
+      width: 704,
+      height: 480,
+      durationFrames: 60,
+      target: { documentId: ledgerStory, shotId: told.id },
+    });
+    await call("yamakan.generation.status", { generationId });
+    return generationId;
+  };
+  const brought = [];
+  for (const made of [onePattern, otherPattern]) {
+    makes = made;
+    const generationId = await goes("succeeded");
+    const { take } = await call("yamakan.generation.import", { generationId });
+    brought.push({ generationId, takeId: take.takeId });
+  }
+  const failedRun = await goes("failed");
+  const stoppedRun = await goes("running");
+  await call("yamakan.generation.cancel", { generationId: stoppedRun });
+  const inStory = (
+    await call("yamakan.document.get", { projectId, documentId: ledgerStory })
+  ).content.scenes[0].shots[0];
+  await saveTold({ ...inStory, selectedTakeId: brought[0].takeId });
+  await call("yamakan.story.assemble", {
+    projectId,
+    expectedRevision: await head(),
+    documentId: ledgerStory,
+    trackId: (await call("yamakan.project.open", { projectId })).tracks.find(
+      (t) => t.kind === "video",
+    ).id,
+  });
+  const proposal = await call("yamakan.take.proposeReplace", {
+    projectId,
+    documentId: ledgerStory,
+    shotId: told.id,
+    takeId: brought[1].takeId,
+  });
+  const applied = await call("yamakan.take.apply", {
+    projectId,
+    expectedRevision: await head(),
+    proposal,
+  });
+  await call("yamakan.project.undo", {
+    projectId,
+    expectedRevision: await head(),
+  });
+  const ask = { projectId, documentId: ledgerStory, shotId: told.id };
+  const ledger = await call("yamakan.shot.history", ask);
+  assert.deepEqual(
+    ledger.attempts.map((x) => [x.id, x.outcome, x.takeId]),
+    [
+      [stoppedRun, "cancelled", null],
+      [failedRun, "failed", null],
+      [brought[1].generationId, "succeeded", brought[1].takeId],
+      [brought[0].generationId, "succeeded", brought[0].takeId],
+    ],
+  );
+  assert.deepEqual(ledger.replacements, [
+    {
+      revision: applied.revision,
+      principalId: "browser-ui",
+      fromTakeId: brought[0].takeId,
+      toTakeId: brought[1].takeId,
+      clips: 1,
+    },
+  ]);
+  assert.equal(ledger.current.shownTakeId, brought[0].takeId);
+  assert.deepEqual(
+    [
+      ledger.totals.attempts,
+      ledger.totals.succeeded,
+      ledger.totals.failed,
+      ledger.totals.cancelled,
+      ledger.totals.takes,
+      ledger.totals.replacements,
+    ],
+    [4, 2, 1, 1, 2, 1],
+  );
+  assert.ok(!JSON.stringify(ledger).includes(PROMPT));
+  historyStep(
+    "one shot's history: two runs brought in, one failed, one stopped, a replacement and its undo",
+    { ledger },
+  );
+
+  // A project with many runs and many notes.
+  const many = { ...told, id: randomUUID(), name: "Many" };
+  const manyStory = randomUUID();
+  await call("yamakan.story.save", {
+    projectId,
+    expectedRevision: await head(),
+    documentId: manyStory,
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 2,
+      title: "Many",
+      scenes: [{ id: randomUUID(), name: "One", shots: [many] }],
+    },
+  });
+  const table = ctx.queue.generationLedger();
+  for (let n = 0; n < 2_000; n++) {
+    const generationId = randomUUID();
+    const made = {
+      generationId,
+      projectId,
+      recipe,
+      prompt: PROMPT,
+      seed: n,
+      width: 704,
+      height: 480,
+      durationFrames: 60,
+      firstFrameAssetId: null,
+      inputs: [],
+      ...(n % 8 === 0
+        ? { target: { documentId: manyStory, shotId: many.id } }
+        : {}),
+      executionRef: `seeded-${n}`,
+      phase: "sent",
+      startedAt: 1_000,
+      state: "running",
+      diagnostic: "It failed, for this check. ".repeat(20),
+      videoSha256: null,
+      imported: null,
+      cancelled: false,
+      dismissed: false,
+    };
+    table.begin(made);
+    table.update(generationId, { state: "failed", endedAt: 2_000 });
+  }
+  const db = new DatabaseSync(join(root, "workspace", "workspace.sqlite"));
+  db.exec("BEGIN");
+  for (let n = 0; n < 300; n++) {
+    const noteBytes = Buffer.from(
+      canonicalJson({
+        format: "yamakan.take-replacement",
+        formatVersion: 1,
+        documentId: manyStory,
+        shotId: many.id,
+        fromTakeId: randomUUID(),
+        toTakeId: randomUUID(),
+        clips: 1,
+        revision: n + 1,
+        principalId: "browser-ui",
+      }),
+      "utf8",
+    );
+    const hash = sha256Hex(noteBytes);
+    db.prepare(
+      "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, 'takeReplacement', 1, '[]', '[]', ?, ?)",
+    ).run(hash, noteBytes, noteBytes.length);
+    db.prepare(
+      "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?)",
+    ).run(projectId, manyStory, hash, n + 1);
+  }
+  db.exec("COMMIT");
+  db.close();
+  measured.worstMs = 0;
+  measured.largestBytes = 0;
+  const asked = {
+    projectId,
+    documentId: manyStory,
+    shotId: many.id,
+    limit: 100,
+  };
+  for (let n = 0; n < 20; n++) {
+    const began = performance.now();
+    const page = await call("yamakan.shot.history", asked);
+    measured.worstMs = Math.max(
+      measured.worstMs,
+      Math.round((performance.now() - began) * 10) / 10,
+    );
+    measured.largestBytes = Math.max(
+      measured.largestBytes,
+      Buffer.byteLength(JSON.stringify(page)),
+    );
+    assert.equal(page.totals.attempts, 250);
+    assert.equal(page.attempts.length, 100);
+    assert.equal(page.replacementTotal, 300);
+    assert.equal(page.replacements.length, 32);
+    assert.equal(page.totals.complete, true);
+  }
+  assert.ok(measured.largestBytes <= 128 * 1024, `${measured.largestBytes}`);
+  assert.ok(measured.worstMs <= 250, `${measured.worstMs} ms`);
+  const pages = [];
+  let upTo;
+  do {
+    const page = await call("yamakan.shot.history", {
+      ...asked,
+      ...(upTo === undefined ? {} : { before: upTo }),
+    });
+    pages.push(page.attempts.length);
+    upTo = page.next ?? undefined;
+  } while (upTo !== undefined);
+  assert.deepEqual(pages, [100, 100, 50]);
+  historyStep(
+    "twenty calls on 2,000 runs, 250 of them the shot's, and 300 notes",
+    {
+      ...measured,
+      pages,
+    },
+  );
+
+  // The same from the service itself, over both of its transports.
+  await shut();
+  const port = 24379;
+  const url = `http://127.0.0.1:${port}`;
+  const where = fileURLToPath(new URL("..", import.meta.url));
+  const workspaceFolder = join(root, "workspace");
+  served = fork(join(where, "server", "main.ts"), [], {
+    env: {
+      ...process.env,
+      YAMAKAN_WORKSPACE: workspaceFolder,
+      YAMAKAN_PORT: String(port),
+    },
+    silent: true,
+    windowsHide: true,
+  });
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("The service did not start.")),
+      20_000,
+    );
+    served.stdout.on("data", (chunk) => {
+      if (!String(chunk).includes("Yamakan is running")) return;
+      clearTimeout(timer);
+      resolve();
+    });
+    served.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`The service exited ${code}.`));
+    });
+  });
+  const overRest = await new YamakanClient({
+    baseUrl: url,
+    token: readFileSync(join(workspaceFolder, "token"), "utf8").trim(),
+  }).call("yamakan.shot.history", ask);
+  spoken = spawn(process.execPath, [join(where, "mcp", "main.ts")], {
+    env: {
+      ...process.env,
+      YAMAKAN_WORKSPACE: workspaceFolder,
+      YAMAKAN_MCP_LOCAL_CLIENT: "1",
+      YAMAKAN_URL: url,
+    },
+    stdio: ["pipe", "pipe", "ignore"],
+    windowsHide: true,
+  });
+  const overMcp = await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("MCP did not answer.")),
+      20_000,
+    );
+    let said = "";
+    spoken.stdout.on("data", (chunk) => {
+      said += String(chunk);
+      if (!said.includes("\n")) return;
+      clearTimeout(timer);
+      resolve(
+        JSON.parse(JSON.parse(said.split("\n")[0]).result.content[0].text),
+      );
+    });
+    // One that has gone is said, after the receipts are written.
+    spoken.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`MCP exited ${code}.`));
+    });
+    spoken.stdin.on("error", reject);
+    spoken.stdin.write(
+      `${JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "yamakan_shot_history", arguments: ask },
+      })}\n`,
+    );
+  });
+  assert.deepEqual(overMcp, overRest);
+  // The run of before is followed no more by a service with no engine, and told the same.
+  const bare = ({ revision: _r, ...rest }) => rest;
+  assert.deepEqual(bare(overRest), bare(JSON.parse(JSON.stringify(ledger))));
+  historyStep("the service answers the same over REST and over MCP");
   passed = true;
 } catch (e) {
   // This receipt may be committed, and an error can hold a local path naming the user.
   failure = diagnostic(String(e?.message ?? e)) ?? "It failed.";
   console.error(e);
 } finally {
+  for (const child of [spoken, served])
+    if (child && child.exitCode === null && child.signalCode === null) {
+      const gone = once(child, "exit");
+      child.kill();
+      await gone.catch(() => {});
+    }
   await shut().catch(() => {});
   // Read once, before either receipt is written.
   const git = (...args) =>
@@ -524,14 +933,15 @@ try {
     passed,
     failure,
   };
-  for (const [out, task, its] of [
+  for (const [out, task, its, more] of [
     [receiptOut, "MPR-101", steps],
     [targetOut, "MPR-102", targetSteps],
+    [historyOut, "MPR-107", historySteps, measured],
   ])
     if (out)
       writeFileSync(
         out,
-        `${JSON.stringify({ task, ...common, steps: its }, null, 2)}
+        `${JSON.stringify({ task, ...common, ...more, steps: its }, null, 2)}
 `,
       );
   try {
