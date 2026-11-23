@@ -1393,7 +1393,12 @@ engineConformance("comfyui", async () => {
       running: becomes((id) => void f.queue.running.push(id)),
       failed: becomes((id) => {
         f.history[id] = ended("error", [
-          ["execution_error", { exception_message: "It did not run." }],
+          [
+            "execution_error",
+            {
+              exception_message: `No such file: ${process.cwd()}/model ${"x".repeat(600)}`,
+            },
+          ],
         ]);
       }),
       uncertainLanded: becomes(succeeds, false),

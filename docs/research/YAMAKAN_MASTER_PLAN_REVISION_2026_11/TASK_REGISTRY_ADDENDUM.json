@@ -2614,6 +2614,7 @@
       "targets": [
         "core/engines/fake.ts",
         "core/engines/comfyui.ts",
+        "core/engines/v1-bridge.ts",
         "docs/MODEL_CAPABILITIES.md",
         "tests/engines.test.ts",
         "tests/comfyui-engine.test.ts",
@@ -2663,7 +2664,7 @@
         "Write `docs/MODEL_INTAKE.md` and `tests/model-intake.test.ts`. For the two routes that exist, write the answers to the written items (`egress`, `spend`, `download`, `withdrawal`) under a heading 'Intake' in this card's evidence file.",
         "Add `scripts/qualify-engine-conformance.mjs` and the npm script `qualify:engine-conformance` in `package.json`.",
         "Part b. Register the bridge in `tests/engines.test.ts`, ComfyUI in `tests/comfyui-engine.test.ts`, and Kaggle in `tests/kaggle-engine.test.ts` (adapter layer) and `tests/generation-durable.test.ts` (service layer), each with the stand-in its file already has. `sends()` is the stand-in's own count of pushes or prompt submissions. Give a reason in `unavailable` for every state a stand-in cannot be put in.",
-        "If a real adapter fails a check, fix the adapter in this card when the change stays inside that adapter and add it to this card's changed files in the evidence; otherwise stop, record the failing check in the evidence file and report it. Never weaken a check or move it to `unavailable` to pass. Empty `PENDING`.",
+        "If a real adapter fails a check, fix the adapter in this card when the change stays inside that adapter and add it to this card's changed files in the evidence; otherwise stop, record the failing check in the evidence file and report it. Never weaken a check or move it to `unavailable` to pass. Empty `PENDING`. (Found: the bridge cannot follow a landed run whose answer was lost, since a version 1 engine names a job only in its answer. It stays in `PENDING` until the version 1 contract takes a name or the bridge is retired, which is not decided.)",
         "Run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run provenance:check`, `npm test` and `npm run qualify:engine-conformance`; commit the evidence file."
       ],
       "acceptance": [

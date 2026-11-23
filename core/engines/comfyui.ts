@@ -1061,6 +1061,7 @@ export function createComfyEngine(options: ComfyEngineOptions) {
           if (!stopped.remoteAcknowledged) replaced.set(superseded, now());
         }
         if (superseded === executionRef) return { refused: "STALE_ATTEMPT" };
+        // Beside what a claim needs to know of it.
         const answer = { executionRef, ...(uncertain ? { uncertain } : {}) };
         return answer;
       });
