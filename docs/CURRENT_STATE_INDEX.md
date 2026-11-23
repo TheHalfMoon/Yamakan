@@ -4,7 +4,7 @@ This page says what the code does today and where to check it. It adds no author
 
 ## Verified against
 
-Main commit `16d2175`, 2026-11-23, on the founder's Windows PC. Two rows were updated by MPR-010 at `45b142d` and one by this index's later status change. Every row was checked by reading the named file or running the named grep; nothing here was run in a browser, with a model, or with Blender. A row that could not be confirmed says "not verified".
+Main commit `16d2175`, 2026-11-23, on the founder's Windows PC. Rows on consent and the pinned take were updated by MPR-010 at `45b142d` and, with the status row of `specs/CURRENT.md`, by the status update after it. Every row was checked by reading the named file or running the named grep; nothing here was run in a browser, with a model, or with Blender. A row that could not be confirmed says "not verified".
 
 ## Where authority lives
 
@@ -39,7 +39,7 @@ Main commit `16d2175`, 2026-11-23, on the founder's Windows PC. Two rows were up
 
 - `README.md`: CURRENT, corrected with this index.
 - `AGENTS.md`: NOT REVIEWED, not edited here.
-- `specs/CURRENT.md`: OWNED ELSEWHERE (MPR-001). Two of its sentences are overtaken: that drafts 85 and 86 are to be retired (both are closed), and that the package keeps its PROPOSED line until MPR-003 lands (it has).
+- `specs/CURRENT.md`: OWNED ELSEWHERE (MPR-001); its sentences on the drafts and the package's status line were corrected after MPR-003.
 - [P10 release gate matrix](plans/P10-qualification-activation/RELEASE_GATE_MATRIX.md): BANNER ADDED.
 
 | Document | Status | Reason |
@@ -102,7 +102,7 @@ Checked by reading only. CLOSED needs a path a reviewer can open; no row is CLOS
 | same | Timing results need AC power and a quiet machine | OPEN | a standing condition, not a defect that can be closed |
 | SS-012, SS-013 and undo, 2026-11-05 | Toolbar Undo can strand unsaved canvas or caption work | CHANGED | PR #180 (merged) makes it wait; `npm run qualify:undo-unsaved` and the receipt in `docs/evidence/ultimate/SS-013-captions.md` (read) describe real-Edge runs; CI does not run them, so not CLOSED |
 | same | Undo ends at a story, pack, migration, import or whole-project save | NOT RE-VERIFIED | the undo boundary rules in `src/main.tsx` and the store were not traced; a run is needed |
-| same | A take could return through undo after consent was revoked | CHANGED | PR #179 pinned the opposite with a test in `tests/story-packs.test.ts`, which MPR-010 inverted; MPR-010 reverses it on the founder's word of 2026-11-23, with `tests/consent-undo-pinned-take.test.ts` (its browser run is BLOCKED) |
+| same | A take could return through undo after consent was revoked | CHANGED | PR #179 pinned the opposite with a test in `tests/story-packs.test.ts`, which MPR-010 inverted on the founder's word of 2026-11-23, with `tests/consent-undo-pinned-take.test.ts` (its browser run is BLOCKED) |
 | same | Timed render tests fail on a loaded machine on battery | OPEN | a standing condition |
 | Undo, consent gate, keyboard editing, 2026-11-05 | `process owners sharing an input` failed once | NOT RE-VERIFIED | the cause was never established |
 | same | Timeline jumps by about 690 px when the preview finishes | NOT RE-VERIFIED | needs a browser |

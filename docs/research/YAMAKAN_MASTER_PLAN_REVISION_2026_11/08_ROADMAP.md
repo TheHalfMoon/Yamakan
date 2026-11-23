@@ -100,9 +100,9 @@ documents, wire the plan check, settle one consent rule, and widen Windows CI.
 Exit: MPR-001 recorded; MPR-002, MPR-003 and MPR-010 verified; MPR-804 verified
 or recorded blocked on FD-8.
 
-Order: the planning pull request is merged first, on the founder's explicit word; then
-MPR-001, then MPR-003, then MPR-002 and MPR-010. Until MPR-003 lands, the package check
-refuses any card's listed new file, so no card that creates one may merge before it.
+Order (kept as planned): the planning pull request was merged first, on the founder's word;
+then MPR-001, MPR-003, and MPR-002 and MPR-010. Before MPR-003 the package check refused any
+card's listed new file, so no card that creates one could merge before it.
 
 Gates: qualification evidence becomes checkable (MPR-003, MPR-804); the consent
 undo path is closed (MPR-010). MPR-010 is decided under the existing delegation

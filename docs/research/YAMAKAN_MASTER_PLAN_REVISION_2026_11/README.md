@@ -174,8 +174,8 @@ whether the plan is right.
 
 To change a card, change it in the registry, run the renderer without
 `--check`, and run the package check. The task program is never edited by
-hand. MPR-003 proposes to wire these checks into the repository's own
-scripts and its workflow; until then they are run by hand.
+hand. MPR-003 wired these checks into the repository's own scripts
+(`npm run plan:check`) and its workflow.
 
 ## 7. What this pull request does and does not do
 

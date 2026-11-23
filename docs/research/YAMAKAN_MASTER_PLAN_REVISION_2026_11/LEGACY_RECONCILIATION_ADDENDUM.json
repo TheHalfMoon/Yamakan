@@ -702,7 +702,7 @@
         "MPR-402"
       ],
       "authority": "Founder record entries '2026-11-05: Kaggle as the zero-cost GPU environment', '2026-11-06: The Create workspace, and Yamakan drives Kaggle' and '2026-11-06: A reference image travels inside the run's brief'.",
-      "verification": "Pull request numbers read from the first-parent history of main; whether the route is a product feature is FD-3."
+      "verification": "Pull request numbers read from the first-parent history of main; whether the route is a product feature is FD-3. Read for MPR-003 on 2026-11-23: #208 (a general export-colour fix) is not verified as Kaggle or Create work."
     },
     {
       "id": "stream:consent",
