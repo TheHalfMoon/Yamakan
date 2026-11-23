@@ -548,6 +548,32 @@ test("a client that closes the error stream loses only its lines", async () => {
   await client.settled();
 });
 
+test("what became of the cancel is said, and an address may end in slashes", async () => {
+  const s = await service(
+    { both: agent("render:execute", "job:control") },
+    { "yamakan.export.video": () => ({ id: randomUUID() }) },
+  );
+  for (const slashes of ["", "/", "//"]) {
+    const client = connect(s.origin + slashes, "both");
+    await client.request("tools/list");
+    s.reached.length = 0;
+    const before = s.count("yamakan.job.cancel");
+    const open = s.hold("yamakan.export.video");
+    const start = client.call("yamakan.export.video", {});
+    await until(() => s.reached.includes("yamakan.export.video"), "sent");
+    client.cancel(start.id);
+    await client.settled();
+    open();
+    // The real cancel knows no such job.
+    await until(
+      () => /job\.cancel refused \([A-Z_]+\)\.\n/.test(client.stderr()),
+      `said after ${JSON.stringify(slashes)}`,
+    );
+    assert.equal(s.count("yamakan.job.cancel"), before + 1);
+    assert.equal(client.answeredTo(start.id), 0);
+  }
+});
+
 test("a list without withheld names, as an older service gives it, is read", async () => {
   const s = await service({ reader: agent("project:read") });
   s.older();
@@ -684,6 +710,18 @@ test("a change cancelled before it is sent is never sent", async () => {
   await wait(200);
   const staged = () => s.paths.filter((p) => p.endsWith("/stage")).length;
   assert.equal(staged(), 0, s.paths.join(" "));
+  // Its content does not go either, when it is stopped while the service proves itself.
+  s.reached.length = 0;
+  const proving = s.hold("hello");
+  const unproved = client.call("yamakan.document.save", document);
+  await until(() => s.reached.includes("hello"), "proving");
+  client.cancel(unproved.id);
+  await client.settled();
+  proving();
+  await wait(200);
+  await client.settled();
+  assert.equal(staged(), 0, s.paths.join(" "));
+  assert.equal(client.answeredTo(unproved.id), 0);
   const project = await s.store.create("Staged");
   const keep = s.hold("stage");
   const save = client.call("yamakan.document.save", {

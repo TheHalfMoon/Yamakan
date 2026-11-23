@@ -1,6 +1,7 @@
 // What a cancelled MCP request does here (MPR-501). What has not been sent is not sent. A read is
-// stopped. A change that has been sent cannot be taken back: it is left to finish, and if it started something that has a cancel of its
-// own, that is asked for once. Whatever happens, a cancelled request gets no answer.
+// stopped. A change that has been sent cannot be taken back: it is left to finish, and if it
+// started something that has a cancel of its own, that is asked for once. Whatever happens, a
+// cancelled request gets no answer.
 import type { Operation } from "../sdk/client.ts";
 
 type Twin = {

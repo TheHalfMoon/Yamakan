@@ -14,7 +14,7 @@ import type { Phase } from "./cancellation.ts";
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const env = (key: string) =>
   process.env[`YAMAKAN_${key}`] || process.env[`DARZAIN_${key}`];
-const url = (env("URL") || "http://127.0.0.1:4318").replace(/\/$/, "");
+const url = (env("URL") || "http://127.0.0.1:4318").replace(/\/+$/, "");
 if (new URL(url).hostname !== "127.0.0.1")
   throw new Error("MCP connects only to the local Yamakan server.");
 const root = path.resolve(env("WORKSPACE") || ".yamakan");
@@ -49,14 +49,13 @@ const client = async (request?: InFlight) =>
     ...(request ? { fetch: sending(request) } : {}),
   });
 // A command is sent once the service has proved itself and the command itself goes out. Until
-// then, a cancelled one is not sent: not after the proof, nor after a save's staged content.
+// then, nothing more of a cancelled one is sent: not a save's content, nor its commit after it.
 const sending =
   (request: InFlight): typeof fetch =>
   (input, init) => {
-    if (String(input) === `${url}/api/v1/call`) {
-      request.stop.signal.throwIfAborted();
-      request.phase = "sent";
-    }
+    const { pathname } = new URL(String(input));
+    if (pathname !== "/api/v1/hello") request.stop.signal.throwIfAborted();
+    if (pathname === "/api/v1/call") request.phase = "sent";
     return fetch(input, init);
   };
 
