@@ -18,23 +18,30 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 | `shot-gone` | The story has no such shot. |
 | `shot-full` | The shot already holds 8 takes; remove one before generating another. |
 | `take-too-short` | The shot lasts 2 s and this take lasts 1 s; ask for a longer take or shorten the shot. |
-| `story-refused` | The refusal's own words |
-| `busy` | The story kept changing while the take was added; bring it in again. |
+| `story-refused` | The refusal's own words: a reference whose consent ended, media a restore took away, a damaged record in the shot, a story past its size, the project's history or the disk full, creative documents turned off |
+| `busy` | The story kept changing while the take was added; bring it in again. Or the store's own words when it is busy |
 
 **No screen sends a target until MPR-104,** and so no page yet says before an import that the undo history ends, which the card expects of the page; that is MPR-104's too. The contract says it.
+
+## Where this differs from the card
+
+- **At the start, creative documents turned off** is a fifth refusal, `CAPABILITY_UNAVAILABLE`, as every story command has it; at the import it is `story-refused`.
+- **`busy` is also the store's own "busy",** which the card does not speak of, since it passes and no check refused anything.
+- **A damaged record in the shot is `story-refused`,** because it may be this run's own, and adding another could be adding it twice. It stays so until that take is removed or a backup restored.
+- **What is no refusal** (a disk error) is not turned into a reason: the import fails with it, after the video is in the project, and importing again tries again.
+- **The tests of the start's refusals and of the restart** are in `tests/generation-target.test.ts` with the rest, and not in `tests/generation-service.test.ts` and `tests/generation-durable.test.ts`: those need a decoder, and this file runs on every host.
+- **The card expects the page to say before the import that the undo history ends.** No page sends a target yet, so that is MPR-104's; the contract says it.
 
 ## What to know when reading it
 
 - **Which check is the authority:** the start compares the frames asked for with the shot; the import compares the video that came.
-- **A run's record is found again by its generation's id** in the shot's takes, so a stop between the story and the run's row, or two imports at once, add one take. A take a person moved to another shot meanwhile is not looked for there.
-- **An added take that a person removes is not added again** by importing again: the row holds that it was added.
-- **A refusal that is not a command's** (a disk error, a damaged record) is not turned into a reason: the import fails with it after the video is in the project, and importing again tries again.
-- **`story-refused` also covers** a story that would grow past its size and creative documents turned off.
-- **Where the tests are:** the refusals at the start and the restart are in `tests/generation-target.test.ts` with the rest, and not in `tests/generation-service.test.ts` and `tests/generation-durable.test.ts` as the card has it, because those need a decoder and this file does not.
+- **One take for one run:** the row remembers that it was added, so importing again adds nothing, also after a person took it out. Until that is on the row (a stop between the story and the row, two imports at once), the run's take is looked for in the target shot by the run's id. If a person moved or removed it in exactly that window, importing again adds it there.
+- **A run cancelled after its import** is still added by importing again, as a save by hand could.
+- **After a restore to before the take,** importing again still answers that it was added, as the card has it, though the take is not in the story any more.
 
 ## Evidence
 
-- **On the founder host, against the real store, job table and commands:** the 10 tests of `tests/generation-target.test.ts` pass. The engine is a double whose video is already the project's, as its rows and ten bytes; no decoder is asked.
+- **On the founder host, against the real store, job table and commands:** the 13 tests of `tests/generation-target.test.ts` pass, among them a real refusal by a consent that ended, a version 1 story, and a stop and restart in the middle. The engine is a double whose video is already the project's, as its rows and ten bytes; no decoder is asked.
 - **`npm run qualify:revisable-shot`,** extended with a shot-target arm and its own receipt: see the section below.
 - No real browser reads this path: that is MPR-104's.
 

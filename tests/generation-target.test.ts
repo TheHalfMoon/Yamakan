@@ -19,6 +19,7 @@ import {
 import { CommandError, toCommandError } from "../core/command/errors.ts";
 import {
   createGenerationService,
+  type GenerationRecipe,
   type GenerationRecord,
   type TakeOutcome,
 } from "../core/engines/generation.ts";
@@ -26,7 +27,8 @@ import type {
   EngineAdapterV2,
   EngineRequestV2,
 } from "../core/engines/contract-v2.ts";
-import { sha256Hex } from "../core/hash/canonical.ts";
+import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
+import { kaggleRecipes } from "../core/engines/kaggle.ts";
 import type { Asset, Project } from "../core/project.ts";
 import { STORY_LIMITS, type StoryDocument } from "../core/story.ts";
 import type { TakeRecord } from "../core/take-record.ts";
@@ -526,7 +528,14 @@ test("a second import after a failed append appends once", async () => {
 test("an import interrupted after the story commit does not append twice", async () => {
   const w = await withProject();
   const made = await video(w, "made");
-  const mine = shot();
+  const filler = await video(w, "filler");
+  // Takes with no record come first, and this one is the last there is room for.
+  const before = Array.from({ length: 5 }, () => ({
+    id: id(),
+    assetId: filler.id,
+    sourceStartTicks: 0,
+  }));
+  const mine = shot({ takes: before });
   const documentId = id();
   await save(w, documentId, story([mine]));
   const target = { documentId, shotId: mine.id };
@@ -538,7 +547,23 @@ test("an import interrupted after the story commit does not append twice", async
   await assert.rejects(bring(w, generationId), /stopped here/);
   w.service.keepTake = keep;
   assert.equal(w.service.row(generationId)!.take, undefined);
-  const [there] = takesOf(w, documentId, mine.id);
+  const there = takesOf(w, documentId, mine.id).at(-1);
+  assert.equal(takesOf(w, documentId, mine.id).length, 6);
+  const full = {
+    ...mine,
+    takes: [
+      ...takesOf(w, documentId, mine.id),
+      ...[0, 1].map(() => ({
+        id: id(),
+        assetId: filler.id,
+        sourceStartTicks: 0,
+      })),
+    ],
+  };
+  await save(w, documentId, {
+    ...stored(w, documentId),
+    scenes: [{ ...stored(w, documentId).scenes[0]!, shots: [full] }],
+  });
   // In a service started again, with the job table it left.
   for (const h of [w.queue, w.store]) await h.close();
   const next = await workspace(w.root);
@@ -546,14 +571,38 @@ test("an import interrupted after the story commit does not append twice", async
   next.remember(w.videos);
   assert.deepEqual(next.service.row(generationId)!.target, target);
   const take = added((await bring(next, generationId)).take);
-  assert.equal(take.takeId, there!.id);
-  assert.equal(take.recordHash, there!.recordHash);
-  assert.equal(takesOf(next, documentId, mine.id).length, 1);
+  assert.deepEqual(take, {
+    appended: true,
+    ...target,
+    takeId: there!.id,
+    recordHash: there!.recordHash,
+    contentHash: next.store.getDocument(next.projectId, documentId).ref
+      .contentHash,
+    revision: (await next.store.load(next.projectId)).revision,
+  });
+  assert.equal(takesOf(next, documentId, mine.id).length, 8);
+  await save(next, documentId, {
+    ...stored(next, documentId),
+    scenes: [
+      {
+        ...stored(next, documentId).scenes[0]!,
+        shots: [{ ...mine, takes: [there!] }],
+      },
+    ],
+  });
   // Two calls at once, where neither has kept its answer, are one take too.
   const both = await video(next, "both");
   const racing = await start(next, both, target);
   const [a, b] = await Promise.all([bring(next, racing), bring(next, racing)]);
-  assert.equal(added(a.take).takeId, added(b.take).takeId);
+  assert.deepEqual(added(a.take), added(b.take));
+  assert.equal(
+    added(a.take).revision,
+    (await next.store.load(next.projectId)).revision,
+  );
+  assert.equal(
+    added(a.take).contentHash,
+    next.store.getDocument(next.projectId, documentId).ref.contentHash,
+  );
   assert.equal(takesOf(next, documentId, mine.id).length, 2);
 });
 
@@ -607,43 +656,243 @@ test("what refuses the story is said in its own words, and a story that keeps ch
   await save(w, documentId, story([mine]));
   const generationId = await start(w, made, { documentId, shotId: mine.id });
   const commit = w.store.commitDocument.bind(w.store);
-  const tries: string[] = [];
+  const tries: { expectedRevision: number; principalId?: string }[] = [];
   const refusing = (e: () => unknown) => {
     tries.length = 0;
-    w.store.commitDocument = (async (input: { documentId: string }) => {
-      tries.push(input.documentId);
+    w.store.commitDocument = (async (input: (typeof tries)[number]) => {
+      tries.push(input);
       throw e();
     }) as never;
   };
-  refusing(() => new CommandError("VALIDATION", "Another shot's pack."));
-  const refused = (await bring(w, generationId)).take;
-  assert.deepEqual(refused, {
-    appended: false,
-    reason: "story-refused",
-    message: "Another shot's pack.",
-  });
+  const outcome = async () => {
+    const { take } = await bring(w, generationId);
+    assert.ok(take && !take.appended);
+    assert.deepEqual(w.service.row(generationId)!.take, take);
+    return [take.reason, take.message];
+  };
+  refusing(() => new CommandError("LIMIT_EXCEEDED", "Too large."));
+  assert.deepEqual(await outcome(), ["story-refused", "Too large."]);
   assert.equal(tries.length, 1);
-  refusing(() => new CommandError("REVISION_CONFLICT", "Changed."));
-  const busy = (await bring(w, generationId)).take;
-  assert.ok(busy && !busy.appended);
-  assert.equal(busy.reason, "busy");
-  // Once, and at most three times more.
-  assert.equal(tries.length, 4);
+  // It is held to the head it read, as the person who brings it in.
+  const { revision } = await w.store.load(w.projectId);
+  assert.equal(tries[0]!.expectedRevision, revision);
+  assert.equal(tries[0]!.principalId, "browser-ui");
+  refusing(() => new CommandError("BUSY", "Workspace database is busy."));
+  assert.deepEqual(await outcome(), ["busy", "Workspace database is busy."]);
+  assert.equal(tries.length, 1);
+  // Once, and at most three times more, whichever way the store says it.
+  for (const conflict of [
+    new CommandError("REVISION_CONFLICT", "Changed."),
+    new Error("Revision conflict: the project changed."),
+  ]) {
+    refusing(() => conflict);
+    assert.deepEqual(await outcome(), [
+      "busy",
+      "The story kept changing while the take was added; bring it in again.",
+    ]);
+    assert.equal(tries.length, 4);
+  }
   // What is no refusal is not hidden as one, and nothing is kept of it.
+  const was = w.service.row(generationId)!.take;
   refusing(() => new Error("disk"));
   await assert.rejects(bring(w, generationId), /disk/);
-  assert.deepEqual(w.service.row(generationId)!.take, busy);
-  // A change in between is only another try.
+  assert.deepEqual(w.service.row(generationId)!.take, was);
+  // A cut made in between is only another try.
   let first = true;
   w.store.commitDocument = (async (...input: Parameters<typeof commit>) => {
     if (first) {
       first = false;
-      throw new CommandError("REVISION_CONFLICT", "Changed.");
+      await video(w, "between");
     }
     return commit(...input);
   }) as never;
   added((await bring(w, generationId)).take);
+  assert.equal(first, false);
   assert.equal(takesOf(w, documentId, mine.id).length, 1);
+});
+
+test("a reference whose consent ended, media a restore took away, and a damaged record each refuse the take", async () => {
+  const w = await withProject();
+  const made = await video(w, "made");
+  const face = await video(w, "face");
+  const { id: consentId } = await call(w, "yamakan.consent.grant", {
+    characterId: "lead",
+    purpose: "likeness-generate",
+    version: "v1",
+    ttlMs: 86_400_000,
+  });
+  const pack = id();
+  await call(w, "yamakan.pack.save", {
+    projectId: w.projectId,
+    expectedRevision: (await w.store.load(w.projectId)).revision,
+    documentId: pack,
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "Lead",
+      entries: [
+        {
+          id: id(),
+          role: "character",
+          label: "Lead",
+          assetId: face.id,
+          assetHash: face.hash,
+          characterId: "lead",
+          consentId,
+        },
+      ],
+    },
+  });
+  const pinned = shot({
+    name: "Pinned",
+    referencePacks: [
+      {
+        documentId: pack,
+        contentHash: w.store
+          .listDocuments(w.projectId)
+          .find((d) => d.id === pack)!.contentHash,
+      },
+    ],
+  });
+  const mine = shot();
+  const documentId = id();
+  await save(w, documentId, story([pinned, mine]));
+  const target = { documentId, shotId: mine.id };
+  const refused = async (generationId: string, message: RegExp) => {
+    const at = w.store.getDocument(w.projectId, documentId).ref.contentHash;
+    const { take } = await bring(w, generationId);
+    assert.ok(take && !take.appended);
+    assert.equal(take.reason, "story-refused");
+    assert.match(take.message, message);
+    assert.equal(
+      w.store.getDocument(w.projectId, documentId).ref.contentHash,
+      at,
+    );
+  };
+  const held = await start(w, made, target);
+  await call(w, "yamakan.consent.revoke", { consentId });
+  await refused(held, /consent/i);
+  // Without that shot, its takes' media must still be the project's.
+  const alone = { ...stored(w, documentId), scenes: [] as never[] };
+  await save(w, documentId, {
+    ...alone,
+    scenes: [{ id: id(), name: "One", shots: [mine] }],
+  });
+  const revision = (await w.store.load(w.projectId)).revision;
+  const late = await video(w, "late");
+  const later = await start(w, late, target);
+  const keep = w.store.commitDocument;
+  w.store.commitDocument = (async () => {
+    throw new CommandError("VALIDATION", "Not yet.");
+  }) as never;
+  await refused(later, /Not yet/);
+  w.store.commitDocument = keep;
+  await call(w, "yamakan.project.restore", {
+    projectId: w.projectId,
+    revision,
+    expectedHeadFingerprint: (
+      await call(w, "yamakan.project.history", {
+        projectId: w.projectId,
+        limit: 1,
+      })
+    ).headFingerprint,
+  });
+  await refused(later, /media|asset|project/i);
+  assert.ok(
+    !(await w.store.load(w.projectId)).assets.some((a) => a.id === late.id),
+  );
+  // A record in the shot that does not read back might be this run's.
+  const first = added((await bring(w, held)).take);
+  const another = await start(w, await video(w, "another"), target);
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  db.prepare(
+    "UPDATE creative_documents SET bytes = x'7b7d', byte_length = 2 WHERE hash = ?",
+  ).run(first.recordHash);
+  db.close();
+  await refused(another, /record is missing or damaged/);
+});
+
+test("with creative documents turned off nothing is started for a shot, and nothing is added", async () => {
+  const w = await withProject();
+  const made = await video(w, "made");
+  const mine = shot();
+  const documentId = id();
+  await save(w, documentId, story([mine]));
+  const target = { documentId, shotId: mine.id };
+  const generationId = await start(w, made, target);
+  process.env.YAMAKAN_AG_DOCS_OFF = "1";
+  try {
+    assert.match(
+      await reason(start(w, made, target)),
+      /^CAPABILITY_UNAVAILABLE: Saving creative documents is turned off/,
+    );
+    assert.equal(rows(w), 1);
+    const { take, assetId } = await bring(w, generationId);
+    assert.equal(assetId, made.id);
+    assert.ok(take && !take.appended);
+    assert.equal(take.reason, "story-refused");
+    assert.match(take.message, /turned off/);
+  } finally {
+    delete process.env.YAMAKAN_AG_DOCS_OFF;
+  }
+  added((await bring(w, generationId)).take);
+});
+
+test("a take names the picture it was made from, and its record what its recipe says", async () => {
+  const w = await withProject();
+  const made = await video(w, "made");
+  const [known] = kaggleRecipes().filter((r) => r.operation === "imageToVideo");
+  (w.ctx.generation!.recipes as GenerationRecipe[]).push(known!);
+  const still = await video(w, "still");
+  // Its rows say a picture; nothing reads it.
+  const picture: Asset = {
+    ...still,
+    id: id(),
+    kind: "image",
+    extension: "png",
+    hash: sha256Hex(Buffer.from("picture   ")),
+    durationFrames: 1,
+  };
+  await writeFile(
+    path.join(w.root, "projects", w.projectId, "assets", `${picture.hash}.png`),
+    "picture   ",
+  );
+  await w.store.attachAsset(w.projectId, picture, (db) => {
+    db.prepare(
+      "INSERT INTO asset_objects(project_id, digest, byte_length, state, generation) VALUES (?, ?, 10, 'ready', 1)",
+    ).run(w.projectId, picture.hash);
+    db.prepare(
+      "INSERT INTO asset_versions(version_id, project_id, digest, probe) VALUES (?, ?, ?, '{}')",
+    ).run(picture.id, w.projectId, picture.hash);
+  });
+  const mine = shot();
+  const documentId = id();
+  await save(w, documentId, story([mine]));
+  const generationId = await start(
+    w,
+    made,
+    { documentId, shotId: mine.id },
+    {
+      recipeId: known!.id,
+      firstFrameAssetId: picture.id,
+      noUnconsentedPerson: true,
+    },
+  );
+  const take = added((await bring(w, generationId)).take);
+  const inputs = [{ assetId: picture.id, assetHash: picture.hash }];
+  assert.deepEqual(takesOf(w, documentId, mine.id)[0]!.lineage, {
+    outputHash: made.hash,
+    inputs,
+  });
+  const { record } = (await call(w, "yamakan.take.record", {
+    projectId: w.projectId,
+    documentId,
+    shotId: mine.id,
+    takeId: take.takeId,
+  })) as { record: TakeRecord };
+  assert.equal(record.route, "kaggle");
+  assert.deepEqual(record.inputs, [{ ...inputs[0]!, role: "firstFrame" }]);
 });
 
 test("a target that no take could be added to starts nothing", async () => {
@@ -761,32 +1010,78 @@ test("a target that no take could be added to starts nothing", async () => {
   assert.equal(rows(w), 1);
 });
 
-test("an earlier version's story that receives a take is saved as the newest", async () => {
+// The head's story as an older build left it: its bytes, hash and version 1, named by a head
+// snapshot of its own.
+function asAnOlderBuildStored(w: W, documentId: string) {
+  const one = { ...stored(w, documentId), formatVersion: 1 };
+  const bytes = Buffer.from(canonicalJson(one), "utf8");
+  const hash = sha256Hex(bytes);
+  const ref = w.store
+    .listDocuments(w.projectId)
+    .find((d) => d.id === documentId)!;
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  const head = db
+    .prepare(
+      "SELECT p.snapshot_hash AS hash, s.format AS format, s.bytes AS bytes FROM projects p JOIN snapshots s ON s.hash = p.snapshot_hash WHERE p.project_id = ?",
+    )
+    .get(w.projectId) as { hash: string; format: string; bytes: Uint8Array };
+  const snapshot = Buffer.from(
+    Buffer.from(head.bytes)
+      .toString("utf8")
+      .replace(ref.contentHash, hash)
+      .replace('"schemaVersion":2', '"schemaVersion":1'),
+    "utf8",
+  );
+  const next = sha256Hex(snapshot);
+  db.prepare(
+    "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT ?, kind, 1, asset_ids, object_digests, ?, ? FROM creative_documents WHERE hash = ?",
+  ).run(hash, bytes, bytes.length, ref.contentHash);
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) SELECT project_id, document_id, ?, revision FROM story_document_versions WHERE content_hash = ?",
+  ).run(hash, ref.contentHash);
+  db.prepare(
+    "INSERT INTO snapshots(hash, format, bytes, byte_length) VALUES (?, ?, ?, ?)",
+  ).run(next, head.format, snapshot, snapshot.length);
+  db.prepare("INSERT INTO snapshot_document_refs VALUES (?, ?)").run(
+    next,
+    hash,
+  );
+  db.prepare("UPDATE projects SET snapshot_hash = ? WHERE project_id = ?").run(
+    next,
+    w.projectId,
+  );
+  db.prepare(
+    "UPDATE revisions SET snapshot_hash = ? WHERE project_id = ? AND snapshot_hash = ?",
+  ).run(next, w.projectId, head.hash);
+  db.close();
+  return { hash, one };
+}
+
+test("a version 1 story that receives a take is saved as version 2, and its version 1 stays", async () => {
   const w = await withProject();
   const made = await video(w, "made");
   const mine = shot();
   const documentId = id();
   await save(w, documentId, story([mine]));
-  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"), {
-    readOnly: true,
-  });
-  const versions = () =>
-    (
-      db
-        .prepare(
-          "SELECT count(*) AS n FROM story_document_versions WHERE document_id = ?",
-        )
-        .get(documentId) as { n: number }
-    ).n;
-  const before = versions();
+  const { hash, one } = asAnOlderBuildStored(w, documentId);
+  assert.equal(stored(w, documentId).formatVersion as number, 1);
   const generationId = await start(w, made, { documentId, shotId: mine.id });
-  added((await bring(w, generationId)).take);
-  // The story's new version, and the record it names.
-  assert.equal(versions() - before, 2);
-  db.close();
+  const take = added((await bring(w, generationId)).take);
+  const now = stored(w, documentId);
+  assert.equal(now.formatVersion, 2);
   assert.equal(
     w.store.listDocuments(w.projectId).find((d) => d.id === documentId)!
       .schemaVersion,
     2,
   );
+  assert.equal(now.scenes[0]!.shots[0]!.takes[0]!.id, take.takeId);
+  now.scenes[0]!.shots[0]!.takes.pop();
+  assert.deepEqual({ ...now, formatVersion: 1 }, one);
+  const bytes = w.store.read(
+    (db) =>
+      db
+        .prepare("SELECT bytes FROM creative_documents WHERE hash = ?")
+        .get(hash) as { bytes: Uint8Array },
+  ).bytes;
+  assert.deepEqual(JSON.parse(Buffer.from(bytes).toString("utf8")), one);
 });

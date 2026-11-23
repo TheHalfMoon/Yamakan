@@ -397,6 +397,19 @@ try {
     return sha256Hex(canonicalJson({ scenes, tracks, clips }));
   };
   await saveShots(shots);
+  // A cut to keep: the first story, assembled.
+  await call("yamakan.story.assemble", {
+    projectId,
+    expectedRevision: await head(),
+    documentId,
+    trackId: (await call("yamakan.project.open", { projectId })).tracks.find(
+      (t) => t.kind === "video",
+    ).id,
+  });
+  assert.equal(
+    (await call("yamakan.project.export", { projectId })).clips.length,
+    1,
+  );
   const begin = async (shot, durationFrames = 60) => {
     const { generationId } = await call("yamakan.generation.start", {
       projectId,
@@ -430,6 +443,7 @@ try {
     takeId: one.take.takeId,
   });
   assert.equal(made.output.sha256, sha256);
+  assert.equal((await storyNow()).scenes[0].shots[0].selectedTakeId, null);
   targetStep(
     "a run made for a shot is a take of it, and the cut is as it was",
     {

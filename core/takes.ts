@@ -12,7 +12,7 @@
 // project, so undo returns exactly the old take.
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
-import { CommandError } from "./command/errors.ts";
+import { CommandError, toCommandError } from "./command/errors.ts";
 import { Id } from "./project.ts";
 import { FLICKS_PER_SECOND, Ticks, framesToTicks } from "./time.ts";
 import type { CanonicalProject } from "./canonical.ts";
@@ -655,14 +655,24 @@ const seconds = (ticks: number) =>
 const tooShort = (shotTicks: number, takeTicks: number, what: string) =>
   `The shot lasts ${seconds(shotTicks)} s and ${what} ${seconds(takeTicks)} s; ask for a longer take or shorten the shot.`;
 
-// The head's story of that id, or null when the project has none.
+// The head's story of that id and the head it is of, or null when the project has none. Read
+// without a pause, so the two belong together.
 function storyAt(store: ProjectStore, projectId: string, documentId: string) {
   const ref = store
     .listDocuments(projectId)
     .find((d) => d.id === documentId && d.kind === "story");
   if (!ref) return null;
   const { ref: at, bytes } = store.getDocument(projectId, documentId);
-  return { ref: at, story: parseStory(JSON.parse(bytes.toString("utf8"))) };
+  const { revision } = store.read((db) =>
+    db
+      .prepare("SELECT revision FROM projects WHERE project_id = ?")
+      .get(projectId),
+  ) as { revision: number };
+  return {
+    ref: at,
+    revision,
+    story: parseStory(JSON.parse(bytes.toString("utf8"))),
+  };
 }
 const shotOf = (story: Story, shotId: string) =>
   story.scenes.flatMap((sc) => sc.shots).find((shot) => shot.id === shotId);
@@ -715,32 +725,41 @@ export async function appendGeneratedTake(
     const project = await store.load(projectId);
     const held = storyAt(store, projectId, documentId);
     if (!held) return not("story-gone", NO_STORY);
-    const { ref, story } = held;
+    const { ref, revision, story } = held;
     const shot = shotOf(story, shotId);
     if (!shot) return not("shot-gone", NO_SHOT);
     // Already here: an answer or a stop came between the story and the run's own row.
-    for (const take of shot.takes) {
-      if (take.recordHash === undefined) continue;
-      const { source } = store.takeRecord(
-        projectId,
-        documentId,
-        take.recordHash,
-      );
-      if (
-        source &&
-        "generationId" in source &&
-        source.generationId === row.generationId
-      )
-        return {
-          appended: true,
+    let there: Take | undefined;
+    try {
+      there = shot.takes.find((take) => {
+        if (take.recordHash === undefined) return false;
+        const { source } = store.takeRecord(
+          projectId,
           documentId,
-          shotId,
-          takeId: take.id,
-          recordHash: take.recordHash,
-          contentHash: ref.contentHash,
-          revision: project.revision,
-        };
+          take.recordHash,
+        );
+        return (
+          source !== null &&
+          "generationId" in source &&
+          source.generationId === row.generationId
+        );
+      });
+    } catch (e) {
+      // A damaged record may be this run's own: adding another could be adding it twice.
+      const refused = toCommandError(e);
+      if (refused.code === "INTERNAL") throw e;
+      return not("story-refused", refused.message);
     }
+    if (there)
+      return {
+        appended: true,
+        documentId,
+        shotId,
+        takeId: there.id,
+        recordHash: there.recordHash!,
+        contentHash: ref.contentHash,
+        revision,
+      };
     if (shot.takes.length >= STORY_LIMITS.takesPerShot)
       return not("shot-full", SHOT_FULL);
     const asset = project.assets.find((a) => a.id === imported.assetId);
@@ -784,7 +803,7 @@ export async function appendGeneratedTake(
     try {
       const saved = await store.commitDocument({
         projectId,
-        expectedRevision: project.revision,
+        expectedRevision: revision,
         documentId,
         kind: "story",
         schemaVersion: DOCUMENT_SCHEMA_VERSIONS.story,
@@ -811,9 +830,11 @@ export async function appendGeneratedTake(
         revision: saved.revision,
       };
     } catch (e) {
-      if (!(e instanceof CommandError)) throw e;
-      if (e.code === "REVISION_CONFLICT") continue;
-      return not("story-refused", e.message);
+      // Some of the store's refusals are plain errors with words of their own.
+      const refused = toCommandError(e);
+      if (refused.code === "INTERNAL") throw e;
+      if (refused.code === "REVISION_CONFLICT") continue;
+      return not(refused.retryable ? "busy" : "story-refused", refused.message);
     }
   }
   return not(
