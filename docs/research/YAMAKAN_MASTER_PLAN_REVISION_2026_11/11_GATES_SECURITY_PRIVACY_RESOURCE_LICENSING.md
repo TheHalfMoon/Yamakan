@@ -178,7 +178,7 @@ outbound call sites makes it a tested property for `core`, `server`, `cli` and `
 
 | Data | Where it rests at the baseline | Change proposed |
 |---|---|---|
-| Prompt text | Browser `localStorage` (the Create brief); shot `notes` in the story document; a hash in the generation ledger | MPR-101 stores the full request in a content-addressed record named from the take; MPR-106 moves the brief into the story document (FD-2) |
+| Prompt text | Browser `localStorage` (the Create brief); shot `notes` in the story document; the full prompt in the generation ledger (`jobs.payload`), and so in backups; a hash only in an imported video's lineage | MPR-101 stores the full request in a content-addressed record named from the take; MPR-106 moves the brief into the story document (FD-2) |
 | Reference images, likeness and voice consent | Project media store and consent records | MPR-401 and MPR-402 add entity records and a delivery report; the consent gate is unchanged |
 | Kaggle credentials | The person's own Kaggle configuration; Yamakan never reads them | Unchanged; MPR-205 names the variables that may reach the CLI and tests that no other does |
 | Workspace and agent tokens | Workspace folder; an agent token file named by `YAMAKAN_AGENT_TOKEN_FILE` | MPR-503 makes the agent token the default for CLI and SDK automation |
@@ -194,7 +194,8 @@ outbound call sites makes it a tested property for `core`, `server`, `cli` and `
 2. The consent gate applies on every route, including future ones. A new route that cannot enforce
    it is not added.
 3. A principal with `project:read` can read prompts, briefs and notes once they are in the
-   project. No new scope is added; the agent-access text says this plainly (MPR-503, MPR-304).
+   project, and already reads the prompt of a listed generation through
+   `yamakan.generation.list` today. No new scope is added; the agent-access text says this plainly (MPR-503, MPR-304).
 4. The export manifest never carries prompt text, a seed, a name or a host path. The provenance
    report gives prompt text only on request, and only after FD-2 is recorded (MPR-701).
 5. Benchmark raters see media only; operators' recordings stay outside the repository

@@ -324,8 +324,10 @@ registry, the task program is rendered again, and the package check is run.
 | OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs. | SE-4 | MPR-204 |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |
 | OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts`. | SA-1 | MPR-204 |
+| OA-23 | MPR-003, MPR-209 and other cards with parts | The package check gets a part-aware rule, so a part that lands before its card's dependencies does not fail it. MPR-209 part a is the confirmed case; others were not examined. | Review of #281 | MPR-003 |
+| OA-24 | MPR-209 | Acceptance, tests, files and an offer field for the new `NOTICE` entries, the FFmpeg source or written offer, and `node.exe`, whose hash is the running host's and so differs between hosts. | Review of #281 | MPR-209 part a |
 
-The planner's view on timing: OA-5 and OA-16 both change the take record that MPR-101 creates.
+The planner's view on timing (OA-1 to OA-22): OA-5 and OA-16 both change the take record that MPR-101 creates.
 The record is versioned and a later additive step is possible, but each is cheapest before
 MPR-101 merges. OA-4 and OA-8 answer the creative director's blocker and both land in MPR-302.
 OA-18 changes a closed list, so it is cheapest before MPR-207 fixes that list. The rest can wait
@@ -500,7 +502,7 @@ changes the reason given.
 | Make the recommended answer to FD-2 a condition of the Stage 1 exit (PS-3) | A plan cannot make a founder decision a condition of its own stage. Stage 1 is demonstrated with whichever answer is recorded. |
 | Move MPR-209 to Stage 0 (OM-1) | Part a has no dependency and is first in Stage 2. Stage 0 is kept to adoption, the package check and CI. The founder may reorder under FD-11. |
 | Render the task program in CI and stop committing it (OM-4) | A reviewer reads the cards in the pull request. The committed file is compared with the registry by the rendering check, and a CI rendering would wait for MPR-804. |
-| Derive the two counts in `tests/parity.test.ts` from the registry (OM-5) | There is nothing to derive: the file holds no counts, so the earlier reason (a literal tripwire) was wrong. No test fails when a command is added or removed by accident from both lists. Whether to add one is open. The 25 cards that list the file check at step 0 whether they need to edit it. |
+| Derive the two counts in `tests/parity.test.ts` from the registry (OM-5) | There is nothing to derive: the file holds no counts, so the earlier reason (a literal tripwire) was wrong. No test pins the count. Whether to add one is open. The 25 cards that list the file check at step 0 whether they need to edit it. |
 | A dedicated table for take records (SA-6) | It is a schema step that the handoff says MPR-101 must not need, and the version table already keeps documents by kind. It is reopened if a reader without a kind filter is found. |
 | Editing the rendered task program by hand | The registry is the source. The rendering check fails on any hand edit. |
 
@@ -513,7 +515,8 @@ changes the reason given.
 3. The exit of Stage 1 needs three working editors or creative leads on the founder host. Can
    that be arranged? If not, the exit stays BLOCKED.
 4. MPR-010 reverses a consent rule that an earlier pull request kept on purpose. It proceeds under
-   the delegation of 2026-11-07 without a new answer; the founder may overrule it.
+   the delegation of 2026-11-07 without a new answer, unless its reviewer judges that the change
+   needs the founder (section 5.5); the founder may overrule it.
 5. Is Stage 1, as limited in document 00 section 5 (silent clips of a few seconds, no control of
    framing or performance, no prompt refill without FD-2), the right first deliverable under
    FD-11?

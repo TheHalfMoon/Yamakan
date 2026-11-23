@@ -440,8 +440,8 @@ workspace schema went from 15 (PR #133) to 18 (PR #271); no card should hard-cod
    MPR-201 and MPR-202. MPR-201 puts one catalog over the model lists and checks them against it;
    it replaces none. MPR-202 adds one report built from the catalog; both existing commands keep
    their fields.
-5. Truth first: MPR-002 (section 6 and the closed rows of section 10), MPR-003 (unregistered
-   streams), MPR-010 (consent-undo reproduction).
+5. Truth first: MPR-003 (unregistered streams), MPR-002 (section 6 and the closed rows of section
+   10), MPR-010 (consent-undo reproduction), in the order of the handoff's section 4.
 6. Agent honesty: MPR-501, MPR-502, MPR-503; MPR-508 stays on FD-9.
 7. Evidence: commit receipts for anything later called QUALIFIED, and full Windows CI (MPR-804,
    FD-8), before Stage 5 claims

@@ -15,7 +15,7 @@ Those stay unauthorised whatever is decided below.
 
 | Id | Question | Recommended answer | Default if not decided | Cards that wait |
 |---|---|---|---|---|
-| FD-1 | Adopt this revision as the current plan, and close draft pull requests #85 and #86 as superseded evidence? | Yes to both | The System Supremacy programme stays the only authority; this package stays a proposal | MPR-001 and, through it, the start of every other card |
+| FD-1 | Four answers: (a) adopt this revision as the current plan; (b) close draft pull requests #85 and #86 as superseded evidence; (c) merge the planning pull request; (d) build the cards in the order of FD-11, each behind its own gates? | Yes to each | The System Supremacy programme stays the only authority; this package stays a proposal | MPR-001 and, through it, the start of every other card |
 | FD-2 | May the full generation request, prompt included, be stored in the project and travel with backups and, when the person chooses, with exports? | Yes in the project and backups; opt-in for exports | No prompt in the take record; the full prompts already kept in the generation ledger and the shot notes, and so in backups, stay as today; "revise from a take" cannot refill the prompt | MPR-101, MPR-103, MPR-701 |
 | FD-3 | Is the Kaggle route a product feature or a founder-only experiment? | Product feature marked experimental, after containment and a reading of Kaggle's terms | Founder-only, environment-gated, as today | MPR-404, MPR-405, MPR-604, MPR-801, MPR-802, MPR-803 (what they deliver) |
 | FD-4 | May small, permissively licensed weights be downloaded for local captions, voice and image, for qualification first? | Yes for captions and voice on this PC, qualification only; image later | No weights on the PC, as today | MPR-220, MPR-221; also MPR-404, MPR-405, MPR-604 |
@@ -34,7 +34,8 @@ programme, and should draft pull requests #85 and #86 be closed as "superseded, 
 evidence"? Two answers are asked for beside it and are not implied by it: may the planning pull
 request be merged (MPR-001 cannot start before the package is on `main`), and may the cards be
 built in the order of FD-11, each behind its own gates? An adoption that says nothing about these
-two adopts the plan and authorises neither.
+two adopts the plan and authorises neither: without the merge nothing starts, and without the
+word to build the programme stops after MPR-001.
 
 **Facts.** The current frontier pointer is the System Supremacy registry
 (`docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json`), adopted through pull request
@@ -66,7 +67,8 @@ seed, parameters, references, model identity and route) as part of the project?
 column of the workspace database). A workspace backup is a copy of that database
 (`core/recovery.ts`), so backups carry those prompts. The Create page also writes the prompt, cut
 to 2,000 characters, into the shot's notes (`src/create/create-story.ts` `addMadeVideo`). Only the
-lineage of an imported video (`GenerationLineage`) keeps a hash alone. No take holds the request
+lineage of an imported video (`GenerationLineage`) keeps a hash alone. An agent with
+`project:read` already reads the prompt of a listed generation (`yamakan.generation.list`). No take holds the request
 it was made from. Without the request, a take cannot be revised by
 changing one field, and an export cannot say what made a clip. A prompt can contain private
 detail, and consented likeness references are named by it.
@@ -316,4 +318,5 @@ These were considered and are deliberately not put to the founder yet.
   today be put back by undo. Which rule closes that path is an open product decision of the kind
   the founder record entry of 2026-11-07 delegates. MPR-010 states both rules, recommends one and
   records the choice in the decision record the delegation names. The founder can overrule it;
-  no answer is needed for the card to proceed. Document 13 section 7 says the same.
+  no answer is needed for the card to proceed, unless its reviewer judges that the change needs
+  the founder; then it waits, as the card says.

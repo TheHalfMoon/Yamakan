@@ -60,10 +60,10 @@ This roadmap extends the System Supremacy programme. It does not replace it.
 FD-11 asks the founder to confirm this order. The default, if it is not
 decided, is that the implementation owner continues the current streams.
 
-0. Merge the planning pull request, on the founder's explicit word. MPR-001 needs the
-   package on `main`.
-1. Finish the in-flight Blender pull requests, #279 included. No card of this
+0. Finish the in-flight Blender pull requests, #279 included. No card of this
    revision assumes #279 is merged; step 0 of each card finds out.
+1. Merge the planning pull request, on the founder's explicit word. MPR-001 needs the
+   package on `main`.
 2. Stage 0, so the written record and the checks are true before feature work.
 3. Stage 1, before any new feature stream is opened.
 4. Stage 2 and Stage 3, which can interleave by lane (section 6).

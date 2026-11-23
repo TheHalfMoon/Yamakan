@@ -27,8 +27,11 @@ wins and step 0 of the card records what was found.
 - Nothing here is authorised until MPR-001 records the founder's answer to
   FD-1. Until then the System Supremacy programme is the only task authority,
   and this handoff is a proposal to read, not an instruction to act on.
-- Adoption makes this package the plan. It authorises building only as far as
-  the founder's own quoted words do, and it opens no gate. A card that needs a
+- Adoption makes this package the plan, and MPR-001 may then record it once the
+  package is merged. Every other card, MPR-003 included, starts only if the
+  founder's own quoted words authorise building and cover that card. If they do
+  not, the programme stops after MPR-001 and the founder is asked. Adoption
+  opens no gate. A card that needs a
   founder decision still waits for that decision.
 - Not authorised by any card: a public release, an installer, signing, paid
   infrastructure, a production model or provider switched on, a model
@@ -144,7 +147,7 @@ PASS, and go on with Stage 2.
 | 2 | MPR-205 | After MPR-204 and MPR-207. Part b only after FD-10. |
 | 2 | MPR-502, MPR-503, MPR-504 | After MPR-501. MPR-504 carries a schema step. |
 | 3 | MPR-203 | After MPR-201, MPR-202, MPR-204, MPR-205, MPR-207. |
-| 3 | MPR-209, MPR-305 | MPR-209 part a waits for nothing and is the first pull request of Stage 2; part b after MPR-208. MPR-305 after MPR-202. |
+| 3 | MPR-209, MPR-305 | MPR-209 part a needs no card and is the first pull request of Stage 2 once OA-23 and OA-24 are settled; part b after MPR-208. MPR-305 after MPR-202. |
 | 3 | MPR-505 | Part a (tables and commands; the schema step) after MPR-504. Part b after MPR-203, MPR-204 and MPR-507. |
 | 3 | MPR-506 | Part a (the schema step) after MPR-502 and after the step of MPR-505; part b after MPR-101. |
 | 4 | MPR-210 | Last. A loopback fake only; no real service is contacted. |
@@ -292,7 +295,8 @@ Some cards append to documents that are records, not ordinary prose:
   folder are not edited by any card except where MPR-001 or MPR-003 says so
   by name. Appending a dated entry to `docs/FOUNDER_DECISION_RECORD.md` or
   `docs/AGENT_DECISION_RECORD.md`, as MPR-001 and MPR-010 do, is not an edit in
-  this sense: nothing already there changes.
+  this sense: nothing already there changes. MPR-010's entry is added at the top
+  of the agent record, which is that record's order.
 
 ### 5.6 Donor roots and provenance
 
@@ -332,7 +336,7 @@ These are the cases that change the order of work:
 | MPR-203 | Two pull requests under one id. |
 | MPR-204 | Two pull requests; part a alone changes no behaviour. |
 | MPR-205 | Part b only after FD-10 is decided. |
-| MPR-209 | Part a has no dependency and is the first pull request of Stage 2; part b follows MPR-208. |
+| MPR-209 | Part a has no dependency and is the first pull request of Stage 2 once OA-23 and OA-24 are settled; part b follows MPR-208. |
 | MPR-221 | Part a is captions; part b is the voice. |
 | MPR-504 | Part a (store and commands) is safe to merge alone; part b is the inbox and the qualification. |
 | MPR-505 | Part a needs MPR-504 only; part b needs MPR-203, MPR-204 and MPR-507. |
@@ -347,8 +351,9 @@ These are the cases that change the order of work:
 | MPR-802 | Two pull requests: part a ends with the freeze commit; part b is the counted run and its evidence. |
 | MPR-803 | Two pull requests: part a spends nothing; part b is the arm itself. |
 
-A part that lands early does not make the card complete, and a card's state
-does not change until its last part is verified. The exact content of each
+A part that lands early does not make the card complete. How the package check
+treats a part that lands before the card's dependencies is open amendment OA-23;
+until it is settled, such a part waits for them. The exact content of each
 part is on the card. Where this table and a card differ, the card is right.
 
 ## 7. How each feature is shown to work
