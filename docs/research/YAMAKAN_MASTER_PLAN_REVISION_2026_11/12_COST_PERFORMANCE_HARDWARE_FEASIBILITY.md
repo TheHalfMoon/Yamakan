@@ -1,6 +1,6 @@
 # Cost, performance and hardware feasibility
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This document covers what the revision costs in hardware, money, quota and human time, and what the

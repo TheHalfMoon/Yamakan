@@ -1,6 +1,6 @@
 # Implementation Handoff
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This document is written for the implementation owner. It says what to build,
@@ -24,9 +24,9 @@ wins and step 0 of the card records what was found.
 - The planning reviewer wrote this package and built nothing. The
   implementation owner builds, tests and opens the pull requests. This
   package does not change who decides anything.
-- Nothing here is authorised until MPR-001 records the founder's answer to
-  FD-1. Until then the System Supremacy programme is the only task authority,
-  and this handoff is a proposal to read, not an instruction to act on.
+- The founder adopted the plan and authorised building its cards on 2026-11-23
+  (two entries in `docs/FOUNDER_DECISION_RECORD.md`). Before that the System
+  Supremacy programme was the only task authority.
 - Adoption makes this package the plan, and MPR-001 may then record it once the
   package is merged. Every other card, MPR-003 included, starts only if the
   founder's own quoted words authorise building and cover that card. If they do

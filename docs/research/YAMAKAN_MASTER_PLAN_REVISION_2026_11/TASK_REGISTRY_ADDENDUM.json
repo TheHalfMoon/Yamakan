@@ -1,7 +1,12 @@
 {
   "schema": "yamakan.system-improvement-plan-addendum/v1",
-  "status": "PROPOSED_NOT_AUTHORIZED",
-  "implementationAuthorized": false,
+  "status": "ADOPTED",
+  "implementationAuthorized": true,
+  "adoption": {
+    "record": "docs/FOUNDER_DECISION_RECORD.md",
+    "heading": "2026-11-23: Master plan revision adopted as the frontier",
+    "mergeCommit": "89f116f8f17b2ab6e415d4f1a5cea6b1e66c37df"
+  },
   "baselineMain": "7b1ca46ce20efaa603be12b51d57aee04a3f5f72",
   "planningDate": "2026-11-12",
   "extends": {
@@ -126,6 +131,14 @@
     {
       "id": "DEFERRED",
       "meaning": "Deliberately not scheduled; kept so the reason and the reopening condition are on record."
+    },
+    {
+      "id": "REVIEW_PENDING",
+      "meaning": "Built, or being built, and not yet verified. The pull request that builds a card sets it when it creates one of the card's listed new files."
+    },
+    {
+      "id": "VERIFIED",
+      "meaning": "Complete: every listed new file exists and `evidence` names the merge commit. The implementation lead sets it in a reviewed pull request."
     }
   ],
   "founderDecisions": [
@@ -357,7 +370,8 @@
         "D",
         "E"
       ],
-      "state": "EXTERNAL_BLOCKED",
+      "state": "VERIFIED",
+      "evidence": "Merged as 89f116f8f17b2ab6e415d4f1a5cea6b1e66c37df (PR #282, adoption) and 8b7a5a16af3d66153680358d789bc43ae4cbd834 (PR #284, the two drafts, shut on 2026-11-23 with branches kept)",
       "dependsOn": [],
       "legacy": [
         "SS-019"
@@ -601,7 +615,7 @@
         "D",
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "REVIEW_PENDING",
       "dependsOn": [
         "MPR-001"
       ],

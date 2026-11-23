@@ -1,6 +1,6 @@
 # Sources
 
-> Status: PROPOSED — planning only. Not authority until founder review.
+> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions.
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This file resolves every source key used in this package. A source key is a short code, such as S7, HF-S7, R-TOS, U12, V-WHI or C-4, that stands for a public page or a paper.

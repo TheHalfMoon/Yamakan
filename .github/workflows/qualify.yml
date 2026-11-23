@@ -47,6 +47,7 @@ jobs:
       # The committed SBOM must be what the lockfile and the vendored list make now.
       - run: npm run sbom:check
       - run: npm run brand:check
+      - run: npm run plan:check
       # Same gate: audit must pass. Retries only cover transient registry 5xx/timeouts
       # (npm status outages); never treats audit failure or skipped scan as success.
       - name: npm audit (high, bounded registry retry)
