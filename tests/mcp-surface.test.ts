@@ -27,6 +27,8 @@ import type { Operation, Principal, Scope } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { ProjectStore } from "../core/store.ts";
+import { createEmptyStudioDocument } from "../core/studio.ts";
+import { stageDocument } from "../server/document-stage.ts";
 import { CANCEL_TWINS, cancelPlan } from "../mcp/cancellation.ts";
 import { MCP_LIMITS } from "../mcp/framing.ts";
 import { YamakanClient, type OperationResult } from "../sdk/client.ts";
@@ -59,9 +61,14 @@ async function service(
   const reached: string[] = [];
   const dropped: string[] = [];
   let origin = "";
+  let older = false;
   const http = createServer((req, res: ServerResponse) => {
     const url = new URL(req.url!, origin);
     paths.push(url.pathname);
+    // From its arrival: a request can be dropped before this has done what it asks.
+    res.on("close", () => {
+      if (!res.writableEnded) dropped.push(url.pathname);
+    });
     const json = (status: number, body: unknown) => {
       if (res.destroyed) return;
       res.writeHead(status, { "Content-Type": "application/json" });
@@ -71,13 +78,11 @@ async function service(
       const gate = held.get(name);
       if (!gate) return;
       reached.push(name);
-      res.on("close", () => {
-        if (!res.writableEnded) dropped.push(name);
-      });
       await gate;
     };
     void (async () => {
       if (url.pathname === "/api/v1/hello") {
+        await holding("hello");
         for (const token of Object.keys(people)) {
           const key = await tokenKey(token);
           if ((await serviceId(key)) === url.searchParams.get("id"))
@@ -95,8 +100,27 @@ async function service(
         people[String(req.headers.authorization).replace("Bearer ", "")];
       if (url.pathname === "/api/v1/tools") {
         await holding("tools");
-        return json(200, { ...catalogFor(principal) });
+        const { tools, withheld } = catalogFor(principal);
+        return json(200, { tools, ...(older ? {} : { withheld }) });
       }
+      const stage = /^\/api\/v1\/projects\/([^/]+)\/documents\/stage$/.exec(
+        url.pathname,
+      );
+      if (stage)
+        try {
+          const receipt = await stageDocument(
+            store,
+            principal,
+            stage[1]!,
+            req,
+            true,
+          );
+          await holding("stage");
+          return json(200, receipt);
+        } catch (e) {
+          const { code, message, retryable } = toCommandError(e);
+          return json(400, { error: { code, message, retryable } });
+        }
       let text = "";
       for await (const chunk of req) text += chunk;
       const { operation, parameters, requestId } = JSON.parse(text);
@@ -139,6 +163,9 @@ async function service(
     paths,
     reached,
     dropped,
+    older: () => {
+      older = true;
+    },
     count: (operation: string) =>
       calls.filter((c) => c.operation === operation).length,
     hold: (name: string) => {
@@ -194,6 +221,7 @@ function connect(origin: string, token: string) {
   return {
     answers,
     stderr: () => stderr,
+    closeErrors: () => child.stderr.destroy(),
     write,
     send,
     request: (method: string, params?: unknown) =>
@@ -311,12 +339,18 @@ test("a withheld tool is answered by the service's own refusal, and one that is 
     if (/generation|agent/.test(operation))
       assert.match(said.message, /requires the browser session/);
   }
-  // Refused before anything of the save is sent.
+  // A save's first step is refused as its command is.
   const save = await client.call("yamakan.document.save", {
     projectId: project.id,
     content: {},
+    kind: "studio",
+    schemaVersion: 1,
   }).answered;
   assert.equal(save.result.isError, true);
+  assert.deepEqual(
+    JSON.parse(save.result.content[0].text).code,
+    "SCOPE_DENIED",
+  );
   assert.equal((await s.store.load(project.id)).revision, project.revision);
   for (const name of ["yamakan_nothing", "constructor", ""]) {
     const answer = await client.request("tools/call", { name });
@@ -390,6 +424,137 @@ const stateOf = (s: Awaited<ReturnType<typeof service>>, id: string) =>
       db.prepare("SELECT state FROM jobs WHERE job_id = ?").get(id),
     ) as { state: string }
   ).state;
+
+test("a cancelled read frees its place among those in progress, and an id in use names its first", async () => {
+  const s = await service({ reader: agent("project:read", "project:write") });
+  const client = connect(s.origin, "reader");
+  await client.request("tools/list");
+  const open = s.hold("yamakan.project.list");
+  const sent = () => s.count("yamakan.project.list");
+  // One fewer than may be in progress, so that a cancellation is still read.
+  const reads = Array.from({ length: MCP_LIMITS.inFlight - 1 }, () =>
+    client.call("yamakan.project.list"),
+  );
+  await until(() => sent() === reads.length, "all sent");
+  client.cancel(reads[0].id);
+  await until(() => s.dropped.length === 1, "aborted");
+  const started = Date.now();
+  // Two more fit, and only with its place free.
+  client.call("yamakan.project.list");
+  client.call("yamakan.project.list");
+  await until(() => sent() === reads.length + 2, "both sent");
+  assert.ok(Date.now() - started < 1000);
+  open();
+  for (const read of reads.slice(1)) await read.answered;
+  await client.settled();
+  // Two with one id: a read, then a change that a cancellation would let finish unanswered.
+  const reopen = s.hold("yamakan.project.list");
+  const remake = s.hold("yamakan.project.create");
+  const before = sent();
+  const asked = (name: string, args: object) => ({
+    id: "same",
+    method: "tools/call",
+    params: { name, arguments: args },
+  });
+  client.write(
+    asked("yamakan_project_list", {}),
+    asked("yamakan_project_create", { name: "Second" }),
+  );
+  await until(
+    () => sent() === before + 1 && s.count("yamakan.project.create") === 1,
+    "both sent",
+  );
+  client.cancel("same");
+  await until(() => s.dropped.length === 2, "the first aborted");
+  reopen();
+  remake();
+  await until(() => client.answeredTo("same") === 1, "the second answered");
+  await client.settled();
+  const [answer] = client.answers.filter((a) => a.id === "same");
+  assert.equal(JSON.parse(answer.result.content[0].text).name, "Second");
+  assert.equal(client.answeredTo("same"), 1);
+});
+
+test("a cancelled batch and a cancelled proxy are stopped by their own commands", async () => {
+  const projectId = randomUUID();
+  const assetId = randomUUID();
+  const batchId = "b".repeat(32);
+  for (const [start, parameters, result, cancel, input] of [
+    [
+      "yamakan.export.batch",
+      { projectId, idempotencyKey: "k", variants: [] },
+      { batchId },
+      "yamakan.export.batchCancel",
+      { projectId, batchId },
+    ],
+    [
+      "yamakan.proxy.build",
+      { projectId, assetId },
+      { state: "queued" },
+      "yamakan.proxy.cancel",
+      { projectId, assetId },
+    ],
+    // What it started is not named, so nothing is stopped.
+    ["yamakan.export.batch", { projectId }, {}, "", null],
+  ] as const) {
+    const s = await service(
+      { renderer: agent("render:execute") },
+      {
+        [start]: () => result,
+        "yamakan.export.batchCancel": () => ({}),
+        "yamakan.proxy.cancel": () => ({}),
+      },
+    );
+    const client = connect(s.origin, "renderer");
+    await client.request("tools/list");
+    const open = s.hold(start);
+    const call = client.call(start, parameters);
+    await until(() => s.reached.includes(start), "sent");
+    client.cancel(call.id);
+    await client.settled();
+    open();
+    if (cancel) await until(() => s.count(cancel) === 1, "stopped");
+    else await wait(300);
+    await client.settled();
+    assert.deepEqual(
+      s.calls.slice(1),
+      cancel ? [{ operation: cancel, parameters: input }] : [],
+    );
+    assert.equal(client.answeredTo(call.id), 0);
+  }
+});
+
+test("a client that closes the error stream loses only its lines", async () => {
+  const s = await service(
+    { both: agent("render:execute", "job:control") },
+    {
+      "yamakan.export.video": () => ({ id: randomUUID() }),
+      "yamakan.job.cancel": () => {
+        throw new Error("gone");
+      },
+    },
+  );
+  const client = connect(s.origin, "both");
+  await client.request("tools/list");
+  client.closeErrors();
+  const open = s.hold("yamakan.export.video");
+  const start = client.call("yamakan.export.video", {});
+  await until(() => s.reached.includes("yamakan.export.video"), "sent");
+  client.cancel(start.id);
+  await client.settled();
+  open();
+  await until(() => s.count("yamakan.job.cancel") === 1, "asked");
+  await wait(200);
+  await client.settled();
+});
+
+test("a list without withheld names, as an older service gives it, is read", async () => {
+  const s = await service({ reader: agent("project:read") });
+  s.older();
+  const client = connect(s.origin, "reader");
+  const { tools } = (await client.request("tools/list")).result;
+  assert.ok(tools.length > 0);
+});
 
 test("a cancelled start finishes, and what it started is stopped once, if the token may", async () => {
   const may = randomUUID();
@@ -491,24 +656,54 @@ test("a change cancelled before it is sent is never sent", async () => {
   await client.settled();
   assert.equal(s.count("yamakan.project.create"), 0);
   assert.equal(client.answeredTo(create.id), 0);
-  // Nor is a save, whose first step is a route of its own: the cancellation comes with it.
+  // Nor while the service is still proving itself.
   await client.request("tools/list");
-  const save = "save";
+  const prove = s.hold("hello");
+  const early = client.call("yamakan.project.create", { name: "Never" });
+  await until(() => s.reached.includes("hello"), "proving");
+  client.cancel(early.id);
+  await until(() => s.dropped.length === 2, "the proof is aborted");
+  prove();
+  await client.settled();
+  // Nor a save, when the cancellation comes with it, or when its content is staged.
+  const document = {
+    projectId: randomUUID(),
+    content: createEmptyStudioDocument({ id: randomUUID(), name: "Never" }),
+    kind: "studio",
+    schemaVersion: 1,
+  };
   client.write(
     {
-      id: save,
+      id: "save",
       method: "tools/call",
-      params: {
-        name: "yamakan_document_save",
-        arguments: { projectId: randomUUID(), content: {} },
-      },
+      params: { name: "yamakan_document_save", arguments: document },
     },
-    { method: "notifications/cancelled", params: { requestId: save } },
+    { method: "notifications/cancelled", params: { requestId: "save" } },
   );
   await client.settled();
   await wait(200);
-  assert.equal(client.answeredTo(save), 0);
-  assert.ok(!s.paths.some((p) => p.includes("stage")), s.paths.join(" "));
+  const staged = () => s.paths.filter((p) => p.endsWith("/stage")).length;
+  assert.equal(staged(), 0, s.paths.join(" "));
+  const project = await s.store.create("Staged");
+  const keep = s.hold("stage");
+  const save = client.call("yamakan.document.save", {
+    ...document,
+    projectId: project.id,
+    expectedRevision: project.revision,
+    documentId: randomUUID(),
+    expectedContentHash: null,
+  });
+  await until(() => s.reached.includes("stage"), "staged");
+  client.cancel(save.id);
+  await client.settled();
+  keep();
+  await wait(200);
+  await client.settled();
+  assert.equal(staged(), 1);
+  assert.equal(s.count("yamakan.document.commit"), 0);
+  assert.equal(s.count("yamakan.project.create"), 0);
+  for (const id of [early.id, "save", save.id])
+    assert.equal(client.answeredTo(id), 0);
   // The next call loads the list again and works.
   const next = await client.call("yamakan.project.create", { name: "Made" })
     .answered;

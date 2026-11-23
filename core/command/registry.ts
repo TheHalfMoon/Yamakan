@@ -3328,20 +3328,20 @@ export function catalog() {
 
 /** What a principal may call, and the name of each command it may not, with why. */
 export function catalogFor(principal: Principal) {
-  const all = catalog();
-  return {
-    tools: all.filter((c) => mayCall(principal, c)),
-    withheld: all
-      .filter((c) => !mayCall(principal, c))
-      .map((c) => ({
+  const tools: ReturnType<typeof catalog> = [];
+  const withheld: { name: Operation; reason: "scope" | "browser-only" }[] = [];
+  for (const c of catalog())
+    if (mayCall(principal, c)) tools.push(c);
+    else
+      withheld.push({
         name: c.name,
         // As authorize says it: who must call comes before what they hold.
         reason:
           c.humanOnly && principal.id !== "browser-ui"
-            ? ("browser-only" as const)
-            : ("scope" as const),
-      })),
-  };
+            ? "browser-only"
+            : "scope",
+      });
+  return { tools, withheld };
 }
 
 // A caption track of the current revision (YU-024).

@@ -1,5 +1,5 @@
-// What a cancelled MCP request does here (MPR-501). A read is stopped. A change that has been sent
-// cannot be taken back: it is left to finish, and if it started something that has a cancel of its
+// What a cancelled MCP request does here (MPR-501). What has not been sent is not sent. A read is
+// stopped. A change that has been sent cannot be taken back: it is left to finish, and if it started something that has a cancel of its
 // own, that is asked for once. Whatever happens, a cancelled request gets no answer.
 import type { Operation } from "../sdk/client.ts";
 
@@ -57,7 +57,8 @@ export const CANCEL_TWINS: Readonly<Partial<Record<Operation, Twin>>> =
     },
   });
 
-// Where a request is: not yet sent to the service, sent and not answered, or answered here.
+// Where a request is: its command not yet sent to the service, sent and not answered, or answered
+// here.
 export type Phase = "waiting" | "sent" | "answered";
 export type CancelPlan =
   "abort" | "finish-then-cancel" | "finish-and-drop" | "ignore";

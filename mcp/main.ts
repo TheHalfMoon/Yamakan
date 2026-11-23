@@ -14,7 +14,7 @@ import type { Phase } from "./cancellation.ts";
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const env = (key: string) =>
   process.env[`YAMAKAN_${key}`] || process.env[`DARZAIN_${key}`];
-const url = env("URL") || "http://127.0.0.1:4318";
+const url = (env("URL") || "http://127.0.0.1:4318").replace(/\/$/, "");
 if (new URL(url).hostname !== "127.0.0.1")
   throw new Error("MCP connects only to the local Yamakan server.");
 const root = path.resolve(env("WORKSPACE") || ".yamakan");
@@ -42,8 +42,23 @@ async function bearerToken() {
   return (await readFile(path.join(root, "token"), "utf8")).trim();
 }
 // The service rotates its credential on restart, so read it for every call.
-const client = async () =>
-  new YamakanClient({ baseUrl: url, token: await bearerToken() });
+const client = async (request?: InFlight) =>
+  new YamakanClient({
+    baseUrl: url,
+    token: await bearerToken(),
+    ...(request ? { fetch: sending(request) } : {}),
+  });
+// A command is sent once the service has proved itself and the command itself goes out. Until
+// then, a cancelled one is not sent: not after the proof, nor after a save's staged content.
+const sending =
+  (request: InFlight): typeof fetch =>
+  (input, init) => {
+    if (String(input) === `${url}/api/v1/call`) {
+      request.stop.signal.throwIfAborted();
+      request.phase = "sent";
+    }
+    return fetch(input, init);
+  };
 
 // A mutation retried with the same request ID returns its original result,
 // as over REST (the envelope's requestId). MCP has no envelope, so each tool
@@ -66,6 +81,8 @@ type Message = {
   method?: string;
   params?: Record<string, unknown>;
 };
+// A client that does not read these lines loses only them.
+process.stderr.on("error", () => {});
 const send = (value: unknown) =>
   process.stdout.write(`${JSON.stringify(value)}\n`);
 const error = (id: Message["id"], code: number, message: string) =>
@@ -149,7 +166,7 @@ async function tools(signal: AbortSignal) {
         [toolName(name), { name, mutation, callable: true }] as const,
     ),
     // What it does is not said, so it is never taken for a read.
-    ...catalog.withheld.map(
+    ...(catalog.withheld ?? []).map(
       ({ name }) =>
         [toolName(name), { name, mutation: true, callable: false }] as const,
     ),
@@ -208,7 +225,8 @@ async function stopStarted(
     .then((service) => service.call(twin.cancel, input as never))
     .then(
       () => "asked for",
-      () => "refused",
+      (e) =>
+        e instanceof YamakanError ? `refused (${e.code})` : "not reached",
     );
   process.stderr.write(
     `Yamakan MCP: ${started} was cancelled after it started; ${twin.cancel} ${outcome}.\n`,
@@ -217,8 +235,7 @@ async function stopStarted(
 
 async function handle(message: Message, request: InFlight) {
   const { id, method } = message;
-  const reply = (_id: Message["id"], result: unknown) =>
-    answer(id, request, { result });
+  const reply = (result: unknown) => answer(id, request, { result });
   const params =
     message.params && typeof message.params === "object" ? message.params : {};
   const notification = id === undefined;
@@ -227,7 +244,7 @@ async function handle(message: Message, request: InFlight) {
   switch (method) {
     case "initialize": {
       const requested = String(params.protocolVersion ?? "");
-      return reply(id, {
+      return reply({
         protocolVersion: PROTOCOL_VERSIONS.includes(requested)
           ? requested
           : PROTOCOL_VERSIONS[0],
@@ -240,14 +257,14 @@ async function handle(message: Message, request: InFlight) {
     case "notifications/initialized":
       return;
     case "ping":
-      return reply(id, {});
+      return reply({});
     case "tools/list":
-      return reply(id, { tools: await tools(request.stop.signal) });
+      return reply({ tools: await tools(request.stop.signal) });
     case "tools/call": {
       // Tool failures are results the model can read, not protocol errors;
       // that includes a refused credential while loading the tool list.
       const toolError = (e: YamakanError, sent?: unknown) =>
-        reply(id, {
+        reply({
           // The caller's or save's own id first: a save's stage and commit
           // suffix theirs, and retrying under one of those replays nothing.
           // Otherwise the service's trace id, to report. The text stays as it was.
@@ -333,13 +350,12 @@ async function handle(message: Message, request: InFlight) {
               null,
             );
         }
-        const service = await client();
+        const service = await client(request);
         if (request.cancelled) return;
         request.operation = operation ?? {
           name: "yamakan.document.save",
           mutation: true,
         };
-        request.phase = "sent";
         // A save always has an id. One generated here reaches the caller only
         // with a reply: after a lost response, only a supplied id can retry.
         if (saving)
@@ -361,7 +377,7 @@ async function handle(message: Message, request: InFlight) {
           return saving
             ? undefined
             : await stopStarted(operation!.name, args, result);
-        return reply(id, {
+        return reply({
           ...requestMeta(sent),
           content: [{ type: "text", text: JSON.stringify(result) }],
         });
