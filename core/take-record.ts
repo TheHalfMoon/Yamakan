@@ -142,8 +142,8 @@ export const TakeRecordSchema = z
       )
       .max(TAKE_RECORD_LIMITS.inputs),
     output: z.object({ sha256: Sha256 }).strict(),
-    // What the run itself said it used (OA-16), beside what was asked for above: its
-    // runtime lock, the provider's model id and version, and its seed. Null: it said nothing.
+    // What the run itself said (OA-16), beside what was asked for above: its runtime, the
+    // provider's model id and version, and its seed. Null: it said nothing.
     reported: EngineReportSchema.nullable(),
     // Epoch milliseconds; null is not known.
     timings: z

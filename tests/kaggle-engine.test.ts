@@ -1599,9 +1599,5 @@ test("a receipt that says nothing of its run is no failure", async () => {
   const answer = await k.engine.submit(request(), context as never);
   const ref = (answer as { executionRef: string }).executionRef;
   assert.equal((await k.engine.status(ref)).state, "succeeded");
-  assert.deepEqual(k.engine.reported!(ref), {
-    model: null,
-    seed: null,
-    runtime: null,
-  });
+  assert.equal(k.engine.reported!(ref), null);
 });

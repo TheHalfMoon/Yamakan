@@ -228,7 +228,8 @@ const ShotV2Schema = ShotSchema.extend({
 
 const StorySceneV2Schema = StorySceneSchema.extend({
   shots: z.array(ShotV2Schema).max(STORY_LIMITS.shotsPerScene),
-  script: Words(4_000).optional(),
+  // Not "script", a name no command's input may have (tests/command.test.ts).
+  sceneText: Words(4_000).optional(),
 }).strict();
 
 /** The story as it is written: version 2. */
@@ -272,7 +273,7 @@ export function storyTextBytes(story: StoryDocument): number {
     story.scenes.reduce(
       (n, sc) =>
         n +
-        bytes(sc.script) +
+        bytes(sc.sceneText) +
         sc.shots.reduce((m, shot) => m + bytes(shot.intent), 0),
       0,
     )

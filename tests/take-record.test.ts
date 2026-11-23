@@ -4,6 +4,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -889,7 +890,7 @@ test("a story's text is bounded, and an empty part is left out", () => {
     scenes: [
       {
         ...base.scenes[0]!,
-        script: "سطر",
+        sceneText: "سطر",
         shots: [
           {
             ...base.scenes[0]!.shots[0]!,
@@ -912,7 +913,7 @@ test("a story's text is bounded, and an empty part is left out", () => {
     id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
     name: "S",
     shots: [],
-    script: "x".repeat(4000),
+    sceneText: "x".repeat(4000),
   }));
   assert.throws(
     () =>
@@ -1618,31 +1619,119 @@ test("a record holds what the run said of itself, beside what was asked", async 
   assert.equal(silent.reported, null);
 });
 
-test("a run's word is taken only where it reads as a plain name", () => {
+test("what an import is the first to learn of a run is kept too", async () => {
+  const w = await workspace();
+  const asset = await video(w, "direct");
+  const ledger = memoryLedger();
+  const row = run(w, asset, { imported: null, state: "running" });
+  ledger.begin(row);
+  const reported = engineReport({ seed: 4 });
+  const service = createGenerationService({
+    adapter: {
+      status: async () => ({ executionRef: "r", state: "succeeded" }),
+      enumerateArtifacts: async () => [
+        {
+          handle: "o.mp4",
+          mediaType: "video/mp4",
+          byteLength: 10,
+          sha256: asset.hash,
+        },
+      ],
+      reported: () => reported,
+    } as unknown as EngineAdapterV2,
+    store: w.store,
+    resourcePolicyHash: RESOURCE_POLICY_HASH,
+    ledger,
+  });
+  await service.importResult(row.generationId);
+  assert.deepEqual(service.row(row.generationId)?.reported, {
+    model: null,
+    seed: 4,
+    runtime: null,
+  });
+});
+
+test("a run's word is taken only where it has the form of such a name", () => {
   const none = { model: null, seed: null, runtime: null };
+  const runtime = { python: null, torch: null, packages: null };
+  for (const said of [
+    {},
+    { model: "C:\\Users\\someone\\model" },
+    { model: "/home/someone/model" },
+    { model: "Users/someone/model" },
+    { model: "a/../b" },
+    { model: "a..b" },
+    { model: "someone@example.com" },
+    { model: "https://example.com/x" },
+    { model: "a/b\nc" },
+    { model: "two words" },
+    { model: "m".repeat(201) },
+    { model: 5, seed: "7", packages: "x" },
+    { seed: -1 },
+    { seed: 1.5 },
+    { packages: Array(33).fill("a==1") },
+    { packages: ["a==1", "b @ /home/someone/b"] },
+    { packages: ["a".repeat(81)] },
+    { packages: [5] },
+    { python: "a b" },
+    { python: "1".repeat(81) },
+    { torch: "../x" },
+    { version: "only a version" },
+  ])
+    assert.equal(engineReport(said), null, JSON.stringify(said));
   for (const [said, expected] of [
-    [{}, none],
-    [{ model: "C:\\Users\\someone\\model" }, none],
-    [{ model: "/home/someone/model" }, none],
-    [{ model: "https://example.com/x" }, none],
-    [{ model: "a/b\nc" }, none],
-    [{ model: "m".repeat(201) }, none],
-    [{ model: 5, seed: "7", packages: "x" }, none],
-    [{ seed: -1 }, none],
-    [{ seed: 1.5 }, none],
-    [{ packages: Array(33).fill("a==1") }, none],
-    [{ packages: ["a==1", "b @ /home/someone/b"] }, none],
+    [
+      { model: "m".repeat(200), seed: 0 },
+      { ...none, model: { id: "m".repeat(200), version: null }, seed: 0 },
+    ],
     [
       { model: "a/b", version: "not a version" },
       { ...none, model: { id: "a/b", version: null } },
     ],
     [
-      { packages: ["a==1"], python: "a b" },
+      { model: "a/b", version: "1".repeat(81) },
+      { ...none, model: { id: "a/b", version: null } },
+    ],
+    // Each part alone: an odd package leaves Python and torch known.
+    [
+      { packages: ["./x"], python: "3.13.16", torch: "2.11.0+cu130" },
       {
         ...none,
-        runtime: { python: null, torch: null, packages: ["a==1"] },
+        runtime: { ...runtime, python: "3.13.16", torch: "2.11.0+cu130" },
+      },
+    ],
+    [
+      { packages: ["imageio[ffmpeg]==2.37.0", "ftfy>=6", "accelerate"] },
+      {
+        ...none,
+        runtime: {
+          ...runtime,
+          packages: ["imageio[ffmpeg]==2.37.0", "ftfy>=6", "accelerate"],
+        },
       },
     ],
   ] as const)
     assert.deepEqual(engineReport(said), expected, JSON.stringify(said));
+  // What the real scripts pin has this form.
+  for (const r of KAGGLE_RECIPES) {
+    const script = readFileSync(
+      new URL(`../scripts/kaggle/${r.folder}/run.py`, import.meta.url),
+      "utf8",
+    );
+    const packages = [
+      ...script
+        .slice(script.indexOf("PACKAGES = ["))
+        .split("]")[0]!
+        .matchAll(/"([^"]+)"/g),
+    ].map((m) => m[1]!);
+    assert.ok(packages.length > 3);
+    assert.deepEqual(
+      engineReport({ model: r.model, version: r.revision, packages }),
+      {
+        model: { id: r.model, version: r.revision },
+        seed: null,
+        runtime: { ...runtime, packages },
+      },
+    );
+  }
 });

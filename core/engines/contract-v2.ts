@@ -357,25 +357,44 @@ export type EngineContextV2 = {
 };
 
 // What a run said of itself when it ended (OA-16): claims of the engine that ran it, not facts
-// checked here, so only plain short names pass. What does not read as one is not known.
-const Plain = (max: number) =>
-  z
-    .string()
-    .max(max)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9._+=<>~!,/@-]*$/);
+// checked here. Each part has the form of such a name, or is not known; a form is no proof
+// that it is one.
+const Version = z
+  .string()
+  .max(80)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._+-]*$/);
 export const EngineReportSchema = z
   .object({
     model: z
-      .object({ id: Plain(200), version: Plain(80).nullable() })
+      .object({
+        // A name, or an owner's: never a longer path.
+        id: z
+          .string()
+          .max(200)
+          .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)?$/)
+          .refine((id) => !id.includes("..")),
+        version: Version.nullable(),
+      })
       .strict()
       .nullable(),
     seed: z.number().int().nonnegative().nullable(),
-    // The runtime lock: what the run was made with.
+    // The runtime lock, as far as a run says it: for a Kaggle run, the packages its script
+    // asks for, not all that was installed.
     runtime: z
       .object({
-        python: Plain(40).nullable(),
-        torch: Plain(80).nullable(),
-        packages: z.array(Plain(80)).max(32),
+        python: Version.nullable(),
+        torch: Version.nullable(),
+        packages: z
+          .array(
+            z
+              .string()
+              .max(80)
+              .regex(
+                /^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9._,-]+\])?([=<>~!]=?[A-Za-z0-9.+*!_-]+)?$/,
+              ),
+          )
+          .max(32)
+          .nullable(),
       })
       .strict()
       .nullable(),
@@ -383,7 +402,7 @@ export const EngineReportSchema = z
   .strict();
 export type EngineReport = z.infer<typeof EngineReportSchema>;
 
-/** A run's report from what it left, each part known or null. */
+/** A run's report from what it left, each part known or null; null when it said nothing. */
 export function engineReport(said: {
   model?: unknown;
   version?: unknown;
@@ -391,22 +410,28 @@ export function engineReport(said: {
   python?: unknown;
   torch?: unknown;
   packages?: unknown;
-}): EngineReport {
+}): EngineReport | null {
   const shape = EngineReportSchema.shape;
   const known = <T>(schema: z.ZodType<T>, value: unknown): T | null => {
     const read = schema.safeParse(value);
     return read.success ? read.data : null;
   };
-  const version = known(Plain(80), said.version);
-  return {
-    model: known(shape.model.unwrap(), { id: said.model, version }),
-    seed: known(shape.seed.unwrap(), said.seed),
-    runtime: known(shape.runtime.unwrap(), {
-      python: known(Plain(40), said.python),
-      torch: known(Plain(80), said.torch),
-      packages: said.packages,
-    }),
+  const runtime = {
+    python: known(Version, said.python),
+    torch: known(Version, said.torch),
+    packages: known(shape.runtime.unwrap().shape.packages, said.packages),
   };
+  const report = {
+    model: known(shape.model.unwrap(), {
+      id: said.model,
+      version: known(Version, said.version),
+    }),
+    seed: known(shape.seed.unwrap(), said.seed),
+    runtime: Object.values(runtime).every((part) => part === null)
+      ? null
+      : runtime,
+  };
+  return Object.values(report).every((part) => part === null) ? null : report;
 }
 
 export type EngineAdapterV2 = {

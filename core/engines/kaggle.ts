@@ -473,7 +473,7 @@ type Run = {
   endedWith?: string;
   video?: { file: string; artifact: Artifact };
   // What its receipt said of it, read before the receipt goes.
-  reported?: EngineReport;
+  reported?: EngineReport | null;
   // Sent with no answer: nothing says it is running at all.
   uncertain?: boolean;
   // Sent from another Kaggle account: its notebook is not this one's to ask about.

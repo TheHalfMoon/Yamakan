@@ -90,9 +90,9 @@ them. Severity is the reviewer's own. The words in the last column mean:
 | Disposition | Findings | Of which blockers |
 |---|---|---|
 | FIXED | 49 | 6 |
-| PARTLY FIXED | 20 | 1 |
+| PARTLY FIXED | 22 | 1 |
 | STATED AS LIMIT | 5 | 1 |
-| LEFT OPEN | 9 | 1 |
+| LEFT OPEN | 7 | 1 |
 | ALREADY IN CARD | 1 | 0 |
 | REJECTED | 1 | 0 |
 | Total | 85 | 9 |
@@ -211,7 +211,7 @@ Verdict: yes with fixes. ME-1 must be settled before any Stage 6 local card.
 | ME-2 | MAJOR | The capability report and preflight cannot describe references, audio output, controls or extension. | PARTLY FIXED: `limits` in MPR-202 has a `references` entry. The rest is OA-15. |
 | ME-3 | MAJOR | The worst-case figure is a waiting time used as a unit of spend. | LEFT OPEN: OA-1. MPR-203 states the limit under risks. |
 | ME-4 | MAJOR | The preflight hash changes when the run does not. | FIXED: the hash in MPR-203 covers the parts that define the run. |
-| ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101, for runs whose engine reports them. |
+| ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101. A Kaggle run reports its script's own pins, model and the seed it was sent, not all that was installed, so a take still cannot be reproduced from its record. |
 | ME-6 | MAJOR | A capability cell's state follows paperwork, not measurement. | PARTLY FIXED: the conformance kit has more cases. `failureClass` stays optional and facts carry no date or sample size: OA-17. |
 | ME-7 | MAJOR | The consistency study can pass on the anchor frame. | PARTLY FIXED: MPR-405 does not show or score frames before one quarter of the clip, and each task asks for a change of framing. The unit of analysis must be stated before any run. |
 | ME-8 | MINOR | The failure classes are too few. | PARTLY FIXED: MPR-210 classifies a 401 answer as `providerRejected`. Three more classes are OA-18. |
@@ -297,7 +297,7 @@ is a reading of the code, and step 0 of every card reproduces the gap before bui
 ### 5.1 Open amendments
 
 Each row is a change to card text that a reviewer or a check asked for and that this package
-does not make. The founder accepts or refuses each one. An accepted amendment is made in the
+does not make, but for the parts marked as accepted. The founder accepts or refuses each one. An accepted amendment is made in the
 registry, the task program is rendered again, and the package check is run.
 
 | Id | Cards | Proposed amendment | Raised by | Decide before |
