@@ -28,7 +28,7 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 - **At the start, creative documents turned off** is a fifth refusal, `CAPABILITY_UNAVAILABLE`, as every story command has it; at the import it is `story-refused`.
 - **`busy` is also the store's own "busy",** which the card does not speak of, since it passes and no check refused anything.
 - **A damaged record in the shot is `story-refused`,** because it may be this run's own, and adding another could be adding it twice. It stays so until that take is removed or a backup restored.
-- **What is no refusal** (a disk error) is not turned into a reason: the import fails with it, after the video is in the project, and importing again tries again.
+- **What is no refusal of the take** (a disk error, or a story document that is itself damaged) is not turned into a reason: the import fails with it, after the video is in the project, and importing again tries again.
 - **The tests of the start's refusals and of the restart** are in `tests/generation-target.test.ts` with the rest, and not in `tests/generation-service.test.ts` and `tests/generation-durable.test.ts`: those need a decoder, and this file runs on every host.
 - **The card expects the page to say before the import that the undo history ends.** No page sends a target yet, so that is MPR-104's; the contract says it.
 
@@ -44,6 +44,10 @@ At `f6f11f4`: `yamakan.generation.start` had no `target`, `GenerationRecord` had
 - **On the founder host, against the real store, job table and commands:** the 13 tests of `tests/generation-target.test.ts` pass, among them a real refusal by a consent that ended, a version 1 story, and a stop and restart in the middle. The engine is a double whose video is already the project's, as its rows and ten bytes; no decoder is asked.
 - **`npm run qualify:revisable-shot`,** extended with a shot-target arm and its own receipt: see the section below.
 - No real browser reads this path: that is MPR-104's.
+
+## Not covered by a test
+
+- That the append checks the other takes' continuity references (`verifyStoryContinuity`): an added take has none, and the review's mutation that removes the call is not caught.
 
 ## The real check
 

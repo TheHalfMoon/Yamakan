@@ -529,7 +529,7 @@ test("an import interrupted after the story commit does not append twice", async
   const w = await withProject();
   const made = await video(w, "made");
   const filler = await video(w, "filler");
-  // Takes with no record come first, and this one is the last there is room for.
+  // Takes with no record come first; the shot is filled before the import is tried again.
   const before = Array.from({ length: 5 }, () => ({
     id: id(),
     assetId: filler.id,
@@ -798,7 +798,7 @@ test("a reference whose consent ended, media a restore took away, and a damaged 
       })
     ).headFingerprint,
   });
-  await refused(later, /media|asset|project/i);
+  await refused(later, /media|asset/i);
   assert.ok(
     !(await w.store.load(w.projectId)).assets.some((a) => a.id === late.id),
   );

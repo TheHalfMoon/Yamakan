@@ -800,8 +800,9 @@ export async function appendGeneratedTake(
         ),
       })),
     };
+    let saved: { revision: number };
     try {
-      const saved = await store.commitDocument({
+      saved = await store.commitDocument({
         projectId,
         expectedRevision: revision,
         documentId,
@@ -818,17 +819,6 @@ export async function appendGeneratedTake(
           verifyStoryContinuity(next, c);
         },
       });
-      return {
-        appended: true,
-        documentId,
-        shotId,
-        takeId,
-        recordHash,
-        contentHash: store
-          .listDocumentsAt(projectId, saved.revision)
-          .find((d) => d.id === documentId)!.contentHash,
-        revision: saved.revision,
-      };
     } catch (e) {
       // Some of the store's refusals are plain errors with words of their own.
       const refused = toCommandError(e);
@@ -836,6 +826,18 @@ export async function appendGeneratedTake(
       if (refused.code === "REVISION_CONFLICT") continue;
       return not(refused.retryable ? "busy" : "story-refused", refused.message);
     }
+    // Saved from here on: nothing below is a refusal of the take.
+    return {
+      appended: true,
+      documentId,
+      shotId,
+      takeId,
+      recordHash,
+      contentHash: store
+        .listDocumentsAt(projectId, saved.revision)
+        .find((d) => d.id === documentId)!.contentHash,
+      revision: saved.revision,
+    };
   }
   return not(
     "busy",
