@@ -504,6 +504,36 @@ test("an answer over the byte limit is cut and paged", async () => {
   assert.ok(pages >= 2, `${pages}`);
 });
 
+test("a row that says anything is held to its form and its length", async () => {
+  const w = await workspace();
+  const documentId = id();
+  const mine = shot();
+  await save(w, documentId, [mine]);
+  const target = { documentId, shotId: mine.id };
+  const taken = id();
+  const from = id();
+  const rows = [
+    { take: { appended: true, takeId: taken }, derivedFromTakeId: from },
+    { take: { appended: true, takeId: "z".repeat(300_000) } },
+    { derivedFromTakeId: "C:\\Users\\someone\\words of the prompt" },
+    { take: { appended: true, takeId: 7 }, derivedFromTakeId: {} },
+    { recipe: { ...recipe, id: "r".repeat(300_000) } },
+    // Cut at 200 in the middle of a pair.
+    { diagnostic: `${"x".repeat(199)}\u{1F600}` },
+    { recipe: { ...recipe, id: `${"x".repeat(79)}\u{1F600}` } },
+  ];
+  seed(w, rows.length, (i) => ({ target, ...(rows[i] as object) }));
+  const page = await history(w, documentId, mine.id);
+  const of = (key: string) =>
+    page.attempts.map((a: any) => a[key]).reverse() as unknown[];
+  assert.deepEqual(of("takeId"), [taken, ...Array(6).fill(null)]);
+  assert.deepEqual(of("derivedFromTakeId"), [from, ...Array(6).fill(null)]);
+  assert.equal((of("recipeId")[4] as string).length, 80);
+  assert.equal(of("diagnostic")[5], "x".repeat(199));
+  assert.equal(of("recipeId")[6], "x".repeat(79));
+  assert.ok(Buffer.byteLength(JSON.stringify(page)) < 8_192);
+});
+
 test("a take removed from the shot is still named by its attempt, and one without a record has nulls", async () => {
   const w = await workspace();
   const documentId = id();
@@ -596,7 +626,10 @@ test("a take removed from the shot is still named by its attempt, and one withou
 });
 
 // A shot in the cut, with two takes of it.
-async function cut(w: W) {
+async function cut(
+  w: W,
+  pins: (b: Asset) => Promise<Shot["referencePacks"]> = async () => [],
+) {
   const documentId = id();
   const [a, b] = [await video(w, "take a"), await video(w, "take b")];
   const takes = [a, b].map((x) => ({
@@ -604,7 +637,11 @@ async function cut(w: W) {
     assetId: x.id,
     sourceStartTicks: 0,
   }));
-  const mine = shot({ takes, selectedTakeId: takes[0]!.id });
+  const mine = shot({
+    takes,
+    selectedTakeId: takes[0]!.id,
+    referencePacks: await pins(b),
+  });
   await save(w, documentId, [mine]);
   await call(w, "yamakan.story.assemble", {
     projectId: w.projectId,
@@ -764,14 +801,14 @@ test("a refused apply writes no note, and no one else may write one", async () =
     }).success,
     "nor is it ever a project document",
   );
-  // The largest there can be is inside its bound, and one past it is refused.
+  // The largest there can be is inside its bound.
   assert.equal(SHOT_HISTORY_LIMITS.noteBytes, 512);
   const largest = {
     ...note,
     fromTakeId: id(),
     clips: 64,
     revision: 10_000,
-    principalId: "p".repeat(80),
+    principalId: "م".repeat(64),
   };
   validateDocument(
     "takeReplacement",
@@ -779,7 +816,7 @@ test("a refused apply writes no note, and no one else may write one", async () =
     Buffer.from(canonicalJson(largest), "utf8"),
   );
   for (const over of [
-    { principalId: "p".repeat(81) },
+    { principalId: "p".repeat(65) },
     { clips: 65 },
     { clips: 0 },
     { extra: 1 },
@@ -790,6 +827,114 @@ test("a refused apply writes no note, and no one else may write one", async () =
       !TakeReplacementSchema.safeParse({ ...note, ...over }).success,
       JSON.stringify(over),
     );
+});
+
+test("a proposal found stale inside the commit, or whose commit fails, writes no note", async () => {
+  const w = await workspace();
+  const { takes, propose } = await cut(w);
+  const proposal = await propose(takes[1]!.id);
+  const before = await head(w);
+  const apply = (over: object = {}) =>
+    reason(
+      call(w, "yamakan.take.apply", {
+        projectId: w.projectId,
+        expectedRevision: before,
+        proposal: { ...proposal, ...over },
+      }),
+    );
+  // At the head's own revision, so that the commit is what refuses.
+  assert.equal(
+    await apply({ storyContentHash: "0".repeat(64) }),
+    "REVISION_CONFLICT: The story changed since the proposal; propose it again.",
+  );
+  assert.equal(
+    await apply({ proposalHash: "0".repeat(64) }),
+    "REVISION_CONFLICT: The proposal no longer matches the project; propose it again.",
+  );
+  const other = () => new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  // A fault after the note and before the revision.
+  let db = other();
+  db.exec(
+    "CREATE TRIGGER stop BEFORE INSERT ON revisions BEGIN SELECT RAISE(ABORT, 'stopped'); END",
+  );
+  db.close();
+  assert.notEqual(await apply(), "ok");
+  db = other();
+  db.exec("DROP TRIGGER stop");
+  // The document space is full.
+  db.exec("PRAGMA ignore_check_constraints = 1");
+  const [big] = db
+    .prepare("SELECT hash, byte_length AS n FROM creative_documents LIMIT 1")
+    .all() as { hash: string; n: number }[];
+  const size = (n: number) =>
+    db
+      .prepare("UPDATE creative_documents SET byte_length = ? WHERE hash = ?")
+      .run(n, big!.hash);
+  size(4 * 1024 ** 3);
+  db.close();
+  assert.match(
+    await apply(),
+    /^LIMIT_EXCEEDED: The workspace's creative document space is full/,
+  );
+  db = other();
+  db.exec("PRAGMA ignore_check_constraints = 1");
+  size(big!.n);
+  db.close();
+  assert.equal(notes(w), 0);
+  assert.equal(await head(w), before);
+  assert.equal(await apply(), "ok");
+  assert.equal(notes(w), 1);
+});
+
+test("an apply refused by a consent that is no longer usable writes no note", async () => {
+  const w = await workspace();
+  const consent = await call(w, "yamakan.consent.grant", {
+    characterId: "lead",
+    purpose: "likeness-generate",
+    version: "v1",
+    ttlMs: 24 * 60 * 60 * 1000,
+  });
+  const { takes, propose } = await cut(w, async (b) => {
+    const packId = id();
+    const { document } = await call(w, "yamakan.pack.save", {
+      projectId: w.projectId,
+      expectedRevision: await head(w),
+      documentId: packId,
+      expectedContentHash: null,
+      pack: {
+        format: "yamakan.reference-pack",
+        formatVersion: 1,
+        name: "Lead",
+        entries: [
+          {
+            id: id(),
+            role: "character",
+            label: "Lead",
+            assetId: b.id,
+            assetHash: b.hash,
+            characterId: "lead",
+            consentId: consent.id,
+          },
+        ],
+      },
+    });
+    return [{ documentId: packId, contentHash: document.contentHash }];
+  });
+  const proposal = await propose(takes[1]!.id);
+  await call(w, "yamakan.consent.revoke", { consentId: consent.id });
+  const before = await head(w);
+  assert.match(
+    await reason(
+      call(w, "yamakan.take.apply", {
+        projectId: w.projectId,
+        expectedRevision: before,
+        proposal,
+      }),
+    ),
+    /^VALIDATION: .*consent/,
+  );
+  assert.equal(notes(w), 0);
+  assert.equal(await head(w), before);
 });
 
 // The head's story as an older build left it: its bytes, hash and version 1, named by a head
@@ -943,6 +1088,35 @@ test("another story's shot, another project's story and bad input are refused, a
     "NOT_FOUND: The story has no such shot.",
   );
   assert.match(await reason(history(w, id(), mine.id)), /^NOT_FOUND/);
+  // A document that is no story.
+  const packed = await video(w, "pack");
+  const packId = id();
+  await call(w, "yamakan.pack.save", {
+    projectId: w.projectId,
+    expectedRevision: await head(w),
+    documentId: packId,
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "Props",
+      entries: [
+        {
+          id: id(),
+          role: "prop",
+          label: "Prop",
+          assetId: packed.id,
+          assetHash: packed.hash,
+          characterId: null,
+          consentId: null,
+        },
+      ],
+    },
+  });
+  assert.equal(
+    await reason(history(w, packId, mine.id)),
+    "VALIDATION: This document is not a story.",
+  );
   const elsewhere = (
     (await execute(w.ctx, "yamakan.project.create", { name: "E" }))
       .result as Project

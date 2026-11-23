@@ -1148,7 +1148,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Read what was tried for one story shot and what it cost: the takes it holds and how each was made, every generation or render attempted for it (failed, stopped and dismissed ones too), the take replacements applied to it, and totals, a page of attempts at a time. What no row says is null or a named gap, and no prompt's words are in it. Changes nothing.",
+      "Read what was tried for one story shot and what it cost: the takes it holds and how each was made, every generation or render attempted for it (failed, stopped and dismissed ones too), the take replacements applied to it, and totals, a page of attempts at a time. What no row says is null or a named gap. No words are taken from a run's or a record's prompt, but a shot's name, a take's label and an engine's own message are given as they are. Changes nothing.",
     input: z
       .object({
         projectId: Id,

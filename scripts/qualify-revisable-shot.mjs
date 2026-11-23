@@ -859,6 +859,12 @@ try {
         JSON.parse(JSON.parse(said.split("\n")[0]).result.content[0].text),
       );
     });
+    // One that has gone is said, after the receipts are written.
+    spoken.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`MCP exited ${code}.`));
+    });
+    spoken.stdin.on("error", reject);
     spoken.stdin.write(
       `${JSON.stringify({
         jsonrpc: "2.0",

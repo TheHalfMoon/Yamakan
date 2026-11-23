@@ -138,7 +138,8 @@ export type AttemptRow = {
 /**
  * The project's generation and render jobs that name a shot, newest first by the order their rows
  * were made in (MPR-107): a job row is never deleted, so its number is not used again. Every
- * payload is read as text that may say anything: one that does not read is skipped.
+ * payload is read as text that may say anything: one that does not read is skipped. The newest
+ * rows are found by the index alone, and their payloads are read one at a time.
  */
 export function shotAttemptRows(
   db: DatabaseSync,
@@ -148,9 +149,9 @@ export function shotAttemptRows(
 ) {
   const read = db
     .prepare(
-      "SELECT rowid AS seq, kind, job_id AS id, state, payload, error, artifact FROM jobs WHERE project_id = ? AND kind IN (?, 'blender-render') ORDER BY rowid DESC LIMIT ?",
+      "SELECT rowid AS seq, kind, job_id AS id, state, payload, error, artifact FROM jobs WHERE rowid IN (SELECT rowid FROM jobs WHERE project_id = ? AND kind IN (?, 'blender-render') ORDER BY rowid DESC LIMIT ?) ORDER BY rowid DESC",
     )
-    .all(projectId, REMOTE_GENERATION, most + 1) as {
+    .iterate(projectId, REMOTE_GENERATION, most + 1) as Iterable<{
     seq: number;
     kind: string;
     id: string;
@@ -158,11 +159,13 @@ export function shotAttemptRows(
     payload: string;
     error: string | null;
     artifact: string | null;
-  }[];
+  }>;
   const rows: AttemptRow[] = [];
   let untargeted = false;
   let unlinkedRenders = false;
-  for (const row of read.slice(0, most)) {
+  let scanned = 0;
+  for (const row of read) {
+    if (++scanned > most) break;
     const payload = safeJson(row.payload);
     if (typeof payload !== "object" || payload === null) continue;
     const said = payload as Record<string, unknown>;
@@ -194,7 +197,7 @@ export function shotAttemptRows(
     rows,
     untargeted,
     unlinkedRenders,
-    complete: read.length <= most,
+    complete: scanned <= most,
   };
 }
 const generationJobState = (r: GenerationRecord): YamakanJobState => {

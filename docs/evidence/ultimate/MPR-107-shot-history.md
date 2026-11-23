@@ -6,7 +6,7 @@ At `b8c9f3b`, by reading: no `yamakan.shot.*` command, and a take replacement le
 
 - `jobs` has a text primary key and no `WITHOUT ROWID`, so each row has a number of its own; no code in `core`, `server` or `scripts` deletes job rows or runs `VACUUM`. The order of the attempts is that number.
 - Every reader of `story_document_versions` in `core` joins the document's kind, so no table is needed.
-- An undo step is recorded for a commit named `project.applyBatch` with a writer, and any other operation ends the undo history (`EDIT_HISTORY_OPERATIONS`), so the apply keeps that name. The render job's kind is `blender-render`.
+- Which commits are undo steps goes by their operation and their writer (`EDIT_HISTORY_OPERATIONS`), so the apply keeps its name, `project.applyBatch`. The render job's kind is `blender-render`.
 
 ## Every field, and where it is read from
 
@@ -39,22 +39,30 @@ At `b8c9f3b`, by reading: no `yamakan.shot.*` command, and a take replacement le
 - **The note's schema is in `core/take-record.ts`,** which the document checks read, and `core/shot-history.ts` exports it: the other way round the modules would read each other.
 - **`takeId` of a run or render whose row names none** is the take whose record says it made it, so a take saved by hand or a render placed on the shot is not lost.
 - **A render is always `sent`.** Nothing of it leaves this computer, so the question does not arise.
-- **A restored copy's run is `uncertain`:** it belongs to the workspace it was copied from.
+- **A restored copy's run is `uncertain`** while it is unfinished and not dismissed: it belongs to the workspace it was copied from. A dismissed one is `cancelled`, as anywhere.
+- **Scan:** `shotAttemptRows` takes how many rows to read and no `before`: totals are over all of them, so a page is cut from what was read. The index finds the newest rows and only those payloads are read, one at a time.
+- **A job row whose payload does not read** is skipped, is not counted, and does not make `complete` false.
+- **The head's project is loaded,** where the card's performance text says no snapshot is: the card's own `current` (which take the cut shows, and its clips) cannot be read without it.
+- **With more than 2,000 notes** the oldest one read stands for the first, so `earlier-replacements` is always said.
 - **`route` of a run that made no take** is `kaggle` when its row says it left this computer, and null otherwise.
 - **A damaged take record** refuses the answer, as reading that take does; it is not shown as a take without one.
 
 ## What to know when reading it
 
 - **The notes are kept for good,** like records, and count against the workspace's document space. An apply is refused when that is full, which it was not before.
+- **Words of a prompt can still be in an answer,** though none are read from a run's or a record's prompt: Create names a shot by the first line of its prompt, a label is a person's, and an engine's message is its own.
+- **A note that is damaged** (its bytes do not read as one) is left out and nothing says so, and a backup's check does not look at notes.
+- **`core/shot-history.ts` cannot be the first module a program imports,** nor can `core/jobs.ts`, which it reads (they and the command registry read each other). The service and the tests import the store first.
 - **Nothing here says how good a take is,** and no cost in money exists in this build.
 
 ## Evidence
 
-- **On the founder host, against the real store, job table and commands:** the 14 tests of `tests/shot-history.test.ts` pass. The engine is a double and its video is the project's as its rows and ten bytes.
+- **On the founder host, against the real store, job table and commands:** the 17 tests of `tests/shot-history.test.ts` pass. The engine is a double and its video is the project's as its rows and ten bytes.
 - **`npm run qualify:revisable-shot`** is extended with a ledger arm, a volume arm and the same call over REST and MCP; see the section below.
 
 ## Not covered by a test
 
 - A page cut to the size bound is tested with text of the widest characters, not with every field at its longest.
 - `tests/take-replace.test.ts` is unchanged: that the apply's result, receipt and undo step are as they were is in `tests/shot-history.test.ts` and in that file's own tests, which need media and run in CI.
-- The note's 512-byte ceiling is reached by no note the schema allows, so a larger ceiling would fail no test; its value is pinned.
+- The note's 512-byte ceiling is reached by no note the schema allows (a writer's id is at most 64 characters, as in the workspace's own table), so a larger ceiling would fail no test; its value is pinned.
+- How long a scan takes with large payloads is held by no test. On the founder host, in memory, `shotAttemptRows` took 44 ms for 5,000 rows of 8 KB, 49 ms for 20,000 and 142 ms for 5,000 of 40 KB, where the query it had before (found by the review) took 207, 321 and 1,548 ms before any row was looked at.

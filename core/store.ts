@@ -2047,7 +2047,7 @@ export class ProjectStore {
     )
       throw new CommandError(
         "VALIDATION",
-        "Stories, take records, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
+        "Stories, take records, take replacements, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,

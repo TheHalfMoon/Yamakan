@@ -1,7 +1,9 @@
 // What was tried for one shot and what it cost (MPR-107): the takes it holds and how each was
 // made, every generation or render attempted for it, the take replacements applied to it, and
 // totals. Read from rows and documents that other things write; nothing here is estimated, and
-// what a row does not say is null or a named gap. No prompt's words are in it.
+// what a row does not say is null or a named gap. It takes no words from a run's or a record's
+// prompt; a shot's name, a take's label and an engine's own message are given as they are, and a
+// person or an engine may have put some there.
 import type { DatabaseSync } from "node:sqlite";
 import { CommandError } from "./command/errors.ts";
 import { diagnostic as safeDiagnostic } from "./engines/contract-v2.ts";
@@ -15,6 +17,7 @@ import {
   type TakeRecord,
   type TakeReplacement,
 } from "./take-record.ts";
+import { Id } from "./project.ts";
 import { listTakes } from "./takes.ts";
 import { canonicalJson } from "./hash/canonical.ts";
 import { shotAttemptRows, type AttemptRow } from "./jobs.ts";
@@ -65,11 +68,25 @@ const RENDER_OUTCOME: Readonly<Record<string, Outcome>> = {
 const whole = (v: unknown) =>
   typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : null;
 const text = (v: unknown) => (typeof v === "string" ? v : null);
-const said = (v: unknown) =>
-  safeDiagnostic(text(v) ?? undefined)?.slice(
-    0,
-    SHOT_HISTORY_LIMITS.diagnosticChars,
-  ) ?? null;
+const idOf = (v: unknown) => {
+  const read = Id.safeParse(v);
+  return read.success ? read.data : null;
+};
+// By whole characters.
+const short = (v: string, most: number) => {
+  let out = "";
+  for (const point of v) {
+    if (out.length + point.length > most) break;
+    out += point;
+  }
+  return out;
+};
+const said = (v: unknown) => {
+  const told = safeDiagnostic(text(v) ?? undefined);
+  return told === undefined
+    ? null
+    : short(told, SHOT_HISTORY_LIMITS.diagnosticChars);
+};
 
 type Attempt = {
   seq: number;
@@ -127,7 +144,7 @@ function attemptOf(
   const startedAt = whole(g.startedAt);
   const endedAt = whole(g.endedAt);
   const takeId =
-    (g.take?.appended === true ? text(g.take.takeId) : null) ??
+    (g.take?.appended === true ? idOf(g.take.takeId) : null) ??
     made?.takeId ??
     null;
   return {
@@ -145,7 +162,7 @@ function attemptOf(
     }),
     sent: !(g.phase !== "sent" && g.state === "failed"),
     imported: Boolean(g.imported),
-    recipeId: text(g.recipe?.id)?.slice(0, 80) ?? null,
+    recipeId: g.recipe ? short(text(g.recipe.id) ?? "", 80) || null : null,
     startedAt,
     endedAt,
     wallMs:
@@ -155,7 +172,7 @@ function attemptOf(
     quotaSeconds,
     takeId,
     takeInShot: takeId !== null && inShot.has(takeId),
-    derivedFromTakeId: text(g.derivedFromTakeId),
+    derivedFromTakeId: idOf(g.derivedFromTakeId),
     diagnostic: said(g.diagnostic),
   };
 }

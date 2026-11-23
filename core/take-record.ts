@@ -438,7 +438,8 @@ export const TakeReplacementSchema = z
     toTakeId: Id,
     clips: z.number().int().positive().max(64),
     revision: z.number().int().nonnegative(),
-    principalId: z.string().min(1).max(80),
+    // As long as the workspace's own column for it.
+    principalId: z.string().min(1).max(64),
   })
   .strict();
 export type TakeReplacement = z.infer<typeof TakeReplacementSchema>;
