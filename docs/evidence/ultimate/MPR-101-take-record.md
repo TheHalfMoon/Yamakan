@@ -1,6 +1,6 @@
 # Every take can name the record of how it was made (MPR-101)
 
-Part a (PR 291, merged as `6b9fb8e`) is the record, its storage, story version 2, generation and declared records, and Create. Part b is the Blender record and the recovery check; its section is at the end. **The card is not complete:** none of its browser and end-to-end checks has run.
+Part a (PR 291, merged as `6b9fb8e`) is the record, its storage, story version 2, generation and declared records, and Create. Part b is the Blender record and the recovery check; its section is at the end. **The card is not verified:** its Blender arm has not run, and its other checks have run only on GitHub's Linux machine ([result](github-real-checks.md)).
 
 ## What was found (step 0)
 
@@ -56,7 +56,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ## Not run, and not claimed
 
-- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have never run. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). `MPR-101-take-record-receipt.json` is not written.
+- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have not run on the founder host. **On GitHub's Linux machine it passed on 2026-11-23** at `140bbfb` ([what that shows, and what it does not](github-real-checks.md)); their receipts are `MPR-101-take-record-receipt.json` and `create-durable-github-receipt.json`. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). The Blender arm below is not among them.
 - `npm run test:e2e` was not run here.
 - **The Blender arm** is part b's, below.
 

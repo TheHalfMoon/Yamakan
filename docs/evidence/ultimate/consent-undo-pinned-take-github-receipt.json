@@ -1,0 +1,22 @@
+{
+  "task": "consent-gate",
+  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "passed": true,
+  "steps": [
+    {
+      "name": "Undo of the removal is refused, with the reason and the way back shown",
+      "shown": "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it."
+    },
+    {
+      "name": "A new consent saved in a pack lets the photo be placed again"
+    },
+    {
+      "name": "Undo of a take whose shot pins the person's pack is refused, with the reason shown",
+      "shown": "This person's consent was revoked, so this media cannot be placed or shown on the timeline again. Clips still showing it stay, and the file is kept. To use it again, record a new consent and save the reference pack with it."
+    },
+    {
+      "name": "no page errors"
+    }
+  ],
+  "serverError": ""
+}

@@ -1,0 +1,37 @@
+{
+  "task": "MPR-101",
+  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "freeDiskBytes": 93843644416,
+    "freeMemoryBytes": 15302410240,
+    "onAcPower": null,
+    "load": [
+      0.38,
+      0.25,
+      0.12
+    ],
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "a run is started, followed and its checked video imported"
+    },
+    {
+      "name": "its take is saved with a record that matches the run and its own hash",
+      "recordHash": "5dcc80cb286b7019d787eb438bd47bc25c2125f44614466253b00129d2d3b6b5",
+      "revisions": 1,
+      "maxRevision": 10000
+    },
+    {
+      "name": "the record is the same after the workspace is closed and opened again"
+    },
+    {
+      "name": "a stored version 1 story is read, and saved as version 2 with every part kept"
+    }
+  ]
+}

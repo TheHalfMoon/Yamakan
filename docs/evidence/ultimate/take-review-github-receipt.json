@@ -1,0 +1,58 @@
+{
+  "task": "SS-006",
+  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "passed": true,
+  "steps": [
+    {
+      "name": "real stills imported and a three-shot story assembled"
+    },
+    {
+      "name": "takes listed with the one shown marked"
+    },
+    {
+      "name": "review shows the exact proposal and changes nothing",
+      "hash": "031359fca1aa3db091df29b76d00a5197607fd06d9ede524c8f5cffe27157704"
+    },
+    {
+      "name": "a stale review is refused, dropped and changes nothing"
+    },
+    {
+      "name": "a fresh review applies and changes only the middle clip",
+      "revision": 8
+    },
+    {
+      "name": "undo returns the previous take"
+    },
+    {
+      "name": "a review overtaken by a save is dropped and the panel stays usable"
+    },
+    {
+      "name": "applying is refused while edits are unsaved, and their save needs a fresh review"
+    },
+    {
+      "name": "while an apply runs, undo and project switching are disabled"
+    },
+    {
+      "name": "a lost response is replayed under one request id: the shown proposal, once",
+      "revision": 14
+    },
+    {
+      "name": "a response lost twice says the outcome is not known, not that it failed"
+    },
+    {
+      "name": "Arabic labels, right-to-left page, left-to-right identifiers"
+    },
+    {
+      "name": "no Director approval or stage command was called",
+      "takeCommands": [
+        "yamakan.take.list",
+        "yamakan.take.proposeReplace",
+        "yamakan.take.apply"
+      ]
+    },
+    {
+      "name": "no external requests and no page errors"
+    }
+  ],
+  "serverError": ""
+}

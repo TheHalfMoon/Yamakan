@@ -1,0 +1,20 @@
+{
+  "task": "MPR-105",
+  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "host": "linux",
+  "passed": true,
+  "steps": [
+    {
+      "name": "a split and trimmed shot's proposal has a row per clip"
+    },
+    {
+      "name": "apply is one revision and each piece keeps its place in the new take"
+    },
+    {
+      "name": "one undo brings both pieces back"
+    },
+    {
+      "name": "a refusal names the clip"
+    }
+  ]
+}
