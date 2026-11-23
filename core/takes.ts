@@ -559,7 +559,6 @@ export function proposeReplace(
     operations.forEach((operation, i) => {
       try {
         applyOne(project, operation);
-        applyBatch(project, [operation]);
       } catch (x) {
         if (x instanceof CommandError) refuse(places[i]!, x.message);
         throw x;

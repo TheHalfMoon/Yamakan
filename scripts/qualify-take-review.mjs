@@ -26,6 +26,7 @@ const receipt = process.argv[2] ?? null;
 // The split arm's own receipt (MPR-105), beside SS-006's.
 const splitReceiptFile = process.argv[3] ?? null;
 let ssSteps = null;
+let ssServerError = null;
 let splitPassed = false;
 const splitSteps = [];
 
@@ -755,7 +756,10 @@ try {
   // flag and receipt.
   passed = true;
   ssSteps = [...steps];
+  ssServerError = serverError;
   await splitArm(page, call);
+  assert.deepEqual(external, []);
+  assert.deepEqual(pageErrors, []);
   splitPassed = true;
 } finally {
   await browser?.close().catch(() => {});
@@ -771,7 +775,7 @@ try {
           }).trim(),
           passed,
           steps: ssSteps ?? steps,
-          serverError: serverError.slice(-1000),
+          serverError: (ssServerError ?? serverError).slice(-1000),
         },
         null,
         2,

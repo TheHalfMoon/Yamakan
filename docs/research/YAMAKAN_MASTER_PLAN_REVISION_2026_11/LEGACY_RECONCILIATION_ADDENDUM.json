@@ -267,7 +267,7 @@
         "SS-006",
         "MPR-105"
       ],
-      "note": "The remaining scope stays with SS-006. MPR-105 adds take-proposal format version 2 beside version 1, which stays readable."
+      "note": "The remaining scope stays with SS-006. MPR-105 moves take proposals, which are never stored, to format version 2; a version 1 proposal of an open page is read only to refuse it as stale."
     },
     {
       "id": "YU-061",
@@ -551,7 +551,7 @@
         "MPR-104",
         "MPR-304"
       ],
-      "note": "Stays the card that exposes take comparison and replacement in the editor. MPR-104 adds the shot-card surface; MPR-304 reads it. MPR-105 changes the take-proposal format additively and keeps version 1 readable, so the card's rule against a new take schema is kept as written for stored takes."
+      "note": "Stays the card that exposes take comparison and replacement in the editor. MPR-104 adds the shot-card surface; MPR-304 reads it. MPR-105 moves the take-proposal format to version 2 and refuses version 1 as stale, so this card must use version 2 proposals; its rule against a new take schema is kept as written for stored takes."
     },
     {
       "id": "SS-012",

@@ -373,14 +373,19 @@ function fresh(p: CanonicalProject, id: string) {
   if (used) throw invalid("Identifier is already in use.");
 }
 
-/** One operation on a copy of the project, with its own refusal and no batch wording. */
+/**
+ * One operation on a copy of the project, checked as a batch of it would be,
+ * but refused in its own words.
+ */
 export function applyOne(project: CanonicalProject, operation: Operation) {
+  const next = structuredClone(project);
   try {
-    apply(structuredClone(project), operation, project);
+    apply(next, operation, project);
   } catch (e) {
     if (e instanceof RangeError) throw invalid("Time is out of range.");
     throw e;
   }
+  return valid(next);
 }
 
 // `original` is the project before the batch (for checks that compare a
@@ -1140,6 +1145,10 @@ export function applyBatch(
       throw e;
     }
   });
+  return valid(next);
+}
+
+function valid(next: CanonicalProject): CanonicalProject {
   const checked = CanonicalProjectSchema.safeParse(next);
   if (!checked.success)
     throw invalid(
