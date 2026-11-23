@@ -55,11 +55,13 @@ async function service(
   const queue = new JobSupervisor(store);
   const calls: { operation: string; parameters: any }[] = [];
   const held = new Map<string, Promise<void>>();
+  const paths: string[] = [];
   const reached: string[] = [];
   const dropped: string[] = [];
   let origin = "";
   const http = createServer((req, res: ServerResponse) => {
     const url = new URL(req.url!, origin);
+    paths.push(url.pathname);
     const json = (status: number, body: unknown) => {
       if (res.destroyed) return;
       res.writeHead(status, { "Content-Type": "application/json" });
@@ -134,6 +136,7 @@ async function service(
     store,
     queue,
     calls,
+    paths,
     reached,
     dropped,
     count: (operation: string) =>
@@ -175,8 +178,13 @@ function connect(origin: string, token: string) {
     answers.push(message);
     waiting.get(message.id)?.(message);
   });
-  const write = (message: object) =>
-    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", ...message })}\n`);
+  // Each on its own line, all in one write.
+  const write = (...messages: object[]) =>
+    child.stdin.write(
+      messages
+        .map((m) => `${JSON.stringify({ jsonrpc: "2.0", ...m })}\n`)
+        .join(""),
+    );
   let next = 1;
   const send = (method: string, params?: unknown, id: unknown = next++) => {
     const answered = new Promise<any>((r) => waiting.set(id, r));
@@ -340,12 +348,23 @@ test("a cancelled read is aborted, gets no answer, and frees its place", async (
     JSON.parse((await again.answered).result.content[0].text),
     [],
   );
+  // And that id names the new request, not the one before it.
+  const reopen = s.hold("yamakan.project.list");
+  client.send(
+    "tools/call",
+    { name: "yamakan_project_list", arguments: {} },
+    read.id,
+  );
+  await until(() => s.count("yamakan.project.list") === 3, "sent again");
+  client.cancel(read.id);
+  await until(() => s.dropped.length === 2, "aborted again");
+  reopen();
   // The list is a read too, also when a first call loads it.
   const shut = s.hold("tools");
   const list = client.send("tools/list");
   await until(() => s.reached.includes("tools"), "asked for");
   client.cancel(list.id);
-  await until(() => s.dropped.length === 2, "the list is aborted");
+  await until(() => s.dropped.length === 3, "the list is aborted");
   shut();
   await client.settled();
   assert.equal(client.answeredTo(list.id), 0);
@@ -472,6 +491,24 @@ test("a change cancelled before it is sent is never sent", async () => {
   await client.settled();
   assert.equal(s.count("yamakan.project.create"), 0);
   assert.equal(client.answeredTo(create.id), 0);
+  // Nor is a save, whose first step is a route of its own: the cancellation comes with it.
+  await client.request("tools/list");
+  const save = "save";
+  client.write(
+    {
+      id: save,
+      method: "tools/call",
+      params: {
+        name: "yamakan_document_save",
+        arguments: { projectId: randomUUID(), content: {} },
+      },
+    },
+    { method: "notifications/cancelled", params: { requestId: save } },
+  );
+  await client.settled();
+  await wait(200);
+  assert.equal(client.answeredTo(save), 0);
+  assert.ok(!s.paths.some((p) => p.includes("stage")), s.paths.join(" "));
   // The next call loads the list again and works.
   const next = await client.call("yamakan.project.create", { name: "Made" })
     .answered;

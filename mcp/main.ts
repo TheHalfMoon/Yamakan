@@ -79,9 +79,9 @@ type InFlight = {
   stop: AbortController;
 };
 const requests = new Map<string | number, InFlight>();
-// A request is answered once, and one the client cancelled is not answered at all.
+// One the client cancelled is not answered.
 function answer(id: Message["id"], request: InFlight, body: object) {
-  if (request.cancelled || request.phase === "answered") return;
+  if (request.cancelled) return;
   request.phase = "answered";
   send({ jsonrpc: "2.0", id: id ?? null, ...body });
 }
@@ -91,7 +91,7 @@ function cancel(params: Record<string, unknown>) {
     typeof id === "string" || typeof id === "number"
       ? requests.get(id)
       : undefined;
-  if (!request || request.cancelled) return;
+  if (!request) return;
   const plan = cancelPlan(request.operation, request.phase);
   if (plan === "ignore") return;
   request.cancelled = true;
@@ -282,7 +282,6 @@ async function handle(message: Message, request: InFlight) {
               : REQUEST_ID.maxLength));
       try {
         if (!operations) await tools(request.stop.signal);
-        if (request.cancelled) return;
       } catch (e) {
         if (e instanceof YamakanError)
           return toolError(e, valid ? requestId : undefined);

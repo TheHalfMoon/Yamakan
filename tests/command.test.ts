@@ -92,6 +92,7 @@ test("what a principal is shown is what the gate lets it call", () => {
     { id: "browser-ui", scopes: browserScopes() },
     { id: "local-client", scopes: cliScopes() },
     // Nobody is given these; the rule holds without it.
+    { id: "browser-ui", scopes: new Set() },
     { id: "local-client", scopes: new Set(Scopes) },
     agent(...Scopes),
     agent(),
