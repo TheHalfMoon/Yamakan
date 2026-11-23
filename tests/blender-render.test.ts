@@ -449,7 +449,7 @@ test(
       const sceneId = "9e3f4a5b-6c7d-4e8f-8a9b-1c2d3e4f5a6b";
       const story = (takes: unknown[], selectedTakeId: string | null) => ({
         format: "yamakan.story",
-        formatVersion: 1,
+        formatVersion: 2,
         title: "Shots",
         scenes: [
           {

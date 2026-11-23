@@ -42,7 +42,8 @@ const Sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 const Whole = z.number().int().nonnegative();
 const Finite = z.number().finite();
 const Text = (max: number) => z.string().min(1).max(max);
-const Prompt = Text(ENGINE_V2_LIMITS.promptChars);
+// A receipt file may name an empty prompt.
+const Prompt = z.string().max(ENGINE_V2_LIMITS.promptChars);
 
 const GenerationRequestSchema = z
   .object({

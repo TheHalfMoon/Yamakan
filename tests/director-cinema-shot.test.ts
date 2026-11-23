@@ -28,7 +28,7 @@ const story = (
 ): StoryDocument =>
   StoryDocumentSchema.parse({
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title,
     scenes: [
       { id: "22222222-2222-4222-8222-222222222222", name: "Scene", shots },

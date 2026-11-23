@@ -385,7 +385,8 @@ test("AG-DOCS group: documents through the real service survive save, undo, migr
     available: boolean;
     turnedOff: boolean;
   };
-  assert.deepEqual(capability, { available: false, turnedOff: true });
+  assert.equal(capability.available, false);
+  assert.equal(capability.turnedOff, true);
   for (const [id, bytes] of expected)
     assert.equal(await bytesOf(off.client, id), bytes);
   assert.deepEqual(

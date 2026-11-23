@@ -8,6 +8,8 @@ import {
   addMadeVideo,
   madeRecords,
   type CreateStory,
+  type TakeRecordRequest,
+  recordRequests,
   type MadeRecord,
 } from "./create-story.ts";
 import {
@@ -122,6 +124,7 @@ export function CreateWorkspace(props: {
     documentId: string;
     expectedContentHash: string | null;
     story: CreateStory;
+    records?: TakeRecordRequest[];
   }) => Promise<KeptStory | null>;
   ticksOf: (asset: Asset) => number;
   reopenProject: () => Promise<void>;
@@ -289,6 +292,8 @@ export function CreateWorkspace(props: {
     receipt: RunReceipt,
     // A generated video's panel has its own way to try again.
     offerRetry = true,
+    // The run that made it, when it came from one.
+    generationId?: string,
   ) => {
     const missed = () => {
       if (offerRetry)
@@ -330,6 +335,7 @@ export function CreateWorkspace(props: {
         documentId: latest?.documentId ?? crypto.randomUUID(),
         expectedContentHash: latest?.contentHash ?? null,
         story: next,
+        records: recordRequests(next, asset.id, receipt, generationId),
       });
       if (!kept) return missed();
       setKeptStory(kept);
@@ -347,10 +353,14 @@ export function CreateWorkspace(props: {
     (m) => m.model === brief.modelId && m.operation === "imageToVideo",
   );
   // Awaited by the panel, under nothing else: the video has come in by now.
-  const remember = async (receipt: RunReceipt, asset: Asset) => {
+  const remember = async (
+    receipt: RunReceipt,
+    asset: Asset,
+    generationId: string,
+  ) => {
     // A retry: an earlier failure to save is no longer true.
     setProblem(null);
-    const saved = await record(asset, receipt, false);
+    const saved = await record(asset, receipt, false, generationId);
     if (saved)
       setNotice({ key: "create.runBroughtIn", vars: { name: receipt.model } });
     return saved;

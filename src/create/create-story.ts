@@ -18,6 +18,8 @@ type Take = {
     outputHash: string;
     inputs: { assetId: string; assetHash: string }[];
   };
+  // The record of how it was made, which the service writes.
+  recordHash?: string;
 };
 type Shot = {
   id: string;
@@ -30,7 +32,7 @@ type Shot = {
 };
 export type CreateStory = {
   format: "yamakan.story";
-  formatVersion: 1;
+  formatVersion: 2;
   title: string;
   scenes: { id: string; name: string; shots: Shot[] }[];
 };
@@ -73,7 +75,7 @@ export function addMadeVideo(
 ): CreateStory | "already-there" | "full" {
   const current: CreateStory = story ?? {
     format: "yamakan.story",
-    formatVersion: 1,
+    formatVersion: 2,
     title: CREATE_STORY_TITLE,
     scenes: [],
   };
@@ -116,6 +118,8 @@ export function addMadeVideo(
   };
   return {
     ...current,
+    // A story kept in the older form is written in this one.
+    formatVersion: 2,
     scenes: room
       ? [
           ...current.scenes.slice(0, -1),
@@ -126,6 +130,52 @@ export function addMadeVideo(
           { id: newId(), name: CREATE_STORY_TITLE, shots: [shot] },
         ],
   };
+}
+
+// What the service makes a video's take record from: its run here, or the receipt's claims.
+export type TakeRecordSource =
+  | { generationId: string }
+  | {
+      declared: {
+        model: string;
+        revision?: string;
+        prompt: string;
+        seed: number;
+        steps: number;
+        licence?: string;
+      };
+    };
+export type TakeRecordRequest = { takeId: string; from: TakeRecordSource };
+
+// The records to ask for with a story that now holds this video: its take's, from the run
+// that made it, else from its receipt. A receipt that names no model has none to declare.
+export function recordRequests(
+  story: CreateStory,
+  assetId: string,
+  receipt: RunReceipt,
+  generationId?: string,
+): TakeRecordRequest[] {
+  const take = story.scenes
+    .flatMap((s) => s.shots.flatMap((shot) => shot.takes))
+    .find((t) => t.assetId === assetId);
+  if (!take || take.recordHash) return [];
+  if (generationId) return [{ takeId: take.id, from: { generationId } }];
+  if (!receipt.model) return [];
+  return [
+    {
+      takeId: take.id,
+      from: {
+        declared: {
+          model: receipt.model,
+          ...(receipt.revision ? { revision: receipt.revision } : {}),
+          prompt: receipt.prompt,
+          seed: receipt.seed,
+          steps: receipt.steps,
+          ...(receipt.licence ? { licence: receipt.licence } : {}),
+        },
+      },
+    },
+  ];
 }
 
 // What the project's story records, by the stored file's hash. Anything that does not

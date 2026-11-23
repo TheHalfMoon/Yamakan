@@ -131,7 +131,11 @@ export function GeneratePanel(props: {
   t: Translate;
   api: GenerationApi;
   // Whether its record was saved. Bringing it in again is safe, and tries again.
-  onMade: (receipt: RunReceipt, asset: MadeAsset) => Promise<boolean>;
+  onMade: (
+    receipt: RunReceipt,
+    asset: MadeAsset,
+    generationId: string,
+  ) => Promise<boolean>;
   findAsset: (id: string) => MadeAsset | undefined;
   // The same model started from a picture, when that is offered, and the project's stills
   // it can start from.
@@ -204,6 +208,7 @@ export function GeneratePanel(props: {
           const saved = await props.onMade(
             receiptOf(latest, asset.hash),
             asset,
+            latest.generationId,
           );
           if (saved) await api.dismiss(latest.generationId);
           else if (current) setRun(asRun(latest));
@@ -329,7 +334,11 @@ export function GeneratePanel(props: {
       setProblem(t("create.bringInFailed"));
       return;
     }
-    const saved = await props.onMade(receiptOf(run, asset.hash), asset);
+    const saved = await props.onMade(
+      receiptOf(run, asset.hash),
+      asset,
+      run.generationId,
+    );
     setWorking(false);
     if (saved) finishedWith();
   };
