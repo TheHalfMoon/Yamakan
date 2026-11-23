@@ -1,13 +1,13 @@
 {
   "task": "MPR-501",
-  "gitHead": "d7f52e3dfc9e33e0b81ff2bf6872ced1823a5a8e",
+  "gitHead": "49d0e48b844586f7bcbe976cb1de6c0be996f7eb",
   "dirty": false,
   "host": {
     "platform": "win32",
     "githubImage": null,
-    "freeDiskBytes": 13626654720,
-    "freeMemoryBytes": 2209316864,
-    "onAcPower": false,
+    "freeDiskBytes": 13618761728,
+    "freeMemoryBytes": 4495482880,
+    "onAcPower": true,
     "load": null,
     "need": "unmeasured"
   },
