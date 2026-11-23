@@ -56,7 +56,7 @@ The model and the seed. They are said, before the save, not to be kept; a made v
 - **A nearly full story:** 93 percent; over by the paste: 103 percent, refused by the page in percents and by the service with its byte counts.
 - **Typing in a 200-shot story with 100 shots shown:** 6 ms in the middle of 30 keys and 7 ms at worst, from the key to the page as redrawn (criterion 50 ms).
 
-Two earlier runs failed and are kept in mind here. At `782e1fe`, after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed: the page was corrected, not the check. On GitHub at `7d1efeb`, `qualify:create-durable` still read a made video's prompt from the shot's notes, the place this card moves it from; it now reads `intent` and that the notes are empty.
+Three earlier runs failed and are kept in mind here. At `782e1fe`, after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed: the page was corrected, not the check. On GitHub at `7d1efeb`, `qualify:create-durable` still read a made video's prompt from the shot's notes, the place this card moves it from; it now reads `intent` and that the notes are empty. On GitHub at `4571120`, this check's own first call came before its session was there; it now waits for that, and the receipt here was made before the wait was added.
 
 The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
 
