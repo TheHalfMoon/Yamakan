@@ -1,16 +1,17 @@
 {
   "task": "MPR-101",
-  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
   "dirty": false,
   "host": {
     "platform": "linux",
-    "freeDiskBytes": 93843644416,
-    "freeMemoryBytes": 15302410240,
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90269704192,
+    "freeMemoryBytes": 15529406464,
     "onAcPower": null,
     "load": [
-      0.38,
-      0.25,
-      0.12
+      0.81,
+      0.28,
+      0.1
     ],
     "need": "unmeasured"
   },
@@ -23,7 +24,7 @@
     },
     {
       "name": "its take is saved with a record that matches the run and its own hash",
-      "recordHash": "5dcc80cb286b7019d787eb438bd47bc25c2125f44614466253b00129d2d3b6b5",
+      "recordHash": "7d319d10d4ba2aac4d1bced3fde1682d338c464c34402773c0112c81e75a3b90",
       "revisions": 1,
       "maxRevision": 10000
     },

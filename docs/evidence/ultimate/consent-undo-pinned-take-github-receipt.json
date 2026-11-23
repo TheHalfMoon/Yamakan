@@ -1,6 +1,19 @@
 {
   "task": "consent-gate",
-  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90263957504,
+    "freeMemoryBytes": 15388348416,
+    "onAcPower": null,
+    "load": [
+      1.98,
+      0.72,
+      0.26
+    ],
+    "need": "unmeasured"
+  },
   "passed": true,
   "steps": [
     {

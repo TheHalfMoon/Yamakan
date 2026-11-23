@@ -1,7 +1,19 @@
 {
   "task": "MPR-105",
-  "head": "140bbfb295343158a66b45ee55091bbe2c9d1898",
-  "host": "linux",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90264018944,
+    "freeMemoryBytes": 15309938688,
+    "onAcPower": null,
+    "load": [
+      1.94,
+      0.62,
+      0.22
+    ],
+    "need": "unmeasured"
+  },
   "passed": true,
   "steps": [
     {
