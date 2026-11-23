@@ -57,7 +57,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-001 | 0 | VERIFIED | — | Record plan adoption, point specs/CURRENT.md at the new frontier, settle PRs #85/#86 |
 | MPR-002 | 0 | REVIEW_PENDING | — | Add dated status banners and one current-state index for stale top-level documents |
 | MPR-003 | 0 | REVIEW_PENDING | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
-| MPR-010 | 0 | QUALIFICATION_READY | — | Decide and close the pinned-take path past consent revocation at the commit point |
+| MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | QUALIFICATION_READY | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
 | MPR-103 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
@@ -489,7 +489,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 0 |
 | Track | 0 |
 | Pillars | D, B |
