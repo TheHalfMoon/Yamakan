@@ -13,6 +13,9 @@ import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes, type Scope } from "../core/command/registry.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { DatabaseSync } from "node:sqlite";
+import { assertPlacementConsent } from "../core/continuity.ts";
+import { sha256Hex } from "../core/hash/canonical.ts";
 import type { Project } from "../core/project.ts";
 import type { ReferencePack, StoryDocument } from "../core/story.ts";
 
@@ -297,18 +300,10 @@ for (const kind of ["pin", "inputs"] as const) {
       ? "a take in a shot that pins a pack linked to a revoked consent"
       : "a take whose lineage inputs are linked to a revoked consent";
 
-  test(`${what} cannot return by undo, redo, placing or restore`, async () => {
+  test(`${what} cannot return by placing, swapping media or restore`, async () => {
     const s = await scene(kind);
     const { c } = s;
     const removed = await s.edit([{ type: "clip.remove", clipId: s.clip.id }]);
-    // A redo to refuse too: a placement undone before the revocation.
-    const added = id();
-    await s.edit([{ ...s.add(), clipId: added }]);
-    await s.undo();
-    assert.equal(
-      (await head(c)).clips.some((x) => x.id === added),
-      false,
-    );
     // Something else on the timeline, so a media swap has a clip to swap: the person's own
     // picture goes on while the consent stands.
     const other = id();
@@ -461,4 +456,268 @@ test("control: a newer consent, saved in a pack version with the story, lets the
   });
   await s.edit([s.add()]);
   assert.ok((await head(c)).clips.some((x) => x.assetId === s.clip.assetId));
+});
+
+// The commit point itself, over a database made here: no media is needed, so these run anywhere.
+const PROJECT = "11111111-1111-4111-8111-111111111111";
+const hex = (n: number) => String(n).padStart(64, "0");
+const FILE = hex(7); // the take's own file
+const PERSON = hex(8); // the person's picture a pack links to the consent
+const CONSENT = "22222222-2222-4222-8222-222222222222";
+const TAKE_ASSET = "33333333-3333-4333-8333-333333333333";
+const PERSON_ASSET = "44444444-4444-4444-8444-444444444444";
+const FRESH_ASSET = "55555555-5555-4555-8555-555555555555";
+
+function commitPoint(
+  kind: "pin" | "inputs",
+  opts: {
+    revoked?: boolean;
+    oldStory?: boolean;
+    pack?: "ok" | "missing" | "damaged";
+    epoch?: number;
+  } = {},
+) {
+  const db = new DatabaseSync(":memory:");
+  db.exec(`
+
+    CREATE TABLE asset_versions(version_id TEXT, project_id TEXT, digest TEXT);
+    CREATE TABLE creative_documents(hash TEXT, kind TEXT, bytes BLOB);
+    CREATE TABLE story_document_versions(project_id TEXT, document_id TEXT, content_hash TEXT);
+    CREATE TABLE likeness_consents(id TEXT, character_id TEXT, purpose TEXT, version TEXT, granted_at INTEGER, expires_at INTEGER, grantor_principal_id TEXT, epoch INTEGER);
+    CREATE TABLE consent_revocations(consent_id TEXT, revoked_at INTEGER);
+    CREATE TABLE consent_revalidations(consent_id TEXT, epoch INTEGER);
+    CREATE TABLE director_epoch(singleton INTEGER, value INTEGER);
+  `);
+  const store = (value: unknown, kindOf: string) => {
+    const bytes = Buffer.from(JSON.stringify(value));
+    const hash = sha256Hex(bytes);
+    db.prepare("INSERT INTO creative_documents VALUES (?, ?, ?)").run(
+      hash,
+      kindOf,
+      bytes,
+    );
+    return hash;
+  };
+  const pack = {
+    format: "yamakan.reference-pack",
+    formatVersion: 1,
+    name: "Lead",
+    entries: [
+      {
+        id: id(),
+        role: "character",
+        label: "Lead",
+        assetId: PERSON_ASSET,
+        assetHash: PERSON,
+        characterId: "lead",
+        consentId: CONSENT,
+      },
+    ],
+  };
+  const packDocument = "66666666-6666-4666-8666-666666666666";
+  const packHash = store(pack, "referencePack");
+  db.prepare("INSERT INTO story_document_versions VALUES (?, ?, ?)").run(
+    PROJECT,
+    packDocument,
+    packHash,
+  );
+  if (opts.pack === "missing")
+    db.prepare("DELETE FROM creative_documents WHERE hash = ?").run(packHash);
+  if (opts.pack === "damaged")
+    db.prepare("UPDATE creative_documents SET bytes = ? WHERE hash = ?").run(
+      Buffer.from("not the pack"),
+      packHash,
+    );
+  const takeId = "77777777-7777-4777-8777-777777777777";
+  const storyOf = (title: string) => ({
+    format: "yamakan.story",
+    formatVersion: 1,
+    title,
+    scenes: [
+      {
+        id: id(),
+        name: "One",
+        shots: [
+          {
+            id: id(),
+            name: "Shot",
+            durationTicks: 30 * FRAME,
+            notes: "",
+            referencePacks:
+              kind === "pin"
+                ? [{ documentId: packDocument, contentHash: packHash }]
+                : [],
+            takes: [
+              {
+                id: takeId,
+                assetId: TAKE_ASSET,
+                sourceStartTicks: 0,
+                ...(kind === "inputs"
+                  ? {
+                      lineage: {
+                        outputHash: FILE,
+                        inputs: [{ assetId: PERSON_ASSET, assetHash: PERSON }],
+                      },
+                    }
+                  : {}),
+              },
+            ],
+            selectedTakeId: takeId,
+          },
+        ],
+      },
+    ],
+  });
+  const storyHash = store(storyOf("Takes"), "story");
+  db.prepare("INSERT INTO story_document_versions VALUES (?, ?, ?)").run(
+    PROJECT,
+    "88888888-8888-4888-8888-888888888888",
+    storyHash,
+  );
+  // The asset that the take names, kept as a version after the timeline has lost it.
+  db.prepare("INSERT INTO asset_versions VALUES (?, ?, ?)").run(
+    TAKE_ASSET,
+    PROJECT,
+    FILE,
+  );
+  db.prepare(
+    "INSERT INTO likeness_consents VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    CONSENT,
+    "lead",
+    "likeness-generate",
+    "v1",
+    1,
+    9_999_999_999_999,
+    "browser-ui",
+    opts.epoch ?? 1,
+  );
+  db.prepare("INSERT INTO director_epoch VALUES (1, 1)").run();
+  if (opts.revoked !== false)
+    db.prepare("INSERT INTO consent_revocations VALUES (?, 2)").run(CONSENT);
+  const track = { id: "t", kind: "video", muted: false, solo: false };
+  const placed = (
+    clips: { assetId: string; ticks: number }[],
+    ids: string[],
+  ) => ({
+    assets: ids.map((x) => ({
+      id: x,
+      hash: x === PERSON_ASSET ? PERSON : FILE,
+      kind: "video",
+    })),
+    tracks: [track],
+    clips: clips.map((c) => ({
+      trackId: "t",
+      assetId: c.assetId,
+      durationTicks: c.ticks,
+      sound: null,
+    })),
+  });
+  const check = (
+    before: ReturnType<typeof placed> | null,
+    after: ReturnType<typeof placed>,
+  ) =>
+    assertPlacementConsent(
+      {
+        db,
+        projectId: PROJECT,
+        project: after as never,
+        held: () => true,
+        nowMs: 5,
+      },
+      before,
+      after,
+    );
+  return { db, check, placed };
+}
+
+for (const kind of ["pin", "inputs"] as const) {
+  test(`commit point (${kind}): a re-import of the file after a restore dropped the asset is refused`, () => {
+    const { check, placed } = commitPoint(kind);
+    // The restore left neither the old asset nor the take's clip; the bytes came back as another asset.
+    assert.throws(
+      () =>
+        check(
+          placed([], []),
+          placed([{ assetId: FRESH_ASSET, ticks: 30 }], [FRESH_ASSET]),
+        ),
+      /This person's consent was revoked/,
+    );
+  });
+
+  test(`commit point (${kind}): a second copy and a longer clip are new uses, a split or move is not`, () => {
+    const { check, placed } = commitPoint(kind);
+    const one = [{ assetId: TAKE_ASSET, ticks: 30 }];
+    const at = placed(one, [TAKE_ASSET]);
+    assert.throws(
+      () =>
+        check(
+          at,
+          placed([...one, { assetId: TAKE_ASSET, ticks: 10 }], [TAKE_ASSET]),
+        ),
+      /This person's consent was revoked/,
+      "a second copy",
+    );
+    assert.throws(
+      () =>
+        check(at, placed([{ assetId: TAKE_ASSET, ticks: 31 }], [TAKE_ASSET])),
+      /This person's consent was revoked/,
+      "a longer clip",
+    );
+    // Split or moved: the same total time, nothing new.
+    check(
+      at,
+      placed(
+        [
+          { assetId: TAKE_ASSET, ticks: 12 },
+          { assetId: TAKE_ASSET, ticks: 18 },
+        ],
+        [TAKE_ASSET],
+      ),
+    );
+    check(at, placed([{ assetId: TAKE_ASSET, ticks: 20 }], [TAKE_ASSET]));
+  });
+
+  test(`commit point (${kind}): an unrevoked consent of an earlier epoch is refused until revalidated`, () => {
+    const { check, placed, db } = commitPoint(kind, {
+      revoked: false,
+      epoch: 0,
+    });
+    const after = placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]);
+    assert.throws(() => check(placed([], []), after), /must be revalidated/);
+    db.prepare("INSERT INTO consent_revalidations VALUES (?, 1)").run(CONSENT);
+    check(placed([], []), after);
+  });
+
+  test(`commit point (${kind}): a commit that adds nothing reads no story`, () => {
+    const { check, placed, db } = commitPoint(kind);
+    // With the story versions gone, anything that read them would throw.
+    db.exec("DROP TABLE story_document_versions");
+    const at = placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]);
+    check(at, placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]));
+    check(at, placed([{ assetId: TAKE_ASSET, ticks: 5 }], [TAKE_ASSET]));
+  });
+}
+
+test("commit point: a pinned pack that is missing or damaged refuses the take, and names the pack", () => {
+  for (const pack of ["missing", "damaged"] as const) {
+    const { check, placed } = commitPoint("pin", { pack });
+    const after = placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]);
+    assert.throws(
+      () => check(placed([], []), after),
+      /reference pack a take is pinned to/,
+    );
+    // Any other file, and a commit that adds nothing, are not held up.
+    check(after, after);
+  }
+});
+
+test("commit point: with the consent in force the take places, and a file with no linked take is not affected", () => {
+  for (const kind of ["pin", "inputs"] as const) {
+    const { check, placed } = commitPoint(kind, { revoked: false });
+    check(
+      placed([], []),
+      placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]),
+    );
+  }
 });

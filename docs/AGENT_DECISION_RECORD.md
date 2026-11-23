@@ -9,7 +9,8 @@ Decisions the implementing agent (Claude, Claude Code) made under authority the 
 - **Why:** a person who withdraws consent should not see a take made with their references come back, and a pin or a recorded input is the only record the project holds of that use.
 - **Cost:** a pin shows that a pack was attached to the shot, not that the take depicts the person, so some takes that show no one are refused, and a file shared between shots is unavailable in all of them. The way back is a newer consent saved in a pack version for that media.
 - **This reverses a rule:** PR #179 kept the opposite on purpose, and a test pinned it. The rule tightens consent and lifts none.
-- **Not decided by this:** media already on the timeline, which stays and can be moved and split; exports already made; expiry, which does not gate it.
+- **Not decided by this:** media already on the timeline, which stays and can be moved, split and shortened; exports already made; expiry, which does not gate it.
+- **Also chosen:** a further copy or a longer clip is a new use, as for a person's own media; after a restore the consent must be revalidated first; a pinned pack version that is missing or damaged refuses the take, because it cannot say whom it links, with a message naming the pack (it blocks only commits that newly use that file). Any past story version counts.
 - **Change rule:** the founder can overturn this at any time, and a new entry records it.
 
 ## 2026-11-10: the MCP server needs an agent token
