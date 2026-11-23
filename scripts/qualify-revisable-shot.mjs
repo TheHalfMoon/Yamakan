@@ -54,7 +54,7 @@ const step = (name, detail = {}) => {
   steps.push({ name, ...detail });
   console.log(`ok - ${name}`);
 };
-// Where core/process/owner.ts looks for it.
+// Where core/process/owner.ts looks for it, on Windows. Elsewhere it needs none.
 const procd =
   process.env.YAMAKAN_PROCD ||
   fileURLToPath(
@@ -166,7 +166,8 @@ const shut = async () => {
 
 try {
   // Looked for before anything runs.
-  if (!existsSync(procd)) blocked = "The native helpers are not built.";
+  if (process.platform === "win32" && !existsSync(procd))
+    blocked = "The native helpers are not built.";
   else
     try {
       execFileSync(mediaTools().ffmpeg, ["-version"], {

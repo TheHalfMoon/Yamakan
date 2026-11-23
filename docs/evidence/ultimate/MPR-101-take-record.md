@@ -56,7 +56,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ## Not run, and not claimed
 
-- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have never run. On Linux the first always ends BLOCKED, since it looks for the Windows helper (unless `YAMAKAN_PROCD` names one). They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). `MPR-101-take-record-receipt.json` is not written.
+- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have never run. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). `MPR-101-take-record-receipt.json` is not written.
 - `npm run test:e2e` was not run here.
 - **The Blender arm** is part b's, below.
 

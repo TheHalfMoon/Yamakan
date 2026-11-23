@@ -1,9 +1,13 @@
 # The real checks (npm run qualify:*) that the founder's own computer cannot run today, on
-# GitHub's Windows machine: the real service, FFmpeg in its sandbox, and real Edge. They run when
-# a person starts them, or when a pull request changes one of them. Each prints its receipt,
-# which names the commit and the host. This adds checks and replaces none: nothing in
+# GitHub's Linux machine: the real service, real FFmpeg and real Edge, which that machine has.
+# They run when a person starts them, or when a pull request changes one of them. Each prints its
+# receipt, which names the commit and the host. This adds checks and replaces none: nothing in
 # qualify.yml depends on it, and a check that cannot run here is a failure or BLOCKED, never a
 # pass. No model, no paid service and no secret is used.
+#
+# Not on GitHub's Windows machine: every sandboxed worker ends there as it starts, with Windows
+# status 0xC0000142 (run 45190159942), and the sandbox is not loosened for it. So a pass here says
+# nothing of the Windows sandbox.
 name: Real checks
 on:
   workflow_dispatch:
@@ -17,13 +21,13 @@ on:
 permissions:
   contents: read
 jobs:
-  windows:
-    runs-on: windows-latest
+  linux:
+    # As qualify.yml's own job: its FFmpeg is the one the tests know.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          lfs: true
           # The commit itself, so that a receipt names it, not a merge made for the run.
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           # The job needs no git access after this, so its token is not left in .git.
@@ -32,41 +36,40 @@ jobs:
         with:
           node-version: 24.19.0
           cache: npm
-      - run: npm ci --ignore-scripts --no-audit --no-fund
-      # The native helpers: no dependencies (native/procd/Cargo.toml), from the machine's own Rust.
-      - run: npm run build:native -- --locked --offline
-      - name: Create clean TEMP and a folder for receipts
-        shell: pwsh
+      # As in qualify.yml.
+      - name: Install FFmpeg and fonts
+        timeout-minutes: 18
         run: |
-          $dir = Join-Path $env:RUNNER_TEMP "yamakan-tmp"
-          $receipts = Join-Path $env:RUNNER_TEMP "receipts"
-          New-Item -ItemType Directory -Force -Path $dir, $receipts | Out-Null
-          echo "TEMP=$dir" >> $env:GITHUB_ENV
-          echo "TMP=$dir" >> $env:GITHUB_ENV
-          echo "RECEIPTS=$receipts" >> $env:GITHUB_ENV
-      # Whether the sandbox starts a worker here at all, before anything relies on it.
-      - run: node --test tests/process-owner.test.ts tests/probe.test.ts
+          for attempt in 1 2 3; do
+            if timeout 60 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update &&
+              timeout 240 sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y --no-install-recommends ffmpeg fonts-dejavu-core; then
+              exit 0
+            fi
+            echo "Package install attempt $attempt did not finish."
+            sudo dpkg --configure -a || true
+            sleep 15
+          done
+          exit 1
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: The browser this machine has
+        run: microsoft-edge --version
+      - run: mkdir -p "$RUNNER_TEMP/receipts"
       - name: A take's record, end to end (MPR-101)
         if: ${{ !cancelled() }}
-        shell: pwsh
-        run: node scripts/qualify-revisable-shot.mjs (Join-Path $env:RECEIPTS "MPR-101-take-record.json")
+        run: node scripts/qualify-revisable-shot.mjs "$RUNNER_TEMP/receipts/MPR-101-take-record.json"
       - name: A made video's record lasts, in real Edge (MPR-101)
         if: ${{ !cancelled() }}
-        shell: pwsh
-        run: node scripts/qualify-create-durable.mjs (Join-Path $env:RECEIPTS "create-durable.json")
+        run: node scripts/qualify-create-durable.mjs "$RUNNER_TEMP/receipts/create-durable.json"
       - name: Take review and a split shot, in real Edge (SS-006, MPR-105)
         if: ${{ !cancelled() }}
-        shell: pwsh
-        run: node scripts/qualify-take-review.mjs (Join-Path $env:RECEIPTS "take-review.json") (Join-Path $env:RECEIPTS "MPR-105-split-shot-replace.json")
+        run: node scripts/qualify-take-review.mjs "$RUNNER_TEMP/receipts/take-review.json" "$RUNNER_TEMP/receipts/MPR-105-split-shot-replace.json"
       - name: Consent gate and a pinned take, in real Edge (MPR-010)
         if: ${{ !cancelled() }}
-        shell: pwsh
-        run: node scripts/qualify-consent-gate.mjs (Join-Path $env:RECEIPTS "consent-gate.json")
+        run: node scripts/qualify-consent-gate.mjs "$RUNNER_TEMP/receipts/consent-gate.json"
       - name: Print the receipts
         if: ${{ !cancelled() }}
-        shell: pwsh
         run: |
-          Get-ChildItem $env:RECEIPTS -Filter *.json | ForEach-Object {
-            Write-Output "===== $($_.Name)"
-            Get-Content -Raw $_.FullName
-          }
+          for f in "$RUNNER_TEMP"/receipts/*.json; do
+            echo "===== $(basename "$f")"
+            cat "$f"
+          done
