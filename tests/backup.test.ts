@@ -17,6 +17,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
+import { consumeGates, gateState, requireGate } from "../core/gates.ts";
 import { ProjectStore } from "../core/store.ts";
 import { hashAgentToken } from "../core/agents.ts";
 import {
@@ -778,6 +779,21 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   db.prepare(
     "INSERT INTO Director_Requests VALUES ('browser-ui', 'r1', ?, '{}', ?, 0)",
   ).run("0".repeat(64), epoch + 5);
+  // Approvals of this epoch, of one to come, and one that a person did give.
+  const approval = db.prepare(
+    "INSERT INTO gate_approvals VALUES (?, ?, 'kaggle', 'kaggle.com', 'someone', 'generation', 0, 0, 1000, 9999999, ?, 0, 9999999999999, 'browser-ui', ?)",
+  );
+  for (const [n, at] of [epoch, epoch + 7, epoch + 8].entries())
+    for (const [kind, unit] of [
+      ["egress", "bytes"],
+      ["spend", "seconds"],
+    ])
+      approval.run(
+        `0000000${n}-0000-4000-8000-00000000000${kind === "egress" ? 1 : 2}`,
+        kind,
+        unit,
+        at,
+      );
   db.close();
   const bytes = await readFile(path.join(dir, "workspace.sqlite"));
   const manifestFile = path.join(dir, "backup.json");
@@ -791,6 +807,22 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   await restored.initialize();
   assert.equal(restored.principalForAgentToken(token), null);
   assert.equal(restored.principalForAgentToken(agentToken), null);
+  for (const kind of ["egress", "spend"] as const) {
+    const ask = {
+      kind,
+      route: "kaggle",
+      host: "kaggle.com",
+      account: "someone",
+      purpose: "generation" as const,
+      network: { proxyConfigured: false, certificateOverride: false },
+    };
+    assert.equal(gateState(restored, ask).state, "voided");
+    assert.throws(() => requireGate(restored, ask), /voided by a restore/);
+    assert.throws(
+      () => consumeGates(restored, [{ ask, units: 1 }], "run"),
+      /voided by a restore/,
+    );
+  }
   restored.close();
   const check = new DatabaseSync(path.join(target, "workspace.sqlite"), {
     readOnly: true,
@@ -802,7 +834,7 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
       value: number;
     }
   ).value;
-  assert.ok(now > epoch + 5, `the epoch ${now} is past every planted one`);
+  assert.ok(now > epoch + 8, `the epoch ${now} is past every planted one`);
   assert.deepEqual(
     check
       .prepare("SELECT revoked FROM agent_tokens")

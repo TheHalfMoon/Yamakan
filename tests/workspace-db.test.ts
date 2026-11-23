@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { writeFileSync, existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { ProjectStore } from "../core/store.ts";
+import { ProjectStore, WORKSPACE_SCHEMA_VERSION } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { execute, Scopes } from "../core/command/registry.ts";
 import { CommandError } from "../core/command/errors.ts";
@@ -323,6 +323,117 @@ test("a newer or foreign database is refused and left byte-identical", async () 
     new ProjectStore(foreign).initialize(),
     /not a Yamakan workspace database/,
   );
+});
+
+test("a version 18 database gains the approval tables, empty, and keeps every row", async () => {
+  const { root, store, project } = await workspace();
+  await store.save({ ...project, name: "Edited" }, 0);
+  store.close();
+  const file = path.join(root, "workspace.sqlite");
+  // As the build before left it: without the tables, at its version.
+  const db = new DatabaseSync(file);
+  const GATES = [
+    "gate_approval_uses",
+    "gate_approval_revocations",
+    "gate_approvals",
+  ];
+  for (const table of GATES) db.exec(`DROP TABLE ${table}`);
+  db.exec("PRAGMA user_version = 18");
+  // Every other table, row by row and column by column.
+  const rows = (from: DatabaseSync) =>
+    Object.fromEntries(
+      (
+        from
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+          )
+          .all() as { name: string }[]
+      )
+        .filter(({ name }) => !GATES.includes(name))
+        .map(({ name }) => [
+          name,
+          from
+            .prepare(`SELECT * FROM "${name}"`)
+            .all()
+            .map((row) => JSON.stringify(row))
+            .sort(),
+        ]),
+    );
+  const before = rows(db);
+  assert.ok(Object.values(before).some((r) => r.length > 1));
+  db.close();
+  const upgraded = new ProjectStore(root);
+  handles.push(upgraded);
+  await upgraded.initialize();
+  upgraded.close();
+  const after = new DatabaseSync(file, { readOnly: true });
+  assert.equal(
+    (after.prepare("PRAGMA user_version").get() as { user_version: number })
+      .user_version,
+    WORKSPACE_SCHEMA_VERSION,
+  );
+  const now = rows(after);
+  // The service's own lease is not a person's row.
+  delete now.supervisor;
+  delete before.supervisor;
+  assert.deepEqual(now, before);
+  for (const table of GATES)
+    assert.deepEqual(after.prepare(`SELECT * FROM ${table}`).all(), []);
+  // A row outside the bounds is refused by the table itself.
+  after.close();
+  const write = new DatabaseSync(file);
+  const plant = (over: Record<string, string | number>) => {
+    const row: Record<string, string | number> = {
+      id: "00000000-0000-4000-8000-000000000000",
+      kind: "egress",
+      route: "kaggle",
+      host: "kaggle.com",
+      account: "someone",
+      purpose: "generation",
+      proxy_configured: 0,
+      certificate_override: 0,
+      limit_runs: 1,
+      limit_units: 1,
+      limit_unit: "bytes",
+      granted_at: 1,
+      expires_at: 2,
+      grantor_principal_id: "browser-ui",
+      epoch: 1,
+      ...over,
+    };
+    write
+      .prepare(
+        `INSERT INTO gate_approvals(${Object.keys(row).join(", ")}) VALUES (${Object.keys(
+          row,
+        )
+          .map(() => "?")
+          .join(", ")})`,
+      )
+      .run(...Object.values(row));
+  };
+  for (const over of [
+    { id: "x" },
+    { kind: "money" },
+    { route: "" },
+    { host: "h".repeat(254) },
+    { account: "a".repeat(81) },
+    { purpose: "other" },
+    { proxy_configured: 2 },
+    { certificate_override: 2 },
+    { limit_runs: 0 },
+    { limit_units: -1 },
+    { limit_unit: "euros" },
+    { expires_at: 1 },
+    { grantor_principal_id: "" },
+  ])
+    assert.throws(
+      () => plant(over as never),
+      /constraint/i,
+      JSON.stringify(over),
+    );
+  plant({});
+  assert.throws(() => plant({}), /constraint/i);
+  write.close();
 });
 
 test("a damaged lock file is set aside and the lock is acquired", async () => {

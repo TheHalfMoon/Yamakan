@@ -766,6 +766,7 @@ const EPOCH_TABLES = [
   "consent_revalidations",
   "director_attempts",
   "director_requests",
+  "gate_approvals",
 ] as const;
 function fenceRestored(db: DatabaseSync): Fenced {
   const run = (sql: string, ...args: (string | number)[]) =>

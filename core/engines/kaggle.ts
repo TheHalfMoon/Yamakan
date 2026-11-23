@@ -37,6 +37,7 @@ import {
 } from "./contract-v2.ts";
 import { refusedSubmit } from "./failures.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import type { GateNetwork } from "../gates.ts";
 import type { RecipeFacts } from "../take-record.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
 
@@ -255,6 +256,31 @@ const CLI_ENVIRONMENT = [
   "CURL_CA_BUNDLE",
   "SSL_CERT_FILE",
 ];
+// Of those, what sends the CLI another way, and what changes whom it believes. The CLI also gets
+// every KAGGLE_ name, and whether it reads this one is not known.
+const PROXY_SETTINGS = [
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "ALL_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "all_proxy",
+  "KAGGLE_PROXY",
+];
+const CERTIFICATE_SETTINGS = [
+  "REQUESTS_CA_BUNDLE",
+  "CURL_CA_BUNDLE",
+  "SSL_CERT_FILE",
+];
+/** Whether the CLI would be given a proxy or a certificate setting; never its value (OA-20). */
+export function kaggleNetwork(from: NodeJS.ProcessEnv): GateNetwork {
+  const env = kaggleCliEnvironment(from);
+  const any = (names: readonly string[]) => names.some((name) => env[name]);
+  return {
+    proxyConfigured: any(PROXY_SETTINGS),
+    certificateOverride: any(CERTIFICATE_SETTINGS),
+  };
+}
 export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {
   const env: NodeJS.ProcessEnv = { PYTHONUTF8: "1" };
   for (const [name, value] of Object.entries(from))

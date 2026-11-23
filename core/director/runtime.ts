@@ -44,7 +44,7 @@ export async function loadManifestFromAssets(
 /** A run as stored, with its compare-and-swap version. */
 export type VersionedRun = DirectorRun & { version: number };
 
-const epochOf = (db: DatabaseSync) =>
+export const epochOf = (db: DatabaseSync) =>
   (
     db
       .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
@@ -65,7 +65,7 @@ export function bumpDirectorEpoch(db: DatabaseSync): number {
 
 // A replayable mutation: a retry under the same request id returns the
 // stored result; the same id with a different request is refused.
-function once<T>(
+export function once<T>(
   db: DatabaseSync,
   receipt: RequestReceipt | undefined,
   compute: () => T,

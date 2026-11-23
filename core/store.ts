@@ -188,7 +188,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 18;
+export const WORKSPACE_SCHEMA_VERSION = 19;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -440,6 +440,41 @@ ALTER TABLE agent_tokens ADD COLUMN expires_at TEXT
 // Cinema 3D models (3D asset import): which content-addressed objects of a project are
 // checked .glb models (core/cinema/glb.ts), named by Cinema scene items by digest. Their
 // digests are kept in creative_documents.object_digests like Studio bitmaps'.
+// A person's approvals of what leaves this computer, what uses a remote allowance and what is
+// downloaded (MPR-204), under the network settings they were given under (OA-20). No row is
+// updated: a revocation and a use are rows of their own, and none is given back.
+const SCHEMA_V19 = `
+CREATE TABLE IF NOT EXISTS gate_approvals(
+  id TEXT PRIMARY KEY CHECK(length(id) = 36),
+  kind TEXT NOT NULL CHECK(kind IN ('egress', 'spend', 'download')),
+  route TEXT NOT NULL CHECK(length(route) BETWEEN 1 AND 40),
+  host TEXT NOT NULL CHECK(length(host) BETWEEN 1 AND 253),
+  account TEXT NOT NULL CHECK(length(account) BETWEEN 1 AND 80),
+  purpose TEXT NOT NULL CHECK(purpose IN ('generation', 'qualification')),
+  proxy_configured INTEGER NOT NULL CHECK(proxy_configured IN (0, 1)),
+  certificate_override INTEGER NOT NULL CHECK(certificate_override IN (0, 1)),
+  limit_runs INTEGER NOT NULL CHECK(limit_runs > 0),
+  limit_units INTEGER NOT NULL CHECK(limit_units >= 0),
+  limit_unit TEXT NOT NULL CHECK(limit_unit IN ('seconds', 'bytes')),
+  granted_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL CHECK(expires_at > granted_at),
+  grantor_principal_id TEXT NOT NULL CHECK(length(grantor_principal_id) BETWEEN 1 AND 64),
+  epoch INTEGER NOT NULL
+) STRICT;
+CREATE INDEX IF NOT EXISTS gate_approvals_asked ON gate_approvals(kind, route, host, account, purpose);
+CREATE TABLE IF NOT EXISTS gate_approval_revocations(
+  approval_id TEXT PRIMARY KEY REFERENCES gate_approvals(id),
+  revoked_at INTEGER NOT NULL,
+  principal_id TEXT NOT NULL CHECK(length(principal_id) BETWEEN 1 AND 64)
+) STRICT;
+CREATE TABLE IF NOT EXISTS gate_approval_uses(
+  approval_id TEXT NOT NULL REFERENCES gate_approvals(id),
+  use_id TEXT NOT NULL CHECK(length(use_id) BETWEEN 1 AND 80),
+  units INTEGER NOT NULL CHECK(units >= 0),
+  used_at INTEGER NOT NULL,
+  PRIMARY KEY(approval_id, use_id)
+) STRICT;
+`;
 const SCHEMA_V18 = `
 CREATE TABLE IF NOT EXISTS cinema_models(
   project_id TEXT NOT NULL,
@@ -870,6 +905,7 @@ export class ProjectStore {
         SCHEMA_V16,
         SCHEMA_V17,
         SCHEMA_V18,
+        SCHEMA_V19,
       ];
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
