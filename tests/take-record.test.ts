@@ -8,8 +8,11 @@ import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { z } from "zod";
 import { ProjectStore, SNAPSHOT_FORMAT } from "../core/store.ts";
-import { JobSupervisor } from "../core/jobs.ts";
+import { BlenderPayload, JobSupervisor } from "../core/jobs.ts";
+import { BLENDER_PIN } from "../core/blender/runtime.ts";
+import { creativeClosure } from "../core/recovery.ts";
 import {
   API_VERSION,
   RESOURCE_POLICY_HASH,
@@ -52,6 +55,7 @@ import {
   TakeRecordSchema,
   buildDeclaredRecord,
   buildGenerationRecord,
+  buildRenderRecord,
   recordHashOf,
   type TakeRecord,
 } from "../core/take-record.ts";
@@ -89,7 +93,12 @@ async function workspace() {
   const store = new ProjectStore(root);
   handles.push(store);
   await store.initialize();
-  const queue = new JobSupervisor(store);
+  // A job is claimed and goes no further: no worker starts here.
+  const queue = new JobSupervisor(store, {
+    fault: () => {
+      throw new Error("Not run in this test.");
+    },
+  });
   handles.push(queue);
   const ctx = {
     store,
@@ -1750,4 +1759,483 @@ test("a run's word is taken only where it has the form of such a name", () => {
       },
     );
   }
+});
+
+// A render of a story's shot, planned by the Director's own code and submitted to the real job
+// table, where it is claimed and goes no further; its end is written there.
+async function rendered(
+  w: W,
+  documentId: string,
+  body: StoryDocument,
+  asset: Asset,
+  direction: Record<string, string>,
+  over: { state?: string; artifact?: string | null; kind?: string } = {},
+) {
+  const started = (
+    await execute(w.ctx, "yamakan.director.start", {
+      projectId: w.projectId,
+      pipelineName: "cinema-blender",
+    })
+  ).result as { id: string };
+  const { job } = await renderStoryShot(w.store, w.queue, {
+    runId: started.id,
+    storyDocumentId: documentId,
+    shotId: body.scenes[0]!.shots[0]!.id,
+    direction,
+  });
+  for (let i = 0; i < 500 && w.queue.status(job.id).state !== "FAILED"; i++)
+    await new Promise((done) => setTimeout(done, 10));
+  assert.equal(w.queue.status(job.id).state, "FAILED");
+  const payload = await w.store.transaction((db) => {
+    db.prepare(
+      "UPDATE jobs SET kind = ?, state = ?, artifact = ? WHERE job_id = ?",
+    ).run(
+      over.kind ?? "blender-render",
+      over.state ?? "succeeded",
+      over.artifact === undefined ? `asset:${asset.id}` : over.artifact,
+      job.id,
+    );
+    return JSON.parse(
+      (
+        db.prepare("SELECT payload FROM jobs WHERE job_id = ?").get(job.id) as {
+          payload: string;
+        }
+      ).payload,
+    ) as z.output<typeof BlenderPayload>;
+  });
+  return { jobId: job.id, payload };
+}
+
+test("a Blender take's record holds its scene hash and settings", async () => {
+  const w = await workspace();
+  const asset = await video(w, "render");
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  const { jobId, payload } = await rendered(w, documentId, empty, asset, {
+    shot: "aerial",
+    light: "golden",
+    movement: "orbit",
+  });
+  assert.deepEqual(payload.shot, {
+    documentId,
+    shotId: empty.scenes[0]!.shots[0]!.id,
+  });
+  const t = take(asset);
+  const body = structuredClone(empty) as StoryDocument;
+  body.scenes[0]!.shots[0]!.takes = [t];
+  await save(w, documentId, body, {
+    records: [{ takeId: t.id, from: { jobId } }],
+  });
+  const { record, recordHash } = await read(
+    w,
+    documentId,
+    stored(w, documentId),
+  );
+  assert.equal(recordHash, sha256Hex(canonicalJson(record)));
+  const { scene } = payload;
+  assert.equal(record.origin, "render");
+  assert.equal(record.route, "blender");
+  assert.equal(record.operation, "render");
+  assert.deepEqual(record.source, { jobId });
+  assert.deepEqual(record.request, {
+    kind: "render",
+    blenderVersion: BLENDER_PIN.version,
+    sceneFormat: scene.format,
+    sceneHash: sha256Hex(canonicalJson(scene)),
+    width: scene.width,
+    height: scene.height,
+    fps: scene.fps,
+    frames: scene.frames,
+    samples: scene.samples,
+    camera: {
+      focalLengthMm: scene.camera.focalLengthMm,
+      sensorWidthMm: scene.camera.sensorWidthMm,
+    },
+    moves: {
+      orbitDegrees: scene.camera.orbitDegrees,
+      dolly: scene.camera.dolly,
+      panDegrees: scene.camera.panDegrees,
+      shake: scene.camera.shake,
+    },
+    lighting: "golden",
+    view: "aerial",
+    direction: [
+      { kind: "shot", choice: "aerial" },
+      { kind: "light", choice: "golden" },
+      { kind: "movement", choice: "orbit" },
+    ].sort(
+      (a, b) =>
+        Object.keys(payload.direction!).indexOf(a.kind) -
+        Object.keys(payload.direction!).indexOf(b.kind),
+    ),
+  });
+  assert.notEqual(scene.camera.orbitDegrees, 0);
+  assert.deepEqual(record.timings, {
+    startedAt: null,
+    endedAt: null,
+    importedAt: null,
+  });
+  assert.deepEqual(record.inputs, []);
+  assert.equal(record.output.sha256, asset.hash);
+});
+
+test("each move, and a direction that is neither lit nor aerial, is recorded as itself", async () => {
+  const w = await workspace();
+  const asset = await video(w, "moves");
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  for (const [movement, moves] of [
+    ["push", { orbitDegrees: 0, dolly: 0.35, panDegrees: 0, shake: 0 }],
+    ["pan", { orbitDegrees: 0, dolly: 0, panDegrees: 30, shake: 0 }],
+    ["handheld", { orbitDegrees: 0, dolly: 0, panDegrees: 0, shake: 0.03 }],
+  ] as const) {
+    const { jobId } = await rendered(w, documentId, empty, asset, {
+      shot: "close",
+      movement,
+    });
+    const { request } = buildRenderRecord(
+      w.queue.blenderRender(w.projectId, jobId),
+      asset.hash,
+    );
+    assert.ok(request.kind === "render");
+    assert.deepEqual(request.moves, moves, movement);
+    assert.ok(!("view" in request) && !("lighting" in request));
+  }
+  // A choice inherited from Object is no light.
+  const { jobId } = await rendered(w, documentId, empty, asset, {});
+  const render = w.queue.blenderRender(w.projectId, jobId);
+  const odd = buildRenderRecord(
+    {
+      ...render,
+      payload: { ...render.payload, direction: { light: "toString" } },
+    },
+    asset.hash,
+  );
+  assert.ok(odd.request.kind === "render" && !("lighting" in odd.request));
+});
+
+test("a scene's hash is of the scene as stored, whatever is read into it now", async () => {
+  const w = await workspace();
+  const asset = await video(w, "older");
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  const { jobId, payload } = await rendered(w, documentId, empty, asset, {});
+  const { finish: _finish, surface: _surface, ...scene } = payload.scene;
+  await w.store.transaction((db) =>
+    db
+      .prepare("UPDATE jobs SET payload = ? WHERE job_id = ?")
+      .run(JSON.stringify({ ...payload, scene }), jobId),
+  );
+  const render = w.queue.blenderRender(w.projectId, jobId);
+  assert.equal(render.sceneHash, sha256Hex(canonicalJson(scene)));
+  assert.notEqual(
+    render.sceneHash,
+    sha256Hex(canonicalJson(render.payload.scene)),
+  );
+  await w.store.transaction((db) =>
+    db
+      .prepare(
+        'UPDATE jobs SET payload = \'{"format":"blender/9"}\' WHERE job_id = ?',
+      )
+      .run(jobId),
+  );
+  assert.equal(
+    await reason((async () => w.queue.blenderRender(w.projectId, jobId))()),
+    "VALIDATION: This render's description cannot be read by this version.",
+  );
+});
+
+test("what a payload may say of its shot and direction is bounded as the record is", async () => {
+  const w = await workspace();
+  const asset = await video(w, "bound");
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  const { payload } = await rendered(w, documentId, empty, asset, {
+    shot: "wide",
+  });
+  const ok = (over: object) =>
+    BlenderPayload.safeParse({ ...payload, ...over }).success;
+  assert.ok(ok({}));
+  for (const over of [
+    { shot: { ...payload.shot, more: 1 } },
+    { shot: { documentId } },
+    { direction: { a: "1", b: "2", c: "3", d: "4", e: "5" } },
+    { direction: { ["k".repeat(41)]: "x" } },
+    { direction: { shot: "x".repeat(41) } },
+    { direction: { shot: "" } },
+    { other: 1 },
+  ])
+    assert.equal(ok(over), false, JSON.stringify(over));
+  const full = Object.fromEntries(
+    ["a", "b", "c", "d"].map((k) => [k.repeat(40), "v".repeat(40)]),
+  );
+  assert.ok(ok({ direction: full }));
+  buildRenderRecord(
+    {
+      jobId: id(),
+      payload: { ...payload, direction: full },
+      sceneHash: "a".repeat(64),
+    },
+    asset.hash,
+  );
+});
+
+test("a render with no shot or direction, and one over a plate, are recorded as that", async () => {
+  const w = await workspace();
+  const asset = await video(w, "plain");
+  const plate = await video(w, "plate");
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  const { payload } = await rendered(w, documentId, empty, asset, {});
+  // As a render that no story shot asked for, and as a payload from before this.
+  const { shot: _shot, direction: _direction, ...older } = payload;
+  assert.ok(BlenderPayload.safeParse(older).success);
+  const sceneHash = "a".repeat(64);
+  const plain = buildRenderRecord(
+    { jobId: id(), payload: BlenderPayload.parse(older), sceneHash },
+    asset.hash,
+  );
+  assert.ok(
+    plain.request.kind === "render" &&
+      !("direction" in plain.request) &&
+      !("lighting" in plain.request) &&
+      !("view" in plain.request),
+  );
+  const over = buildRenderRecord(
+    {
+      jobId: id(),
+      payload: {
+        ...payload,
+        plateAssetId: plate.id,
+        plateAssetHash: plate.hash,
+      },
+      sceneHash,
+    },
+    asset.hash,
+  );
+  assert.deepEqual(over.inputs, [
+    { assetId: plate.id, assetHash: plate.hash, role: "plate" },
+  ]);
+});
+
+test("a render of another project, kind or take, or not finished, is refused", async () => {
+  const w = await workspace();
+  const [a, b] = [await video(w, "mine"), await video(w, "theirs")];
+  const documentId = id();
+  const empty = story([]);
+  await save(w, documentId, empty);
+  const t = take(a);
+  const body = structuredClone(empty) as StoryDocument;
+  body.scenes[0]!.shots[0]!.takes = [t];
+  const ask = (jobId: string) =>
+    reason(
+      save(w, documentId, body, {
+        records: [{ takeId: t.id, from: { jobId } }],
+      }),
+    );
+  const make = async (over: Parameters<typeof rendered>[5], asset = a) =>
+    (await rendered(w, documentId, empty, asset, {}, over)).jobId;
+  const set = (jobId: string, column: string, value: string) =>
+    w.store.transaction((db) =>
+      db
+        .prepare(`UPDATE jobs SET ${column} = ? WHERE job_id = ?`)
+        .run(value, jobId),
+    );
+  const foreign = await make({});
+  const other = (
+    await execute(w.ctx, "yamakan.project.create", { name: "Other" })
+  ).result as Project;
+  await set(foreign, "project_id", other.id);
+  assert.equal(await ask(id()), "NOT_FOUND: Render not found.");
+  assert.equal(await ask(foreign), "NOT_FOUND: Render not found.");
+  const unfinished = "VALIDATION: This render is not finished.";
+  const otherMedia = "VALIDATION: This render did not make the take's media.";
+  for (const [over, asset, why] of [
+    [{ kind: "export" }, a, "NOT_FOUND: Render not found."],
+    [{ state: "failed", artifact: null }, a, unfinished],
+    [{ state: "cancelled", artifact: null }, a, unfinished],
+    [{ state: "running", artifact: null }, a, unfinished],
+    [{ state: "reconciliationRequired" }, a, unfinished],
+    [{ artifact: null }, a, otherMedia],
+    [{ artifact: `track:${a.id}` }, a, otherMedia],
+    [{}, b, otherMedia],
+  ] as const) {
+    const jobId = await make(over, asset);
+    assert.equal(await ask(jobId), why, JSON.stringify(over));
+    // Out of the way of the next one.
+    await set(jobId, "state", "failed");
+  }
+  assert.equal(await ask(await make({})), "ok");
+});
+
+test("a record a retained story names is missing or damaged in a backup's check", async () => {
+  const w = await workspace();
+  const asset = await video(w, "kept");
+  const documentId = id();
+  const t = take(asset);
+  const { records } = await save(w, documentId, story([t]), {
+    records: [
+      {
+        takeId: t.id,
+        from: { declared: { model: "m", prompt: "p", seed: 1 } },
+      },
+    ],
+  });
+  const hash = records[0]!.recordHash;
+  // A later version of the story without the take still leaves the earlier one retained.
+  await save(w, documentId, { ...story([]), title: "Later" });
+  const file = path.join(w.root, "workspace.sqlite");
+  const closure = (edit?: string) => {
+    const db = new DatabaseSync(file);
+    if (edit) db.exec(`PRAGMA foreign_keys = OFF; ${edit}`);
+    const found = creativeClosure(db);
+    db.close();
+    return found;
+  };
+  assert.equal(closure().gaps, 0);
+  // Stored, but no longer held for its story: the story could not be saved again.
+  const unheld = new DatabaseSync(file);
+  const versions = unheld
+    .prepare("SELECT * FROM story_document_versions WHERE content_hash = ?")
+    .get(hash) as { project_id: string; document_id: string; revision: number };
+  unheld
+    .prepare("DELETE FROM story_document_versions WHERE content_hash = ?")
+    .run(hash);
+  assert.deepEqual(
+    creativeClosure(unheld).reported.map((g) => [g.ref, g.reason]),
+    [[hash, "missing"]],
+  );
+  unheld
+    .prepare(
+      "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?)",
+    )
+    .run(versions.project_id, versions.document_id, hash, versions.revision);
+  unheld.close();
+  const gap = (reason: string) => ({
+    projectId: w.projectId,
+    kind: "document",
+    ref: hash,
+    reason,
+  });
+  assert.deepEqual(
+    closure(
+      `UPDATE creative_documents SET bytes = x'7b7d', byte_length = 2 WHERE hash = '${hash}'`,
+    ).reported,
+    [gap("mismatch")],
+  );
+  assert.deepEqual(
+    closure(`DELETE FROM creative_documents WHERE hash = '${hash}'`).reported,
+    [gap("missing")],
+  );
+  // Another kind of document under the record's hash is not the record.
+  closure(
+    `INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) SELECT '${hash}', 'captions', 1, '[]', '[]', x'7b7d', 2`,
+  );
+  assert.deepEqual(closure().reported, [gap("missing")]);
+  // A stored story whose scenes are no list is reported, and does not stop the check.
+  const odd = asAnOlderBuildStored(w, documentId, { scenes: 5 });
+  assert.ok(
+    closure().reported.some(
+      (g) => g.ref === odd.hash && g.reason === "unreadable",
+    ),
+  );
+});
+
+test("a record is checked for each story that names it, in its own project", async () => {
+  const w = await workspace();
+  const asset = await video(w, "shared");
+  const t = take(asset);
+  const declared = { model: "m", prompt: "p", seed: 1 };
+  const records = [{ takeId: t.id, from: { declared } }];
+  // Two stories of this project name one record, since what it says is the same.
+  const [one, two] = [id(), id()];
+  const hash = (await save(w, one, story([t]), { records })).records[0]!
+    .recordHash;
+  assert.equal(
+    (await save(w, two, story([t]), { records })).records[0]!.recordHash,
+    hash,
+  );
+  const file = path.join(w.root, "workspace.sqlite");
+  const db = new DatabaseSync(file);
+  db.exec("PRAGMA foreign_keys = OFF");
+  const gaps = () =>
+    creativeClosure(db).reported.map((g) => [g.projectId, g.ref, g.reason]);
+  assert.deepEqual(gaps(), []);
+  const missing = [[w.projectId, hash, "missing"]];
+  // One of the two no longer holds it: reported, once.
+  db.prepare(
+    "DELETE FROM story_document_versions WHERE content_hash = ? AND document_id = ?",
+  ).run(hash, two);
+  assert.deepEqual(gaps(), missing);
+  // Held for that story in another project only is not held in this one.
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, 1)",
+  ).run(id(), two, hash);
+  assert.deepEqual(gaps(), missing);
+  db.close();
+});
+
+test("a story a damaged snapshot calls something else is still checked, and an odd record name too", async () => {
+  const w = await workspace();
+  const asset = await video(w, "relabelled");
+  const t = take(asset);
+  const documentId = id();
+  const { records } = await save(w, documentId, story([t]), {
+    records: [
+      {
+        takeId: t.id,
+        from: { declared: { model: "m", prompt: "p", seed: 1 } },
+      },
+    ],
+  });
+  const hash = records[0]!.recordHash;
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  db.exec("PRAGMA foreign_keys = OFF");
+  const head = db
+    .prepare("SELECT snapshot_hash AS hash FROM projects WHERE project_id = ?")
+    .get(w.projectId) as { hash: string };
+  const snapshot = (
+    db.prepare("SELECT bytes FROM snapshots WHERE hash = ?").get(head.hash) as {
+      bytes: Uint8Array;
+    }
+  ).bytes;
+  const bytes = Buffer.from(
+    Buffer.from(snapshot)
+      .toString("utf8")
+      .replace('"kind":"story"', '"kind":"captions"'),
+  );
+  const next = sha256Hex(bytes);
+  assert.notEqual(next, head.hash);
+  db.prepare(
+    "INSERT INTO snapshots(hash, format, bytes, byte_length) SELECT ?, format, ?, ? FROM snapshots WHERE hash = ?",
+  ).run(next, bytes, bytes.length, head.hash);
+  db.prepare("UPDATE projects SET snapshot_hash = ?").run(next);
+  db.prepare(
+    "UPDATE revisions SET snapshot_hash = ? WHERE snapshot_hash = ?",
+  ).run(next, head.hash);
+  db.prepare("DELETE FROM creative_documents WHERE hash = ?").run(hash);
+  assert.ok(
+    creativeClosure(db).reported.some(
+      (g) => g.ref === hash && g.reason === "missing",
+    ),
+  );
+  db.close();
+  // A name that is no text is reported as what it says.
+  const odd = await workspace();
+  const oddId = id();
+  await save(odd, oddId, story([]));
+  asAnOlderBuildStored(odd, oddId, {
+    scenes: [{ shots: [{ takes: [{ recordHash: 7 }] }] }],
+  });
+  const oddDb = new DatabaseSync(path.join(odd.root, "workspace.sqlite"));
+  assert.deepEqual(
+    creativeClosure(oddDb).reported.map((g) => [g.ref, g.reason]),
+    [["7", "missing"]],
+  );
+  oddDb.close();
 });

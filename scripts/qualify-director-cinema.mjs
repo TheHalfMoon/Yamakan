@@ -14,14 +14,49 @@
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statfsSync,
+  writeFileSync,
+} from "node:fs";
+import { freemem, loadavg, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { YamakanClient } from "../sdk/client.ts";
 
+// What this host has, before anything runs. What the run needs is unmeasured, so nothing is
+// refused for it.
+const disk = statfsSync(tmpdir());
+const onAcPower = () => {
+  if (process.platform !== "win32") return null;
+  try {
+    const said = execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).trim();
+    return said === "Online" ? true : said === "Offline" ? false : null;
+  } catch {
+    return null;
+  }
+};
+const host = {
+  platform: process.platform,
+  freeDiskBytes: Number(disk.bavail) * Number(disk.bsize),
+  freeMemoryBytes: freemem(),
+  onAcPower: onAcPower(),
+  // Windows reports none.
+  load: process.platform === "win32" ? null : loadavg(),
+  need: "unmeasured",
+};
 execFileSync("npm", ["run", "build"], {
   stdio: "inherit",
   windowsHide: true,
@@ -69,6 +104,7 @@ const receipt = {
   checkedAt: new Date().toISOString(),
   gitHead: head,
   clean,
+  host,
   steps,
   passed: false,
 };
@@ -92,6 +128,8 @@ try {
   const token = readFileSync(join(workspace, "token"), "utf8").trim();
   const client = new YamakanClient({ baseUrl: base, token });
   const capability = await client.call("yamakan.blender.capability", {});
+  // Without the pinned Blender this is BLOCKED, not a failure of what it checks.
+  if (!capability.available) receipt.blocked = capability.message;
   assert.equal(capability.available, true, capability.message);
 
   // A 23.976 fps project with a one-shot story, made through the SDK: the render (at 24) must
@@ -278,6 +316,27 @@ try {
   const clipsOf = (opened, assetId) =>
     opened.clips.filter((c) => c.assetId === assetId).length;
   assert.equal(clipsOf(one.opened, one.asset.id), 1);
+  // MPR-101: the placed take's record is of this render.
+  const recordOf = async (takeId) =>
+    client.call("yamakan.take.record", {
+      projectId: project.id,
+      documentId: storyDocumentId,
+      shotId,
+      takeId,
+    });
+  const oneRecord = (await recordOf(one.selected.id)).record;
+  assert.equal(one.selected.recordHash.length, 64);
+  assert.equal(oneRecord.origin, "render");
+  assert.equal(oneRecord.output.sha256, one.asset.hash);
+  assert.match(oneRecord.request.sceneHash, /^[a-f0-9]{64}$/);
+  assert.equal(oneRecord.request.blenderVersion, capability.version);
+  // 1.001 s at 24 fps, and the planner's own samples.
+  assert.equal(oneRecord.request.frames, 25);
+  assert.equal(oneRecord.request.samples, 8);
+  assert.equal(oneRecord.request.lighting, "studio");
+  step("the placed take's record is of its render", {
+    request: oneRecord.request,
+  });
   step("first render approved and placed", {
     seconds: first.seconds,
     planned: first.planned,
@@ -292,6 +351,14 @@ try {
   assert.equal(clipsOf(two.opened, two.asset.id), 1);
   assert.equal(clipsOf(two.opened, one.asset.id), 0);
   assert.equal(two.opened.clips.length, one.opened.clips.length);
+  const twoRecord = (await recordOf(two.selected.id)).record;
+  assert.equal(twoRecord.output.sha256, two.asset.hash);
+  assert.notEqual(
+    twoRecord.request.sceneHash,
+    oneRecord.request.sceneHash,
+    "another scene",
+  );
+  assert.deepEqual((await recordOf(one.selected.id)).record, oneRecord);
   step("second render replaced the shot's clip", {
     seconds: second.seconds,
     takes: two.s.takes.length,
@@ -371,6 +438,10 @@ try {
   if (!receipt.passed) receipt.error = "the working tree is not clean";
 } catch (e) {
   receipt.error = e instanceof Error ? e.message : String(e);
+  // A sandboxed worker was refused its start (0xC0000022), so what it makes was not checked.
+  if (/\bexit 3221225506\b/.test(receipt.error))
+    receipt.blocked =
+      "Windows refused a sandboxed worker its start (Blender, or FFmpeg after it).";
 } finally {
   await browser?.close().catch(() => {});
   child.kill();
@@ -380,4 +451,10 @@ const text = JSON.stringify(receipt, null, 2) + "\n";
 if (process.env.YAMAKAN_QUALIFY_RECEIPT)
   writeFileSync(process.env.YAMAKAN_QUALIFY_RECEIPT, text);
 console.log(text);
-console.log(receipt.passed ? "DIRECTOR CINEMA PIPELINE PASS" : "FAILED");
+console.log(
+  receipt.passed
+    ? "DIRECTOR CINEMA PIPELINE PASS"
+    : receipt.blocked
+      ? `BLOCKED: ${receipt.blocked}`
+      : "FAILED",
+);

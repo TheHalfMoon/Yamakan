@@ -148,6 +148,9 @@ export async function renderStoryShot(
     run.projectId,
     blenderSceneFromCinema(plan.scene, plan.settings),
     shot.name.slice(0, 100),
+    undefined,
+    undefined,
+    { shot: { documentId: ref.id, shotId: shot.id }, direction },
   );
   return {
     job,
