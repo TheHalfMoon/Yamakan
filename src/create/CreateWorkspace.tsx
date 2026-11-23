@@ -18,6 +18,7 @@ import {
   type GenerationApi,
 } from "./GeneratePanel.tsx";
 import { mediaUrl } from "../session.ts";
+import { focusIfLost } from "../story/focus.ts";
 import { saveStory, type StoryClient } from "../story/save-story.ts";
 import {
   directionText,
@@ -157,7 +158,7 @@ function DraftOffer(props: {
   }, [possible, props.revision, reads]);
   // The button that held focus is gone: what came of it takes it.
   useEffect(() => {
-    if (saved) savedShown.current?.focus();
+    if (saved) focusIfLost(savedShown.current, null);
   }, [saved]);
   if (saved)
     return (

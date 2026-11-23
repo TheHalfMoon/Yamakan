@@ -1192,7 +1192,8 @@ function App() {
     // A save that met a conflict stops here, so its notice and unapplied change stay.
     onReload: () =>
       run(async () => {
-        if (unapplied || !(await save())) return;
+        if (head.current?.id !== project.id || unapplied) return;
+        if (!(await save()) || head.current?.id !== project.id) return;
         accept(await call("yamakan.project.open", { projectId: project.id }));
       }),
   });

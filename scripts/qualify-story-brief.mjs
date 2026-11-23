@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { diagnostic } from "../core/engines/contract-v2.ts";
+import { translate } from "../src/i18n.ts";
 import { readHost } from "./qualify-host.mjs";
 
 // Before anything runs.
@@ -37,6 +38,7 @@ const receipt =
   );
 const FRAME = 23_520_000;
 const ARABIC = "طائرة ورقية حمراء فوق أسطح المدينة عند الغروب";
+const UNDO_WAITS = translate("en", "status.documentUnsaved");
 const DRAFT = "A red kite over the roofs at dusk.";
 const steps = [];
 const measured = {};
@@ -499,10 +501,26 @@ try {
     "a stale save writes nothing, keeps the text, and saves on top after a reload",
   );
 
-  // A second save without a reload, of what was typed after the first.
+  // A second save without a reload, of what was typed after the first. The person types on while
+  // it runs: the focus stays with them and the text stays.
   await at("story-brief-audience").fill("Everyone, twice");
+  let release;
+  const held1 = new Promise((r) => (release = r));
+  await page.route("**/api/v1/call", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}");
+    if (body.operation === "yamakan.story.save") await held1;
+    await route.continue();
+  });
   await at("story-text-save").click();
+  await at("story-brief-format").click();
+  await page.keyboard.type("Typed ");
+  release();
   await at("story-text-done").waitFor();
+  await page.keyboard.type("on");
+  await page.unroute("**/api/v1/call");
+  assert.match(await at("story-brief-format").inputValue(), /Typed on/);
+  assert.equal(await at("story-text-save").isDisabled(), false);
+  await at("story-text-discard").click();
   assert.equal((await held()).content.brief.audience, "Everyone, twice");
   step("a second save follows the first, and the page says it is saved");
 
@@ -544,7 +562,7 @@ try {
   // Undo waits for typed text, and text for a shot that is gone is kept and not saved.
   await at("story-brief-tone").fill("Not saved");
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await page.waitForTimeout(500);
+  await page.getByText(UNDO_WAITS, { exact: true }).waitFor();
   assert.equal(await at("story-brief-tone").inputValue(), "Not saved");
   assert.equal((await held()).content.brief.tone, "Loudest");
   await at("story-text-discard").click();

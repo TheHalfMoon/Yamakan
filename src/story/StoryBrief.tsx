@@ -4,6 +4,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
 import { saveStory, type SaveOutcome, type StoryClient } from "./save-story.ts";
+import { focusIfLost } from "./focus.ts";
 import {
   SHOT_FIELDS,
   TEXT_LIMITS,
@@ -123,15 +124,17 @@ export function StoryBrief({
   // A read that began before a later save or reload is not shown.
   const ticket = useRef(0);
   const shown = useRef<HTMLDivElement | null>(null);
+  const actions = useRef<HTMLDivElement | null>(null);
 
   useEffect(
     () => registerUnsaved(() => Object.keys(latest.current.edits).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  // A button that held focus may be gone or off: what came of it takes it.
+  // A button that held focus may be gone or off: what came of it takes it. Never from a person
+  // who has gone on to type.
   useEffect(() => {
-    if (done || refused) shown.current?.focus();
+    if (done || refused) focusIfLost(shown.current, actions.current);
   }, [done, refused]);
   const read = async (): Promise<Held[]> => {
     const refs = (await caller.current.call("yamakan.document.list", {
@@ -176,8 +179,18 @@ export function StoryBrief({
         if (Object.keys(typed).length === 0) {
           hold(same ?? found[0] ?? null);
           setMoved(false);
-        } else if (!same) setRefused({ why: "gone" });
-        else if (same.contentHash !== held?.contentHash) setMoved(true);
+        } else if (same && same.contentHash !== held?.contentHash)
+          setMoved(true);
+        const gone = Object.keys(typed).length > 0 && !same;
+        setRefused((r) =>
+          gone
+            ? r?.why === "gone"
+              ? r
+              : { why: "gone" }
+            : r?.why === "gone"
+              ? null
+              : r,
+        );
       })
       .catch(() => {
         if (mine === ticket.current) setStories((known) => known ?? "unknown");
@@ -191,7 +204,11 @@ export function StoryBrief({
     if (!held) return;
     setRefused((r) => (r?.why === "unknown" || r?.why === "gone" ? r : null));
     setDone(null);
-    setEdits((typed) => edit(typed, held.story, field, text));
+    const next = edit(latest.current.edits, held.story, field, text);
+    latest.current = { ...latest.current, edits: next };
+    setEdits(next);
+    // Put back as it was: the page shows the story as it now is.
+    if (Object.keys(next).length === 0) setReads((n) => n + 1);
   }, []);
   const draft = useMemo(
     () => (base ? withEdits(base.story, edits) : null),
@@ -445,7 +462,7 @@ export function StoryBrief({
           </p>
         )}
       </div>
-      <div className="story-words-actions">
+      <div className="story-words-actions" ref={actions}>
         <button
           type="button"
           data-testid="story-text-save"
