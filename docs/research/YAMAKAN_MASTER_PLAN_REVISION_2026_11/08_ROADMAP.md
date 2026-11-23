@@ -153,7 +153,7 @@ agent surface with waits, approvals, budgets and an audit feed.
 | MPR-203 | Preflight: estimate, egress disclosure and a hash that start checks | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | none |
 | MPR-204 | Default-deny gates with recorded human approvals | QUALIFICATION_READY | none | none |
 | MPR-205 | The Kaggle command-line route contained; quota facts stated | WAITING_DEPENDENCIES | MPR-204, MPR-207 | FD-10 (second part only) |
-| MPR-206 | Five engine operations defined; a conformance kit for every adapter | QUALIFICATION_READY | MPR-201 | none |
+| MPR-206 | Five engine operations defined; a conformance kit for every adapter | REVIEW_PENDING | MPR-201 | none |
 | MPR-207 | A typed failure class and end time on every ended generation | REVIEW_PENDING | none | none |
 | MPR-208 | Every offered model gated on a complete, machine-checked licence block | QUALIFICATION_READY | MPR-201 | none |
 | MPR-209 | Notices, the source offer and the route licence shown; wider SBOM | WAITING_DEPENDENCIES | MPR-208 | none |

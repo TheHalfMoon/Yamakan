@@ -7,7 +7,11 @@ import {
   ENGINE_ENABLED,
   engineAbsentCapability,
 } from "../core/engines/contract.ts";
-import { createFakeEngine, createFakeEngineV2 } from "../core/engines/fake.ts";
+import {
+  createFakeEngine,
+  createFakeEngineV2,
+  createFakeWorld,
+} from "../core/engines/fake.ts";
 import {
   ENGINE_CONTRACT_V2,
   ENGINE_V2_LIMITS,
@@ -802,4 +806,122 @@ test("diagnostics are bounded and carry no paths or URLs", () => {
   )!;
   assert.ok(!/models|https|home\/u/.test(text), text);
   assert.ok(Array.from(text).length <= ENGINE_V2_LIMITS.diagnosticChars);
+});
+
+// MPR-206: what the fake can stand for, beside what it does with no option.
+const accepted = async (engine: EngineAdapterV2, extra = {}) => {
+  const answer = await engine.submit(textToVideo(extra), context());
+  assert.ok("executionRef" in answer, JSON.stringify(answer));
+  return answer;
+};
+
+test("an uncertain submit that landed can be followed", async () => {
+  const world = createFakeWorld();
+  const engine = createFakeEngineV2({ world, uncertainSubmit: "landed" });
+  const { executionRef, uncertain } = await accepted(engine);
+  assert.match(uncertain ?? "", /may have arrived/);
+  assert.equal((await engine.status(executionRef)).state, "succeeded");
+  const [artifact] = await engine.enumerateArtifacts(executionRef);
+  await readArtifactVerified(engine, executionRef, artifact!);
+  // The same attempt is the same answer, and sent once.
+  assert.deepEqual(await accepted(engine), { executionRef, uncertain });
+  assert.deepEqual([world.sends, engine.spawned()], [1, 1]);
+});
+
+test("an uncertain submit that never landed never succeeds", async () => {
+  const world = createFakeWorld();
+  const engine = createFakeEngineV2({ world, uncertainSubmit: "neverLanded" });
+  const { executionRef, uncertain } = await accepted(engine);
+  assert.ok(uncertain);
+  for (let n = 0; n < 3; n++)
+    assert.deepEqual(await engine.status(executionRef), {
+      executionRef,
+      state: "unknown",
+    });
+  assert.deepEqual(await engine.enumerateArtifacts(executionRef), []);
+  // It was sent, and nothing started.
+  assert.deepEqual([world.sends, engine.spawned()], [1, 0]);
+});
+
+test("a second fake over the same world knows the first one's executions and starts nothing", async () => {
+  const world = createFakeWorld();
+  const first = createFakeEngineV2({ world });
+  const { executionRef } = await accepted(first);
+  const second = createFakeEngineV2({ world });
+  assert.deepEqual(
+    await second.reconcile(executionRef),
+    await first.status(executionRef),
+  );
+  const [artifact] = await second.enumerateArtifacts(executionRef);
+  await readArtifactVerified(second, executionRef, artifact!);
+  assert.deepEqual([world.sends, second.spawned()], [1, 0]);
+  // Its next run is another one, and one of another world is not known.
+  assert.notEqual(
+    (await accepted(second, { attemptKey: "attempt-2" })).executionRef,
+    executionRef,
+  );
+  await assert.rejects(
+    createFakeEngineV2().status(executionRef),
+    (e: { code?: string }) => e.code === "NOT_FOUND",
+  );
+});
+
+test("a run the engine lost says so, and leaves nothing", async () => {
+  const world = createFakeWorld();
+  const { executionRef } = await accepted(createFakeEngineV2({ world }));
+  const after = createFakeEngineV2({ world, lostExecutions: true });
+  const status = ExecutionStatusSchema.parse(await after.status(executionRef));
+  assert.deepEqual(
+    [status.state, "failureClass" in status && status.failureClass],
+    ["failed", "lostJob"],
+  );
+  assert.deepEqual(await after.enumerateArtifacts(executionRef), []);
+});
+
+test("a corrupt artifact fails verification", async () => {
+  const engine = createFakeEngineV2({ corruptArtifact: true });
+  const { executionRef } = await accepted(engine);
+  const [artifact] = await engine.enumerateArtifacts(executionRef);
+  await assert.rejects(
+    readArtifactVerified(engine, executionRef, artifact!),
+    /does not match its declared length and hash/,
+  );
+});
+
+test("a stop that goes on says so", async () => {
+  const going = createFakeEngineV2({
+    stayRunning: true,
+    cancelOutcome: "continuing",
+  });
+  const { executionRef } = await accepted(going);
+  assert.deepEqual(await going.requestCancel(executionRef), {
+    requested: true,
+    localProcessExited: true,
+    remoteAcknowledged: false,
+    remoteOutcome: "continuing",
+    billingOutcome: "unknown",
+  });
+  assert.equal((await going.status(executionRef)).state, "running");
+  assert.equal(going.location?.("r"), "fake/r");
+  const ended = createFakeEngineV2({
+    stayRunning: true,
+    cancelOutcome: "stopped",
+  });
+  const run = await accepted(ended);
+  assert.equal(
+    (await ended.requestCancel(run.executionRef)).remoteOutcome,
+    "stopped",
+  );
+  assert.equal((await ended.status(run.executionRef)).state, "cancelled");
+  // With neither it is on this computer, as before.
+  const here = createFakeEngineV2({ stayRunning: true });
+  assert.equal(here.location, undefined);
+  assert.deepEqual(
+    await here.requestCancel((await accepted(here)).executionRef),
+    {
+      requested: true,
+      localProcessExited: true,
+      billingOutcome: "notApplicable",
+    },
+  );
 });
