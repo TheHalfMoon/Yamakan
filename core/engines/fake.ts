@@ -431,7 +431,8 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
           billingOutcome: "unknown",
         };
       // Executions finish within submit, so there is never a running one.
-      if (e.status.state === "queued" || e.status.state === "running") {
+      const going = e.status.state === "queued" || e.status.state === "running";
+      if (going) {
         e.status = {
           executionRef: ref,
           state: "cancelled",
@@ -443,8 +444,8 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
         ? {
             requested: true,
             localProcessExited: true,
-            remoteAcknowledged: true,
-            remoteOutcome: "stopped",
+            remoteAcknowledged: going,
+            remoteOutcome: going ? "stopped" : "unknown",
             billingOutcome: "unknown",
           }
         : {

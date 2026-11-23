@@ -8,7 +8,7 @@
  * Usage: node scripts/qualify-engine-conformance.mjs [evidence.md]
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Operation, diagnostic } from "../core/engines/contract-v2.ts";
@@ -32,7 +32,10 @@ const out =
   join(where, "docs", "evidence", "model-system", "engine-conformance.md");
 
 const files = [
-  ...new Set([...Object.values(ADAPTER_SUITES), "model-intake.test.ts"]),
+  ...new Set([
+    ...Object.values(ADAPTER_SUITES).flatMap((suite) => suite.tests),
+    "model-intake.test.ts",
+  ]),
 ];
 // Only the kit's own tests of a file that has others: those named by a check.
 const named = new RegExp(`^(.+): (${CONFORMANCE_CHECKS.join("|")})$`);
@@ -81,21 +84,22 @@ for (const file of files) {
     else if (of) intake.push({ offer: of[1], outcome });
     else others.push({ name, outcome });
   }
-  // A file that ended another way than its tests say has not been read whole.
+  // A file that ended another way than its tests say has not been read whole: this alone would
+  // not see one that ran nothing, which the rows below are for.
   if (
     !seen ||
     ran.error ||
     ran.signal ||
-    ran.status === null ||
+    ran.status !== 0 ||
     !/^1\.\.\d+$/m.test(ran.stdout)
   ) {
     complete = false;
     console.error(diagnostic(`${file} did not run to its end.`));
   }
 }
-const adapters = [...new Set(rows.map((r) => r.adapter))];
-// Every adapter has every check, once.
-for (const adapter of adapters)
+// Every registered adapter has every check once under each of its names, and no other has any.
+const names = Object.values(ADAPTER_SUITES).flatMap((suite) => suite.names);
+for (const adapter of names)
   for (const check of CONFORMANCE_CHECKS)
     if (
       rows.filter((r) => r.adapter === adapter && r.check === check).length !==
@@ -104,10 +108,15 @@ for (const adapter of adapters)
       complete = false;
       console.error(`${adapter}: ${check} was not seen once.`);
     }
+for (const { adapter } of rows)
+  if (!names.includes(adapter)) {
+    complete = false;
+    console.error(`${adapter} is not registered.`);
+  }
 const all = [...rows, ...intake, ...others];
 const passed =
   complete &&
-  adapters.length > 0 &&
+  names.length > 0 &&
   intake.length > 0 &&
   // Skipped is for a check of the kit, with a reason.
   all.every((r) => r.outcome !== "FAIL") &&
@@ -133,7 +142,9 @@ ${intake.map((r) => `| \`${r.offer}\` | ${r.outcome} |`).join("\n")}
 
 The same files' other tests: ${others.filter((r) => r.outcome === "PASS").length} of ${others.length} passed.
 `;
-const held = readFileSync(out, "utf8");
+const held = existsSync(out)
+  ? readFileSync(out, "utf8").replaceAll("\r\n", "\n")
+  : "";
 const at = held.indexOf("\n## The check\n");
 writeFileSync(
   out,

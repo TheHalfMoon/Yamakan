@@ -19,7 +19,8 @@ import { kaggleRecipes } from "../core/engines/kaggle.ts";
 import { ADAPTER_SUITES, PENDING } from "./fixtures/engine-suites.ts";
 
 const root = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
-const read = (p: string) => readFileSync(root(p), "utf8");
+const read = (p: string) =>
+  readFileSync(root(p), "utf8").replaceAll("\r\n", "\n");
 const fileAt = (p: string) => existsSync(root(p)) && statSync(root(p)).isFile();
 
 // The adapter that each route runs on.

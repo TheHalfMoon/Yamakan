@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { homedir, tmpdir } from "node:os";
 import {
   CancellationSchema,
+  CapabilityV2Schema,
   ENGINE_V2_LIMITS,
   ExecutionStatusSchema,
   readArtifactVerified,
@@ -26,6 +27,7 @@ import {
   type GenerationLedger,
   type GenerationRequest,
 } from "../../core/engines/generation.ts";
+import { CommandError } from "../../core/command/errors.ts";
 import type { ProjectStore } from "../../core/store.ts";
 
 export const ADAPTER_CHECKS = [
@@ -33,6 +35,7 @@ export const ADAPTER_CHECKS = [
   "unlisted-role-refused",
   "limits-held",
   "status-parses",
+  "states-told-as-they-are",
   "ended-failure-has-class",
   "ref-usable-at-once",
   "same-attempt-never-sent-twice",
@@ -91,6 +94,8 @@ export type ConformanceHarness = {
     store: ProjectStore;
     request: GenerationRequest;
     ledger?(): GenerationLedger;
+    // The kit's own tests only: another service over the same adapter.
+    make?: typeof createGenerationService;
     // How many media this store was given.
     imports(): number;
   };
@@ -137,35 +142,95 @@ async function submitted(
   );
   return answer;
 }
-async function arranged(h: ConformanceHarness, scenario: Scenario) {
-  await h.reset();
-  const arrange = h.arrange[scenario];
-  if (!arrange) throw new Unavailable(h.unavailable[scenario]);
-  await arrange();
-}
-const available = (h: ConformanceHarness) =>
-  SCENARIOS.filter((s) => h.arrange[s] !== undefined);
 
-// Refused before anything is sent: an answer that says so, and a count that does not move.
+// Each of these states that the stand-in has, with a run submitted in it. Whatever is then asked,
+// nothing more is sent: contract, "After a restart: what is known about an execution, never a
+// resubmit", and "Said, not resent". A state it has not is told after the others were asked.
+async function each(
+  h: ConformanceHarness,
+  scenarios: readonly Scenario[],
+  ask: (
+    scenario: Scenario,
+    run: {
+      adapter: EngineAdapterV2;
+      request: EngineRequestV2;
+      answer: Submitted;
+      ref: string;
+    },
+  ) => Promise<void>,
+) {
+  const missing: string[] = [];
+  for (const scenario of scenarios) {
+    const arrange = h.arrange[scenario];
+    if (!arrange) {
+      missing.push(`${scenario}: ${h.unavailable[scenario]}`);
+      continue;
+    }
+    await h.reset();
+    await arrange();
+    const adapter = h.adapter();
+    const request = h.request();
+    const answer = await submitted(h, adapter, request);
+    assert.equal(h.sends(), 1, `${scenario}: sent other than once.`);
+    await ask(scenario, {
+      adapter,
+      request,
+      answer,
+      ref: answer.executionRef,
+    });
+    assert.equal(h.sends(), 1, `${scenario}: sent again.`);
+  }
+  if (missing.length) throw new Unavailable(missing.join(" "));
+}
+// Every part is asked, and what one could not ask is told after the others.
+async function whole(...parts: (() => Promise<void>)[]) {
+  const missing: string[] = [];
+  for (const part of parts)
+    try {
+      await part();
+    } catch (e) {
+      if (!(e instanceof Unavailable)) throw e;
+      missing.push(e.message);
+    }
+  if (missing.length) throw new Unavailable(missing.join(" "));
+}
+// The states this stand-in has, for what is asked of any: with none, nothing is asked.
+const had = (h: ConformanceHarness) => {
+  const scenarios = SCENARIOS.filter((s) => h.arrange[s] !== undefined);
+  if (!scenarios.length) throw new Unavailable("No state can be had.");
+  return scenarios;
+};
+
+// Refused before anything is sent: an answer that says so, or where no reason is asked for an
+// error of a command's own kind, and a count that does not move.
 async function refuses(
   h: ConformanceHarness,
   request: unknown,
   reason: RefusalReason | null,
   what: string,
 ) {
-  const before = h.sends();
-  const answer = await h
-    .adapter()
-    .submit(request as EngineRequestV2, h.context());
-  assert.ok("refused" in answer, `${what} was accepted.`);
-  if (reason !== null) assert.equal(answer.refused, reason, what);
-  assert.equal(h.sends(), before, `${what} was refused, and something sent.`);
+  await h.reset();
+  let answer: Awaited<ReturnType<EngineAdapterV2["submit"]>> | null = null;
+  try {
+    answer = await h.adapter().submit(request as EngineRequestV2, h.context());
+  } catch (e) {
+    if (reason !== null || !(e instanceof CommandError)) throw e;
+  }
+  if (answer !== null) {
+    assert.ok("refused" in answer, `${what} was accepted.`);
+    if (reason !== null) assert.equal(answer.refused, reason, what);
+  }
+  assert.equal(h.sends(), 0, `${what} was refused, and something sent.`);
 }
 
 const ENDS: ReadonlySet<ExecutionStatus["state"]> = new Set([
   "succeeded",
   "failed",
   "cancelled",
+]);
+const GOING: ReadonlySet<ExecutionStatus["state"]> = new Set([
+  "queued",
+  "running",
 ]);
 // Every answer about one run, until it ends or has been asked often enough.
 async function followed(adapter: EngineAdapterV2, ref: string) {
@@ -175,22 +240,22 @@ async function followed(adapter: EngineAdapterV2, ref: string) {
     seen.push(await adapter.reconcile(ref));
     if (ENDS.has(seen.at(-1)!.state)) break;
   }
+  for (const s of seen)
+    assert.equal(s.executionRef, ref, "An answer about another run.");
   return seen;
 }
 // Everything an adapter says in every state this stand-in has, a stop included.
 async function everythingSaid(h: ConformanceHarness) {
   const statuses: ExecutionStatus[] = [];
   const texts: string[] = [];
-  for (const scenario of available(h)) {
-    await arranged(h, scenario);
-    const adapter = h.adapter();
-    const answer = await submitted(h, adapter);
-    texts.push(answer.uncertain ?? "", answer.notice ?? "");
-    statuses.push(...(await followed(adapter, answer.executionRef)));
-    await adapter.requestCancel(answer.executionRef);
-    statuses.push(await adapter.status(answer.executionRef));
-    statuses.push(await h.adapter().reconcile(answer.executionRef));
-  }
+  await each(h, had(h), async (_, { adapter, answer, ref }) => {
+    texts.push(answer.notice ?? "");
+    statuses.push(...(await followed(adapter, ref)));
+    statuses.push(...(await followed(h.adapter(), ref)));
+    await adapter.requestCancel(ref);
+    statuses.push(await adapter.status(ref));
+    statuses.push(await h.adapter().reconcile(ref));
+  });
   texts.push(...statuses.map((s) => s.diagnostic ?? ""));
   return { statuses, texts: texts.filter(Boolean) };
 }
@@ -208,43 +273,52 @@ const FURTHER_ROLES: Record<Operation, readonly string[]> = {
   transcribe: [],
   enhance: [],
 };
+// contract: "Available means measured constraints", and their hash is theirs.
 const claimed = (h: ConformanceHarness): CapabilityV2[] => {
   const of = h
     .adapter()
     .capabilities()
+    .map((c) => CapabilityV2Schema.parse(c))
     .filter((c) => c.available);
   assert.ok(of.length, "The adapter claims nothing, so nothing can be asked.");
   return of;
 };
 
-// What each limit accepts at its bound, and the least it refuses.
+// What is accepted at each bound (nothing, where only the engine could say), and the least that
+// is refused past it.
 function boundsOf(c: CapabilityV2, base: EngineRequestV2) {
-  const bounds: [string, unknown, unknown][] = [];
-  const bound = (name: string, at: object, over: object) =>
+  const bounds: [string, object | null, object][] = [];
+  const bound = (name: string, at: object | null, over: object) =>
     bounds.push([
       `${c.operation} ${name}`,
-      { ...base, ...at },
+      at && { ...base, ...at },
       { ...base, ...over },
     ]);
-  if ("prompt" in base)
+  if ("prompt" in base) {
     bound(
-      "prompt",
+      "longest prompt",
       { prompt: "x".repeat(ENGINE_V2_LIMITS.promptChars) },
       { prompt: "x".repeat(ENGINE_V2_LIMITS.promptChars + 1) },
     );
-  bound("seed", { seed: 2 ** 32 - 1 }, { seed: 2 ** 32 });
+    bound("shortest prompt", { prompt: "x" }, { prompt: "" });
+  }
+  bound("greatest seed", { seed: 2 ** 32 - 1 }, { seed: 2 ** 32 });
+  bound("least seed", { seed: 0 }, { seed: -1 });
   bound(
-    "deadlineMs",
+    "longest deadline",
     { deadlineMs: ENGINE_V2_LIMITS.deadlineMs },
     { deadlineMs: ENGINE_V2_LIMITS.deadlineMs + 1 },
   );
+  bound("shortest deadline", null, { deadlineMs: 0 });
+  bound("least lease", { leaseGeneration: 1 }, { leaseGeneration: 0 });
   const constraints = c.constraints!;
+  // Which values of its own a control takes is the engine's: only the contract's range is asked.
   for (const control of constraints.controls)
-    bound(
-      `control ${control}`,
-      { controls: { [control]: 1e6 } },
-      { controls: { [control]: 1e6 + 1 } },
-    );
+    for (const value of [1e6 + 1, -1e6 - 1])
+      bound(`control ${control}`, null, { controls: { [control]: value } });
+  bound("a control it does not list", null, {
+    controls: { notAControlOfAny: 1 },
+  });
   const out = base.output;
   if (out.kind === "video") {
     // A size is even: one more than its bound is two.
@@ -252,16 +326,18 @@ function boundsOf(c: CapabilityV2, base: EngineRequestV2) {
     const output = (over: object) => ({ output: { ...out, ...over } });
     const { maxWidth, maxHeight, minDurationTicks, maxDurationTicks } =
       constraints;
-    bound(
-      "width",
-      output({ width: even(maxWidth) }),
-      output({ width: even(maxWidth) + 2 }),
-    );
-    bound(
-      "height",
-      output({ height: even(maxHeight) }),
-      output({ height: even(maxHeight) + 2 }),
-    );
+    for (const [name, most] of [
+      ["width", maxWidth],
+      ["height", maxHeight],
+    ] as const) {
+      bound(
+        `greatest ${name}`,
+        output({ [name]: even(most) }),
+        output({ [name]: even(most) + 2 }),
+      );
+      // How small a model goes is the engine's: the contract's least is asked past only.
+      bound(`least ${name}`, null, output({ [name]: 14 }));
+    }
     bound(
       "longest",
       output({ durationTicks: maxDurationTicks }),
@@ -272,6 +348,15 @@ function boundsOf(c: CapabilityV2, base: EngineRequestV2) {
       output({ durationTicks: minDurationTicks }),
       output({ durationTicks: minDurationTicks - 1 }),
     );
+    const rate = { num: 7919, den: 997 };
+    for (const fps of constraints.fps)
+      bound(
+        `${fps.num}/${fps.den} frames a second`,
+        output({ fps }),
+        output({ fps: rate }),
+      );
+    if (!constraints.audio)
+      bound("sound it does not make", null, output({ audio: true }));
   }
   return bounds;
 }
@@ -283,13 +368,55 @@ const FOLDERS = [homedir(), tmpdir(), process.cwd()].flatMap((f) => [
 ]);
 const holdsPath = (text: string) =>
   /[A-Za-z]:[\\/]/.test(text) ||
-  /(^|[\s"'(=])\/[^\s/"']+\/[^\s"']/.test(text) ||
+  /\\\\[^\\\s]+\\/.test(text) ||
+  /(^|[^A-Za-z0-9.\\:/])[\\/][^\s\\/"']+[\\/][^\s"']/.test(text) ||
   FOLDERS.some((f) => f.length > 3 && text.toLowerCase().includes(f));
 
 const notFound = (e: unknown) =>
   e instanceof Error && (e as { code?: unknown }).code === "NOT_FOUND";
 // Never issued, so nothing may be known of it.
 const NEVER_ISSUED = "never-issued-1";
+
+// What a run in each state may be said to be, by the adapter that sent it and by a new one, which
+// may know nothing of it; and what one of its answers must be.
+const states = (...of: ExecutionStatus["state"][]) => new Set(of);
+const TOLD: Record<
+  Scenario,
+  {
+    may: ReadonlySet<ExecutionStatus["state"]>;
+    // One of these is told, by the adapter that sent it.
+    must: ReadonlySet<ExecutionStatus["state"]>;
+  }
+> = {
+  succeeded: {
+    may: states("queued", "running", "unknown", "succeeded"),
+    must: states("succeeded"),
+  },
+  running: {
+    may: states("queued", "running", "unknown"),
+    must: states("queued", "running"),
+  },
+  failed: {
+    may: states("queued", "running", "unknown", "failed"),
+    must: states("failed"),
+  },
+  uncertainLanded: {
+    may: states("queued", "running", "unknown", "succeeded"),
+    must: states("succeeded"),
+  },
+  uncertainNeverLanded: {
+    may: states("queued", "running", "unknown", "failed"),
+    must: states("queued", "running", "unknown", "failed"),
+  },
+  lost: {
+    may: states("queued", "running", "unknown", "failed"),
+    must: states("unknown", "failed"),
+  },
+  corruptArtifact: {
+    may: states("queued", "running", "unknown", "succeeded", "failed"),
+    must: states("succeeded", "failed"),
+  },
+};
 
 const ADAPTER: Record<
   (typeof ADAPTER_CHECKS)[number],
@@ -299,26 +426,34 @@ const ADAPTER: Record<
   "refusal-sends-nothing": async (h) => {
     const refused = h.refusedRequests();
     assert.ok(refused.length, "A harness names a request that is refused.");
-    for (const { request, reason } of refused) {
-      await h.reset();
+    for (const { request, reason } of refused)
       await refuses(h, request, reason, `A request (${reason})`);
-    }
   },
 
   // contract: "The input roles this engine honours (a request using another refuses)."
   "unlisted-role-refused": async (h) => {
-    for (const c of claimed(h))
-      for (const role of FURTHER_ROLES[c.operation]) {
-        if (c.constraints!.roles.includes(role)) continue;
-        await h.reset();
-        const base = h.request({ operation: c.operation });
+    let asked = 0;
+    for (const c of claimed(h)) {
+      const { roles } = c.constraints!;
+      const base = () => h.request({ operation: c.operation });
+      const refused = async (inputs: unknown[], role: string) => {
+        asked++;
         await refuses(
           h,
-          { ...base, inputs: [...base.inputs, { role, asset: EXTRA }] },
+          { ...base(), inputs },
           "INPUT_UNSUPPORTED",
           `${c.operation} with a ${role}`,
         );
-      }
+      };
+      // One it must have and does not list: it claims what it cannot take.
+      for (const { role } of base().inputs)
+        if (!roles.includes(role)) await refused([...base().inputs], role);
+      for (const role of FURTHER_ROLES[c.operation])
+        if (!roles.includes(role))
+          await refused([...base().inputs, { role, asset: EXTRA }], role);
+    }
+    if (!asked)
+      throw new Unavailable("It lists every role its operations have.");
   },
 
   // contract: "a request is checked against them before any worker is spawned".
@@ -328,11 +463,11 @@ const ADAPTER: Record<
         c,
         h.request({ operation: c.operation }),
       )) {
-        await h.reset();
-        await refuses(h, over, null, `${name} past its bound`);
+        await refuses(h, over, null, `${name}, past it,`);
+        if (at === null) continue;
         await h.reset();
         await submitted(h, h.adapter(), at as EngineRequestV2).catch((e) => {
-          throw new Error(`${name} at its bound: ${e.message}`);
+          throw new Error(`${name}: ${e.message}`);
         });
       }
   },
@@ -340,25 +475,55 @@ const ADAPTER: Record<
   // contract: "Observations an adapter reports: bounded".
   "status-parses": async (h) => {
     const { statuses } = await everythingSaid(h);
-    assert.ok(statuses.length);
     for (const s of statuses) ExecutionStatusSchema.parse(s);
   },
 
-  // contract: "An adapter that says a run failed or was stopped names which kind of end it was".
-  "ended-failure-has-class": async (h) => {
-    await arranged(h, "failed");
-    const { statuses } = await everythingSaid(h);
-    const ended = statuses.filter(
-      (s) => s.state === "failed" || s.state === "cancelled",
-    );
-    assert.ok(ended.length, "No run of this stand-in ended in a failure.");
-    for (const s of statuses)
-      assert.equal(
-        "failureClass" in s && typeof s.failureClass === "string",
-        ended.includes(s),
-        JSON.stringify(s),
+  // contract: "Observations an adapter reports", of a run in a state that is known here.
+  "states-told-as-they-are": async (h) => {
+    await each(h, SCENARIOS, async (scenario, { adapter, ref }) => {
+      const { may, must } = TOLD[scenario];
+      const before = await followed(adapter, ref);
+      const after = await followed(h.adapter(), ref);
+      for (const s of [...before, ...after])
+        assert.ok(may.has(s.state), `${scenario} is told as ${s.state}.`);
+      assert.ok(
+        before.some((s) => must.has(s.state)),
+        `${scenario} is not told: ${before.map((s) => s.state).join(", ")}`,
       );
+      // What goes on elsewhere outlives this service, and so does what became of it.
+      if (h.remote !== "none" && scenario !== "lost")
+        assert.ok(
+          after.some((s) => must.has(s.state)),
+          `${scenario} is not told after a restart: ${after.map((s) => s.state).join(", ")}`,
+        );
+      // A file that is found not to be the declared one is that kind of failure.
+      if (scenario === "corruptArtifact")
+        for (const s of before)
+          if (s.state === "failed")
+            assert.equal(s.failureClass, "invalidArtifact");
+    });
   },
+
+  // contract: "An adapter that says a run failed or was stopped names which kind of end it was".
+  "ended-failure-has-class": (h) =>
+    whole(
+      // With no failure there is nothing to name the kind of.
+      () =>
+        each(h, ["failed"], async (_, { adapter, ref }) => {
+          const last = (await followed(adapter, ref)).at(-1)!;
+          assert.equal(last.state, "failed");
+          assert.equal(typeof last.failureClass, "string");
+        }),
+      async () => {
+        const { statuses } = await everythingSaid(h);
+        for (const s of statuses)
+          assert.equal(
+            "failureClass" in s && typeof s.failureClass === "string",
+            s.state === "failed" || s.state === "cancelled",
+            JSON.stringify(s),
+          );
+      },
+    ),
 
   // contract: "An external execution reference tied to the durable attempt".
   "ref-usable-at-once": async (h) => {
@@ -367,169 +532,194 @@ const ADAPTER: Record<
       (a, ref) => a.reconcile(ref),
       (a, ref) => a.requestCancel(ref),
       (a, ref) => a.enumerateArtifacts(ref),
-    ] as ((a: EngineAdapterV2, ref: string) => Promise<unknown>)[]) {
-      await arranged(h, "succeeded");
-      const adapter = h.adapter();
-      const { executionRef } = await submitted(h, adapter);
-      await ask(adapter, executionRef);
-    }
+    ] as ((a: EngineAdapterV2, ref: string) => Promise<unknown>)[])
+      await each(h, ["succeeded"], async (_, { adapter, ref }) => {
+        await ask(adapter, ref);
+      });
   },
 
-  // contract: "the current generation replays its first result for the same request".
-  "same-attempt-never-sent-twice": async (h) => {
-    for (const atOnce of [false, true]) {
-      await arranged(h, "succeeded");
-      const adapter = h.adapter();
-      const before = h.sends();
-      const request = h.request();
-      const again = () => adapter.submit(request, h.context());
-      const answers = atOnce
-        ? await Promise.allSettled([again(), again()])
-        : [await settled(again()), await settled(again())];
-      assert.equal(h.sends(), before + 1, "Sent other than once.");
-      const refs = answers.flatMap((a) =>
-        a.status === "fulfilled" && "executionRef" in a.value
-          ? [a.value.executionRef]
-          : [],
-      );
-      assert.ok(refs.length, "Neither was accepted.");
-      assert.equal(new Set(refs).size, 1, "One attempt is two runs.");
-    }
-  },
+  // contract: "the current generation replays its first result for the same request", and
+  // "Said, not resent" of one whose answer was lost.
+  "same-attempt-never-sent-twice": (h) =>
+    whole(
+      () =>
+        each(
+          h,
+          ["succeeded", "failed", "uncertainLanded", "uncertainNeverLanded"],
+          async (scenario, { adapter, request, ref }) => {
+            // Asked about in between, as a service would.
+            for (const between of [false, true]) {
+              if (between) await followed(adapter, ref);
+              const again = await settled(adapter.submit(request, h.context()));
+              if (again.status === "fulfilled" && "executionRef" in again.value)
+                assert.equal(
+                  again.value.executionRef,
+                  ref,
+                  `${scenario}: one attempt is two runs.`,
+                );
+            }
+          },
+        ),
+      async () => {
+        if (!h.arrange.succeeded)
+          throw new Unavailable(h.unavailable.succeeded);
+        await h.reset();
+        await h.arrange.succeeded();
+        const adapter = h.adapter();
+        const request = h.request();
+        const answers = await Promise.allSettled([
+          adapter.submit(request, h.context()),
+          adapter.submit(request, h.context()),
+        ]);
+        assert.equal(h.sends(), 1, "Sent other than once, both at once.");
+        const refs = answers.flatMap((a) =>
+          a.status === "fulfilled" && "executionRef" in a.value
+            ? [a.value.executionRef]
+            : [],
+        );
+        assert.ok(refs.length, "Neither was accepted.");
+        assert.equal(new Set(refs).size, 1, "One attempt is two runs.");
+      },
+    ),
 
   // contract: "the send's answer was lost, so it may have arrived. Said, not resent."
   "uncertain-sends-nothing-more": async (h) => {
-    for (const [scenario, lands] of [
-      ["uncertainLanded", true],
-      ["uncertainNeverLanded", false],
-    ] as const) {
-      await arranged(h, scenario);
-      const adapter = h.adapter();
-      const { executionRef, uncertain } = await submitted(h, adapter);
-      assert.ok(uncertain, `${scenario}: an uncertain send is not said.`);
-      const sent = h.sends();
-      const seen = [
-        ...(await followed(adapter, executionRef)),
-        ...(await followed(h.adapter(), executionRef)),
-      ];
-      assert.equal(h.sends(), sent, `${scenario}: sent again.`);
-      assert.equal(
-        seen.some((s) => s.state === "succeeded"),
-        lands,
-        `${scenario}: ${seen.map((s) => s.state).join(", ")}`,
-      );
-      if (!lands)
-        assert.equal(
-          (await adapter.enumerateArtifacts(executionRef).catch(() => []))
-            .length,
-          0,
-        );
-    }
+    const scenarios = ["uncertainLanded", "uncertainNeverLanded"] as const;
+    await each(h, scenarios, async (scenario, { adapter, answer, ref }) => {
+      assert.ok(answer.uncertain, `${scenario}: it is not said.`);
+      const lands = scenario === "uncertainLanded";
+      for (const asked of [adapter, h.adapter()]) {
+        const seen = (await followed(asked, ref)).map((s) => s.state);
+        if (!lands) {
+          assert.ok(!seen.includes("succeeded"), "It never arrived.");
+          const left = await asked.enumerateArtifacts(ref).catch(() => []);
+          assert.deepEqual(left, []);
+        } else if (asked === adapter || h.remote !== "none")
+          assert.equal(seen.at(-1), "succeeded", seen.join(", "));
+      }
+    });
   },
 
   // contract: "After a restart: what is known about an execution, never a resubmit."
   "restart-reconciles-without-sending": async (h) => {
-    for (const scenario of ["succeeded", "running"] as const) {
-      await arranged(h, scenario);
-      const { executionRef } = await submitted(h, h.adapter());
-      const sent = h.sends();
-      const after = h.adapter();
-      const answer = await after.reconcile(executionRef);
-      ExecutionStatusSchema.parse(answer);
-      assert.equal(answer.executionRef, executionRef);
-      await after.status(executionRef);
-      assert.equal(h.sends(), sent, `${scenario}: sent after a restart.`);
-    }
+    for (const first of ["reconcile", "status"] as const)
+      await each(h, had(h), async (_, { ref }) => {
+        const after = h.adapter();
+        ExecutionStatusSchema.parse(await after[first](ref));
+        await followed(after, ref);
+        await after.enumerateArtifacts(ref).catch(() => []);
+        // And after another, which is stopped.
+        const last = h.adapter();
+        await last.requestCancel(ref).catch(() => null);
+        await followed(last, ref);
+      });
   },
 
   // contract: "Observations an adapter reports", of a run it never heard of and one it lost.
   "unknown-ref-answered-honestly": async (h) => {
     await h.reset();
     const adapter = h.adapter();
-    for (const ask of [adapter.status, adapter.reconcile]) {
-      const answer = await ask.call(adapter, NEVER_ISSUED).catch((e) => {
+    const unlessNotFound = <T>(p: Promise<T>) =>
+      p.catch((e) => {
         if (!notFound(e)) throw e;
         return null;
       });
+    for (const ask of ["status", "reconcile"] as const) {
+      const answer = await unlessNotFound(adapter[ask](NEVER_ISSUED));
       if (answer) assert.equal(answer.state, "unknown");
     }
-    const left = await adapter.enumerateArtifacts(NEVER_ISSUED).catch((e) => {
-      if (!notFound(e)) throw e;
-      return [];
-    });
-    assert.deepEqual(left, []);
+    const left = await unlessNotFound(adapter.enumerateArtifacts(NEVER_ISSUED));
+    assert.deepEqual(left ?? [], []);
+    const stop = await unlessNotFound(adapter.requestCancel(NEVER_ISSUED));
+    if (stop) {
+      assert.notEqual(stop.remoteOutcome, "stopped");
+      assert.notEqual(stop.remoteAcknowledged, true);
+    }
     assert.equal(h.sends(), 0);
-    await arranged(h, "lost");
-    const losing = h.adapter();
-    const { executionRef } = await submitted(h, losing);
-    for (const s of await followed(losing, executionRef))
-      assert.notEqual(s.state, "succeeded");
+    await each(h, ["lost"], async (_, { adapter: losing, ref }) => {
+      for (const s of await followed(losing, ref))
+        assert.notEqual(s.state, "succeeded");
+      const kept = await losing.enumerateArtifacts(ref).catch(() => []);
+      assert.deepEqual(kept, []);
+    });
   },
 
-  // contract: Cancellation's remoteAcknowledged, remoteOutcome and billingOutcome.
+  // contract: what a Cancellation's remoteAcknowledged, remoteOutcome and billingOutcome say.
+  // That a later status does not say otherwise is the card's "a stop never claims more than
+  // happened".
   "cancel-never-overclaims": async (h) => {
-    for (const scenario of ["running", "uncertainLanded"] as const) {
-      if (scenario !== "running" && !h.arrange[scenario]) continue;
-      await arranged(h, scenario);
-      const adapter = h.adapter();
-      const { executionRef } = await submitted(h, adapter);
-      const sent = h.sends();
-      const answer = await adapter.requestCancel(executionRef);
+    const scenarios = [
+      "running",
+      "failed",
+      "uncertainLanded",
+      "uncertainNeverLanded",
+      "lost",
+    ] as const;
+    await each(h, scenarios, async (scenario, { adapter, ref }) => {
+      const answer = await adapter.requestCancel(ref);
       CancellationSchema.parse(answer);
-      assert.equal(h.sends(), sent, "A stop started something.");
-      if (h.remote === "unstoppable") {
-        assert.notEqual(answer.remoteOutcome, "stopped");
-        assert.notEqual(answer.remoteAcknowledged, true);
-        // Nor afterwards: what goes on there is not said to have been stopped.
-        assert.notEqual(
-          (await adapter.status(executionRef)).state,
-          "cancelled",
-        );
+      const later = (await adapter.status(ref)).state;
+      const said = `${scenario}: ${JSON.stringify(answer)}, then ${later}`;
+      const stopped =
+        answer.remoteOutcome === "stopped" ||
+        answer.remoteAcknowledged === true;
+      const there = scenario !== "uncertainNeverLanded" && scenario !== "lost";
+      // Nothing that goes on, or was not there, was stopped.
+      if (!there || GOING.has(later) || h.remote !== "stoppable")
+        assert.ok(!stopped, said);
+      if (GOING.has(later)) {
+        assert.notEqual(answer.billingOutcome, "refunded", said);
+        if (h.remote === "none")
+          assert.equal(answer.localProcessExited, false, said);
       }
-      if (h.remote === "none")
+      if (h.remote === "unstoppable") {
+        assert.notEqual(answer.billingOutcome, "refunded", said);
+        assert.notEqual(later, "cancelled", said);
+      }
+      if (h.remote === "none") {
+        assert.equal(answer.remoteOutcome, undefined, said);
         assert.ok(
           answer.billingOutcome === undefined ||
             answer.billingOutcome === "notApplicable",
-          `billingOutcome ${answer.billingOutcome}`,
+          said,
         );
-    }
+      }
+    });
   },
 
   // contract: "named artifacts the service reads back in bounded chunks, re-hashing".
   "artifact-verified": async (h) => {
-    await arranged(h, "succeeded");
-    const adapter = h.adapter();
-    const { executionRef } = await submitted(h, adapter);
-    const seen = await followed(adapter, executionRef);
-    assert.equal(seen.at(-1)!.state, "succeeded");
-    const artifacts = await adapter.enumerateArtifacts(executionRef);
-    assert.ok(artifacts.length, "A succeeded run left nothing.");
-    assert.ok(artifacts.length <= ENGINE_V2_LIMITS.artifacts);
-    for (const artifact of artifacts)
-      await readArtifactVerified(adapter, executionRef, artifact);
+    await each(h, ["succeeded"], async (_, { adapter, ref }) => {
+      assert.equal((await followed(adapter, ref)).at(-1)!.state, "succeeded");
+      const artifacts = await adapter.enumerateArtifacts(ref);
+      assert.ok(artifacts.length, "A succeeded run left nothing.");
+      assert.ok(artifacts.length <= ENGINE_V2_LIMITS.artifacts);
+      for (const artifact of artifacts)
+        await readArtifactVerified(adapter, ref, artifact);
+    });
   },
 
   // contract: "An artifact does not match its declared length and hash."
   "corrupt-artifact-rejected": async (h) => {
-    await arranged(h, "corruptArtifact");
-    const adapter = h.adapter();
-    const { executionRef } = await submitted(h, adapter);
-    await followed(adapter, executionRef);
-    // One that finds it itself names no artifact, or says why.
-    let artifacts: Artifact[] = [];
-    try {
-      artifacts = await adapter.enumerateArtifacts(executionRef);
-    } catch {
-      return;
-    }
-    for (const artifact of artifacts)
-      await assert.rejects(
-        readArtifactVerified(adapter, executionRef, artifact),
-        "Bytes that were not declared were taken.",
-      );
+    await each(h, ["corruptArtifact"], async (_, { adapter, ref }) => {
+      await followed(adapter, ref);
+      // One that finds it itself names no artifact, or says why.
+      let artifacts: Artifact[] = [];
+      try {
+        artifacts = await adapter.enumerateArtifacts(ref);
+      } catch {
+        return;
+      }
+      for (const artifact of artifacts)
+        await assert.rejects(
+          readArtifactVerified(adapter, ref, artifact),
+          "Bytes that were not declared were taken.",
+        );
+    });
   },
 
-  // contract: "Diagnostics leave an adapter bounded and without paths or URLs."
+  // contract: "Diagnostics leave an adapter bounded and without paths or URLs." Their length and
+  // the paths are asked about, as the card has it.
   "diagnostic-bounded": async (h) => {
     const { texts } = await everythingSaid(h);
     for (const text of texts) {
@@ -551,8 +741,7 @@ const ADAPTER: Record<
       `remote: ${h.remote}`,
     );
     const { recipeId } = h.request();
-    if (adapter.location)
-      assert.equal(typeof adapter.location(recipeId), "string");
+    if (adapter.location) assert.ok(adapter.location(recipeId), "It is empty.");
   },
 };
 
@@ -562,21 +751,26 @@ async function settled<T>(p: Promise<T>): Promise<PromiseSettledResult<T>> {
 
 // The service over this adapter, with its ledger watched.
 function watched(h: ConformanceHarness, ledger: GenerationLedger) {
-  const { store } = h.service!;
+  const { store, make = createGenerationService } = h.service!;
   const seen = {
     sendsAtBegin: [] as number[],
     refAtStatus: [] as (string | null)[],
   };
   const held = h.adapter();
-  const adapter: EngineAdapterV2 = {
-    ...held,
-    status: async (ref) => {
-      seen.refAtStatus.push(ledger.read(current)?.executionRef ?? null);
-      return held.status(ref);
-    },
-  };
   let current = "";
-  const service = createGenerationService({
+  // Whatever the adapter is made as.
+  const adapter = new Proxy(held, {
+    get: (of, name) => {
+      const value: unknown = Reflect.get(of, name, of);
+      if (name === "status")
+        return async (ref: string) => {
+          seen.refAtStatus.push(ledger.read(current)?.executionRef ?? null);
+          return of.status(ref);
+        };
+      return typeof value === "function" ? value.bind(of) : value;
+    },
+  });
+  const service = make({
     adapter,
     store,
     resourcePolicyHash: "0".repeat(64),
@@ -593,92 +787,124 @@ function watched(h: ConformanceHarness, ledger: GenerationLedger) {
 }
 const ledgerOf = (h: ConformanceHarness) =>
   h.service!.ledger?.() ?? memoryLedger();
-async function served(h: ConformanceHarness, scenario: Scenario) {
+// A service in each of these states that the stand-in has; one it has not is told afterwards.
+async function servedIn(
+  h: ConformanceHarness,
+  scenarios: readonly Scenario[],
+  ask: (
+    scenario: Scenario,
+    of: ReturnType<typeof watched> & {
+      ledger: GenerationLedger;
+      request: GenerationRequest;
+    },
+  ) => Promise<void>,
+) {
   if (!h.service) throw new Unavailable(h.unavailable.service);
-  await arranged(h, scenario);
-  const ledger = ledgerOf(h);
-  return { ledger, ...watched(h, ledger), request: h.service.request };
-}
-const codeOf = async (p: Promise<unknown>) => {
-  try {
-    await p;
-    return "ok";
-  } catch (e) {
-    return (e as { code?: string }).code ?? String(e);
+  const missing: string[] = [];
+  for (const scenario of scenarios) {
+    const arrange = h.arrange[scenario];
+    if (!arrange) {
+      missing.push(`${scenario}: ${h.unavailable[scenario]}`);
+      continue;
+    }
+    await h.reset();
+    await arrange();
+    const ledger = ledgerOf(h);
+    await ask(scenario, {
+      ledger,
+      ...watched(h, ledger),
+      request: h.service.request,
+    });
+    assert.equal(h.sends(), 1, `${scenario}: sent other than once.`);
   }
-};
+  if (missing.length) throw new Unavailable(missing.join(" "));
+}
+async function refusedImport(p: Promise<unknown>, why?: RegExp) {
+  const e = await p.then(
+    () => assert.fail("It was brought in."),
+    (error: unknown) => error,
+  );
+  assert.equal((e as { code?: string }).code, "VALIDATION", String(e));
+  if (why) assert.match((e as Error).message, why);
+}
 
 const SERVICE: Record<
   (typeof SERVICE_CHECKS)[number],
   (h: ConformanceHarness) => Promise<void>
 > = {
   // service: "Recorded before anything leaves: a crash from here on leaves a record."
-  "row-before-send": async (h) => {
-    const { service, seen, request } = await served(h, "succeeded");
-    const before = h.sends();
-    await service.start(request);
-    assert.deepEqual(seen.sendsAtBegin, [before], "Sent before its row.");
-    assert.equal(h.sends(), before + 1);
-  },
+  "row-before-send": (h) =>
+    servedIn(h, ["succeeded"], async (_, { service, seen, request }) => {
+      await service.start(request);
+      assert.deepEqual(seen.sendsAtBegin, [0], "Sent before its row.");
+      assert.equal(h.sends(), 1);
+    }),
 
   // service: "The engine's name for it, once known. Before that, the attempt key is."
-  "ref-before-poll": async (h) => {
-    const { service, seen, request } = await served(h, "succeeded");
-    const { generationId } = await service.start(request);
-    await service.status(generationId);
-    assert.ok(seen.refAtStatus.length, "The adapter was not asked.");
-    assert.ok(seen.refAtStatus[0], "Asked before the row held its name.");
-  },
+  "ref-before-poll": (h) =>
+    servedIn(h, ["succeeded"], async (_, { service, seen, request }) => {
+      const { generationId } = await service.start(request);
+      await service.status(generationId);
+      assert.ok(seen.refAtStatus.length, "The adapter was not asked.");
+      assert.ok(seen.refAtStatus[0], "Asked before the row held its name.");
+    }),
 
   // service: "it is followed, not resent".
-  "uncertain-row-not-resent": async (h) => {
-    for (const scenario of [
-      "uncertainLanded",
-      "uncertainNeverLanded",
-    ] as const) {
-      const { service, ledger, request } = await served(h, scenario);
-      const { generationId } = await service.start(request);
-      assert.equal(ledger.read(generationId)?.phase, "sending", scenario);
-      const sent = h.sends();
-      const { service: next } = watched(h, ledger);
-      assert.deepEqual(
-        next.list(request.projectId).map((g) => g.generationId),
-        [generationId],
-      );
-      await next.status(generationId);
-      assert.equal(h.sends(), sent, `${scenario}: sent again.`);
-      if (scenario === "uncertainNeverLanded")
-        assert.equal(ledger.read(generationId)?.phase, "sending");
-    }
-  },
+  "uncertain-row-not-resent": (h) =>
+    servedIn(
+      h,
+      ["uncertainLanded", "uncertainNeverLanded"],
+      async (scenario, { service, ledger, request }) => {
+        const { generationId } = await service.start(request);
+        assert.equal(ledger.read(generationId)?.phase, "sending", scenario);
+        const { service: next } = watched(h, ledger);
+        assert.deepEqual(
+          next.list(request.projectId).map((g) => g.generationId),
+          [generationId],
+        );
+        for (let n = 0; n < 5; n++) await next.status(generationId);
+        assert.equal(h.sends(), 1, `${scenario}: sent again.`);
+        if (scenario === "uncertainNeverLanded")
+          assert.equal(ledger.read(generationId)?.phase, "sending");
+      },
+    ),
 
   // service: "Asked to stop: whatever the engine then does, this is not imported".
-  "continuing-stop-blocks-import": async (h) => {
-    const { service, ledger, request } = await served(h, "running");
-    const { generationId } = await service.start(request);
-    await service.cancel(generationId);
-    const row = ledger.read(generationId)!;
-    assert.equal(row.cancelled, true);
-    if (h.remote === "unstoppable")
-      assert.match(row.diagnostic ?? "", /The engine was not told to stop/);
-    assert.equal(
-      await codeOf(service.importResult(generationId)),
-      "VALIDATION",
-    );
-    assert.equal(h.service!.imports(), 0);
-  },
+  "continuing-stop-blocks-import": (h) =>
+    whole(
+      () =>
+        servedIn(h, ["running"], async (_, { service, ledger, request }) => {
+          const { generationId } = await service.start(request);
+          await service.cancel(generationId);
+          const row = ledger.read(generationId)!;
+          assert.equal(row.cancelled, true);
+          if (h.remote === "unstoppable")
+            assert.match(
+              row.diagnostic ?? "",
+              /The engine was not told to stop/,
+            );
+          await refusedImport(service.importResult(generationId));
+          assert.equal(h.service!.imports(), 0);
+        }),
+      // One that finished there all the same: only the stop keeps it out.
+      () =>
+        servedIn(h, ["succeeded"], async (_, { service, ledger, request }) => {
+          const { generationId } = await service.start(request);
+          await service.cancel(generationId);
+          assert.equal(ledger.read(generationId)!.cancelled, true);
+          await refusedImport(service.importResult(generationId), /cancelled/);
+          assert.equal(h.service!.imports(), 0);
+        }),
+    ),
 
   // service: "checked by its declared length and hash".
-  "corrupt-result-not-imported": async (h) => {
-    const { service, request } = await served(h, "corruptArtifact");
-    const { generationId } = await service.start(request);
-    await service.status(generationId);
-    assert.equal(
-      await codeOf(service.importResult(generationId)),
-      "VALIDATION",
-    );
-    assert.equal(h.service!.imports(), 0);
-  },
+  "corrupt-result-not-imported": (h) =>
+    servedIn(h, ["corruptArtifact"], async (_, { service, request }) => {
+      const { generationId } = await service.start(request);
+      await service.status(generationId);
+      await refusedImport(service.importResult(generationId));
+      assert.equal(h.service!.imports(), 0);
+    }),
 };
 
 /** Every check of one adapter, one at a time: what passed, what did not, and what was not asked. */
@@ -706,13 +932,18 @@ export async function runConformance(
   return results;
 }
 
-/** One test of each check. One that its stand-in cannot arrange is skipped, with the reason. */
+/**
+ * One test of each check. One that its stand-in cannot arrange whole is skipped, with the reason,
+ * after the rest of it was asked. An adapter whose layers are in two files names the checks of
+ * each, under one name.
+ */
 export function engineConformance(
   name: string,
   make: ConformanceHarness | (() => Promise<ConformanceHarness>),
+  checks: readonly ConformanceCheck[] = CONFORMANCE_CHECKS,
 ) {
   if (typeof make !== "function") assertWhole(make);
-  for (const check of CONFORMANCE_CHECKS)
+  for (const check of checks)
     test(`${name}: ${check}`, async (t) => {
       const harness = typeof make === "function" ? await make() : make;
       const [result] = await runConformance(harness, [check]);

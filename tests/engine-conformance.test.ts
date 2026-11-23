@@ -5,14 +5,23 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
+import { CommandError } from "../core/command/errors.ts";
 import {
   ENGINE_CONTRACT_V2,
   Operation,
+  constraintsHash,
   parseRequestV2,
   type AssetRef,
+  type Cancellation,
   type EngineAdapterV2,
+  type EngineContextV2,
   type EngineRequestV2,
+  type ExecutionStatus,
 } from "../core/engines/contract-v2.ts";
+import {
+  createGenerationService,
+  memoryLedger,
+} from "../core/engines/generation.ts";
 import {
   createFakeEngineV2,
   createFakeWorld,
@@ -21,12 +30,17 @@ import {
 import type { ProjectStore } from "../core/store.ts";
 import {
   CONFORMANCE_CHECKS,
+  SCENARIOS,
   engineConformance,
   runConformance,
   type ConformanceCheck,
   type ConformanceHarness,
 } from "./fixtures/engine-conformance.ts";
-import { ADAPTER_SUITES, PENDING } from "./fixtures/engine-suites.ts";
+import {
+  ADAPTER_SUITES,
+  NOT_ADAPTERS,
+  PENDING,
+} from "./fixtures/engine-suites.ts";
 
 const zeros = "0".repeat(64);
 const TICKS = 705_600_000;
@@ -201,113 +215,442 @@ test("the fake passes every check, with none unavailable", async () => {
 // Each is wrong in one way, and the check for that way finds it.
 const failing = async (h: ConformanceHarness) =>
   (await runConformance(h)).filter((r) => !r.ok).map((r) => r.check);
+const context = {
+  async *openAsset() {
+    yield bytes;
+  },
+};
+// Something more is sent, as by one that takes silence for a run that never left.
+const sendsAgain = (a: EngineAdapterV2) => a.submit(request(), context);
+type Wrong = (adapter: EngineAdapterV2, nth: number) => EngineAdapterV2;
+const withoutReference: Wrong = (a) => ({
+  ...a,
+  submit: (r, c) =>
+    a.submit(
+      {
+        ...r,
+        inputs: (r.inputs as { role: string }[]).filter(
+          (i) => i.role !== "reference",
+        ),
+      } as EngineRequestV2,
+      c,
+    ),
+});
+const status =
+  (of: (s: ExecutionStatus, nth: number) => object): Wrong =>
+  (a, nth) => {
+    const told = async (ref: string) =>
+      of(await a.status(ref), nth) as ExecutionStatus;
+    return { ...a, status: told, reconcile: told };
+  };
+const stop =
+  (over: Partial<Cancellation>): Wrong =>
+  (a) => ({
+    ...a,
+    requestCancel: async (ref) => ({
+      ...(await a.requestCancel(ref)),
+      ...over,
+    }),
+  });
+const output1280 = (r: EngineRequestV2) =>
+  (r.output.kind === "video"
+    ? {
+        ...r,
+        output: { ...r.output, width: Math.min(r.output.width, 1280) },
+      }
+    : r) as EngineRequestV2;
 const broken: [
+  string,
   ConformanceCheck,
   ConformanceHarness["remote"],
-  (adapter: EngineAdapterV2) => EngineAdapterV2,
+  Wrong,
 ][] = [
   [
+    "sends again in reconcile",
     "restart-reconciles-without-sending",
     "none",
     (a) => ({
       ...a,
       reconcile: async (ref) => {
-        await a.submit(request(), {
-          async *openAsset() {
-            yield bytes;
-          },
-        });
+        await sendsAgain(a);
         return a.reconcile(ref);
       },
     }),
   ],
   [
-    "cancel-never-overclaims",
-    "unstoppable",
+    "sends a failed run again after a restart",
+    "restart-reconciles-without-sending",
+    "none",
+    (a, nth) => ({
+      ...a,
+      status: async (ref) => {
+        const s = await a.status(ref);
+        if (nth > 1 && s.state === "failed") await sendsAgain(a);
+        return s;
+      },
+    }),
+  ],
+  [
+    "sends a lost run again",
+    "unknown-ref-answered-honestly",
+    "none",
     (a) => ({
       ...a,
-      requestCancel: async (ref) => ({
-        ...(await a.requestCancel(ref)),
+      status: async (ref) => {
+        const s = await a.status(ref);
+        if (s.state === "failed" && s.failureClass === "lostJob")
+          await sendsAgain(a);
+        return s;
+      },
+    }),
+  ],
+  [
+    "sends a run again the third time it is asked about",
+    "restart-reconciles-without-sending",
+    "none",
+    (a) => {
+      let asked = 0;
+      return {
+        ...a,
+        status: async (ref) => {
+          if (++asked === 3) await sendsAgain(a);
+          return a.status(ref);
+        },
+      };
+    },
+  ],
+  [
+    "sends an attempt again when its first answer was uncertain",
+    "same-attempt-never-sent-twice",
+    "none",
+    (a) => {
+      const uncertain = new Set<string>();
+      return {
+        ...a,
+        submit: async (r, c) => {
+          if (uncertain.has(r.attemptKey)) await sendsAgain(a);
+          const answer = await a.submit(r, c);
+          if ("uncertain" in answer) uncertain.add(r.attemptKey);
+          return answer;
+        },
+      };
+    },
+  ],
+  [
+    "sends an attempt again when its run failed",
+    "same-attempt-never-sent-twice",
+    "none",
+    (a) => {
+      const refs = new Map<string, string>();
+      return {
+        ...a,
+        submit: async (r, c) => {
+          const ref = refs.get(r.attemptKey);
+          if (ref && (await a.status(ref)).state === "failed")
+            return sendsAgain(a);
+          const answer = await a.submit(r, c);
+          if ("executionRef" in answer)
+            refs.set(r.attemptKey, answer.executionRef);
+          return answer;
+        },
+      };
+    },
+  ],
+  [
+    "takes every submit for a new attempt",
+    "same-attempt-never-sent-twice",
+    "none",
+    (a) => ({
+      ...a,
+      submit: (r, c) =>
+        a.submit(
+          { ...r, attemptKey: `attempt-${++attempts}` } as EngineRequestV2,
+          c,
+        ),
+    }),
+  ],
+  [
+    "sends again as a file is read",
+    "artifact-verified",
+    "none",
+    (a) => ({
+      ...a,
+      async *readArtifact(ref, handle) {
+        await sendsAgain(a);
+        yield* a.readArtifact(ref, handle);
+      },
+    }),
+  ],
+  [
+    "sends again as a run is stopped",
+    "cancel-never-overclaims",
+    "none",
+    (a) => ({
+      ...a,
+      requestCancel: async (ref) => {
+        await sendsAgain(a);
+        return a.requestCancel(ref);
+      },
+    }),
+  ],
+  [
+    "does not say that an answer was lost",
+    "uncertain-sends-nothing-more",
+    "none",
+    (a) => ({
+      ...a,
+      submit: async (r, c) => {
+        const answer = await a.submit(r, c);
+        return "refused" in answer
+          ? answer
+          : { executionRef: answer.executionRef };
+      },
+    }),
+  ],
+  [
+    "calls a run that never landed finished",
+    "uncertain-sends-nothing-more",
+    "none",
+    status((s) => (s.state === "unknown" ? { ...s, state: "succeeded" } : s)),
+  ],
+  [
+    "loses a landed run after a restart",
+    "uncertain-sends-nothing-more",
+    "unstoppable",
+    (a, nth) =>
+      nth > 1
+        ? status((s) => ({ executionRef: s.executionRef, state: "unknown" }))(
+            a,
+            nth,
+          )
+        : a,
+  ],
+  [
+    "calls a landed run lost after a restart",
+    "states-told-as-they-are",
+    "none",
+    status((s, nth) =>
+      nth > 1 && s.state === "succeeded"
+        ? {
+            executionRef: s.executionRef,
+            state: "failed",
+            failureClass: "lostJob",
+          }
+        : s,
+    ),
+  ],
+  [
+    "calls a running run finished",
+    "states-told-as-they-are",
+    "none",
+    status((s) => (s.state === "running" ? { ...s, state: "succeeded" } : s)),
+  ],
+  [
+    "calls a running run finished after a restart",
+    "states-told-as-they-are",
+    "none",
+    status((s, nth) =>
+      nth > 1 && s.state === "running" ? { ...s, state: "succeeded" } : s,
+    ),
+  ],
+  [
+    "calls a failed run finished",
+    "states-told-as-they-are",
+    "none",
+    status(({ executionRef, state }) =>
+      state === "failed"
+        ? { executionRef, state: "succeeded" }
+        : { executionRef, state },
+    ),
+  ],
+  [
+    "answers about another run",
+    "status-parses",
+    "none",
+    status((s) => ({ ...s, executionRef: "another-run" })),
+  ],
+  [
+    "answers with a field that is not the contract's",
+    "status-parses",
+    "none",
+    status((s) => ({ ...s, eta: 3 })),
+  ],
+  [
+    "names no kind of end",
+    "ended-failure-has-class",
+    "none",
+    status((s) => {
+      const { failureClass: _, ...rest } = s as { failureClass?: string };
+      return rest;
+    }),
+  ],
+  [
+    "names a kind of end for a run that goes on",
+    "ended-failure-has-class",
+    "none",
+    status((s) => ({ ...s, failureClass: "unknown" })),
+  ],
+  [
+    "says a stop that goes on ended it",
+    "cancel-never-overclaims",
+    "unstoppable",
+    stop({ remoteOutcome: "stopped" }),
+  ],
+  [
+    "says a stop was acknowledged that was not",
+    "cancel-never-overclaims",
+    "unstoppable",
+    stop({ remoteAcknowledged: true }),
+  ],
+  [
+    "says a run that goes on was refunded",
+    "cancel-never-overclaims",
+    "unstoppable",
+    stop({ billingOutcome: "refunded" }),
+  ],
+  [
+    "says a stop elsewhere, where there is no elsewhere",
+    "cancel-never-overclaims",
+    "none",
+    stop({ remoteAcknowledged: true, remoteOutcome: "stopped" }),
+  ],
+  [
+    "says a bill where there is none",
+    "cancel-never-overclaims",
+    "none",
+    stop({ billingOutcome: "charged" }),
+  ],
+  [
+    "says its process ended and lets the run go on",
+    "cancel-never-overclaims",
+    "none",
+    (a) => ({
+      ...a,
+      requestCancel: async () => ({
+        requested: true,
+        localProcessExited: true,
+      }),
+    }),
+  ],
+  [
+    "says a run ended there and lets it go on",
+    "cancel-never-overclaims",
+    "stoppable",
+    (a) => ({
+      ...a,
+      requestCancel: async () => ({
+        requested: true,
+        localProcessExited: true,
+        remoteAcknowledged: true,
         remoteOutcome: "stopped",
       }),
     }),
   ],
   [
-    "refusal-sends-nothing",
-    "none",
+    "says it stopped a run that never landed",
+    "cancel-never-overclaims",
+    "stoppable",
+    stop({ remoteOutcome: "stopped" }),
+  ],
+  [
+    "says it stopped a run it never heard of",
+    "unknown-ref-answered-honestly",
+    "stoppable",
     (a) => ({
       ...a,
-      submit: (r, context) =>
-        a.submit(
-          {
-            ...r,
-            inputs: (r.inputs as { role: string }[]).filter(
-              (i) => i.role !== "reference",
-            ),
-          } as EngineRequestV2,
-          context,
-        ),
+      requestCancel: async () => ({
+        requested: true,
+        localProcessExited: true,
+        remoteOutcome: "stopped",
+      }),
     }),
   ],
   [
+    "calls a run it never heard of finished",
+    "unknown-ref-answered-honestly",
+    "none",
+    (a) => ({
+      ...a,
+      status: async (ref) =>
+        ref.startsWith("never")
+          ? { executionRef: ref, state: "succeeded" }
+          : a.status(ref),
+    }),
+  ],
+  [
+    "drops a role it does not take",
+    "refusal-sends-nothing",
+    "none",
+    withoutReference,
+  ],
+  [
+    "drops a role it does not list",
+    "unlisted-role-refused",
+    "none",
+    withoutReference,
+  ],
+  [
+    "takes a role it must have and does not list",
     "unlisted-role-refused",
     "none",
     (a) => ({
       ...a,
-      submit: (r, context) =>
-        a.submit(
-          {
-            ...r,
-            inputs: (r.inputs as { role: string }[]).filter(
-              (i) => i.role !== "reference",
-            ),
-          } as EngineRequestV2,
-          context,
-        ),
+      capabilities: () =>
+        a.capabilities().map((c) => {
+          const constraints = { ...c.constraints!, roles: [] };
+          return {
+            ...c,
+            constraints,
+            constraintsHash: constraintsHash(constraints),
+          };
+        }),
     }),
   ],
   [
+    "answers a size it cannot make with a smaller one",
+    "limits-held",
+    "none",
+    (a) => ({ ...a, submit: (r, c) => a.submit(output1280(r), c) }),
+  ],
+  [
+    "answers a frame rate it does not make with another",
     "limits-held",
     "none",
     (a) => ({
       ...a,
-      submit: (r, context) =>
+      submit: (r, c) =>
         a.submit(
-          r.output.kind === "video"
-            ? ({
-                ...r,
-                output: {
-                  ...r.output,
-                  width: Math.min(r.output.width, 1280),
-                },
-              } as EngineRequestV2)
-            : r,
-          context,
+          (r.output.kind === "video"
+            ? { ...r, output: { ...r.output, fps: { num: 30, den: 1 } } }
+            : r) as EngineRequestV2,
+          c,
         ),
     }),
   ],
   [
-    "status-parses",
+    "refuses what its capabilities say it takes",
+    "limits-held",
     "none",
     (a) => ({
       ...a,
-      status: async (ref) => ({ ...(await a.status(ref)), eta: 3 }) as never,
+      submit: async (r, c) =>
+        r.output.kind === "video" && r.output.width > 1000
+          ? { refused: "OUTPUT_UNSUPPORTED" }
+          : a.submit(r, c),
     }),
   ],
   [
-    "ended-failure-has-class",
+    "names constraints that are not its hash's",
+    "limits-held",
     "none",
     (a) => ({
       ...a,
-      status: async (ref) => {
-        const { failureClass: _, ...rest } = (await a.status(ref)) as {
-          failureClass?: string;
-        };
-        return rest as never;
-      },
+      capabilities: () =>
+        a.capabilities().map((c) => ({ ...c, constraintsHash: zeros })),
     }),
   ],
   [
+    "cannot be asked for its files before it was asked how it is",
     "ref-usable-at-once",
     "none",
     (a) => {
@@ -326,42 +669,7 @@ const broken: [
     },
   ],
   [
-    "same-attempt-never-sent-twice",
-    "none",
-    (a) => ({
-      ...a,
-      submit: (r, context) =>
-        a.submit(
-          { ...r, attemptKey: `attempt-${++attempts}` } as EngineRequestV2,
-          context,
-        ),
-    }),
-  ],
-  [
-    "uncertain-sends-nothing-more",
-    "none",
-    (a) => ({
-      ...a,
-      submit: async (r, context) => {
-        const answer = await a.submit(r, context);
-        return "refused" in answer
-          ? answer
-          : { executionRef: answer.executionRef };
-      },
-    }),
-  ],
-  [
-    "unknown-ref-answered-honestly",
-    "none",
-    (a) => ({
-      ...a,
-      status: async (ref) =>
-        ref.startsWith("never")
-          ? { executionRef: ref, state: "succeeded" }
-          : a.status(ref),
-    }),
-  ],
-  [
+    "declares a length that its file has not",
     "artifact-verified",
     "none",
     (a) => ({
@@ -373,61 +681,283 @@ const broken: [
         })),
     }),
   ],
-  [
+  ...[
+    `It is in ${process.cwd()}`,
+    "Kept on \\\\server\\share\\x",
+    "Kept at [/data/me/x]",
+    "Kept in \\Windows\\Temp",
+    "x".repeat(501),
+  ].map((said): (typeof broken)[number] => [
+    `says "${said.slice(0, 24)}"`,
     "diagnostic-bounded",
     "none",
-    (a) => ({
-      ...a,
-      status: async (ref) =>
-        ({
-          ...(await a.status(ref)),
-          diagnostic: `It is in ${process.cwd()}`,
-        }) as never,
-    }),
-  ],
+    status((s) => ({ ...s, diagnostic: said })),
+  ]),
   [
+    "does not say where it sends a run",
     "location-declared",
     "unstoppable",
     (a) => ({ ...a, location: undefined }) as EngineAdapterV2,
   ],
+  [
+    "says a place that is empty",
+    "location-declared",
+    "unstoppable",
+    (a) => ({ ...a, location: () => "" }),
+  ],
+  [
+    "says a place and sends nowhere",
+    "location-declared",
+    "none",
+    (a) => ({ ...a, location: () => "somewhere" }),
+  ],
 ];
-for (const [check, remote, wrap] of broken)
-  test(`an adapter that is wrong fails ${check}`, async () => {
-    assert.ok((await failing(fakeHarness(remote, wrap))).includes(check));
+for (const [what, check, remote, wrap] of broken)
+  test(`an adapter that ${what} fails ${check}`, async () => {
+    // Which adapter of its stand-in it is: the first sends, a later one is after a restart.
+    let nth = 0;
+    const h = fakeHarness(remote, (a) => wrap(a, ++nth));
+    const reset = h.reset;
+    const found = await failing({
+      ...h,
+      reset: () => {
+        nth = 0;
+        return reset();
+      },
+    });
+    assert.ok(found.includes(check), found.join(", "));
   });
 
-test("bytes that are not the declared ones fail two checks when an adapter declares them anyway", async () => {
-  // It serves whatever was declared, whatever was asked for.
+test("a truthful adapter passes, however it is made and however it refuses", async () => {
+  // A class, whose parts are not its own properties.
+  class Adapter {
+    readonly #of: EngineAdapterV2;
+    constructor(of: EngineAdapterV2) {
+      this.#of = of;
+    }
+    get contract() {
+      return this.#of.contract;
+    }
+    capabilities() {
+      return this.#of.capabilities();
+    }
+    submit(r: EngineRequestV2, c: EngineContextV2) {
+      return this.#of.submit(r, c);
+    }
+    status(ref: string) {
+      return this.#of.status(ref);
+    }
+    reconcile(ref: string) {
+      return this.#of.reconcile(ref);
+    }
+    requestCancel(ref: string) {
+      return this.#of.requestCancel(ref);
+    }
+    enumerateArtifacts(ref: string) {
+      return this.#of.enumerateArtifacts(ref);
+    }
+    readArtifact(ref: string, handle: string) {
+      return this.#of.readArtifact(ref, handle);
+    }
+  }
+  assert.deepEqual(
+    await failing(fakeHarness("none", (a) => new Adapter(a))),
+    [],
+  );
+  // A control that takes a narrow range of the contract's.
+  assert.deepEqual(
+    await failing(
+      fakeHarness("none", (a) => ({
+        ...a,
+        submit: async (r, c) =>
+          Number(r.controls?.guidance ?? 7) > 20
+            ? { refused: "CONTROL_UNSUPPORTED" }
+            : a.submit(r, c),
+      })),
+    ),
+    [],
+  );
+  // A request past a limit, refused by an error of a command's own kind.
+  assert.deepEqual(
+    await failing(
+      fakeHarness("none", (a) => ({
+        ...a,
+        submit: async (r, c) => {
+          if (r.seed === 2 ** 32)
+            throw new CommandError("VALIDATION", "That seed is too large.");
+          return a.submit(r, c);
+        },
+      })),
+    ),
+    [],
+  );
+});
+
+test("a stand-in that is not in the state it says fails", async () => {
   const h = fakeHarness();
-  const honest = fakeHarness();
+  for (const [scenario, as] of [
+    ["running", "succeeded"],
+    ["failed", "succeeded"],
+    ["corruptArtifact", "failed"],
+    ["lost", "succeeded"],
+    ["uncertainNeverLanded", "uncertainLanded"],
+    ["succeeded", "running"],
+  ] as const)
+    assert.ok(
+      (
+        await failing({
+          ...h,
+          arrange: { ...h.arrange, [scenario]: h.arrange[as] },
+        })
+      ).includes("states-told-as-they-are"),
+      `${scenario} as ${as}`,
+    );
+});
+
+test("bytes that are not the declared ones fail two checks when an adapter declares them anyway", async () => {
+  const h = fakeHarness();
+  // It serves whatever was declared, whatever was asked for.
   const found = await failing({
     ...h,
     arrange: { ...h.arrange, corruptArtifact: h.arrange.succeeded },
   });
   assert.ok(found.includes("corrupt-artifact-rejected"));
   assert.ok(found.includes("corrupt-result-not-imported"));
-  assert.deepEqual(await failing(honest), []);
 });
 
-test("a service check fails where the service's adapter is wrong", async () => {
-  // A run that has not ended when it is asked to be brought in, and a row written after the send.
-  const h = fakeHarness("unstoppable");
-  const store = h.service!.store;
-  const early = await failing({
+// The service, wrong in one way over an adapter that is not.
+type Service = ReturnType<typeof createGenerationService>;
+const wrongServices: [
+  string,
+  ConformanceCheck,
+  (service: Service, h: ConformanceHarness) => Service,
+][] = [
+  [
+    "forgets that a run was stopped",
+    "continuing-stop-blocks-import",
+    (s) => ({ ...s, cancel: async () => ({}) as Cancellation }),
+  ],
+  [
+    "brings in a stopped run that finished",
+    "continuing-stop-blocks-import",
+    (s) => ({
+      ...s,
+      importResult: async (id) => {
+        // As it would be without the stop: only a run that has not ended is refused.
+        if ((await s.status(id)).state !== "succeeded")
+          return s.importResult(id);
+        return {} as Awaited<ReturnType<Service["importResult"]>>;
+      },
+    }),
+  ],
+  [
+    "sends an uncertain run again when it is asked about",
+    "uncertain-row-not-resent",
+    (s, h) => ({
+      ...s,
+      status: async (id) => {
+        await sendsAgain(h.adapter());
+        return s.status(id);
+      },
+    }),
+  ],
+  [
+    "sends before it records",
+    "row-before-send",
+    (s, h) => ({
+      ...s,
+      start: async (r) => {
+        await sendsAgain(h.adapter());
+        return s.start(r);
+      },
+    }),
+  ],
+  [
+    "brings in a file that is not the declared one",
+    "corrupt-result-not-imported",
+    (s) => ({
+      ...s,
+      importResult: async () =>
+        ({}) as Awaited<ReturnType<Service["importResult"]>>,
+    }),
+  ],
+];
+for (const [what, check, wrap] of wrongServices)
+  test(`a service that ${what} fails ${check}`, async () => {
+    const h = fakeHarness("unstoppable");
+    const found = await failing({
+      ...h,
+      service: {
+        ...h.service!,
+        make: (options) => wrap(createGenerationService(options), h),
+      },
+    });
+    assert.ok(found.includes(check), found.join(", "));
+  });
+
+test("a service that asks before it has kept a run's name fails ref-before-poll", async () => {
+  const h = fakeHarness();
+  const found = await failing({
     ...h,
     service: {
       ...h.service!,
-      store: {
-        ...store,
-        // Before its row exists, something of this run leaves.
-        exportProject: async (...a: [string]) => {
-          await h.adapter().submit(request(), h.context());
-          return store.exportProject(...a);
-        },
-      } as unknown as ProjectStore,
+      ledger: () => {
+        const ledger = memoryLedger();
+        return {
+          ...ledger,
+          update: (id, { executionRef: _ref, ...change }) =>
+            ledger.update(id, change),
+        };
+      },
     },
   });
-  assert.ok(early.includes("row-before-send"));
+  assert.ok(found.includes("ref-before-poll"));
+});
+
+test("what can be asked is asked, though a part of it cannot", async () => {
+  const h = fakeHarness("none", (a) => ({
+    ...a,
+    status: async (ref) => {
+      const s = await a.status(ref);
+      return s.state === "unknown"
+        ? { executionRef: ref, state: "succeeded" }
+        : s;
+    },
+  }));
+  const { uncertainLanded: _, ...arrange } = h.arrange;
+  const results = await runConformance({
+    ...h,
+    arrange,
+    unavailable: { uncertainLanded: "It always answers." },
+  });
+  const of = (check: ConformanceCheck) =>
+    results.find((r) => r.check === check)!;
+  assert.deepEqual(
+    [
+      of("uncertain-sends-nothing-more").ok,
+      of("uncertain-sends-nothing-more").unavailable,
+    ],
+    [false, false],
+  );
+  // Nothing to arrange is nothing asked, of the checks that take any state too.
+  const none = await runConformance({
+    ...fakeHarness(),
+    arrange: {},
+    unavailable: Object.fromEntries(SCENARIOS.map((s) => [s, "No stand-in."])),
+  });
+  assert.deepEqual(
+    none.filter((r) => r.ok).map((r) => r.check),
+    [
+      "refusal-sends-nothing",
+      "unlisted-role-refused",
+      "limits-held",
+      "location-declared",
+    ],
+  );
+  assert.deepEqual(
+    none.filter((r) => !r.ok && !r.unavailable),
+    [],
+  );
 });
 
 test("a harness that leaves out a state, or gives no reason for it, is refused before anything is asked", async () => {
@@ -465,50 +995,104 @@ test("a harness that leaves out a state, or gives no reason for it, is refused b
   const one = told.find((r) => r.check === "unknown-ref-answered-honestly")!;
   assert.deepEqual(
     [one.ok, one.unavailable, one.detail],
-    [false, true, "It forgets nothing."],
+    [false, true, "lost: It forgets nothing."],
   );
 });
 
 const ENGINES = new URL("../core/engines/", import.meta.url);
-const makesAdapter = (text: string) =>
-  /^\s*contract: ENGINE_CONTRACT_V2,$/m.test(text) &&
-  /EngineAdapterV2\b/.test(text) &&
-  /\brequestCancel\b[^;]*[{(]/.test(text) &&
-  /\breconcile\b/.test(text);
-const unregistered = (files: readonly string[]) =>
-  files.filter(
-    (f) => !Object.hasOwn(ADAPTER_SUITES, f) && !PENDING.includes(f),
+// Anything that could make an adapter names the contract or one of its parts.
+const namesContract = (text: string) =>
+  /EngineAdapterV2|ENGINE_CONTRACT_V2|engine-adapter\/v2|\brequestCancel\b/.test(
+    text,
   );
+const classified = (file: string) =>
+  [
+    Object.hasOwn(ADAPTER_SUITES, file),
+    PENDING.includes(file),
+    Object.hasOwn(NOT_ADAPTERS, file),
+  ].filter(Boolean).length;
 
 test("every adapter file is registered with the conformance kit or named as pending", () => {
-  const adapters = readdirSync(ENGINES)
-    .filter((f) => f.endsWith(".ts"))
-    .filter((f) => makesAdapter(readFileSync(new URL(f, ENGINES), "utf8")));
+  const engines = readdirSync(ENGINES, { recursive: true, encoding: "utf8" })
+    .map((f) => f.replaceAll("\\", "/"))
+    .filter((f) => /\.[cm]?[jt]sx?$/.test(f));
+  const naming = engines.filter((f) =>
+    namesContract(readFileSync(new URL(f, ENGINES), "utf8")),
+  );
+  // Each in one list, and every list of files that are there.
   assert.deepEqual(
-    [...adapters].sort(),
-    [...Object.keys(ADAPTER_SUITES), ...PENDING].sort(),
+    naming.filter((f) => classified(f) !== 1),
+    [],
   );
-  assert.deepEqual(unregistered(adapters), []);
-  assert.deepEqual(unregistered([...adapters, "another.ts"]), ["another.ts"]);
-  assert.equal(
-    PENDING.some((f) => Object.hasOwn(ADAPTER_SUITES, f)),
-    false,
+  assert.deepEqual(
+    [
+      ...Object.keys(ADAPTER_SUITES),
+      ...PENDING,
+      ...Object.keys(NOT_ADAPTERS),
+    ].sort(),
+    [...naming].sort(),
   );
+  for (const why of Object.values(NOT_ADAPTERS)) assert.ok(why.length > 20);
+  // One more, in whatever way it is written, is in none.
+  assert.equal(classified("another.ts"), 0);
+  assert.equal(classified("providers/another.ts"), 0);
+  for (const text of [
+    "class A implements EngineAdapterV2 {}",
+    "const a = { contract: ENGINE_CONTRACT_V2 as const };",
+    "const contract = ENGINE_CONTRACT_V2; export const a = { contract };",
+    'const a = { contract: "yamakan.engine-adapter/v2" };',
+    "const a = { contract: ENGINE_CONTRACT_V2, // the contract",
+    "export const a = (b: Base) => ({ ...b, requestCancel: async () => {} });",
+  ])
+    assert.ok(namesContract(text), text);
 });
 
+// What a file says outside its comments.
+const code = (text: string) =>
+  text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
 test("a registered test file calls the kit", () => {
-  for (const file of new Set(Object.values(ADAPTER_SUITES)))
+  for (const [adapter, { makes, tests, names }] of Object.entries(
+    ADAPTER_SUITES,
+  )) {
     assert.match(
-      readFileSync(new URL(file, import.meta.url), "utf8"),
-      /^engineConformance\(/m,
-      file,
+      readFileSync(new URL(adapter, ENGINES), "utf8"),
+      new RegExp(`^export (function|const) ${makes}\\b`, "m"),
+      adapter,
     );
+    const texts = tests.map((file) =>
+      code(readFileSync(new URL(file, import.meta.url), "utf8")),
+    );
+    for (const [n, text] of texts.entries()) {
+      assert.match(text, /^engineConformance\(/m, tests[n]);
+      // It makes that adapter, from that file.
+      assert.match(
+        text,
+        new RegExp(
+          `\\b${makes}\\b[^;]*\\bfrom "\\.\\./core/engines/${adapter}"`,
+        ),
+        tests[n],
+      );
+      assert.match(text, new RegExp(`\\b${makes}\\(`), tests[n]);
+    }
+    for (const name of names)
+      assert.ok(
+        texts.some((text) =>
+          new RegExp(`^engineConformance\\(\\s*"${name}",`, "m").test(text),
+        ),
+        name,
+      );
+  }
+  assert.doesNotMatch(
+    code("/*\nengineConformance(\n*/\n// engineConformance("),
+    /engineConformance/,
+  );
 });
 
 const OPERATIONS_DOC = readFileSync(
   new URL("../docs/ENGINE_OPERATIONS.md", import.meta.url),
   "utf8",
-);
+).replaceAll("\r\n", "\n");
 // The lines of one first-level section.
 const section = (doc: string, name: string) => {
   const lines = doc.split(/\r?\n/);

@@ -6,7 +6,7 @@ What must be known of a model before a route of it is `qualified` or `offered` i
 
 - `identity`: the full identity, its host, owner and model, variant, and the exact revision as a full commit. A family name, a branch or a tag is not an identity.
 - `licence`: the licence's name as the publisher states it, the page it was read on and the date it was read.
-- `route`: one of the catalog's routes, and a recipe that the route can start.
+- `route`: one of the catalog's routes and the recipe it runs; an offered one's recipe can be started.
 - `operation`: one of the operations in [Engine operations](ENGINE_OPERATIONS.md), with the input roles it honours, each of them a role of that operation.
 - `limits`: the size, frames, frame rate, steps, lengths and sound that it makes.
 - `evidence`: at least one existing file under `docs/evidence/`.

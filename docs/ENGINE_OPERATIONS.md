@@ -60,12 +60,13 @@ What each operation of the engine contract means: what goes in, what comes out, 
 
 # Common to every operation
 
+- **Which contract and operation:** `contract`, the contract's name, and `operation`, one of those above.
 - **Who runs it:** `recipeId`, `recipeHash` and `modelManifestHash`, a recipe the service owns and the exact manifest it was qualified with.
 - **How:** an optional `seed` (0 to 4,294,967,295) and at most 32 named `controls`, each a number within a million of zero, a yes or no, or a short choice. A control is never a path, an address or the name of code.
 - **Which attempt:** `attemptKey` and `leaseGeneration`. The same attempt and generation is one run, sent once.
 - **For how long and within what:** `deadlineMs` (at most six hours) and `resourcePolicyHash`.
 - **A video output** declares its width and height (16 to 8192, even), its frame rate as a fraction, its length in ticks and whether it has audio.
-- **Nothing else:** a request with any other field is refused. No graph, model class, plugin, address or file path crosses it. Inputs name versions of the project's own media by id and SHA-256.
+- **Nothing else:** a request with any other field is refused. No graph, model class, plugin, address or file path crosses it. An input names a version of the project's own media by id, SHA-256 and media type, and its `role`; one that is not a `reference` may say where in the video it stands (`atTicks`).
 
 # Nothing is approximated
 
