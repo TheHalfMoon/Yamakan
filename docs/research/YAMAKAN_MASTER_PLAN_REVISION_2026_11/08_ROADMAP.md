@@ -117,12 +117,12 @@ revised from its own record, and the history of a shot can be read.
 
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
-| MPR-101 | An immutable, hashed record of how each take was made | QUALIFICATION_READY | none | FD-2 |
-| MPR-102 | A generation targets a story shot and appends its take on import | WAITING_DEPENDENCIES | MPR-101 | none |
+| MPR-101 | An immutable, hashed record of how each take was made | VERIFIED | none | FD-2 |
+| MPR-102 | A generation targets a story shot and appends its take on import | QUALIFICATION_READY | MPR-101 | none |
 | MPR-103 | A revision draft read from a take; what changed between takes is recorded | WAITING_DEPENDENCIES | MPR-101, MPR-102 | FD-2 |
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
-| MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | QUALIFICATION_READY | SS-006 | none |
-| MPR-106 | Brief, scene scripts and shot intent stored in the story document | WAITING_DEPENDENCIES | MPR-101 | none |
+| MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |
+| MPR-106 | Brief, scene scripts and shot intent stored in the story document | QUALIFICATION_READY | MPR-101 | none |
 | MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | WAITING_DEPENDENCIES | MPR-101, MPR-102 | none |
 
 Exit: MPR-101 to MPR-107 verified. One shot is generated or rendered onto its
@@ -148,14 +148,14 @@ agent surface with waits, approvals, budgets and an audit feed.
 
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
-| MPR-201 | One model catalog; every existing model list checked against it | QUALIFICATION_READY | none | none |
-| MPR-202 | Capabilities as supported, unsupported or unverified cells | WAITING_DEPENDENCIES | MPR-201 | none |
+| MPR-201 | One model catalog; every existing model list checked against it | VERIFIED | none | none |
+| MPR-202 | Capabilities as supported, unsupported or unverified cells | QUALIFICATION_READY | MPR-201 | none |
 | MPR-203 | Preflight: estimate, egress disclosure and a hash that start checks | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | none |
 | MPR-204 | Default-deny gates with recorded human approvals | QUALIFICATION_READY | none | none |
 | MPR-205 | The Kaggle command-line route contained; quota facts stated | WAITING_DEPENDENCIES | MPR-204, MPR-207 | FD-10 (second part only) |
-| MPR-206 | Five engine operations defined; a conformance kit for every adapter | WAITING_DEPENDENCIES | MPR-201 | none |
+| MPR-206 | Five engine operations defined; a conformance kit for every adapter | QUALIFICATION_READY | MPR-201 | none |
 | MPR-207 | A typed failure class and end time on every ended generation | QUALIFICATION_READY | none | none |
-| MPR-208 | Every offered model gated on a complete, machine-checked licence block | WAITING_DEPENDENCIES | MPR-201 | none |
+| MPR-208 | Every offered model gated on a complete, machine-checked licence block | QUALIFICATION_READY | MPR-201 | none |
 | MPR-209 | Notices, the source offer and the route licence shown; wider SBOM | WAITING_DEPENDENCIES | MPR-208 | none |
 | MPR-210 | The hosted-provider profile, proven on a loopback fake only | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | none |
 | MPR-303 | Hash-bound edit proposals; a propose-only agent mode | QUALIFICATION_READY | SS-006 | none |
@@ -196,7 +196,7 @@ and write a provenance manifest beside every export.
 | MPR-604 | First run: a locally built sample project and a capability banner | QUALIFICATION_READY | none | FD-3, FD-4 (banner wording only) |
 | MPR-605 | A continuity journey test through Create, Story, Edit, Finish and back | QUALIFICATION_READY | none | none |
 | MPR-606 | Arabic interface strings frozen; an unsigned review packet | WAITING_DEPENDENCIES | MPR-601, MPR-602, MPR-603, MPR-604 | none |
-| MPR-701 | A provenance manifest beside every export and a readable report | WAITING_DEPENDENCIES | MPR-101, MPR-201 | FD-2 |
+| MPR-701 | A provenance manifest beside every export and a readable report | QUALIFICATION_READY | MPR-101, MPR-201 | FD-2 |
 | MPR-702 | Clip lineage in OTIO metadata; the OTIO import proposal appliable | WAITING_DEPENDENCIES | MPR-101, MPR-303, MPR-701 | none |
 
 Exit: every card of the stage verified. The editing commands named in the cards
@@ -217,7 +217,7 @@ one camera and render record per shot, and a consistency measurement harness.
 
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
-| MPR-401 | An entity, an approved anchor and variants on each reference pack | WAITING_DEPENDENCIES | MPR-101 | none |
+| MPR-401 | An entity, an approved anchor and variants on each reference pack | QUALIFICATION_READY | MPR-101 | none |
 | MPR-402 | Entities scheduled per shot; a report of what a route will receive | WAITING_DEPENDENCIES | MPR-101, MPR-102, MPR-103, MPR-202, MPR-203, MPR-401 | none |
 | MPR-403 | One camera and render record per shot; the legacy scene store read-only | WAITING_DEPENDENCIES | MPR-101, MPR-106 | none |
 | MPR-404 | Blender depth and normal control passes for control-capable routes | DEFERRED | MPR-202, MPR-203, MPR-204, MPR-206, MPR-403, MPR-507 | FD-3, FD-4, FD-5 |

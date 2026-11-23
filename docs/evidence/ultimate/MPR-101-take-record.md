@@ -7,7 +7,7 @@ Part a (PR 291, merged as `6b9fb8e`) is the record, its storage, story version 2
 By reading the head this branch starts from:
 
 - `TakeSchema` had no record field, `DOCUMENT_SCHEMA_VERSIONS.story` was 1, `DocumentKind` had no `takeRecord`, and no `yamakan.take.record` command existed. The gap is as the card says.
-- **FD-2 was not recorded as decided** (`docs/FOUNDER_DECISION_RECORD.md`) when parts a and b were built, so `RECORD_HOLDS_PROMPT` was false. It is now: see the last section.
+- **FD-2 was not recorded as decided** (`docs/FOUNDER_DECISION_RECORD.md`) when parts a and b were built, so `RECORD_HOLDS_PROMPT` was false. It is now: see [FD-2](#fd-2-the-prompt-is-kept).
 - `verifyStory` is called by `yamakan.story.save`, `yamakan.story.assemble` and `yamakan.take.apply`. A document revert refuses a story, and a project restore does not call it. So the rule that a take keeps its record is in the save command.
 - The `asset_ids` of a document row are read only for documents a project names (`#assertDocumentAssets`). A record is never one, so its list protects nothing; it is kept for the reader.
 - `verifyStoryContinuity` reads only continuity references, and is unchanged.
@@ -25,7 +25,7 @@ By reading the head this branch starts from:
 ### Where this differs from the card
 
 - **MPR-106's scene field is `sceneText`, not `script`.** CI found it at `30be0f2`: `tests/command.test.ts` forbids `script` in any command's input, and story version 2 is one. That test guards security, so the field was renamed, in both cards and the code, and the test was not touched. Nothing writes the field yet. Three reviews before that run had not noticed it.
-- **With FD-2 on, a largest-case record would not fit** (settled in the last section)**.** As the reviewer measured it, a 4,000-character CJK prompt with a full report and note is about 19.6 KB against 16,384 bytes (about 14.9 KB without those two). With no prompt, as it was then, the largest was about 9 KB. It had to be settled before `RECORD_HOLDS_PROMPT` was turned on.
+- **With FD-2 on, a largest-case record would not fit** (settled under [FD-2](#fd-2-the-prompt-is-kept))**.** As the reviewer measured it, a 4,000-character CJK prompt with a full report and note is about 19.6 KB against 16,384 bytes (about 14.9 KB without those two). With no prompt, as it was then, the largest was about 9 KB. It had to be settled before `RECORD_HOLDS_PROMPT` was turned on.
 - **`importedAt` on the ledger row** is one field more than the card's `endedAt`. The record has an `importedAt` time, and no row held one. A record has to come out the same on a retry of the request, so it cannot use the time of the save.
 - **A model no recipe fact names** takes the recipe's id, so that the manifest hash the row does hold is kept.
 - **A declared record's operation** is read from the take: image to video when its lineage names inputs, else text to video. A receipt file does not say.
@@ -57,7 +57,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ## Not run, and not claimed
 
-- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have not run on the founder host. **On GitHub's Linux machine both passed on 2026-11-23** at `8806322` ([what that shows, and what it does not](github-real-checks.md)); their receipts are `MPR-101-take-record-receipt.json` and `create-durable-github-receipt.json`. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). The Blender arm below is not among them.
+- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have not run on the founder host. **On GitHub's Linux machine both passed on 2026-11-23** at `8806322`, and again at `2fc6472` ([what that shows, and what it does not](github-real-checks.md)); their receipts are `MPR-101-take-record-receipt.json` and `create-durable-github-receipt.json`, of `2fc6472`. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). The Blender arm below is not among them.
 - `npm run test:e2e` was not run here.
 - **The Blender arm** is part b's, below.
 
@@ -109,4 +109,4 @@ The founder answered "Yes, keep prompts" for the project and its backups ([recor
 
 The card names no computer for its runs, so by the founder's answer GitHub's results count ([record](../../FOUNDER_DECISION_RECORD.md#2026-11-23-a-card-that-names-no-computer-may-be-verified-on-githubs-results)). It was built in three merges: `6b9fb8e`, `c7c9929` and `399172a`.
 
-**What being VERIFIED does not say:** that it ran on the founder host, where media workers do not start; that a Blender take was recorded for real; that a real model made a recorded take; or that Stage 1's exit, which names the founder host, is nearer than its other cards make it.
+**What being VERIFIED does not say:** that its end-to-end checks ran on the founder host, where media tests fail; that a Blender take was recorded for real (the record is tested with a job whose end the test wrote, and the extended `qualify:director-cinema` was only checked for its syntax); that a real model made a recorded take; or that no log line holds a prompt, which no test shows. Stage 1's exit, which names the founder host, is not met by it.
