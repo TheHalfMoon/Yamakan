@@ -702,7 +702,7 @@
         "MPR-402"
       ],
       "authority": "Founder record entries '2026-11-05: Kaggle as the zero-cost GPU environment', '2026-11-06: The Create workspace, and Yamakan drives Kaggle' and '2026-11-06: A reference image travels inside the run's brief'.",
-      "verification": "Pull request numbers read from the first-parent history of main; whether the route is a product feature is FD-3."
+      "verification": "Pull request numbers read from the first-parent history of main; whether the route is a product feature is FD-3. Read for MPR-003 on 2026-11-23: #208 (a general export-colour fix) is not verified as Kaggle or Create work."
     },
     {
       "id": "stream:consent",
@@ -725,7 +725,7 @@
         "MPR-003"
       ],
       "authority": "Ledger checkpoint 'Checkpoint: security check of main, 2026-11-08'. A founder record entry for this stream was not verified.",
-      "verification": "Pull request numbers read from the first-parent history of main; Read for MPR-003 on 2026-11-23; see its pull request."
+      "verification": "Pull request numbers read from the first-parent history of main; read for MPR-003 on 2026-11-23: #225 to #228 match their descriptions, #251 (the agent-token page) is not verified as security work."
     },
     {
       "id": "stream:cinema",
@@ -737,7 +737,7 @@
         "MPR-403"
       ],
       "authority": "Not verified: no founder record entry names issue #203 or this stream (read 2026-11-23). Ledger 12 links #203 to the founder's 'Yes, follow it' of 2026-11-06 and to the record entry '2026-11-06: The Create workspace, and Yamakan drives Kaggle', which names neither #203 nor the Cinema page. Issue #203 and pull requests #243, #244 and #248 show the work; #204, its first slice, was shut without merging.",
-      "verification": "Pull request numbers read from the first-parent history of main; Read for MPR-003 on 2026-11-23; see its pull request."
+      "verification": "Pull request numbers read from the first-parent history of main; read for MPR-003 on 2026-11-23: titles of #243, #244 and #248 and issue #203, the rest by number."
     },
     {
       "id": "stream:blender",
