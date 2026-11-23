@@ -383,6 +383,8 @@ try {
     ledger: ctx.queue.generationLedger(),
   });
   ctx = { ...ctx, generation: { service: again, recipes: [recipe] } };
+  // MPR-106: what the first is meant to show.
+  const meant = { action: "A red kite.", direction: { shot: "wide" } };
   const shots = [0, 1, 2, 3].map((n) => ({
     id: randomUUID(),
     name: `Target ${n}`,
@@ -391,6 +393,7 @@ try {
     referencePacks: [],
     takes: [],
     selectedTakeId: null,
+    ...(n === 0 ? { intent: meant } : {}),
   }));
   const targets = randomUUID();
   const sceneId = randomUUID();
@@ -474,6 +477,33 @@ try {
       timelineBeforeAndAfter: one.timeline,
       recordHash: one.take.recordHash,
     },
+  );
+  // MPR-106: the words and the take leave each other as they are.
+  const [meantShot] = (await storyNow()).scenes[0].shots;
+  assert.deepEqual(meantShot.intent, meant);
+  const saidAgain = {
+    ...meant,
+    action: "A red kite, higher.",
+    dialogue: "Up!",
+  };
+  await saveShots(
+    (await storyNow()).scenes[0].shots.map((s) =>
+      s.id === meantShot.id ? { ...s, intent: saidAgain } : s,
+    ),
+  );
+  const [nowSaid] = (await storyNow()).scenes[0].shots;
+  assert.deepEqual(nowSaid, { ...meantShot, intent: saidAgain });
+  assert.deepEqual(
+    await call("yamakan.take.record", {
+      projectId,
+      documentId: targets,
+      shotId: meantShot.id,
+      takeId: one.take.takeId,
+    }),
+    { recordHash: one.take.recordHash, record: made },
+  );
+  step(
+    "a take added to a shot keeps its intent, and a new intent keeps the take's record (MPR-106)",
   );
   const running = await begin(shots[0]);
   let now = await storyNow();

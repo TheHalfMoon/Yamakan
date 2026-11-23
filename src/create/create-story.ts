@@ -3,11 +3,11 @@
 // take tools can use it. The shot being written stays a draft in this browser.
 import { STORY_LIMITS } from "../../core/story.ts";
 import type { RunReceipt } from "./create-model.ts";
+import { TEXT_LIMITS, upTo, type Intent } from "../story/story-text.ts";
 
 // Distinct, so that a person's own story is not taken for this one.
 export const CREATE_STORY_TITLE = "Made in Create";
 const NAME_LIMIT = 120;
-const NOTE_LIMIT = 2000;
 
 type Take = {
   id: string;
@@ -26,6 +26,8 @@ type Shot = {
   name: string;
   durationTicks: number;
   notes: string;
+  // What the shot is meant to show. A shot made here before this has its prompt in `notes`.
+  intent?: Intent;
   referencePacks: { documentId: string; contentHash: string }[];
   takes: Take[];
   selectedTakeId: string | null;
@@ -40,22 +42,14 @@ export type CreateStory = {
 export type MadeRecord = {
   // What the receipt said: its claims, not facts this checked.
   label: string;
+  // The shot's own text: the prompt it was made with, and since MPR-106 what a person has made
+  // of it. Not a claim of the receipt.
   prompt: string;
   // The stored file was converted on the way in, so it is not what was checked.
   converted: boolean;
 };
 
 const CONVERTED = " (converted copy)";
-
-// By whole characters, so that no emoji is cut in half and stored.
-const upTo = (text: string, limit: number) => {
-  let out = "";
-  for (const point of text) {
-    if (out.length + point.length > limit) break;
-    out += point;
-  }
-  return out;
-};
 
 const shotName = (prompt: string) => {
   const line = prompt.trim().split(/\r?\n/)[0] || "Shot";
@@ -95,7 +89,11 @@ export function addMadeVideo(
     id: newId(),
     name: shotName(receipt.prompt),
     durationTicks: video.durationTicks,
-    notes: upTo(receipt.prompt, NOTE_LIMIT),
+    notes: "",
+    // Kept as the receipt has it; an empty one is left out.
+    ...(receipt.prompt
+      ? { intent: { action: upTo(receipt.prompt, TEXT_LIMITS.action) } }
+      : {}),
     referencePacks: [],
     takes: [
       {
@@ -195,7 +193,14 @@ export function madeRecords(story: unknown): Record<string, MadeRecord> {
           label: label.endsWith(CONVERTED)
             ? label.slice(0, -CONVERTED.length)
             : label,
-          prompt: typeof shot.notes === "string" ? shot.notes : "",
+          // A shot made before MPR-106 keeps its prompt in its notes; one made since has none
+          // there.
+          prompt:
+            typeof shot.notes === "string" && shot.notes !== ""
+              ? shot.notes
+              : typeof shot.intent?.action === "string"
+                ? shot.intent.action
+                : "",
           converted: label.endsWith(CONVERTED),
         };
       }

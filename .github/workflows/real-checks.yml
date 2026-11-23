@@ -1,6 +1,6 @@
 # The real checks (npm run qualify:*) that the founder's own computer cannot run today, on
 # GitHub's Linux machine, with the FFmpeg its packages have. The first uses the real store, job
-# table and commands in one process, with the stand-in engine; the other three use the real
+# table and commands in one process, with the stand-in engine; the others use the real
 # service and the Microsoft Edge the machine has. They run when a person starts them, or when a
 # pull request changes this file or one of them (not when the product changes). Each prints its
 # receipt, which names the commit and what the machine had. This adds checks and replaces none:
@@ -9,8 +9,8 @@
 # model, no paid service and no secret is used.
 #
 # Not on GitHub's Windows machine: there, three tests of a sandboxed worker ended with Windows
-# status 0xC0000142, the media probe failed, and so did all four checks (run
-# 45190159942). The sandbox is not loosened for it. So a pass here says nothing of the Windows
+# status 0xC0000142, the media probe failed, and so did all four checks there were then
+# (run 45190159942). The sandbox is not loosened for it. So a pass here says nothing of the Windows
 # sandbox: on Linux a media worker has none (core/process/owner.ts, "posix-unqualified").
 name: Real checks
 on:
@@ -21,6 +21,7 @@ on:
       - scripts/qualify-host.mjs
       - scripts/qualify-revisable-shot.mjs
       - scripts/qualify-create-durable.mjs
+      - scripts/qualify-story-brief.mjs
       - scripts/qualify-take-review.mjs
       - scripts/qualify-consent-gate.mjs
 permissions:
@@ -71,6 +72,10 @@ jobs:
         if: ${{ !cancelled() }}
         timeout-minutes: 10
         run: node scripts/qualify-create-durable.mjs "$RUNNER_TEMP/receipts/create-durable.json"
+      - name: The brief, scripts and shot texts of a story, in real Edge (MPR-106)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: node scripts/qualify-story-brief.mjs "$RUNNER_TEMP/receipts/MPR-106-story-brief.json"
       - name: Take review and a split shot, in real Edge (SS-006, MPR-105)
         if: ${{ !cancelled() }}
         timeout-minutes: 10
