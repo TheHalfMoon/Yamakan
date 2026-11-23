@@ -25,8 +25,9 @@ dates and no effort estimates, because none were measured.
   may start when its own dependencies are verified and the order of FD-11
   permits it. Section 7 lists the cards that are expected to start earlier
   than their stage number suggests.
-- MPR-001 recorded the answer to FD-1 on 2026-11-23; the cards are built under
-  it, each behind its own gates and founder decisions.
+- MPR-001 recorded the adoption on 2026-11-23 and a later entry that day records
+  the founder's word to build; the cards are built under it, each behind its own
+  gates and founder decisions.
 - Card states at the planning baseline: 14 `QUALIFICATION_READY`, 33
   `WAITING_DEPENDENCIES`, 7 `EXTERNAL_BLOCKED`, 2 `DEFERRED`. MPR-003 adds the
   two completion states (`REVIEW_PENDING`, `VERIFIED`) once the plan is adopted.

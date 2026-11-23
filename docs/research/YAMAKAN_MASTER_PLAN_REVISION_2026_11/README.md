@@ -4,8 +4,9 @@
 > Baseline: `main` at `7b1ca46ce20efaa603be12b51d57aee04a3f5f72`, verified 2026-11-12.
 
 This directory revises the Yamakan master plan. The founder adopted it as the
-frontier on 2026-11-23, and building its cards, each behind its own gates
-(`docs/FOUNDER_DECISION_RECORD.md`); FD-2 to FD-11 are not decided. The earlier
+frontier on 2026-11-23 and, in a separate entry the same day ('Building the
+master plan revision's cards'), authorised building its cards, each behind its
+own gates (`docs/FOUNDER_DECISION_RECORD.md`); FD-2 to FD-11 are not decided. The earlier
 programme (`docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/TASK_REGISTRY.json`) keeps
 its registry. The documents below describe the package as it was proposed on its
 baseline; a card's current state is in its registry.

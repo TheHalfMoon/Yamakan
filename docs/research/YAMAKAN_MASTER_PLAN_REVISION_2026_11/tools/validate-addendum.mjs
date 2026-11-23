@@ -50,7 +50,8 @@ const PLANNING_STATES = [
 ];
 const STATES = [...PLANNING_STATES, "REVIEW_PENDING", "VERIFIED"];
 const namesCommit = (text) =>
-  typeof text === "string" && /\b[a-f0-9]{7,40}\b/.test(text);
+  typeof text === "string" &&
+  /\b(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/.test(text);
 
 // Returns messages; an empty list is a pass. `exists` is given so the self-test can stub it.
 export function lifecycleIssues(tasks, ssState, exists) {
@@ -173,6 +174,7 @@ if (process.argv.includes("--self-test")) {
   ];
   none(lifecycleIssues(ok, ss, here));
   has(rule(card("A", "VERIFIED", { newFiles: [] })), "names a commit");
+  has(rule(card("A", "VERIFIED", { evidence: "done 20261123, run 45136406982" })), "names a commit");
   has(rule(card("A", "VERIFIED", { evidence: commit, newFiles: ["nowhere"] })), "new file is missing");
   has(
     rule(card("A", "REVIEW_PENDING"), card("B", "QUALIFICATION_READY", { dependsOn: ["A"] })),

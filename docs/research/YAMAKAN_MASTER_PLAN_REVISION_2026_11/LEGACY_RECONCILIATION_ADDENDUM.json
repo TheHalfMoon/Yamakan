@@ -725,7 +725,7 @@
         "MPR-003"
       ],
       "authority": "Ledger checkpoint 'Checkpoint: security check of main, 2026-11-08'. A founder record entry for this stream was not verified.",
-      "verification": "Pull request numbers read from the first-parent history of main; MPR-003 verifies the stream's records."
+      "verification": "Pull request numbers read from the first-parent history of main; Read for MPR-003 on 2026-11-23; see its pull request."
     },
     {
       "id": "stream:cinema",
@@ -736,8 +736,8 @@
         "MPR-003",
         "MPR-403"
       ],
-      "authority": "Not verified: no founder record entry names issue #203 or this stream (read 2026-11-23). Issue #203 and pull requests #243, #244 and #248 show the work; #204, its first slice, was shut without merging.",
-      "verification": "Pull request numbers read from the first-parent history of main; MPR-003 verifies the stream's records."
+      "authority": "Not verified: no founder record entry names issue #203 or this stream (read 2026-11-23). Ledger 12 links #203 to the founder's 'Yes, follow it' of 2026-11-06 and to the record entry '2026-11-06: The Create workspace, and Yamakan drives Kaggle', which names neither #203 nor the Cinema page. Issue #203 and pull requests #243, #244 and #248 show the work; #204, its first slice, was shut without merging.",
+      "verification": "Pull request numbers read from the first-parent history of main; Read for MPR-003 on 2026-11-23; see its pull request."
     },
     {
       "id": "stream:blender",
