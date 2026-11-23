@@ -1,5 +1,7 @@
 # Provider matrix — official snapshot, 2026-10-11
 
+> **Status, 2026-11-23, main 16d2175:** a vendor snapshot that predates the ComfyUI adapter and the Kaggle route; no row was qualified at runtime. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 The authoritative full-field research registry is [provider-registry.json](evidence/yamakan/provider-registry.json). Every record includes modalities, duration, resolution, native audio, frames, references, motion, asynchronous jobs, account/rate/region limitations, units/prices, BYOK, reseller/white-label status, business contact, date, official evidence and uncertainties. Null means unknown, never an advertised capability. This is a reviewed-source snapshot, not a running or commercially entitled service registry. No inference requests were made.
 
 | Provider | Model | Maximum output seconds | Resolution | Pricing unit | Price detail | State |

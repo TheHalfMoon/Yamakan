@@ -2,7 +2,7 @@
 
 Yamakan is an AI-native creative production platform. Canonical repository: [TheHalfMoon/Yamakan](https://github.com/TheHalfMoon/Yamakan) (formerly `TheHalfMoon/Darzain`). The current product is an **offline local-web engineering preview**, not a release.
 
-**Phase: implementation (P01).** The founder approved the final plan `edbaba6c` on 2026-10-11 ([decision record](docs/FOUNDER_DECISION_RECORD.md)). [CURRENT](specs/CURRENT.md) is the live frontier and [the master plan](docs/IMPLEMENTATION_PLAN.md) is the sole task authority. The planning PRs #3–#5 are merged.
+**Status:** the current frontier is in [CURRENT](specs/CURRENT.md) and what the code does today is in the [current-state index](docs/CURRENT_STATE_INDEX.md). The founder approved the first plan `edbaba6c` on 2026-10-11 ([decision record](docs/FOUNDER_DECISION_RECORD.md)) and planning PRs #3–#5 were merged under it; [the first plan](docs/IMPLEMENTATION_PLAN.md) is frozen.
 
 ## Run locally
 
@@ -19,7 +19,7 @@ Open the launch link saved in the workspace's `launch` file (`http://127.0.0.1:4
 
 Local boundary: the workspace, its recovery folder and every file in them are private to your account (on Windows, access for you, SYSTEM and Administrators only; an elevated administrator can always read them). A workspace on a drive without permissions (FAT/exFAT), a folder owned by another account, or a link or junction is refused. A workspace that other accounts could read before this version may already be open in their programs (taking permissions away does not close what is open): if that matters, restore a backup into a fresh folder and use that. Keep the application folder itself (this checkout, `node_modules`, the built helpers) writable only by your account: anyone who can change the code that runs as you can read what you can.
 
-Source/weight/service rights and capability availability remain distinct. No paid inference, cloud account or model weights are used.
+Source/weight/service rights and capability availability remain distinct. No paid inference and no model weights on the PC are used. A founder-directed route can run generation on the person's own Kaggle account; that route is not part of a release-qualified product.
 
 ## Planning package (historical)
 

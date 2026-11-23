@@ -1,5 +1,7 @@
 # Competitive capabilities and evidence
 
+> **Status, 2026-11-23, main 16d2175:** the Yamakan status column predates Create, Cinema and the Blender worker; the statement that no superiority claim is earned still stands. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 Yamakan's ambition is to lead specific measurable creative-production categories. **No overall superiority claim is earned.** No paid competitor generation or head-to-head usability/quality benchmark ran. Public claims below are claims, inspected code is code, and bounded test receipts qualify only their exercised behavior.
 
 Status: **I** existing Yamakan prototype (with known defects, not accepted MVP); **Q** bounded reusable-source qualification; **P** planned product; **U** unverified runtime/entitlement/output; **R** longer-term research. [Source matrix](SOURCE_IMPORT_MATRIX.md) gives pins/tests; [provider matrix](PROVIDER_MATRIX.md) gives official-operation evidence rather than model-name support claims.

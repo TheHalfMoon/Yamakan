@@ -1,5 +1,7 @@
 # Local inference and hardware
 
+> **Status, 2026-11-23, main 16d2175:** a proposal whose candidate table still lists ComfyUI as source only and which has no section for the Kaggle route or the Blender worker; it already links the current ComfyUI state in `docs/evidence/ultimate/comfyui-engine.md`; engines remain off by default and no model weights are pinned. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
+
 Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts](OPERATIONAL_CONTRACTS.md) own current scope and exact protocols. Earlier evidence remains bounded; no final implementation or founder approval is implied.
 
 Observed host: Windows, Intel i5-13420H with 12 logical CPUs, about 16 GiB RAM; CIM exposes Intel UHD Graphics AdapterRAM 1 GiB. No compatible discrete GPU verified. Existing Ollama CPU-resident Qwen3 4B models establish LLM availability, not image/video qualification. Node 24.19.0/FFmpeg 8.1.1 support the existing offline slice; Python 3.14.7 is the research interpreter, not universal inference compatibility.
