@@ -297,7 +297,10 @@ test("a proxy or a certificate setting that came or went closes an approval (OA-
   assert.deepEqual(read({}), PLAIN);
   assert.deepEqual(read({ PATH: "x", NO_PROXY: "localhost" }), PLAIN);
   assert.deepEqual(read({ HTTPS_PROXY: "" }), PLAIN);
-  assert.deepEqual(read({ KAGGLE_CONFIG_DIR: "x", KAGGLE_KEY: "k" }), PLAIN);
+  assert.deepEqual(
+    read({ KAGGLE_CONFIG_DIR: "x", KAGGLE_KEY: "k", KAGGLE_CACHE: "c" }),
+    PLAIN,
+  );
   for (const name of [
     "HTTP_PROXY",
     "HTTPS_PROXY",
@@ -316,6 +319,10 @@ test("a proxy or a certificate setting that came or went closes an approval (OA-
     "SSL_CERT_FILE",
     "KAGGLE_SSL_CA_CERT",
     "KAGGLE_Verify_SSL",
+    "KAGGLE_verify",
+    "KAGGLE_CA",
+    "KAGGLE_ROOT_CA",
+    "KAGGLE_CA_FILE",
   ])
     assert.deepEqual(read({ [name]: "C:/x.pem" }), CERTIFICATE, name);
   assert.deepEqual(

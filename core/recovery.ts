@@ -769,7 +769,47 @@ const EPOCH_TABLES = [
   "director_attempts",
   "director_requests",
 ] as const;
+// The one epoch there is, or null where there is not exactly one.
+const epochNow = (db: DatabaseSync) => {
+  const rows = db
+    .prepare("SELECT singleton, value FROM director_epoch LIMIT 2")
+    .all() as { singleton: unknown; value: unknown }[];
+  return rows.length === 1 &&
+    rows[0]!.singleton === 1 &&
+    typeof rows[0]!.value === "number"
+    ? rows[0]!.value
+    : null;
+};
+// Approvals of what leaves this computer (MPR-204) are never restored: a person gives them again.
+// Their tables go whatever they hold, at any version a backup claims, and are made again from
+// this build's own step, or by the upgrade.
+function removeApprovals(db: DatabaseSync) {
+  for (const table of GATES_TABLES)
+    if (has(db, table)) db.exec(`DROP TABLE ${table}`);
+  // The number the last one had, which would be the next one's beginning.
+  if (has(db, "sqlite_sequence"))
+    db.exec(
+      "DELETE FROM sqlite_sequence WHERE name LIKE 'gate\\_%' ESCAPE '\\'",
+    );
+  if (
+    db
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE name LIKE 'gate\\_approval%' ESCAPE '\\' LIMIT 1",
+      )
+      .get()
+  )
+    throw new CommandError(
+      "RECOVERY_REQUIRED",
+      "The backup's database holds something else under the name of its approvals.",
+    );
+  const { user_version: version } = db.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  };
+  if (version >= 19) db.exec(GATES_SCHEMA);
+}
+// The connection has foreign keys off (see the caller).
 function fenceRestored(db: DatabaseSync): Fenced {
+  removeApprovals(db);
   const run = (sql: string, ...args: (string | number)[]) =>
     Number(db.prepare(sql).run(...args).changes);
   const fenced: Fenced = {
@@ -844,28 +884,26 @@ function fenceRestored(db: DatabaseSync): Fenced {
       );
     run("UPDATE director_epoch SET value = ? WHERE singleton = 1", highest + 1);
     // Read back: a table with rules of its own could have let the change pass by.
-    const epochs = db.prepare("SELECT singleton, value FROM director_epoch");
-    const [{ singleton, value }, ...more] = epochs.all() as {
-      singleton: unknown;
-      value: unknown;
-    }[];
-    if (more.length || singleton !== 1 || value !== highest + 1)
+    fenced.directorEpoch = epochNow(db);
+    if (fenced.directorEpoch !== highest + 1)
       throw new CommandError(
         "RECOVERY_REQUIRED",
         "The backup's database holds an epoch this workspace cannot change.",
       );
-    fenced.directorEpoch = value;
   }
-  // Approvals of what leaves this computer (MPR-204) are never restored: a person gives them
-  // again. Their tables go whatever they hold, at any version a backup claims, and are made
-  // again from this build's own step, or by the upgrade.
-  for (const table of GATES_TABLES)
-    if (has(db, table)) db.exec(`DROP TABLE ${table}`);
-  db.exec("DROP INDEX IF EXISTS gate_approvals_asked");
-  const { user_version: version } = db.prepare("PRAGMA user_version").get() as {
-    user_version: number;
-  };
-  if (version >= 19) db.exec(GATES_SCHEMA);
+  // Looked at again when all is done: each of these was set above, and nothing a backup brings
+  // may have set one back.
+  const back =
+    (has(db, "agent_tokens") &&
+      db
+        .prepare("SELECT 1 FROM agent_tokens WHERE revoked IS NOT 1 LIMIT 1")
+        .get() !== undefined) ||
+    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch);
+  if (back)
+    throw new CommandError(
+      "RECOVERY_REQUIRED",
+      "The backup's database does not keep what a restore must change.",
+    );
   return fenced;
 }
 
@@ -1015,7 +1053,11 @@ async function restore(
       else legacyQuarantined.push({ path: file.path, reason: result });
     }
     // What could not be verified is kept registered but never served.
-    const db = new DatabaseSync(database);
+    // Without foreign keys: a table of a backup could otherwise set one row back as another is
+    // changed or removed.
+    const db = new DatabaseSync(database, {
+      enableForeignKeyConstraints: false,
+    });
     let fenced: Fenced;
     let closure: Closure;
     try {

@@ -429,14 +429,28 @@ test("a version 18 database gains the approval tables, empty, and keeps every ro
     { limit_unit: "euros" },
     { expires_at: 1 },
     { grantor_principal_id: "" },
+    { epoch: "soon" },
+    { granted_at: "long ago" },
   ])
     assert.throws(
       () => plant(over as never),
-      /constraint/i,
+      /constraint|cannot store/i,
       JSON.stringify(over),
     );
   plant({});
   assert.throws(() => plant({}), /constraint/i);
+  // A number that was one's is never another's.
+  const last = () =>
+    (
+      write.prepare("SELECT max(n) AS n FROM gate_approvals").get() as {
+        n: number;
+      }
+    ).n;
+  plant({ id: "00000000-0000-4000-8000-000000000001" });
+  const was = last();
+  write.exec(`DELETE FROM gate_approvals WHERE n = ${was}`);
+  plant({ id: "00000000-0000-4000-8000-000000000002" });
+  assert.equal(last(), was + 1);
   // The same of the rows beside it.
   const ID = "00000000-0000-4000-8000-000000000000";
   write.exec("PRAGMA foreign_keys = ON");

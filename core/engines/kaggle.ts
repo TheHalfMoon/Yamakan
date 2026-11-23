@@ -262,7 +262,7 @@ const CLI_ENVIRONMENT = [
 const PROXY_SETTING =
   /^(?:(?:HTTP|HTTPS|ALL)_PROXY|KAGGLE_.*(?:PROXY|ENDPOINT|HOST|URL).*)$/i;
 const CERTIFICATE_SETTING =
-  /^(?:REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|SSL_CERT_FILE|KAGGLE_.*(?:SSL|CERT|CA_|VERIFY).*)$/i;
+  /^(?:REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|SSL_CERT_FILE|KAGGLE_(?:.*(?:SSL|CERT|VERIFY).*|(?:.*_)?CA(?:_.*)?))$/i;
 /** Whether the CLI would be given a proxy or a certificate setting; never its value (OA-20). */
 export function kaggleNetwork(from: NodeJS.ProcessEnv): GateNetwork {
   const given = Object.entries(kaggleCliEnvironment(from))

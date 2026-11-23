@@ -1067,3 +1067,87 @@ INSERT INTO director_epoch VALUES (1, 1), (2, 2);`);
     );
   }
 });
+
+test("a backup whose tables would set back what a restore changes does not", async () => {
+  const agentToken = "e".repeat(64);
+  const agent = "agent:00000000-0000-4000-8000-000000000000";
+  const TOKEN = `INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '["project:read","project:write"]', 'planted', 0, '2026-01-01', NULL`;
+  for (const [what, plant] of [
+    [
+      "by the approvals it removes",
+      `DROP TABLE gate_approval_uses; DROP TABLE gate_approval_revocations; DROP TABLE gate_approvals;
+CREATE TABLE gate_approvals(n INTEGER, z TEXT, epoch INTEGER, UNIQUE(n, z));
+INSERT INTO gate_approvals VALUES (1, 't', 1), (2, 'e', 1);
+DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER PRIMARY KEY, value INTEGER DEFAULT 1, z TEXT DEFAULT NULL, FOREIGN KEY(value, z) REFERENCES gate_approvals(n, z) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT);
+INSERT INTO director_epoch VALUES (1, 1, 'e');
+DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, z TEXT DEFAULT NULL, FOREIGN KEY(revoked, z) REFERENCES gate_approvals(n, z) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT);
+${TOKEN}, 't');`,
+    ],
+    [
+      "by the epoch it raises",
+      `DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER PRIMARY KEY, value INTEGER, z TEXT, UNIQUE(value, z));
+INSERT INTO director_epoch VALUES (1, 1, 't');
+DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, z TEXT DEFAULT NULL, FOREIGN KEY(revoked, z) REFERENCES director_epoch(value, z) ON UPDATE SET DEFAULT ON DELETE SET DEFAULT);
+${TOKEN}, 't');`,
+    ],
+  ] as const) {
+    const { dir, target } = await forged((db) => db.exec(plant));
+    const receipt = await restoreWorkspace(dir, target);
+    const db = new DatabaseSync(path.join(target, "workspace.sqlite"), {
+      readOnly: true,
+    });
+    const { value } = db
+      .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
+      .get() as { value: number };
+    assert.equal(value, 2, what);
+    assert.deepEqual(
+      db
+        .prepare("SELECT revoked FROM agent_tokens")
+        .all()
+        .map((r) => (r as { revoked: number }).revoked),
+      [1],
+      what,
+    );
+    db.close();
+    assert.ok(receipt);
+    const restored = new ProjectStore(target);
+    await restored.initialize();
+    assert.equal(restored.principalForAgentToken(agentToken), null, what);
+    restored.close();
+  }
+});
+
+test("a planted number does not keep a person from approving, and another thing of that name is refused", async () => {
+  for (const last of ["9223372036854775807", "9223372036854775806"]) {
+    const { dir, target } = await forged((db) => {
+      plantApprovals(db, [1]);
+      for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+      db.exec(`CREATE TABLE gate_approvals(n INTEGER);
+DELETE FROM sqlite_sequence;
+INSERT INTO sqlite_sequence VALUES ('gate_approvals', ${last}), ('Gate_Approvals', ${last});`);
+    });
+    await restoreWorkspace(dir, target);
+    const restored = new ProjectStore(target);
+    await restored.initialize();
+    const given = approveGate(restored, {
+      ask: ASKS[0]!,
+      ttlMs: 3_600_000,
+      limit: { runs: 1, units: 1 },
+      principalId: "browser-ui",
+    });
+    assert.equal(given.state, "approved");
+    restored.close();
+  }
+  const { dir, target } = await forged((db) => {
+    for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+    db.exec("CREATE TABLE gate_approvals_asked(x)");
+  });
+  await assert.rejects(
+    restoreWorkspace(dir, target),
+    /something else under the name of its approvals/,
+  );
+});
