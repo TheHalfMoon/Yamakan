@@ -60,12 +60,14 @@ import {
   missingDocumentAssets,
   validateDocument,
 } from "./documents.ts";
-import type { DocumentRef } from "./documents.ts";
+import type { DocumentRef, ValidatedDocument } from "./documents.ts";
+import { SERVICE_KINDS } from "./document-ref.ts";
 import type { CommitContext as DocumentCommitContext } from "./story.ts";
 import {
   TAKE_RECORD_LIMITS,
   TakeRecordSchema,
   type TakeRecord,
+  type TakeReplacement,
 } from "./take-record.ts";
 import { assertPlacementConsent } from "./continuity.ts";
 import { assertStudioImageLimits } from "./studio.ts";
@@ -1668,10 +1670,12 @@ export class ProjectStore {
     Id.parse(input.projectId);
     Id.parse(input.documentId);
     const kind = DocumentKind.parse(input.kind);
-    if (kind === "takeRecord")
+    if (SERVICE_KINDS.includes(kind))
       throw new CommandError(
         "VALIDATION",
-        "A take record is saved with its take.",
+        kind === "takeRecord"
+          ? "A take record is saved with its take."
+          : "A take replacement is noted as it is applied.",
       );
     // Older versions are read, and never written; a retry of a request that an older
     // build committed only replays.
@@ -1893,29 +1897,15 @@ export class ProjectStore {
                 validated.bytes,
                 validated.bytes.length,
               );
-              for (const record of attachments) {
-                withinDocumentBudget(
+              for (const record of attachments)
+                this.#attachToStory(
                   db,
-                  record.hash,
-                  record.bytes.length,
+                  input.projectId,
+                  input.documentId,
+                  record,
+                  revision,
                   input.principalId,
                 );
-                db.prepare(
-                  "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
-                ).run(
-                  record.hash,
-                  record.kind,
-                  record.schemaVersion,
-                  JSON.stringify(record.assetIds),
-                  JSON.stringify(record.objectDigests),
-                  record.bytes,
-                  record.bytes.length,
-                );
-                // Held for this story, as its own versions are.
-                db.prepare(
-                  "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-                ).run(input.projectId, input.documentId, record.hash, revision);
-              }
               if (kind === "story" || kind === "referencePack")
                 db.prepare(
                   "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
@@ -1974,6 +1964,32 @@ export class ProjectStore {
       );
     return TakeRecordSchema.parse(JSON.parse(bytes.toString("utf8")));
   }
+  // A document that only the service writes, beside a story's commit or an apply: held for that
+  // story, as its own versions are.
+  #attachToStory(
+    db: DatabaseSync,
+    projectId: string,
+    documentId: string,
+    attached: ValidatedDocument,
+    revision: number,
+    principalId: string | undefined,
+  ) {
+    withinDocumentBudget(db, attached.hash, attached.bytes.length, principalId);
+    db.prepare(
+      "INSERT INTO creative_documents(hash, kind, schema_version, asset_ids, object_digests, bytes, byte_length) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(hash) DO NOTHING",
+    ).run(
+      attached.hash,
+      attached.kind,
+      attached.schemaVersion,
+      JSON.stringify(attached.assetIds),
+      JSON.stringify(attached.objectDigests),
+      attached.bytes,
+      attached.bytes.length,
+    );
+    db.prepare(
+      "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+    ).run(projectId, documentId, attached.hash, revision);
+  }
   /** Whether this project committed this document version (read-only checks). */
   holdsDocument(
     projectId: string,
@@ -2027,11 +2043,11 @@ export class ProjectStore {
       kind === "captions" ||
       kind === "lut" ||
       kind === "promptPresets" ||
-      kind === "takeRecord"
+      SERVICE_KINDS.includes(kind)
     )
       throw new CommandError(
         "VALIDATION",
-        "Stories, take records, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
+        "Stories, take records, take replacements, reference packs, caption tracks, LUTs and prompt presets are not staged; save them with their own commands.",
       );
     const bodySha256 = DocumentRefSchema.shape.contentHash.parse(
       input.bodySha256,
@@ -3297,6 +3313,9 @@ export class ProjectStore {
     receipt?: RequestReceipt,
     // Checks against the head inside the commit (YU-031 story assembly).
     verify?: (context: DocumentCommitContext) => void,
+    // MPR-107: a note of what this applies, held for a story of the project. Made inside the
+    // commit, after the operations are, and written with it or not at all.
+    note?: (revision: number) => TakeReplacement,
   ) {
     Id.parse(projectId);
     return this.#commit({
@@ -3304,6 +3323,24 @@ export class ProjectStore {
       projectId,
       expectedRevision,
       receipt,
+      effects: note
+        ? (db, revision) => {
+            const made = note(revision);
+            const held = validateDocument(
+              "takeReplacement",
+              DOCUMENT_SCHEMA_VERSIONS.takeReplacement,
+              Buffer.from(canonicalJson(made), "utf8"),
+            );
+            this.#attachToStory(
+              db,
+              projectId,
+              made.documentId,
+              held,
+              revision,
+              author,
+            );
+          }
+        : undefined,
       next: (current, revision) => {
         const head = current();
         verify?.({

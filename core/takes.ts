@@ -344,6 +344,17 @@ export function listTakes(
   };
 }
 
+/** The take that all of a shot's clips show, or null when they show no one take. */
+export function shownTake(
+  story: Story,
+  project: CanonicalProject,
+  shotId: string,
+) {
+  const { shot } = storyShot(story, shotId);
+  const clips = shotClips(project, shot.id);
+  return clips ? currentTake(clips, shot.takes) : null;
+}
+
 /**
  * Side-by-side facts about some of a shot's takes, without changing
  * anything: each take's media version and size, whether it covers the
