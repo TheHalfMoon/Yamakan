@@ -46,6 +46,8 @@ By reading main `c7c9929`:
 - **A run that had succeeded and is then stopped** is `cancelled`, and keeps the time of its own end.
 - **`endedAt` of a stopped run** is the time of the stop. MPR-101 recorded only an end its engine reported; no such row can be recorded in a take, since a stopped run is not imported.
 
+- **This file is written by hand.** The card has `scripts/qualify-kaggle-screens.mjs` write it, and that script does not read what the host has first (common contract rule 6); neither is done, since it has not run.
+
 ## Evidence
 
 - **On the founder host:** all 15 tests of `tests/generation-failure-class.test.ts` pass, over the real Kaggle adapter with its stand-in CLI (no network), with those of `tests/kaggle-engine.test.ts`, `tests/comfyui-engine.test.ts`, `tests/engines.test.ts` and `tests/create-model.test.ts`. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
