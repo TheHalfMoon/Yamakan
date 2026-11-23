@@ -168,7 +168,7 @@ export const TakeRecordSchema = z
     // The take this one revises, and that take's record, so the chain outlives the take.
     derivedFromTakeId: Id.nullable(),
     derivedFromRecordHash: Sha256.nullable(),
-    // Why this take revises that one, in the person's words (OA-5). MPR-103 writes it.
+    // Why this take revises that one, in the person's words (OA-5).
     revisionNote: Text(TAKE_RECORD_LIMITS.revisionNote).nullable(),
     changedFields: z
       .array(z.enum(REVISION_FIELDS))
@@ -231,17 +231,68 @@ export type RecipeFacts = {
   steps: number | null;
 };
 
-/** The record of a generation whose video was imported, from its ledger row. */
+/**
+ * What differs between the requests of two records of generations, in the order of
+ * REVISION_FIELDS; nothing, for an exact repeat. What only one of them says differs.
+ */
+export function diffRequests(
+  base: TakeRecord,
+  next: TakeRecord,
+): (typeof REVISION_FIELDS)[number][] {
+  const said = (r: TakeRecord) =>
+    r.request as Partial<z.output<typeof GenerationRequestSchema>>;
+  const of = (
+    r: TakeRecord,
+    other: TakeRecord,
+  ): Record<(typeof REVISION_FIELDS)[number], unknown> => {
+    const request = said(r);
+    const pins = (first: boolean) =>
+      r.inputs
+        .filter((i) => (i.role === "firstFrame") === first)
+        .map((i) => `${i.role} ${i.assetHash}`)
+        .sort();
+    return {
+      recipe: r.recipe && [r.recipe.id, r.recipe.hash],
+      model: r.model && [r.model.id, r.model.revision, r.model.manifestHash],
+      // One of them may hold the hash alone.
+      prompt:
+        request.prompt !== undefined && said(other).prompt !== undefined
+          ? request.prompt
+          : request.promptHash,
+      seed: request.seed,
+      width: request.width,
+      height: request.height,
+      durationFrames: request.durationFrames,
+      fps: request.fps,
+      steps: request.steps,
+      firstFrame: pins(true),
+      inputs: pins(false),
+    };
+  };
+  const was = of(base, next);
+  const is = of(next, base);
+  return REVISION_FIELDS.filter(
+    (field) =>
+      canonicalJson([was[field] ?? null]) !==
+      canonicalJson([is[field] ?? null]),
+  );
+}
+
+/**
+ * The record of a generation whose video was imported, from its ledger row. `base` is the
+ * record of the take it revises, when it revises one and that record can be read.
+ */
 export function buildGenerationRecord(
   row: GenerationRecord,
   facts: RecipeFacts,
   holdsPrompt: boolean = RECORD_HOLDS_PROMPT,
+  base: TakeRecord | null = null,
 ): TakeRecord {
   if (!row.imported)
     throw new CommandError("VALIDATION", "This generation is not imported.");
   const { lineage } = row.imported;
   const endedAt = row.endedAt ?? null;
-  return TakeRecordSchema.parse({
+  const made = TakeRecordSchema.parse({
     format: "yamakan.take-record",
     formatVersion: 1,
     origin: "generation",
@@ -285,11 +336,14 @@ export function buildGenerationRecord(
       // No route reports its quota today.
       quotaSeconds: null,
     },
-    derivedFromTakeId: null,
-    derivedFromRecordHash: null,
-    revisionNote: null,
+    derivedFromTakeId: row.derivedFrom?.takeId ?? null,
+    derivedFromRecordHash: row.derivedFrom?.recordHash ?? null,
+    revisionNote: row.derivedFrom?.revisionNote ?? null,
     changedFields: [],
   });
+  return row.derivedFrom && base
+    ? { ...made, changedFields: diffRequests(base, made) }
+    : made;
 }
 
 export const DeclaredSchema = z
