@@ -28,34 +28,9 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { YamakanClient } from "../sdk/client.ts";
 
-execFileSync("npm", ["run", "build"], {
-  stdio: "inherit",
-  windowsHide: true,
-  shell: true,
-});
-
-const head = execFileSync("git", ["rev-parse", "HEAD"], {
-  encoding: "utf8",
-}).trim();
-const clean =
-  execFileSync("git", ["status", "--porcelain"], {
-    encoding: "utf8",
-  }).trim() === "";
-const shots = process.env.YAMAKAN_QUALIFY_SHOTS;
-if (shots) mkdirSync(shots, { recursive: true });
-const steps = [];
-const step = (name, detail) => {
-  steps.push(detail ? { name, ...detail } : { name });
-  console.log(`- ${name}${detail ? ` ${JSON.stringify(detail)}` : ""}`);
-};
-
-const root = mkdtempSync(join(tmpdir(), "yamakan-director-cinema-"));
-const workspace = join(root, "workspace");
-const port = 24395;
-const base = `http://127.0.0.1:${port}`;
 // What this host has, before anything runs. What the run needs is unmeasured, so nothing is
 // refused for it.
-const disk = statfsSync(root);
+const disk = statfsSync(tmpdir());
 const onAcPower = () => {
   if (process.platform !== "win32") return null;
   try {
@@ -82,6 +57,31 @@ const host = {
   load: process.platform === "win32" ? null : loadavg(),
   need: "unmeasured",
 };
+execFileSync("npm", ["run", "build"], {
+  stdio: "inherit",
+  windowsHide: true,
+  shell: true,
+});
+
+const head = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim();
+const clean =
+  execFileSync("git", ["status", "--porcelain"], {
+    encoding: "utf8",
+  }).trim() === "";
+const shots = process.env.YAMAKAN_QUALIFY_SHOTS;
+if (shots) mkdirSync(shots, { recursive: true });
+const steps = [];
+const step = (name, detail) => {
+  steps.push(detail ? { name, ...detail } : { name });
+  console.log(`- ${name}${detail ? ` ${JSON.stringify(detail)}` : ""}`);
+};
+
+const root = mkdtempSync(join(tmpdir(), "yamakan-director-cinema-"));
+const workspace = join(root, "workspace");
+const port = 24395;
+const base = `http://127.0.0.1:${port}`;
 const child = fork(
   fileURLToPath(new URL("../server/main.ts", import.meta.url)),
   [],
@@ -438,9 +438,10 @@ try {
   if (!receipt.passed) receipt.error = "the working tree is not clean";
 } catch (e) {
   receipt.error = e instanceof Error ? e.message : String(e);
-  // The sandbox was refused its start (0xC0000022): nothing here was checked by it.
+  // A sandboxed worker was refused its start (0xC0000022), so what it makes was not checked.
   if (/\bexit 3221225506\b/.test(receipt.error))
-    receipt.blocked = "Windows refused the sandboxed Blender its start.";
+    receipt.blocked =
+      "Windows refused a sandboxed worker its start (Blender, or FFmpeg after it).";
 } finally {
   await browser?.close().catch(() => {});
   child.kill();

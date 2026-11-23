@@ -1553,15 +1553,15 @@ export function creativeClosure(db: DatabaseSync): Closure {
     const documents = new Set<string>();
     // Each record by the stories that name it.
     const records = new Map<string, Set<string>>();
-    const storiesOf = new Map<string, Set<string>>();
+    const namedAs = new Map<string, Set<string>>();
     for (const project of parsed.values())
       for (const ref of project?.documents ?? []) {
         documents.add(ref.contentHash);
-        if (ref.kind === "story")
-          (
-            storiesOf.get(ref.contentHash) ??
-            storiesOf.set(ref.contentHash, new Set()).get(ref.contentHash)!
-          ).add(ref.id);
+        // Whatever kind a damaged snapshot says: the stored document's own decides below.
+        (
+          namedAs.get(ref.contentHash) ??
+          namedAs.set(ref.contentHash, new Set()).get(ref.contentHash)!
+        ).add(ref.id);
       }
     for (const hash of [...documents].sort()) {
       closure.documents++;
@@ -1590,7 +1590,7 @@ export function creativeClosure(db: DatabaseSync): Closure {
       if (row.kind === "story")
         try {
           for (const name of recordsNamed(row.bytes))
-            for (const id of storiesOf.get(hash) ?? [])
+            for (const id of namedAs.get(hash) ?? [])
               (
                 records.get(name) ?? records.set(name, new Set()).get(name)!
               ).add(id);

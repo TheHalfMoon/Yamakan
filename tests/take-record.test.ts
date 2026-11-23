@@ -2145,3 +2145,97 @@ test("a record a retained story names is missing or damaged in a backup's check"
     ),
   );
 });
+
+test("a record is checked for each story that names it, in its own project", async () => {
+  const w = await workspace();
+  const asset = await video(w, "shared");
+  const t = take(asset);
+  const declared = { model: "m", prompt: "p", seed: 1 };
+  const records = [{ takeId: t.id, from: { declared } }];
+  // Two stories of this project name one record, since what it says is the same.
+  const [one, two] = [id(), id()];
+  const hash = (await save(w, one, story([t]), { records })).records[0]!
+    .recordHash;
+  assert.equal(
+    (await save(w, two, story([t]), { records })).records[0]!.recordHash,
+    hash,
+  );
+  const file = path.join(w.root, "workspace.sqlite");
+  const db = new DatabaseSync(file);
+  db.exec("PRAGMA foreign_keys = OFF");
+  const gaps = () =>
+    creativeClosure(db).reported.map((g) => [g.projectId, g.ref, g.reason]);
+  assert.deepEqual(gaps(), []);
+  const missing = [[w.projectId, hash, "missing"]];
+  // One of the two no longer holds it: reported, once.
+  db.prepare(
+    "DELETE FROM story_document_versions WHERE content_hash = ? AND document_id = ?",
+  ).run(hash, two);
+  assert.deepEqual(gaps(), missing);
+  // Held for that story in another project only is not held in this one.
+  db.prepare(
+    "INSERT INTO story_document_versions(project_id, document_id, content_hash, revision) VALUES (?, ?, ?, 1)",
+  ).run(id(), two, hash);
+  assert.deepEqual(gaps(), missing);
+  db.close();
+});
+
+test("a story a damaged snapshot calls something else is still checked, and an odd record name too", async () => {
+  const w = await workspace();
+  const asset = await video(w, "relabelled");
+  const t = take(asset);
+  const documentId = id();
+  const { records } = await save(w, documentId, story([t]), {
+    records: [
+      {
+        takeId: t.id,
+        from: { declared: { model: "m", prompt: "p", seed: 1 } },
+      },
+    ],
+  });
+  const hash = records[0]!.recordHash;
+  const db = new DatabaseSync(path.join(w.root, "workspace.sqlite"));
+  db.exec("PRAGMA foreign_keys = OFF");
+  const head = db
+    .prepare("SELECT snapshot_hash AS hash FROM projects WHERE project_id = ?")
+    .get(w.projectId) as { hash: string };
+  const snapshot = (
+    db.prepare("SELECT bytes FROM snapshots WHERE hash = ?").get(head.hash) as {
+      bytes: Uint8Array;
+    }
+  ).bytes;
+  const bytes = Buffer.from(
+    Buffer.from(snapshot)
+      .toString("utf8")
+      .replace('"kind":"story"', '"kind":"captions"'),
+  );
+  const next = sha256Hex(bytes);
+  assert.notEqual(next, head.hash);
+  db.prepare(
+    "INSERT INTO snapshots(hash, format, bytes, byte_length) SELECT ?, format, ?, ? FROM snapshots WHERE hash = ?",
+  ).run(next, bytes, bytes.length, head.hash);
+  db.prepare("UPDATE projects SET snapshot_hash = ?").run(next);
+  db.prepare(
+    "UPDATE revisions SET snapshot_hash = ? WHERE snapshot_hash = ?",
+  ).run(next, head.hash);
+  db.prepare("DELETE FROM creative_documents WHERE hash = ?").run(hash);
+  assert.ok(
+    creativeClosure(db).reported.some(
+      (g) => g.ref === hash && g.reason === "missing",
+    ),
+  );
+  db.close();
+  // A name that is no text is reported as what it says.
+  const odd = await workspace();
+  const oddId = id();
+  await save(odd, oddId, story([]));
+  asAnOlderBuildStored(odd, oddId, {
+    scenes: [{ shots: [{ takes: [{ recordHash: 7 }] }] }],
+  });
+  const oddDb = new DatabaseSync(path.join(odd.root, "workspace.sqlite"));
+  assert.deepEqual(
+    creativeClosure(oddDb).reported.map((g) => [g.ref, g.reason]),
+    [["7", "missing"]],
+  );
+  oddDb.close();
+});

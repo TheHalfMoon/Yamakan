@@ -72,7 +72,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 ### Where it differs from the card
 
 - **The record does not name the shot.** A render planned for one shot can be recorded on a take of another in the same project, as its video can be used there. The payload's `shot` is kept and not read yet, as the card has it.
-- **Which renders are the same one:** the shot and direction are part of a job's key, so a second request for the same scene from another shot or direction, while the first runs, is now refused as already running instead of returning the first.
+- **Which renders are the same one:** the shot and direction are part of a job's key, so a second request for the same scene, under the same name and at the same revision, from another shot or direction, while the first runs, is now refused as already running instead of returning the first.
 - **`sceneHash` is of the scene as the job row stores it,** not as this build reads it, so a later default does not change it.
 - **The moves always hold `dolly`, `panDegrees` and `shake`,** since the scene holds them (0 when there is none). The card has them optional.
 - **`lighting` and `view` are read from the direction,** as the planner reads it, because the scene holds the light and camera they became. A render that no shot asked for has neither.
@@ -83,5 +83,5 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ### Evidence
 
-- **On the founder host:** all 35 tests of `tests/take-record.test.ts` pass. The renders are planned by the Director's own code and submitted to the real job table, where each is claimed and goes no further; their end is written to the row.
+- **On the founder host:** all 37 tests of `tests/take-record.test.ts` pass. The renders are planned by the Director's own code and submitted to the real job table, where each is claimed and goes no further; their end is written to the row.
 - **Not run: `npm run qualify:director-cinema`,** extended with the placed takes' records and syntax-checked. It needs the pinned Blender, whose sandboxed start is BLOCKED on the founder host (ledger 12); the script now says BLOCKED for that status (3221225506) and records what the host has first. **The Blender arm is BLOCKED, not PASS.**
