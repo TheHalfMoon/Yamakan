@@ -156,7 +156,9 @@ const input = <R extends string>(
 
 // What a picture is for, when it is no frame of the video: what to look like. After the frames,
 // and only where an engine says it honours the role; none does (OA-15).
-const Reference = input("reference", ["image/png", "image/jpeg"]);
+const Reference = input("reference", ["image/png", "image/jpeg"]).omit({
+  atTicks: true,
+});
 const referencesFit = (inputs: readonly { role: string }[]) =>
   inputs.filter((i) => i.role === "reference").length <=
   ENGINE_V2_LIMITS.references;

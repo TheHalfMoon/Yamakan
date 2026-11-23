@@ -164,13 +164,14 @@ test("today's catalog gives thirty cells in three states", async () => {
     [count("supported"), count("unverified"), count("unsupported")],
     [3, 3, 24],
   );
-  // In order: the entries', the routes' and the contract's own operations'.
+  // In order of the models' ids, then the routes and the contract's own operations.
   assert.deepEqual([...OPERATIONS], Operation.options);
+  assert.ok(Object.isFrozen(OPERATIONS) && Object.isFrozen(ROUTES));
   assert.deepEqual(
     report.cells.map((c: any) => [c.catalogId, c.route, c.operation]),
-    MODEL_CATALOG.entries.flatMap((e) =>
-      ROUTES.flatMap((route) =>
-        Operation.options.map((operation) => [e.id, route, operation]),
+    ["cogvideox-2b-diffusers", "wan2.2-ti2v-5b-diffusers"].flatMap((id) =>
+      ["kaggle", "comfyui", "local"].flatMap((route) =>
+        Operation.options.map((operation) => [id, route, operation]),
       ),
     ),
   );
@@ -184,10 +185,10 @@ test("today's catalog gives thirty cells in three states", async () => {
     reasons: [],
     source: {
       kind: "evidence",
-      ref: "docs/evidence/ultimate/kaggle-page-run-receipt.json",
+      ref: "docs/evidence/ultimate/kaggle-restart-run-receipt.json",
       samples: 1,
     },
-    asOf: "2026-11-06",
+    asOf: "2026-11-07",
     limits: MODEL_CATALOG.entries[0].offers[0].limits,
   });
   assert.deepEqual(cell(report, "local", "imageToVideo"), {
@@ -350,6 +351,57 @@ test("a place with more than one offer shows the furthest along", () => {
     );
     assert.equal(report.cells.length, 30);
   }
+  // Unverified is further along than unsupported, and the first of two alike is the one.
+  const two = (change: (a: any, b: any) => void) =>
+    cell(
+      build({
+        catalog: catalogWith((c) => {
+          const offer = offerOf(c, "kaggle", "textToVideo");
+          const a = { ...offer, recipeId: "kaggle-a" };
+          const b = { ...offer, recipeId: "kaggle-b" };
+          change(a, b);
+          c.entries[0].offers.splice(0, 1, a, b);
+        }),
+      }),
+      "kaggle",
+      "textToVideo",
+    );
+  const unverified = two((a, b) => {
+    a.lifecycle = "retired";
+    b.measured = null;
+  });
+  assert.deepEqual(
+    [unverified.state, unverified.recipeId],
+    ["unverified", "kaggle-b"],
+  );
+  assert.equal(two(() => {}).recipeId, "kaggle-a");
+  // Two current offers in one place would hide one: the catalog takes no such pair.
+  for (const lifecycle of ["offered", "qualified"] as const)
+    assert.throws(
+      () =>
+        parseModelCatalog(
+          catalogWith((c) => {
+            const offer = offerOf(c, "kaggle", "textToVideo");
+            c.entries[0].offers.push({
+              ...offer,
+              recipeId: "kaggle-wan-fast",
+              lifecycle,
+            });
+          }),
+        ),
+      /at a time/,
+    );
+  for (const lifecycle of ["candidate", "retired"] as const)
+    parseModelCatalog(
+      catalogWith((c) => {
+        const offer = offerOf(c, "kaggle", "textToVideo");
+        c.entries[0].offers.push({
+          ...offer,
+          recipeId: "kaggle-wan-fast",
+          lifecycle,
+        });
+      }),
+    );
 });
 
 test("a route that is not configured changes no cell", async () => {
@@ -375,15 +427,22 @@ test("a route that is not configured changes no cell", async () => {
     }).routes[2].reason,
     "ROUTE_NOT_CONFIGURED",
   );
-  const { report } = await ask(
-    await context({ kaggle: KAGGLE, comfyUrl: "http://127.0.0.1:9" }),
-    "yamakan.engines.capabilities",
-  );
-  assert.deepEqual(report.cells, none.cells);
-  assert.deepEqual(
-    report.routes.map((r: any) => r.configured),
-    [true, true, false],
-  );
+  for (const [over, configured] of [
+    [{ kaggle: KAGGLE }, [true, false, false]],
+    [{ comfyUrl: "http://127.0.0.1:9" }, [false, true, false]],
+    // Engines are off in this build, whatever folder of models there is.
+    [{ modelRoot: tmpdir() }, [false, false, false]],
+  ] as const) {
+    const { report } = await ask(
+      await context(over as Partial<CommandContext>),
+      "yamakan.engines.capabilities",
+    );
+    assert.deepEqual(report.cells, none.cells);
+    assert.deepEqual(
+      report.routes.map((r: any) => r.configured),
+      configured,
+    );
+  }
 });
 
 test("generation options are a projection and equal what they were", async () => {
@@ -482,6 +541,14 @@ test("the report stays inside its bounds and refuses past them", () => {
     catalogWith((c) => {
       (c.entries[0].identity as any).host = "h".repeat(
         CAPABILITY_REPORT_LIMITS.bytes / 10,
+      );
+    }),
+  );
+  // Counted in bytes, not in characters: each of these is three.
+  over(
+    catalogWith((c) => {
+      (c.entries[0].identity as any).host = "漢".repeat(
+        CAPABILITY_REPORT_LIMITS.bytes / 40,
       );
     }),
   );
@@ -603,6 +670,8 @@ test("a request may name reference pictures, and no engine here takes one (OA-15
     assert.ok(reads("imageToVideo", [first, ...refs(n)]), `${n}`);
     assert.ok(reads("imageToVideo", [first, last, ...refs(n)]), `${n}`);
   }
+  // It is no moment of the video.
+  assert.ok(!reads("textToVideo", [{ ...refs(1)[0], atTicks: 0 }]));
   for (const [operation, inputs] of [
     ["textToVideo", refs(5)],
     ["textToVideo", [first]],
@@ -666,7 +735,7 @@ test("a request may name reference pictures, and no engine here takes one (OA-15
   assert.deepEqual(started, []);
 });
 
-test("both commands take nothing, need the read scope, and start no program", async () => {
+test("both commands take nothing, need the read scope, and answer with no Kaggle CLI there", async () => {
   const ctx = await context({ kaggle: KAGGLE });
   const reason = async (p: Promise<unknown>) => {
     try {
@@ -702,5 +771,22 @@ test("both commands take nothing, need the read scope, and start no program", as
     new URL("../core/engines/capability-report.ts", import.meta.url),
     "utf8",
   );
-  assert.doesNotMatch(source, /node:|fetch\s*\(|child_process|process\./);
+  assert.doesNotMatch(source, /fetch\s*\(|process\.|require\s*\(|import\s*\(/);
+  // Only these, and none of them reaches further than zod.
+  const imports = (text: string) =>
+    [
+      ...text.matchAll(
+        /^(?:import|\}) (?!type)[^;]*?from "([^"]+)";|^import "([^"]+)";/gm,
+      ),
+    ].map((m) => m[1] ?? m[2]);
+  assert.deepEqual(imports(source).sort(), [
+    "../command/errors.ts",
+    "./catalog.ts",
+    "./reasons.ts",
+  ]);
+  for (const name of ["command/errors", "engines/catalog", "engines/reasons"])
+    for (const from of imports(
+      readFileSync(new URL(`../core/${name}.ts`, import.meta.url), "utf8"),
+    ))
+      assert.ok(from === "zod", `${name} imports ${from}`);
 });

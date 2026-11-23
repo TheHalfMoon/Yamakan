@@ -186,7 +186,10 @@ export function buildCapabilityReport(of: {
         ? REASON_OF_DISCOVERY
         : ("ROUTE_NOT_CONFIGURED" as const),
   }));
-  const cells = catalog.entries.flatMap((entry) =>
+  const entries = [...catalog.entries].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
+  const cells = entries.flatMap((entry) =>
     ROUTES.flatMap((route) =>
       OPERATIONS.map((operation) =>
         cellOf(

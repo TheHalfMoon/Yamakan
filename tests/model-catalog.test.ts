@@ -128,6 +128,7 @@ test("each model's identity, and the evidence of each offer, are what the reposi
           "kaggle",
           "kaggle-wan22-ti2v-5b",
           "textToVideo",
+          receipt("kaggle-restart-run-receipt"),
           receipt("kaggle-page-run-receipt"),
         ],
         [
@@ -622,7 +623,7 @@ test("every evidence path the catalog names exists in the repository", () => {
     ...MODEL_CATALOG.entries.flatMap((e) => e.offers),
     ...MODEL_CATALOG.refused,
   ].flatMap((x) => x.evidence);
-  assert.equal(named.length, 7);
+  assert.equal(named.length, 8);
   for (const path of named) assert.ok(existsSync(at(path)), path);
 });
 

@@ -20,13 +20,13 @@ export const MODEL_CATALOG_LIMITS = Object.freeze({
 });
 
 // The engine contract's words, checked against it by the types here and by the test.
-export const OPERATIONS = [
+export const OPERATIONS = Object.freeze([
   "textToVideo",
   "imageToVideo",
   "videoEdit",
   "transcribe",
   "enhance",
-] as const satisfies readonly Operation[];
+] as const satisfies readonly Operation[]);
 const ROLES = [
   "firstFrame",
   "lastFrame",
@@ -36,7 +36,7 @@ const ROLES = [
   "reference",
 ] as const satisfies readonly EngineRequestV2["inputs"][number]["role"][];
 
-export const ROUTES = ["kaggle", "comfyui", "local"] as const;
+export const ROUTES = Object.freeze(["kaggle", "comfyui", "local"] as const);
 
 const Id = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/);
 const words = (max: number) =>
@@ -119,8 +119,8 @@ export const CatalogOfferSchema = z
         frames: Count,
         fps: Count,
         steps: Count,
-        // How many frames a video of it may have: one number twice where a recipe fixes it
-        // (OA-15). `frames` is what it makes when nothing else is asked.
+        // How many frames a video of it may have, at its own `fps`: one number twice where a
+        // recipe fixes it (OA-15). `frames` is what it makes when nothing else is asked.
         durationFrames: z
           .object({ min: Count, max: Count })
           .strict()
@@ -166,7 +166,8 @@ export const CatalogOfferSchema = z
         },
       ),
     evidence: Evidence,
-    // When and in how many runs it was seen to do this, by its evidence (OA-17); null: not seen.
+    // When and in how many runs it was seen to do this, by the first of its evidence (OA-17);
+    // null: not seen.
     measured: z
       .object({
         at: z.iso.date(),
@@ -243,6 +244,18 @@ export const ModelCatalogSchema = z
         )
       )
         refuse("Each candidate without a recipe once on a route.");
+    // A report has one cell for each place (MPR-202): two there would hide one of them.
+    for (const entry of catalog.entries)
+      if (
+        !unique(
+          entry.offers
+            .filter(
+              (o) => o.lifecycle === "offered" || o.lifecycle === "qualified",
+            )
+            .map((o) => `${o.route} ${o.operation}`),
+        )
+      )
+        refuse("One offer of a model on a route for an operation at a time.");
     if (
       new TextEncoder().encode(JSON.stringify(catalog)).length >
       MODEL_CATALOG_LIMITS.bytes
@@ -339,8 +352,12 @@ export const MODEL_CATALOG: ModelCatalog = parseModelCatalog({
           operation: "textToVideo",
           lifecycle: "offered",
           limits: WAN_LIMITS,
-          evidence: ["docs/evidence/ultimate/kaggle-page-run-receipt.json"],
-          measured: { at: "2026-11-06", samples: 1 },
+          // The first is of the script as it is; the second of the one before it.
+          evidence: [
+            "docs/evidence/ultimate/kaggle-restart-run-receipt.json",
+            "docs/evidence/ultimate/kaggle-page-run-receipt.json",
+          ],
+          measured: { at: "2026-11-07", samples: 1 },
         },
         {
           route: "kaggle",

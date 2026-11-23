@@ -93,7 +93,7 @@ const ROUTES = {
       new URL("./fixtures/fake-kaggle.mjs", import.meta.url),
     ),
   },
-  // Nothing listens on a port this low, and nobody here may open one.
+  // The discard port, where nothing is expected to listen; the service asks it nothing here.
   comfyui: { YAMAKAN_COMFYUI_URL: "http://127.0.0.1:9" },
 };
 // This host's own settings are no part of it.
