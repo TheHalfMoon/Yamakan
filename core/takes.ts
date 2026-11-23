@@ -126,16 +126,29 @@ const byPlace = (
   b: { startTicks: number; id: string },
 ) => a.startTicks - b.startTicks || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+// What a project's shots, clips and tracks are, read once.
+function indexOf(project: CanonicalProject) {
+  return {
+    shots: new Map(
+      project.scenes.flatMap((s) => s.shots.map((x) => [x.id, x] as const)),
+    ),
+    clips: new Map(project.clips.map((c) => [c.id, c])),
+    tracks: new Map(project.tracks.map((t) => [t.id, t.kind])),
+  };
+}
+
 /**
  * The clips that show a story shot on the timeline, in timeline order: those
  * of the timeline shot of the same id, on a video track. A shot not assembled
  * has none (null); one whose clips were all removed, are more than one
  * replacement changes, or are off video is refused.
  */
-function shotClips(project: CanonicalProject, shotId: string): Clip[] | null {
-  const shot = project.scenes
-    .flatMap((s) => s.shots)
-    .find((s) => s.id === shotId);
+function shotClips(
+  project: CanonicalProject,
+  shotId: string,
+  index = indexOf(project),
+): Clip[] | null {
+  const shot = index.shots.get(shotId);
   if (!shot) return null;
   if (!shot.clipIds.length)
     throw invalid(
@@ -147,9 +160,9 @@ function shotClips(project: CanonicalProject, shotId: string): Clip[] | null {
       "The shot is shown by more than 64 clips; replace its takes in the editor.",
     );
   const clips = shot.clipIds.map((id) => {
-    const clip = project.clips.find((c) => c.id === id);
+    const clip = index.clips.get(id);
     if (!clip) throw invalid("The shot's clip is missing from the timeline.");
-    if (project.tracks.find((t) => t.id === clip.trackId)?.kind !== "video")
+    if (index.tracks.get(clip.trackId) !== "video")
       throw invalid("The shot's clip is not on a video track.");
     return clip;
   });
@@ -167,16 +180,23 @@ const SAME_MEDIA =
 /**
  * The take of a shot that a clip shows, and how far into it the clip starts.
  * A take whose in-point is the clip's own is the one shown. Otherwise the
- * clip is that far into the only take of the shot with its media.
+ * clip is that far into the only take of the shot with its media. A later
+ * piece of a split shot whose in-point is a take's own can also be another
+ * take of the same media, played on: which is not told, so it is refused.
  */
 function shown(
   clip: Clip,
   takes: readonly Take[],
+  later = false,
 ): { takeId: string; offsetTicks: number } | { reason: string } {
   if (clip.title !== null) return { reason: NO_LONGER_SHOWS };
   const same = takes.filter((t) => t.assetId === clip.assetId);
   const exact = same.find((t) => t.sourceStartTicks === clip.sourceStartTicks);
-  if (exact) return { takeId: exact.id, offsetTicks: 0 };
+  if (exact)
+    return later &&
+      same.some((t) => t.sourceStartTicks < exact.sourceStartTicks)
+      ? { reason: SAME_MEDIA }
+      : { takeId: exact.id, offsetTicks: 0 };
   if (same.length > 1) return { reason: SAME_MEDIA };
   const take = same[0];
   if (!take || clip.sourceStartTicks < take.sourceStartTicks)
@@ -198,8 +218,8 @@ function footageOffsets(
   takes: readonly Take[],
 ): number[] {
   let before = 0;
-  return clips.map((clip) => {
-    const from = shown(clip, takes);
+  return clips.map((clip, i) => {
+    const from = shown(clip, takes, i > 0);
     const still =
       clip.title === null && assetOf(project, clip.assetId)?.kind === "image";
     const offset = still ? before : "reason" in from ? 0 : from.offsetTicks;
@@ -210,8 +230,8 @@ function footageOffsets(
 
 // The take all of a shot's clips show, at some offset, or null.
 function currentTake(clips: readonly Clip[], takes: readonly Take[]) {
-  const ids = clips.map((clip) => {
-    const s = shown(clip, takes);
+  const ids = clips.map((clip, i) => {
+    const s = shown(clip, takes, i > 0);
     return "reason" in s ? null : s.takeId;
   });
   return ids.length && ids.every((id) => id !== null && id === ids[0])
@@ -235,6 +255,7 @@ export function listTakes(
   project: CanonicalProject,
 ) {
   const { orphans, total: orphanTotal } = orphansOf(story, project);
+  const index = indexOf(project);
   return {
     documentId: ref.id,
     contentHash: ref.contentHash,
@@ -248,7 +269,7 @@ export function listTakes(
         let clips: Clip[] | null = null;
         let problem: string | null = null;
         try {
-          clips = shotClips(project, shot.id);
+          clips = shotClips(project, shot.id, index);
         } catch (e) {
           if (!(e instanceof CommandError)) throw e;
           problem = e.message;
@@ -269,8 +290,8 @@ export function listTakes(
                   durationTicks: first.durationTicks,
                   ...clipMedia(project, first),
                   currentTakeId: currentTake(clips, shot.takes),
-                  clips: clips.map((clip) => {
-                    const s = shown(clip, shot.takes);
+                  clips: clips.map((clip, i) => {
+                    const s = shown(clip, shot.takes, i > 0);
                     const known = !("reason" in s);
                     return {
                       clipId: clip.id,
@@ -321,10 +342,14 @@ export function compareTakes(
     throw invalid("Each take is compared once.");
   const clips = shotClips(project, shot.id);
   const offsets = clips ? footageOffsets(project, clips, shot.takes) : [];
-  // How far into a footage take the shot's clips reach, in all.
-  const length = clips
+  // How far into a footage take the shot's clips reach, in all, and how long they play.
+  const reach = clips
     ? Math.max(...clips.map((c, i) => offsets[i]! + c.durationTicks))
     : shot.durationTicks;
+  const length = clips
+    ? clips.reduce((sum, c) => sum + c.durationTicks, 0)
+    : shot.durationTicks;
+  const from = clips ? Math.min(...offsets) : 0;
   const current = clips ? currentTake(clips, shot.takes) : null;
   return {
     documentId: ref.id,
@@ -357,8 +382,8 @@ export function compareTakes(
           asset?.kind === "image"
             ? take.sourceStartTicks === 0
             : asset?.kind === "video" &&
-              take.sourceStartTicks + length <= asset.durationTicks,
-        // The second in the middle of the take's range.
+              take.sourceStartTicks + reach <= asset.durationTicks,
+        // The second in the middle of what the shot's clips would play of it.
         preview:
           asset?.kind === "video"
             ? {
@@ -367,7 +392,8 @@ export function compareTakes(
                 index: Math.min(
                   seconds - 1,
                   Math.floor(
-                    (take.sourceStartTicks + length / 2) / FLICKS_PER_SECOND,
+                    (take.sourceStartTicks + (from + reach) / 2) /
+                      FLICKS_PER_SECOND,
                   ),
                 ),
               }
@@ -469,7 +495,7 @@ export function proposeReplace(
     );
   clips.forEach((clip, i) => {
     if (clip.title !== null) return;
-    const s = shown(clip, shot.takes);
+    const s = shown(clip, shot.takes, i > 0);
     if ("reason" in s) refuse(i, s.reason);
   });
   const asset = assetOf(project, take.assetId);
@@ -523,16 +549,24 @@ export function proposeReplace(
   // Refusals (a locked track, a retimed clip, unlinked sound, a take shorter
   // than the clip) come now, not at apply, and name the clip they are about.
   const operations = replaceOperations(proposal);
-  if (!single)
+  try {
+    applyBatch(project, operations);
+  } catch (e) {
+    if (single || !(e instanceof CommandError)) throw e;
+    // The batch names an operation, not a clip: try each clip alone, in order, and say
+    // which is refused. Unlinked sound is found by its media, so that refusal can name
+    // a clip whose own sound is linked.
     operations.forEach((operation, i) => {
       try {
         applyOne(project, operation);
-      } catch (e) {
-        if (e instanceof CommandError) refuse(places[i]!, e.message);
-        throw e;
+        applyBatch(project, [operation]);
+      } catch (x) {
+        if (x instanceof CommandError) refuse(places[i]!, x.message);
+        throw x;
       }
     });
-  applyBatch(project, operations);
+    throw e;
+  }
   return proposal;
 }
 

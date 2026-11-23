@@ -91,3 +91,65 @@ test("only plain refusals are shown as the service wrote them", () => {
   });
   assert.deepEqual(refusal(undefined, "no code"), { kind: "failed" });
 });
+
+test("a list with each clip's place and orphans still reads as one row per take", () => {
+  const rows = takeRows({
+    documentId: "story",
+    contentHash: "c",
+    revision: 4,
+    orphans: [
+      { clipId: "loose", candidates: [{ shotId: "shot", takeId: "a" }] },
+    ],
+    orphanTotal: 1,
+    shots: [
+      {
+        shotId: "shot",
+        name: "Wide",
+        problem: null,
+        timeline: {
+          clipId: "one",
+          currentTakeId: "a",
+          clips: [
+            { clipId: "one", takeId: "a", takeOffsetTicks: 0 },
+            { clipId: "two", takeId: "a", takeOffsetTicks: 30 },
+          ],
+        },
+        takes: [
+          { id: "a", assetHash: "a".repeat(64), kind: "video" },
+          { id: "b", assetHash: "b".repeat(64), kind: "video" },
+        ],
+      },
+    ],
+  })!;
+  assert.deepEqual(
+    rows.map((r) => [r.takeId, r.current, r.assembled]),
+    [
+      ["a", true, true],
+      ["b", false, true],
+    ],
+  );
+});
+
+test("a version 2 proposal with several mappings is current for its project and revision", () => {
+  const proposal: TakeProposal = {
+    format: "yamakan.take-proposal",
+    formatVersion: 2,
+    projectId: "p",
+    revision: 4,
+    documentId: "d",
+    storyContentHash: "c",
+    shotId: "s",
+    takeId: "t",
+    mappings: [0, 1].map((n) => ({
+      clipId: `clip${n}`,
+      startTicks: n,
+      durationTicks: 1,
+      takeOffsetTicks: n,
+      from: { assetId: "a", assetHash: null, title: null, sourceStartTicks: 0 },
+      to: { assetId: "b", assetHash: null, title: null, sourceStartTicks: n },
+    })),
+    proposalHash: "h",
+  };
+  assert.equal(proposalIsCurrent(proposal, "p", 4), true);
+  assert.equal(proposalIsCurrent(proposal, "p", 5), false);
+});

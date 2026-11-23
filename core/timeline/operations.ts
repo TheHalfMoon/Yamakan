@@ -373,13 +373,18 @@ function fresh(p: CanonicalProject, id: string) {
   if (used) throw invalid("Identifier is already in use.");
 }
 
-// `original` is the project before the batch (for checks that compare a
-// clip with what it was, such as a restated transition with the switch off).
 /** One operation on a copy of the project, with its own refusal and no batch wording. */
 export function applyOne(project: CanonicalProject, operation: Operation) {
-  apply(structuredClone(project), operation, project);
+  try {
+    apply(structuredClone(project), operation, project);
+  } catch (e) {
+    if (e instanceof RangeError) throw invalid("Time is out of range.");
+    throw e;
+  }
 }
 
+// `original` is the project before the batch (for checks that compare a
+// clip with what it was, such as a restated transition with the switch off).
 function apply(
   p: CanonicalProject,
   op: Operation,

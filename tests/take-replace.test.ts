@@ -1239,6 +1239,96 @@ test("what cannot be told is refused: no clip, a split title card, no take, two 
   );
 });
 
+test("unlinked sound, a piece before the take and a later piece of another take are refused by name", () => {
+  // Sound unlinked onto an audio clip: the batch finds it by its media, so the first
+  // piece of that media is the one named.
+  const unlinked = project(
+    [
+      clipAt(100, 0, 30, A, 10),
+      clipAt(101, 30, 30, A, 40),
+      { ...clipAt(150, 0, 30, A, 10), trackId: uid(3), sound: null },
+    ],
+    [uid(100), uid(101)],
+  );
+  assert.equal(
+    reasonOf(() => proposeIn(unlinked, TAKES.b)),
+    "Clip 1 of 2 of this shot: Relink the clip's unlinked sound before replacing its take.",
+  );
+  // The second piece starts before the take does.
+  const early = project([clipAt(100, 0, 30, A, 10), clipAt(101, 30, 30, A, 5)]);
+  assert.equal(
+    reasonOf(() => proposeIn(early, TAKES.b)),
+    "Clip 2 of 2 of this shot: The shot's clip no longer shows one of this shot's takes; replace it in the editor.",
+  );
+  // Takes T1 (from 0) and T2 (from 40) of one file: a later piece at 40 may be T1 played on.
+  const twins = storyOf([
+    { id: TAKES.a, assetId: A, sourceStartTicks: 0 },
+    { id: TAKES.a2, assetId: A, sourceStartTicks: 40 * FRAME },
+    { id: TAKES.b, assetId: B, sourceStartTicks: 0 },
+  ]);
+  const played = project([
+    clipAt(100, 0, 40, A, 0),
+    clipAt(101, 40, 20, A, 40),
+  ]);
+  assert.equal(
+    reasonOf(() => proposeIn(played, TAKES.b, twins)),
+    "Clip 2 of 2 of this shot: Two takes of this shot use the same media, so the clip's place in the take cannot be told; replace it in the editor.",
+  );
+  assert.equal(
+    listTakes(twins, STORY, played).shots[0]!.timeline!.currentTakeId,
+    null,
+  );
+});
+
+test("a batch that fails as a whole still names the clip", () => {
+  // A dissolve into the first piece: the new take at its start leaves too little before the cut.
+  const p = project(
+    [
+      clipAt(90, 0, 30, A, 10),
+      {
+        ...clipAt(100, 30, 30, A, 40),
+        transition: {
+          kind: "dissolve",
+          fromClipId: uid(90),
+          durationTicks: 6 * FRAME,
+          audio: "equalPower",
+        },
+      },
+      clipAt(101, 60, 30, A, 70),
+    ],
+    [uid(100), uid(101)],
+  );
+  const why = reasonOf(() =>
+    proposeIn(
+      p,
+      TAKES.b,
+      storyOf([
+        { id: TAKES.a, assetId: A, sourceStartTicks: 40 * FRAME },
+        { id: TAKES.b, assetId: B, sourceStartTicks: 0 },
+      ]),
+    ),
+  );
+  assert.match(why, /^Clip 1 of 2 of this shot: .*too little source media/);
+});
+
+test("more than 64 orphans are cut with the true total, and each has at most 4 candidates", () => {
+  const takes: Take[] = Array.from({ length: 6 }, (_, i) => ({
+    id: uid(300 + i),
+    assetId: A,
+    sourceStartTicks: i * FRAME,
+  }));
+  const loose = Array.from({ length: 70 }, (_, i) =>
+    clipAt(400 + i, i, 1, A, i),
+  );
+  const list = listTakes(storyOf(takes), STORY, project(loose, []));
+  assert.equal(list.orphans.length, TAKE_LIMITS.orphans);
+  assert.equal(list.orphanTotal, 70);
+  assert.equal(
+    list.orphans[0]!.candidates.length,
+    TAKE_LIMITS.orphanCandidates,
+  );
+});
+
 test("a proposal of an older page parses as version 1 only, and version 2 is bounded", () => {
   const p = project([clipAt(100, 0, 60, A, 10)]);
   const v2 = proposeIn(p, TAKES.b);
@@ -1363,6 +1453,33 @@ test("a split shot's take is replaced as one revision, and one undo brings every
   });
   assert.ok(undone.revision > applied.revision);
   assert.deepEqual((await exported(c)).clips, before.clips);
+  // What was reviewed is what is applied: a dropped or changed mapping, or a proposal
+  // made before a further split, is refused and changes nothing.
+  const fresh = await propose(c, documentId, shots[0].id, t.b1);
+  const tampered = [
+    { ...fresh, mappings: fresh.mappings.slice(0, 1) },
+    {
+      ...fresh,
+      mappings: fresh.mappings.map((m, i) =>
+        i === 1 ? { ...m, takeOffsetTicks: m.takeOffsetTicks + FRAME } : m,
+      ),
+    },
+  ];
+  for (const bad of tampered)
+    assert.equal(await code(apply(c, bad)), "REVISION_CONFLICT");
+  const third = id();
+  await run(c, "yamakan.project.applyBatch", {
+    expectedRevision: (await head(c)).revision,
+    operations: [
+      {
+        type: "clip.split",
+        clipId: second,
+        atTicks: 20 * FRAME,
+        newClipId: third,
+      },
+    ],
+  });
+  assert.equal(await code(apply(c, fresh)), "REVISION_CONFLICT");
   // A proposal made by an older page is refused in words and changes nothing.
   const { takeOffsetTicks: _, ...old } = proposal.mappings[0]!;
   assert.match(
