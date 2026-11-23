@@ -431,11 +431,13 @@ test("control: revoking another person's consent refuses nothing for the take", 
   assert.ok((await head(s.c)).clips.some((x) => x.id === s.clip.id));
 });
 
-test("control: an expired consent that was not revoked does not block a return", async () => {
-  const s = await scene("pin", 8000);
+test("control: an expired consent that was not revoked does not block a return", async (t) => {
+  const s = await scene("pin", 60_000);
   await s.edit([{ type: "clip.remove", clipId: s.clip.id }]);
-  await new Promise((r) => setTimeout(r, 9000));
+  const realNow = Date.now;
+  const clock = t.mock.method(Date, "now", () => realNow() + 10 * 60_000);
   await s.undo();
+  clock.mock.restore();
   assert.ok((await head(s.c)).clips.some((x) => x.id === s.clip.id));
 });
 

@@ -1,7 +1,8 @@
 /**
  * A person's photo after their consent is revoked, in a real browser against the
  * real service: Undo of its removal is refused with the reason on screen, and the
- * file is kept. The way back is driven through the service.
+ * file is kept. The way back is driven through the service. Then the same for a take
+ * whose shot pins a pack linked to the consent (MPR-010).
  *
  * Usage: node scripts/qualify-consent-gate.mjs [receipt.json]
  */
@@ -271,6 +272,160 @@ try {
   });
   assert.equal((await head()).clips.length, 1);
   step("A new consent saved in a pack lets the photo be placed again");
+
+  // A take in a shot that pins a pack linked to the person: its own picture carries no
+  // link, but Undo of its removal is refused once the consent is revoked.
+  const taken = await service("yamakan.project.create", { name: "Takes" });
+  const takenId = taken.id;
+  const upload = async (file, name) => {
+    const answer = await page.evaluate(
+      async ([id, base64, name]) => {
+        const stored = JSON.parse(
+          sessionStorage.getItem("yamakan.session") ?? "null",
+        );
+        const headers = { "Content-Type": "image/png", "X-Asset-Name": name };
+        if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+        const res = await fetch(`/api/v1/projects/${id}/assets`, {
+          method: "POST",
+          headers,
+          body: Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)),
+        });
+        return res.json();
+      },
+      [takenId, (await readFile(file)).toString("base64"), name],
+    );
+    return answer.result?.asset ?? answer.asset ?? answer;
+  };
+  const takeFile = join(root, "take.png");
+  execFileSync(
+    mediaTools().ffmpeg,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=olive:s=320x180",
+      "-frames:v",
+      "1",
+      takeFile,
+    ],
+    { windowsHide: true },
+  );
+  const person = await upload(still, "person.png");
+  const take = await upload(takeFile, "take.png");
+  const openTaken = () =>
+    service("yamakan.project.open", { projectId: takenId });
+  const pinnedConsent = await service("yamakan.consent.grant", {
+    characterId: "second",
+    purpose: "likeness-generate",
+    version: "v1",
+    ttlMs: 86_400_000,
+  });
+  const pinnedPack = crypto.randomUUID();
+  const savedPack = await service("yamakan.pack.save", {
+    projectId: takenId,
+    expectedRevision: (await openTaken()).revision,
+    documentId: pinnedPack,
+    expectedContentHash: null,
+    pack: {
+      format: "yamakan.reference-pack",
+      formatVersion: 1,
+      name: "Second",
+      entries: [
+        {
+          id: crypto.randomUUID(),
+          role: "character",
+          label: "Second",
+          assetId: person.id,
+          assetHash: person.hash,
+          characterId: "second",
+          consentId: pinnedConsent.id,
+        },
+      ],
+    },
+  });
+  const takeId = crypto.randomUUID();
+  await service("yamakan.story.save", {
+    projectId: takenId,
+    expectedRevision: (await openTaken()).revision,
+    documentId: crypto.randomUUID(),
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 1,
+      title: "Takes",
+      scenes: [
+        {
+          id: crypto.randomUUID(),
+          name: "One",
+          shots: [
+            {
+              id: crypto.randomUUID(),
+              name: "Shot",
+              durationTicks: 705_600_000,
+              notes: "",
+              referencePacks: [
+                {
+                  documentId: pinnedPack,
+                  contentHash: savedPack.document.contentHash,
+                },
+              ],
+              takes: [{ id: takeId, assetId: take.id, sourceStartTicks: 0 }],
+              selectedTakeId: takeId,
+            },
+          ],
+        },
+      ],
+    },
+  });
+  const pinnedClip = crypto.randomUUID();
+  const pinnedTrack = (await openTaken()).tracks.find(
+    (t) => t.kind === "video",
+  ).id;
+  await service("yamakan.project.applyBatch", {
+    projectId: takenId,
+    expectedRevision: (await openTaken()).revision,
+    operations: [
+      {
+        type: "clip.add",
+        clipId: pinnedClip,
+        trackId: pinnedTrack,
+        assetId: take.id,
+        title: null,
+        startTicks: 0,
+        durationTicks: 705_600_000,
+        sourceStartTicks: 0,
+      },
+    ],
+  });
+  await service("yamakan.project.applyBatch", {
+    projectId: takenId,
+    expectedRevision: (await openTaken()).revision,
+    operations: [{ type: "clip.remove", clipId: pinnedClip }],
+  });
+  await service("yamakan.consent.revoke", { consentId: pinnedConsent.id });
+  const takenAt = (await openTaken()).revision;
+  await page.reload();
+  await page.getByRole("button", { name: /Takes/ }).first().click();
+  await page.getByRole("heading", { name: "Takes", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[role="status"].status')
+      ?.textContent?.includes("consent was revoked"),
+  );
+  const pinnedShown = await page.locator('[role="status"].status').innerText();
+  assert.match(pinnedShown, /record a new consent/);
+  const pinnedAfter = await openTaken();
+  assert.equal(pinnedAfter.revision, takenAt);
+  assert.equal(pinnedAfter.clips.length, 0);
+  step(
+    "Undo of a take whose shot pins the person's pack is refused, with the reason shown",
+    { shown: pinnedShown },
+  );
 
   assert.deepEqual(pageErrors, []);
   step("no page errors");

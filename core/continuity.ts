@@ -607,6 +607,13 @@ function presentedTicks(p: Placed) {
  * current story, or importing its file again as another asset, does not
  * free it. Moving, trimming, splitting or copying a clip already presented
  * the same way presents nothing new.
+ *
+ * A take without continuity references is matched too (MPR-010): by its
+ * recorded output hash, or, with no lineage, by its asset. The media its
+ * lineage was made from, and the media the packs its shot pins link to a
+ * consent, must not have had that consent revoked. A pin shows a pack was
+ * attached to the shot, not that the take depicts the person, so this can
+ * refuse a take that shows no one; the way back is a newer consent.
  */
 export function assertPlacementConsent(
   c: ContinuityContext & { projectId: string },
@@ -635,14 +642,26 @@ export function assertPlacementConsent(
   // most 200, one per clip, well within SQLite's expression limits); only
   // versions naming one are parsed.
   const hashes = [...placed];
+  // A take with no lineage names its medium only by asset, so the assets of the
+  // placed media are looked for too, in queries of a bounded number of terms.
+  const hashOf = new Map(after.assets.map((a) => [a.id, a.hash]));
+  const named = [
+    ...hashes,
+    ...after.assets.filter((a) => placed.has(a.hash)).map((a) => a.id),
+  ];
   const versions = new Map<string, Uint8Array>();
-  for (const row of c.db
-    .prepare(
-      `SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND (${hashes.map(() => "instr(CAST(d.bytes AS TEXT), ?) > 0").join(" OR ")})`,
-    )
-    .all(c.projectId, ...hashes) as { hash: string; bytes: Uint8Array }[])
-    versions.set(row.hash, row.bytes);
+  for (let i = 0; i < named.length; i += 400) {
+    const terms = named.slice(i, i + 400);
+    for (const row of c.db
+      .prepare(
+        `SELECT DISTINCT v.content_hash AS hash, d.bytes AS bytes FROM story_document_versions v JOIN creative_documents d ON d.hash = v.content_hash WHERE v.project_id = ? AND d.kind = 'story' AND (${terms.map(() => "instr(CAST(d.bytes AS TEXT), ?) > 0").join(" OR ")})`,
+      )
+      .all(c.projectId, ...terms) as { hash: string; bytes: Uint8Array }[])
+      versions.set(row.hash, row.bytes);
+  }
   const checked = new Set<string>();
+  // The media a matched take was made from or with, whose consent must stand.
+  const used = new Set<string>();
   for (const [hash, bytes] of versions) {
     if (sha256Hex(Buffer.from(bytes)) !== hash) throw damagedStory();
     let story: StoryDocument;
@@ -656,14 +675,23 @@ export function assertPlacementConsent(
     for (const scene of story.scenes)
       for (const shot of scene.shots)
         for (const take of shot.takes) {
+          const output = take.lineage?.outputHash ?? hashOf.get(take.assetId);
+          if (output === undefined || !placed.has(output)) continue;
+          for (const input of take.lineage?.inputs ?? [])
+            used.add(input.assetHash);
+          // A damaged pack a take is pinned to cannot say whom it links, so the take is refused.
+          for (const pin of shot.referencePacks)
+            for (const link of linksOf(c.db, pin.contentHash, [""]))
+              used.add(link.assetHash);
           const refs = take.lineage?.continuity;
-          if (!refs?.length || !placed.has(take.lineage!.outputHash)) continue;
+          if (!refs?.length) continue;
           const key = JSON.stringify(refs);
           if (checked.has(key)) continue;
           resolveContinuity(c, refs, "attach");
           checked.add(key);
         }
   }
+  assertLinkedMediaNotRevoked(c.db, [...used], !before);
 }
 
 /** Every take's continuity references in a story, checked as traceable. */
