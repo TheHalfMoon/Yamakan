@@ -853,14 +853,22 @@ test("an import keeps the end that was already known", async () => {
   const service = createGenerationService({
     adapter: {
       status: async () => ({ executionRef: "r", state: "succeeded" }),
-      enumerateArtifacts: async () => [
-        {
-          handle: "o.mp4",
-          mediaType: "video/mp4",
-          byteLength: 1,
-          sha256: hash,
-        },
-      ],
+      enumerateArtifacts: async () => {
+        // Stopped as it comes in, and its end was known long before.
+        await service.cancel(row.generationId);
+        return [
+          {
+            handle: "o.mp4",
+            mediaType: "video/mp4",
+            byteLength: 1,
+            sha256: hash,
+          },
+        ];
+      },
+      requestCancel: async () => ({
+        requested: false,
+        localProcessExited: true,
+      }),
     } as unknown as EngineAdapterV2,
     store: w.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -869,6 +877,7 @@ test("an import keeps the end that was already known", async () => {
   });
   await service.importResult(row.generationId);
   assert.equal(service.row(row.generationId)!.endedAt, 5);
+  assert.equal(service.row(row.generationId)!.failureClass, undefined);
   assert.equal(service.row(row.generationId)!.importedAt, 9_000);
 });
 

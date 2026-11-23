@@ -43,7 +43,7 @@ By reading main `c7c9929`:
 
 ### Where this differs from the card, or goes past it
 
-- **A killed run stays `providerRejected`,** as the card has it: its log shows that it was killed, and memory is the likely reason and not a known one. Only a run's own name for its error (`OutOfMemoryError`, `MemoryError`) is `resourceExhausted`, never its words.
+- **A killed run stays `providerRejected`,** as the card has it: its log shows that it was killed, and memory is the likely reason and not a known one. Only a run's own name for its error (`OutOfMemoryError`, `MemoryError`, or numpy's `_ArrayMemoryError`) is `resourceExhausted`, never its words.
 - **A credential refused at the question before a push** is `credentialRejected`. The card's rule for what is thrown before the push is `refusedByPolicy`; OA-18 came after it.
 - **A run that had succeeded and is then stopped** is `cancelled`, and keeps the time of its own end.
 - **`endedAt` of a stopped run** is the time of the stop. A stop that comes as a video is being brought in can be too late for it: the video is in, the run has no class, and on the job table its own end is the time kept, as MPR-101's record of it needs. In this machine's memory (ComfyUI, which has no recipe) a failure or a stop that was already kept can leave its time.
@@ -56,6 +56,8 @@ By reading main `c7c9929`:
 - **A 401 at the list of notebooks** before a push is not told apart, and one at the check that the notebook is private is `refusedByPolicy`.
 
 - **This file is written by hand.** The card has `scripts/qualify-kaggle-screens.mjs` write it, and that script does not read what the host has first (common contract rule 6); neither is done, since it has not run.
+
+- **The words of the page are Kaggle's** ("its notebook", "Kaggle GPU time"). A failure of a local engine would show them too; none can run, since no recipe of one is pinned.
 
 ## Evidence
 
