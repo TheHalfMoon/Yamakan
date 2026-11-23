@@ -1,0 +1,2702 @@
+{
+  "task": "MPR-202",
+  "head": "fca8bcef6a7a0cb49ffbd1b5619b70b81ddeeb3f",
+  "dirty": false,
+  "host": {
+    "platform": "win32",
+    "githubImage": null,
+    "freeDiskBytes": 13748162560,
+    "freeMemoryBytes": 4002889728,
+    "onAcPower": true,
+    "load": null,
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "measured": {
+    "largestReportBytes": 14538
+  },
+  "configurations": {
+    "none": {
+      "outcome": "PASS",
+      "capabilities": {
+        "operations": [
+          {
+            "operation": "textToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "imageToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "videoEdit",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "transcribe",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "enhance",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          }
+        ],
+        "report": {
+          "format": "yamakan.capability-report/v1",
+          "routes": [
+            {
+              "route": "kaggle",
+              "configured": false,
+              "reason": "ROUTE_NOT_CONFIGURED"
+            },
+            {
+              "route": "comfyui",
+              "configured": false,
+              "reason": "ROUTE_NOT_CONFIGURED"
+            },
+            {
+              "route": "local",
+              "configured": false,
+              "reason": "ENGINE_DISABLED"
+            }
+          ],
+          "cells": [
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-06"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b-first-frame",
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-first-frame-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-08"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-cogvideox-2b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-cogvideox-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-07"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            }
+          ],
+          "refused": [
+            {
+              "catalogId": "wan2.2-ti2v-5b-native",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B",
+                "revision": "921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+                "variant": "native"
+              },
+              "reason": "MODEL_REFUSED",
+              "because": "REMOTE_SERVICE_REFERENCE",
+              "refusedAt": "2026-10-27",
+              "evidence": [
+                "docs/evidence/ultimate/engine-candidate-manifests.json"
+              ]
+            }
+          ],
+          "reasonMessages": {
+            "ENGINE_DISABLED": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "MODEL_REFUSED": "This model was looked at and turned down.",
+            "NOT_QUALIFIED": "This has not been checked here yet.",
+            "OPERATION_NOT_OFFERED": "Yamakan has no recipe for this with this model.",
+            "ROUTE_NOT_CONFIGURED": "This service was not set up to use that route."
+          }
+        }
+      },
+      "options": {
+        "route": null,
+        "models": []
+      }
+    },
+    "kaggle": {
+      "outcome": "PASS",
+      "capabilities": {
+        "operations": [
+          {
+            "operation": "textToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "imageToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "videoEdit",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "transcribe",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "enhance",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          }
+        ],
+        "report": {
+          "format": "yamakan.capability-report/v1",
+          "routes": [
+            {
+              "route": "kaggle",
+              "configured": true,
+              "reason": null
+            },
+            {
+              "route": "comfyui",
+              "configured": false,
+              "reason": "ROUTE_NOT_CONFIGURED"
+            },
+            {
+              "route": "local",
+              "configured": false,
+              "reason": "ENGINE_DISABLED"
+            }
+          ],
+          "cells": [
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-06"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b-first-frame",
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-first-frame-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-08"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-cogvideox-2b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-cogvideox-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-07"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            }
+          ],
+          "refused": [
+            {
+              "catalogId": "wan2.2-ti2v-5b-native",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B",
+                "revision": "921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+                "variant": "native"
+              },
+              "reason": "MODEL_REFUSED",
+              "because": "REMOTE_SERVICE_REFERENCE",
+              "refusedAt": "2026-10-27",
+              "evidence": [
+                "docs/evidence/ultimate/engine-candidate-manifests.json"
+              ]
+            }
+          ],
+          "reasonMessages": {
+            "ENGINE_DISABLED": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "MODEL_REFUSED": "This model was looked at and turned down.",
+            "NOT_QUALIFIED": "This has not been checked here yet.",
+            "OPERATION_NOT_OFFERED": "Yamakan has no recipe for this with this model.",
+            "ROUTE_NOT_CONFIGURED": "This service was not set up to use that route."
+          }
+        }
+      },
+      "options": {
+        "route": "kaggle",
+        "models": [
+          {
+            "recipeId": "kaggle-wan22-ti2v-5b",
+            "name": "Wan2.2-TI2V-5B",
+            "operation": "textToVideo",
+            "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+            "revision": "b8fff7315c768468a5333511427288870b2e9635",
+            "licence": "Apache-2.0",
+            "width": 704,
+            "height": 480,
+            "frames": 81,
+            "fps": 24,
+            "steps": 30,
+            "expectedSeconds": 1132,
+            "timeoutSeconds": 3600,
+            "notebook": "https://www.kaggle.com/code/someone/yamakan-run-wan22-ti2v-5b"
+          },
+          {
+            "recipeId": "kaggle-wan22-ti2v-5b-first-frame",
+            "name": "Wan2.2-TI2V-5B, from a first frame",
+            "operation": "imageToVideo",
+            "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+            "revision": "b8fff7315c768468a5333511427288870b2e9635",
+            "licence": "Apache-2.0",
+            "width": 704,
+            "height": 480,
+            "frames": 81,
+            "fps": 24,
+            "steps": 30,
+            "expectedSeconds": 1132,
+            "timeoutSeconds": 3600,
+            "notebook": "https://www.kaggle.com/code/someone/yamakan-run-wan22-ti2v-5b-first-frame"
+          },
+          {
+            "recipeId": "kaggle-cogvideox-2b",
+            "name": "CogVideoX-2b",
+            "operation": "textToVideo",
+            "model": "zai-org/CogVideoX-2b",
+            "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+            "licence": "Apache-2.0",
+            "width": 720,
+            "height": 480,
+            "frames": 49,
+            "fps": 8,
+            "steps": 50,
+            "expectedSeconds": 1125,
+            "timeoutSeconds": 3600,
+            "notebook": "https://www.kaggle.com/code/someone/yamakan-run-cogvideox-2b"
+          }
+        ]
+      }
+    },
+    "comfyui": {
+      "outcome": "PASS",
+      "capabilities": {
+        "operations": [
+          {
+            "operation": "textToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "imageToVideo",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "videoEdit",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "transcribe",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          },
+          {
+            "operation": "enhance",
+            "available": false,
+            "verified": false,
+            "reason": "ENGINE_DISABLED",
+            "message": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "version": null,
+            "expiresAt": null
+          }
+        ],
+        "report": {
+          "format": "yamakan.capability-report/v1",
+          "routes": [
+            {
+              "route": "kaggle",
+              "configured": false,
+              "reason": "ROUTE_NOT_CONFIGURED"
+            },
+            {
+              "route": "comfyui",
+              "configured": true,
+              "reason": null
+            },
+            {
+              "route": "local",
+              "configured": false,
+              "reason": "ENGINE_DISABLED"
+            }
+          ],
+          "cells": [
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-06"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-wan22-ti2v-5b-first-frame",
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-first-frame-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-08"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "limits": {
+                "width": 704,
+                "height": 480,
+                "frames": 81,
+                "fps": 24,
+                "steps": 30,
+                "durationFrames": {
+                  "min": 81,
+                  "max": 81
+                },
+                "audioOut": false,
+                "promptWordsRead": null,
+                "roles": [
+                  "firstFrame"
+                ],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "wan2.2-ti2v-5b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+                "revision": "b8fff7315c768468a5333511427288870b2e9635",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "wan2.2-ti2v-5b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": "kaggle-cogvideox-2b",
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "state": "supported",
+              "reasons": [],
+              "source": {
+                "kind": "evidence",
+                "ref": "docs/evidence/ultimate/kaggle-cogvideox-page-run-receipt.json",
+                "samples": 1
+              },
+              "asOf": "2026-11-07"
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "kaggle",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "textToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "comfyui",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "recipeId": null,
+              "operation": "textToVideo",
+              "limits": {
+                "width": 720,
+                "height": 480,
+                "frames": 49,
+                "fps": 8,
+                "steps": 50,
+                "durationFrames": {
+                  "min": 49,
+                  "max": 49
+                },
+                "audioOut": false,
+                "promptWordsRead": 150,
+                "roles": [],
+                "references": null
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "state": "unverified",
+              "reasons": [
+                "NOT_QUALIFIED",
+                "ENGINE_DISABLED"
+              ]
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "imageToVideo",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "videoEdit",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "transcribe",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            },
+            {
+              "route": "local",
+              "catalogId": "cogvideox-2b-diffusers",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "zai-org/CogVideoX-2b",
+                "revision": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+                "variant": "diffusers"
+              },
+              "source": {
+                "kind": "catalog",
+                "ref": "cogvideox-2b-diffusers",
+                "samples": null
+              },
+              "asOf": "2026-10-27",
+              "recipeId": null,
+              "operation": "enhance",
+              "state": "unsupported",
+              "reasons": [
+                "OPERATION_NOT_OFFERED"
+              ],
+              "limits": null
+            }
+          ],
+          "refused": [
+            {
+              "catalogId": "wan2.2-ti2v-5b-native",
+              "identity": {
+                "host": "huggingface.co",
+                "model": "Wan-AI/Wan2.2-TI2V-5B",
+                "revision": "921dbaf3f1674a56f47e83fb80a34bac8a8f203e",
+                "variant": "native"
+              },
+              "reason": "MODEL_REFUSED",
+              "because": "REMOTE_SERVICE_REFERENCE",
+              "refusedAt": "2026-10-27",
+              "evidence": [
+                "docs/evidence/ultimate/engine-candidate-manifests.json"
+              ]
+            }
+          ],
+          "reasonMessages": {
+            "ENGINE_DISABLED": "Generative engines are turned off in this build. Editing, rendering and export work without them.",
+            "MODEL_REFUSED": "This model was looked at and turned down.",
+            "NOT_QUALIFIED": "This has not been checked here yet.",
+            "OPERATION_NOT_OFFERED": "Yamakan has no recipe for this with this model.",
+            "ROUTE_NOT_CONFIGURED": "This service was not set up to use that route."
+          }
+        }
+      },
+      "options": {
+        "route": null,
+        "models": []
+      }
+    }
+  }
+}
