@@ -4,7 +4,7 @@
  * review refused, unsaved edits protected, keyboard, Arabic and undo. The review
  * must call only the existing take commands and never a Director approval.
  *
- * Usage: node scripts/qualify-take-review.mjs [receipt.json]
+ * Usage: node scripts/qualify-take-review.mjs [SS-006 receipt.json] [MPR-105 receipt.json]
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
@@ -23,6 +23,218 @@ execFileSync("npm", ["run", "build"], {
 });
 
 const receipt = process.argv[2] ?? null;
+// The split arm's own receipt (MPR-105), beside SS-006's.
+const splitReceiptFile = process.argv[3] ?? null;
+let ssSteps = null;
+let ssServerError = null;
+let splitPassed = false;
+const splitSteps = [];
+
+// MPR-105: a shot whose clip was split and whose first part was trimmed keeps its take
+// replaceable, as one revision and one undo, and a refusal names the clip. It uses footage,
+// so that each piece's place in the take is seen.
+async function splitArm(page, call) {
+  const mark = (name, detail = {}) => {
+    splitSteps.push({ name, ...detail });
+    console.log(`ok - ${name}`);
+  };
+  const footage = (name, source) => {
+    const file = join(root, name);
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        `${source}=size=320x180:rate=30:duration=4`,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-pix_fmt",
+        "yuv420p",
+        file,
+      ],
+      { windowsHide: true },
+    );
+    return file;
+  };
+  const created = await call("yamakan.project.create", {
+    name: "Split takes",
+  });
+  const id = created.id;
+  const open = async () =>
+    (await call("yamakan.project.open", { projectId: id })).project ??
+    (await call("yamakan.project.open", { projectId: id }));
+  const upload = async (file, name) => {
+    const answer = await page.evaluate(
+      async ([id, base64, name]) => {
+        const stored = JSON.parse(
+          sessionStorage.getItem("yamakan.session") ?? "null",
+        );
+        const headers = { "Content-Type": "video/mp4", "X-Asset-Name": name };
+        if (stored?.session) headers["X-Yamakan-Session"] = stored.session;
+        const res = await fetch(`/api/v1/projects/${id}/assets`, {
+          method: "POST",
+          headers,
+          body: Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)),
+        });
+        return res.json();
+      },
+      [id, (await readFile(file)).toString("base64"), name],
+    );
+    return answer.result?.asset ?? answer.asset ?? answer;
+  };
+  const first = await upload(footage("split-a.mp4", "testsrc"), "split-a.mp4");
+  const second = await upload(
+    footage("split-b.mp4", "smptebars"),
+    "split-b.mp4",
+  );
+  assert.ok(first.id && second.id, "both footage files are in the project");
+  const takeA = {
+    id: crypto.randomUUID(),
+    assetId: first.id,
+    sourceStartTicks: 15 * FRAME,
+  };
+  const takeB = {
+    id: crypto.randomUUID(),
+    assetId: second.id,
+    sourceStartTicks: 0,
+  };
+  const shotId = crypto.randomUUID();
+  const storyDocument = crypto.randomUUID();
+  const at = await open();
+  await call("yamakan.story.save", {
+    projectId: id,
+    expectedRevision: at.revision,
+    documentId: storyDocument,
+    expectedContentHash: null,
+    story: {
+      format: "yamakan.story",
+      formatVersion: 1,
+      title: "Split",
+      scenes: [
+        {
+          id: crypto.randomUUID(),
+          name: "Scene",
+          shots: [
+            {
+              id: shotId,
+              name: "Only",
+              durationTicks: 60 * FRAME,
+              notes: "",
+              referencePacks: [],
+              takes: [takeA, takeB],
+              selectedTakeId: takeA.id,
+            },
+          ],
+        },
+      ],
+    },
+  });
+  await call("yamakan.story.assemble", {
+    projectId: id,
+    expectedRevision: (await open()).revision,
+    documentId: storyDocument,
+    trackId: at.tracks.find((t) => t.kind === "video").id,
+  });
+  const whole = (await open()).clips.find((c) => c.assetId === first.id);
+  const pieceId = crypto.randomUUID();
+  await call("yamakan.project.applyBatch", {
+    projectId: id,
+    expectedRevision: (await open()).revision,
+    operations: [
+      {
+        type: "clip.split",
+        clipId: whole.id,
+        atTicks: (whole.startFrame + 30) * FRAME,
+        newClipId: pieceId,
+      },
+      // The first piece starts ten frames into what it showed.
+      {
+        type: "clip.trim",
+        clipId: whole.id,
+        startTicks: (whole.startFrame + 10) * FRAME,
+      },
+    ],
+  });
+  const before = await open();
+  const pieces = (p) =>
+    [whole.id, pieceId].map((x) => p.clips.find((c) => c.id === x));
+  assert.deepEqual(
+    pieces(before).map((c) => c.sourceFrame),
+    [25, 45],
+  );
+  const openReview = async () => {
+    await page.evaluate(() => localStorage.setItem("yamakan.lang", "en"));
+    await page.reload();
+    await page
+      .getByRole("button", { name: /Split takes Revision/ })
+      .first()
+      .click();
+    await page
+      .getByRole("heading", { name: "Split takes", exact: true })
+      .waitFor();
+    await page.getByRole("tab", { name: "Story", exact: true }).click();
+    await page.locator("details.director > summary").click();
+    await page
+      .getByTestId("take-review")
+      .locator(`li[data-take="${takeB.id}"] [data-testid="take-review-open"]`)
+      .click();
+  };
+  await openReview();
+  await page.getByTestId("take-proposal").waitFor();
+  assert.equal(await page.getByTestId("take-proposal-clip").count(), 2);
+  assert.match(await page.getByTestId("take-proposal-count").innerText(), /2/);
+  mark("a split and trimmed shot's proposal has a row per clip");
+  await page.getByTestId("take-proposal-apply").click();
+  await page.getByTestId("take-notice-applied").waitFor();
+  const after = await open();
+  assert.equal(after.revision, before.revision + 1);
+  assert.deepEqual(
+    pieces(after).map((c) => [c.assetId, c.startFrame, c.sourceFrame]),
+    [
+      [second.id, whole.startFrame + 10, 10],
+      [second.id, whole.startFrame + 30, 30],
+    ],
+  );
+  mark("apply is one revision and each piece keeps its place in the new take");
+  await call("yamakan.project.undo", {
+    projectId: id,
+    expectedRevision: after.revision,
+  });
+  assert.deepEqual(
+    pieces(await open()).map((c) => [c.assetId, c.sourceFrame]),
+    [
+      [first.id, 25],
+      [first.id, 45],
+    ],
+  );
+  mark("one undo brings both pieces back");
+  await call("yamakan.project.applyBatch", {
+    projectId: id,
+    expectedRevision: (await open()).revision,
+    operations: [
+      {
+        type: "clip.setSpeed",
+        clipId: pieceId,
+        speed: { num: 1, den: 2 },
+      },
+    ],
+  });
+  await openReview();
+  await page.getByTestId("take-notice-refused").waitFor();
+  assert.match(
+    await page.getByTestId("take-notice-refused").innerText(),
+    /Clip 2 of 2 of this shot: Reset the clip's speed before replacing its take\./,
+  );
+  mark("a refusal names the clip");
+}
+
 const root = mkdtempSync(join(tmpdir(), "yamakan-take-review-"));
 const port = 24381;
 const origin = `http://127.0.0.1:${port}`;
@@ -539,7 +751,16 @@ try {
   assert.deepEqual(external, []);
   assert.deepEqual(pageErrors, []);
   step("no external requests and no page errors");
+
+  // SS-006's result stands as it is from here: the split arm below has its own steps,
+  // flag and receipt.
   passed = true;
+  ssSteps = [...steps];
+  ssServerError = serverError;
+  await splitArm(page, call);
+  assert.deepEqual(external, []);
+  assert.deepEqual(pageErrors, []);
+  splitPassed = true;
 } finally {
   await browser?.close().catch(() => {});
   child.kill();
@@ -553,8 +774,25 @@ try {
             encoding: "utf8",
           }).trim(),
           passed,
-          steps,
-          serverError: serverError.slice(-1000),
+          steps: ssSteps ?? steps,
+          serverError: (ssServerError ?? serverError).slice(-1000),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  if (splitReceiptFile)
+    writeFileSync(
+      splitReceiptFile,
+      `${JSON.stringify(
+        {
+          task: "MPR-105",
+          head: execFileSync("git", ["rev-parse", "HEAD"], {
+            encoding: "utf8",
+          }).trim(),
+          host: process.platform,
+          passed: splitPassed,
+          steps: splitSteps,
         },
         null,
         2,
@@ -568,5 +806,5 @@ try {
     retryDelay: 200,
   });
 }
-console.log(passed ? "TAKE REVIEW PASS" : "TAKE REVIEW FAIL");
-process.exit(passed ? 0 : 1);
+console.log(passed && splitPassed ? "TAKE REVIEW PASS" : "TAKE REVIEW FAIL");
+process.exit(passed && splitPassed ? 0 : 1);

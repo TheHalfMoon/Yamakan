@@ -142,7 +142,7 @@ import {
 } from "../story.ts";
 import {
   TAKE_LIMITS,
-  TakeProposalSchema,
+  TakeProposalInputSchema,
   assertTakeMedia,
   compareTakes,
   listTakes,
@@ -842,7 +842,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "List a story's shots with their alternative takes (media versions and lineage) and, for each assembled shot, the clip that shows it and which take that clip shows. Changes nothing.",
+      "List a story's shots with their alternative takes (media versions and lineage) and, for each assembled shot, the clips that show it, each with its place in the take, and which take all of them show; clips of a take's media in no shot are listed too. Changes nothing.",
     input: z.object({ projectId: Id, documentId: Id }).strict(),
     run: async ({ store }, a) => {
       const { story, ref, canonical } = await readStory(store, a);
@@ -853,7 +853,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Compare up to 8 takes of one story shot side by side (media version, size, whether each covers the shot's clip, and a small preview: a footage thumbnail index or the still) without changing anything.",
+      "Compare up to 8 takes of one story shot side by side (media version, size, whether each covers the shot's clips, and a small preview: a footage thumbnail index or the still) without changing anything.",
     input: z
       .object({
         projectId: Id,
@@ -871,7 +871,7 @@ export const commands = {
     scope: "project:read",
     mutation: false,
     summary:
-      "Propose making an assembled story shot's clip show another of its takes: the exact clip mapping, bound to this revision, story version and media versions, and named by its hash. Changes nothing; apply it with yamakan.take.apply.",
+      "Propose making an assembled story shot's clips show another of its takes: the exact mapping of each of the shot's clips, bound to this revision, story version and media versions, and named by its hash. Changes nothing; apply it with yamakan.take.apply.",
     input: z
       .object({
         projectId: Id,
@@ -901,10 +901,15 @@ export const commands = {
       .object({
         projectId: Id,
         expectedRevision: z.number().int().nonnegative(),
-        proposal: TakeProposalSchema,
+        proposal: TakeProposalInputSchema,
       })
       .strict(),
     run: async ({ store, principal, receipt }, a) => {
+      if (a.proposal.formatVersion === 1)
+        throw new CommandError(
+          "REVISION_CONFLICT",
+          "This proposal was made by an older page; propose it again.",
+        );
       const p = a.proposal;
       if (p.projectId !== a.projectId || p.revision !== a.expectedRevision)
         throw new CommandError(

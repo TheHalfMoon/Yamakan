@@ -62,7 +62,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-102 | 1 | WAITING_DEPENDENCIES | MPR-101 | Let a generation target a story shot and append its take on import |
 | MPR-103 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
-| MPR-105 | 1 | QUALIFICATION_READY | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
+| MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
 | MPR-106 | 1 | WAITING_DEPENDENCIES | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
 | MPR-201 | 2 | QUALIFICATION_READY | — | Add one model catalog and check every existing model list against it |
@@ -1132,7 +1132,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |

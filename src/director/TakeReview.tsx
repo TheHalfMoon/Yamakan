@@ -179,7 +179,6 @@ export function TakeReview({
   };
 
   if (rows === null) return null;
-  const mapping = proposal?.mappings[0];
   return (
     <section data-testid="take-review" aria-label={t("take.title")}>
       <h3>{t("take.title")}</h3>
@@ -221,24 +220,31 @@ export function TakeReview({
       ) : (
         <p>{t("take.none")}</p>
       )}
-      {proposal && mapping ? (
+      {proposal ? (
         <div data-testid="take-proposal" data-revision={proposal.revision}>
+          <p data-testid="take-proposal-count">
+            {t("take.count", { n: proposal.mappings.length })}
+          </p>
+          {proposal.mappings.map((mapping) => (
+            <dl key={mapping.clipId}>
+              <dt>{t("take.clip")}</dt>
+              <dd dir="ltr" data-testid="take-proposal-clip">
+                {mapping.clipId}
+              </dd>
+              <dt>{t("take.timing")}</dt>
+              <dd>
+                {t("take.span", {
+                  start: ticksToSeconds(mapping.startTicks),
+                  duration: ticksToSeconds(mapping.durationTicks),
+                })}
+              </dd>
+              <dt>{t("take.from")}</dt>
+              <dd data-testid="take-proposal-from">{media(mapping.from)}</dd>
+              <dt>{t("take.to")}</dt>
+              <dd data-testid="take-proposal-to">{media(mapping.to)}</dd>
+            </dl>
+          ))}
           <dl>
-            <dt>{t("take.clip")}</dt>
-            <dd dir="ltr" data-testid="take-proposal-clip">
-              {mapping.clipId}
-            </dd>
-            <dt>{t("take.timing")}</dt>
-            <dd>
-              {t("take.span", {
-                start: ticksToSeconds(mapping.startTicks),
-                duration: ticksToSeconds(mapping.durationTicks),
-              })}
-            </dd>
-            <dt>{t("take.from")}</dt>
-            <dd data-testid="take-proposal-from">{media(mapping.from)}</dd>
-            <dt>{t("take.to")}</dt>
-            <dd data-testid="take-proposal-to">{media(mapping.to)}</dd>
             <dt>{t("take.revision")}</dt>
             <dd>{proposal.revision}</dd>
             <dt>{t("take.hash")}</dt>
