@@ -49,9 +49,16 @@ The model and the seed. They are said, before the save, not to be kept; a made v
 - **Tests:** `tests/story-text.test.ts`, and the additions to `create-story`, `create-model` and `i18n`. The store, the commands and the schema are the real ones.
 - **In real Edge on the founder host, against the real service:** see the section below. No model, no network and no spend.
 
-@@CHECK@@The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
+## The real check
 
-The first run of the other real checks with this change failed at `7d1efeb`: `qualify:create-durable` still read a made video's prompt from the shot's notes, which is the place this card moves it from. The check now reads `intent.action` and that the notes are empty.
+`npm run qualify:story-brief`, in real Edge on the founder host (Windows) against the real service: **PASS at `a73cfb4`**, with a clean checkout. Its receipt is `MPR-106-story-brief-receipt.json`, 18 steps: the offer (nothing sent until the person says so, refused against a story that moved on, kept once, "never"), the form in English and Arabic with the direction of each field, after a reload and in a fresh browser profile, a story changed elsewhere, two saves in a row, an answer lost once and twice, Undo and a shot that is gone, two stories, and a story over its budget. It also runs on GitHub's Linux machine (`real-checks.yml`).
+
+- **A nearly full story:** 93 percent; over by the paste: 103 percent, refused by the page in percents and by the service with its byte counts.
+- **Typing in a 200-shot story with 100 shots shown:** 6.3 ms in the middle of 30 keys and 13.1 ms at worst, from the key to the page as redrawn (criterion 50 ms).
+
+Two earlier runs failed and are kept in mind here. At `782e1fe`, after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed: the page was corrected, not the check. On GitHub at `7d1efeb`, `qualify:create-durable` still read a made video's prompt from the shot's notes, the place this card moves it from; it now reads `intent` and that the notes are empty.
+
+The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
 
 ## Not covered
 
