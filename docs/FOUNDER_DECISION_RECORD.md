@@ -203,3 +203,9 @@ Approval line in the packet's format:
 - **Authorized scope:** building the cards of `docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11`, each as its own dependencies, gates and founder decisions allow.
 - **Still not authorized:** FD-2 to FD-11 are not decided by this entry, and the disposition of drafts 85 and 86 is still not decided. Models and providers stay off, spending zero, frozen resource limits stand, release NO-GO, and no weight download, installer, signing or human-only gate is authorized.
 - **Effect:** the founder's-words condition of card MPR-003 (its step 4) is met by this entry; its dependency on MPR-001 is unchanged. It opens no gate: a card that needs a founder decision still waits for it.
+
+## 2026-11-23: Drafts 85 and 86 retired as superseded
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "Should drafts #85 and #86 be retired as superseded, branches kept?", the founder answered "Yes, retire them". Chat instruction only: no signed approval and no founder GitHub review.
+- **Disposition:** both are closed as superseded by the System Supremacy package and the master plan revision, both are retained as evidence, neither branch is deleted, and neither is merged: #85 `research/competitive-video-rea-2026-10-22` at `7472a14e2eecea0620e0bb2d4422db8852421491`, #86 `research/ultimate-master-plan-2026-10-23` at `caec7d9c225d430e1a42f8af8fd8eebc17c5317d`. They are acted on only after this entry merges.
+- **Effect:** this is the disposition the two entries above record as not decided, and the deliberate reconciliation decision the 2026-10-25 entry asked for. FD-2 to FD-11 are not decided by it.
