@@ -19,7 +19,7 @@ Each is in `tests/fixtures/engine-conformance.ts` beside the sentence of the con
 | `states-told-as-they-are` | a run told as something it is not in the state it was put in, before a restart or after it |
 | `ended-failure-has-class` | a failed or stopped run that names no kind of end, or another answer that names one |
 | `ref-usable-at-once` | a run's name that cannot be asked about before anything else |
-| `same-attempt-never-sent-twice` | one attempt and generation sent other than once: one after the other, both at once, after an uncertain answer or after a failure |
+| `same-attempt-never-sent-twice` | one attempt and generation sent other than once: one after the other, both at once, while its run goes on, after an uncertain answer, a failure or a stop |
 | `uncertain-sends-nothing-more` | an uncertain send that is not said, is sent again, is lost when it landed, or is called finished when it did not |
 | `restart-reconciles-without-sending` | a new adapter that sends, however often it is asked and in whatever state the run is |
 | `unknown-ref-answered-honestly` | a run never issued, or lost, that is called finished or stopped |
@@ -43,11 +43,11 @@ The tests of the kit hold it to this: adapters wrong in one way each, made from 
 - **Four checks more than its list of ids:** `unlisted-role-refused` and `limits-held`, which its acceptance asks for without an id; `ended-failure-has-class`, which it asks for when MPR-207 is merged; and `states-told-as-they-are`, without which an adapter that calls a running run finished passed, and a stand-in that is not in the state it says.
 - **Two states more,** `running` and `failed`: a stop of a run that has ended, and a kind of end that no run has, would prove nothing.
 - **`reset()` on the harness,** so that each check starts with nothing sent; `request` and `imports` beside the service's store and ledger, and `make` for the kit's own tests of a wrong service; and `unavailable` in a result.
-- **A stop** must also not be followed by a status that says otherwise, and not claim a run that never landed, was lost or was never issued. The card names only the answer; its objective is that a stop never claims more than happened.
+- **A stop** must also not be followed by a status that says otherwise, and not claim a run that never landed, was lost, had ended or was never issued; on this computer it must not say its process ended while the run goes on, nor that anything was stopped elsewhere; and nothing that goes on or was not there is refunded. The card names only the answer and fewer cases; its objective is that a stop never claims more than happened. That a stop was taken is not that it ended anything: only `unstoppable`, or a run that was not there, may not say so.
 - **Of a control only the contract's range is asked,** past it: which values of its own it takes is the engine's, so "accepted at its bound" is not asked of it, nor of how small a size goes or how short a deadline. The other numeric limits are asked at the bound and past it.
 - **A request past a limit may be refused by an error of a command's kind,** with nothing sent, as the service takes it. A role, a control, a media type or an output that cannot be honoured must be answered with its reason.
 - **A size's bound plus one is plus two,** since a size is even.
-- **`ADAPTER_SUITES` and `PENDING` are in `tests/fixtures/engine-suites.ts`,** which the kit's test, the intake's test and the check script read; a test file that imports another runs it. Each names what makes the adapter, its test files and the names it is called by, since an adapter may have its two layers in two files. Every file under `core/engines` that names the contract is in one of its three lists, with a reason if it makes no adapter: a text search cannot tell an adapter in every form.
+- **`ADAPTER_SUITES` and `PENDING` are in `tests/fixtures/engine-suites.ts`,** which the kit's test, the intake's test and the check script read; a test file that imports another runs it. Each names what makes the adapter, its test files and the names it is called by, since an adapter may have its two layers in two files. Every file under `core/engines` that names the contract is in one of its three lists, with a reason if it makes no adapter: a text search cannot tell an adapter in every form, and a file that takes one from a file of another folder is not seen.
 - **The fake's "Unknown engine execution." is a `NOT_FOUND` now,** which `unknown-ref-answered-honestly` asks for. Its words are the same.
 - **The lost run of the fake** is `failed` with `lostJob`.
 
@@ -57,7 +57,9 @@ The tests of the kit hold it to this: adapters wrong in one way each, made from 
 - **The fake's three runs** are of one adapter with a stop that has no remote, one that ends the run and one that does not.
 - **`corrupt-artifact-rejected` is also passed by an adapter that names no file or refuses to,** which is as safe.
 - **`limits-held` does not ask** about a count of controls or how long an attempt's key may be.
-- **What part b is expected to find, by reading and not yet run:** Kaggle's adapter claims no capabilities, and asks about no length, prompt length or seed; ComfyUI's says nothing of a lost answer, and throws an error of no kind for the files of a run it does not know. Each is to be fixed in that adapter or reported, and no check is to be loosened for it.
+- **What part b is expected to find, by reading and not yet run:** Kaggle's adapter claims no capabilities, and asks about no length, prompt length or seed; it keeps no record of an attempt, so the same one after its run ended looks as if it would be sent again; and it takes no account of a frame rate, so listing the model's own would refuse what the service sends today (the project's), which is a decision and not only a fix. ComfyUI's says nothing of a lost answer, and throws an error of no kind for the files of a run it does not know. Each is to be fixed in that adapter or reported, and no check is to be loosened for it.
+- **`sends()` is what the stand-in counts:** one that does not count a send which never landed cannot show such a send made again.
+- **Not asked:** whether a failed run leaves files (the contract does not say), and what a run stopped elsewhere cost.
 - **An uncertain answer's own words are not measured** (the card lists diagnostics and notices).
 - **The written answers below are checked only to be there.**
 
@@ -76,85 +78,3 @@ The tests of the kit hold it to this: adapters wrong in one way each, made from 
 - `spend`: none, but this computer's own time and power.
 - `download`: the model's files, put in place by a person before a recipe could be pinned. None is today, so there is no size to state.
 - `withdrawal`: its recipe is taken out of `PINNED_COMFY_RECIPES`. Nothing new starts. A run already started goes on in ComfyUI, which is the person's own program and is not stopped; this service forgets it when it ends.
-
-## The check
-
-`npm run qualify:engine-conformance`: **PASS** at `381277cd63442367d1d0e7e43f96f1d34016d7ce`, on win32, with the in-process fake and the test files' own stand-ins. No network but loopback, no account, no download, no model and no spend.
-
-Operations compared with the contract: `textToVideo`, `imageToVideo`, `videoEdit`, `transcribe`, `enhance`.
-
-Adapter files not yet registered: `v1-bridge.ts`, `comfyui.ts`, `kaggle.ts`.
-
-| Adapter | Check | Result |
-|---|---|---|
-| fake | `refusal-sends-nothing` | PASS |
-| fake | `unlisted-role-refused` | PASS |
-| fake | `limits-held` | PASS |
-| fake | `status-parses` | PASS |
-| fake | `states-told-as-they-are` | PASS |
-| fake | `ended-failure-has-class` | PASS |
-| fake | `ref-usable-at-once` | PASS |
-| fake | `same-attempt-never-sent-twice` | PASS |
-| fake | `uncertain-sends-nothing-more` | PASS |
-| fake | `restart-reconciles-without-sending` | PASS |
-| fake | `unknown-ref-answered-honestly` | PASS |
-| fake | `cancel-never-overclaims` | PASS |
-| fake | `artifact-verified` | PASS |
-| fake | `corrupt-artifact-rejected` | PASS |
-| fake | `diagnostic-bounded` | PASS |
-| fake | `location-declared` | PASS |
-| fake | `row-before-send` | PASS |
-| fake | `ref-before-poll` | PASS |
-| fake | `uncertain-row-not-resent` | PASS |
-| fake | `continuing-stop-blocks-import` | PASS |
-| fake | `corrupt-result-not-imported` | PASS |
-| fake, stopped elsewhere | `refusal-sends-nothing` | PASS |
-| fake, stopped elsewhere | `unlisted-role-refused` | PASS |
-| fake, stopped elsewhere | `limits-held` | PASS |
-| fake, stopped elsewhere | `status-parses` | PASS |
-| fake, stopped elsewhere | `states-told-as-they-are` | PASS |
-| fake, stopped elsewhere | `ended-failure-has-class` | PASS |
-| fake, stopped elsewhere | `ref-usable-at-once` | PASS |
-| fake, stopped elsewhere | `same-attempt-never-sent-twice` | PASS |
-| fake, stopped elsewhere | `uncertain-sends-nothing-more` | PASS |
-| fake, stopped elsewhere | `restart-reconciles-without-sending` | PASS |
-| fake, stopped elsewhere | `unknown-ref-answered-honestly` | PASS |
-| fake, stopped elsewhere | `cancel-never-overclaims` | PASS |
-| fake, stopped elsewhere | `artifact-verified` | PASS |
-| fake, stopped elsewhere | `corrupt-artifact-rejected` | PASS |
-| fake, stopped elsewhere | `diagnostic-bounded` | PASS |
-| fake, stopped elsewhere | `location-declared` | PASS |
-| fake, stopped elsewhere | `row-before-send` | PASS |
-| fake, stopped elsewhere | `ref-before-poll` | PASS |
-| fake, stopped elsewhere | `uncertain-row-not-resent` | PASS |
-| fake, stopped elsewhere | `continuing-stop-blocks-import` | PASS |
-| fake, stopped elsewhere | `corrupt-result-not-imported` | PASS |
-| fake, going on elsewhere | `refusal-sends-nothing` | PASS |
-| fake, going on elsewhere | `unlisted-role-refused` | PASS |
-| fake, going on elsewhere | `limits-held` | PASS |
-| fake, going on elsewhere | `status-parses` | PASS |
-| fake, going on elsewhere | `states-told-as-they-are` | PASS |
-| fake, going on elsewhere | `ended-failure-has-class` | PASS |
-| fake, going on elsewhere | `ref-usable-at-once` | PASS |
-| fake, going on elsewhere | `same-attempt-never-sent-twice` | PASS |
-| fake, going on elsewhere | `uncertain-sends-nothing-more` | PASS |
-| fake, going on elsewhere | `restart-reconciles-without-sending` | PASS |
-| fake, going on elsewhere | `unknown-ref-answered-honestly` | PASS |
-| fake, going on elsewhere | `cancel-never-overclaims` | PASS |
-| fake, going on elsewhere | `artifact-verified` | PASS |
-| fake, going on elsewhere | `corrupt-artifact-rejected` | PASS |
-| fake, going on elsewhere | `diagnostic-bounded` | PASS |
-| fake, going on elsewhere | `location-declared` | PASS |
-| fake, going on elsewhere | `row-before-send` | PASS |
-| fake, going on elsewhere | `ref-before-poll` | PASS |
-| fake, going on elsewhere | `uncertain-row-not-resent` | PASS |
-| fake, going on elsewhere | `continuing-stop-blocks-import` | PASS |
-| fake, going on elsewhere | `corrupt-result-not-imported` | PASS |
-
-| Offer | Machine-checked intake |
-|---|---|
-| `kaggle-wan22-ti2v-5b` | PASS |
-| `kaggle-wan22-ti2v-5b-first-frame` | PASS |
-| `kaggle-cogvideox-2b` | PASS |
-
-The same files' other tests: 68 of 68 passed.

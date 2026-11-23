@@ -82,7 +82,8 @@ export type ConformanceHarness = {
   request(over?: { operation?: Operation } & object): EngineRequestV2;
   refusedRequests(): { request: unknown; reason: RefusalReason }[];
   context(): EngineContextV2;
-  // How often anything was really sent or started, since the last reset.
+  // How often anything was sent or started, since the last reset, as the stand-in counts it: one
+  // that is lost before it lands may not be among them.
   sends(): number;
   // Whether a run goes elsewhere, and whether a stop of it ends it there.
   remote: "none" | "stoppable" | "unstoppable";
@@ -143,6 +144,9 @@ async function submitted(
   return answer;
 }
 
+const sentOnce = (scenario: Scenario, sent: number) =>
+  sent === 1 || (scenario === "uncertainNeverLanded" && sent === 0);
+
 // Each of these states that the stand-in has, with a run submitted in it. Whatever is then asked,
 // nothing more is sent: contract, "After a restart: what is known about an execution, never a
 // resubmit", and "Said, not resent". A state it has not is told after the others were asked.
@@ -171,14 +175,15 @@ async function each(
     const adapter = h.adapter();
     const request = h.request();
     const answer = await submitted(h, adapter, request);
-    assert.equal(h.sends(), 1, `${scenario}: sent other than once.`);
+    const sent = h.sends();
+    assert.ok(sentOnce(scenario, sent), `${scenario}: sent ${sent} times.`);
     await ask(scenario, {
       adapter,
       request,
       answer,
       ref: answer.executionRef,
     });
-    assert.equal(h.sends(), 1, `${scenario}: sent again.`);
+    assert.equal(h.sends(), sent, `${scenario}: sent again.`);
   }
   if (missing.length) throw new Unavailable(missing.join(" "));
 }
@@ -349,6 +354,7 @@ function boundsOf(c: CapabilityV2, base: EngineRequestV2) {
       output({ durationTicks: minDurationTicks - 1 }),
     );
     const rate = { num: 7919, den: 997 };
+    bound("a frame rate it does not list", null, output({ fps: rate }));
     for (const fps of constraints.fps)
       bound(
         `${fps.num}/${fps.den} frames a second`,
@@ -533,7 +539,7 @@ const ADAPTER: Record<
       (a, ref) => a.requestCancel(ref),
       (a, ref) => a.enumerateArtifacts(ref),
     ] as ((a: EngineAdapterV2, ref: string) => Promise<unknown>)[])
-      await each(h, ["succeeded"], async (_, { adapter, ref }) => {
+      await each(h, ["succeeded", "running"], async (_, { adapter, ref }) => {
         await ask(adapter, ref);
       });
   },
@@ -545,11 +551,21 @@ const ADAPTER: Record<
       () =>
         each(
           h,
-          ["succeeded", "failed", "uncertainLanded", "uncertainNeverLanded"],
+          [
+            "succeeded",
+            "running",
+            "failed",
+            "uncertainLanded",
+            "uncertainNeverLanded",
+          ],
           async (scenario, { adapter, request, ref }) => {
-            // Asked about in between, as a service would.
-            for (const between of [false, true]) {
-              if (between) await followed(adapter, ref);
+            // At once, when it was asked about as a service would, and when it was stopped.
+            for (const before of [
+              async () => {},
+              () => followed(adapter, ref),
+              () => adapter.requestCancel(ref),
+            ]) {
+              await before();
               const again = await settled(adapter.submit(request, h.context()));
               if (again.status === "fulfilled" && "executionRef" in again.value)
                 assert.equal(
@@ -644,11 +660,12 @@ const ADAPTER: Record<
     });
   },
 
-  // contract: what a Cancellation's remoteAcknowledged, remoteOutcome and billingOutcome say.
-  // That a later status does not say otherwise is the card's "a stop never claims more than
-  // happened".
+  // contract: what a Cancellation's remoteAcknowledged, remoteOutcome and billingOutcome say: that
+  // a stop was taken is not that it ended anything, and "unknown" claims nothing. That a later
+  // status does not say otherwise is the card's "a stop never claims more than happened".
   "cancel-never-overclaims": async (h) => {
     const scenarios = [
+      "succeeded",
       "running",
       "failed",
       "uncertainLanded",
@@ -660,29 +677,28 @@ const ADAPTER: Record<
       CancellationSchema.parse(answer);
       const later = (await adapter.status(ref)).state;
       const said = `${scenario}: ${JSON.stringify(answer)}, then ${later}`;
-      const stopped =
-        answer.remoteOutcome === "stopped" ||
-        answer.remoteAcknowledged === true;
       const there = scenario !== "uncertainNeverLanded" && scenario !== "lost";
-      // Nothing that goes on, or was not there, was stopped.
-      if (!there || GOING.has(later) || h.remote !== "stoppable")
-        assert.ok(!stopped, said);
-      if (GOING.has(later)) {
+      // It ended there: only where a stop can end it, it was there, and it is not told otherwise.
+      if (answer.remoteOutcome === "stopped")
+        assert.ok(
+          h.remote === "stoppable" &&
+            there &&
+            (later === "cancelled" || later === "unknown"),
+          said,
+        );
+      if (h.remote === "unstoppable" || !there)
+        assert.notEqual(answer.remoteAcknowledged, true, said);
+      if (h.remote === "unstoppable" || !there || GOING.has(later))
         assert.notEqual(answer.billingOutcome, "refunded", said);
-        if (h.remote === "none")
-          assert.equal(answer.localProcessExited, false, said);
-      }
-      if (h.remote === "unstoppable") {
-        assert.notEqual(answer.billingOutcome, "refunded", said);
-        assert.notEqual(later, "cancelled", said);
-      }
+      if (h.remote === "unstoppable") assert.notEqual(later, "cancelled", said);
       if (h.remote === "none") {
-        assert.equal(answer.remoteOutcome, undefined, said);
         assert.ok(
           answer.billingOutcome === undefined ||
             answer.billingOutcome === "notApplicable",
           said,
         );
+        if (GOING.has(later))
+          assert.equal(answer.localProcessExited, false, said);
       }
     });
   },
@@ -759,15 +775,16 @@ function watched(h: ConformanceHarness, ledger: GenerationLedger) {
   const held = h.adapter();
   let current = "";
   // Whatever the adapter is made as.
-  const adapter = new Proxy(held, {
-    get: (of, name) => {
-      const value: unknown = Reflect.get(of, name, of);
+  const adapter = new Proxy({} as EngineAdapterV2, {
+    has: (_, name) => Reflect.has(held, name),
+    get: (_, name) => {
+      const value: unknown = Reflect.get(held, name, held);
       if (name === "status")
         return async (ref: string) => {
           seen.refAtStatus.push(ledger.read(current)?.executionRef ?? null);
-          return of.status(ref);
+          return held.status(ref);
         };
-      return typeof value === "function" ? value.bind(of) : value;
+      return typeof value === "function" ? value.bind(held) : value;
     },
   });
   const service = make({
@@ -815,7 +832,10 @@ async function servedIn(
       ...watched(h, ledger),
       request: h.service.request,
     });
-    assert.equal(h.sends(), 1, `${scenario}: sent other than once.`);
+    assert.ok(
+      sentOnce(scenario, h.sends()),
+      `${scenario}: sent ${h.sends()} times.`,
+    );
   }
   if (missing.length) throw new Unavailable(missing.join(" "));
 }
@@ -856,6 +876,7 @@ const SERVICE: Record<
       ["uncertainLanded", "uncertainNeverLanded"],
       async (scenario, { service, ledger, request }) => {
         const { generationId } = await service.start(request);
+        const sent = h.sends();
         assert.equal(ledger.read(generationId)?.phase, "sending", scenario);
         const { service: next } = watched(h, ledger);
         assert.deepEqual(
@@ -863,7 +884,7 @@ const SERVICE: Record<
           [generationId],
         );
         for (let n = 0; n < 5; n++) await next.status(generationId);
-        assert.equal(h.sends(), 1, `${scenario}: sent again.`);
+        assert.equal(h.sends(), sent, `${scenario}: sent again.`);
         if (scenario === "uncertainNeverLanded")
           assert.equal(ledger.read(generationId)?.phase, "sending");
       },

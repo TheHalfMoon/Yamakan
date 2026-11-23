@@ -357,6 +357,107 @@ const broken: [
     },
   ],
   [
+    "sends an attempt again while its run goes on",
+    "same-attempt-never-sent-twice",
+    "none",
+    (a) => {
+      const refs = new Map<string, string>();
+      return {
+        ...a,
+        submit: async (r, c) => {
+          const ref = refs.get(r.attemptKey);
+          if (ref && (await a.status(ref)).state === "running")
+            return sendsAgain(a);
+          const answer = await a.submit(r, c);
+          if ("executionRef" in answer)
+            refs.set(r.attemptKey, answer.executionRef);
+          return answer;
+        },
+      };
+    },
+  ],
+  [
+    "sends an attempt again when its run was stopped",
+    "same-attempt-never-sent-twice",
+    "none",
+    (a) => {
+      let stopped = false;
+      return {
+        ...a,
+        requestCancel: async (ref) => {
+          stopped = true;
+          return a.requestCancel(ref);
+        },
+        submit: (r, c) => (stopped ? sendsAgain(a) : a.submit(r, c)),
+      };
+    },
+  ],
+  [
+    "cannot be asked for the files of a run that goes on",
+    "ref-usable-at-once",
+    "none",
+    (a) => ({
+      ...a,
+      enumerateArtifacts: async (ref) => {
+        if ((await a.status(ref)).state === "running")
+          throw new TypeError("It has no files.");
+        return a.enumerateArtifacts(ref);
+      },
+    }),
+  ],
+  [
+    "says it stopped a run that had finished",
+    "cancel-never-overclaims",
+    "stoppable",
+    (a) => ({
+      ...a,
+      requestCancel: async (ref) => ({
+        ...(await a.requestCancel(ref)),
+        ...((await a.status(ref)).state === "succeeded"
+          ? { remoteOutcome: "stopped" as const }
+          : {}),
+      }),
+    }),
+  ],
+  [
+    "says a run that never landed was refunded",
+    "cancel-never-overclaims",
+    "stoppable",
+    (a) => ({
+      ...a,
+      requestCancel: async (ref) => ({
+        ...(await a.requestCancel(ref)),
+        ...((await a.status(ref)).state === "unknown"
+          ? { billingOutcome: "refunded" as const }
+          : {}),
+      }),
+    }),
+  ],
+  [
+    "takes a frame rate and lists none",
+    "limits-held",
+    "none",
+    (a) => ({
+      ...a,
+      capabilities: () =>
+        a.capabilities().map((c) => {
+          const constraints = { ...c.constraints!, fps: [] };
+          return {
+            ...c,
+            constraints,
+            constraintsHash: constraintsHash(constraints),
+          };
+        }),
+      submit: (r, c) =>
+        a.submit(
+          (r.output.kind === "video"
+            ? { ...r, output: { ...r.output, fps: { num: 30, den: 1 } } }
+            : r) as EngineRequestV2,
+          c,
+        ),
+    }),
+  ],
+  [
     "takes every submit for a new attempt",
     "same-attempt-never-sent-twice",
     "none",
@@ -764,6 +865,80 @@ test("a truthful adapter passes, however it is made and however it refuses", asy
     await failing(fakeHarness("none", (a) => new Adapter(a))),
     [],
   );
+  // One whose parts cannot be put in place of.
+  assert.deepEqual(
+    await failing(fakeHarness("none", (a) => Object.freeze({ ...a }))),
+    [],
+  );
+  // A stop that was taken, and whose end is not known yet, on this computer and elsewhere.
+  assert.deepEqual(
+    await failing(
+      fakeHarness("none", (a) => ({
+        ...a,
+        requestCancel: async (ref) => {
+          const { state } = await a.status(ref);
+          const there = state === "running" || state === "succeeded";
+          return {
+            ...(await a.requestCancel(ref)),
+            remoteAcknowledged: there,
+            remoteOutcome: "unknown",
+          };
+        },
+      })),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    await failing(
+      fakeHarness("stoppable", (a) => {
+        // Ended the second time it is asked about.
+        const going = new Map<string, number>();
+        return {
+          ...a,
+          requestCancel: async (ref) => {
+            const { state } = await a.status(ref);
+            if (state !== "running") return a.requestCancel(ref);
+            going.set(ref, 1);
+            return {
+              requested: true,
+              localProcessExited: true,
+              remoteAcknowledged: true,
+              remoteOutcome: "unknown",
+            };
+          },
+          status: async (ref) => {
+            const left = going.get(ref);
+            if (left === 0) await a.requestCancel(ref);
+            if (left !== undefined) going.set(ref, left - 1);
+            return a.status(ref);
+          },
+        };
+      }),
+    ),
+    [],
+  );
+  // A stand-in that does not count a send which never landed.
+  const uncounted = fakeHarness();
+  let never = false;
+  assert.deepEqual(
+    await failing({
+      ...uncounted,
+      reset: () => {
+        never = false;
+        return uncounted.reset();
+      },
+      sends: () => uncounted.sends() - (never ? 1 : 0),
+      arrange: {
+        ...uncounted.arrange,
+        uncertainNeverLanded: () => {
+          never = true;
+          return uncounted.arrange.uncertainNeverLanded!();
+        },
+      },
+      context: () => uncounted.context(),
+    }),
+    [],
+  );
   // A control that takes a narrow range of the contract's.
   assert.deepEqual(
     await failing(
@@ -1001,10 +1176,18 @@ test("a harness that leaves out a state, or gives no reason for it, is refused b
 
 const ENGINES = new URL("../core/engines/", import.meta.url);
 // Anything that could make an adapter names the contract or one of its parts.
+// It does so itself, or by what it takes from a file that makes one (its types aside).
+const makers = [...Object.keys(ADAPTER_SUITES), ...PENDING]
+  .map((f) => f.replace(".", "\\."))
+  .join("|");
+const takesMaker = new RegExp(
+  `^(import|export)(?! type\\b)[^;]*?from "[^"]*/(${makers})"`,
+  "m",
+);
 const namesContract = (text: string) =>
   /EngineAdapterV2|ENGINE_CONTRACT_V2|engine-adapter\/v2|\brequestCancel\b/.test(
     text,
-  );
+  ) || takesMaker.test(text);
 const classified = (file: string) =>
   [
     Object.hasOwn(ADAPTER_SUITES, file),
@@ -1043,6 +1226,8 @@ test("every adapter file is registered with the conformance kit or named as pend
     'const a = { contract: "yamakan.engine-adapter/v2" };',
     "const a = { contract: ENGINE_CONTRACT_V2, // the contract",
     "export const a = (b: Base) => ({ ...b, requestCancel: async () => {} });",
+    'import { createKaggleEngine } from "./kaggle.ts";\nexport const a = (o: O) => ({ ...createKaggleEngine(o), submit });',
+    'export {\n  bridgeV1 as a,\n} from "../v1-bridge.ts";',
   ])
     assert.ok(namesContract(text), text);
 });
