@@ -183,27 +183,31 @@ try {
       blocked = "ffmpeg does not start on this host.";
     }
   if (blocked) throw new Error(blocked);
-  const file = join(root, "pattern.mp4");
-  execFileSync(
-    mediaTools().ffmpeg,
-    [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-f",
-      "lavfi",
-      "-i",
-      "testsrc2=size=704x480:rate=30:duration=2",
-      "-pix_fmt",
-      "yuv420p",
-      "-c:v",
-      "libx264",
-      file,
-    ],
-    { windowsHide: true },
-  );
-  const bytes = readFileSync(file);
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const pattern = (name, source) => {
+    const file = join(root, name);
+    execFileSync(
+      mediaTools().ffmpeg,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `${source}=size=704x480:rate=30:duration=2`,
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        file,
+      ],
+      { windowsHide: true },
+    );
+    const bytes = readFileSync(file);
+    return { bytes, sha256: createHash("sha256").update(bytes).digest("hex") };
+  };
+  const onePattern = pattern("pattern.mp4", "testsrc2");
+  const { sha256 } = onePattern;
 
   let ctx = await workspace();
   const fake = createFakeEngineV2();
@@ -214,15 +218,16 @@ try {
     modelManifestHash: "b".repeat(64),
   };
   // The fake runs and follows the request; its output is the pattern.
-  const serving = (engine) => ({
+  const serving = (engine, output = () => onePattern) => ({
     ...engine,
     enumerateArtifacts: async (ref) =>
       (await engine.enumerateArtifacts(ref)).map((x) => ({
         ...x,
-        byteLength: bytes.length,
-        sha256,
+        byteLength: output().bytes.length,
+        sha256: output().sha256,
       })),
     readArtifact: async function* () {
+      const { bytes } = output();
       for (let i = 0; i < bytes.length; i += 1024 * 1024)
         yield new Uint8Array(bytes.subarray(i, i + 1024 * 1024));
     },
@@ -533,10 +538,13 @@ try {
     console.log(`ok - ${name}`);
   };
   let ends = "succeeded";
+  // The second run makes other media, so that a replacement changes what the clip shows.
+  const otherPattern = pattern("second.mp4", "smptebars");
+  let makes = onePattern;
   const engine = createFakeEngineV2();
   const ledgered = createGenerationService({
     adapter: {
-      ...serving(engine),
+      ...serving(engine, () => makes),
       status: async (ref) => {
         const said = await engine.status(ref);
         return ends === "failed"
@@ -601,7 +609,8 @@ try {
     return generationId;
   };
   const brought = [];
-  for (let n = 0; n < 2; n++) {
+  for (const made of [onePattern, otherPattern]) {
+    makes = made;
     const generationId = await goes("succeeded");
     const { take } = await call("yamakan.generation.import", { generationId });
     brought.push({ generationId, takeId: take.takeId });
