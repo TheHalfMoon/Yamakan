@@ -1,0 +1,49 @@
+{
+  "task": "MPR-201",
+  "head": "67486831023bdf720538acdb4a529b33fc3a7f75",
+  "dirty": false,
+  "host": {
+    "platform": "win32",
+    "githubImage": null,
+    "freeDiskBytes": 14040096768,
+    "freeMemoryBytes": 3137949696,
+    "onAcPower": true,
+    "load": null,
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "entries": 2,
+  "refusals": 1,
+  "lists": [
+    {
+      "list": "KAGGLE_RECIPES",
+      "items": 3,
+      "disagreements": []
+    },
+    {
+      "list": "PINNED_COMFY_RECIPES",
+      "items": 0,
+      "disagreements": []
+    },
+    {
+      "list": "PINNED_MODEL_MANIFESTS",
+      "items": 0,
+      "disagreements": []
+    },
+    {
+      "list": "engine-candidate-manifests.json",
+      "items": 3,
+      "disagreements": []
+    },
+    {
+      "list": "CREATE_MODELS",
+      "items": 2,
+      "disagreements": []
+    }
+  ],
+  "evidence": {
+    "path": "docs/evidence/ultimate/engine-candidate-manifests.json",
+    "sha256": "51bd31621c07423c12b83ed2dfd39e2a0e120a2c4cbe79d28d5144dd07f93152"
+  }
+}
