@@ -141,9 +141,14 @@ export function StoryBrief({
       }
     return found;
   };
+  // Known at once, also to a read that ends before the page is drawn again.
+  const hold = (held: Held | null) => {
+    latest.current = { ...latest.current, base: held };
+    setBase(held);
+  };
   // Takes the story as it is. Typed text stays, on top of it.
   const adopt = (held: Held) => {
-    setBase(held);
+    hold(held);
     setEdits((typed) => stillToSave(typed, held.story));
   };
   useEffect(() => {
@@ -158,7 +163,7 @@ export function StoryBrief({
         // reloads when they want to.
         if (Object.keys(typed).length === 0) {
           const next = same ?? found[0] ?? null;
-          setBase(next);
+          hold(next);
           setRefused(null);
         } else if (same?.contentHash !== held?.contentHash)
           setRefused("conflict");
@@ -223,7 +228,7 @@ export function StoryBrief({
         contentHash: answer.document.contentHash,
         story: draft,
       };
-      setBase(held);
+      hold(held);
       // What was typed while it was being saved is still to save.
       setEdits((typed) => {
         const left: Edits = {};
@@ -289,7 +294,7 @@ export function StoryBrief({
             disabled={dirty || saving}
             onChange={(e) => {
               const next = stories.find((s) => s.documentId === e.target.value);
-              if (next) setBase(next);
+              if (next) hold(next);
             }}
           >
             {stories.map((s) => (
