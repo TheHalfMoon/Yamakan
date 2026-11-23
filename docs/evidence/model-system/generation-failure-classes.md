@@ -13,7 +13,7 @@ By reading main `c7c9929`:
 ## What was built
 
 - **`core/engines/failures.ts`:** the table, billing and the refusal's carrier. Eleven classes: the card's eight and the three of OA-18, which the founder accepted ([record](../../FOUNDER_DECISION_RECORD.md#2026-11-23-three-more-kinds-of-generation-failure)).
-- **Adapters** name the class where each message is made. Messages are unchanged.
+- **Adapters** name the class where each message is made. Messages are unchanged. **An answer that a run failed or was stopped must name one** (OA-17, accepted by the founder, [record](../../FOUNDER_DECISION_RECORD.md#2026-11-23-every-engine-names-a-failure-kind-and-measured-facts-carry-a-date-and-a-sample-size)): the type and the schema refuse one that does not, and refuse a class in any other answer. The fake and the bridge to version 1 engines say `unknown` where they do not know. The service still reads an answer that breaks this as `unknown`, and believes no class beside another state.
 - **The service** has one writer of how a run ended. The first end stands, a stop is an end, and a row from before this card gains nothing and reads as `unknown`.
 - **`yamakan.generation.status` and `yamakan.generation.list`** gain `failureClass`, `mayStillBeBilled`, `billedIn`, `retry` and `endedAt`.
 - **The Create page** shows a line with the kind, the billing and the advice, in English and Arabic. The Arabic is unreviewed.
@@ -72,6 +72,6 @@ By reading main `c7c9929`:
 ## Not run, and not claimed
 
 - **`npm run qualify:kaggle-screens`,** whose scenes `failed` and `stop-running` now check the line, is syntax-checked and was not run: it needs the native helpers, a browser and a C# compiler. Its scenes' observations are therefore not here, and **the card is not complete.**
-- **OA-17** (`failureClass` becomes required in an adapter's answer, and measured facts carry a date) is open, with MPR-207 as its date; the field is optional here, as the card has it.
+- **OA-17's other half** (each measured fact carries a date and a sample size) is in MPR-202's text now, and nothing here measures anything.
 - The optional look at a real Kaggle run was not made. **[ASSUMED]** items stay so: how Kaggle reports a run it ended at its time limit, so `timeout` there is taken from the clock; and that Kaggle counts a failed or stopped run's GPU time, so the wording says "may".
 - `npm run test:studio` and `npm run test:e2e` were not run here.

@@ -9,6 +9,7 @@ import {
   ENGINE_CONTRACT_V2,
   readArtifactVerified,
   type EngineRequestV2,
+  ExecutionStatusSchema,
 } from "../core/engines/contract-v2.ts";
 import {
   PINNED_COMFY_RECIPES,
@@ -544,7 +545,7 @@ test("a job ComfyUI stops reporting fails from when it was last seen", async () 
   pass(200);
   const gone = await engine.status(id);
   assert.equal(gone.diagnostic, "ComfyUI stopped reporting this job.");
-  assert.equal(gone.failureClass, "lostJob");
+  assert.equal("failureClass" in gone && gone.failureClass, "lostJob");
   engine.close();
 });
 
@@ -1037,7 +1038,9 @@ test("status follows queue, history, and failure, with bounded diagnostics", asy
         messages: [["execution_error", { exception_type }]],
       },
     } as never;
-    assert.equal((await engine.status(id)).failureClass, kind);
+    const failed = await engine.status(id);
+    assert.equal("failureClass" in failed && failed.failureClass, kind);
+    ExecutionStatusSchema.parse(failed);
   }
   f.history[id] = { status: { messages: [["execution_interrupted", {}]] } };
   const interrupted = await engine.status(id);

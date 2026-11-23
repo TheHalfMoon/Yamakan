@@ -492,9 +492,10 @@ export function createGenerationService(options: {
         imported: g.imported,
         ...outcomeOf(g),
       };
-    const { state, progress, diagnostic, failureClass } = await adapter.status(
-      refOf(g),
-    );
+    const said = await adapter.status(refOf(g));
+    const { state, progress, diagnostic } = said;
+    // An adapter must name it, and one that does not is still not guessed for.
+    const failureClass = "failureClass" in said ? said.failureClass : undefined;
     const change: Partial<GenerationRecord> = {
       state,
       diagnostic: diagnostic ?? null,

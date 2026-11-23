@@ -19,6 +19,7 @@ import {
   type EngineAdapterV2,
   type EngineContextV2,
   type EngineRequestV2,
+  ExecutionStatusSchema,
 } from "../core/engines/contract-v2.ts";
 import {
   SERVER_RECIPES,
@@ -295,7 +296,41 @@ test("unsupported controls and outputs fail before any worker is spawned", async
   assert.equal(engine.spawned(), 1);
 });
 
-test("a failed execution names the kind it is given, and none when it is given none", async () => {
+test("an answer that a run failed or was stopped names which kind of end it was, and no other answer does", () => {
+  for (const state of ["failed", "cancelled"])
+    for (const [failureClass, ok] of [
+      ["timeout", true],
+      ["unknown", true],
+      ["cancelled", true],
+      [undefined, false],
+      ["no such kind", false],
+      [null, false],
+    ] as const)
+      assert.equal(
+        ExecutionStatusSchema.safeParse({
+          executionRef: "r",
+          state,
+          ...(failureClass === undefined ? {} : { failureClass }),
+        }).success,
+        ok,
+        `${state} ${failureClass}`,
+      );
+  for (const state of ["queued", "running", "succeeded", "unknown"]) {
+    const answer = { executionRef: "r", state, progress: 0.5 };
+    assert.ok(ExecutionStatusSchema.safeParse(answer).success, state);
+    assert.ok(
+      !ExecutionStatusSchema.safeParse({ ...answer, failureClass: "unknown" })
+        .success,
+      state,
+    );
+  }
+  assert.ok(
+    !ExecutionStatusSchema.safeParse({ executionRef: "r", state: "lost" })
+      .success,
+  );
+});
+
+test("a failed execution names the kind it is given, and says unknown when it is given none", async () => {
   for (const failureClass of [undefined, "timeout"] as const) {
     const engine = createFakeEngineV2({
       failExecutions: true,
@@ -305,7 +340,11 @@ test("a failed execution names the kind it is given, and none when it is given n
     assert.ok("executionRef" in ran);
     const status = await engine.status(ran.executionRef);
     assert.equal(status.state, "failed");
-    assert.equal(status.failureClass, failureClass);
+    assert.equal(
+      "failureClass" in status && status.failureClass,
+      failureClass ?? "unknown",
+    );
+    ExecutionStatusSchema.parse(status);
   }
 });
 
@@ -405,7 +444,13 @@ test("v1 parity: the bridge lowers only server recipes and reports what the v2 f
   const probe = bridgeV1(createFakeEngine({ failProbe: true }));
   const failed = await probe.submit(textToVideo(), ctx);
   assert.ok("executionRef" in failed);
-  assert.equal((await probe.status(failed.executionRef)).state, "failed");
+  // Which kind, a version 1 engine does not say.
+  assert.deepEqual(
+    ((s) => [s.state, "failureClass" in s && s.failureClass])(
+      await probe.status(failed.executionRef),
+    ),
+    ["failed", "unknown"],
+  );
   assert.deepEqual(await probe.enumerateArtifacts(failed.executionRef), []);
 });
 
@@ -595,7 +640,9 @@ test("a newer generation cancels the execution it replaces; unknown executions a
     ctx,
   );
   assert.ok("executionRef" in second);
-  assert.equal((await long.status(first.executionRef)).state, "cancelled");
+  const replaced = await long.status(first.executionRef);
+  assert.equal(replaced.state, "cancelled");
+  ExecutionStatusSchema.parse(replaced);
   assert.equal((await long.status(second.executionRef)).state, "running");
   // A stuck older generation never holds up the newer one.
   const stuck = createFakeEngineV2({

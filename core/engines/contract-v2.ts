@@ -327,22 +327,28 @@ export const FailureClass = z.enum([
 ]);
 export type FailureClass = z.infer<typeof FailureClass>;
 
-export const ExecutionStatusSchema = z
-  .object({
-    executionRef: Ref,
-    state: z.enum([
-      "queued",
-      "running",
-      "succeeded",
-      "failed",
-      "cancelled",
-      "unknown",
-    ]),
-    progress: z.number().min(0).max(1).optional(),
-    diagnostic: Diagnostic.optional(),
-    failureClass: FailureClass.optional(),
-  })
-  .strict();
+const StatusParts = {
+  executionRef: Ref,
+  progress: z.number().min(0).max(1).optional(),
+  diagnostic: Diagnostic.optional(),
+};
+// An adapter that says a run failed or was stopped names which kind of end it was (OA-17): one
+// that does not know says "unknown". Any other answer names none.
+export const ExecutionStatusSchema = z.discriminatedUnion("state", [
+  z
+    .object({
+      ...StatusParts,
+      state: z.enum(["queued", "running", "succeeded", "unknown"]),
+    })
+    .strict(),
+  z
+    .object({
+      ...StatusParts,
+      state: z.enum(["failed", "cancelled"]),
+      failureClass: FailureClass,
+    })
+    .strict(),
+]);
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 export const CancellationSchema = z
   .object({

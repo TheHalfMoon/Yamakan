@@ -707,12 +707,16 @@ export function createKaggleEngine(options: {
     if (!state) throw new Error("Kaggle gave no state for this run.");
     return state;
   };
-  const status = (run: Run): ExecutionStatus => ({
-    executionRef: run.runId,
-    state: run.ended ?? "unknown",
-    ...(run.endedWith ? { diagnostic: diagnostic(run.endedWith) } : {}),
-    ...(run.endedAs ? { failureClass: run.endedAs } : {}),
-  });
+  const status = (run: Run): ExecutionStatus => {
+    const said = {
+      executionRef: run.runId,
+      ...(run.endedWith ? { diagnostic: diagnostic(run.endedWith) } : {}),
+    };
+    const state = run.ended ?? "unknown";
+    return state === "failed" || state === "cancelled"
+      ? { ...said, state, failureClass: run.endedAs ?? "unknown" }
+      : { ...said, state };
+  };
   const succeeded = (run: Run): ExecutionStatus => {
     run.ended = "succeeded";
     return status(run);

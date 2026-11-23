@@ -31,7 +31,6 @@ import {
 import {
   FailureClass,
   type EngineAdapterV2,
-  type ExecutionStatus,
 } from "../core/engines/contract-v2.ts";
 import {
   createGenerationService,
@@ -934,7 +933,8 @@ test("a row from before gains nothing as it is stopped, dismissed or asked again
 });
 
 test("a status without a class is unknown, never guessed from its words, and one with a class it should not have is not believed", async () => {
-  const answer: { now: Partial<ExecutionStatus> } = { now: {} };
+  // As an adapter that does not keep the contract would answer.
+  const answer: { now: Record<string, unknown> } = { now: {} };
   const w = await workspace(
     () =>
       ({
