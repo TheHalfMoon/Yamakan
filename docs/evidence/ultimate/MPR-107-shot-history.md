@@ -60,6 +60,32 @@ At `b8c9f3b`, by reading: no `yamakan.shot.*` command, and a take replacement le
 - **On the founder host, against the real store, job table and commands:** the 17 tests of `tests/shot-history.test.ts` pass. The engine is a double and its video is the project's as its rows and ten bytes.
 - **`npm run qualify:revisable-shot`** is extended with a ledger arm, a volume arm and the same call over REST and MCP; see the section below.
 
+## The real check
+
+`npm run qualify:revisable-shot` needs ffmpeg through the native helpers, which the founder host's sandbox does not start (ledger 12), so it ran on GitHub's Linux machine: **PASS at `dc47876`** (run 45245057467, `ubuntu-24.04`, no sandbox), with the MPR-101 and MPR-102 steps before it. Its receipt is `MPR-107-shot-history-receipt.json`. It is not evidence of the founder host. Its engine is a double, which runs nothing: the two videos are test patterns, and the times are this check's, not a model's.
+
+The demonstration shot's history, as the command gave it (ids by their first characters; the times are in milliseconds from the first run's start):
+
+| Attempt | Outcome | Started | Ended | Took | Quota | Take it made |
+|---|---|---|---|---|---|---|
+| 17 `c1428457` | cancelled ("No longer followed here. The engine was not told to stop, and anything running there goes on until it ends.") | 458 | 567 | 109 | not known | none |
+| 16 `e600cb79` | failed ("It failed, for this check.") | 335 | 457 | 122 | not known | none |
+| 15 `a3a4097d` | succeeded, imported | 133 | 273 | 140 | not known | `daf06447` |
+| 14 `34295191` | succeeded, imported | 0 | 127 | 127 | not known | `4a403b3f` |
+
+| Take | How it was made | Record | Added at revision | Shown now |
+|---|---|---|---|---|
+| `4a403b3f` | a generation, recipe `qualify-pattern`, seed 7, 704x480, 60 frames | `61bbe8c8` | 21 | yes |
+| `daf06447` | the same | `213577e8` | 23 | no |
+
+| Replacement | By | From | To | Clips |
+|---|---|---|---|---|
+| revision 26, then undone | browser-ui | `4a403b3f` | `daf06447` | 1 |
+
+Totals: 4 attempts (2 succeeded, 1 failed, 1 cancelled), 2 takes, 1 replacement, 498 ms in all with none unknown, quota unknown for all 4, complete. Gaps: `untargeted-attempts` (the MPR-101 steps made a run for no shot) and `earlier-replacements` (an assembly is a batch edit).
+
+The volume arm, 2,000 runs of which 250 are the shot's and 300 notes: the slowest of 20 calls took 25.8 ms (criterion 250) and the largest answer is 56,330 bytes (criterion 131,072), in pages of 100, 100 and 50. The service gave the same answer over REST and over MCP.
+
 ## Not covered by a test
 
 - A page cut to the size bound is tested with text of the widest characters, not with every field at its longest.
