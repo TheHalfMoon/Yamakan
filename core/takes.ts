@@ -32,8 +32,11 @@ import {
   buildGenerationRecord,
   recordHashOf,
   type RecipeFacts,
+  type TakeRecord,
 } from "./take-record.ts";
 import type {
+  GenerationBase,
+  GenerationRecipe,
   GenerationRecord,
   GenerationTarget,
   TakeOutcome,
@@ -712,6 +715,296 @@ export async function assertGenerationTarget(
     throw invalid(tooShort(shot.durationTicks, made, "this request makes"));
 }
 
+const NO_TAKE = "The shot has no such take.";
+
+/** The take of the target's shot that a run revises, read before anything is recorded or sent. */
+export function generationBase(
+  store: ProjectStore,
+  projectId: string,
+  target: GenerationTarget,
+  takeId: string,
+  revisionNote: string | undefined,
+): GenerationBase {
+  const held = storyAt(store, projectId, target.documentId);
+  if (!held) throw notFound(NO_STORY);
+  const take = shotOf(held.story, target.shotId)?.takes.find(
+    (t) => t.id === takeId,
+  );
+  if (!take)
+    throw invalid("A revision is made for the shot its base take belongs to.");
+  const { recordHash } = take;
+  if (
+    recordHash === undefined ||
+    store.takeRecord(projectId, target.documentId, recordHash).request.kind !==
+      "generation"
+  )
+    throw invalid("The base take has no generation request to revise from.");
+  return { takeId, recordHash, ...(revisionNote ? { revisionNote } : {}) };
+}
+
+/**
+ * The record of an imported run, beside the record of the take it revises. One that cannot be
+ * read leaves what changed unsaid, which the notice says, and stops nothing.
+ */
+export function generatedRecord(
+  store: ProjectStore,
+  row: GenerationRecord,
+  facts: RecipeFacts,
+): { record: TakeRecord; notice: string | null } {
+  let base: TakeRecord | null = null;
+  let notice: string | null = null;
+  if (row.derivedFrom)
+    try {
+      base = store.takeRecord(
+        row.projectId,
+        row.target?.documentId ?? "",
+        row.derivedFrom.recordHash,
+      );
+    } catch (e) {
+      if (toCommandError(e).code === "INTERNAL") throw e;
+      notice =
+        "The record of the take this one revises could not be read, so what changed from it is not recorded.";
+    }
+  return { record: buildGenerationRecord(row, facts, undefined, base), notice };
+}
+
+// A model that can be started here today, and what it makes, where that is known.
+export type OfferedRecipe = GenerationRecipe & {
+  makes: { width: number; height: number; frames: number; fps: number } | null;
+};
+export type Offer = {
+  // Why nothing can be started here; null when something can.
+  reason: string | null;
+  recipes: readonly OfferedRecipe[];
+};
+export type RevisionCheck = {
+  field:
+    | "route"
+    | "recipe"
+    | "model"
+    | "prompt"
+    | "seed"
+    | "width"
+    | "height"
+    | "durationFrames"
+    | "firstFrame";
+  state: "ok" | "changed" | "unavailable" | "unknown";
+  message: string;
+};
+
+/**
+ * The request that made one take, as a draft to change and start again, and what today's offer
+ * says of each part. It reads only, and starts no engine.
+ */
+export async function revisionDraft(
+  store: ProjectStore,
+  at: {
+    projectId: string;
+    documentId: string;
+    shotId: string;
+    takeId: string;
+  },
+  offer: Offer,
+  rowOf: (generationId: string) => GenerationRecord | null,
+) {
+  const project = await store.load(at.projectId);
+  const held = storyAt(store, at.projectId, at.documentId);
+  if (!held) throw notFound(NO_STORY);
+  if (held.revision !== project.revision)
+    throw new CommandError(
+      "REVISION_CONFLICT",
+      "The project changed while it was read; try again.",
+    );
+  const shot = shotOf(held.story, at.shotId);
+  if (!shot) throw notFound(NO_SHOT);
+  const take = shot.takes.find((t) => t.id === at.takeId);
+  if (!take) throw notFound(NO_TAKE);
+  const base = {
+    documentId: at.documentId,
+    shotId: at.shotId,
+    takeId: at.takeId,
+    recordHash: take.recordHash ?? null,
+    storyContentHash: held.ref.contentHash,
+  };
+  const none = (reason: string) => ({
+    base,
+    draft: null,
+    complete: false,
+    startable: false,
+    checks: [] as RevisionCheck[],
+    reason,
+  });
+  if (take.recordHash === undefined)
+    return none("This take has no generation record.");
+  const record = store.takeRecord(at.projectId, at.documentId, take.recordHash);
+  const { request, recipe, model } = record;
+  if (request.kind !== "generation")
+    return none(
+      "This take was rendered with Blender; revise it from its shot direction.",
+    );
+
+  // The words, or where only their hash was kept, the run's own row when it is the same words.
+  let prompt = request.prompt ?? null;
+  if (
+    prompt === null &&
+    request.promptHash !== null &&
+    record.source !== null &&
+    "generationId" in record.source
+  ) {
+    const row = rowOf(record.source.generationId);
+    if (
+      row?.projectId === at.projectId &&
+      row.prompt !== null &&
+      sha256Hex(row.prompt) === request.promptHash
+    )
+      prompt = row.prompt;
+  }
+  const first = record.inputs.find((i) => i.role === "firstFrame") ?? null;
+  const fromStill = first !== null || record.operation === "imageToVideo";
+  const draft = {
+    recipeId: recipe?.id ?? null,
+    prompt,
+    seed: request.seed,
+    width: request.width,
+    height: request.height,
+    durationFrames: request.durationFrames,
+    firstFrameAssetId: first?.assetId ?? null,
+  };
+  const complete =
+    draft.recipeId !== null &&
+    draft.width !== null &&
+    draft.height !== null &&
+    draft.durationFrames !== null &&
+    (Boolean(prompt) || request.promptHash === null) &&
+    (!fromStill || first !== null);
+
+  const checks: RevisionCheck[] = [];
+  const check = (
+    field: RevisionCheck["field"],
+    state: RevisionCheck["state"],
+    message: string,
+  ) => checks.push({ field, state, message });
+  if (offer.reason !== null) check("route", "unavailable", offer.reason);
+  else check("route", "ok", "Models can be started here.");
+  const offered =
+    recipe === null
+      ? null
+      : (offer.recipes.find((r) => r.id === recipe.id) ?? null);
+  if (recipe === null)
+    check(
+      "recipe",
+      "unknown",
+      "This take's record names no model set up here.",
+    );
+  else if (offer.reason !== null)
+    check(
+      "recipe",
+      "unknown",
+      "Nothing can be started here, so whether this model is offered is not known.",
+    );
+  else if (!offered)
+    check("recipe", "unavailable", "This model is no longer offered here.");
+  else if (offered.hash !== recipe.hash)
+    check(
+      "recipe",
+      "changed",
+      "The model's run script changed since this take; the same request may give a different result.",
+    );
+  else check("recipe", "ok", "This model is offered with the same run script.");
+  if (!offered || !model?.manifestHash)
+    check(
+      "model",
+      "unknown",
+      "Whether the model is the same version is not known.",
+    );
+  else if (offered.modelManifestHash !== model.manifestHash)
+    check(
+      "model",
+      "changed",
+      "The model's version changed since this take; the same request may give a different result.",
+    );
+  else check("model", "ok", "The model is the same version.");
+  if (prompt) check("prompt", "ok", "The prompt was kept.");
+  else if (request.promptHash === null || prompt === "")
+    check("prompt", "ok", "This take was made without a prompt.");
+  else
+    check(
+      "prompt",
+      "unknown",
+      "Only a hash of this take's prompt was kept, and its words were not found.",
+    );
+  if (request.seed !== null) check("seed", "ok", "The seed was kept.");
+  else
+    check(
+      "seed",
+      "unknown",
+      "This take has no recorded seed; a repeat may differ.",
+    );
+  const makes = offered?.makes ?? null;
+  const { num, den } = frameRateOf(project);
+  // As a page asks for it: a whole number of the project's own frames.
+  const now = {
+    width: makes?.width,
+    height: makes?.height,
+    durationFrames:
+      makes === null
+        ? undefined
+        : Math.max(1, Math.floor((makes.frames / makes.fps) * (num / den))),
+  };
+  for (const [field, name, unit] of [
+    ["width", "width", "pixels"],
+    ["height", "height", "pixels"],
+    ["durationFrames", "length", "frames of this project"],
+  ] as const) {
+    const asked = request[field];
+    const is = now[field];
+    if (asked === null)
+      check(field, "unknown", `This take's record holds no ${name}.`);
+    else if (is === undefined)
+      check(
+        field,
+        "unknown",
+        `The ${name} this model makes is not known here.`,
+      );
+    else if (is !== asked)
+      check(
+        field,
+        "changed",
+        `The ${name} this model makes is now ${is} ${unit}; this take was asked for ${asked}.`,
+      );
+    else check(field, "ok", `This model makes this ${name}.`);
+  }
+  if (fromStill) {
+    const asset = project.assets.find((a) => a.id === first?.assetId);
+    if (!first)
+      check(
+        "firstFrame",
+        "unknown",
+        "This take's record does not say which still it started from.",
+      );
+    else if (asset?.hash !== first.assetHash)
+      check(
+        "firstFrame",
+        "unavailable",
+        "The still this take started from is no longer in the project.",
+      );
+    else
+      check(
+        "firstFrame",
+        "ok",
+        "The still this take started from is in the project.",
+      );
+  }
+  return {
+    base,
+    draft,
+    complete,
+    startable: complete && checks.every((c) => c.state !== "unavailable"),
+    checks,
+    reason: null,
+  };
+}
+
 /**
  * Adds an imported run's video to the shot it was made for, as a take with its record, in a new
  * version of the story as it is now. The shot's selection and the timeline are the person's and
@@ -782,7 +1075,7 @@ export async function appendGeneratedTake(
           tooShort(shot.durationTicks, made, "this take lasts"),
         );
     }
-    const record = buildGenerationRecord(row, facts);
+    const { record, notice } = generatedRecord(store, row, facts);
     const recordHash = recordHashOf(record);
     const takeId = crypto.randomUUID();
     const next: Story = {
@@ -848,6 +1141,7 @@ export async function appendGeneratedTake(
         .listDocumentsAt(projectId, saved.revision)
         .find((d) => d.id === documentId)!.contentHash,
       revision: saved.revision,
+      ...(notice ? { notice } : {}),
     };
   }
   return not(
