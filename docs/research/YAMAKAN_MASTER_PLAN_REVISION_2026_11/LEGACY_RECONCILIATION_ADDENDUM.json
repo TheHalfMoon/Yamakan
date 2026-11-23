@@ -1,0 +1,800 @@
+{
+  "schema": "yamakan.legacy-reconciliation-addendum/v1",
+  "baselineMain": "7b1ca46ce20efaa603be12b51d57aee04a3f5f72",
+  "extends": "docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/LEGACY_RECONCILIATION.json",
+  "rule": "Nothing in an earlier plan is reopened, re-scored or reimplemented by this addendum. Each row states that the earlier disposition stands and names the cards of this revision that build on it. Earlier receipts, flags, skips and limitations keep their exact scope.",
+  "ultimatePlan": [
+    {
+      "id": "YU-000",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-001",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-002",
+        "SS-017"
+      ]
+    },
+    {
+      "id": "YU-002",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-003",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-010",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-011",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-012",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-403"
+      ]
+    },
+    {
+      "id": "YU-013",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-001",
+        "SS-003",
+        "MPR-204"
+      ]
+    },
+    {
+      "id": "YU-014",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-015",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-601"
+      ]
+    },
+    {
+      "id": "YU-016",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-012"
+      ]
+    },
+    {
+      "id": "YU-017",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-009"
+      ]
+    },
+    {
+      "id": "YU-018",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-009",
+        "SS-010"
+      ]
+    },
+    {
+      "id": "YU-019",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-014"
+      ]
+    },
+    {
+      "id": "YU-020",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-014",
+        "MPR-602"
+      ]
+    },
+    {
+      "id": "YU-021",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-014"
+      ]
+    },
+    {
+      "id": "YU-022",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-014"
+      ]
+    },
+    {
+      "id": "YU-023",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-602"
+      ]
+    },
+    {
+      "id": "YU-024",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-013",
+        "MPR-606"
+      ]
+    },
+    {
+      "id": "YU-025",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-026",
+      "priorDisposition": "PRESERVE_VERIFIED_WITH_M_UNQUALIFIED",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-005",
+        "SS-005a",
+        "SS-005b",
+        "SS-010"
+      ]
+    },
+    {
+      "id": "YU-030",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-011",
+        "MPR-104"
+      ],
+      "note": "MPR-104 puts the existing take comparison and replacement on shot cards; the verified command scope is unchanged."
+    },
+    {
+      "id": "YU-031",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-010",
+        "MPR-401",
+        "MPR-402"
+      ],
+      "note": "MPR-010, MPR-401 and MPR-402 build on the reference pack as verified; the pack format moves only by an additive version step."
+    },
+    {
+      "id": "YU-032",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-011",
+        "MPR-010",
+        "MPR-402"
+      ],
+      "note": "MPR-010 settles one consent rule on undo of a pinned take; MPR-402 reports reference delivery. The continuity check keeps its verified scope."
+    },
+    {
+      "id": "YU-040",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-206",
+        "MPR-210"
+      ]
+    },
+    {
+      "id": "YU-041",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-042",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-201",
+        "MPR-202",
+        "MPR-208",
+        "MPR-220"
+      ],
+      "note": "The engine contract stays as verified. MPR-201, MPR-202, MPR-208 and MPR-220 add a catalog, a capability report and licence gates around it."
+    },
+    {
+      "id": "YU-043",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-201",
+        "MPR-208",
+        "MPR-220"
+      ],
+      "note": "Kept as verified; MPR-201, MPR-208 and MPR-220 read it and do not change its receipt."
+    },
+    {
+      "id": "YU-050",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-403",
+        "MPR-404"
+      ]
+    },
+    {
+      "id": "YU-051",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-003",
+        "MPR-010",
+        "MPR-401",
+        "MPR-402",
+        "MPR-405"
+      ],
+      "note": "Kept as verified; the consistency cards read identity records and add no claim of demonstrated model consistency."
+    },
+    {
+      "id": "YU-060",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-006",
+        "MPR-105"
+      ],
+      "note": "The remaining scope stays with SS-006. MPR-105 adds take-proposal format version 2 beside version 1, which stays readable."
+    },
+    {
+      "id": "YU-061",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-004",
+        "SS-008",
+        "MPR-805"
+      ],
+      "note": "The remaining scope stays with SS-004 and SS-008. MPR-805 measures the supervised-agent journey and does not replace either card."
+    },
+    {
+      "id": "YU-062",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-007"
+      ]
+    },
+    {
+      "id": "YU-070",
+      "priorDisposition": "PRESERVE_STANDIN_ONLY",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "MPR-221"
+      ],
+      "note": "The stand-in stays a stand-in. MPR-221 is the gated qualification of real local speech-to-text and waits for FD-4."
+    },
+    {
+      "id": "YU-071",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": []
+    },
+    {
+      "id": "YU-072",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "X-03"
+      ]
+    },
+    {
+      "id": "YU-080",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-015",
+        "MPR-702"
+      ],
+      "note": "The remaining scope stays with SS-015. MPR-702 depends on SS-015 and adds lineage metadata on top of it."
+    },
+    {
+      "id": "YU-081",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-016",
+        "MPR-107",
+        "MPR-802"
+      ],
+      "note": "The remaining scope stays with SS-016. MPR-107 gives the measure its data; MPR-802 runs the Yamakan-only baseline."
+    },
+    {
+      "id": "YU-090",
+      "priorDisposition": "PRESERVE_VERIFIED_SCOPE",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "SS-005a",
+        "SS-016",
+        "SS-017",
+        "MPR-107",
+        "MPR-405",
+        "MPR-801"
+      ],
+      "note": "The frozen benchmark protocol and its receipt are kept. MPR-801 pre-registers protocol version 2 beside it; MPR-405 and MPR-107 reuse its statistics."
+    },
+    {
+      "id": "YU-091",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-018"
+      ]
+    },
+    {
+      "id": "YU-092",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS_EXTENDED",
+      "successors": [
+        "X-03",
+        "MPR-803"
+      ],
+      "note": "The remaining scope stays with X-03. MPR-803 is the competitor arm and stays blocked until FD-6."
+    },
+    {
+      "id": "YU-093",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "X-01",
+        "SS-013"
+      ]
+    },
+    {
+      "id": "YU-100",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "SS-019"
+      ]
+    },
+    {
+      "id": "YU-101",
+      "priorDisposition": "REMAINING_SCOPED_WORK",
+      "disposition": "PRIOR_DISPOSITION_STANDS",
+      "successors": [
+        "X-02"
+      ]
+    }
+  ],
+  "systemSupremacy": [
+    {
+      "id": "SS-001",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-002",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-003",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-301",
+        "MPR-302"
+      ]
+    },
+    {
+      "id": "SS-004",
+      "state": "AGGREGATE",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-004a",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-004b",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-005",
+      "state": "AGGREGATE",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-005a",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-005b",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "R-01",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-601",
+        "MPR-602",
+        "MPR-603",
+        "MPR-604",
+        "MPR-605",
+        "MPR-606"
+      ],
+      "note": "Verified research, kept. The editor and experience cards (MPR-601 to MPR-606) use its capability coverage as their list of command-only features."
+    },
+    {
+      "id": "R-02",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-210",
+        "MPR-222"
+      ],
+      "note": "Verified research, kept. MPR-210 and MPR-222 use its workflow coverage for the hosted-provider profile."
+    },
+    {
+      "id": "R-03",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-603"
+      ],
+      "note": "Verified research, kept. MPR-603 reuses its interchange findings."
+    },
+    {
+      "id": "R-04",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "R-05",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-006",
+      "state": "VERIFIED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-103",
+        "MPR-104",
+        "MPR-105",
+        "MPR-301",
+        "MPR-303"
+      ],
+      "note": "Verified and kept. MPR-104, MPR-105 and MPR-303 depend on it: shot cards, take-proposal format version 2 and hash-bound edit proposals reuse its revision-bound proposal rule."
+    },
+    {
+      "id": "SS-007",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-203",
+        "MPR-204",
+        "MPR-206",
+        "MPR-501",
+        "MPR-502",
+        "MPR-503",
+        "MPR-504"
+      ],
+      "note": "Its request, progress and handoff semantics stay the contract. The agent-surface cards (MPR-501 to MPR-504) and the preflight, gate and operation cards (MPR-203, MPR-204, MPR-206) follow it and must not fork it."
+    },
+    {
+      "id": "SS-008",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-207",
+        "MPR-805"
+      ],
+      "note": "Its cancellation and recovery qualification stays its own card. MPR-207 adds typed failure classes that it can read; MPR-805 forces one restart inside the supervised-agent measure."
+    },
+    {
+      "id": "SS-009",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-010",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-011",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-104",
+        "MPR-304"
+      ],
+      "note": "Stays the card that exposes take comparison and replacement in the editor. MPR-104 adds the shot-card surface; MPR-304 reads it. MPR-105 changes the take-proposal format additively and keeps version 1 readable, so the card's rule against a new take schema is kept as written for stored takes."
+    },
+    {
+      "id": "SS-012",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-602",
+        "MPR-603"
+      ],
+      "note": "Kept. MPR-602 and MPR-603 put the existing loudness and audio commands in the browser and state measured loudness honestly; they add no audio processing."
+    },
+    {
+      "id": "SS-013",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-221",
+        "MPR-606"
+      ],
+      "note": "Kept. MPR-606 freezes Arabic interface strings and prepares the review packet; MPR-221 is the gated speech-to-text qualification. Neither closes the card."
+    },
+    {
+      "id": "SS-014",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-601"
+      ],
+      "note": "Kept. MPR-601 wires existing timeline commands into the browser under the equivalence this card qualifies."
+    },
+    {
+      "id": "SS-015",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-303",
+        "MPR-603",
+        "MPR-702"
+      ],
+      "note": "Kept and depended on. MPR-702 starts only after this card is verified; MPR-303 and MPR-603 reuse its loss report."
+    },
+    {
+      "id": "SS-016",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-107",
+        "MPR-801",
+        "MPR-802"
+      ],
+      "note": "Stays the card that measures selective revision. MPR-107 supplies the shot history it needs, MPR-801 pre-registers the wider protocol and MPR-802 runs the Yamakan-only baseline."
+    },
+    {
+      "id": "SS-017",
+      "state": "QUALIFICATION_READY",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-209"
+      ],
+      "note": "Kept. MPR-209 widens the notices and the software bill of materials under its reproducibility rule."
+    },
+    {
+      "id": "SS-018",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AS_IS",
+      "relatedCards": []
+    },
+    {
+      "id": "SS-019",
+      "state": "WAITING_DEPENDENCIES",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-001",
+        "MPR-002",
+        "MPR-209"
+      ],
+      "note": "Stays the final packet of the programme. MPR-001 and MPR-002 point the current-state documents at the new frontier; MPR-209 adds notices it can cite."
+    },
+    {
+      "id": "X-01",
+      "state": "EXTERNAL_BLOCKED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-221",
+        "MPR-606"
+      ],
+      "note": "Still blocked on a native Arabic reviewer. MPR-606 prepares the packet and MPR-221 the speech route; neither signs the review."
+    },
+    {
+      "id": "X-02",
+      "state": "EXTERNAL_BLOCKED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-209"
+      ],
+      "note": "Still blocked on release, profile and signing decisions. MPR-209 adds the notices a release would need and authorises no release."
+    },
+    {
+      "id": "X-03",
+      "state": "EXTERNAL_BLOCKED",
+      "disposition": "KEEP_AND_BUILD_ON",
+      "relatedCards": [
+        "MPR-208",
+        "MPR-210",
+        "MPR-211",
+        "MPR-220",
+        "MPR-221",
+        "MPR-222"
+      ],
+      "note": "Still blocked until models are authorised. MPR-208, MPR-210, MPR-211, MPR-220, MPR-221 and MPR-222 are the gated path to it; each waits for its own founder decision."
+    }
+  ],
+  "streams": [
+    {
+      "id": "stream:comfyui",
+      "pullRequests": "#188, #191, #192, #194, #195, #196, #198; checkpoint documents #190 and #199",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-002",
+        "MPR-003",
+        "MPR-201",
+        "MPR-202",
+        "MPR-207"
+      ],
+      "authority": "Founder record entries '2026-11-05: Local AI work and donor copying authorized', '2026-11-05: A person starts ComfyUI' and '2026-11-05: Temporary integration, and a statement about copying ComfyUI'.",
+      "verification": "Pull request numbers read from the first-parent history of main; the authority entries were read by title."
+    },
+    {
+      "id": "stream:kaggle-create",
+      "pullRequests": "#200 to #202, #205 to #210, #212 to #215, #217, #218, #222 to #224, #233 to #235; ledger documents #211 and #236",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-002",
+        "MPR-003",
+        "MPR-101",
+        "MPR-102",
+        "MPR-103",
+        "MPR-106",
+        "MPR-201",
+        "MPR-202",
+        "MPR-203",
+        "MPR-204",
+        "MPR-205",
+        "MPR-207",
+        "MPR-208",
+        "MPR-305",
+        "MPR-401",
+        "MPR-402"
+      ],
+      "authority": "Founder record entries '2026-11-05: Kaggle as the zero-cost GPU environment', '2026-11-06: The Create workspace, and Yamakan drives Kaggle' and '2026-11-06: A reference image travels inside the run's brief'.",
+      "verification": "Pull request numbers read from the first-parent history of main; whether the route is a product feature is FD-3."
+    },
+    {
+      "id": "stream:consent",
+      "pullRequests": "#179, #181, #183, #197, #216, #219 to #221, #232, #237",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-003",
+        "MPR-010",
+        "MPR-203",
+        "MPR-204"
+      ],
+      "authority": "Founder record entry '2026-11-07: Claude chooses on open product decisions', with the agent record entries '2026-11-07: revoked media, and an unlinked photo of a person' and '2026-11-09: consent is recorded from the Create page'; the three earliest pull requests fall under the ledger checkpoint 'Checkpoint: undo, consent gate, keyboard editing'.",
+      "verification": "Pull request numbers read from the first-parent history of main. MPR-010 proposes one change to a rule this stream kept on purpose and says so on the card."
+    },
+    {
+      "id": "stream:security-check",
+      "pullRequests": "#225 to #231, #238 to #242, #249 to #255",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-003"
+      ],
+      "authority": "Ledger checkpoint 'Checkpoint: security check of main, 2026-11-08'. A founder record entry for this stream was not verified.",
+      "verification": "Pull request numbers read from the first-parent history of main; MPR-003 verifies the stream's records."
+    },
+    {
+      "id": "stream:cinema",
+      "pullRequests": "issue #203 and #243 to #248",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-002",
+        "MPR-003",
+        "MPR-403"
+      ],
+      "authority": "Not verified: no founder record entry was matched to this stream by the planning author.",
+      "verification": "Pull request numbers read from the first-parent history of main; MPR-003 verifies the stream's records."
+    },
+    {
+      "id": "stream:blender",
+      "pullRequests": "#256 to #260 and #263 to #278; #279 is open and not merged",
+      "disposition": "MERGED_KEPT_AS_BUILT_STILL_IN_MOTION",
+      "cards": [
+        "MPR-002",
+        "MPR-003",
+        "MPR-301",
+        "MPR-302",
+        "MPR-303",
+        "MPR-304",
+        "MPR-403",
+        "MPR-404"
+      ],
+      "authority": "Founder record entry '2026-11-10: Blender integration, and YouMind OpenLab as its extension'.",
+      "verification": "Pull request numbers read from the first-parent history of main up to the baseline. The stream is still being built; FD-11 orders it before Stage 1."
+    },
+    {
+      "id": "stream:prompt-library",
+      "pullRequests": "#261 and #262",
+      "disposition": "MERGED_KEPT_AS_BUILT",
+      "cards": [
+        "MPR-003"
+      ],
+      "authority": "Founder record entry '2026-11-10: Blender integration, and YouMind OpenLab as its extension'.",
+      "verification": "Pull request numbers read from the first-parent history of main."
+    }
+  ],
+  "unassigned": [
+    {
+      "item": "Pull requests #160 to #187 except #179, #181 and #183, plus #189 and #193",
+      "disposition": "System Supremacy programme merges; covered by the systemSupremacy rows."
+    },
+    {
+      "item": "Pull request #204",
+      "disposition": "Not verified by the planning author; MPR-003 assigns it when it verifies the stream records."
+    }
+  ],
+  "pullRequests": [
+    {
+      "number": 85,
+      "title": "Earlier draft master plan",
+      "state": "open draft when read on 2026-11-22",
+      "proposedDisposition": "Close as superseded and keep the branch as evidence. Waits for FD-1; MPR-001 records the answer."
+    },
+    {
+      "number": 86,
+      "title": "Ultimate Master Plan (YU cards)",
+      "state": "open draft when read on 2026-11-22",
+      "proposedDisposition": "Close as superseded and keep the branch as evidence. Its 44 cards are the ultimatePlan rows above. Waits for FD-1; MPR-001 records the answer."
+    },
+    {
+      "number": 279,
+      "title": "Blender render view and surface on the Cinema page",
+      "state": "open, not a draft, not merged when read on 2026-11-22",
+      "proposedDisposition": "Not part of this plan. It belongs to the implementation owner's Blender stream; FD-11 orders that stream before Stage 1."
+    }
+  ]
+}
