@@ -8,6 +8,8 @@ import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import type { Operation } from "../sdk/client.ts";
 import { LineFramer, MCP_LIMITS } from "./framing.ts";
 import type { Frame } from "./framing.ts";
+import { CANCEL_TWINS, cancelPlan } from "./cancellation.ts";
+import type { Phase } from "./cancellation.ts";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const env = (key: string) =>
@@ -66,10 +68,35 @@ type Message = {
 };
 const send = (value: unknown) =>
   process.stdout.write(`${JSON.stringify(value)}\n`);
-const reply = (id: Message["id"], result: unknown) =>
-  send({ jsonrpc: "2.0", id, result });
 const error = (id: Message["id"], code: number, message: string) =>
   send({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
+
+// A request in progress, by its id: what a cancellation names. A read until it says otherwise.
+type InFlight = {
+  operation: { name: string; mutation: boolean };
+  phase: Phase;
+  cancelled: boolean;
+  stop: AbortController;
+};
+const requests = new Map<string | number, InFlight>();
+// A request is answered once, and one the client cancelled is not answered at all.
+function answer(id: Message["id"], request: InFlight, body: object) {
+  if (request.cancelled || request.phase === "answered") return;
+  request.phase = "answered";
+  send({ jsonrpc: "2.0", id: id ?? null, ...body });
+}
+function cancel(params: Record<string, unknown>) {
+  const id = params.requestId;
+  const request =
+    typeof id === "string" || typeof id === "number"
+      ? requests.get(id)
+      : undefined;
+  if (!request || request.cancelled) return;
+  const plan = cancelPlan(request.operation, request.phase);
+  if (plan === "ignore") return;
+  request.cancelled = true;
+  if (plan === "abort") request.stop.abort();
+}
 
 // Documents larger than a tool call travel over the authenticated staging
 // route: this one tool stages the JSON content, then commits the sealed
@@ -106,14 +133,27 @@ function saveDocumentTool(commit: {
         "content",
       ],
     },
-    annotations: { readOnlyHint: false },
+    annotations: { readOnlyHint: false, destructiveHint: false },
   };
 }
 
-let operations: Map<string, Operation> | null = null;
-async function tools() {
-  const catalog = await (await client()).catalog();
-  operations = new Map(catalog.tools.map((t) => [toolName(t.name), t.name]));
+// Every name the service has, also one this token may not call: calling it is answered by the
+// service's own refusal. Null until the first list.
+type Known = { name: Operation; mutation: boolean; callable: boolean };
+let operations: Map<string, Known> | null = null;
+async function tools(signal: AbortSignal) {
+  const catalog = await (await client()).catalog({ signal });
+  operations = new Map<string, Known>([
+    ...catalog.tools.map(
+      ({ name, mutation }) =>
+        [toolName(name), { name, mutation, callable: true }] as const,
+    ),
+    // What it does is not said, so it is never taken for a read.
+    ...catalog.withheld.map(
+      ({ name }) =>
+        [toolName(name), { name, mutation: true, callable: false }] as const,
+    ),
+  ]);
   const commit = catalog.tools.find(
     (t) => t.name === "yamakan.document.commit",
   );
@@ -139,7 +179,11 @@ function catalogTools(
         ...schema,
         properties: { ...schema.properties, requestId: REQUEST_ID },
       },
-      annotations: { readOnlyHint: !t.mutation },
+      // Nothing here says whether a call is idempotent or reaches outside, so neither is claimed.
+      annotations: {
+        readOnlyHint: !t.mutation,
+        ...(t.mutation ? { destructiveHint: t.destructive } : {}),
+      },
     };
   });
 }
@@ -150,8 +194,31 @@ const requestMeta = (requestId: unknown) =>
     ? { _meta: { "yamakan/requestId": requestId } }
     : {};
 
-async function handle(message: Message) {
+// A cancelled start has finished: what it started is stopped, once, if this token may.
+async function stopStarted(
+  started: Operation,
+  args: Record<string, unknown>,
+  result: unknown,
+) {
+  const twin = CANCEL_TWINS[started];
+  const input = twin?.input(args, result);
+  if (!twin || !input || !operations!.get(toolName(twin.cancel))?.callable)
+    return;
+  const outcome = await client()
+    .then((service) => service.call(twin.cancel, input as never))
+    .then(
+      () => "asked for",
+      () => "refused",
+    );
+  process.stderr.write(
+    `Yamakan MCP: ${started} was cancelled after it started; ${twin.cancel} ${outcome}.\n`,
+  );
+}
+
+async function handle(message: Message, request: InFlight) {
   const { id, method } = message;
+  const reply = (_id: Message["id"], result: unknown) =>
+    answer(id, request, { result });
   const params =
     message.params && typeof message.params === "object" ? message.params : {};
   const notification = id === undefined;
@@ -168,13 +235,14 @@ async function handle(message: Message) {
         serverInfo: { name: "yamakan", title: "Yamakan", version: "0.1.0" },
       });
     }
-    case "notifications/initialized":
     case "notifications/cancelled":
+      return cancel(params);
+    case "notifications/initialized":
       return;
     case "ping":
       return reply(id, {});
     case "tools/list":
-      return reply(id, { tools: await tools() });
+      return reply(id, { tools: await tools(request.stop.signal) });
     case "tools/call": {
       // Tool failures are results the model can read, not protocol errors;
       // that includes a refused credential while loading the tool list.
@@ -213,7 +281,8 @@ async function handle(message: Message) {
               ? SAVE_REQUEST_ID_LENGTH
               : REQUEST_ID.maxLength));
       try {
-        if (!operations) await tools();
+        if (!operations) await tools(request.stop.signal);
+        if (request.cancelled) return;
       } catch (e) {
         if (e instanceof YamakanError)
           return toolError(e, valid ? requestId : undefined);
@@ -222,8 +291,13 @@ async function handle(message: Message) {
       const operation = operations!.get(String(params.name));
       const saving =
         params.name === SAVE_DOCUMENT &&
-        [...operations!.values()].includes("yamakan.document.commit");
-      if (!operation && !saving) return error(id, -32602, "Unknown tool.");
+        [...operations!.values()].some(
+          (o) => o.name === "yamakan.document.commit",
+        );
+      if (!operation && !saving)
+        return answer(id, request, {
+          error: { code: -32602, message: "Unknown tool." },
+        });
       let sent: unknown = requestId;
       try {
         if (!valid)
@@ -261,6 +335,12 @@ async function handle(message: Message) {
             );
         }
         const service = await client();
+        if (request.cancelled) return;
+        request.operation = operation ?? {
+          name: "yamakan.document.save",
+          mutation: true,
+        };
+        request.phase = "sent";
         // A save always has an id. One generated here reaches the caller only
         // with a reply: after a lost response, only a supplied id can retry.
         if (saving)
@@ -272,11 +352,16 @@ async function handle(message: Message) {
               requestId: sent as string,
             })
           : await service.call(
-              operation!,
+              operation!.name,
               args as never,
               // The service validates it like the REST envelope's requestId.
               requestId === undefined ? undefined : (requestId as string),
+              { signal: request.stop.signal },
             );
+        if (request.cancelled)
+          return saving
+            ? undefined
+            : await stopStarted(operation!.name, args, result);
         return reply(id, {
           ...requestMeta(sent),
           content: [{ type: "text", text: JSON.stringify(result) }],
@@ -287,7 +372,10 @@ async function handle(message: Message) {
       }
     }
     default:
-      if (!notification) error(id, -32601, "Method not found.");
+      if (!notification)
+        answer(id, request, {
+          error: { code: -32601, message: "Method not found." },
+        });
   }
 }
 
@@ -312,15 +400,30 @@ function dispatch(frame: Frame) {
   if (message?.jsonrpc !== "2.0" || typeof message.method !== "string")
     return error(message?.id, -32600, "Invalid request.");
   // Transport failures (no token file, service not listening) never echo host paths.
-  const pending = handle(message).catch(() =>
-    error(
-      message.id,
-      -32603,
-      "Yamakan service is not running or its workspace credential is unavailable.",
-    ),
+  const request: InFlight = {
+    operation: { name: message.method, mutation: false },
+    phase: "waiting",
+    cancelled: false,
+    stop: new AbortController(),
+  };
+  // A client may not cancel initialize, and nothing without an id of its own can be named.
+  const named =
+    typeof id === "string" || typeof id === "number"
+      ? message.method !== "initialize" && !requests.has(id)
+      : false;
+  if (named) requests.set(id as string | number, request);
+  const pending = handle(message, request).catch(() =>
+    answer(id, request, {
+      error: {
+        code: -32603,
+        message:
+          "Yamakan service is not running or its workspace credential is unavailable.",
+      },
+    }),
   );
   inFlight.add(pending);
   void pending.finally(() => {
+    if (named) requests.delete(id as string | number);
     inFlight.delete(pending);
     pump();
   });

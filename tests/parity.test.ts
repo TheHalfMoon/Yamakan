@@ -25,6 +25,7 @@ import { createInterface } from "node:readline";
 import { YamakanClient, YamakanError } from "../sdk/client.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { writeLaunchLink } from "../core/launch.ts";
+import { commands } from "../core/command/registry.ts";
 
 const F = 23_520_000; // flicks per 30 fps frame
 // Clip, scene and shot identifiers are unique across a workspace, so each
@@ -553,7 +554,10 @@ test(
             .map((r: string) => (r === "source" ? "content" : r))
             .sort(),
         );
-        assert.equal(save.annotations.readOnlyHint, false);
+        assert.deepEqual(save.annotations, {
+          readOnlyHint: false,
+          destructiveHint: false,
+        });
       }
       const tools = listed.filter(
         (x: { title: string }) => x.title !== "yamakan.document.save",
@@ -574,6 +578,68 @@ test(
           tool.title,
         );
         assert.equal(tool.annotations.readOnlyHint, !command.mutation);
+        assert.equal(
+          tool.annotations.destructiveHint,
+          command.mutation ? command.destructive : undefined,
+        );
+      }
+      // What is not listed is named, with why, and only that.
+      assert.equal(
+        catalog.tools.length + catalog.withheld.length,
+        Object.keys(commands).length,
+      );
+      // The same for an agent that may only read.
+      const made = await (
+        await fetch(`${base}/api/v1/call`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: base,
+            ...uiHeaders,
+          },
+          body: JSON.stringify({
+            apiVersion: 1,
+            operation: "yamakan.agent.create",
+            parameters: { scopes: ["project:read"], expiresInDays: 1 },
+          }),
+        })
+      ).json();
+      const readerToken = made.result.token;
+      assert.match(readerToken, /^[0-9a-f]{64}$/);
+      const { YAMAKAN_MCP_LOCAL_CLIENT: _local, ...agentEnv } = env;
+      const reader = mcp({ ...agentEnv, YAMAKAN_AGENT_TOKEN: readerToken });
+      try {
+        const theirs = await (
+          await fetch(`${base}/api/v1/tools`, {
+            headers: { Authorization: `Bearer ${readerToken}` },
+          })
+        ).json();
+        const seen = (await reader.raw("tools/list")).result.tools;
+        assert.deepEqual(
+          seen.map((x: { title: string }) => x.title).sort(),
+          theirs.tools.map((x: { name: string }) => x.name).sort(),
+        );
+        assert.ok(seen.length > 0 && seen.length < tools.length);
+        for (const x of theirs.tools) assert.equal(x.scope, "project:read");
+        const refused = {
+          ok: false,
+          code: "SCOPE_DENIED",
+          retryable: false,
+        };
+        for (const op of ["yamakan.project.create", "yamakan.agent.list"]) {
+          const overRest = await rest(readerToken).call(op, {});
+          const overMcp = await reader.call(op, {});
+          assert.deepEqual(overMcp, overRest);
+          assert.deepEqual(
+            { ...overMcp, message: undefined },
+            {
+              ...refused,
+              message: undefined,
+            },
+          );
+        }
+      } finally {
+        await reader.close();
       }
 
       const idsA = idSet("a");

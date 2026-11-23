@@ -4,6 +4,7 @@ import {
   API_VERSION,
   RESOURCE_POLICY_HASH,
   catalog,
+  catalogFor,
   execute,
 } from "../core/command/registry.ts";
 import type { Principal } from "../core/command/registry.ts";
@@ -37,7 +38,8 @@ export class CreativeAPI {
     this.comfyUrl = options.comfyUrl;
     this.kaggle = options.kaggle;
   }
-  catalog() {
+  // With a principal, what it may call and what is withheld from it; without one, everything.
+  catalog(principal?: Principal) {
     return {
       apiVersion: API_VERSION,
       service: "yamakan",
@@ -49,7 +51,7 @@ export class CreativeAPI {
         enforced: RESOURCE_POLICY.enforced,
         hash: RESOURCE_POLICY_HASH,
       },
-      tools: catalog(),
+      ...(principal ? catalogFor(principal) : { tools: catalog() }),
       assetImport: {
         method: "POST",
         path: "/api/v1/projects/{id}/assets",

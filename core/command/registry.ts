@@ -304,6 +304,9 @@ type Definition<S extends z.ZodType, R> = {
   // A mutation that keeps no receipt says so. It refuses a request ID, because
   // a caller who sends one believes a retry is protected. The text says why.
   refusesRequestId?: string;
+  // It removes, stops or overwrites something that nothing here keeps a way back to. A change
+  // made as a revision is not that: the one before it stays.
+  destructive?: true;
   summary: string;
   input: S;
   run: (ctx: RunContext, input: z.output<S>) => Promise<R> | R;
@@ -2016,6 +2019,7 @@ export const commands = {
   "yamakan.workspace.collectGarbage": define({
     scope: "project:recover",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Remove crash leftovers older than an hour (unregistered media objects, temporary and staging files).",
@@ -2113,7 +2117,8 @@ export const commands = {
   }),
   "yamakan.proxy.build": define({
     scope: "render:execute",
-    mutation: false,
+    mutation: true,
+    refusesRequestId: NO_REPLAY,
     summary:
       "Start making a video asset's edit proxy for smooth preview (the original is unchanged and still exported).",
     input: z.object({ projectId: Id, assetId: Id }).strict(),
@@ -2121,7 +2126,9 @@ export const commands = {
   }),
   "yamakan.proxy.cancel": define({
     scope: "render:execute",
-    mutation: false,
+    mutation: true,
+    destructive: true,
+    refusesRequestId: NO_REPLAY,
     summary: "Stop a video asset's proxy build; a ready proxy stays.",
     input: z.object({ projectId: Id, assetId: Id }).strict(),
     run: ({ store }, a) => cancelProxy(store, a.projectId, a.assetId),
@@ -2334,6 +2341,7 @@ export const commands = {
   "yamakan.export.batchCancel": define({
     scope: "render:execute",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a batch's unfinished outputs; finished exports and the project are untouched.",
@@ -2352,6 +2360,7 @@ export const commands = {
   "yamakan.job.cancel": define({
     scope: "job:control",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary: "Request cancellation of a render job.",
     input: z.object({ jobId: Id }).strict(),
@@ -2376,6 +2385,7 @@ export const commands = {
   "yamakan.job.discard": define({
     scope: "job:control",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Cancel a job that needs reconciliation without changing project revisions.",
@@ -2392,6 +2402,7 @@ export const commands = {
   "yamakan.scene.save": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     summary:
       "Validate, content-hash, and (when Cinema is enabled) persist a scene3d document.",
@@ -2587,6 +2598,7 @@ export const commands = {
   "yamakan.consent.revoke": define({
     scope: "consent:revoke",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     summary:
       "Revoke likeness consent and invalidate derived encodings. Browser session only.",
@@ -2790,6 +2802,7 @@ export const commands = {
   "yamakan.generation.dismiss": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
@@ -2811,6 +2824,7 @@ export const commands = {
   "yamakan.generation.cancel": define({
     scope: "project:write",
     mutation: true,
+    destructive: true,
     humanOnly: true,
     refusesRequestId: NO_REPLAY,
     summary:
@@ -3207,6 +3221,7 @@ export const commands = {
   "yamakan.agent.revoke": define({
     scope: "agent:revoke",
     mutation: true,
+    destructive: true,
     refusesRequestId: NO_REPLAY,
     humanOnly: true,
     summary: "Revoke an agent token. Requires the browser session.",
@@ -3238,18 +3253,26 @@ export function resolveOperation(name: unknown): Operation {
   return canonical as Operation;
 }
 
+// Who may call a command: the one rule of the gate (authorize) and of what is shown (catalogFor).
+export const mayCall = (
+  principal: Principal,
+  definition: { scope: Scope; humanOnly?: boolean },
+) =>
+  (!definition.humanOnly || principal.id === "browser-ui") &&
+  principal.scopes.has(definition.scope);
+
 export function authorize(principal: Principal, operation: Operation) {
-  const command = commands[operation];
+  const command = commands[operation] as Definition<z.ZodType, unknown>;
+  if (mayCall(principal, command)) return;
   if (command.humanOnly && principal.id !== "browser-ui")
     throw new CommandError(
       "SCOPE_DENIED",
       "This command requires the browser session.",
     );
-  if (!principal.scopes.has(command.scope))
-    throw new CommandError(
-      "SCOPE_DENIED",
-      `Principal ${principal.id} lacks scope ${command.scope}.`,
-    );
+  throw new CommandError(
+    "SCOPE_DENIED",
+    `Principal ${principal.id} lacks scope ${command.scope}.`,
+  );
 }
 
 export async function execute(
@@ -3283,15 +3306,42 @@ export async function execute(
   return { operation, result: await command.run({ ...ctx, receipt }, input) };
 }
 
+// What a request id does: a mutation's is replayed from its receipt or refused; a read keeps none.
+const requestIdOf = (c: { mutation: boolean; refusesRequestId?: string }) =>
+  !c.mutation ? "none" : c.refusesRequestId ? "refused" : "replayed";
+
 export function catalog() {
-  return Object.entries(commands).map(([name, c]) => ({
+  return (
+    Object.entries(commands) as [Operation, Definition<z.ZodType, unknown>][]
+  ).map(([name, c]) => ({
     name,
     scope: c.scope,
     mutation: c.mutation,
+    humanOnly: c.humanOnly === true,
+    destructive: c.destructive === true,
+    requestId: requestIdOf(c),
     summary: c.summary,
     legacyAlias: name.replace(/^yamakan\./, LEGACY_PREFIX),
     inputSchema: z.toJSONSchema(c.input),
   }));
+}
+
+/** What a principal may call, and the name of each command it may not, with why. */
+export function catalogFor(principal: Principal) {
+  const all = catalog();
+  return {
+    tools: all.filter((c) => mayCall(principal, c)),
+    withheld: all
+      .filter((c) => !mayCall(principal, c))
+      .map((c) => ({
+        name: c.name,
+        // As authorize says it: who must call comes before what they hold.
+        reason:
+          c.humanOnly && principal.id !== "browser-ui"
+            ? ("browser-only" as const)
+            : ("scope" as const),
+      })),
+  };
 }
 
 // A caption track of the current revision (YU-024).
