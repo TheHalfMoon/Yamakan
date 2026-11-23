@@ -26,7 +26,10 @@ import {
   scriptWithBrief,
   type KaggleCli,
 } from "../core/engines/kaggle.ts";
-import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
+import {
+  ENGINE_CONTRACT_V2,
+  ExecutionStatusSchema,
+} from "../core/engines/contract-v2.ts";
 import { CREATE_MODELS } from "../src/create/create-model.ts";
 
 const folderRoot = mkdtempSync(path.join(tmpdir(), "kaggle-engine-test-"));
@@ -338,6 +341,7 @@ async function fetchedBy(extra?: string) {
   // Past the minutes when Kaggle may still answer for an earlier run.
   time = 10 * 60 * 1000;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   return { asked, answer };
 }
 
@@ -509,6 +513,7 @@ test("after a while, another run's result is a failure", async () => {
   )) as any;
   time = 10 * 60 * 1000;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /not this one/);
 });
@@ -1239,6 +1244,7 @@ test("if privacy cannot be read after the push, the run goes on and says so", as
     context as never,
   )) as any;
   const answer = await engine.status(executionRef);
+  ExecutionStatusSchema.parse(answer);
   assert.equal(answer.state, "running");
   assert.match(answer.diagnostic!, /Could not confirm/);
 });

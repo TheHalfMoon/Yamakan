@@ -29,6 +29,7 @@ import {
   refusedSubmit,
 } from "../core/engines/failures.ts";
 import {
+  ExecutionStatusSchema,
   FailureClass,
   type EngineAdapterV2,
 } from "../core/engines/contract-v2.ts";
@@ -166,24 +167,32 @@ async function workspace(
   return { root, store, queue, project, service, ledger, ctx };
 }
 
+// An engine whose every answer about a run is held to the contract.
+const keeping = (engine: EngineAdapterV2): EngineAdapterV2 => ({
+  ...engine,
+  status: async (ref) => ExecutionStatusSchema.parse(await engine.status(ref)),
+});
+
 // A project with a Kaggle engine over its stand-in, and one run started from it.
 async function onKaggle(durable = false) {
   const k = kaggle();
   const w = await workspace(
     (root) =>
-      createKaggleEngine({
-        cli: k.cli,
-        username: "someone",
-        folderRoot: root,
-        scriptFor: async () => {
-          if (k.world.script) throw new Error(k.world.script);
-          return SCRIPT;
-        },
-        download: async (_r, folder) => k.world.leave(k.world.runId, folder),
-        now: () => k.world.now,
-        watchMs: 10,
-        stopGraceMs: 1000,
-      }),
+      keeping(
+        createKaggleEngine({
+          cli: k.cli,
+          username: "someone",
+          folderRoot: root,
+          scriptFor: async () => {
+            if (k.world.script) throw new Error(k.world.script);
+            return SCRIPT;
+          },
+          download: async (_r, folder) => k.world.leave(k.world.runId, folder),
+          now: () => k.world.now,
+          watchMs: 10,
+          stopGraceMs: 1000,
+        }),
+      ),
     durable ? "durable" : memoryLedger(),
     () => k.world.now,
   );

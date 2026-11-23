@@ -452,6 +452,19 @@ test("v1 parity: the bridge lowers only server recipes and reports what the v2 f
     ["failed", "unknown"],
   );
   assert.deepEqual(await probe.enumerateArtifacts(failed.executionRef), []);
+  // One that a version 1 engine says was stopped is that.
+  const v1 = createFakeEngine();
+  const stopping = bridgeV1({
+    ...v1,
+    status: async (id: string) => ({ id, state: "cancelled" }) as never,
+  });
+  const stopped = await stopping.submit(textToVideo(), context());
+  assert.ok("executionRef" in stopped);
+  const said = await stopping.status(stopped.executionRef);
+  assert.deepEqual(
+    [said.state, "failureClass" in said && said.failureClass],
+    ["cancelled", "cancelled"],
+  );
 });
 
 test("concurrent submits: an older generation never replaces a newer one, and one generation runs once", async () => {
@@ -644,6 +657,16 @@ test("a newer generation cancels the execution it replaces; unknown executions a
   assert.equal(replaced.state, "cancelled");
   ExecutionStatusSchema.parse(replaced);
   assert.equal((await long.status(second.executionRef)).state, "running");
+  // Stopped on request, it says so too.
+  const asked = createFakeEngineV2({ stayRunning: true });
+  const running = await asked.submit(textToVideo({ attemptKey: "ask" }), ctx);
+  assert.ok("executionRef" in running);
+  await asked.requestCancel(running.executionRef);
+  const halted = await asked.status(running.executionRef);
+  assert.deepEqual(
+    [halted.state, "failureClass" in halted && halted.failureClass],
+    ["cancelled", "cancelled"],
+  );
   // A stuck older generation never holds up the newer one.
   const stuck = createFakeEngineV2({
     beforeInput: (r) =>
