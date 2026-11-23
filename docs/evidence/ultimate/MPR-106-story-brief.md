@@ -45,6 +45,17 @@ The model and the seed. They are said, before the save, not to be kept; a made v
 - **Tests:** `tests/story-text.test.ts`, and the additions to `create-story`, `create-model` and `i18n`. The store, the commands and the schema are the real ones.
 - **In real Edge on the founder host, against the real service:** see the section below. No model, no network and no spend.
 
+## The real check
+
+`npm run qualify:story-brief`, in real Edge on the founder host (Windows) against the real service: **PASS at `6b37670`**, with a clean checkout. Its receipt is `MPR-106-story-brief-receipt.json`, 13 steps: the offer (nothing sent until the person says so, refused against a story that moved on, kept once, "never"), the form in English and Arabic with the direction of each field, after a reload and in a fresh browser profile, a story changed elsewhere, and a story over its budget.
+
+- **A nearly full story:** 93 percent; over by the paste: 103 percent, refused by the page in percents and by the service with its byte counts.
+- **Typing in a 200-shot story with 100 shots shown:** 2.9 ms in the middle of 30 keys and 4.6 ms at worst, from the key to the page as redrawn (criterion 50 ms).
+
+An earlier run at `782e1fe` failed: after a reload, a reading that had begun with the same revision could still compare with the story from before it, and say again that the story changed. The page was corrected, not the check, and five runs in a row passed after it.
+
+The server step is in `npm run qualify:revisable-shot`, on GitHub's Linux machine: a take added to a shot keeps its intent, and a new intent keeps the take's record.
+
 ## Not covered
 
 - The offer and the form in Arabic are only checked to turn the page right to left.
