@@ -604,6 +604,11 @@ test("an import interrupted after the story commit does not append twice", async
     next.store.getDocument(next.projectId, documentId).ref.contentHash,
   );
   assert.equal(takesOf(next, documentId, mine.id).length, 2);
+  // And what became of it is still there when the service is started again.
+  for (const h of [next.queue, next.store]) await h.close();
+  const last = await workspace(w.root);
+  assert.deepEqual(last.service.row(racing)!.take, a.take);
+  assert.deepEqual(last.service.row(racing)!.target, target);
 });
 
 test("two generations for one shot both land, and a ninth take is refused as shot-full", async () => {

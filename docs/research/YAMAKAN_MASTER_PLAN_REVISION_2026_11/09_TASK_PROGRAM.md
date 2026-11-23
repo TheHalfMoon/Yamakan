@@ -59,12 +59,12 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-003 | 0 | VERIFIED | MPR-001 | Wire the plan check into npm and CI, add card completion states, verify stream records |
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | VERIFIED | — | Record every take's generation or render request as an immutable, hashed take record |
-| MPR-102 | 1 | REVIEW_PENDING | MPR-101 | Let a generation target a story shot and append its take on import |
-| MPR-103 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
+| MPR-102 | 1 | VERIFIED | MPR-101 | Let a generation target a story shot and append its take on import |
+| MPR-103 | 1 | QUALIFICATION_READY | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
 | MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
 | MPR-106 | 1 | QUALIFICATION_READY | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
-| MPR-107 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
+| MPR-107 | 1 | QUALIFICATION_READY | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
 | MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
 | MPR-202 | 2 | QUALIFICATION_READY | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
@@ -89,10 +89,10 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-403 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
 | MPR-404 | 4 | DEFERRED | MPR-202, MPR-206, MPR-403, MPR-203, MPR-204, MPR-507 | Emit Blender depth and normal control passes for control-capable routes |
 | MPR-405 | 4 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-401, MPR-402 | Build the consistency measurement harness with a local blind forced-choice study |
-| MPR-501 | 2 | REVIEW_PENDING | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
-| MPR-502 | 2 | WAITING_DEPENDENCIES | MPR-501 | Add a bounded job wait and a revision event cursor for agents |
-| MPR-503 | 2 | WAITING_DEPENDENCIES | MPR-501 | Let the CLI and SDK act as an agent, generate CLI help, and add media import helpers |
-| MPR-504 | 2 | WAITING_DEPENDENCIES | MPR-501 | Add hash-bound approval requests so an agent can ask a person to run a human-only command |
+| MPR-501 | 2 | VERIFIED | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
+| MPR-502 | 2 | QUALIFICATION_READY | MPR-501 | Add a bounded job wait and a revision event cursor for agents |
+| MPR-503 | 2 | QUALIFICATION_READY | MPR-501 | Let the CLI and SDK act as an agent, generate CLI help, and add media import helpers |
+| MPR-504 | 2 | QUALIFICATION_READY | MPR-501 | Add hash-bound approval requests so an agent can ask a person to run a human-only command |
 | MPR-505 | 2 | WAITING_DEPENDENCIES | MPR-504, MPR-203, MPR-204, MPR-507 | Add per-agent budget envelopes, enforced at approvals and at the egress and spend gates |
 | MPR-506 | 2 | WAITING_DEPENDENCIES | MPR-502, MPR-101 | Add an append-only audit feed of mutation calls and a provenance trace read command |
 | MPR-507 | 2 | QUALIFICATION_READY | — | Put the Blender worker in the memory budget, queue its jobs fairly, add rerun from failed |
@@ -762,13 +762,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
 | Dependencies | MPR-101 |
 | Founder decisions | none |
 | Earlier plan items | stream:kaggle-create |
+| Evidence | Merged as aaab5d58250872f5359b1c775e3f6fe8bda2aa44 (PR #299, pinned to 664e9e7); qualify:revisable-shot passed at 29a170a on GitHub's Linux machine (docs/evidence/ultimate/MPR-102-shot-target-receipt.json); main's CI passed; no screen sends a target until MPR-104 |
 
 **Goal.** A person can start a generation for a shot that already exists, and bringing the result in adds it to that shot's take stack as a new story version. The timeline changes only when the person later replaces the take.
 
@@ -885,7 +886,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
@@ -1379,7 +1380,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B, E |
@@ -4598,13 +4599,14 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 2 |
 | Track | 5 |
 | Pillars | E |
 | Dependencies | none |
 | Founder decisions | none |
 | Earlier plan items | SS-007 |
+| Evidence | Merged as 5306ea9166ecb2e9a1fc1c7497271344de6995e1 (PR #297, pinned to 4105406, which adds only the receipt to 49d0e48); qualify:agent-mcp passed at 49d0e48 on the founder host (docs/evidence/qualification/mpr-501-agent-mcp.json), its cancelled call before it was sent; cancelling after the send is tested with a held test service; main's CI passed |
 
 **Goal.** An agent connected over MCP is shown exactly the tools its token can call, each marked truthfully as reading or changing (and destructive or not), and a request the client cancels stops cleanly instead of being ignored.
 
@@ -4722,7 +4724,7 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 5 |
 | Pillars | E |
@@ -4850,7 +4852,7 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 5 |
 | Pillars | E |
@@ -4973,7 +4975,7 @@ An honest tool list, waits and events, approvals that survive a restart, budgets
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 5 |
 | Pillars | E |

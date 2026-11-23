@@ -1044,7 +1044,8 @@
       "pillars": [
         "B"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as aaab5d58250872f5359b1c775e3f6fe8bda2aa44 (PR #299, pinned to 664e9e7); qualify:revisable-shot passed at 29a170a on GitHub's Linux machine (docs/evidence/ultimate/MPR-102-shot-target-receipt.json); main's CI passed; no screen sends a target until MPR-104",
       "dependsOn": [
         "MPR-101"
       ],
@@ -1173,7 +1174,7 @@
       "pillars": [
         "B"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101",
         "MPR-102"
@@ -1711,7 +1712,7 @@
         "B",
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-101",
         "MPR-102"
@@ -5296,7 +5297,8 @@
       "pillars": [
         "E"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 5306ea9166ecb2e9a1fc1c7497271344de6995e1 (PR #297, pinned to 4105406, which adds only the receipt to 49d0e48); qualify:agent-mcp passed at 49d0e48 on the founder host (docs/evidence/qualification/mpr-501-agent-mcp.json), its cancelled call before it was sent; cancelling after the send is tested with a held test service; main's CI passed",
       "dependsOn": [],
       "legacy": [
         "SS-007"
@@ -5428,7 +5430,7 @@
       "pillars": [
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-501"
       ],
@@ -5567,7 +5569,7 @@
       "pillars": [
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-501"
       ],
@@ -5699,7 +5701,7 @@
       "pillars": [
         "E"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-501"
       ],
