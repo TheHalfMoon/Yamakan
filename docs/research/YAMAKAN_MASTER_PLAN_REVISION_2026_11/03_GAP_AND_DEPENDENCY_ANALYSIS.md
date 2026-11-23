@@ -377,7 +377,7 @@ Founder decisions, as stated in [FOUNDER_DECISIONS_REQUESTED.md](FOUNDER_DECISIO
 | Decision | Cards that list it | Cards that wait behind those | What the wait really is |
 |---|---|---|---|
 | FD-1 | MPR-001 | MPR-003 | By the decision's note, every other card starts only after it. |
-| FD-2 | MPR-101, MPR-103, MPR-701 | 18 more through MPR-101 | Not a block. MPR-101 proceeds with hashes only if FD-2 is declined. Only the prompt-text option waits. |
+| FD-2 | MPR-101, MPR-103, MPR-701 | 18 more through MPR-101 | Not a block. MPR-101 proceeds with a hash only in the take record if FD-2 is declined. Only the prompt-text option waits. |
 | FD-3 | MPR-404, MPR-405, MPR-604, MPR-801, MPR-802, MPR-803 | MPR-606, MPR-805 | Changes what those cards deliver. Real-route observations are recorded BLOCKED without it. |
 | FD-4 | MPR-220, MPR-221, MPR-404, MPR-405, MPR-604 | MPR-606, MPR-803 | Blocks MPR-220 and MPR-221 outright. Narrows the others. |
 | FD-5 | MPR-211, MPR-222, MPR-404, MPR-405 | MPR-803 | Blocks MPR-211 and MPR-222 outright, with a completed legal review. |

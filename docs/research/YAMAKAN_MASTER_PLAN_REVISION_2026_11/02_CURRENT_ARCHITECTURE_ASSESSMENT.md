@@ -132,7 +132,7 @@ Invariants under test: REST/MCP parity (`tests/parity.test.ts`), receipt or requ
 | First-frame image-to-video | QUALIFIED | `kaggle-wan22-ti2v-5b-first-frame`; `core/engines/clean-image.ts`; `qualify:kaggle-first-frame`, `docs/evidence/ultimate/kaggle-first-frame-page-run-receipt.json` | `noUnconsentedPerson` per run; send consent for pack-linked images |
 | Record before send, follow after restart, never resend | QUALIFIED | `JobSupervisor.generationLedger()`; `tests/generation-durable.test.ts`; `qualify:create-durable`, `docs/evidence/ultimate/kaggle-restart-run-receipt.json` | which script wrote that receipt: not verified |
 | Stop a Kaggle run | STUB by necessity | `requestCancel` returns `remoteAcknowledged: false`; `job.cancel` refuses `remote-generation` | quota is used until the run ends |
-| Bring in a generated video | IN CODE | `yamakan.generation.import`; `bringIn` checks size and SHA-256 | prompt kept only as an unsalted hash in the job payload |
+| Bring in a generated video | IN CODE | `yamakan.generation.import`; `bringIn` checks size and SHA-256 | the lineage keeps the prompt only as an unsalted hash; the generation ledger row in `jobs.payload` keeps the full prompt |
 | Generate into an existing shot | ABSENT | `generation.start` input has no shot id; Create adds a shot to the "Made in Create" story | MPR-102 |
 | Prompt library and presets | IN CODE | `core/prompts/library.ts`, `core/prompts/presets.ts`; `yamakan.prompt.search`, `prompt.fill`, `prompt.savePresets`; `tests/prompt-library.test.ts` | `qualify:prompt-library` receipt not committed |
 | Estimate | STUB | `yamakan.generation.options` gives `expectedSeconds`, `timeoutSeconds` only | MPR-203 |
@@ -440,8 +440,8 @@ workspace schema went from 15 (PR #133) to 18 (PR #271); no card should hard-cod
    MPR-201 and MPR-202. MPR-201 puts one catalog over the model lists and checks them against it;
    it replaces none. MPR-202 adds one report built from the catalog; both existing commands keep
    their fields.
-5. Truth first: MPR-002 (section 6 and the closed rows of section 10), MPR-003 (unregistered
-   streams), MPR-010 (consent-undo reproduction).
+5. Truth first: MPR-003 (unregistered streams), MPR-002 (section 6 and the closed rows of section
+   10), MPR-010 (consent-undo reproduction), in the order of the handoff's section 4.
 6. Agent honesty: MPR-501, MPR-502, MPR-503; MPR-508 stays on FD-9.
 7. Evidence: commit receipts for anything later called QUALIFIED, and full Windows CI (MPR-804,
    FD-8), before Stage 5 claims

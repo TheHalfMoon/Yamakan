@@ -177,8 +177,8 @@ Verdict: yes with fixes. The reviewer would refuse the merge while OM-1 and OM-4
 | OM-1 | BLOCKER | Existing licence defects (notices, source offer, SBOM) wait behind feature cards. | PARTLY FIXED: part a of MPR-209 has no dependency and is the first pull request of Stage 2 in the handoff. It was not moved to Stage 0. Making MPR-301 wait for MPR-209 is OA-13. |
 | OM-2 | MAJOR | The decisions in document 04 disagree with the cards. | FIXED: a script compared them. 55 of 56 agree. The difference is MPR-222, which document 04 calls DEFER, then BUILD and the card calls DEFER. |
 | OM-3 | MAJOR | Several licences are assumed, not read. | PARTLY FIXED: cards that name an unread licence read it at step 0. The licence of the `windows` crate in MPR-508 is still [ASSUMED]. |
-| OM-4 | MAJOR | The package check would fail on the first implementing merge, because new files would then exist. | FIXED: in MPR-003 the rule that new files must not exist applies to cards in a planning state alone. Rendering the task program in CI was not adopted (section 6). |
-| OM-5 | MAJOR | A few files are edited by dozens of cards. | PARTLY FIXED: handoff section 5.3 sends every pull request that edits one of them through one merge queue, and document 08 section 6 points there. Deriving the parity counts was rejected (section 6). |
+| OM-4 | MAJOR | The package check would fail on the first implementing merge, because new files would then exist. | FIXED: in MPR-003 the rule that new files must not exist applies to cards in a planning state alone. This holds only when MPR-003 lands before any card that creates a listed file, which is the handoff's Stage 0 order. Rendering the task program in CI was not adopted (section 6). |
+| OM-5 | MAJOR | A few files are edited by dozens of cards. | PARTLY FIXED: handoff section 5.3 sends every pull request that edits one of them through one merge queue, and document 08 section 6 points there. Its premise about parity counts was wrong (section 6). |
 | OM-6 | MAJOR | The order of schema steps was stated three ways. | FIXED: handoff section 5.1 is the authority, and documents 03, 05 and 08 point to it. |
 | OM-7 | MAJOR | Many cards are larger than one pull request. | LEFT OPEN: OA-14. |
 | OM-8 | MAJOR | Windows CI has no budget. | FIXED: MPR-804 cancels superseded runs and caches LFS objects. The LFS quota and the free runner minutes are still [UNKNOWN] and are checked by the founder under FD-8. |
@@ -280,7 +280,8 @@ Examples of facts taken from the code and not from earlier plans:
 - The story has no dialogue field at the baseline. MPR-106 adds it.
 - The engine contract names five operations; three of them have no adapter.
 - `.github/workflows/qualify.yml` has no `concurrency` key.
-- `tests/parity.test.ts` holds the counts of commands and tools as literals.
+- `tests/parity.test.ts` holds no counts. It compares the MCP tool list with the REST list at run
+  time. (An earlier version of this line said it held the counts as literals; that was wrong.)
 - The service never reads free memory.
 
 The dependency check and its eleven findings are in section 6 of
@@ -323,8 +324,10 @@ registry, the task program is rendered again, and the package check is run.
 | OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs. | SE-4 | MPR-204 |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |
 | OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts`. | SA-1 | MPR-204 |
+| OA-23 | MPR-003, MPR-209 and other cards with parts | The package check gets a part-aware rule, so a part that lands before its card's dependencies does not fail it. MPR-209 part a is the confirmed case; others were not examined. | Review of #281 | MPR-003 |
+| OA-24 | MPR-209 | Acceptance, tests, files and an offer field for the new `NOTICE` entries, the FFmpeg source or written offer, and `node.exe`, whose hash is the running host's and so differs between hosts. | Review of #281 | MPR-209 part a |
 
-The planner's view on timing: OA-5 and OA-16 both change the take record that MPR-101 creates.
+The planner's view on timing (OA-1 to OA-22): OA-5 and OA-16 both change the take record that MPR-101 creates.
 The record is versioned and a later additive step is possible, but each is cheapest before
 MPR-101 merges. OA-4 and OA-8 answer the creative director's blocker and both land in MPR-302.
 OA-18 changes a closed list, so it is cheapest before MPR-207 fixes that list. The rest can wait
@@ -499,7 +502,7 @@ changes the reason given.
 | Make the recommended answer to FD-2 a condition of the Stage 1 exit (PS-3) | A plan cannot make a founder decision a condition of its own stage. Stage 1 is demonstrated with whichever answer is recorded. |
 | Move MPR-209 to Stage 0 (OM-1) | Part a has no dependency and is first in Stage 2. Stage 0 is kept to adoption, the package check and CI. The founder may reorder under FD-11. |
 | Render the task program in CI and stop committing it (OM-4) | A reviewer reads the cards in the pull request. The committed file is compared with the registry by the rendering check, and a CI rendering would wait for MPR-804. |
-| Derive the two counts in `tests/parity.test.ts` from the registry (OM-5) | The literal counts are a deliberate tripwire: a command added or removed by accident fails the test. A derived count would pass for any accidental change. The cost is that 25 cards edit the file, which the merge queue of handoff section 5.3 handles. |
+| Derive the two counts in `tests/parity.test.ts` from the registry (OM-5) | There is nothing to derive: the file holds no counts, so the earlier reason (a literal tripwire) was wrong. No test pins the count. Whether to add one is open. The 25 cards that list the file check at step 0 whether they need to edit it. |
 | A dedicated table for take records (SA-6) | It is a schema step that the handoff says MPR-101 must not need, and the version table already keeps documents by kind. It is reopened if a reader without a kind filter is found. |
 | Editing the rendered task program by hand | The registry is the source. The rendering check fails on any hand edit. |
 
@@ -511,8 +514,9 @@ changes the reason given.
 2. OA-5 and OA-16 change the take record. Should either be made before MPR-101 is built?
 3. The exit of Stage 1 needs three working editors or creative leads on the founder host. Can
    that be arranged? If not, the exit stays BLOCKED.
-4. MPR-010 reverses a consent rule that an earlier pull request kept on purpose. Does that change
-   need the founder?
+4. MPR-010 reverses a consent rule that an earlier pull request kept on purpose. It proceeds under
+   the delegation of 2026-11-07 without a new answer, unless its reviewer judges that the change
+   needs the founder (section 5.5); the founder may overrule it.
 5. Is Stage 1, as limited in document 00 section 5 (silent clips of a few seconds, no control of
    framing or performance, no prompt refill without FD-2), the right first deliverable under
    FD-11?
