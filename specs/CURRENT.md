@@ -1,5 +1,13 @@
 # Yamakan current frontier
 
+## Master plan revision adopted (2026-11-23)
+
+The frontier is the [master plan revision](../docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/README.md) and its [task registry](../docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/TASK_REGISTRY_ADDENDUM.json); the founder's words are in the [decision record](../docs/FOUNDER_DECISION_RECORD.md#2026-11-23-master-plan-revision-adopted-as-the-frontier). Existing SS, R and X cards keep their registry and are referenced, not replaced; progress stays in the [continuation ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md).
+
+Standing limits: models and providers off unless a card's gate and a recorded founder decision allow, spending zero, release NO-GO, M export unqualified.
+
+Draft pull requests #85 (`7472a14e2eecea0620e0bb2d4422db8852421491`) and #86 (`caec7d9c225d430e1a42f8af8fd8eebc17c5317d`) are open drafts, branches untouched; their disposition is not decided. The package's own documents still carry their PROPOSED status line until MPR-003 lands.
+
 ## Implementation under founder handoff (2026-11-04)
 
 The founder [handed implementation to Claude Opus](../docs/FOUNDER_DECISION_RECORD.md#2026-11-04-system-supremacy-implementation-handoff-to-claude-opus). The hold described below is lifted for the 31-task program; progress is in the [continuation ledger](../docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/12_EXECUTION_AND_CONTINUATION_LEDGER.md). SS-004a merged at `928100281440bc32e522595dadd2504ac986c543`. Models and providers disabled, Plume deferred, resource limits frozen, spending zero, public release NO-GO, M export unqualified.
