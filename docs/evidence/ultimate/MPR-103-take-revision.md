@@ -69,4 +69,16 @@ At `6e0b5b6`, by reading: no `yamakan.take.revisionDraft`, no `derivedFromTakeId
 
 ## The real check
 
-To come.
+`npm run qualify:revisable-shot` ran on GitHub's Linux machine: **PASS at `bdafd6c`** (run 45282798893, `ubuntu-24.04`, no sandbox), with the MPR-101, MPR-102 and MPR-107 steps before and around it. Its receipt is `MPR-103-take-revision-receipt.json`. It is not evidence of the founder host.
+
+**The stand-in engine does not vary its output with the request.** The base take's video and the revision's are two test patterns that the check chose, and nothing in either is AI output. So this proves what is recorded and how a revision is placed and taken back, not that a model follows a changed seed or prompt.
+
+| What | Value |
+|---|---|
+| Base record | `d9a99f76f61c367dfa7d3d486b3263c676c908a3a84efcd8a94ef78f306bd67b` |
+| Draft | recipe `qualify-pattern`, seed 7, 704x480, 60 frames, the prompt; complete and startable |
+| Record of the run with seed 8 | `d20a7d25cffe837fdb7b744e52a4e158f24db3169331638c290d55ca38eb5c1b`, `changedFields` `["seed"]`, with its note |
+| Record of the run as it was | `d94479a6fdcda24c5e707191058fce2a929230ff8f4b8c5a91406494f020897e`, `changedFields` `[]` |
+| Placing it | revision 34 to 35, one revision |
+| Undo | revision 36, the base take shown again |
+| A service with no engine | the same draft over REST and over MCP, `route` unavailable ("Engines are off in this build."), not startable |
