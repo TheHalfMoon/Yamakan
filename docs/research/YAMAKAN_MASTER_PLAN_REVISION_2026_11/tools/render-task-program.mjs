@@ -13,6 +13,12 @@ const directory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+// The status line every document carries: the proposed or the adopted form.
+export const statusLine = (registry) =>
+  registry.status === "ADOPTED"
+    ? "> Status: ADOPTED — the current frontier by founder instruction. Each card stays gated by its state and founder decisions."
+    : "> Status: PROPOSED — planning only. Not authority until founder review.";
+
 const REGISTRY = "TASK_REGISTRY_ADDENDUM.json";
 const OUTPUT = "09_TASK_PROGRAM.md";
 
@@ -50,6 +56,7 @@ function card(task) {
     `| Dependencies | ${task.dependsOn.length ? task.dependsOn.join(", ") : "none"} |`,
     `| Founder decisions | ${task.founderDecisions.length ? task.founderDecisions.join(", ") : "none"} |`,
     `| Earlier plan items | ${task.legacy.length ? task.legacy.join(", ") : "none"} |`,
+    ...(task.evidence ? [`| Evidence | ${task.evidence} |`] : []),
     "",
     `**Goal.** ${task.objective}`,
     "",
@@ -124,7 +131,7 @@ export function render(registry) {
   const lines = [
     "# Task program",
     "",
-    "> Status: PROPOSED — planning only. Not authority until founder review.",
+    statusLine(registry),
     `> Baseline: \`main\` at \`${registry.baselineMain}\`, verified ${registry.planningDate}.`,
     "",
     `This file is rendered from \`${REGISTRY}\` by \`tools/render-task-program.mjs\`.`,

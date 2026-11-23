@@ -1,15 +1,18 @@
 // Validates the master plan revision package. Read-only: it writes nothing.
 //
 //   node docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/tools/validate-addendum.mjs
+//   node docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/tools/validate-addendum.mjs --self-test
 //
+// --self-test runs in-memory controls of the state and header rules; it reads no file.
 // It checks structure and cross-references, and that what the documents name
 // in the repository exists at the checked-out head. It does not judge whether
 // the plan is good, and a PASS here is not a review. A check that cannot run
 // is an error, never a pass.
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { render } from "./render-task-program.mjs";
+import { render, statusLine } from "./render-task-program.mjs";
 
 const directory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -36,8 +39,183 @@ const strings = (value) =>
   Array.isArray(value) &&
   value.every((item) => typeof item === "string" && item.trim().length > 0);
 
+// ---------------------------------------------------------------- rules
+// The four planning states keep the rule that none of a card's newFiles exists. REVIEW_PENDING
+// puts no condition on newFiles. VERIFIED needs them all and names its commit in `evidence`.
+const PLANNING_STATES = [
+  "QUALIFICATION_READY",
+  "WAITING_DEPENDENCIES",
+  "EXTERNAL_BLOCKED",
+  "DEFERRED",
+];
+const STATES = [...PLANNING_STATES, "REVIEW_PENDING", "VERIFIED"];
+const namesCommit = (text) =>
+  typeof text === "string" && /\b[a-f0-9]{7,40}\b/.test(text);
+
+// Returns messages; an empty list is a pass. `exists` is given so the self-test can stub it.
+export function lifecycleIssues(tasks, ssState, exists) {
+  const issues = [];
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  for (const task of tasks) {
+    const at = "card " + task.id + ": ";
+    const files = task.newFiles ?? [];
+    if (!STATES.includes(task.state)) {
+      issues.push(at + "state not allowed: " + task.state);
+      continue;
+    }
+    if (PLANNING_STATES.includes(task.state))
+      for (const file of files)
+        if (exists(file))
+          issues.push(at + "newFiles entry already exists: " + file);
+    let waiting = false;
+    for (const dependency of task.dependsOn ?? []) {
+      if (dependency === task.id) issues.push(at + "depends on itself");
+      if (byId.has(dependency))
+        waiting ||= byId.get(dependency).state !== "VERIFIED";
+      else if (ssState.has(dependency))
+        waiting ||= ssState.get(dependency) !== "VERIFIED";
+      else issues.push(at + "unknown dependency " + dependency);
+    }
+    if (waiting && ["QUALIFICATION_READY", "REVIEW_PENDING", "VERIFIED"].includes(task.state))
+      issues.push(at + task.state + " with an unfinished dependency");
+    if (!waiting && task.state === "WAITING_DEPENDENCIES")
+      issues.push(at + "WAITING_DEPENDENCIES with no unfinished dependency");
+    if (
+      task.state === "EXTERNAL_BLOCKED" &&
+      (task.blockingExternalRequirements ?? []).length === 0
+    )
+      issues.push(at + "EXTERNAL_BLOCKED needs blockingExternalRequirements");
+    if (task.state === "VERIFIED") {
+      if (!namesCommit(task.evidence))
+        issues.push(at + "VERIFIED needs evidence that names a commit");
+      for (const file of files)
+        if (!exists(file))
+          issues.push(at + "VERIFIED but a new file is missing: " + file);
+    }
+  }
+  return issues;
+}
+
+// The registry header and the documents' status lines are in exactly one form: proposed or
+// adopted. The heading is one that exists in the founder record. A pass is not an authority.
+export function headerIssues(registry, documentHeads, recordText) {
+  const issues = [];
+  const adopted = registry.status === "ADOPTED";
+  if (!adopted && registry.status !== "PROPOSED_NOT_AUTHORIZED")
+    issues.push("registry: status must be PROPOSED_NOT_AUTHORIZED or ADOPTED");
+  if (!adopted) {
+    if (registry.implementationAuthorized !== false)
+      issues.push("registry: implementationAuthorized must be false while proposed");
+    if (registry.adoption !== undefined)
+      issues.push("registry: a proposed package has no adoption block");
+  } else {
+    if (registry.implementationAuthorized !== true)
+      issues.push("registry: ADOPTED needs implementationAuthorized true");
+    const adoption = registry.adoption;
+    if (!adoption) issues.push("registry: ADOPTED needs an adoption block");
+    else {
+      if (adoption.record !== "docs/FOUNDER_DECISION_RECORD.md")
+        issues.push("registry: adoption.record must be the founder record");
+      if (!isSha(adoption.mergeCommit))
+        issues.push("registry: adoption.mergeCommit is not a commit id");
+      const headings = new Set(
+        [...recordText.matchAll(/^## (.+)$/gm)].map((match) => match[1].trim()),
+      );
+      if (!headings.has(adoption.heading))
+        issues.push("registry: adoption.heading is not a heading of the founder record");
+    }
+  }
+  const own = statusLine(registry);
+  const other = statusLine({ status: adopted ? "PROPOSED_NOT_AUTHORIZED" : "ADOPTED" });
+  for (const { name, head } of documentHeads) {
+    if (!head.includes(own)) issues.push(name + ": status line missing");
+    if (head.includes(other))
+      issues.push(name + ": carries the status line of the other form");
+  }
+  return issues;
+}
+
+if (process.argv.includes("--self-test")) {
+  let count = 0;
+  const has = (list, word) => {
+    assert(
+      list.some((message) => message.includes(word)),
+      "expected '" + word + "' in " + JSON.stringify(list),
+    );
+    count++;
+  };
+  const none = (list) => {
+    assert.deepEqual(list, []);
+    count++;
+  };
+  const card = (id, state, more = {}) => ({
+    id,
+    state,
+    dependsOn: [],
+    newFiles: [],
+    blockingExternalRequirements: [],
+    ...more,
+  });
+  const ss = new Map([
+    ["SS-001", "VERIFIED"],
+    ["SS-002", "IN_PROGRESS"],
+  ]);
+  const here = (file) => file === "there";
+  const commit = "merged as " + "a".repeat(40);
+  const rule = (...tasks) => lifecycleIssues(tasks, ss, here);
+  const ok = [
+    card("A", "VERIFIED", { evidence: commit, newFiles: ["there"] }),
+    card("B", "REVIEW_PENDING", { dependsOn: ["A"], newFiles: ["there"] }),
+    card("C", "QUALIFICATION_READY", { dependsOn: ["A", "SS-001"], newFiles: ["nowhere"] }),
+    card("D", "WAITING_DEPENDENCIES", { dependsOn: ["B"] }),
+    card("E", "EXTERNAL_BLOCKED", { blockingExternalRequirements: ["a decision"] }),
+    card("F", "DEFERRED"),
+  ];
+  none(lifecycleIssues(ok, ss, here));
+  has(rule(card("A", "VERIFIED", { newFiles: [] })), "names a commit");
+  has(rule(card("A", "VERIFIED", { evidence: commit, newFiles: ["nowhere"] })), "new file is missing");
+  has(
+    rule(card("A", "REVIEW_PENDING"), card("B", "QUALIFICATION_READY", { dependsOn: ["A"] })),
+    "QUALIFICATION_READY with an unfinished dependency",
+  );
+  has(rule(card("A", "QUALIFICATION_READY", { dependsOn: ["SS-002"] })), "unfinished dependency");
+  has(
+    rule(card("A", "VERIFIED", { evidence: commit }), card("B", "WAITING_DEPENDENCIES", { dependsOn: ["A"] })),
+    "no unfinished dependency",
+  );
+  has(rule(card("A", "QUALIFICATION_READY", { newFiles: ["there"] })), "already exists");
+  has(rule(card("A", "DONE")), "state not allowed");
+  has(rule(card("A", "REVIEW_PENDING", { dependsOn: ["SS-002"] })), "REVIEW_PENDING with an unfinished");
+  has(rule(card("A", "VERIFIED", { evidence: commit, dependsOn: ["SS-002"] })), "VERIFIED with an unfinished");
+  has(rule(card("A", "QUALIFICATION_READY", { dependsOn: ["SS-999"] })), "unknown dependency");
+  has(rule(card("A", "EXTERNAL_BLOCKED")), "needs blockingExternalRequirements");
+
+  const record = "# Record\n\n## 2026-01-01: Adopted\n\ntext\n\n### deeper\n";
+  const line = (status) => statusLine({ status });
+  const heads = (status) => [{ name: "README.md", head: "# T\n\n" + line(status) }];
+  const adoption = {
+    record: "docs/FOUNDER_DECISION_RECORD.md",
+    heading: "2026-01-01: Adopted",
+    mergeCommit: "b".repeat(40),
+  };
+  const adopted = { status: "ADOPTED", implementationAuthorized: true, adoption };
+  const proposed = { status: "PROPOSED_NOT_AUTHORIZED", implementationAuthorized: false };
+  none(headerIssues(proposed, heads("PROPOSED_NOT_AUTHORIZED"), record));
+  none(headerIssues(adopted, heads("ADOPTED"), record));
+  has(headerIssues({ ...adopted, implementationAuthorized: false }, heads("ADOPTED"), record), "implementationAuthorized true");
+  has(headerIssues({ ...adopted, adoption: undefined }, heads("ADOPTED"), record), "adoption block");
+  has(headerIssues({ ...proposed, adoption }, heads("PROPOSED_NOT_AUTHORIZED"), record), "no adoption block");
+  has(headerIssues({ ...proposed, implementationAuthorized: true }, heads("PROPOSED_NOT_AUTHORIZED"), record), "false while proposed");
+  has(headerIssues({ ...adopted, adoption: { ...adoption, heading: "deeper" } }, heads("ADOPTED"), record), "not a heading");
+  has(headerIssues({ ...adopted, adoption: { ...adoption, mergeCommit: "b" } }, heads("ADOPTED"), record), "not a commit id");
+  has(headerIssues(adopted, heads("PROPOSED_NOT_AUTHORIZED"), record), "other form");
+  has(headerIssues({ status: "MAYBE", implementationAuthorized: false }, heads("PROPOSED_NOT_AUTHORIZED"), record), "status must be");
+  console.log("PASS: lifecycle and header controls (" + count + " assertions).");
+  process.exit(0);
+}
+
 // ---------------------------------------------------------------- inputs
-let registry, reconciliation, ssRegistry, ssReconciliation, commandSource;
+let registry, reconciliation, ssRegistry, ssReconciliation, commandSource, recordText;
 try {
   registry = readJson(path.join(directory, "TASK_REGISTRY_ADDENDUM.json"));
   reconciliation = readJson(
@@ -48,6 +226,9 @@ try {
     path.join(root, SS_DIRECTORY, "LEGACY_RECONCILIATION.json"),
   );
   commandSource = fs.readFileSync(path.join(root, COMMAND_REGISTRY), "utf8");
+  recordText = fs
+    .readFileSync(path.join(root, "docs/FOUNDER_DECISION_RECORD.md"), "utf8")
+    .replace(/\r\n/g, "\n");
 } catch (error) {
   console.error("BLOCKED: a required input could not be read: " + error.message);
   process.exit(1);
@@ -57,25 +238,11 @@ const legacyIds = ssReconciliation.tasks.map((task) => task.id);
 
 // ---------------------------------------------------------------- registry
 let mark = errors.length;
-const STATES = [
-  "QUALIFICATION_READY",
-  "WAITING_DEPENDENCIES",
-  "EXTERNAL_BLOCKED",
-  "DEFERRED",
-];
 const DECISIONS = ["COPY", "ADAPT", "WRAP", "COMBINE", "BUILD", "DEFER", "REJECT"];
 const PILLARS = ["A", "B", "C", "D", "E"];
 check(
   registry.schema === "yamakan.system-improvement-plan-addendum/v1",
   "registry: unexpected schema",
-);
-check(
-  registry.status === "PROPOSED_NOT_AUTHORIZED",
-  "registry: status must be PROPOSED_NOT_AUTHORIZED",
-);
-check(
-  registry.implementationAuthorized === false,
-  "registry: implementationAuthorized must be false",
 );
 check(isSha(registry.baselineMain), "registry: baselineMain is not a commit id");
 check(
@@ -106,7 +273,7 @@ check(decisionIds.size >= 1, "registry: founderDecisions missing");
 check(
   JSON.stringify((registry.states ?? []).map((state) => state.id)) ===
     JSON.stringify(STATES),
-  "registry: states must list the four allowed card states in order",
+  "registry: states must list the six allowed card states in order",
 );
 for (const entry of registry.pathsNotOnMain ?? [])
   check(
@@ -184,12 +351,21 @@ for (const task of tasks) {
       strings(task[field]) && task[field].length >= minimum,
       at + field + " must be a list of at least " + minimum + " text items",
     );
-  const known = new Set([...STRING_FIELDS, ...Object.keys(ARRAY_FIELDS), "stage"]);
+  const known = new Set([
+    ...STRING_FIELDS,
+    ...Object.keys(ARRAY_FIELDS),
+    "stage",
+    "evidence",
+  ]);
   for (const key of Object.keys(task))
     check(known.has(key), at + "unknown field " + key);
   check(/^MPR-\d{3}$/.test(task.id ?? ""), at + "id must look like MPR-000");
   check((task.title ?? "").length <= 90, at + "title is longer than 90 characters");
-  check(STATES.includes(task.state), at + "state not allowed: " + task.state);
+  check(
+    task.evidence === undefined ||
+      (typeof task.evidence === "string" && task.evidence.trim().length > 0),
+    at + "evidence must be text",
+  );
   check(stageIds.has(task.stage), at + "unknown stage " + task.stage);
   check(trackIds.has(task.track), at + "unknown track " + task.track);
   for (const pillar of task.pillars ?? [])
@@ -216,36 +392,14 @@ for (const task of tasks) {
     );
   for (const target of task.targets ?? [])
     check(exists(target), at + "target does not exist: " + target);
-  for (const file of task.newFiles ?? []) {
-    check(!exists(file), at + "newFiles entry already exists: " + file);
-    proposedPaths.add(file);
-  }
-  // Dependencies and what they imply for the state.
-  let waiting = false;
-  for (const dependency of task.dependsOn ?? []) {
-    check(dependency !== task.id, at + "depends on itself");
-    if (byId.has(dependency)) waiting = true;
-    else if (ssState.has(dependency))
-      waiting ||= ssState.get(dependency) !== "VERIFIED";
-    else check(false, at + "unknown dependency " + dependency);
-  }
+  for (const file of task.newFiles ?? []) proposedPaths.add(file);
   check(
     new Set(task.dependsOn).size === (task.dependsOn ?? []).length,
     at + "duplicate dependency",
   );
-  if (waiting)
-    check(
-      task.state !== "QUALIFICATION_READY",
-      at + "QUALIFICATION_READY with an unfinished dependency",
-    );
-  if (task.state === "EXTERNAL_BLOCKED")
-    check(
-      (task.blockingExternalRequirements ?? []).length > 0,
-      at + "EXTERNAL_BLOCKED needs blockingExternalRequirements",
-    );
-  if (task.state === "WAITING_DEPENDENCIES")
-    check(waiting, at + "WAITING_DEPENDENCIES with no unfinished dependency");
 }
+for (const message of lifecycleIssues(tasks, ssState, exists))
+  check(false, message);
 // No cycle among the cards (dependencies on System Supremacy cards are leaves).
 {
   const active = new Set();
@@ -417,16 +571,14 @@ function checkText(name, text) {
   );
 }
 
+const documentHeads = [];
 for (const name of REQUIRED_DOCUMENTS) {
   const file = path.join(directory, name);
   if (!check(fs.existsSync(file), "missing document " + name)) continue;
   const text = fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n");
   const head = text.split("\n").slice(0, 8).join("\n");
   check(/^# \S/.test(text), name + ": must start with a level-one title");
-  check(
-    head.includes("> Status: PROPOSED — planning only. Not authority until founder review."),
-    name + ": status line missing",
-  );
+  documentHeads.push({ name, head });
   check(
     head.includes(registry.baselineMain),
     name + ": baseline line missing or names another commit",
@@ -441,6 +593,8 @@ for (const name of REQUIRED_DOCUMENTS) {
     );
   }
 }
+for (const message of headerIssues(registry, documentHeads, recordText))
+  check(false, message);
 checkText("TASK_REGISTRY_ADDENDUM.json", JSON.stringify(registry));
 checkText("LEGACY_RECONCILIATION_ADDENDUM.json", JSON.stringify(reconciliation));
 for (const name of fs.readdirSync(directory))

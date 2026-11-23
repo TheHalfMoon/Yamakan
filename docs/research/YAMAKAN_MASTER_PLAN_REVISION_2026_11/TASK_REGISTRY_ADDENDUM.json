@@ -126,6 +126,14 @@
     {
       "id": "DEFERRED",
       "meaning": "Deliberately not scheduled; kept so the reason and the reopening condition are on record."
+    },
+    {
+      "id": "REVIEW_PENDING",
+      "meaning": "Built, or being built, and not yet verified. The pull request that builds a card sets it when it creates one of the card's listed new files."
+    },
+    {
+      "id": "VERIFIED",
+      "meaning": "Complete: every listed new file exists and `evidence` names the merge commit. The implementation lead sets it in a reviewed pull request."
     }
   ],
   "founderDecisions": [

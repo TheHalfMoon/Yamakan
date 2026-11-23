@@ -47,6 +47,8 @@ These rules apply to every card and are not repeated inside the cards.
 | WAITING_DEPENDENCIES | At least one dependency is not verified yet. |
 | EXTERNAL_BLOCKED | Waits for something outside engineering, named on the card (a founder decision, a person, a tool or a machine). |
 | DEFERRED | Deliberately not scheduled; kept so the reason and the reopening condition are on record. |
+| REVIEW_PENDING | Built, or being built, and not yet verified. The pull request that builds a card sets it when it creates one of the card's listed new files. |
+| VERIFIED | Complete: every listed new file exists and `evidence` names the merge commit. The implementation lead sets it in a reviewed pull request. |
 
 ## Index
 

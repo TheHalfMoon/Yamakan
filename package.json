@@ -23,6 +23,7 @@
     "test:e2e:studio": "node e2e/testerarmy/run.mjs",
     "provenance:check": "node scripts/provenance.mjs",
     "brand:check": "node scripts/brand-check.mjs",
+    "plan:check": "node docs/research/YAMAKAN_SYSTEM_SUPREMACY_REA/tools/validate-plan.mjs && node docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/tools/validate-addendum.mjs --self-test && node docs/research/YAMAKAN_MASTER_PLAN_REVISION_2026_11/tools/validate-addendum.mjs",
     "benchmark": "node scripts/benchmark-production.ts",
     "mcp": "node mcp/main.ts",
     "blender:install": "node scripts/blender-install.ts",
