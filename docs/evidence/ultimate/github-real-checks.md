@@ -4,7 +4,7 @@ The founder answered "Yes, use GitHub" to running the blocked real checks on Git
 
 ## Result
 
-Run 45197050458, commit `88063220f4ef0f22a03ed1324cab6c290f84a0a9`, on GitHub's `ubuntu-24.04` machine (image 20261111.635), with FFmpeg 6.1.1 from Ubuntu's packages, which the job installs (not the pinned Windows build). All four ended PASS. `qualify:revisable-shot` uses the real store, job table and commands in one process, with the stand-in engine and no browser. The other three use the real service and Microsoft Edge, which the machine has: 157.0.4341.60 by a step of its own, as the receipts do not name it. The receipts beside this file are as the log printed them; the workflow's log is the source.
+Run 45197050458, commit `88063220f4ef0f22a03ed1324cab6c290f84a0a9`, on GitHub's `ubuntu-24.04` machine (image 20261116.376.1), with FFmpeg 6.1.1 from Ubuntu's packages, which the job installs (not the pinned Windows build). All four ended PASS. `qualify:revisable-shot` uses the real store, job table and commands in one process, with the stand-in engine and no browser. The other three use the real service and Microsoft Edge, which the machine has: 157.0.4341.60 by a step of its own, as the receipts do not name it. The receipts beside this file are as the log printed them; the workflow's log is the source.
 
 | Check                    | Cards           | Receipt                                                                         | Steps    |
 | ------------------------ | --------------- | ------------------------------------------------------------------------------- | -------- |
