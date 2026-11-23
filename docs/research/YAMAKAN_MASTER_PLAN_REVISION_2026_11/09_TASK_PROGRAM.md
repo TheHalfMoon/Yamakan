@@ -65,7 +65,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
 | MPR-106 | 1 | WAITING_DEPENDENCIES | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | WAITING_DEPENDENCIES | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
-| MPR-201 | 2 | QUALIFICATION_READY | — | Add one model catalog and check every existing model list against it |
+| MPR-201 | 2 | REVIEW_PENDING | — | Add one model catalog and check every existing model list against it |
 | MPR-202 | 2 | WAITING_DEPENDENCIES | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
 | MPR-204 | 2 | QUALIFICATION_READY | — | Add default-deny gates for egress, spend and download with recorded human approvals |
@@ -1508,7 +1508,7 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |

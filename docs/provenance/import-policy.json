@@ -109,6 +109,10 @@
       "reason": "Yamakan-authored Kaggle adapter. Its only process is the person's own Kaggle CLI, an absolute path they configure, by execFile with fixed arguments; a prompt travels in a file, never an argument."
     },
     {
+      "path": "core/engines/catalog.ts",
+      "reason": "Yamakan-authored model catalog: typed data only, no donor copy, no process, no network."
+    },
+    {
       "path": "core/engines/generation.ts",
       "reason": "Yamakan-authored generation service over the engine contract; no donor copy."
     },
