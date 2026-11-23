@@ -92,6 +92,8 @@ try {
   const token = readFileSync(join(workspace, "token"), "utf8").trim();
   const client = new YamakanClient({ baseUrl: base, token });
   const capability = await client.call("yamakan.blender.capability", {});
+  // Without the pinned Blender this is BLOCKED, not a failure of what it checks.
+  if (!capability.available) receipt.blocked = capability.message;
   assert.equal(capability.available, true, capability.message);
 
   // A 23.976 fps project with a one-shot story, made through the SDK: the render (at 24) must
@@ -278,6 +280,27 @@ try {
   const clipsOf = (opened, assetId) =>
     opened.clips.filter((c) => c.assetId === assetId).length;
   assert.equal(clipsOf(one.opened, one.asset.id), 1);
+  // MPR-101: the placed take's record is of this render.
+  const recordOf = async (takeId) =>
+    client.call("yamakan.take.record", {
+      projectId: project.id,
+      documentId: storyDocumentId,
+      shotId,
+      takeId,
+    });
+  const oneRecord = (await recordOf(one.selected.id)).record;
+  assert.equal(one.selected.recordHash.length, 64);
+  assert.equal(oneRecord.origin, "render");
+  assert.equal(oneRecord.output.sha256, one.asset.hash);
+  assert.match(oneRecord.request.sceneHash, /^[a-f0-9]{64}$/);
+  assert.equal(oneRecord.request.blenderVersion, capability.version);
+  // 1.001 s at 24 fps, and the planner's own samples.
+  assert.equal(oneRecord.request.frames, 25);
+  assert.equal(oneRecord.request.samples, 8);
+  assert.equal(oneRecord.request.lighting, "studio");
+  step("the placed take's record is of its render", {
+    request: oneRecord.request,
+  });
   step("first render approved and placed", {
     seconds: first.seconds,
     planned: first.planned,
@@ -292,6 +315,14 @@ try {
   assert.equal(clipsOf(two.opened, two.asset.id), 1);
   assert.equal(clipsOf(two.opened, one.asset.id), 0);
   assert.equal(two.opened.clips.length, one.opened.clips.length);
+  const twoRecord = (await recordOf(two.selected.id)).record;
+  assert.equal(twoRecord.output.sha256, two.asset.hash);
+  assert.notEqual(
+    twoRecord.request.sceneHash,
+    oneRecord.request.sceneHash,
+    "another scene",
+  );
+  assert.deepEqual((await recordOf(one.selected.id)).record, oneRecord);
   step("second render replaced the shot's clip", {
     seconds: second.seconds,
     takes: two.s.takes.length,
@@ -380,4 +411,10 @@ const text = JSON.stringify(receipt, null, 2) + "\n";
 if (process.env.YAMAKAN_QUALIFY_RECEIPT)
   writeFileSync(process.env.YAMAKAN_QUALIFY_RECEIPT, text);
 console.log(text);
-console.log(receipt.passed ? "DIRECTOR CINEMA PIPELINE PASS" : "FAILED");
+console.log(
+  receipt.passed
+    ? "DIRECTOR CINEMA PIPELINE PASS"
+    : receipt.blocked
+      ? `BLOCKED: ${receipt.blocked}`
+      : "FAILED",
+);
