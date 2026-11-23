@@ -1676,6 +1676,10 @@ test("a run's word is taken only where it has the form of such a name", () => {
     { python: "a b" },
     { python: "1".repeat(81) },
     { torch: "../x" },
+    { torch: "a/b" },
+    { python: ".1" },
+    { packages: ["a==b/c"] },
+    { packages: ["a=1"] },
     { version: "only a version" },
   ])
     assert.equal(engineReport(said), null, JSON.stringify(said));
@@ -1701,12 +1705,24 @@ test("a run's word is taken only where it has the form of such a name", () => {
       },
     ],
     [
-      { packages: ["imageio[ffmpeg]==2.37.0", "ftfy>=6", "accelerate"] },
+      {
+        packages: [
+          "imageio[ffmpeg]==2.37.0",
+          "ftfy>=6,<7",
+          "a===1",
+          "accelerate",
+        ],
+      },
       {
         ...none,
         runtime: {
           ...runtime,
-          packages: ["imageio[ffmpeg]==2.37.0", "ftfy>=6", "accelerate"],
+          packages: [
+            "imageio[ffmpeg]==2.37.0",
+            "ftfy>=6,<7",
+            "a===1",
+            "accelerate",
+          ],
         },
       },
     ],

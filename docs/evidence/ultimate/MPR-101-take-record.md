@@ -25,7 +25,7 @@ By reading the head this branch starts from:
 ### Where this differs from the card
 
 - **MPR-106's scene field is `sceneText`, not `script`.** CI found it at `30be0f2`: `tests/command.test.ts` forbids `script` in any command's input, and story version 2 is one. That test guards security, so the field was renamed, in both cards and the code, and the test was not touched. Nothing writes the field yet. Three reviews before that run had not noticed it.
-- **With FD-2 on, a largest-case record would not fit.** A 4,000-character CJK prompt with a full report and note is 19,379 bytes against 16,384 (14,740 without those two). Today, with no prompt, the largest is 7,367. It must be settled before `RECORD_HOLDS_PROMPT` is turned on.
+- **With FD-2 on, a largest-case record would not fit.** As the reviewer measured it, a 4,000-character CJK prompt with a full report and note is about 19.6 KB against 16,384 bytes (about 14.9 KB without those two). Today, with no prompt, the largest is about 9 KB. It must be settled before `RECORD_HOLDS_PROMPT` is turned on.
 - **`importedAt` on the ledger row** is one field more than the card's `endedAt`. The record has an `importedAt` time, and no row held one. A record has to come out the same on a retry of the request, so it cannot use the time of the save.
 - **`{jobId}` is not accepted yet.** It is part b's, with the Blender builder.
 - **A model no recipe fact names** takes the recipe's id, so that the manifest hash the row does hold is kept.
