@@ -24,6 +24,10 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { diagnostic } from "../core/engines/contract-v2.ts";
 import { mediaTools } from "../core/process/workers.ts";
+import { readHost } from "./qualify-host.mjs";
+
+// Before anything runs.
+const host = readHost();
 
 execFileSync("npm", ["run", "build"], {
   stdio: "inherit",
@@ -462,6 +466,7 @@ try {
           head: execFileSync("git", ["rev-parse", "HEAD"], {
             encoding: "utf8",
           }).trim(),
+          host,
           dirty:
             execFileSync("git", ["status", "--porcelain"], {
               encoding: "utf8",

@@ -1,0 +1,32 @@
+{
+  "task": "MPR-105",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90264018944,
+    "freeMemoryBytes": 15309938688,
+    "onAcPower": null,
+    "load": [
+      1.94,
+      0.62,
+      0.22
+    ],
+    "need": "unmeasured"
+  },
+  "passed": true,
+  "steps": [
+    {
+      "name": "a split and trimmed shot's proposal has a row per clip"
+    },
+    {
+      "name": "apply is one revision and each piece keeps its place in the new take"
+    },
+    {
+      "name": "one undo brings both pieces back"
+    },
+    {
+      "name": "a refusal names the clip"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "task": "SS-006",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90264018944,
+    "freeMemoryBytes": 15309938688,
+    "onAcPower": null,
+    "load": [
+      1.94,
+      0.62,
+      0.22
+    ],
+    "need": "unmeasured"
+  },
+  "passed": true,
+  "steps": [
+    {
+      "name": "real stills imported and a three-shot story assembled"
+    },
+    {
+      "name": "takes listed with the one shown marked"
+    },
+    {
+      "name": "review shows the exact proposal and changes nothing",
+      "hash": "03b8d7476817c5b2b68b534de3062517a98a2441e19fc69105b00a5742f5076b"
+    },
+    {
+      "name": "a stale review is refused, dropped and changes nothing"
+    },
+    {
+      "name": "a fresh review applies and changes only the middle clip",
+      "revision": 8
+    },
+    {
+      "name": "undo returns the previous take"
+    },
+    {
+      "name": "a review overtaken by a save is dropped and the panel stays usable"
+    },
+    {
+      "name": "applying is refused while edits are unsaved, and their save needs a fresh review"
+    },
+    {
+      "name": "while an apply runs, undo and project switching are disabled"
+    },
+    {
+      "name": "a lost response is replayed under one request id: the shown proposal, once",
+      "revision": 14
+    },
+    {
+      "name": "a response lost twice says the outcome is not known, not that it failed"
+    },
+    {
+      "name": "Arabic labels, right-to-left page, left-to-right identifiers"
+    },
+    {
+      "name": "no Director approval or stage command was called",
+      "takeCommands": [
+        "yamakan.take.list",
+        "yamakan.take.proposeReplace",
+        "yamakan.take.apply"
+      ]
+    },
+    {
+      "name": "no external requests and no page errors"
+    }
+  ],
+  "serverError": ""
+}

@@ -278,9 +278,13 @@ test("a generation's take record matches its ledger row and its own hash", async
   });
   const documentId = id();
   const t = take(asset);
+  // Bringing a medium in was one revision, and saving its take with a record is one.
+  const brought = (await w.store.load(w.projectId)).revision;
+  assert.equal(brought, 2, "two media, one each");
   const saved = await save(w, documentId, story([t]), {
     records: [{ takeId: t.id, from: { generationId: row.generationId } }],
   });
+  assert.equal(saved.project.revision, brought + 1);
   const body = stored(w, documentId);
   const { recordHash, record } = await read(w, documentId, body);
   assert.deepEqual(saved.records, [{ takeId: t.id, recordHash }]);
@@ -1433,6 +1437,15 @@ test("a recorded take, and one of a version 1 story, are placed by apply", async
       })
     ).result as Project;
     assert.equal(applied.clips.at(-1)!.assetId, b.id, `older: ${older}`);
+    // What one take spends of a project's revisions: applying it is one, and undoing that one.
+    assert.equal(applied.revision, proposal.revision + 1);
+    const undone = (
+      await execute(w.ctx, "yamakan.project.undo", {
+        projectId: w.projectId,
+        expectedRevision: applied.revision,
+      })
+    ).result as Project;
+    assert.equal(undone.revision, applied.revision + 1);
   }
 });
 

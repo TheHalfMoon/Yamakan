@@ -1,0 +1,50 @@
+{
+  "task": "create-record-durability",
+  "head": "88063220f4ef0f22a03ed1324cab6c290f84a0a9",
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 90269687808,
+    "freeMemoryBytes": 15458852864,
+    "onAcPower": null,
+    "load": [
+      0.81,
+      0.28,
+      0.1
+    ],
+    "need": "unmeasured"
+  },
+  "dirty": false,
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "a failed save says so, claims no success, and the video is in"
+    },
+    {
+      "name": "trying again saves it once, with no duplicate",
+      "documentId": "2084c264-8c87-44da-980f-5eec0954b16b"
+    },
+    {
+      "name": "its take has a declared record, in a version 2 story"
+    },
+    {
+      "name": "a save whose answer was lost is found on trying again, not added twice"
+    },
+    {
+      "name": "the record shows in a fresh browser profile"
+    },
+    {
+      "name": "the record is the same after the service restarts"
+    },
+    {
+      "name": "a backup is made and restored, with the browser's controls"
+    },
+    {
+      "name": "Yamakan on the restored folder has the record and can use the video"
+    },
+    {
+      "name": "no page errors"
+    }
+  ]
+}

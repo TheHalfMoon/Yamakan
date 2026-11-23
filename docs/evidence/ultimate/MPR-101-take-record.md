@@ -1,6 +1,6 @@
 # Every take can name the record of how it was made (MPR-101)
 
-Part a (PR 291, merged as `6b9fb8e`) is the record, its storage, story version 2, generation and declared records, and Create. Part b is the Blender record and the recovery check; its section is at the end. **The card is not complete:** none of its browser and end-to-end checks has run.
+Part a (PR 291, merged as `6b9fb8e`) is the record, its storage, story version 2, generation and declared records, and Create. Part b is the Blender record and the recovery check; its section is at the end. **The card is not verified:** FD-2 is not answered, its Blender arm has not run, and its other end-to-end checks have run only on GitHub's Linux machine ([result](github-real-checks.md)).
 
 ## What was found (step 0)
 
@@ -43,6 +43,7 @@ By reading the head this branch starts from:
 
 - **On the founder host, against the real store and commands:** the 28 tests that `tests/take-record.test.ts` had at `870cb5f` pass, with the catalog test of `tests/command.test.ts`, and all of `tests/create-story.test.ts`, `tests/create-model.test.ts` and `tests/kaggle-engine.test.ts` (a stand-in CLI, no network), among them a story stored as version 1 by an older build, opened, listed, assembled and saved as version 2. Their media are rows and ten bytes; no decoder is asked. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
 - **Measured:** in 262,144 bytes fit 109 shots of 8 takes without record hashes and 86 with. A record hash is 80 bytes of a take, as the card estimated. The card estimated 94 shots.
+- **Revisions one take spends:** 4 of `MAX_REVISION` (10,000): its media brought in, its story saved with the record, applied, and undone (`tests/take-record.test.ts`, whose media is attached by the one commit that a real import also makes). Assembling the story first is one more, for the whole story.
 - **Media tests, in GitHub CI only:** a run started, followed, imported and saved with its record (`tests/generation-service.test.ts`), and a story saved in each form assembled (`tests/story-packs.test.ts`). Their result is the pull request's CI run at its head.
 
 The card's `document.commit` and `kinds` cases for `tests/creative-documents.test.ts` are in `tests/take-record.test.ts`.
@@ -56,7 +57,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ## Not run, and not claimed
 
-- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have never run. On Linux the first always ends BLOCKED, since it looks for the Windows helper (unless `YAMAKAN_PROCD` names one). They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). `MPR-101-take-record-receipt.json` is not written.
+- **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have not run on the founder host. **On GitHub's Linux machine both passed on 2026-11-23** at `8806322` ([what that shows, and what it does not](github-real-checks.md)); their receipts are `MPR-101-take-record-receipt.json` and `create-durable-github-receipt.json`. They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). The Blender arm below is not among them.
 - `npm run test:e2e` was not run here.
 - **The Blender arm** is part b's, below.
 
