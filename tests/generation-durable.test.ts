@@ -485,6 +485,10 @@ test("a push Kaggle refused is a failure with nothing to follow", async () => {
     failed.map((r) => r.state),
     ["failed"],
   );
+  const [stored] = f.s.ledger.list(f.project.id);
+  assert.equal(stored!.failureClass, "quotaExhausted");
+  assert.equal(stored!.mayStillBeBilled, false);
+  assert.equal(typeof stored!.endedAt, "number");
   await f.s.close();
 });
 
@@ -552,10 +556,15 @@ test("a failure stays a failure across a restart, with its reason", async () => 
   f.clock.pass(10 * 60 * 1000);
   const first = await f.s.service.status(id);
   assert.equal(first.state, "failed");
+  assert.equal(first.failureClass, "providerRejected");
+  assert.equal(first.mayStillBeBilled, true);
+  assert.equal(typeof first.endedAt, "number");
   await f.restart();
   const again = await f.s.service.status(id);
   assert.equal(again.state, "failed");
   assert.equal(again.diagnostic, first.diagnostic);
+  assert.equal(again.failureClass, first.failureClass);
+  assert.equal(again.endedAt, first.endedAt);
   // A later answer about the notebook is not about this run.
   f.k.world.state = "COMPLETE";
   await f.restart();
@@ -1088,6 +1097,10 @@ test("Kaggle's real answer on quota reaches the person, past the CLI's advice", 
     f.k.world.pushes.length,
     1,
     "what the stand-in records of a try",
+  );
+  assert.equal(
+    f.s.ledger.list(f.project.id)[0]!.failureClass,
+    "quotaExhausted",
   );
   await f.s.close();
 });

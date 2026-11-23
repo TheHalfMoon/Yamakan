@@ -295,6 +295,20 @@ test("unsupported controls and outputs fail before any worker is spawned", async
   assert.equal(engine.spawned(), 1);
 });
 
+test("a failed execution names the kind it is given, and none when it is given none", async () => {
+  for (const failureClass of [undefined, "timeout"] as const) {
+    const engine = createFakeEngineV2({
+      failExecutions: true,
+      ...(failureClass ? { failureClass } : {}),
+    });
+    const ran = await engine.submit(textToVideo(), context());
+    assert.ok("executionRef" in ran);
+    const status = await engine.status(ran.executionRef);
+    assert.equal(status.state, "failed");
+    assert.equal(status.failureClass, failureClass);
+  }
+});
+
 test("artifacts are read through bounded handles, and inputs are hash-checked streams", async () => {
   const engine = createFakeEngineV2({
     artifactBytes: 3 * ENGINE_V2_LIMITS.chunkBytes + 17,

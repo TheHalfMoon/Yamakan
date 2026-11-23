@@ -5,6 +5,7 @@ import {
   CREATE_MODELS,
   composePrompt,
   emptyBrief,
+  outcomeLines,
   parseReceipt,
   readBrief,
   sha256Of,
@@ -14,6 +15,9 @@ import {
   startingStills,
   validSeed,
 } from "../src/create/create-model.ts";
+import { FailureClass } from "../core/engines/contract-v2.ts";
+import { FAILURE_CLASSES } from "../core/engines/failures.ts";
+import { translate } from "../src/i18n.ts";
 
 const receipt = {
   format: "yamakan.generation-receipt/v1",
@@ -250,4 +254,31 @@ test("a tick given for one model or picture does not count for another", () => {
     assert.notEqual(given, other);
   // Names cannot run together into another choice's.
   assert.notEqual(choiceOf("a|b"), choiceOf("a", "b"));
+});
+
+test("how a run ended is worded for every kind, in both languages", () => {
+  for (const failureClass of FailureClass.options)
+    for (const { retry } of Object.values(FAILURE_CLASSES))
+      for (const mayStillBeBilled of [true, false]) {
+        const lines = outcomeLines({ failureClass, retry, mayStillBeBilled });
+        assert.equal(lines.length, 3);
+        assert.equal(
+          lines[1],
+          mayStillBeBilled ? "create.billMay" : "create.billNot",
+        );
+        for (const lang of ["en", "ar"] as const)
+          for (const key of lines) assert.ok(translate(lang, key).length > 5);
+      }
+  // Each kind has its own words.
+  const first = FailureClass.options.map(
+    (failureClass) => outcomeLines({ failureClass, retry: "whenWanted" })[0],
+  );
+  assert.equal(new Set(first).size, FailureClass.options.length);
+  // Nothing of a run that has no kind, and an unknown word is not shown as one.
+  assert.deepEqual(outcomeLines({}), []);
+  assert.deepEqual(outcomeLines({ failureClass: "toString", retry: "odd" }), [
+    "create.failUnknown",
+    "create.billNot",
+    "create.retryAfterChecking",
+  ]);
 });

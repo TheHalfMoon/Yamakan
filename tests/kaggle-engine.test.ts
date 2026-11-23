@@ -540,7 +540,9 @@ test("a run that failed its own checks is a failure", async () => {
     request(),
     context as never,
   )) as any;
-  assert.equal((await k.engine.status(executionRef)).state, "failed");
+  const ended = await k.engine.status(executionRef);
+  assert.equal(ended.state, "failed");
+  assert.equal(ended.failureClass, "invalidArtifact");
 });
 
 test("a failed run says why, without its paths", async () => {
@@ -883,6 +885,8 @@ test("a killed run says so, from its log, without the log's words", async () => 
   const answer = await k.engine.status(executionRef);
   assert.equal(answer.state, "failed");
   assert.match(answer.diagnostic!, /killed the run/);
+  // Memory is the likely reason, not a known one.
+  assert.equal(answer.failureClass, "providerRejected");
   assert.ok(!answer.diagnostic!.includes("the prompt"));
 });
 
@@ -1405,7 +1409,9 @@ test("a video of the wrong length is refused", async () => {
     request(),
     context as never,
   )) as any;
-  assert.equal((await k.engine.status(executionRef)).state, "failed");
+  const ended = await k.engine.status(executionRef);
+  assert.equal(ended.state, "failed");
+  assert.equal(ended.failureClass, "invalidArtifact");
 });
 
 test("the CLI gets its settings, not this service's environment", () => {

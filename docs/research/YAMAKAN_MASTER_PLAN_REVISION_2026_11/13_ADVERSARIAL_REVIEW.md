@@ -89,8 +89,8 @@ them. Severity is the reviewer's own. The words in the last column mean:
 
 | Disposition | Findings | Of which blockers |
 |---|---|---|
-| FIXED | 49 | 6 |
-| PARTLY FIXED | 22 | 1 |
+| FIXED | 50 | 6 |
+| PARTLY FIXED | 21 | 1 |
 | STATED AS LIMIT | 5 | 1 |
 | LEFT OPEN | 7 | 1 |
 | ALREADY IN CARD | 1 | 0 |
@@ -214,7 +214,7 @@ Verdict: yes with fixes. ME-1 must be settled before any Stage 6 local card.
 | ME-5 | MAJOR | The stored identity cannot reproduce or attribute a take. | PARTLY FIXED: OA-16, accepted 2026-11-23 and the fields in MPR-101. A Kaggle run reports its script's own pins, model and the seed it was sent, not all that was installed, so a take still cannot be reproduced from its record. |
 | ME-6 | MAJOR | A capability cell's state follows paperwork, not measurement. | PARTLY FIXED: the conformance kit has more cases. `failureClass` stays optional and facts carry no date or sample size: OA-17. |
 | ME-7 | MAJOR | The consistency study can pass on the anchor frame. | PARTLY FIXED: MPR-405 does not show or score frames before one quarter of the clip, and each task asks for a change of framing. The unit of analysis must be stated before any run. |
-| ME-8 | MINOR | The failure classes are too few. | PARTLY FIXED: MPR-210 classifies a 401 answer as `providerRejected`. Three more classes are OA-18. |
+| ME-8 | MINOR | The failure classes are too few. | FIXED: OA-18, accepted 2026-11-23: MPR-207 has eleven classes, and MPR-210 classifies a 401 answer as `credentialRejected`. |
 | ME-9 | MINOR | Thresholds for local weights had no measurement rule. | FIXED: MPR-220 and MPR-221 state how each figure is measured, and record BLOCKED otherwise. |
 
 ### 3.8 Systems architect
@@ -319,7 +319,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-15 | MPR-202, MPR-101, MPR-203 | The capability report gains `audioOut` and a range for `durationFrames`; requests gain a `reference` role. | ME-2 | MPR-202 |
 | OA-16 | MPR-101, MPR-201 | The take record gains the runtime lock, the provider's model id and version, and the seed the run reported (accepted by the founder on 2026-11-23; the amendment does not say what MPR-201 changes, so its text is as it was). | ME-5 | accepted |
 | OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size. | ME-6 | MPR-207 |
-| OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted`. | ME-8 | MPR-207 |
+| OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted` (accepted by the founder on 2026-11-23). | ME-8 | accepted |
 | OA-19 | MPR-203 | Preflight carries the route's licence state, so a person sees it before the run and not after. | Planner | MPR-203 |
 | OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs. | SE-4 | MPR-204 |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |

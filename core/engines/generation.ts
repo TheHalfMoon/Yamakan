@@ -30,6 +30,7 @@ import {
   effectiveBilling,
   failureClassOf,
   readFailureClass,
+  type RetryAdvice,
 } from "./failures.ts";
 import { engineReasonMessage } from "./reasons.ts";
 
@@ -137,8 +138,16 @@ export const mayHaveLeft = (
   r.generationId !== except &&
   (r.phase === "sent" || r.state !== "failed");
 
+export type GenerationOutcome = {
+  failureClass?: FailureClass;
+  mayStillBeBilled?: boolean;
+  billedIn?: "providerQuota" | "none";
+  retry?: RetryAdvice;
+  endedAt?: number;
+};
+
 /** How a run ended, for its answers: nothing while it goes on, and no kind for one that worked. */
-export function outcomeOf(r: GenerationRecord) {
+export function outcomeOf(r: GenerationRecord): GenerationOutcome {
   const ended =
     r.endedAt === undefined ? {} : ({ endedAt: r.endedAt } as const);
   if (r.held) return {};

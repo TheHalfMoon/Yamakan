@@ -71,7 +71,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-204 | 2 | QUALIFICATION_READY | — | Add default-deny gates for egress, spend and download with recorded human approvals |
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
 | MPR-206 | 2 | WAITING_DEPENDENCIES | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
-| MPR-207 | 2 | QUALIFICATION_READY | — | Record a typed failure class and end time on every ended generation |
+| MPR-207 | 2 | REVIEW_PENDING | — | Record a typed failure class and end time on every ended generation |
 | MPR-208 | 2 | WAITING_DEPENDENCIES | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
 | MPR-209 | 2 | WAITING_DEPENDENCIES | MPR-208 | Show notices, the AGPL source offer and the route licence in the UI; widen the SBOM |
 | MPR-210 | 2 | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | Define the hosted-provider profile of EngineAdapterV2 and prove it on a loopback fake |
@@ -2290,7 +2290,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
@@ -2316,7 +2316,7 @@ Parts that wait on something outside engineering:
 - Existing: `core/engines/contract-v2.ts`, `core/engines/generation.ts`, `core/engines/kaggle.ts`, `core/engines/comfyui.ts`, `core/engines/fake.ts`, `core/command/registry.ts`, `src/create/GeneratePanel.tsx`, `src/create/create-model.ts`, `src/i18n.ts`, `src/main.tsx`, `docs/provenance/import-policy.json`, `tests/generation-durable.test.ts`, `tests/generation-service.test.ts`, `tests/kaggle-engine.test.ts`, `tests/comfyui-engine.test.ts`, `tests/engines.test.ts`, `tests/create-model.test.ts`, `scripts/qualify-kaggle-screens.mjs`, `scripts/fixtures/fake-kaggle.mjs`
 - New files: `core/engines/failures.ts`, `tests/generation-failure-class.test.ts`, `docs/evidence/model-system/generation-failure-classes.md`
 - Interfaces:
-  - `FailureClass`, a closed enum beside `RefusalReason` in `core/engines/contract-v2.ts`: `refusedByPolicy`, `quotaExhausted`, `providerRejected`, `timeout`, `lostJob`, `invalidArtifact`, `cancelled`, `unknown`. `ExecutionStatusSchema` gains an optional `failureClass`. `ENGINE_CONTRACT_V2` does not move: the field is optional and output-only, and an adapter that never sets it still conforms.
+  - `FailureClass`, a closed enum beside `RefusalReason` in `core/engines/contract-v2.ts`: `refusedByPolicy`, `quotaExhausted`, `providerRejected`, `timeout`, `lostJob`, `invalidArtifact`, `cancelled`, `unknown`, and by OA-18, accepted on 2026-11-23, `credentialRejected` (the provider refused the credential) not billed, `afterChange`; `contentRefused` (the provider refused what the request asks for) may be billed, `afterChange`; `resourceExhausted` (the run said it had not enough memory or another resource) may be billed, `afterChange`. Where this card says eight classes, there are eleven. A Kaggle answer of 401 or 'Authentication required', at the question before a push or at the push, is `credentialRejected`; a run whose receipt, or a ComfyUI error whose type, is named as an out-of-memory error is `resourceExhausted`; no route here reports `contentRefused` yet. `ExecutionStatusSchema` gains an optional `failureClass`. `ENGINE_CONTRACT_V2` does not move: the field is optional and output-only, and an adapter that never sets it still conforms.
   - New `core/engines/failures.ts` (declared in `localFilesInDonorRoots`): the frozen table `FAILURE_CLASSES`, one entry per class with `meaning`, `mayStillBeBilled` and `retry`, where `RetryAdvice` is `afterChange`, `afterWaiting`, `afterChecking` or `whenWanted`.
   - Table: `refusedByPolicy` (Yamakan or the adapter refused before anything was sent) not billed, `afterChange`; `quotaExhausted` (the provider refused because a quota or rate limit is used up) not billed, `afterWaiting`; `providerRejected` (the provider refused the request for another reason, or took it and reported the run as failed) may be billed once the run was taken, `afterChange`; `timeout` (the run passed its deadline) may be billed, `afterChange`; `lostJob` (the provider no longer reports this run, or reports another in its place) may be billed, `afterChecking`; `invalidArtifact` (the run ended but its result is missing, unreadable, or not what was asked or declared) may be billed, `whenWanted`; `cancelled` (the person stopped it or stopped following it) may be billed, `whenWanted`; `unknown` (ended with no class recorded) may be billed, `afterChecking`.
   - `effectiveBilling({ failureClass, remote, left, refusedAtSubmit })` in the same file answers `{ mayStillBeBilled, billedIn }`. `mayStillBeBilled` is true only when the table says so, the route runs off this computer (`remote` is recorded on the row), the request may have left (`mayHaveLeft`) and it was not refused at submit. `billedIn` is `providerQuota` when true and `none` otherwise. No currency exists in this build; currency belongs to MPR-222.
@@ -2417,7 +2417,7 @@ Parts that wait on something outside engineering:
 - [ASSUMED] How Kaggle reports a run it ended at its time limit is not verified, so `timeout` on the Kaggle route is inferred from `pastLimit(run)` at the moment the failure is seen; a run that failed for another reason after its limit would be classed `timeout`.
 - [ASSUMED] That Kaggle counts a failed or stopped run's GPU time against the weekly quota is not verified. The wording says 'may', never 'was'.
 - New Arabic wording is written by the implementer; whether it needs a recorded native review before release is not verified.
-- A card that adds a route whose failures do not fit these eight classes adds a class in that card, with its test; a refused credential is `providerRejected` with a diagnostic saying so.
+- A card that adds a route whose failures do not fit these eight classes adds a class in that card, with its test; a refused credential is `credentialRejected` (OA-18).
 
 Parts that wait on something outside engineering:
 
@@ -2754,7 +2754,7 @@ Parts that wait on something outside engineering:
 
 - With the egress or spend gate at its default (no recorded approval) every adapter method that would call the transport refuses, and the fake receives zero requests.
 - A redirect answer from the fake is a typed failure; the credential is not sent to the second location (the fake's second listener records zero requests).
-- A 401 answer is classified `providerRejected` (the MPR-207 enum is closed and has no credential class), with a diagnostic saying the credential was refused, and is not retried; a 429 or 500 on poll is retried within the bounded interval; a 500 on submit after the request was sent is treated as uncertain, not resent.
+- A 401 answer is classified `credentialRejected` (OA-18, accepted on 2026-11-23), with a diagnostic saying the credential was refused, and is not retried; a 429 or 500 on poll is retried within the bounded interval; a 500 on submit after the request was sent is treated as uncertain, not resent.
 - An artifact whose bytes do not match the reported hash, or that exceeds `ENGINE_V2_LIMITS.artifactBytes`, is refused and nothing is brought in.
 - A transport answer with an unknown key, an over-long string or a provider URL in a field the profile persists fails the strict schema and never reaches a record.
 - A `CredentialRef` with a path, an upper-case letter, a secret-shaped long value or an extra key fails validation.
