@@ -467,12 +467,15 @@ const CONSENT = "22222222-2222-4222-8222-222222222222";
 const TAKE_ASSET = "33333333-3333-4333-8333-333333333333";
 const PERSON_ASSET = "44444444-4444-4444-8444-444444444444";
 const FRESH_ASSET = "55555555-5555-4555-8555-555555555555";
+const OTHER = hex(9); // a file no take is made of
+const OTHER_ASSET = "99999999-9999-4999-8999-999999999999";
 
 function commitPoint(
   kind: "pin" | "inputs",
   opts: {
     revoked?: boolean;
-    oldStory?: boolean;
+    // Also a later story version, which no longer has the pin or inputs.
+    laterVersionClean?: boolean;
     pack?: "ok" | "missing" | "damaged";
     epoch?: number;
   } = {},
@@ -574,6 +577,17 @@ function commitPoint(
     "88888888-8888-4888-8888-888888888888",
     storyHash,
   );
+  if (opts.laterVersionClean) {
+    const clean = storyOf("Takes, later");
+    const shot = clean.scenes[0].shots[0];
+    shot.referencePacks = [];
+    delete (shot.takes[0] as { lineage?: unknown }).lineage;
+    db.prepare("INSERT INTO story_document_versions VALUES (?, ?, ?)").run(
+      PROJECT,
+      "88888888-8888-4888-8888-888888888888",
+      store(clean, "story"),
+    );
+  }
   // The asset that the take names, kept as a version after the timeline has lost it.
   db.prepare("INSERT INTO asset_versions VALUES (?, ?, ?)").run(
     TAKE_ASSET,
@@ -602,7 +616,7 @@ function commitPoint(
   ) => ({
     assets: ids.map((x) => ({
       id: x,
-      hash: x === PERSON_ASSET ? PERSON : FILE,
+      hash: x === PERSON_ASSET ? PERSON : x === OTHER_ASSET ? OTHER : FILE,
       kind: "video",
     })),
     tracks: [track],
@@ -709,15 +723,38 @@ test("commit point: a pinned pack that is missing or damaged refuses the take, a
     );
     // Any other file, and a commit that adds nothing, are not held up.
     check(after, after);
+    check(
+      placed([], []),
+      placed([{ assetId: OTHER_ASSET, ticks: 30 }], [OTHER_ASSET]),
+    );
   }
 });
 
-test("commit point: with the consent in force the take places, and a file with no linked take is not affected", () => {
+test("commit point: with the consent in force the take places; after a revocation a file with no linked take is not affected", () => {
   for (const kind of ["pin", "inputs"] as const) {
+    const revoked = commitPoint(kind);
+    revoked.check(
+      revoked.placed([], []),
+      revoked.placed([{ assetId: OTHER_ASSET, ticks: 30 }], [OTHER_ASSET]),
+    );
     const { check, placed } = commitPoint(kind, { revoked: false });
     check(
       placed([], []),
       placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]),
+    );
+  }
+});
+
+test("commit point: a past story version counts after a later one drops the pin or the inputs", () => {
+  for (const kind of ["pin", "inputs"] as const) {
+    const { check, placed } = commitPoint(kind, { laterVersionClean: true });
+    assert.throws(
+      () =>
+        check(
+          placed([], []),
+          placed([{ assetId: TAKE_ASSET, ticks: 30 }], [TAKE_ASSET]),
+        ),
+      /This person's consent was revoked/,
     );
   }
 });

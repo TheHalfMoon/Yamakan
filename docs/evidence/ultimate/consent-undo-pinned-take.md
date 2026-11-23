@@ -9,7 +9,7 @@ Outcome: the fix, not ALREADY_SATISFIED and not the accepted limit. The founder 
 
 ## Failing first, then passing (GitHub CI, Linux)
 
-The head at which each result was read is the commit named. Sandbox media tools do not start on the founder host, so no test that needs media ran on Windows; the ten `commit point` tests, which need none, ran there and pass.
+The head at which each result was read is the commit named. Sandbox media tools do not start on the founder host, so no test that needs media ran on Windows; the eleven `commit point` tests, which need none, ran there and pass.
 
 - **`cfba77c`, tests only, run 45143721906:** the four return cases ended "accepted" where `VALIDATION` was expected: placing it directly, then undo, for a take in a shot that pins a pack linked to the revoked consent, and for a take whose lineage inputs are linked to it. The control for an expired consent failed because the test asked for an 8-second lifetime (the minimum is 60 seconds); it was corrected. Overall 1,371 tests passed, 6 failed, 66 skipped: the four return cases, the expired control, and the newer-consent control, which first asserts the refusal the fix adds. Each failing test stopped at its first assertion, so redo, media swap, restore and the agent were not seen failing in that run.
 - **`662ab88`, with the fix:** all nine tests of `tests/consent-undo-pinned-take.test.ts` passed, and so did the renamed test in `tests/story-packs.test.ts`. 1,376 passed, 1 failed: the `tests/take-replace.test.ts` case above, stopped on and then changed to the founder's rule.
