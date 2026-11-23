@@ -354,7 +354,11 @@ export function buildDeclaredRecord(
 
 /** The record of a finished Blender render, from its job row. The scene itself stays there. */
 export function buildRenderRecord(
-  render: { jobId: string; payload: z.output<typeof BlenderPayload> },
+  render: {
+    jobId: string;
+    payload: z.output<typeof BlenderPayload>;
+    sceneHash: string;
+  },
   outputHash: string,
 ): TakeRecord {
   const { scene, direction, plateAssetId, plateAssetHash } = render.payload;
@@ -374,7 +378,7 @@ export function buildRenderRecord(
       // The only version a render here runs on.
       blenderVersion: BLENDER_PIN.version,
       sceneFormat: scene.format,
-      sceneHash: sha256Hex(canonicalJson(scene)),
+      sceneHash: render.sceneHash,
       width: scene.width,
       height: scene.height,
       fps: scene.fps,

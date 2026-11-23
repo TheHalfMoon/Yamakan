@@ -14,8 +14,14 @@
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statfsSync,
+  writeFileSync,
+} from "node:fs";
+import { freemem, loadavg, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -47,6 +53,35 @@ const root = mkdtempSync(join(tmpdir(), "yamakan-director-cinema-"));
 const workspace = join(root, "workspace");
 const port = 24395;
 const base = `http://127.0.0.1:${port}`;
+// What this host has, before anything runs. What the run needs is unmeasured, so nothing is
+// refused for it.
+const disk = statfsSync(root);
+const onAcPower = () => {
+  if (process.platform !== "win32") return null;
+  try {
+    const said = execFileSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).trim();
+    return said === "Online" ? true : said === "Offline" ? false : null;
+  } catch {
+    return null;
+  }
+};
+const host = {
+  platform: process.platform,
+  freeDiskBytes: Number(disk.bavail) * Number(disk.bsize),
+  freeMemoryBytes: freemem(),
+  onAcPower: onAcPower(),
+  // Windows reports none.
+  load: process.platform === "win32" ? null : loadavg(),
+  need: "unmeasured",
+};
 const child = fork(
   fileURLToPath(new URL("../server/main.ts", import.meta.url)),
   [],
@@ -69,6 +104,7 @@ const receipt = {
   checkedAt: new Date().toISOString(),
   gitHead: head,
   clean,
+  host,
   steps,
   passed: false,
 };
@@ -402,6 +438,9 @@ try {
   if (!receipt.passed) receipt.error = "the working tree is not clean";
 } catch (e) {
   receipt.error = e instanceof Error ? e.message : String(e);
+  // The sandbox was refused its start (0xC0000022): nothing here was checked by it.
+  if (/\bexit 3221225506\b/.test(receipt.error))
+    receipt.blocked = "Windows refused the sandboxed Blender its start.";
 } finally {
   await browser?.close().catch(() => {});
   child.kill();

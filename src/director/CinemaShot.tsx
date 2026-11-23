@@ -31,7 +31,7 @@ export type CinemaShotHost = {
     takeId: string;
     // The video the shot's clip must show, and the render that made it.
     assetId: string;
-    jobId: string | null;
+    jobId: string;
   }): Promise<string | null>;
 };
 
@@ -346,7 +346,7 @@ export function CinemaShot({
             {t("directorCinema.approve")}
           </button>
         ) : null}
-        {step === "approved" && made && run && target ? (
+        {step === "approved" && made && run && target && jobId ? (
           <button
             type="button"
             data-testid="director-cinema-place"

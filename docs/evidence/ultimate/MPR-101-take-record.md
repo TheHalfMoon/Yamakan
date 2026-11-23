@@ -41,7 +41,7 @@ By reading the head this branch starts from:
 
 ## Evidence
 
-- **On the founder host, against the real store and commands:** all 28 tests of `tests/take-record.test.ts` pass, with the catalog test of `tests/command.test.ts`, and all of `tests/create-story.test.ts`, `tests/create-model.test.ts` and `tests/kaggle-engine.test.ts` (a stand-in CLI, no network), among them a story stored as version 1 by an older build, opened, listed, assembled and saved as version 2. Their media are rows and ten bytes; no decoder is asked. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
+- **On the founder host, against the real store and commands:** the 28 tests that `tests/take-record.test.ts` had at `870cb5f` pass, with the catalog test of `tests/command.test.ts`, and all of `tests/create-story.test.ts`, `tests/create-model.test.ts` and `tests/kaggle-engine.test.ts` (a stand-in CLI, no network), among them a story stored as version 1 by an older build, opened, listed, assembled and saved as version 2. Their media are rows and ten bytes; no decoder is asked. `typecheck`, `lint`, `format:check`, `plan:check`, `provenance:check` and `brand:check` pass.
 - **Measured:** in 262,144 bytes fit 109 shots of 8 takes without record hashes and 86 with. A record hash is 80 bytes of a take, as the card estimated. The card estimated 94 shots.
 - **Media tests, in GitHub CI only:** a run started, followed, imported and saved with its record (`tests/generation-service.test.ts`), and a story saved in each form assembled (`tests/story-packs.test.ts`). Their result is the pull request's CI run at its head.
 
@@ -58,7 +58,7 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 - **`npm run qualify:revisable-shot`** (new) and **`npm run qualify:create-durable`** (extended) pass `node --check` and have never run. On Linux the first always ends BLOCKED, since it looks for the Windows helper (unless `YAMAKAN_PROCD` names one). They need ffmpeg and the native helpers, which are not built in this checkout; media tests failed on the founder host at `3de9b10` with them built (ledger 12 lists them; the cause is likely, not proven). `MPR-101-take-record-receipt.json` is not written.
 - `npm run test:e2e` was not run here.
-- **The Blender arm** belongs to part b: not built, so not run.
+- **The Blender arm** is part b's, below.
 
 ## Part b: the Blender record and the recovery check
 
@@ -67,10 +67,13 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 - **The job's payload** may name the story shot and the direction a render was planned from; `renderStoryShot` sets both. A payload without them, as every earlier one, still reads.
 - **`{jobId}`** in a story save's `records`: the job must be this project's, a finished Blender render, and have made the take's media. `buildRenderRecord` takes its facts from the job's row: the Blender version, the scene's format and hash, its size, frames and samples, the camera, the moves, and the direction.
 - **The Cinema panel** passes its render's job id, and placing the take asks for its record.
-- **`creativeClosure`** (a backup's and a restore's check, and diagnosis) reports every record that a retained story names and that is missing or does not match its hash.
+- **`creativeClosure`** (a backup's and a restore's check; `diagnose` does not call it) reports every record that a retained story names and that is missing, is not held for that story, or does not match its hash. The card asks for presence and hash; a record that is stored but not held would let no save of its story through.
 
 ### Where it differs from the card
 
+- **The record does not name the shot.** A render planned for one shot can be recorded on a take of another in the same project, as its video can be used there. The payload's `shot` is kept and not read yet, as the card has it.
+- **Which renders are the same one:** the shot and direction are part of a job's key, so a second request for the same scene from another shot or direction, while the first runs, is now refused as already running instead of returning the first.
+- **`sceneHash` is of the scene as the job row stores it,** not as this build reads it, so a later default does not change it.
 - **The moves always hold `dolly`, `panDegrees` and `shake`,** since the scene holds them (0 when there is none). The card has them optional.
 - **`lighting` and `view` are read from the direction,** as the planner reads it, because the scene holds the light and camera they became. A render that no shot asked for has neither.
 - **The Blender version is this build's pin** when the record is made. A render made under an earlier pin and first recorded under a later one would name the later one; there has been one pin.
@@ -80,5 +83,5 @@ The card's `document.commit` and `kinds` cases for `tests/creative-documents.tes
 
 ### Evidence
 
-- **On the founder host:** all 32 tests of `tests/take-record.test.ts` pass. The renders are job rows: planned and submitted by the Director's own code, and never run.
-- **Not run: `npm run qualify:director-cinema`,** extended with the placed takes' records and syntax-checked. It needs the pinned Blender, whose sandboxed start is BLOCKED on the founder host (ledger 12). **The Blender arm is BLOCKED, not PASS.**
+- **On the founder host:** all 35 tests of `tests/take-record.test.ts` pass. The renders are planned by the Director's own code and submitted to the real job table, where each is claimed and goes no further; their end is written to the row.
+- **Not run: `npm run qualify:director-cinema`,** extended with the placed takes' records and syntax-checked. It needs the pinned Blender, whose sandboxed start is BLOCKED on the founder host (ledger 12); the script now says BLOCKED for that status (3221225506) and records what the host has first. **The Blender arm is BLOCKED, not PASS.**

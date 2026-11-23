@@ -6,6 +6,7 @@
 // from an earlier generation: their Job Object workers died with that service,
 // so they are marked failed and their jobs re-queued (local work only, never
 // a paid resubmission). Partial outputs are never registered.
+import { canonicalJson } from "./hash/canonical.ts";
 import {
   mayHaveLeft,
   type GenerationLedger,
@@ -744,12 +745,22 @@ export class JobSupervisor {
     const row = this.store.read((db) => this.#row(db, jobId));
     if (!row || row.kind !== "blender-render" || row.project_id !== projectId)
       throw new CommandError("NOT_FOUND", "Render not found.");
-    const payload = BlenderPayload.safeParse(safeJson(row.payload));
-    if (row.state !== "succeeded" || !payload.success)
+    if (row.state !== "succeeded")
       throw new CommandError("VALIDATION", "This render is not finished.");
+    const stored = safeJson(row.payload) as { scene?: unknown };
+    const payload = BlenderPayload.safeParse(stored);
+    if (!payload.success)
+      throw new CommandError(
+        "VALIDATION",
+        "This render's description cannot be read by this version.",
+      );
     return {
       jobId,
       payload: payload.data,
+      // Of the scene as it is stored, whatever a later version reads into it.
+      sceneHash: createHash("sha256")
+        .update(canonicalJson(stored.scene))
+        .digest("hex"),
       assetId: /^asset:(.+)$/.exec(row.artifact ?? "")?.[1] ?? null,
     };
   }
