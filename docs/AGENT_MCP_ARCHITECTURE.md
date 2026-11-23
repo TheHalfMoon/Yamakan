@@ -6,15 +6,15 @@ Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts
 
 All transports use one typed command service: UI, REST, CLI, MCP and TypeScript/Python SDKs share schema validation, scopes, revision checks, audit, consent and quotas. Core production does not require browser clicks. The legacy whole-project tool surface proves a path; granular scopes/full MCP are proposed work.
 
-| Family     | Tools                                              | Scope                                        |
-| ---------- | -------------------------------------------------- | -------------------------------------------- |
-| Projects   | create/open/list/history/restore/archive           | project read/write and explicit recovery     |
-| Assets     | import/search/version/probe                        | asset access/import within workspace         |
-| Director   | script/character/scene/shot/storyboard             | project write plus likeness grants           |
-| Generation | capabilities/quote/submit/status/cancel/reconcile  | local or provider-specific network execution |
-| Timeline   | add/trim/split/move/keyframe/effect/audio/subtitle | revision-bound project write                 |
-| Render     | preview/export/inspect                             | resource-bounded render execution            |
-| Workflows  | validate/start/pause/resume/cancel                 | approved node types and job budget           |
+| Family | Tools | Scope |
+|---|---|---|
+| Projects | create/open/list/history/restore/archive | project read/write and explicit recovery |
+| Assets | import/search/version/probe | asset access/import within workspace |
+| Director | script/character/scene/shot/storyboard | project write plus likeness grants |
+| Generation | capabilities/quote/submit/status/cancel/reconcile | local or provider-specific network execution |
+| Timeline | add/trim/split/move/keyframe/effect/audio/subtitle | revision-bound project write |
+| Render | preview/export/inspect | resource-bounded render execution |
+| Workflows | validate/start/pause/resume/cancel | approved node types and job budget |
 
 Mutations require requestId/expectedRevision. Structured errors: VALIDATION, REVISION_CONFLICT, CAPABILITY_UNAVAILABLE, CONSENT_REQUIRED, BUDGET_EXCEEDED, PROVIDER_RATE_LIMIT, AMBIGUOUS_SUBMISSION, MEDIA_INVALID, CANCEL_UNSUPPORTED, RECOVERY_REQUIRED. Include safe retry/reconciliation hints; no secrets. Return artifact IDs/hash receipts, not unrestricted filesystem authority.
 
