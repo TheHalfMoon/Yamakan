@@ -569,7 +569,10 @@ test("a recipe the gate refuses is in no list and cannot be started, and nothing
   for (const id of ["kaggle-not-read", "kaggle-cogvideox-2b"])
     assert.equal(await start(id), "NOT_FOUND That recipe is not available.");
   // One that is offered gets past this, to the approvals it has not: the refusal is the gate's.
-  assert.match(await start("kaggle-wan22-ti2v-5b"), /No one has approved contacting kaggle.com/);
+  assert.match(
+    await start("kaggle-wan22-ti2v-5b"),
+    /No one has approved contacting kaggle.com/,
+  );
   assert.deepEqual(await call("yamakan.generation.list", { projectId }), []);
 });
 
