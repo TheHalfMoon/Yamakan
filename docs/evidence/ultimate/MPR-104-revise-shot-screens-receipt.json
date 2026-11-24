@@ -1,0 +1,75 @@
+{
+  "task": "MPR-104",
+  "part": "a",
+  "head": "2c220874b86f4422eea38cf62573f4b24f2c28f0",
+  "dirty": false,
+  "host": {
+    "platform": "win32",
+    "githubImage": null,
+    "freeDiskBytes": 11152404480,
+    "freeMemoryBytes": 4030033920,
+    "onAcPower": true,
+    "load": null,
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "en: each shot is a card, with the take the cut shows marked"
+    },
+    {
+      "name": "en: arrows, Home and End walk a shot's takes in reading order"
+    },
+    {
+      "name": "en: how a take was made is read when it is opened, and Escape goes back to it"
+    },
+    {
+      "name": "en: what was tried is listed, failed and refused ones too, and what is not known is said"
+    },
+    {
+      "name": "en: the cards fit 375 pixels",
+      "pageBeyond": 0
+    },
+    {
+      "name": "en: a card leads to the one take review, where a take is applied and undone",
+      "applied": 7,
+      "undone": 8
+    },
+    {
+      "name": "en: 200 cards of 8 takes are shown and no card asks for its own",
+      "shownMs": 248,
+      "takeLists": 2
+    },
+    {
+      "name": "ar: each shot is a card, with the take the cut shows marked"
+    },
+    {
+      "name": "ar: arrows, Home and End walk a shot's takes in reading order"
+    },
+    {
+      "name": "ar: how a take was made is read when it is opened, and Escape goes back to it"
+    },
+    {
+      "name": "ar: what was tried is listed, failed and refused ones too, and what is not known is said"
+    },
+    {
+      "name": "ar: the cards fit 375 pixels",
+      "pageBeyond": 0
+    },
+    {
+      "name": "ar: a card leads to the one take review, where a take is applied and undone",
+      "applied": 9,
+      "undone": 10
+    },
+    {
+      "name": "ar: 200 cards of 8 takes are shown and no card asks for its own",
+      "shownMs": 325,
+      "takeLists": 2
+    },
+    {
+      "name": "no external requests, no page errors, and nothing was started"
+    }
+  ]
+}
