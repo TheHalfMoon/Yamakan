@@ -1,0 +1,265 @@
+{
+  "task": "MPR-208",
+  "head": "e8a978e8b22b99673fde46dcfe08ecc650ca2a51",
+  "dirty": false,
+  "host": {
+    "platform": "win32",
+    "githubImage": null,
+    "freeDiskBytes": 10987520000,
+    "freeMemoryBytes": 3492642816,
+    "onAcPower": true,
+    "load": null,
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "checkedMs": 4.5679,
+  "exceptionsFrom": "2026-11-24",
+  "entries": [
+    {
+      "id": "wan2.2-ti2v-5b-diffusers",
+      "recipeId": "kaggle-wan22-ti2v-5b",
+      "route": "kaggle",
+      "lifecycle": "offered",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "NOT_READ_AT_SOURCE",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "outputUse",
+          "part": null
+        },
+        {
+          "field": "watermark",
+          "part": null
+        },
+        {
+          "field": "evidence",
+          "part": null
+        }
+      ],
+      "beforeTheGate": true,
+      "mayBeOffered": true,
+      "sourceUrl": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/raw/b8fff7315c768468a5333511427288870b2e9635/README.md",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "CLAIM"
+    },
+    {
+      "id": "wan2.2-ti2v-5b-diffusers",
+      "recipeId": "kaggle-wan22-ti2v-5b-first-frame",
+      "route": "kaggle",
+      "lifecycle": "offered",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "NOT_READ_AT_SOURCE",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "outputUse",
+          "part": null
+        },
+        {
+          "field": "watermark",
+          "part": null
+        },
+        {
+          "field": "evidence",
+          "part": null
+        }
+      ],
+      "beforeTheGate": true,
+      "mayBeOffered": true,
+      "sourceUrl": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/raw/b8fff7315c768468a5333511427288870b2e9635/README.md",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "CLAIM"
+    },
+    {
+      "id": "wan2.2-ti2v-5b-diffusers",
+      "recipeId": null,
+      "route": "local",
+      "lifecycle": "candidate",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "NOT_READ_AT_SOURCE",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "outputUse",
+          "part": null
+        },
+        {
+          "field": "watermark",
+          "part": null
+        },
+        {
+          "field": "evidence",
+          "part": null
+        }
+      ],
+      "beforeTheGate": false,
+      "mayBeOffered": false,
+      "sourceUrl": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/raw/b8fff7315c768468a5333511427288870b2e9635/README.md",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "CLAIM"
+    },
+    {
+      "id": "wan2.2-ti2v-5b-diffusers",
+      "recipeId": null,
+      "route": "local",
+      "lifecycle": "candidate",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "NOT_READ_AT_SOURCE",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "outputUse",
+          "part": null
+        },
+        {
+          "field": "watermark",
+          "part": null
+        },
+        {
+          "field": "evidence",
+          "part": null
+        }
+      ],
+      "beforeTheGate": false,
+      "mayBeOffered": false,
+      "sourceUrl": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/raw/b8fff7315c768468a5333511427288870b2e9635/README.md",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "CLAIM"
+    },
+    {
+      "id": "cogvideox-2b-diffusers",
+      "recipeId": "kaggle-cogvideox-2b",
+      "route": "kaggle",
+      "lifecycle": "offered",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "T5 text encoder"
+        },
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "watermark",
+          "part": null
+        }
+      ],
+      "beforeTheGate": true,
+      "mayBeOffered": true,
+      "sourceUrl": "https://huggingface.co/zai-org/CogVideoX-2b/raw/1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01/LICENSE",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "DOC"
+    },
+    {
+      "id": "cogvideox-2b-diffusers",
+      "recipeId": null,
+      "route": "local",
+      "lifecycle": "candidate",
+      "gate": "refused",
+      "reasons": [
+        "FIELD_UNKNOWN",
+        "LICENCE_UNACCEPTED"
+      ],
+      "open": [
+        {
+          "field": "bundled",
+          "part": "T5 text encoder"
+        },
+        {
+          "field": "bundled",
+          "part": "FFmpeg in imageio-ffmpeg 0.6.0"
+        },
+        {
+          "field": "bundled",
+          "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "watermark",
+          "part": null
+        }
+      ],
+      "beforeTheGate": false,
+      "mayBeOffered": false,
+      "sourceUrl": "https://huggingface.co/zai-org/CogVideoX-2b/raw/1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01/LICENSE",
+      "verifiedAt": "2026-11-24",
+      "ageDays": 0,
+      "evidence": "DOC"
+    }
+  ],
+  "service": {
+    "outcome": "PASS",
+    "rest": [
+      "kaggle-wan22-ti2v-5b",
+      "kaggle-wan22-ti2v-5b-first-frame",
+      "kaggle-cogvideox-2b"
+    ],
+    "mcp": [
+      "kaggle-wan22-ti2v-5b",
+      "kaggle-wan22-ti2v-5b-first-frame",
+      "kaggle-cogvideox-2b"
+    ],
+    "bothListWhatMayBeOffered": true
+  }
+}
