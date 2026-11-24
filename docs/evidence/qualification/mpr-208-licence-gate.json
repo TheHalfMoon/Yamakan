@@ -1,12 +1,12 @@
 {
   "task": "MPR-208",
-  "head": "e8a978e8b22b99673fde46dcfe08ecc650ca2a51",
+  "head": "672ec7583dad757c7fa211ce8fd5bb0a8afb7399",
   "dirty": false,
   "host": {
     "platform": "win32",
     "githubImage": null,
-    "freeDiskBytes": 10987520000,
-    "freeMemoryBytes": 3492642816,
+    "freeDiskBytes": 10813607936,
+    "freeMemoryBytes": 3556544512,
     "onAcPower": true,
     "load": null,
     "need": "unmeasured"
@@ -14,7 +14,7 @@
   "outcome": "PASS",
   "passed": true,
   "failure": null,
-  "checkedMs": 4.5679,
+  "checkedMs": 4.0431,
   "exceptionsFrom": "2026-11-24",
   "entries": [
     {
@@ -36,6 +36,10 @@
         {
           "field": "bundled",
           "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
         },
         {
           "field": "outputUse",
@@ -78,6 +82,10 @@
           "part": "torch, NumPy and Pillow on Kaggle's machine"
         },
         {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
+        },
+        {
           "field": "outputUse",
           "part": null
         },
@@ -118,6 +126,10 @@
           "part": "torch, NumPy and Pillow on Kaggle's machine"
         },
         {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
+        },
+        {
           "field": "outputUse",
           "part": null
         },
@@ -156,6 +168,10 @@
         {
           "field": "bundled",
           "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
         },
         {
           "field": "outputUse",
@@ -201,6 +217,10 @@
           "part": "torch, NumPy and Pillow on Kaggle's machine"
         },
         {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
+        },
+        {
           "field": "watermark",
           "part": null
         }
@@ -234,6 +254,10 @@
         {
           "field": "bundled",
           "part": "torch, NumPy and Pillow on Kaggle's machine"
+        },
+        {
+          "field": "bundled",
+          "part": "what these packages install and use in turn"
         },
         {
           "field": "watermark",
