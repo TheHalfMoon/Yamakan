@@ -89,8 +89,8 @@ them. Severity is the reviewer's own. The words in the last column mean:
 
 | Disposition | Findings | Of which blockers |
 |---|---|---|
-| FIXED | 50 | 6 |
-| PARTLY FIXED | 21 | 1 |
+| FIXED | 51 | 6 |
+| PARTLY FIXED | 20 | 1 |
 | STATED AS LIMIT | 5 | 1 |
 | LEFT OPEN | 7 | 1 |
 | ALREADY IN CARD | 1 | 0 |
