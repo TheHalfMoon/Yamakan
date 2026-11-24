@@ -31,7 +31,10 @@ import {
   offeredKaggleRecipes,
   type KaggleCli,
 } from "../core/engines/kaggle.ts";
-import { createGenerationService } from "../core/engines/generation.ts";
+import {
+  createGenerationService,
+  noRemoteUse,
+} from "../core/engines/generation.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { jpegHoldsOnlyAPicture } from "../core/engines/clean-image.ts";
 import { Readable } from "node:stream";
@@ -140,6 +143,7 @@ async function fixture(
     ...ledgerOptions(ledger),
   });
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store,
     resourcePolicyHash: "c".repeat(64),

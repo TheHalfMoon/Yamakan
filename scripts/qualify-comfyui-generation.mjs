@@ -17,7 +17,10 @@ import {
   comfyRecipeHash,
   createComfyEngine,
 } from "../core/engines/comfyui.ts";
-import { createGenerationService } from "../core/engines/generation.ts";
+import {
+  createGenerationService,
+  noRemoteUse,
+} from "../core/engines/generation.ts";
 import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import {
@@ -149,6 +152,7 @@ try {
   });
   assert.deepEqual(await engine.checkSetup(), []);
   const generation = createGenerationService({
+    permit: noRemoteUse,
     adapter: engine,
     store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,

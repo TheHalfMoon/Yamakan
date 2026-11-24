@@ -18,6 +18,7 @@ import {
 import { toCommandError } from "../core/command/errors.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
 import { refusedSubmit } from "../core/engines/failures.ts";
@@ -117,6 +118,7 @@ async function workspace() {
   } as unknown as EngineAdapterV2;
   const clock = { now: 1_000 };
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter,
     store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,

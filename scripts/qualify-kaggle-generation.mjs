@@ -161,6 +161,14 @@ try {
   const start = page.getByTestId("create-generate-start");
   await start.waitFor();
   assert.ok(await start.isDisabled(), "nothing starts until it is agreed to");
+  // What a person allows before anything is sent: one run, and the hours this may have to wait.
+  await page.getByTestId("create-gates-hours").fill("4");
+  await page.getByTestId("create-gates-approve").click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="create-gates"]')?.dataset.open ===
+      "true",
+  );
   await page.getByTestId("create-agree").check();
   await shot("1-ready");
   // The agreement, the last tick, is read in place: inside its panel, on more than a sliver.

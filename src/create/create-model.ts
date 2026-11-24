@@ -315,3 +315,153 @@ export function outcomeLines(
       : "create.retryAfterChecking",
   ];
 }
+
+// What a person is asked to approve before anything is sent (MPR-204), and how it stands.
+export type GateKind = "egress" | "spend";
+export type GateStateName =
+  | "approved"
+  | "missing"
+  | "expired"
+  | "revoked"
+  | "exhausted"
+  | "voided"
+  | "changed";
+export type GateRouteInfo = {
+  route: "kaggle";
+  host: string;
+  account: string;
+  network: { proxyConfigured: boolean; certificateOverride: boolean };
+  run: { bytes: number; seconds: number };
+  gates: {
+    kind: GateKind;
+    state: GateStateName;
+    runsLeft: number;
+    // Whether a run that has left may be followed under it.
+    follows: boolean;
+  }[];
+};
+export type GateApprovalRow = {
+  id: string;
+  kind: GateKind;
+  host: string;
+  account: string;
+  expiresAt: number;
+  state: GateStateName;
+  runsLeft: number;
+};
+export type GateAnswer = {
+  approvals: GateApprovalRow[];
+  route: GateRouteInfo | null;
+};
+// What the page proposes; a person types more.
+export const GATE_PROPOSAL = Object.freeze({ runs: 1, hours: 1 });
+const HOUR_MS = 3_600_000;
+
+/** Whether a start would be let through as far as approvals go. */
+export const gatesOpen = (route: GateRouteInfo) =>
+  route.gates.length === 2 && route.gates.every((g) => g.state === "approved");
+
+/** Whether a run that has left may be followed. */
+export const contactOpen = (route: GateRouteInfo) =>
+  route.gates.some((g) => g.kind === "egress" && g.follows);
+/**
+ * The approvals that count, to be shown and taken back: the newest of each kind of this route's
+ * account, while it still allows anything or would again under its own settings. The service
+ * gives the newest first, and no new run or contact is allowed by an older one.
+ */
+export function approvalsInForce({ approvals, route }: GateAnswer) {
+  if (!route) return [];
+  return (["egress", "spend"] as const).flatMap((kind) => {
+    const newest = approvals.find(
+      (a) =>
+        a.kind === kind && a.host === route.host && a.account === route.account,
+    );
+    return newest &&
+      (newest.state === "approved" ||
+        newest.state === "changed" ||
+        newest.state === "exhausted")
+      ? [newest]
+      : [];
+  });
+}
+
+export const validRuns = (runs: number) =>
+  Number.isInteger(runs) && runs >= 1 && runs <= 1_000;
+export const validHours = (hours: number) =>
+  Number.isInteger(hours) && hours >= 1 && hours <= 366 * 24;
+
+/** The approvals that one press of the button records: contacting, and using unless only a run
+ * is to be followed. Under the network settings the person was shown. */
+export function approvalRequests(
+  route: GateRouteInfo,
+  { runs, hours }: { runs: number; hours: number },
+  kinds: readonly GateKind[] = ["egress", "spend"],
+) {
+  if (!validRuns(runs) || !validHours(hours))
+    throw new Error("An approval is out of its range.");
+  return kinds.map((kind) => ({
+    kind,
+    route: route.route,
+    network: route.network,
+    host: route.host,
+    account: route.account,
+    purpose: "generation" as const,
+    ttlMs: hours * HOUR_MS,
+    limit: {
+      runs,
+      // With no bytes to send, it is for following alone: no run can be counted on it.
+      units: kinds.includes("spend")
+        ? runs * (kind === "egress" ? route.run.bytes : route.run.seconds)
+        : 0,
+    },
+  }));
+}
+
+type Line = { key: MessageKey; vars?: Record<string, string | number> };
+/** What an approval would allow, in words. */
+export function approvalLines(
+  route: GateRouteInfo,
+  { runs, hours }: { runs: number; hours: number },
+  kinds: readonly GateKind[] = ["egress", "spend"],
+): Line[] {
+  const { host, account, run } = route;
+  const minutes = Math.ceil(run.seconds / 60);
+  return [
+    ...(kinds.includes("spend")
+      ? [
+          {
+            key: "create.gateContact" as const,
+            vars: {
+              host,
+              account,
+              runs,
+              megabytes: Math.ceil(run.bytes / 1_000_000),
+            },
+          },
+          { key: "create.gateUse" as const, vars: { runs, minutes } },
+        ]
+      : [{ key: "create.gateFollow" as const, vars: { host, account } }]),
+    { key: "create.gateUntil", vars: { hours } },
+    { key: "create.gateMayEnd", vars: { minutes } },
+    { key: "create.gateHosts" },
+    ...(route.network.proxyConfigured
+      ? [{ key: "create.gateProxy" as const }]
+      : []),
+    ...(route.network.certificateOverride
+      ? [{ key: "create.gateCertificate" as const }]
+      : []),
+  ];
+}
+/** Why the page asks again, where there was an approval. */
+export const gateReasons = (
+  route: GateRouteInfo,
+  kinds: readonly GateKind[] = ["egress", "spend"],
+): MessageKey[] => [
+  ...new Set(
+    route.gates.flatMap((g): MessageKey[] =>
+      g.state === "approved" || !kinds.includes(g.kind)
+        ? []
+        : [`create.gateState.${g.state}`],
+    ),
+  ),
+];

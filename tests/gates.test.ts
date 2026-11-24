@@ -1,11 +1,14 @@
 // MPR-204: the approvals without which nothing leaves this computer, uses a remote allowance or is
 // downloaded. The store, the commands and the authorisation are the real ones.
+import "./fixtures/own-temp.ts";
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { ProjectStore } from "../core/store.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import {
@@ -16,7 +19,21 @@ import {
 } from "../core/command/registry.ts";
 import { toCommandError } from "../core/command/errors.ts";
 import { bumpDirectorEpoch } from "../core/director/runtime.ts";
-import { kaggleNetwork } from "../core/engines/kaggle.ts";
+import {
+  KAGGLE_RECIPES,
+  SCRIPT_BYTES,
+  createKaggleEngine,
+  kaggleCli,
+  kaggleNetwork,
+  kaggleTimeout,
+} from "../core/engines/kaggle.ts";
+import { ENGINE_CONTRACT_V2 } from "../core/engines/contract-v2.ts";
+import { CommandError } from "../core/command/errors.ts";
+import {
+  approvalRequests,
+  contactOpen,
+  gatesOpen,
+} from "../src/create/create-model.ts";
 import {
   GATE_LIMITS,
   approveGate,
@@ -137,6 +154,7 @@ test("without an approval a gate is closed, and an approval binds kind, route, h
     runsLeft: 0,
     unitsLeft: 0,
     uses: 0,
+    follows: false,
   });
   assert.equal(
     reason(() => requireGate(store, ASK)),
@@ -402,10 +420,22 @@ test("a limit is counted before the send and never refunded, and the same genera
     reason(() => requireGate(store, SPEND)),
     /The approval is used up for using the allowance/,
   );
-  // An approval of nothing, which nothing was counted on, allows nothing.
+  // One with no bytes to send is for following alone: contact, and no run.
   give(store, ASK, { units: 0 });
-  assert.match(
+  assert.equal(
     reason(() => requireGate(store, ASK)),
+    "ok",
+  );
+  assert.deepEqual(
+    [gateState(store, ASK).state, gateState(store, ASK).follows],
+    ["exhausted", true],
+  );
+  assert.match(use("six", 1, 0), /The approval is used up for contacting/);
+  // A limit that nothing was counted on, and that is no such one, allows nothing.
+  give(store, SPEND, { units: 0 });
+  assert.equal(gateState(store, SPEND).follows, false);
+  assert.match(
+    reason(() => requireGate(store, SPEND)),
     /The approval is used up/,
   );
   // A use of nothing is a use, and is counted once.
@@ -547,7 +577,9 @@ test("a person approves the route's own host and account, inside the bounds, and
     [{ limit: { runs: 1, units: -1 } }, "VALIDATION"],
     [{ limit: { runs: 1, units: 2 ** 40 + 1 } }, "VALIDATION"],
     [{ limit: { runs: 1, units: 1, euros: 1 } }, "VALIDATION"],
-    [{ network: PLAIN }, "VALIDATION"],
+    [{ network: { proxyConfigured: false } }, "VALIDATION"],
+    [{ network: { ...PLAIN, proxyConfigured: true } }, "REVISION_CONFLICT"],
+    [{ network: { ...PLAIN, certificateOverride: true } }, "REVISION_CONFLICT"],
     [{ nowMs: 0 }, "VALIDATION"],
   ] as const)
     assert.match(
@@ -734,26 +766,56 @@ test("approve and revoke replay a request id and refuse a reused one with differ
 
 test("the list is bounded, newest first, with how each stands", async () => {
   const { call, store } = await workspace();
+  const network = kaggleNetwork(process.env);
+  const NONE = {
+    state: "missing",
+    approvalId: null,
+    expiresAt: null,
+    runsLeft: 0,
+    unitsLeft: 0,
+    uses: 0,
+    follows: false,
+  };
   assert.deepEqual(await call("yamakan.gates.list", {}), {
     approvals: [],
     more: false,
+    // What the route set up here would ask for, and how that stands.
+    route: {
+      route: "kaggle",
+      host: "kaggle.com",
+      account: "someone",
+      network,
+      run: {
+        bytes: SCRIPT_BYTES,
+        seconds: Math.max(
+          ...KAGGLE_RECIPES.filter((r) => r.offered).map(
+            (r) => r.timeoutSeconds,
+          ),
+        ),
+      },
+      gates: [
+        { kind: "egress", ...NONE },
+        { kind: "spend", ...NONE },
+      ],
+    },
   });
-  const network = kaggleNetwork(process.env);
+  assert.equal(
+    (await call("yamakan.gates.list", {}, { kaggle: undefined })).route,
+    null,
+  );
   const ids = Array.from(
     { length: 205 },
     () => give(store, { ...ASK, network }).id,
   ).reverse();
-  const { approvals, more } = await call("yamakan.gates.list", {});
+  const answer = await call("yamakan.gates.list", {});
+  const { approvals, more } = answer;
   assert.equal(more, true);
   assert.ok(approvals.length > 50 && approvals.length <= GATE_LIMITS.listed);
   assert.deepEqual(
     approvals.map((a: GateApproval) => a.id),
     ids.slice(0, approvals.length),
   );
-  assert.ok(
-    Buffer.byteLength(JSON.stringify({ approvals, more })) <=
-      GATE_LIMITS.listBytes,
-  );
+  assert.ok(Buffer.byteLength(JSON.stringify(answer)) <= GATE_LIMITS.listBytes);
   assert.ok(approvals.every((a: GateApproval) => a.state === "approved"));
   // By the index: one read of the place asked for.
   const plan = store.read((db) =>
@@ -767,15 +829,568 @@ test("the list is bounded, newest first, with how each stands", async () => {
   assert.ok(!plan.some((p) => /SORT|TEMP B-TREE/.test(p.detail)));
 });
 
-test("no command changes or deletes an approval, and no row of the three tables is ever updated", async () => {
+// Every source file of the service, by its path from the repository.
+async function sources() {
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const found: [string, string][] = [];
   for (const folder of ["core", "server", "cli", "mcp"])
-    for (const name of await readdir(folder, { recursive: true })) {
-      if (!name.endsWith(".ts")) continue;
-      const text = await readFile(path.join(folder, name), "utf8");
+    for (const name of await readdir(path.join(root, folder), {
+      recursive: true,
+    }))
+      if (/\.(?:ts|mts|mjs|js)$/.test(name))
+        found.push([
+          `${folder}/${name.replaceAll("\\", "/")}`,
+          await readFile(path.join(root, folder, name), "utf8"),
+        ]);
+  return found;
+}
+
+test("no command changes or deletes an approval, and no row of the three tables is ever updated", async () => {
+  for (const [name, text] of await sources()) {
+    {
       assert.doesNotMatch(
         text,
         /(?:UPDATE|DELETE FROM|REPLACE INTO|DROP TABLE|ALTER TABLE)\s+gate_approval/i,
         name,
       );
     }
+  }
+});
+
+// The Kaggle route as the service has it, with a stand-in program: this computer's Node, started
+// in a folder whose `kernels.js` is what it finds first. It writes a line for every start, says
+// what its scene tells it to, and leaves nothing this test did not make.
+async function route() {
+  const w = await workspace();
+  const here = await mkdtemp(path.join(tmpdir(), "yamakan-gates-cli-"));
+  bases.push(here);
+  const log = path.join(here, "calls.log");
+  const scene = path.join(here, "scene.json");
+  const say = (of: object) => writeFileSync(scene, JSON.stringify(of));
+  say({ state: null });
+  writeFileSync(
+    path.join(here, "kernels.js"),
+    `const fs = require("fs"), path = require("path");
+const args = process.argv.slice(2);
+const at = (f) => path.join(__dirname, f);
+fs.appendFileSync(at("calls.log"), args[0] + "\\n");
+const now = JSON.parse(fs.readFileSync(at("scene.json"), "utf8"));
+const folder = args[args.indexOf("-p") + 1];
+if (args[0] === "status") {
+  if (!now.state) { process.stderr.write("Permission 'kernels.get' was denied"); process.exit(1); }
+  if (now.state === "EMPTY") { process.stderr.write("404 Client Error: Not Found for url: https://x/GetKernelSessionStatus"); process.exit(1); }
+  process.stdout.write('has status "KernelWorkerStatus.' + now.state + '"');
+} else if (args[0] === "list") process.stdout.write("Not found");
+else if (args[0] === "push") {
+  fs.writeFileSync(at("scene.json"), JSON.stringify({ state: "RUNNING" }));
+  process.stdout.write("Kernel version 1 successfully pushed.");
+} else if (args[0] === "pull")
+  fs.writeFileSync(path.join(folder, "kernel-metadata.json"), JSON.stringify({ is_private: true }));
+`,
+  );
+  const was = process.cwd();
+  const calls = () =>
+    existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [];
+  const ctx = { kaggle: { cli: process.execPath, username: "someone" } };
+  const ask = (operation: string, input: object, over: object = {}) =>
+    w.call(operation, input, { ...ctx, ...over });
+  const { id: projectId } = await ask("yamakan.project.create", { name: "G" });
+  const started: string[] = [];
+  const start = async (recipeId = "kaggle-wan22-ti2v-5b") => {
+    const recipe = KAGGLE_RECIPES.find((r) => r.id === recipeId)!;
+    const { generationId } = await ask("yamakan.generation.start", {
+      projectId,
+      recipeId,
+      prompt: "A red kite.",
+      seed: 7,
+      width: recipe.width,
+      height: recipe.height,
+      durationFrames: Math.floor((recipe.frames / recipe.fps) * 30),
+    });
+    started.push(generationId);
+    return generationId as string;
+  };
+  return {
+    ...w,
+    here,
+    ask,
+    start,
+    say,
+    calls,
+    projectId,
+    list: () =>
+      ask("yamakan.generation.list", { projectId }) as Promise<
+        { generationId: string; state: string; diagnostic: string | null }[]
+      >,
+    status: (generationId: string) =>
+      ask("yamakan.generation.status", { generationId }),
+    approve: (over: object = {}) => w.approve(over, ctx),
+    async both(over: object = {}) {
+      return [
+        await w.approve({ limit: { runs: 3, units: 9e6 }, ...over }, ctx),
+        await w.approve(
+          { kind: "spend", limit: { runs: 3, units: 9e6 }, ...over },
+          ctx,
+        ),
+      ] as const;
+    },
+    // The stand-in is found from the folder the service is in.
+    async inside(run: () => Promise<void>) {
+      process.chdir(here);
+      try {
+        await run();
+      } finally {
+        process.chdir(was);
+        for (const id of started)
+          rmSync(path.join(tmpdir(), `yamakan-kaggle-work-${id}`), {
+            recursive: true,
+            force: true,
+          });
+      }
+    },
+  };
+}
+
+test("no approval, no process: start is refused and the CLI is never called", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    assert.equal(
+      await answered(r.start()),
+      "CAPABILITY_UNAVAILABLE: No one has approved contacting kaggle.com as someone. A person approves it on the Create page first.",
+    );
+    assert.deepEqual(await r.list(), []);
+    // Contacting alone is not using.
+    await r.approve({ limit: { runs: 1, units: SCRIPT_BYTES } });
+    assert.match(
+      await answered(r.start()),
+      /No one has approved using the allowance of kaggle\.com as someone/,
+    );
+    assert.deepEqual(await r.list(), []);
+    const { approvals } = await r.ask("yamakan.gates.list", {});
+    assert.equal(approvals[0].runsLeft, 1, "nothing was counted");
+    assert.deepEqual(r.calls(), []);
+  });
+});
+
+test("with both approvals a start is sent once and counted before it is", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    await r.both();
+    const id = await r.start();
+    const { approvals } = await r.ask("yamakan.gates.list", {});
+    assert.deepEqual(
+      approvals.map((a: GateApproval) => [a.kind, a.runsLeft, a.unitsLeft]),
+      [
+        ["spend", 2, 9e6 - kaggleTimeout("kaggle-wan22-ti2v-5b")],
+        ["egress", 2, 9e6 - SCRIPT_BYTES],
+      ],
+    );
+    assert.deepEqual(
+      r.calls().filter((c) => c === "push"),
+      ["push"],
+    );
+    assert.equal((await r.status(id)).state, "running");
+    assert.equal(
+      (await r.ask("yamakan.gates.list", {})).approvals[0].runsLeft,
+      2,
+      "asking is no use of it",
+    );
+  });
+});
+
+test("an approval that closes stops every CLI call, the run stays unknown, and a new one resumes it", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    const [egress] = await r.both();
+    const id = await r.start();
+    for (const [close, why] of [
+      [
+        () => r.ask("yamakan.gates.revoke", { approvalId: egress.id }),
+        /The approval was revoked for contacting kaggle\.com as someone/,
+      ],
+      [
+        async () => {
+          await r.approve({ ttlMs: 60_000 });
+          const db = new DatabaseSync(path.join(r.root, "workspace.sqlite"));
+          db.exec(
+            "UPDATE gate_approvals SET granted_at = 1, expires_at = 2 WHERE n = (SELECT max(n) FROM gate_approvals)",
+          );
+          db.close();
+        },
+        /The approval has expired/,
+      ],
+      [
+        async () => {
+          await r.approve();
+          r.store.transaction((db) => bumpDirectorEpoch(db));
+        },
+        /voided by a restore/,
+      ],
+    ] as const) {
+      await close();
+      const before = r.calls().length;
+      const answer = await r.status(id);
+      assert.equal(answer.state, "unknown");
+      assert.match(answer.diagnostic, why);
+      const [listed] = await r.list();
+      assert.equal(listed!.generationId, id);
+      assert.notEqual(listed!.state, "failed");
+      assert.match(
+        await answered(
+          r.ask("yamakan.generation.import", { generationId: id }),
+        ),
+        /^(?!ok)/,
+      );
+      assert.equal(r.calls().length, before, "the CLI was not started");
+    }
+    await r.approve();
+    assert.equal((await r.status(id)).state, "running");
+    // A proxy that came since: for following too (OA-20).
+    const proxy = process.env.HTTPS_PROXY;
+    try {
+      process.env.HTTPS_PROXY = "http://127.0.0.1:9";
+      const asked = r.calls().length;
+      const answer = await r.status(id);
+      assert.equal(answer.state, "unknown");
+      assert.match(answer.diagnostic, /The network settings are not those/);
+      assert.match(
+        await answered(r.start("kaggle-cogvideox-2b")),
+        /The network settings are not those/,
+      );
+      assert.equal(r.calls().length, asked);
+    } finally {
+      if (proxy === undefined) delete process.env.HTTPS_PROXY;
+      else process.env.HTTPS_PROXY = proxy;
+    }
+    assert.equal((await r.status(id)).state, "running");
+    // Stopping to follow it asks nothing of Kaggle, and needs no approval.
+    const [last] = (await r.ask("yamakan.gates.list", {})).approvals;
+    await r.ask("yamakan.gates.revoke", { approvalId: last.id });
+    const before = r.calls().length;
+    await r.ask("yamakan.generation.cancel", { generationId: id });
+    assert.equal(r.calls().length, before);
+  });
+});
+
+test("what was counted for a run is asked about again before it is pushed", async () => {
+  // Taken back, over or under another network while the run is being prepared: any of the two.
+  for (const kind of ["egress", "spend"] as const)
+    for (const spoil of [
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "INSERT INTO gate_approval_revocations VALUES (?, 1, 'browser-ui')",
+          )
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "UPDATE gate_approvals SET granted_at = 1, expires_at = 2 WHERE id = ?",
+          )
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare("UPDATE gate_approvals SET epoch = epoch + 1 WHERE id = ?")
+          .run(id),
+      (db: DatabaseSync, id: string) =>
+        db
+          .prepare(
+            "UPDATE gate_approvals SET proxy_configured = 1 - proxy_configured WHERE id = ?",
+          )
+          .run(id),
+      null,
+    ]) {
+      const r = await route();
+      await r.inside(async () => {
+        const [egress, spend] = await r.both({
+          limit: { runs: 1, units: 9e6 },
+        });
+        const { id } = kind === "egress" ? egress : spend;
+        const script = path.join(r.here, "kernels.js");
+        // The stand-in changes it as it is asked whether the notebook is free.
+        const spoiled = new DatabaseSync(path.join(r.root, "workspace.sqlite"));
+        writeFileSync(
+          script,
+          readFileSync(script, "utf8").replace(
+            'if (args[0] === "status") {',
+            'if (args[0] === "status") { fs.writeFileSync(at("asked"), ""); while (!fs.existsSync(at("go"))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);',
+          ),
+        );
+        const starting = answered(r.start());
+        while (!existsSync(path.join(r.here, "asked")))
+          await new Promise((done) => setTimeout(done, 20));
+        spoil?.(spoiled, id);
+        spoiled.close();
+        writeFileSync(path.join(r.here, "go"), "");
+        const answer = await starting;
+        // Used up by this very run is no matter.
+        if (!spoil) assert.equal(answer, "ok");
+        else {
+          assert.match(answer, /^CAPABILITY_UNAVAILABLE/);
+          assert.ok(!r.calls().includes("push"), `${kind} ${spoil}`);
+          assert.deepEqual(await r.list(), []);
+        }
+      });
+    }
+});
+
+test("allowing a run to be followed lets no other be sent, whatever is left of the allowance", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    const [egress] = await r.both({ limit: { runs: 3, units: 9e6 } });
+    const id = await r.start();
+    await r.ask("yamakan.gates.revoke", { approvalId: egress.id });
+    const { route: here } = await r.ask("yamakan.gates.list", {});
+    // What the page sends while a run is followed.
+    const [request, ...more] = approvalRequests(here, { runs: 1, hours: 1 }, [
+      "egress",
+    ]);
+    assert.deepEqual(more, []);
+    await r.ask("yamakan.gates.approve", request!);
+    assert.equal((await r.status(id)).state, "running");
+    const { route: after } = await r.ask("yamakan.gates.list", {});
+    assert.equal(contactOpen(after), true);
+    assert.equal(gatesOpen(after), false);
+    const before = r.calls().filter((c) => c === "push").length;
+    assert.match(
+      await answered(r.start("kaggle-cogvideox-2b")),
+      /^CAPABILITY_UNAVAILABLE: The approval is used up for contacting/,
+    );
+    assert.equal(r.calls().filter((c) => c === "push").length, before);
+    assert.equal((await r.list()).length, 1);
+  });
+});
+
+test("an approval for another account, purpose or network starts no process", async () => {
+  for (const spoil of [
+    "UPDATE gate_approvals SET account = 'someone else'",
+    "UPDATE gate_approvals SET purpose = 'qualification'",
+    "UPDATE gate_approvals SET host = 'kaggle.org'",
+    "UPDATE gate_approvals SET proxy_configured = 1 - proxy_configured",
+    "UPDATE gate_approvals SET certificate_override = 1 - certificate_override",
+    "UPDATE gate_approvals SET epoch = epoch + 1",
+  ]) {
+    const r = await route();
+    await r.inside(async () => {
+      await r.both();
+      const db = new DatabaseSync(path.join(r.root, "workspace.sqlite"));
+      db.exec(spoil);
+      db.close();
+      assert.match(await answered(r.start()), /^CAPABILITY_UNAVAILABLE/, spoil);
+      assert.deepEqual(await r.list(), [], spoil);
+      assert.deepEqual(r.calls(), [], spoil);
+    });
+  }
+});
+
+test("a used-up approval refuses the next start before it is recorded, and what left is followed", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    await r.both({ limit: { runs: 1, units: 9e6 } });
+    const id = await r.start();
+    const before = r.calls().length;
+    assert.match(
+      await answered(r.start("kaggle-cogvideox-2b")),
+      /^CAPABILITY_UNAVAILABLE: The approval is used up for contacting/,
+    );
+    assert.equal(r.calls().length, before);
+    assert.deepEqual(
+      (await r.list()).map((g) => g.generationId),
+      [id],
+    );
+    assert.equal((await r.status(id)).state, "running");
+  });
+  // Seconds and bytes too.
+  for (const [egress, spend] of [
+    [SCRIPT_BYTES - 1, 9e6],
+    [9e6, kaggleTimeout("kaggle-wan22-ti2v-5b") - 1],
+  ] as const) {
+    const other = await route();
+    await other.inside(async () => {
+      await other.approve({ limit: { runs: 9, units: egress } });
+      await other.approve({
+        kind: "spend",
+        limit: { runs: 9, units: spend },
+      });
+      assert.match(await answered(other.start()), /The approval is used up/);
+      assert.deepEqual(await other.list(), []);
+      assert.deepEqual(other.calls(), []);
+    });
+  }
+});
+
+test("of two starts at once for the last run, one is recorded and sent", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    await r.both({ limit: { runs: 1, units: 9e6 } });
+    const answers = await Promise.all(
+      ["kaggle-wan22-ti2v-5b", "kaggle-cogvideox-2b"].map((id) =>
+        answered(r.start(id)),
+      ),
+    );
+    assert.equal(answers.filter((a) => a === "ok").length, 1, answers.join());
+    assert.equal((await r.list()).length, 1);
+    assert.equal(r.calls().filter((c) => c === "push").length, 1);
+  });
+});
+
+const wan = KAGGLE_RECIPES.find((r) => r.id === "kaggle-wan22-ti2v-5b")!;
+const sending = (attemptKey: string) =>
+  ({
+    contract: ENGINE_CONTRACT_V2,
+    operation: "textToVideo",
+    recipeId: wan.id,
+    recipeHash: "a".repeat(64),
+    modelManifestHash: "b".repeat(64),
+    attemptKey,
+    leaseGeneration: 1,
+    deadlineMs: 1000,
+    resourcePolicyHash: "c".repeat(64),
+    prompt: "A red kite.",
+    seed: 7,
+    inputs: [],
+    output: {
+      kind: "video",
+      width: wan.width,
+      height: wan.height,
+      fps: { num: 30, den: 1 },
+      durationTicks: 1,
+      audio: false,
+    },
+  }) as never;
+
+test("a gate that closes while a run is being sent is a refusal, never a run that may have left", async () => {
+  // Open for so many starts, and then not: of a new notebook, of one that answers it is done, and
+  // of an empty one. Each is asked about in its own way before a push.
+  for (const [state, starts] of [
+    [null, 4],
+    ["COMPLETE", 4],
+    ["EMPTY", 5],
+  ] as const)
+    for (let open = 0; open < starts; open++) {
+      const r = await route();
+      r.say({ state });
+      await r.inside(async () => {
+        let left = open;
+        const folderRoot = await mkdtemp(
+          path.join(tmpdir(), "yamakan-gates-f-"),
+        );
+        bases.push(folderRoot);
+        const engine = createKaggleEngine({
+          // The send asks once before anything is written, and once for each start.
+          cli: kaggleCli(process.execPath, {
+            mayConnect: () => {
+              if (left-- <= 0)
+                throw new CommandError(
+                  "CAPABILITY_UNAVAILABLE",
+                  "Closed here.",
+                );
+            },
+          }),
+          username: "someone",
+          folderRoot,
+        });
+        const answer = await answered(
+          engine.submit(sending("run-a"), {} as never),
+        );
+        assert.equal(
+          answer,
+          "CAPABILITY_UNAVAILABLE: Closed here.",
+          `${state} ${open}`,
+        );
+        assert.ok(!r.calls().includes("push"), `${state} ${open}`);
+        // It is no run here, and nothing of it stays on disk.
+        assert.match(await answered(engine.status("run-a")), /^NOT_FOUND/);
+        assert.deepEqual(await readdir(folderRoot), []);
+      });
+    }
+});
+
+test("a gate that closes between an answer and its output ends no run", async () => {
+  const r = await route();
+  await r.inside(async () => {
+    let open = true;
+    const folderRoot = await mkdtemp(path.join(tmpdir(), "yamakan-gates-f-"));
+    bases.push(folderRoot);
+    let clock = Date.now();
+    let closeAfterStatus = false;
+    const cli = kaggleCli(process.execPath, {
+      mayConnect: () => {
+        if (!open)
+          throw new CommandError("CAPABILITY_UNAVAILABLE", "Closed here.");
+      },
+    });
+    const engine = createKaggleEngine({
+      cli: Object.assign(
+        (async (...args: Parameters<typeof cli>) => {
+          const answer = await cli(...args);
+          if (closeAfterStatus && args[0][1] === "status") open = false;
+          return answer;
+        }) as typeof cli,
+        { mayConnect: cli.mayConnect },
+      ),
+      username: "someone",
+      folderRoot,
+      now: () => clock,
+    });
+    const sent = await engine.submit(sending("run-b"), {} as never);
+    assert.ok("executionRef" in sent);
+    // Long after, so that the notebook's answer is this run's.
+    clock += 20 * 60_000;
+    for (const state of ["ERROR", "COMPLETE"]) {
+      open = true;
+      closeAfterStatus = true;
+      r.say({ state });
+      const answer = await engine.status("run-b");
+      assert.equal(answer.state, "unknown", state);
+      assert.equal(answer.diagnostic, "Closed here.", state);
+    }
+    open = true;
+    closeAfterStatus = false;
+    r.say({ state: "RUNNING" });
+    assert.equal((await engine.status("run-b")).state, "running");
+  });
+});
+
+test("the files with outbound call sites, and how many each has, are a closed list", async () => {
+  // The service's own listening, ComfyUI on this computer, and the local service's own client.
+  const ALLOWED: Record<string, [RegExp, number][]> = {
+    "core/engines/comfyui.ts": [
+      [/\bfetch\(/, 2],
+      [/new WebSocket\(/, 1],
+    ],
+    "server/main.ts": [[/node:http"/, 2]],
+    "server/document-stage.ts": [[/node:http"/, 1]],
+    "mcp/main.ts": [[/return fetch\(input, init\);/, 1]],
+  };
+  const OUTBOUND =
+    /\bfetch\s*[(,;)]|=\s*(?:globalThis\.)?fetch\b|\.fetch\b|new\s+WebSocket\b|new\s+EventSource\b|["'](?:node:)?(?:http|https|net|tls|dgram|http2|dns|undici)(?:\/[a-z]+)?["']|navigator\.sendBeacon/;
+  const found: Record<string, number[]> = {};
+  for (const [name, text] of await sources())
+    for (const line of text.split("\n")) {
+      const code = line
+        .replace(/^\s*(?:\/\/|\*).*$/, "")
+        .replace(/\s\/\/ .*$/, "");
+      if (!OUTBOUND.test(code)) continue;
+      const which = (ALLOWED[name] ?? []).findIndex(([pattern]) =>
+        pattern.test(code),
+      );
+      assert.ok(which >= 0, `${name}: ${line.trim()}`);
+      (found[name] ??= ALLOWED[name]!.map(() => 0))[which]!++;
+    }
+  assert.deepEqual(
+    found,
+    Object.fromEntries(
+      Object.entries(ALLOWED).map(([name, of]) => [name, of.map(([, n]) => n)]),
+    ),
+  );
+  // The Kaggle CLI is started in one place, which asks first; a service cannot be made without
+  // a permit, which is asked in one place.
+  const all = await sources();
+  const count = (pattern: RegExp) =>
+    all.reduce((n, [, text]) => n + (text.match(pattern)?.length ?? 0), 0);
+  assert.equal(count(/\bkaggleCli\(/g), 2, "its definition and one use");
+  assert.equal(count(/= permit\(\{/g), 1);
+  assert.equal(count(/mayPush\?\.\(/g), 1);
+  assert.equal(count(/consumeGates\(/g), 2, "its definition and one use");
 });

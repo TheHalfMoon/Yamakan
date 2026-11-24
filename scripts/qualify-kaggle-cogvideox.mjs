@@ -18,9 +18,18 @@ import { createGenerationService } from "../core/engines/generation.ts";
 import {
   KAGGLE_RECIPES,
   createKaggleEngine,
+  SCRIPT_BYTES,
   kaggleCli,
+  kaggleNetwork,
+  kaggleTimeout,
   ledgerOptions,
 } from "../core/engines/kaggle.ts";
+import {
+  GATE_ROUTES,
+  approveGate,
+  consumeGates,
+  requireGate,
+} from "../core/gates.ts";
 import { JobSupervisor } from "../core/jobs.ts";
 import { mediaTools } from "../core/process/workers.ts";
 import { ProjectStore } from "../core/store.ts";
@@ -107,9 +116,37 @@ try {
   queue = new JobSupervisor(store);
   await queue.start();
   const ledger = queue.generationLedger();
+  // One run, recorded in this check's own workspace as a person's approval would be.
+  const ask = (kind) => ({
+    kind,
+    route: "kaggle",
+    host: GATE_ROUTES.kaggle.host,
+    account: username,
+    purpose: "qualification",
+    network: kaggleNetwork(process.env),
+  });
+  const most = { egress: SCRIPT_BYTES, spend: kaggleTimeout(recipe.id) };
+  for (const kind of ["egress", "spend"])
+    approveGate(store, {
+      ask: ask(kind),
+      ttlMs: 6 * 60 * 60 * 1000,
+      limit: { runs: 1, units: most[kind] },
+      principalId: "local-client",
+    });
   const service = createGenerationService({
+    permit: ({ generationId }) =>
+      consumeGates(
+        store,
+        ["egress", "spend"].map((kind) => ({
+          ask: ask(kind),
+          units: most[kind],
+        })),
+        generationId,
+      ),
     adapter: createKaggleEngine({
-      cli: kaggleCli(cliFile),
+      cli: kaggleCli(cliFile, {
+        mayConnect: () => requireGate(store, ask("egress")),
+      }),
       username,
       alsoOffered: [recipe.id],
       ...ledgerOptions(ledger),

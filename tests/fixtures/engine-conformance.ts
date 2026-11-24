@@ -24,6 +24,7 @@ import {
 import {
   createGenerationService,
   memoryLedger,
+  noRemoteUse,
   type GenerationLedger,
   type GenerationRequest,
 } from "../../core/engines/generation.ts";
@@ -795,6 +796,8 @@ async function watched(h: ConformanceHarness, ledger: GenerationLedger) {
     adapter,
     store,
     resourcePolicyHash: "0".repeat(64),
+    // What a run may use is not the adapter's to say (MPR-204).
+    permit: noRemoteUse,
     ledger: {
       ...ledger,
       begin: (record) => {

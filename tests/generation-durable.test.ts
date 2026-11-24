@@ -30,6 +30,7 @@ import {
 } from "../core/engines/kaggle.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   type GenerationRecipe,
 } from "../core/engines/generation.ts";
 import { mediaTools } from "../core/process/workers.ts";
@@ -214,6 +215,7 @@ async function openAt(
   await queue.start();
   const ledger = queue.generationLedger();
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: createKaggleEngine({
       cli: k.cli,
       username: "someone",

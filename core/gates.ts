@@ -3,7 +3,8 @@
 // with an expiry and a limit. The places that refuse without one ask here (part b). An approval
 // is a row that is never changed; a revocation and a use are rows of their own. A restore brings
 // none back, and one of another epoch is void. The newest approval of a place is the one that
-// counts, so revoking it closes the place.
+// is asked about, so revoking it closes the place to every new contact and every new run; a run
+// that was counted on an older one asks about that one once more before it is pushed.
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -65,6 +66,9 @@ export type GateReading = {
   unitsLeft: number;
   // What was counted on it so far.
   uses: number;
+  // Whether a run that has left may be followed under it: an approval for contacting that is
+  // open, that a run was counted on, or that was given for following alone, with no bytes to send.
+  follows: boolean;
 };
 
 const unitOf = (kind: GateKind) => (kind === "spend" ? "seconds" : "bytes");
@@ -134,6 +138,10 @@ function readRow(
     runsLeft,
     unitsLeft,
     uses: row.runs,
+    follows:
+      row.kind === "egress" &&
+      (state === "approved" ||
+        (state === "exhausted" && (row.runs > 0 || row.limit_units === 0))),
   };
 }
 
@@ -149,6 +157,7 @@ const NONE = {
   runsLeft: 0,
   unitsLeft: 0,
   uses: 0,
+  follows: false,
 };
 
 function stateOf(db: DatabaseSync, ask: GateAsk, nowMs: number): GateReading {
@@ -208,11 +217,7 @@ export function requireGate(
   nowMs = Date.now(),
 ): GateReading & { approvalId: string } {
   const read = gateState(store, ask, nowMs);
-  if (
-    read.approvalId !== null &&
-    (read.state === "approved" ||
-      (ask.kind === "egress" && read.state === "exhausted" && read.uses > 0))
-  )
+  if (read.approvalId !== null && (read.state === "approved" || read.follows))
     return { ...read, approvalId: read.approvalId };
   throw refusal(ask, read.state as Exclude<GateState, "approved">);
 }
@@ -278,6 +283,33 @@ export function consumeGates(
       return read.approvalId!;
     }),
   );
+}
+
+/**
+ * That what was counted for a use still stands: each approval it was counted on is neither
+ * revoked, over, of another epoch, nor given under other network settings. Used up is no matter.
+ */
+export function requireCounted(
+  store: ProjectStore,
+  asks: readonly GateAsk[],
+  useId: string,
+  nowMs = Date.now(),
+) {
+  store.read((db) => {
+    for (const ask of asks) {
+      const row = db
+        .prepare(
+          `SELECT ${COLUMNS} ${FROM} JOIN gate_approval_uses used ON used.approval_id = a.id WHERE used.use_id = ? AND a.kind = ? AND a.route = ? AND a.host = ? AND a.account = ? AND a.purpose = ? ORDER BY a.n DESC LIMIT 1`,
+        )
+        .get(useId, ask.kind, ask.route, ask.host, ask.account, ask.purpose) as
+        Row | undefined;
+      const state = row
+        ? readRow(db, row, ask.network, nowMs).state
+        : "missing";
+      if (state !== "approved" && state !== "exhausted")
+        throw refusal(ask, state);
+    }
+  });
 }
 
 export type GateApproval = {
@@ -427,7 +459,8 @@ export function listGateApprovals(
       .prepare(`SELECT ${COLUMNS} ${FROM} ORDER BY a.n DESC LIMIT ?`)
       .all(GATE_LIMITS.listed + 1) as Row[];
     const approvals: GateApproval[] = [];
-    let bytes = 64;
+    // Room for what a command says beside them.
+    let bytes = 2_048;
     for (const row of rows.slice(0, GATE_LIMITS.listed)) {
       const approval = approvalOf(db, row, network, nowMs);
       bytes += Buffer.byteLength(JSON.stringify(approval)) + 1;

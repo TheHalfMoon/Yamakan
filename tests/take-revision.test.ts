@@ -23,6 +23,7 @@ import { toCommandError } from "../core/command/errors.ts";
 import { DOCUMENT_SCHEMA_VERSIONS } from "../core/document-ref.ts";
 import {
   createGenerationService,
+  noRemoteUse,
   type GenerationRecipe,
   type GenerationRecord,
 } from "../core/engines/generation.ts";
@@ -127,6 +128,7 @@ async function workspace() {
         adapter,
         store,
         resourcePolicyHash: RESOURCE_POLICY_HASH,
+        permit: noRemoteUse,
         ledger: queue.generationLedger(),
       }),
       recipes,
@@ -1284,7 +1286,12 @@ test("a draft is read from its own project's story, and reading it changes nothi
   const kaggle = withKaggle(w);
   // The count sees the CLI that this would run.
   assert.equal(
-    await started(() => kaggleCli(process.execPath)(["--version"], 20_000)),
+    await started(() =>
+      kaggleCli(process.execPath, { mayConnect: () => {} })(
+        ["--version"],
+        20_000,
+      ),
+    ),
     1,
   );
   const programs = await started(async () => {

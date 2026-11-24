@@ -265,15 +265,22 @@ const MEDIA_TYPES: Record<string, AssetRef["mediaType"]> = {
   jpeg: "image/jpeg",
 };
 
+/** The permit of an engine that leaves this computer for nothing and uses no allowance. */
+export const noRemoteUse = () => {};
+
 export function createGenerationService(options: {
   adapter: EngineAdapterV2;
   store: ProjectStore;
   resourcePolicyHash: string;
   ledger?: GenerationLedger;
+  // Asked once for a run, after every other check and before it is recorded or sent (MPR-204):
+  // it throws when the run may not be, and counts it when it may. Every check of that kind is
+  // made there, and nowhere else.
+  permit: (run: { generationId: string; recipeId: string }) => void;
   // Tests only.
   now?: () => number;
 }) {
-  const { adapter, store, resourcePolicyHash } = options;
+  const { adapter, store, resourcePolicyHash, permit } = options;
   const ledger = options.ledger ?? memoryLedger();
   const importing = new Map<
     string,
@@ -628,6 +635,15 @@ export function createGenerationService(options: {
           assetHash: asset.sha256,
         }),
       );
+      // Asked and answered before anything else happens: an answer still to come is none.
+      const early: unknown = permit({
+        generationId: id,
+        recipeId: request.recipe.id,
+      });
+      if (early instanceof Promise) {
+        early.catch(() => {});
+        throw new Error("A permit answers at once.");
+      }
       // Recorded before anything leaves: a crash from here on leaves a record.
       ledger.begin({
         generationId: id,

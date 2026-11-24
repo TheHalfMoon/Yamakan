@@ -41,7 +41,10 @@ import {
   execute,
 } from "../core/command/registry.ts";
 import { createFakeEngineV2 } from "../core/engines/fake.ts";
-import { createGenerationService } from "../core/engines/generation.ts";
+import {
+  createGenerationService,
+  noRemoteUse,
+} from "../core/engines/generation.ts";
 import { diagnostic } from "../core/engines/contract-v2.ts";
 import { canonicalJson, sha256Hex } from "../core/hash/canonical.ts";
 import { mediaTools } from "../core/process/workers.ts";
@@ -247,6 +250,7 @@ try {
     },
   });
   const service = createGenerationService({
+    permit: noRemoteUse,
     adapter: serving(fake),
     store: ctx.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -391,6 +395,7 @@ try {
 
   // MPR-102, in the same workspace: what a run leaves is the pattern, two seconds long.
   const again = createGenerationService({
+    permit: noRemoteUse,
     adapter: serving(createFakeEngineV2()),
     store: ctx.store,
     resourcePolicyHash: RESOURCE_POLICY_HASH,
@@ -587,6 +592,7 @@ try {
   let makes = onePattern;
   const engine = createFakeEngineV2();
   const ledgered = createGenerationService({
+    permit: noRemoteUse,
     adapter: {
       ...serving(engine, () => makes),
       status: async (ref) => {

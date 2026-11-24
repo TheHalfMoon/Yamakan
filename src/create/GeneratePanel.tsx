@@ -3,6 +3,7 @@
 // time. There is no percentage because Kaggle gives none: only a state and the time.
 import React, { useEffect, useRef, useState } from "react";
 import type { MessageKey } from "../i18n.ts";
+import { Approvals, type GatesApi } from "./Approvals.tsx";
 import {
   choiceOf,
   mayStart,
@@ -145,8 +146,13 @@ export function GeneratePanel(props: {
   // it can start from.
   fromPicture?: GenerateModel;
   stills: readonly { id: string; name: string }[];
+  // What a person approves before anything is sent.
+  gates: GatesApi;
+  moment: (ms: number) => string;
 }) {
   const { prompt, seed, seedValid, t, api } = props;
+  // How the approvals stand changes as a run is sent, refused, or asked about.
+  const [asked, setAsked] = useState(0);
   const [run, setRun] = useState<Run | null>(null);
   const [state, setState] = useState("queued");
   const [note, setNote] = useState("");
@@ -249,6 +255,7 @@ export function GeneratePanel(props: {
         setState(answer.state);
         setNote(answer.diagnostic ?? "");
         setOutcome(answer);
+        setAsked((n) => n + 1);
         // Its own result proves it arrived; a notebook's state does not.
         if (answer.state === "succeeded" || answer.state === "failed")
           setRun((r) => (r?.uncertain ? { ...r, uncertain: false } : r));
@@ -324,6 +331,7 @@ export function GeneratePanel(props: {
       setProblem(e instanceof Error ? e.message : t("create.startFailed"));
     } finally {
       setWorking(false);
+      setAsked((n) => n + 1);
     }
   };
 
@@ -366,10 +374,21 @@ export function GeneratePanel(props: {
     </a>
   );
 
+  const approvals = (
+    <Approvals
+      api={props.gates}
+      t={t}
+      moment={props.moment}
+      busy={props.busy}
+      following={following}
+      asked={asked}
+    />
+  );
   if (!run && !props.offered)
     return (
       <div className="create-generate" data-testid="create-generate">
         <h3>{t("create.engineTitle")}</h3>
+        {approvals}
         <p className="note" data-testid="create-not-from-here">
           {t("create.notFromHere")}
         </p>
@@ -380,6 +399,7 @@ export function GeneratePanel(props: {
     return (
       <div className="create-generate" data-testid="create-generate">
         <h3>{t("create.engineTitle")}</h3>
+        {approvals}
         {props.fromPicture && (
           <label className="create-picture">
             {t("create.picture")}
@@ -475,6 +495,7 @@ export function GeneratePanel(props: {
       <p role="status" data-testid="create-run-state" data-state={state}>
         {t(line, { name: runModel.name })}
       </p>
+      {approvals}
       {following && (
         <>
           <progress aria-label={t(line, { name: runModel.name })} />
