@@ -23,6 +23,8 @@ import {
   ENGINE_CONTRACT_V2,
   EngineRequestV2Schema,
 } from "../core/engines/contract-v2.ts";
+import { licenceGate } from "../core/engines/licence.ts";
+import { licenceTerm, wholeLicence } from "./fixtures/licence-block.ts";
 
 const raw = JSON.parse(
   await readFile(
@@ -150,6 +152,38 @@ test("a mutable revision, missing or unaccepted licence, or remote code blocks s
     edit((c) => (c.model.license = "Apache-2.0")),
     [],
   );
+  // The licence gate (MPR-208) says the same of the same candidate.
+  for (const [license, gated] of [
+    ["apache-2.0", false],
+    ["Apache-2.0", true],
+    ["MIT", false],
+    ["cc-by-nc-4.0", false],
+    ["openrail", true],
+  ] as const) {
+    const blockers = edit((c) => Object.assign(c.model, { license, gated }));
+    const gate = licenceGate(
+      {
+        ...wholeLicence(),
+        weights: licenceTerm({ name: license, spdx: license }),
+        gated: gated ? "yes" : "no",
+      },
+      { run: "local" },
+    );
+    const reasons = gate.offered ? [] : gate.reasons;
+    assert.deepEqual(
+      [
+        reasons.includes("LICENCE_UNACCEPTED"),
+        reasons.includes("GATED"),
+        gate.offered,
+      ],
+      [
+        blockers.includes("LICENSE_UNACCEPTED"),
+        blockers.includes("GATED_MODEL"),
+        blockers.length === 0,
+      ],
+      `${license} ${gated}`,
+    );
+  }
   // A package licence must be accepted SPDX terms, not merely present.
   for (const spdx of [
     "GPL-3.0-only",

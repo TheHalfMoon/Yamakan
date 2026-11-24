@@ -1,13 +1,20 @@
 // MPR-201: every model Yamakan offers, is considering or has refused, by exact identity. Facts
 // this repository already holds, written down once; the lists the routes and the page really use
 // are checked against it (catalogDisagreements), not made from it, so nothing here changes what
-// runs. A licence here is what the publisher states and when it was read, not a clearance: the
-// gate is MPR-208's. Data only: this file reads nothing, sends nothing and starts nothing.
+// runs. A licence here is what was read of it and when, not a clearance; what of it may be offered is
+// the gate's (licence.ts, MPR-208). Data only: this file reads nothing, sends nothing and starts nothing.
 import { z } from "zod";
 import type { EngineCandidate } from "./candidates.ts";
 import type { ComfyRecipe } from "./comfyui.ts";
 import type { EngineRequestV2, Operation } from "./contract-v2.ts";
 import type { KaggleRecipe } from "./kaggle.ts";
+import {
+  HOST,
+  LicenceBlockSchema,
+  SourceUrl,
+  plainSegments,
+  type LicenceBlock,
+} from "./licence.ts";
 import type { ModelPin } from "./manifests.ts";
 
 export const MODEL_CATALOG_FORMAT = "yamakan.model-catalog/v1";
@@ -16,7 +23,8 @@ export const MODEL_CATALOG_LIMITS = Object.freeze({
   offers: 8,
   refusals: 32,
   evidence: 8,
-  bytes: 65_536,
+  // Each entry holds a licence block of about two thousand.
+  bytes: 262_144,
 });
 
 // The engine contract's words, checked against it by the types here and by the test.
@@ -49,20 +57,6 @@ const Count = z.number().int().positive().max(1_000_000);
 // Whatever their letter case: a publisher's slug is one model, and Windows has one file.
 const unique = (values: readonly string[]) =>
   new Set(values.map((v) => v.toLowerCase())).size === values.length;
-// A name, never an address by number: its last part begins with a letter.
-const HOST =
-  "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?){0,8}\\.[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?";
-const plainSegments = (p: string) =>
-  !p.split("/").some((s) => s === "" || s === "." || s === "..");
-// A page that was read, never fetched by code: no account, query or fragment in it.
-const SourceUrl = z
-  .string()
-  .max(300)
-  .regex(new RegExp(`^https://${HOST}/[A-Za-z0-9._~/-]+$`))
-  .refine(
-    (u) => plainSegments(u.slice("https://".length)),
-    "A page's plain address.",
-  );
 const EvidencePath = z
   .string()
   .max(200)
@@ -95,16 +89,6 @@ export const ModelIdentitySchema = z
   })
   .strict();
 export type ModelIdentity = z.infer<typeof ModelIdentitySchema>;
-
-export const CatalogLicenceSchema = z
-  .object({
-    // As the publisher states it.
-    weightsLicence: z.string().regex(/^[A-Za-z0-9.+-]{1,40}$/),
-    sourceUrl: SourceUrl,
-    verifiedAt: z.iso.date(),
-  })
-  .strict();
-export type CatalogLicence = z.infer<typeof CatalogLicenceSchema>;
 
 export const CatalogOfferSchema = z
   .object({
@@ -188,7 +172,7 @@ export const CatalogEntrySchema = z
     id: Id,
     name: words(80),
     identity: ModelIdentitySchema,
-    licence: CatalogLicenceSchema,
+    licence: LicenceBlockSchema,
     offers: z.array(CatalogOfferSchema).max(MODEL_CATALOG_LIMITS.offers),
     verifiedAt: z.iso.date(),
     sourceUrl: SourceUrl,
@@ -330,12 +314,87 @@ const COGVIDEOX_LIMITS = {
   roles: [],
   references: null,
 };
-// Both models' licence, in the form the recipes use.
-const licence = (identity: ModelIdentity) => ({
-  weightsLicence: "Apache-2.0",
-  sourceUrl: pageOf(identity),
-  verifiedAt: INSPECTED,
+// What was read of the licences (docs/MODEL_LICENCE_GATE.md), and what stays not known.
+const LICENCES_READ = "2026-11-24";
+const APACHE = {
+  name: "Apache-2.0",
+  spdx: "Apache-2.0",
+  commercialUse: "allowed",
+} as const;
+const BSD_2 = { ...APACHE, name: "BSD-2-Clause", spdx: "BSD-2-Clause" };
+const NOT_KNOWN = (name: string) => ({
+  name,
+  spdx: null,
+  commercialUse: "unknown" as const,
 });
+// What both models' scripts install, and what Kaggle's machine has already.
+const RUN_WITH = [
+  { name: "transformers 4.57.1", role: "package", term: APACHE },
+  { name: "accelerate 1.10.1", role: "package", term: APACHE },
+  { name: "sentencepiece 0.2.1", role: "package", term: APACHE },
+  { name: "imageio 2.37.0", role: "package", term: BSD_2 },
+  { name: "imageio-ffmpeg 0.6.0", role: "package", term: BSD_2 },
+  {
+    name: "FFmpeg in imageio-ffmpeg 0.6.0",
+    role: "program on Kaggle's machine",
+    term: NOT_KNOWN("not stated by the package"),
+  },
+  {
+    name: "torch, NumPy and Pillow on Kaggle's machine",
+    role: "packages it has already",
+    term: NOT_KNOWN("versions not known"),
+  },
+];
+const APACHE_BLOCK = {
+  code: APACHE,
+  weights: APACHE,
+  // The publisher's page names none.
+  baseModel: { kind: "none" },
+  bundledReviewed: true,
+  revenueCap: { kind: "none" },
+  territorialExclusions: { kind: "none" },
+  hostedServiceRight: "allowed",
+  // The pipelines add none; whether the weights learned one is not known.
+  watermark: { kind: "unknown" },
+  gated: "no",
+  attribution: {
+    kind: "required",
+    text: "Keep the licence and its notices where the model is passed on (Apache-2.0, section 4).",
+  },
+  verifiedAt: LICENCES_READ,
+} as const;
+const rawOf = ({ host, model, revision }: ModelIdentity, file: string) =>
+  `https://${host}/${model}/raw/${revision}/${file}`;
+const WAN_LICENCE: LicenceBlock = {
+  ...APACHE_BLOCK,
+  bundled: [
+    { name: "UMT5 text encoder", role: "text encoder", term: APACHE },
+    { name: "Wan VAE", role: "video autoencoder", term: APACHE },
+    ...RUN_WITH,
+    { name: "ftfy 6.3.1", role: "package", term: APACHE },
+  ],
+  // Its page claims no rights in what is made and asks that some of it not be shared, in words
+  // that its licence has not.
+  outputUse: { kind: "unknown" },
+  // The page says which licence; the licence's text is not in this repository.
+  sourceUrl: rawOf(WAN, "README.md"),
+  evidence: "CLAIM",
+};
+const COGVIDEOX_LICENCE: LicenceBlock = {
+  ...APACHE_BLOCK,
+  bundled: [
+    {
+      name: "T5 text encoder",
+      role: "text encoder",
+      term: NOT_KNOWN("not named on the page"),
+    },
+    { name: "CogVideoX VAE", role: "video autoencoder", term: APACHE },
+    ...RUN_WITH,
+  ],
+  outputUse: { kind: "unrestricted" },
+  sourceUrl: rawOf(COGVIDEOX, "LICENSE"),
+  evidence: "DOC",
+};
 
 export const MODEL_CATALOG: ModelCatalog = parseModelCatalog({
   format: MODEL_CATALOG_FORMAT,
@@ -344,7 +403,7 @@ export const MODEL_CATALOG: ModelCatalog = parseModelCatalog({
       id: "wan2.2-ti2v-5b-diffusers",
       name: "Wan2.2-TI2V-5B",
       identity: WAN,
-      licence: licence(WAN),
+      licence: WAN_LICENCE,
       offers: [
         {
           route: "kaggle",
@@ -396,7 +455,7 @@ export const MODEL_CATALOG: ModelCatalog = parseModelCatalog({
       id: "cogvideox-2b-diffusers",
       name: "CogVideoX-2b",
       identity: COGVIDEOX,
-      licence: licence(COGVIDEOX),
+      licence: COGVIDEOX_LICENCE,
       offers: [
         {
           route: "kaggle",
@@ -534,8 +593,8 @@ export function catalogDisagreements(
     there: string | null,
     entry: CatalogEntry,
   ) => {
-    if (!sameLicence(there, entry.licence.weightsLicence))
-      differs(list, item, "licence", there, entry.licence.weightsLicence);
+    if (!sameLicence(there, entry.licence.weights.name))
+      differs(list, item, "licence", there, entry.licence.weights.name);
   };
   const offers = catalog.entries.flatMap((entry) =>
     entry.offers.map((offer) => ({ entry, offer })),

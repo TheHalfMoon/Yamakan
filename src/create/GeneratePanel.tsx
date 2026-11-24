@@ -2,6 +2,7 @@
 // until they tick that their prompt may leave this machine and press the button, each
 // time. There is no percentage because Kaggle gives none: only a state and the time.
 import React, { useEffect, useRef, useState } from "react";
+import type { OpenLicenceField } from "../../core/engines/licence.ts";
 import type { MessageKey } from "../i18n.ts";
 import { Approvals, type GatesApi } from "./Approvals.tsx";
 import {
@@ -27,6 +28,8 @@ export type GenerateModel = {
   model: string;
   revision: string;
   licence: string;
+  // Absent from a service older than this page: what of it is not known.
+  licenceOpen?: readonly OpenLicenceField[];
   width: number;
   height: number;
   frames: number;

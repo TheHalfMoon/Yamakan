@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   CREATE_MODELS,
+  licenceOpenWords,
   composePrompt,
   emptyBrief,
   outcomeLines,
@@ -348,6 +349,34 @@ test("a model that reads only part of a prompt says so, in both languages", asyn
   const { MESSAGES } = await import("../src/i18n.ts");
   for (const language of Object.values(MESSAGES) as Record<string, string>[])
     assert.match(language["create.readsLittle"], /\{words\}/);
+});
+
+test("a model's licence, and what is not known of it, are the catalog's, in both languages", async () => {
+  const { MODEL_CATALOG } = await import("../core/engines/catalog.ts");
+  const { openLicenceFields } = await import("../core/engines/licence.ts");
+  const { MESSAGES, translate } = await import("../src/i18n.ts");
+  for (const model of CREATE_MODELS) {
+    const entry = MODEL_CATALOG.entries.find(
+      (e) => e.identity.model === model.id,
+    )!;
+    assert.equal(model.licence, entry.licence.weights.name);
+    assert.deepEqual(
+      model.licenceOpen,
+      openLicenceFields(entry.licence, { run: "hosted" }),
+    );
+    for (const lang of ["en", "ar"] as const) {
+      const said = licenceOpenWords(model.licenceOpen, (key, vars) =>
+        translate(lang, key, vars),
+      );
+      assert.equal(
+        said.split(MESSAGES[lang]["create.licenceOpenAnd"]).length,
+        model.licenceOpen.length,
+      );
+      for (const { part } of model.licenceOpen)
+        if (part) assert.ok(said.includes(`\u2068${part}\u2069`), said);
+      assert.doesNotMatch(said, /[{}]/);
+    }
+  }
 });
 
 test("a run from a picture is offered only the project's PNG and JPEG stills", () => {

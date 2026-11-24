@@ -9,7 +9,12 @@
 // comparison is predeclared and runs only on evidence.
 import { z } from "zod";
 import { Operation } from "./contract-v2.ts";
-import { ACCEPTED_MODEL_LICENSES } from "./manifests.ts";
+import { ACCEPTED_MODEL_LICENSES, packageLicenseAccepted } from "./licence.ts";
+
+export {
+  ACCEPTED_PACKAGE_LICENSES,
+  packageLicenseAccepted,
+} from "./licence.ts";
 
 export const ENGINE_CANDIDATES_FORMAT = "yamakan.engine-candidates";
 
@@ -364,64 +369,6 @@ export const REMOTE_SERVICE_PACKAGES: readonly string[] = Object.freeze([
   "lumaai",
   "stability-sdk",
 ]);
-
-// Package licences a bundled runtime may carry: permissive, or file-level
-// copyleft (MPL-2.0, unmodified). Anything else, GPL and LGPL included,
-// is refused until reviewed.
-export const ACCEPTED_PACKAGE_LICENSES: readonly string[] = Object.freeze([
-  "Apache-2.0",
-  "MIT",
-  "MIT-CMU",
-  "BSD-2-Clause",
-  "BSD-3-Clause",
-  "0BSD",
-  "ISC",
-  "Zlib",
-  "BSL-1.0",
-  "CC0-1.0",
-  "PSF-2.0",
-  "CNRI-Python",
-  "MPL-2.0",
-]);
-// The only accepted exception, and the licence it modifies.
-const ACCEPTED_EXCEPTIONS: Readonly<Record<string, string>> = Object.freeze({
-  "LLVM-exception": "Apache-2.0",
-});
-
-/**
- * Whether an SPDX expression is well formed and every licence in it is
- * accepted: expression = term ((AND | OR) term)*, term = "(" expression ")"
- * or a licence with an optional "WITH" exception. Either side of an OR
- * must be accepted too (conservative: no choosing the accepted branch).
- */
-export function packageLicenseAccepted(spdx: string | null) {
-  if (!spdx) return false;
-  const tokens = spdx.match(/\(|\)|[^\s()]+/g) ?? [];
-  let i = 0;
-  const term = (): boolean => {
-    const t = tokens[i++];
-    if (t === "(") {
-      if (!expression()) return false;
-      return tokens[i++] === ")";
-    }
-    if (!t || !ACCEPTED_PACKAGE_LICENSES.includes(t)) return false;
-    if (tokens[i] === "WITH") {
-      const exception = tokens[i + 1];
-      i += 2;
-      return exception !== undefined && ACCEPTED_EXCEPTIONS[exception] === t;
-    }
-    return true;
-  };
-  const expression = (): boolean => {
-    if (!term()) return false;
-    while (tokens[i] === "AND" || tokens[i] === "OR") {
-      i++;
-      if (!term()) return false;
-    }
-    return true;
-  };
-  return expression() && i === tokens.length;
-}
 
 /** A file's format from its name; a manifest must say the same. */
 export function fileFormatOf(path: string): z.infer<typeof FileFormat> {

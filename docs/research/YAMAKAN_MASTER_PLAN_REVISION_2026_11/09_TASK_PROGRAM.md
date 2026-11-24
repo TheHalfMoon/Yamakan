@@ -72,7 +72,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
 | MPR-206 | 2 | REVIEW_PENDING | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
 | MPR-207 | 2 | REVIEW_PENDING | — | Record a typed failure class and end time on every ended generation |
-| MPR-208 | 2 | QUALIFICATION_READY | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
+| MPR-208 | 2 | REVIEW_PENDING | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
 | MPR-209 | 2 | WAITING_DEPENDENCIES | MPR-208 | Show notices, the AGPL source offer and the route licence in the UI; widen the SBOM |
 | MPR-210 | 2 | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | Define the hosted-provider profile of EngineAdapterV2 and prove it on a loopback fake |
 | MPR-211 | 6 | DEFERRED | MPR-201, MPR-210 | Qualify a Windows DPAPI credential vault for customer provider keys |
@@ -2443,7 +2443,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |

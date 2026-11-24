@@ -658,6 +658,33 @@ test("only a model with its own tested run from Yamakan is offered", async () =>
   } finally {
     firstFrame.offered = true;
   }
+  // So is one whose licence the gate does not allow, whatever its own flag says: the catalog holds
+  // no block for it (MPR-208).
+  const unnamed = KAGGLE_RECIPES.find(
+    (r) => r.id === "kaggle-wan22-ti2v-5b",
+  ) as { id: string };
+  unnamed.id = "kaggle-not-read";
+  try {
+    assert.deepEqual(
+      offeredKaggleRecipes().map((r) => r.id),
+      all.slice(1),
+    );
+    assert.deepEqual(
+      kaggleRecipes().map((r) => r.id),
+      all.slice(1),
+    );
+    const k = kaggle(["QUEUED"]);
+    assert.deepEqual(
+      await k.engine.submit(
+        request({ recipeId: "kaggle-not-read" }),
+        context as never,
+      ),
+      { refused: "ENGINE_DISABLED" },
+    );
+    assert.equal(k.calls.length, 0);
+  } finally {
+    unnamed.id = "kaggle-wan22-ti2v-5b";
+  }
 });
 
 for (const state of ["ERROR", "CANCEL_ACKNOWLEDGED", "CANCEL_REQUESTED"]) {

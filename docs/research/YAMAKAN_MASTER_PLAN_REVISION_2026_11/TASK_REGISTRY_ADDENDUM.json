@@ -2892,7 +2892,7 @@
       "pillars": [
         "A"
       ],
-      "state": "QUALIFICATION_READY",
+      "state": "REVIEW_PENDING",
       "dependsOn": [
         "MPR-201"
       ],

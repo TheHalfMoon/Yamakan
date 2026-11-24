@@ -155,7 +155,7 @@ agent surface with waits, approvals, budgets and an audit feed.
 | MPR-205 | The Kaggle command-line route contained; quota facts stated | WAITING_DEPENDENCIES | MPR-204, MPR-207 | FD-10 (second part only) |
 | MPR-206 | Five engine operations defined; a conformance kit for every adapter | REVIEW_PENDING | MPR-201 | none |
 | MPR-207 | A typed failure class and end time on every ended generation | REVIEW_PENDING | none | none |
-| MPR-208 | Every offered model gated on a complete, machine-checked licence block | QUALIFICATION_READY | MPR-201 | none |
+| MPR-208 | Every offered model gated on a complete, machine-checked licence block | REVIEW_PENDING | MPR-201 | none |
 | MPR-209 | Notices, the source offer and the route licence shown; wider SBOM | WAITING_DEPENDENCIES | MPR-208 | none |
 | MPR-210 | The hosted-provider profile, proven on a loopback fake only | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | none |
 | MPR-303 | Hash-bound edit proposals; a propose-only agent mode | QUALIFICATION_READY | SS-006 | none |
