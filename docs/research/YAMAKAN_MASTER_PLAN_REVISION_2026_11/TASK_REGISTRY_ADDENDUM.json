@@ -1431,7 +1431,7 @@
         "The pull request names the entry SS-011 will reuse for the editor."
       ],
       "risks": [
-        "Size: two surfaces and a script. Split: part a (steps 1 to 3: shot cards, take stack, review entry in Story) and part b (steps 4 to 6: revise banner, `GeneratePanel` target, Create entry), each under this id. Part a is useful alone.",
+        "Size: two surfaces and a script. Split: part a (steps 1 to 4: shot cards, take stack, attempts, review entry in Story) and part b (steps 5 to 7: revise banner, `GeneratePanel` target, Create entry), each under this id. Part a is useful alone.",
         "Alternative considered: mount a second `GeneratePanel` inside the Story card. Rejected: two panels would poll and show the same run list, and the consent line and run-state rules would have to be kept equal in two places. Cost of the choice: revising moves the person to Create and back; the banner and `create-back-to-shot` carry the context.",
         "How `TakeReview` selects a story and a shot was not verified for this card; if `focusShot` cannot be added without changing its behaviour, fall back to opening the Director section with focus on `take-review-open` and say so in the pull request.",
         "The stand-in CLI may not return a decodable video; then the script must generate one with ffmpeg, which makes ffmpeg a requirement of the qualification host.",
