@@ -138,9 +138,7 @@ function attemptOf(
       diagnostic: said(row.error),
     };
   // The row as it was stored: what is in it is checked here, and nothing else is believed.
-  const g = row.payload as Partial<GenerationRecord> & {
-    derivedFromTakeId?: unknown;
-  };
+  const g = row.payload as Partial<GenerationRecord>;
   const startedAt = whole(g.startedAt);
   const endedAt = whole(g.endedAt);
   const takeId =
@@ -172,7 +170,7 @@ function attemptOf(
     quotaSeconds,
     takeId,
     takeInShot: takeId !== null && inShot.has(takeId),
-    derivedFromTakeId: idOf(g.derivedFromTakeId),
+    derivedFromTakeId: idOf(g.derivedFrom?.takeId),
     diagnostic: said(g.diagnostic),
   };
 }

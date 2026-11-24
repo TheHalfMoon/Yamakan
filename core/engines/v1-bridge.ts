@@ -200,10 +200,26 @@ export function bridgeV1(
           },
     );
   };
+  // What the engine answers, or null: it has no word for why it does not.
+  const asked = async <T>(of: () => Promise<T>): Promise<T | null> => {
+    try {
+      return await of();
+    } catch {
+      return null;
+    }
+  };
   const observe = async (raw: string): Promise<ExecutionStatus> => {
     const ref = ExecutionRef.parse(raw);
     if (!recipeOf.has(ref)) return { executionRef: ref, state: "unknown" };
-    const s = await v1.status(ref);
+    const s = await asked(() => v1.status(ref));
+    // It has no word for a job it no longer knows: that, and an engine that does not answer, are
+    // as little known.
+    if (!s)
+      return {
+        executionRef: ref,
+        state: "unknown",
+        diagnostic: "The engine could not be asked about this run.",
+      };
     const state = v1State(s.state, s.quarantined);
     return ExecutionStatusSchema.parse({
       executionRef: ref,
@@ -220,7 +236,9 @@ export function bridgeV1(
     const recipe = recipeOf.get(ref);
     if (!recipe || (await observe(ref)).state !== "succeeded") return null;
     const map = new Map<string, { artifact: Artifact; bytes: Uint8Array }>();
-    for (const [i, o] of (await v1.outputs(ref))
+    const outputs = await asked(() => v1.outputs(ref));
+    if (!outputs) return null;
+    for (const [i, o] of outputs
       .slice(0, ENGINE_V2_LIMITS.artifacts)
       .entries()) {
       const artifact = ArtifactSchema.parse({
@@ -280,23 +298,38 @@ export function bridgeV1(
           .update(`${request.attemptKey}\u0000${request.leaseGeneration}`)
           .digest("hex")
           .slice(0, 40)}`;
-        const { id } = await v1.submit({
-          graph: known.recipe.template(request),
-          inputs,
-          attemptKey: v1Key,
-        });
-        remember(recipeOf, id, known.recipe, 4096);
+        // A version 1 engine names a job only in its answer. One that throws may have started
+        // it: that run is known here by a name of its own, is never sent again, and cannot be
+        // followed.
+        const sent = await asked(() =>
+          v1.submit({
+            graph: known.recipe.template(request),
+            inputs,
+            attemptKey: v1Key,
+          }),
+        );
+        const id = sent?.id ?? `lost-${v1Key}`;
+        if (sent) remember(recipeOf, id, known.recipe, 4096);
         // Only the newest generation stays live; the one it replaces (or
         // this one, if a newer one is live) is cancelled. A cancel that
         // fails is left to reconcile: the execution's status reports it.
         const cancel = claim.supersede(id);
         // Not awaited: a hung cancel never holds up this submit. A cancel
         // that fails leaves a stale execution the service must cancel.
-        if (cancel) void v1.cancel(cancel).catch(() => {});
+        if (cancel) void asked(() => v1.cancel(cancel));
         // A newer generation went live first: this one is stale.
-        return cancel === id
-          ? { refused: "STALE_ATTEMPT" }
-          : { executionRef: id };
+        if (cancel === id) return { refused: "STALE_ATTEMPT" };
+        // Beside what a claim needs to know of it.
+        const answer = {
+          executionRef: id,
+          ...(sent
+            ? {}
+            : {
+                uncertain:
+                  "The engine's answer was lost, so the run may have started. It is not sent again.",
+              }),
+        };
+        return answer;
       });
     },
     status: observe,
@@ -311,7 +344,13 @@ export function bridgeV1(
           localProcessExited: false,
           remoteOutcome: "unknown",
         };
-      const s = await v1.cancel(ref);
+      const s = await asked(() => v1.cancel(ref));
+      if (!s)
+        return {
+          requested: true,
+          localProcessExited: false,
+          remoteOutcome: "unknown",
+        };
       return {
         requested: true,
         localProcessExited:

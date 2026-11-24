@@ -39,4 +39,6 @@ A test reads each date and each model from its file. **One run is one sample:** 
 
 ## What was not done
 
+Npm run test:studio passed at 245b079 on the founder host after the merge (its 5 node tests and 1,975 Studio tests), which neither CI workflow runs.
+
 No model was run, downloaded or looked up, and nothing was sent to Kaggle: its stand-in leaves a mark if it is ever started, and it was not. The page reads the same fields as before. What a publisher says was not checked again.

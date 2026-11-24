@@ -60,17 +60,17 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | VERIFIED | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | VERIFIED | MPR-101 | Let a generation target a story shot and append its take on import |
-| MPR-103 | 1 | QUALIFICATION_READY | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
-| MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
+| MPR-103 | 1 | VERIFIED | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
+| MPR-104 | 1 | QUALIFICATION_READY | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
-| MPR-106 | 1 | REVIEW_PENDING | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
+| MPR-106 | 1 | VERIFIED | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | VERIFIED | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
 | MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
-| MPR-202 | 2 | REVIEW_PENDING | MPR-201 | Report capabilities as three-state cells and project generation options from them |
+| MPR-202 | 2 | VERIFIED | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
 | MPR-204 | 2 | REVIEW_PENDING | — | Add default-deny gates for egress, spend and download with recorded human approvals |
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
-| MPR-206 | 2 | QUALIFICATION_READY | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
+| MPR-206 | 2 | REVIEW_PENDING | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
 | MPR-207 | 2 | REVIEW_PENDING | — | Record a typed failure class and end time on every ended generation |
 | MPR-208 | 2 | QUALIFICATION_READY | MPR-201 | Gate every offered model on a complete, machine-checked licence block |
 | MPR-209 | 2 | WAITING_DEPENDENCIES | MPR-208 | Show notices, the AGPL source offer and the route licence in the UI; widen the SBOM |
@@ -83,10 +83,10 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-302 | 3 | WAITING_DEPENDENCIES | MPR-301 | Replace the debug Director controls with a production plan view |
 | MPR-303 | 2 | QUALIFICATION_READY | SS-006 | File, review and apply hash-bound edit proposals, with a propose-only agent mode |
 | MPR-304 | 3 | WAITING_DEPENDENCIES | MPR-301, MPR-202, MPR-501 | Add static MCP prompts and read-only, scope-filtered resources for the stage contract |
-| MPR-305 | 2 | WAITING_DEPENDENCIES | MPR-202 | Make yamakan.router.explain return a deterministic, reasoned route order |
+| MPR-305 | 2 | QUALIFICATION_READY | MPR-202 | Make yamakan.router.explain return a deterministic, reasoned route order |
 | MPR-401 | 4 | QUALIFICATION_READY | MPR-101 | Record an entity, an approved anchor and variants on each reference pack |
 | MPR-402 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-102, MPR-202, MPR-203, MPR-401, MPR-103 | Schedule entities per shot and report which references a route will receive |
-| MPR-403 | 4 | WAITING_DEPENDENCIES | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
+| MPR-403 | 4 | QUALIFICATION_READY | MPR-101, MPR-106 | Store one camera and render record per shot and make the legacy scene store read-only |
 | MPR-404 | 4 | DEFERRED | MPR-202, MPR-206, MPR-403, MPR-203, MPR-204, MPR-507 | Emit Blender depth and normal control passes for control-capable routes |
 | MPR-405 | 4 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-401, MPR-402 | Build the consistency measurement harness with a local blind forced-choice study |
 | MPR-501 | 2 | VERIFIED | — | Make the MCP tool list honest: filter by scope, fix mutation flags, handle cancellation |
@@ -886,13 +886,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
 | Dependencies | MPR-101, MPR-102 |
 | Founder decisions | FD-2 |
 | Earlier plan items | stream:kaggle-create, SS-006 |
+| Evidence | Merged as 89c6e7014372a9f6033d19cfccbef484bfa1ccb2 (PR #308, pinned to 47a82e3, which adds only the receipt and its write-up to bdafd6c); qualify:revisable-shot passed at bdafd6c on GitHub's Linux machine (docs/evidence/ultimate/MPR-103-take-revision-receipt.json), with a stand-in engine whose output does not follow its request and test patterns, so it proves the record and the flow and no model; it is not evidence of the founder host, whose sandbox starts no media worker; the 15 tests of tests/take-revision.test.ts passed on the founder host, with an engine double; main's CI passed |
 
 **Goal.** A person can open any take, get back the request that made it as an editable draft, change one field and generate a new take whose record says which take it came from and which fields changed. A revision is a new generation from changed inputs; it does not edit the pixels of the earlier take.
 
@@ -907,13 +908,13 @@ Parts that wait on something outside engineering:
 
 **Exact code areas affected**
 
-- Existing: `core/command/registry.ts`, `core/engines/generation.ts`, `core/takes.ts`, `tests/generation-service.test.ts`, `tests/parity.test.ts`, `docs/evidence/ultimate`
+- Existing: `core/command/registry.ts`, `core/engines/generation.ts`, `core/takes.ts`, `core/take-record.ts`, `core/shot-history.ts`, `tests/shot-history.test.ts`, `scripts/qualify-revisable-shot.mjs`, `docs/OPERATIONAL_CONTRACTS.md`, `docs/evidence/ultimate`
 - New files: `tests/take-revision.test.ts`, `docs/evidence/ultimate/MPR-103-take-revision.md`, `docs/evidence/ultimate/MPR-103-take-revision-receipt.json`
 - Interfaces:
   - New read command `yamakan.take.revisionDraft` (scope `project:read`, not a mutation, no receipt; available to agents as every read is). Strict input `{projectId, documentId, shotId, takeId}`.
   - Its output: `{base: {documentId, shotId, takeId, recordHash, storyContentHash}, draft, complete, startable, checks, reason}`. `draft` is `{recipeId | null, prompt | null, seed | null, width | null, height | null, durationFrames | null, firstFrameAssetId | null}` (the field names of `yamakan.generation.start`) or null. `complete` is true when the draft has every field a start requires. `startable` is true when `complete` and no check is `unavailable`. `checks` is at most 16 of `{field, state, message}` with `field` from `REVISION_FIELDS` or `route` and `state` one of `ok`, `changed`, `unavailable`, `unknown`. `reason` is null or one sentence saying why there is no draft.
   - The draft never carries `noUnconsentedPerson`: a person states it again for every run, as `core/engines/generation.ts` `start` requires.
-  - Checks against today's offer (and against the MPR-201 catalog once it exists; the output shape does not change): `route` (`unavailable` with the engine's own reason when none is configured; the draft is still returned); `recipe` (`unavailable` 'This model is no longer offered here.' when the recipe id is gone; `changed` 'The model's run script changed since this take; the same request may give a different result.' when the id is offered with another hash); `model` (`changed` when the manifest hash differs); `width`, `height`, `durationFrames` (`changed` with the model's present size and length when they differ); `firstFrame` (`unavailable` 'The still this take started from is no longer in the project.' when the pinned asset is gone or has another hash); `seed` (`unknown` 'This take has no recorded seed; a repeat will differ.' when null); `prompt` (`unknown` when the record holds only a hash and no source for the text is found).
+  - Checks against today's offer (and against the MPR-201 catalog once it exists; the output shape does not change): `route` (`unavailable` with the engine's own reason when none is configured, and 'No model is offered here.' when one is and offers none; the draft is still returned); `recipe` (`unavailable` 'This model is no longer offered here.' when the recipe id is gone; `unavailable` 'This model no longer makes a video from a request of this kind.' when it is offered for another operation; `changed` 'The model's run script changed since this take; the same request may give a different result.' when the id is offered with another hash); `model` (`changed` when the manifest hash differs); `width`, `height`, `durationFrames` (`changed` with the model's present size and length when they differ); `firstFrame` (`unavailable` 'The still this take started from is no longer in the project.' when the pinned asset is gone or has another hash); `seed` (`unknown` 'This take has no recorded seed; a repeat may differ.' (a Kaggle run sent without a seed uses one fixed in its script's brief) when null); `prompt` (`unknown` when the record holds only a hash and no source for the text is found).
   - Draft sources by record `origin`: `generation` gives a full draft; `declared` (a receipt file) gives the fields it has with `complete: false`; `render` gives `draft: null` and reason 'This take was rendered with Blender; revise it from its shot direction.'; a take with no record gives `draft: null` and reason 'This take has no generation record.'. When the record holds `promptHash` without text (FD-2 declined), the prompt is taken from the ledger row named by `source.generationId` if that row belongs to this project and its prompt hashes to `promptHash`; otherwise `prompt` is null.
   - `yamakan.generation.start` (scope `project:write`, mutation, human-only, refuses a request id: unchanged) gains optional `derivedFromTakeId` (an id) and, only beside it, optional `revisionNote` (1 to 500 characters; OA-5, accepted on 2026-11-23). It is valid only together with `target`. Refusals before anything is recorded or sent: VALIDATION 'A revision names the shot it is for.' (no `target`); VALIDATION 'A revision is made for the shot its base take belongs to.' (the take is not in the target shot); VALIDATION 'The base take has no generation request to revise from.' (no record, or a record that is not `request.kind: generation`).
   - Ledger row `GenerationRecord` gains optional `derivedFrom {takeId, recordHash, revisionNote?}` (written at start, so the base is fixed even if the take is removed later). At import, MPR-102's append passes it to `buildGenerationRecord`, which writes `derivedFromTakeId`, `derivedFromRecordHash` and `changedFields`, and the record's `revisionNote` (OA-5, accepted on 2026-11-23) when the person gave one.
@@ -935,7 +936,7 @@ Parts that wait on something outside engineering:
 2. Registry: add a helper that returns today's offer (`route` and recipe facts) without constructing an engine or running the Kaggle CLI: `ctx.generation?.recipes` in tests, `offeredKaggleRecipes()` when `ctx.kaggle` is set, the pinned ComfyUI recipes when that route is available, otherwise no route with the reason `generationOf` gives.
 3. Registry: add `yamakan.take.revisionDraft`. Read the story head through the upgrading reader, find the shot and take (NOT_FOUND 'This project has no such story.', 'The story has no such shot.', 'The shot has no such take.'), read the record by `recordHash`, build the draft by `origin`, then run the checks. Keep every message one bounded sentence without a host path.
 4. Registry and service: add `derivedFromTakeId` to the start input with its three refusals; resolve the base take's `recordHash` at start and store `derivedFrom` on the ledger row.
-5. `core/takes.ts` `appendGeneratedTake` (MPR-102): when the row has `derivedFrom`, read the base record by hash and pass it to `buildGenerationRecord` so the new record carries `derivedFromTakeId`, `derivedFromRecordHash` and `changedFields`. If the base record cannot be read (it should always be present: records are not pruned), write the two base fields and an empty `changedFields`, and return the take with a notice rather than failing the import.
+5. `core/takes.ts` `appendGeneratedTake` (MPR-102): when the row has `derivedFrom`, read the base record by hash and pass it to `buildGenerationRecord` so the new record carries `derivedFromTakeId`, `derivedFromRecordHash` and `changedFields`. If the base record cannot be read (it should always be present: records are not pruned), write the two base fields and an empty `changedFields`, and return the take with a notice rather than failing the import. A record saved by hand from such a run is refused, since a save has no answer that could say it.
 6. Hand-off, with no code change to the replace path: after the import the new take is in the shot's stack; `yamakan.take.compare` shows it beside the current one; `yamakan.take.proposeReplace` then `yamakan.take.apply` place it as one undo step; `yamakan.project.undo` returns the old take. Cover this sequence in a test so a later change to either side is caught.
 7. Add the tests of `testPlan`, extend `scripts/qualify-revisable-shot.mjs` (added by MPR-101) and write the evidence files.
 
@@ -952,8 +953,8 @@ Parts that wait on something outside engineering:
 **Test plan**
 
 - New `tests/take-revision.test.ts`: 'a draft returns the request a take was made from'; 'a changed seed is the only changed field'; 'an unchanged request is an exact repeat'; 'each field of REVISION_FIELDS is detected on its own' (table-driven over `diffRequests`); 'a retired recipe and a changed recipe are told apart'; 'a declared take gives a partial draft, a rendered take gives none'; 'a hash-only record takes its prompt from the ledger row or says it cannot'; 'a revision is compared, proposed, applied and undone as one step'.
-- Extend `tests/generation-service.test.ts`: `derivedFromTakeId` without `target`, with a take of another shot, and with a base that has no generation request are each refused with no ledger row and no engine call.
-- `tests/parity.test.ts` holds with `yamakan.take.revisionDraft` on both transports and the wider start input.
+- In `tests/take-revision.test.ts` too: `derivedFromTakeId` without `target`, with a take of another shot, and with a base that has no generation request are each refused with no ledger row and no engine call.
+- `tests/parity.test.ts` holds with the new command and the wider start input (it compares every command's schema on both transports); the qualification makes the call itself over REST and over MCP.
 - `npm test`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run provenance:check`, `npm run brand:check`.
 
 **Negative tests**
@@ -1004,7 +1005,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
@@ -1252,13 +1253,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B, C |
 | Dependencies | MPR-101 |
 | Founder decisions | none |
 | Earlier plan items | stream:kaggle-create |
+| Evidence | Merged as 277698477a12ab592fabe84a4313c76838461212 (PR #302, pinned to fc34f10); qualify:story-brief passed at 00d9a07 in real Edge on the founder host (docs/evidence/ultimate/MPR-106-story-brief-receipt.json) and at fc34f10 on GitHub's Linux machine; no product code changes after 00d9a07: what comes is the receipt and the write-up, what main brought from PR #304 (documents, one test, one line of another check) and a wait in this check; main's CI passed; the reviewer accepted the intent's direction field; the Arabic is unreviewed |
 
 **Goal.** What a film is meant to be (its brief), what each scene says (its script) and what each shot is meant to show (its intent) are stored in the project's story document, inside its 256 KiB limit, so they survive a new browser, a backup and a restore, and an agent can read them. Text that today lives only in one browser is brought in once, by the person's own action.
 
@@ -1630,13 +1632,14 @@ One catalog, honest capability cells, preflight, default-deny gates, typed failu
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
 | Dependencies | MPR-201 |
 | Founder decisions | none |
 | Earlier plan items | YU-042, stream:kaggle-create, stream:comfyui |
+| Evidence | Merged as 245b0796b4ccda66272a74ecedf4d32d685c73b7 (PR #303, pinned to aa9edd7, which adds only the receipt to 003755e); qualify:capability-report passed at 003755e on the founder host (docs/evidence/model-system/capability-report.json), with a stand-in for the Kaggle CLI that was never started; main's CI passed; npm run test:studio passed at 245b079 on the founder host after the merge (its 5 node tests and 1,975 Studio tests); the Arabic messages are unreviewed and no page shows them |
 
 **Goal.** One command tells a person or an agent what each route can do with each model for each operation. Every cell says supported, unsupported or unverified, with where the answer comes from, its date, its limits and a reason code. The list of models a person can start is a projection of the same report, so the two cannot disagree.
 
@@ -2164,7 +2167,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | QUALIFICATION_READY |
+| State | REVIEW_PENDING |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
@@ -2187,8 +2190,8 @@ Parts that wait on something outside engineering:
 
 **Exact code areas affected**
 
-- Existing: `core/engines/fake.ts`, `docs/MODEL_CAPABILITIES.md`, `tests/engines.test.ts`, `tests/comfyui-engine.test.ts`, `tests/kaggle-engine.test.ts`, `tests/generation-durable.test.ts`, `package.json`
-- New files: `docs/ENGINE_OPERATIONS.md`, `docs/MODEL_INTAKE.md`, `tests/fixtures/engine-conformance.ts`, `tests/engine-conformance.test.ts`, `tests/model-intake.test.ts`, `scripts/qualify-engine-conformance.mjs`, `docs/evidence/model-system/engine-conformance.md`
+- Existing: `core/engines/fake.ts`, `core/engines/comfyui.ts`, `core/engines/v1-bridge.ts`, `docs/MODEL_CAPABILITIES.md`, `tests/engines.test.ts`, `tests/comfyui-engine.test.ts`, `tests/kaggle-engine.test.ts`, `tests/generation-durable.test.ts`, `package.json`
+- New files: `docs/ENGINE_OPERATIONS.md`, `docs/MODEL_INTAKE.md`, `tests/fixtures/engine-conformance.ts`, `tests/fixtures/engine-suites.ts`, `tests/engine-conformance.test.ts`, `tests/model-intake.test.ts`, `scripts/qualify-engine-conformance.mjs`, `docs/evidence/model-system/engine-conformance.md`
 - Interfaces:
   - New `docs/ENGINE_OPERATIONS.md`, section 'Operations': one second-level heading per operation, the heading text being the exact name in the `Operation` enum, in enum order. Each section states the purpose, the prompt rule, the inputs (role, count, media type), the output kind and a list headed 'never approximated'. The content is taken from `EngineRequestV2Schema`, not invented: `textToVideo` has a required prompt (1 to 4000 characters), no inputs but up to four `reference` pictures (PNG or JPEG; OA-15, MPR-202) and a video output; `imageToVideo` has an optional prompt, `firstFrame` alone or `firstFrame` then `lastFrame` (each PNG or JPEG), then up to four `reference` pictures, and a video output; no engine honours a reference yet, and the section says so; `videoEdit` has a required prompt, a `source` as MP4 alone or with a `mask` as PNG, and a video output; `transcribe` has no prompt field, one `audio` input as WAV or MP4, and a transcript output with an optional language; `enhance` has no prompt field, one `source` as MP4 and a video output.
   - Section 'Common to every operation': `recipeId`, `recipeHash`, `modelManifestHash`, an optional `seed`, at most 32 named bounded `controls`, `attemptKey`, `leaseGeneration`, `deadlineMs` and `resourcePolicyHash`; a video output declares width and height (16 to 8192, even), the frame rate as a fraction, the length in ticks and whether it has audio.
@@ -2196,11 +2199,11 @@ Parts that wait on something outside engineering:
   - Section 'Adding an operation': five steps, and the operation is offered nowhere until the last is done. (1) A written definition in this document. (2) A strict branch in `EngineRequestV2Schema` and the name in `Operation`; `ENGINE_CONTRACT_V2` stays as it is only if no existing branch changes. (3) Support in `createFakeEngineV2` and a passing run of the kit for it. (4) At least one real adapter that claims it in `capabilities()` and passes the kit. (5) Qualification evidence under `docs/evidence/` and a catalog offer (MPR-201) that passed the intake checklist. Section 'Proposed, not in the contract' lists the extra operations named in `docs/MODEL_CAPABILITIES.md` with the status PROPOSED.
   - `core/engines/fake.ts`: new export `createFakeWorld()` (executions, artifacts and the send count held outside the adapter, so two adapters over one world stand for before and after a restart) and new optional fields on `FakeEngineV2Options`: `world`, `uncertainSubmit: 'landed' | 'neverLanded'`, `lostExecutions: boolean`, `corruptArtifact: boolean`, `cancelOutcome: 'stopped' | 'continuing'`. With none set the fake behaves exactly as on main; `spawned()` stays the count of real starts.
   - New test helper `tests/fixtures/engine-conformance.ts` (not matched by the `npm test` glob, not in a donor root): exports `CONFORMANCE_CHECKS` (the closed list of check ids below), the type `ConformanceHarness`, `runConformance(harness)` (answers one `{ check, ok, detail }` per check) and `engineConformance(name, harness)`, which registers one `node:test` test per check named `<name>: <check id>`.
-  - `ConformanceHarness`: `adapter()` (a new adapter over the same stand-in world on every call), `request(overrides)` (a valid request for an operation the adapter claims), `refusedRequests()` (requests the adapter must refuse, each with its expected `RefusalReason`; at least one, and for an adapter whose model ignores a role the schema allows, such as `lastFrame` on the Kaggle route, a request with that role), `context()` (the second argument of `submit`), `sends()` (real sends or starts so far), `remote: 'none' | 'stoppable' | 'unstoppable'`, `arrange` (functions `succeeded`, `uncertainLanded`, `uncertainNeverLanded`, `lost`, `corruptArtifact`, each putting the stand-in in that state), `unavailable` (scenario name to reason, for a state the stand-in cannot be put in) and an optional `service` (`store` and `ledger`) for the service-layer checks.
+  - `ConformanceHarness`: `reset()` (forgets everything, before each check and each state in one), `adapter()` (a new adapter over the same stand-in world on every call), `request(overrides)` (a valid request for an operation the adapter claims), `refusedRequests()` (requests the adapter must refuse, each with its expected `RefusalReason`; at least one, and for an adapter whose model ignores a role the schema allows, such as `lastFrame` on the Kaggle route, a request with that role), `context()` (the second argument of `submit`), `sends()` (sends or starts since the last reset, as the stand-in counts them), `remote: 'none' | 'stoppable' | 'unstoppable'`, `arrange` (functions `succeeded`, `running`, `failed`, `uncertainLanded`, `uncertainNeverLanded`, `lost`, `corruptArtifact`, each putting the stand-in in that state), `unavailable` (scenario name to reason, for a state the stand-in cannot be put in) and an optional `service` (`store` and `ledger`) for the service-layer checks.
   - Adapter-layer checks: `refusal-sends-nothing` (every refused request answers its `RefusalReason` and `sends()` does not move); `status-parses` (every status parses with `ExecutionStatusSchema`); `ref-usable-at-once` (the `executionRef` from `submit` is accepted by `status`, `reconcile`, `requestCancel` and `enumerateArtifacts` before any polling); `same-attempt-never-sent-twice` (a second `submit` with the same `attemptKey` and `leaseGeneration` answers the same ref or refuses, and `sends()` stays 1); `uncertain-sends-nothing-more` (after an uncertain submit, `status` and `reconcile` send nothing, a run that landed can be followed to its end, and a run that never landed is never reported `succeeded`); `restart-reconciles-without-sending` (a new adapter over the same world answers `reconcile` for a known ref and sends nothing); `unknown-ref-answered-honestly` (a ref never issued is `unknown` or a thrown `NOT_FOUND`, never `succeeded`).
-  - Adapter-layer checks, continued: `cancel-never-overclaims` (the answer parses with `CancellationSchema`; under `remote: 'unstoppable'` it never says `remoteOutcome: 'stopped'` or `remoteAcknowledged: true`; under `remote: 'none'` `billingOutcome` is `notApplicable` or absent); `artifact-verified` (every artifact of a succeeded run passes `readArtifactVerified`); `corrupt-artifact-rejected` (`readArtifactVerified` rejects when the bytes do not match the declared hash or length); `diagnostic-bounded` (every `diagnostic` and `notice` seen is at most `ENGINE_V2_LIMITS.diagnosticChars` long and holds no absolute path of this computer); `location-declared` (the adapter has `location` exactly when `remote` is not `none`).
+  - Adapter-layer checks, continued: `cancel-never-overclaims` (the answer parses with `CancellationSchema`; under `remote: 'unstoppable'` it never says `remoteOutcome: 'stopped'` or `remoteAcknowledged: true`; under `remote: 'none'` `billingOutcome` is `notApplicable` or absent, and nothing was stopped elsewhere; nothing that goes on, had ended or was not there is said to have been stopped, nor, but for one that had ended, refunded); `artifact-verified` (every artifact of a succeeded run passes `readArtifactVerified`); `corrupt-artifact-rejected` (`readArtifactVerified` rejects when the bytes do not match the declared hash or length); `diagnostic-bounded` (every `diagnostic` and `notice` seen is at most `ENGINE_V2_LIMITS.diagnosticChars` long and holds no absolute path of this computer); `location-declared` (the adapter has `location` exactly when `remote` is not `none`). As the acceptance and MPR-207 ask, also: `unlisted-role-refused`, `limits-held` and `ended-failure-has-class`; and `states-told-as-they-are` (a run in each state the stand-in was put in is told as that, before a restart and after it). In every check nothing is sent after the run was.
   - Service-layer checks, run with `createGenerationService` over a recording wrapper of `memoryLedger()` when the harness gives `service`: `row-before-send` (`begin` is recorded before `sends()` first rises); `ref-before-poll` (the row holds `executionRef` before the first `adapter.status` call); `uncertain-row-not-resent` (the row stays in phase `sending`, and a new service with a new adapter on the same ledger lists and reads it without a send); `continuing-stop-blocks-import` (after a stop whose remote goes on, the row is `cancelled`, carries the not-stopped note, and the import behind `yamakan.generation.import` is refused); `corrupt-result-not-imported` (the import is refused with `VALIDATION` and no asset joins the store).
-  - `tests/engine-conformance.test.ts` holds `ADAPTER_SUITES`, the closed map from each adapter file under `core/engines/` to the test file that calls `engineConformance` for it, and `PENDING`, the adapter files not yet registered (three after part a, none after part b).
+  - `tests/fixtures/engine-suites.ts`, read by the tests and the check script, holds `ADAPTER_SUITES`, the closed map from each adapter file under `core/engines/` to what makes it, the test files that call `engineConformance` for it and the names they call it by, `NOT_ADAPTERS`, the files that name the contract and make none, and `PENDING`, the adapter files not yet registered (three after part a, none after part b).
   - New `docs/MODEL_INTAKE.md`: a checklist whose items each start with an id in backticks, mirrored by `INTAKE_ITEMS` in `tests/model-intake.test.ts`. Machine-checked against `MODEL_CATALOG` (MPR-201): `identity` (full identity tuple with an exact revision), `licence` (name, source URL, date read; the gate itself is MPR-208), `route`, `operation` (one of the five, with the roles honoured), `limits`, `evidence` (at least one existing path under `docs/evidence/` for an offer whose lifecycle is `qualified` or `offered`), `conformance` (the route's adapter file is in `ADAPTER_SUITES`, or in `PENDING` until part b lands). Written items, answered in the offer's evidence file: `egress` (what leaves this computer and to which host), `spend` (money or quota time a run can use, or none), `download` (what must be put on this computer and its size, or none), `withdrawal` (how the offer is retired and what happens to runs already made).
   - No new command, scope, error code, table, schema step or contract id. `EngineAdapterV2`, `EngineRequestV2Schema` and `core/engines/contract-v2.ts` are not changed.
 
@@ -2223,7 +2226,7 @@ Parts that wait on something outside engineering:
 5. Write `docs/MODEL_INTAKE.md` and `tests/model-intake.test.ts`. For the two routes that exist, write the answers to the written items (`egress`, `spend`, `download`, `withdrawal`) under a heading 'Intake' in this card's evidence file.
 6. Add `scripts/qualify-engine-conformance.mjs` and the npm script `qualify:engine-conformance` in `package.json`.
 7. Part b. Register the bridge in `tests/engines.test.ts`, ComfyUI in `tests/comfyui-engine.test.ts`, and Kaggle in `tests/kaggle-engine.test.ts` (adapter layer) and `tests/generation-durable.test.ts` (service layer), each with the stand-in its file already has. `sends()` is the stand-in's own count of pushes or prompt submissions. Give a reason in `unavailable` for every state a stand-in cannot be put in.
-8. If a real adapter fails a check, fix the adapter in this card when the change stays inside that adapter and add it to this card's changed files in the evidence; otherwise stop, record the failing check in the evidence file and report it. Never weaken a check or move it to `unavailable` to pass. Empty `PENDING`.
+8. If a real adapter fails a check, fix the adapter in this card when the change stays inside that adapter and add it to this card's changed files in the evidence; otherwise stop, record the failing check in the evidence file and report it. Never weaken a check or move it to `unavailable` to pass. Empty `PENDING`. (Found: the bridge cannot follow a landed run whose answer was lost, since a version 1 engine names a job only in its answer. It stays in `PENDING` until the version 1 contract takes a name or the bridge is retired, which is not decided.)
 9. Run `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run provenance:check`, `npm test` and `npm run qualify:engine-conformance`; commit the evidence file.
 
 **Expected behaviour**
@@ -2235,7 +2238,7 @@ Parts that wait on something outside engineering:
 - A file under `core/engines/` that implements `EngineAdapterV2` and is not in `ADAPTER_SUITES` makes `npm test` fail.
 - Every catalog offer whose lifecycle is `qualified` or `offered` passes the machine-checked intake items, and the ids in `docs/MODEL_INTAKE.md` equal `INTAKE_ITEMS`.
 - No operation outside the five is accepted by `parseRequestV2` or offered by any command when this card merges; MPR-220 and MPR-221 each add one operation later by the five steps.
-- The kit checks, for every adapter, that an input role its capabilities do not list is refused before anything is sent, and that each numeric limit is accepted at its bound and refused at the bound plus one.
+- The kit checks, for every adapter, that an input role its capabilities do not list is refused before anything is sent, and that each numeric limit is accepted at its bound and refused at the bound plus one (a size is even, so plus two; of a control, the least size and the least deadline, only the refusal past the contract's range is asked, since what lies inside it is the engine's own).
 
 **Test plan**
 
@@ -3837,7 +3840,7 @@ A planner and proposer over typed commands: a registered production pipeline, a 
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 2 |
 | Track | 3 |
 | Pillars | A, C |
@@ -4216,7 +4219,7 @@ Reference management that says what a route will receive, one camera and render 
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 4 |
 | Track | 4 |
 | Pillars | D |
