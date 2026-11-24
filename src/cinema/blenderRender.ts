@@ -32,6 +32,14 @@ export const BLENDER_LIGHTS = [
 // The compositor's finish (core/blender/scene.ts FINISHES); "none" is no compositing at all.
 export const BLENDER_FINISHES = ["none", "glow", "vignette", "film"] as const;
 
+// Where the camera looks from: "usual" is the preview's own direction, "aerial" high above,
+// looking down (core/blender/scene.ts AERIAL_DIRECTION).
+export const BLENDER_VIEWS = ["usual", "aerial"] as const;
+
+// The surface: "plain" as before, or "detail", a wide ground with fine detail on it and on the
+// boxes (core/blender/scene.ts's surface).
+export const BLENDER_SURFACES = ["plain", "detail"] as const;
+
 export type BlenderChoices = {
   size: BlenderSize;
   seconds: (typeof BLENDER_SECONDS)[number];
@@ -40,6 +48,8 @@ export type BlenderChoices = {
   move: (typeof BLENDER_MOVES)[number];
   light: (typeof BLENDER_LIGHTS)[number];
   finish: (typeof BLENDER_FINISHES)[number];
+  view: (typeof BLENDER_VIEWS)[number];
+  surface: (typeof BLENDER_SURFACES)[number];
 };
 
 export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
@@ -51,6 +61,8 @@ export const DEFAULT_BLENDER_CHOICES: BlenderChoices = {
   move: "orbit",
   light: "neutral",
   finish: "none",
+  view: "usual",
+  surface: "plain",
 };
 
 /** The settings the service is sent: never more than 120 frames (4 s at 30 fps). */
@@ -66,6 +78,8 @@ export function blenderSettings(choices: BlenderChoices) {
     ...CAMERA_MOVES[choices.move],
     ...(choices.light === "neutral" ? {} : { lighting: choices.light }),
     ...(choices.finish === "none" ? {} : { finish: choices.finish }),
+    ...(choices.view === "usual" ? {} : { view: choices.view }),
+    ...(choices.surface === "plain" ? {} : { surface: choices.surface }),
   };
 }
 

@@ -8,6 +8,8 @@ import {
   BLENDER_QUALITY,
   BLENDER_SECONDS,
   BLENDER_SIZES,
+  BLENDER_SURFACES,
+  BLENDER_VIEWS,
   DEFAULT_BLENDER_CHOICES,
   blenderSettings,
   blenderView,
@@ -325,6 +327,40 @@ export function BlenderRender({
             {BLENDER_FINISHES.map((f) => (
               <option key={f} value={f}>
                 {t(`blender.finish.${f}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("blender.view")}{" "}
+          <select
+            data-testid="cinema-blender-view"
+            value={choices.view}
+            disabled={working}
+            onChange={(e) =>
+              choose("view", e.target.value as BlenderChoices["view"])
+            }
+          >
+            {BLENDER_VIEWS.map((v) => (
+              <option key={v} value={v}>
+                {t(`blender.view.${v}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("blender.surface")}{" "}
+          <select
+            data-testid="cinema-blender-surface"
+            value={choices.surface}
+            disabled={working}
+            onChange={(e) =>
+              choose("surface", e.target.value as BlenderChoices["surface"])
+            }
+          >
+            {BLENDER_SURFACES.map((s) => (
+              <option key={s} value={s}>
+                {t(`blender.surface.${s}`)}
               </option>
             ))}
           </select>

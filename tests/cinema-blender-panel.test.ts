@@ -8,6 +8,8 @@ import {
   BLENDER_QUALITY,
   BLENDER_SECONDS,
   BLENDER_SIZES,
+  BLENDER_SURFACES,
+  BLENDER_VIEWS,
   DEFAULT_BLENDER_CHOICES,
   blenderSettings,
   blenderView,
@@ -31,19 +33,23 @@ test("every choice the Cinema page offers is settings the service accepts", () =
         ) as BlenderChoices["quality"][])
           for (const move of BLENDER_MOVES)
             for (const light of BLENDER_LIGHTS)
-              for (const finish of BLENDER_FINISHES) {
-                const settings = blenderSettings({
-                  size,
-                  seconds,
-                  fps,
-                  quality,
-                  move,
-                  light,
-                  finish,
-                });
-                assert.ok(settings.frames <= 120);
-                BlenderRenderSettingsSchema.parse(settings);
-              }
+              for (const finish of BLENDER_FINISHES)
+                for (const view of BLENDER_VIEWS)
+                  for (const surface of BLENDER_SURFACES) {
+                    const settings = blenderSettings({
+                      size,
+                      seconds,
+                      fps,
+                      quality,
+                      move,
+                      light,
+                      finish,
+                      view,
+                      surface,
+                    });
+                    assert.ok(settings.frames <= 120);
+                    BlenderRenderSettingsSchema.parse(settings);
+                  }
 });
 
 test("the default render is the small, quick one, the orbit under the neutral light it always was", () => {
@@ -188,4 +194,51 @@ test("a finish reaches the render as the compositor's settings; none is no compo
   });
   for (const finish of ["glow", "vignette", "film"] as const)
     assert.deepEqual(scene(finish).finish, FINISHES[finish]);
+});
+
+test("the view and the surface reach the render; the usual view and the plain surface are as before", () => {
+  const scene = (choices: Partial<BlenderChoices>) =>
+    blenderSceneFromCinema(
+      planCinemaShot({
+        shotId: "2c3d4e5f-6071-4829-9abc-1d2e3f405162",
+        direction: {},
+        seconds: 1,
+        fps: 30,
+      }).scene,
+      blenderSettings({ ...DEFAULT_BLENDER_CHOICES, ...choices }),
+    );
+  const usual = blenderSettings(DEFAULT_BLENDER_CHOICES);
+  assert.equal("view" in usual, false);
+  assert.equal("surface" in usual, false);
+  assert.equal(
+    blenderSettings({ ...DEFAULT_BLENDER_CHOICES, view: "aerial" }).view,
+    "aerial",
+  );
+  assert.equal(
+    blenderSettings({ ...DEFAULT_BLENDER_CHOICES, surface: "detail" }).surface,
+    "detail",
+  );
+  // The aerial camera stands far higher above its target, for the same distance, than the
+  // usual one.
+  const height = (s: ReturnType<typeof scene>) => {
+    const d = {
+      x: s.camera.position.x - s.camera.target.x,
+      y: s.camera.position.y - s.camera.target.y,
+      z: s.camera.position.z - s.camera.target.z,
+    };
+    return d.y / Math.hypot(d.x, d.y, d.z);
+  };
+  const plain = scene({});
+  const aerial = scene({ view: "aerial" });
+  assert.ok(height(aerial) > 0.9, `aerial rises ${height(aerial)}`);
+  assert.ok(height(plain) < 0.5, `usual rises ${height(plain)}`);
+  assert.equal(plain.surface, "plain");
+  assert.equal(scene({ surface: "detail" }).surface, "detail");
+  // Each offered value has its words in both languages.
+  for (const v of BLENDER_VIEWS)
+    for (const lang of ["en", "ar"] as const)
+      assert.ok(MESSAGES[lang][`blender.view.${v}`]);
+  for (const s of BLENDER_SURFACES)
+    for (const lang of ["en", "ar"] as const)
+      assert.ok(MESSAGES[lang][`blender.surface.${s}`]);
 });

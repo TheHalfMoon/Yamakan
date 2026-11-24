@@ -122,20 +122,32 @@ const percent = async (page) => {
   return Number(await bar.getAttribute("value"));
 };
 // Until the render has gone further than `past` percent, or finished.
-const waitProgress = (page, past = 0) =>
-  page.waitForFunction(
+// Waits for progress past `past` (or the render done). A failed render ends the wait at once,
+// with the page's own words, rather than after the timeout.
+const waitProgress = async (page, past = 0) => {
+  await page.waitForFunction(
     (p) =>
       Number(
         document
           .querySelector('[data-testid="cinema-blender-progress"]')
           ?.getAttribute("value") ?? -1,
       ) > p ||
-      document
-        .querySelector('[data-testid="cinema-blender-state"]')
-        ?.getAttribute("data-state") === "done",
+      ["done", "failed"].includes(
+        document
+          .querySelector('[data-testid="cinema-blender-state"]')
+          ?.getAttribute("data-state"),
+      ),
     past,
     { timeout: 300000 },
   );
+  const state = await page
+    .getByTestId("cinema-blender-state")
+    .getAttribute("data-state");
+  if (state === "failed")
+    throw new Error(
+      `the render failed: ${await page.getByTestId("cinema-blender").textContent()}`,
+    );
+};
 
 let browser;
 const receipt = {
@@ -242,10 +254,20 @@ try {
 
   // A full render, with its progress seen as it runs. Midway, another project is opened and
   // this one opened again: its panel follows the same render, and the editor is not reloaded
-  // when it finishes. It is a push under the studio light with the film finish, chosen on the panel.
+  // when it finishes. It is a push under the studio light with the film finish, seen from the
+  // aerial view over the detailed surface, all chosen on the panel.
   await page.getByTestId("cinema-blender-move").selectOption("push");
   await page.getByTestId("cinema-blender-light").selectOption("studio");
   await page.getByTestId("cinema-blender-finish").selectOption("film");
+  await page.getByTestId("cinema-blender-view").selectOption("aerial");
+  await page.getByTestId("cinema-blender-surface").selectOption("detail");
+  // The settings the page sends the service, as sent.
+  const sent = [];
+  const listen = (request) => {
+    const body = request.postData() ?? "";
+    if (body.includes("yamakan.blender.render")) sent.push(body);
+  };
+  page.on("request", listen);
   await page.getByTestId("cinema-blender-render").click();
   const seen = new Set();
   const started = Date.now();
@@ -277,6 +299,25 @@ try {
     await page.getByTestId("cinema-blender-finish").inputValue(),
     "film",
   );
+  assert.equal(
+    await page.getByTestId("cinema-blender-view").inputValue(),
+    "aerial",
+  );
+  assert.equal(
+    await page.getByTestId("cinema-blender-surface").inputValue(),
+    "detail",
+  );
+  page.off("request", listen);
+  assert.equal(sent.length, 1, `render requests: ${sent.length}`);
+  const body = JSON.parse(sent[0]);
+  assert.equal(body.operation, "yamakan.blender.render");
+  const settings = body.parameters.settings;
+  assert.equal(settings.view, "aerial");
+  assert.equal(settings.surface, "detail");
+  assert.equal(settings.finish, "film");
+  assert.equal(settings.lighting, "studio");
+  assert.ok(settings.dolly > 0, "the push moves the camera in");
+  assert.equal(body.parameters.plate, undefined);
   assert.ok(
     ["working", "done"].includes(
       await attr(page, "cinema-blender-state", "data-state"),
