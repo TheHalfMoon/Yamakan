@@ -1226,6 +1226,7 @@ footer {
 .shot-card-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
   gap: 0.75rem;
   margin: 0;
   padding: 0;
@@ -1279,5 +1280,16 @@ footer {
   min-inline-size: 0;
 }
 .shot-attempts ol {
-  padding-inline-start: 1.25rem;
+  margin-block: 0.5rem;
+  margin-inline: 0;
+  padding: 0;
+  list-style: none;
+}
+.shot-attempts li {
+  padding-block: 0.5rem;
+  border-block-start: 1px solid currentColor;
+}
+.shot-card-actions,
+.shot-card-actions + div {
+  margin-block-start: 0.5rem;
 }

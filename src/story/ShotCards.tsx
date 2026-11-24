@@ -151,8 +151,8 @@ const Card = memo(
         data-shot={card.shotId}
         aria-labelledby={headingId}
       >
-        <h5 id={headingId} data-testid="shot-card-name" dir="auto">
-          {card.name}
+        <h5 id={headingId} data-testid="shot-card-name">
+          <bdi>{card.name}</bdi>
         </h5>
         <p data-testid="shot-card-duration">
           {t("shot.card.duration", {
