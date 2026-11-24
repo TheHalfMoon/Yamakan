@@ -1,5 +1,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { fork } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import {
@@ -476,6 +477,41 @@ test("a version 18 database gains the approval tables, empty, and keeps every ro
   ])
     assert.throws(() => write.exec(sql), /UNIQUE/, sql);
   write.close();
+});
+
+// OA-22: each step as it landed, by its text's SHA-256, in order. A step that has landed is never
+// changed: a workspace that already took it would differ from one that takes it now. A new step
+// adds one line here; a line that is here is not changed to make this pass.
+const LANDED_STEPS = [
+  "c80c78ec629f53ecbd32ae21cbeaff95fe0f0291f0031344903fce2d4f00129e",
+  "ed139eb77bb3dcf6440f8169364f68985a1afdefa9ad022185cd32cba6ec3055",
+  "5aed7c060e55ca0422e754708c1531b38ea6a62bcbf2b434f9440492c4d9df0c",
+  "d54a498a5e08c2b9ab96baa2b19a114f29d100dbb69e65a4d7b4400de6f3d05a",
+  "5f52278755dfcf55b544b2c0b1e0ee4028c288098286dea06b2186572d2f5211",
+  "30cd27ac8d586355939d2dd7b2bc7c9cd8792749bc9ed0d3cbcf1006aaac1fda",
+  "8aee51958749f82ebfe281cd6008d3ceaa7a20e2e9add46ef0e0a86be77064ff",
+  "137d1ff780c5e06d9d010288fbb3de1a932d709f245084cf8505b248dd77e6d3",
+  "5aa9ef60f677496c35300f9674b8c9d69c3559b8475316ec76249079e55c906f",
+  "75626c1a1113dbb78e5f812186cf6d5c2ebf9d38f7136d949fd6ce7cf7ac5be6",
+  "ca8b56b828629f4c4447d6da811c5380d50c6ef633696938d3303a30ff6dfe2e",
+  "901718bf1d56247d4b26b54a21511e2c7ece95c9210c327902fea4f80fad8372",
+  "13d64f91c5fbc0c4739a59df22a0243c7682a43ce793ec8d76d6617d5bdf2d8b",
+  "89dd69eddb14165134480c5ad16bf59e945f0fd6c228cab840bc4b2f57aedcb5",
+  "a3be9bd5da23f58753ce11b927b8701e33df67ba4b7a331667dfb9170474fafa",
+  "0dc43bbaa687ea247511300eebc60f885706084ebca959ac0ecd7ad7f83d2a48",
+  "78b4ca38240778491833e91b7ca960530333b4d4072107a4d54bbdf35cfb39cf",
+  "9bec1d84d41450bf40718daf1dbbac97b90a722fc084683873735c214726a75d",
+  "1ae103451ada9d980d29ce7365fc4841cf7b44e71b4b797124887ef2951c5d1b",
+];
+
+test("each landed schema step is the text that landed", () => {
+  assert.equal(LANDED_STEPS.length, WORKSPACE_SCHEMA_VERSION);
+  assert.deepEqual(
+    WORKSPACE_SCHEMA_STEPS.map((step) =>
+      createHash("sha256").update(step).digest("hex"),
+    ),
+    LANDED_STEPS,
+  );
 });
 
 test("a database of every older version opens with the same approval tables", async () => {
