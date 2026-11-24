@@ -1,13 +1,13 @@
 {
   "task": "MPR-104",
   "part": "a",
-  "head": "2c220874b86f4422eea38cf62573f4b24f2c28f0",
+  "head": "01e2d930aea1f78de29fdbb79e2baa3fe2a882bb",
   "dirty": false,
   "host": {
     "platform": "win32",
     "githubImage": null,
-    "freeDiskBytes": 11152404480,
-    "freeMemoryBytes": 4030033920,
+    "freeDiskBytes": 11116376064,
+    "freeMemoryBytes": 3837992960,
     "onAcPower": true,
     "load": null,
     "need": "unmeasured"
@@ -39,8 +39,7 @@
     },
     {
       "name": "en: 200 cards of 8 takes are shown and no card asks for its own",
-      "shownMs": 248,
-      "takeLists": 2
+      "shownMs": 376
     },
     {
       "name": "ar: each shot is a card, with the take the cut shows marked"
@@ -65,11 +64,18 @@
     },
     {
       "name": "ar: 200 cards of 8 takes are shown and no card asks for its own",
-      "shownMs": 325,
-      "takeLists": 2
+      "shownMs": 313
     },
     {
       "name": "no external requests, no page errors, and nothing was started"
     }
+  ],
+  "screenshots": [
+    "cards-en.png",
+    "cards-en-375.png",
+    "applied-en.png",
+    "cards-ar.png",
+    "cards-ar-375.png",
+    "applied-ar.png"
   ]
 }
