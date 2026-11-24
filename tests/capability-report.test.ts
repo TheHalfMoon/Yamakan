@@ -1,5 +1,6 @@
 // MPR-202: what each route can do with each model. The commands are the real ones, on the real
 // catalog; the rules are tried on catalogs that today's is not.
+import "./fixtures/own-temp.ts";
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
