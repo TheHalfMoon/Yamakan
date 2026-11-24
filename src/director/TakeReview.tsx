@@ -43,6 +43,7 @@ export function TakeReview({
   unsaved,
   assetName,
   onApply,
+  focusShot,
 }: {
   projectId: string;
   revision: number | null;
@@ -52,6 +53,9 @@ export function TakeReview({
   unsaved: boolean;
   assetName: (assetId: string | null) => string | null;
   onApply: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
+  // A shot whose takes a person asked to review elsewhere, and which asking it was: its first
+  // take here that can be reviewed takes the focus, once its list is read.
+  focusShot?: { documentId: string; shotId: string; asked: number } | null;
 }) {
   const [rows, setRows] = useState<TakeRow[] | "unknown" | null>(null);
   const [proposal, setProposal] = useState<TakeProposal | null>(null);
@@ -65,6 +69,8 @@ export function TakeReview({
   // A proposal answer for an earlier request or revision is dropped.
   const request = useRef(0);
   const noticeShown = useRef<HTMLDivElement | null>(null);
+  const list = useRef<HTMLElement | null>(null);
+  const answered = useRef(0);
 
   const media = (side: TakeProposal["mappings"][number]["from"]) =>
     side.title !== null
@@ -136,6 +142,25 @@ export function TakeReview({
     if (notice) noticeShown.current?.focus();
   }, [notice]);
 
+  useEffect(() => {
+    if (!focusShot || rows === null || answered.current === focusShot.asked)
+      return;
+    answered.current = focusShot.asked;
+    const takes = [
+      ...(list.current?.querySelectorAll<HTMLElement>("li[data-shot]") ?? []),
+    ].filter(
+      (li) =>
+        li.dataset.shot === focusShot.shotId &&
+        li.dataset.document === focusShot.documentId,
+    );
+    const to =
+      takes.map((li) => li.querySelector("button")).find(Boolean) ??
+      takes[0] ??
+      list.current;
+    to?.focus();
+    to?.scrollIntoView({ block: "nearest" });
+  }, [focusShot, rows]);
+
   const review = async (row: TakeRow) => {
     const ticket = ++request.current;
     setReviewing(true);
@@ -180,7 +205,12 @@ export function TakeReview({
 
   if (rows === null) return null;
   return (
-    <section data-testid="take-review" aria-label={t("take.title")}>
+    <section
+      ref={list}
+      tabIndex={-1}
+      data-testid="take-review"
+      aria-label={t("take.title")}
+    >
       <h3>{t("take.title")}</h3>
       {rows === "unknown" ? (
         <p>{t("take.unknown")}</p>
@@ -189,6 +219,8 @@ export function TakeReview({
           {rows.map((row) => (
             <li
               key={`${row.documentId}:${row.shotId}:${row.takeId}`}
+              tabIndex={-1}
+              data-document={row.documentId}
               data-shot={row.shotId}
               data-take={row.takeId}
               data-current={String(row.current)}

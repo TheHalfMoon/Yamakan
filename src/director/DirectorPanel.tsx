@@ -250,6 +250,8 @@ type Props = {
   assetName?: (assetId: string | null) => string | null;
   applyTake?: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
   // Places a Director shot's approved render; absent where the page cannot.
+  // A shot whose takes a person asked to review from its card.
+  focusShot?: { documentId: string; shotId: string; asked: number } | null;
   cinemaShot?: CinemaShotHost;
 };
 
@@ -266,6 +268,7 @@ export function DirectorPanel({
   assetName = () => null,
   applyTake = async () => ({ kind: "busy" }),
   cinemaShot,
+  focusShot = null,
 }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState("idle");
@@ -341,6 +344,7 @@ export function DirectorPanel({
           unsaved={unsaved}
           assetName={assetName}
           onApply={applyTake}
+          focusShot={focusShot}
         />
       ) : null}
       {projectId && cinemaShot ? (
