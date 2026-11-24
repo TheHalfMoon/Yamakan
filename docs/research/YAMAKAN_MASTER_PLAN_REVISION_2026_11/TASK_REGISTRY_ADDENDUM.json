@@ -1170,7 +1170,8 @@
       "pillars": [
         "B"
       ],
-      "state": "REVIEW_PENDING",
+      "state": "VERIFIED",
+      "evidence": "Merged as 89c6e7014372a9f6033d19cfccbef484bfa1ccb2 (PR #308, pinned to 47a82e3, which adds only the receipt and its write-up to bdafd6c); qualify:revisable-shot passed at bdafd6c on GitHub's Linux machine (docs/evidence/ultimate/MPR-103-take-revision-receipt.json), with a stand-in engine whose output does not follow its request and test patterns, so it proves the record and the flow and no model; it is not evidence of the founder host, whose sandbox starts no media worker; the 15 tests of tests/take-revision.test.ts passed there; main's CI passed",
       "dependsOn": [
         "MPR-101",
         "MPR-102"
@@ -1297,7 +1298,7 @@
       "pillars": [
         "B"
       ],
-      "state": "WAITING_DEPENDENCIES",
+      "state": "QUALIFICATION_READY",
       "dependsOn": [
         "MPR-102",
         "MPR-103",
