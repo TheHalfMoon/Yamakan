@@ -26,6 +26,7 @@ import { preferProxies, proxiesPreferred, useEditProxies } from "./proxies.ts";
 import { ReferencePreview } from "./reference.tsx";
 import { CreateWorkspace } from "./create/CreateWorkspace.tsx";
 import { CREATE_STORY_TITLE } from "./create/create-story.ts";
+import { ShotCards } from "./story/ShotCards.tsx";
 import { StoryBrief } from "./story/StoryBrief.tsx";
 import {
   WorkspacePanel,
@@ -106,6 +107,14 @@ function App() {
   // Interface language: Arabic lays the page out right to left; the
   // timeline keeps left-to-right time.
   const [lang, setLang] = useState<Lang>(initialLang);
+  // The Director's part of the Story page, opened by a shot card that sends a person to its review.
+  const [directorOpen, setDirectorOpen] = useState(false);
+  const [reviewShot, setReviewShot] = useState<{
+    projectId: string;
+    documentId: string;
+    shotId: string;
+    asked: number;
+  } | null>(null);
   const t = (key: MessageKey, vars?: Record<string, string | number>) =>
     translate(lang, key, vars);
   // Applied before paint, so an Arabic page never shows left to right
@@ -1230,6 +1239,7 @@ function App() {
         assetName={(id) => p?.assets.find((x) => x.id === id)?.name ?? null}
         applyTake={applyTake}
         cinemaShot={p ? cinemaShotHost(p) : undefined}
+        focusShot={reviewShot}
       />
     </>
   );
@@ -2757,6 +2767,31 @@ function App() {
                   <section className="story">
                     <h2>{t("workspace.story")}</h2>
                     <p>{t("workspace.storyIntro")}</p>
+                    <ShotCards
+                      key={`cards-${p.id}`}
+                      projectId={p.id}
+                      revision={p.revision}
+                      host={{
+                        call: (operation, parameters) =>
+                          client.call(operation as never, parameters as never),
+                        t,
+                        lang,
+                        seconds: (value) => formatSeconds(lang, value),
+                        number: (value) => formatNumber(lang, value),
+                        moment: (ms) =>
+                          formatDate(lang, new Date(ms).toISOString()),
+                        assetName: (id) =>
+                          p.assets.find((x) => x.id === id)?.name ?? null,
+                        onReview: (at) => {
+                          setDirectorOpen(true);
+                          setReviewShot((held) => ({
+                            ...at,
+                            projectId: p.id,
+                            asked: (held?.asked ?? 0) + 1,
+                          }));
+                        },
+                      }}
+                    />
                     {scenesPanel(p)}
                     <StoryBrief
                       key={p.id}
@@ -2774,7 +2809,11 @@ function App() {
                   {cinemaPanel(workspace === "story")}
                   {/* Director's manual stages and their raw results are
                       for checking pipelines, kept out of the story flow. */}
-                  <details className="director">
+                  <details
+                    className="director"
+                    open={directorOpen}
+                    onToggle={(e) => setDirectorOpen(e.currentTarget.open)}
+                  >
                     <summary>{t("director.title")}</summary>
                     {directorPanel()}
                   </details>

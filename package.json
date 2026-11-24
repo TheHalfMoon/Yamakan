@@ -63,6 +63,7 @@
     "qualify:engine-conformance": "node scripts/qualify-engine-conformance.mjs",
     "qualify:revisable-shot": "node scripts/qualify-revisable-shot.mjs",
     "qualify:take-review": "node scripts/qualify-take-review.mjs",
+    "qualify:revise-shot-screens": "node scripts/qualify-revise-shot-screens.mjs",
     "qualify:story-brief": "node scripts/qualify-story-brief.mjs",
     "qualify:q11-jassub-eng": "node scripts/qualify-q11-jassub-eng.mjs",
     "qualify:bundle-r6": "node scripts/qualify-bundle-r6.mjs",

@@ -1221,3 +1221,75 @@ footer {
   border: 1px solid var(--panel-line);
   border-radius: 8px;
 }
+
+/* Shot cards (MPR-104): sides by reading direction only. */
+.shot-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shot-card {
+  min-inline-size: 0;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.shot-card h5 {
+  margin: 0;
+}
+.shot-take-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+  margin-inline: 0;
+  padding: 0;
+  list-style: none;
+}
+.shot-take {
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+.shot-take[aria-current="true"] {
+  border-width: 2px;
+  font-weight: 600;
+}
+.shot-take:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.shot-take-facts dl,
+.shot-attempts dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  margin-block: 0.25rem;
+}
+.shot-take-facts dd,
+.shot-attempts dd {
+  margin: 0;
+  min-inline-size: 0;
+}
+.shot-attempts ol {
+  margin-block: 0.5rem;
+  margin-inline: 0;
+  padding: 0;
+  list-style: none;
+}
+.shot-attempts li {
+  padding-block: 0.5rem;
+  border-block-start: 1px solid currentColor;
+}
+.shot-card-actions,
+.shot-card-actions + div {
+  margin-block-start: 0.5rem;
+}
