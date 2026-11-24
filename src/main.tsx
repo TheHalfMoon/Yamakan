@@ -110,6 +110,7 @@ function App() {
   // The Director's part of the Story page, opened by a shot card that sends a person to its review.
   const [directorOpen, setDirectorOpen] = useState(false);
   const [reviewShot, setReviewShot] = useState<{
+    projectId: string;
     documentId: string;
     shotId: string;
     asked: number;
@@ -2785,6 +2786,7 @@ function App() {
                           setDirectorOpen(true);
                           setReviewShot((held) => ({
                             ...at,
+                            projectId: p.id,
                             asked: (held?.asked ?? 0) + 1,
                           }));
                         },

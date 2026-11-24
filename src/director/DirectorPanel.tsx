@@ -249,9 +249,14 @@ type Props = {
   unsaved?: boolean;
   assetName?: (assetId: string | null) => string | null;
   applyTake?: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
-  // Places a Director shot's approved render; absent where the page cannot.
   // A shot whose takes a person asked to review from its card.
-  focusShot?: { documentId: string; shotId: string; asked: number } | null;
+  focusShot?: {
+    projectId: string;
+    documentId: string;
+    shotId: string;
+    asked: number;
+  } | null;
+  // Places a Director shot's approved render; absent where the page cannot.
   cinemaShot?: CinemaShotHost;
 };
 

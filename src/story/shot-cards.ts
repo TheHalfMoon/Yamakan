@@ -7,6 +7,11 @@ type Row = Record<string, unknown>;
 const text = (v: unknown) => (typeof v === "string" ? v : null);
 const count = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+// The last moment a date can hold.
+const moment = (v: unknown) => {
+  const ms = count(v);
+  return ms !== null && ms <= 8_640_000_000_000_000 ? ms : null;
+};
 
 export type CardTake = {
   takeId: string;
@@ -14,7 +19,8 @@ export type CardTake = {
   assetId: string | null;
   // Whether the timeline shows it.
   shown: boolean;
-  recordHash: string | null;
+  // Null: it has none. Undefined: a service older than the page does not say.
+  recordHash: string | null | undefined;
 };
 export type ShotCard = {
   documentId: string;
@@ -48,8 +54,10 @@ export function shotCards(takeList: unknown): ShotCard[] | null {
         kind: text(take.kind),
         assetId: text(take.assetId),
         shown: timeline?.currentTakeId === take.id,
-        // A service older than the page does not say.
-        recordHash: text(take.recordHash),
+        recordHash:
+          take.recordHash === null
+            ? null
+            : (text(take.recordHash) ?? undefined),
       });
     }
     cards.push({
@@ -140,7 +148,8 @@ const GAPS = [
   "earlier-replacements",
   "scan-limit",
 ] as const;
-type Gap = (typeof GAPS)[number];
+// "other": one this page has no words for, which is still one.
+export type Gap = (typeof GAPS)[number] | "other";
 
 export type Attempt = {
   seq: number;
@@ -148,6 +157,8 @@ export type Attempt = {
   kind: "generation" | "render";
   outcome: Outcome;
   sent: boolean;
+  // Whether something it made came in; null when the service does not say.
+  imported: boolean | null;
   startedAt: number | null;
   wallMs: number | null;
   quotaSeconds: number | null;
@@ -179,6 +190,10 @@ export function attemptsPage(value: unknown): Attempts | null {
   const answer = value as Row | null;
   const totals = answer?.totals as Row | null | undefined;
   if (!answer || !totals || !Array.isArray(answer.attempts)) return null;
+  // Without these, an incomplete history would look like a whole one.
+  const { next, gaps } = answer;
+  if (!Array.isArray(gaps) || (next !== null && count(next) === null))
+    return null;
   const attempts: Attempt[] = [];
   for (const a of answer.attempts as Row[]) {
     const seq = count(a?.seq);
@@ -196,7 +211,8 @@ export function attemptsPage(value: unknown): Attempts | null {
       kind: a.kind,
       outcome: a.outcome as Outcome,
       sent: a.sent,
-      startedAt: count(a.startedAt),
+      imported: typeof a.imported === "boolean" ? a.imported : null,
+      startedAt: moment(a.startedAt),
       wallMs: count(a.wallMs),
       quotaSeconds: count(a.quotaSeconds),
       takeId: text(a.takeId),
@@ -219,11 +235,12 @@ export function attemptsPage(value: unknown): Attempts | null {
   }
   return {
     attempts,
-    next: count(answer.next),
+    next: count(next),
     totals: known,
-    gaps: GAPS.filter(
-      (g) => Array.isArray(answer.gaps) && answer.gaps.includes(g),
-    ),
+    gaps: [
+      ...GAPS.filter((g) => gaps.includes(g)),
+      ...(gaps.some((g) => !GAPS.includes(g)) ? ["other" as const] : []),
+    ],
   };
 }
 
@@ -241,6 +258,21 @@ export const attemptKey = (a: Attempt): MessageKey =>
   a.outcome === "failed" && !a.sent
     ? "shot.attempt.refused"
     : `shot.attempt.${a.outcome}`;
+
+/** Which take of a card an attempt made: its number, or in words why there is none to name. */
+export function madeTake(
+  a: Attempt,
+  takes: readonly CardTake[],
+): { n: number } | MessageKey {
+  if (a.takeId !== null) {
+    if (!a.takeInShot) return "shot.take.gone";
+    const n = takes.findIndex((x) => x.takeId === a.takeId);
+    // The history was read after the card.
+    return n < 0 ? "shot.attempt.takeLater" : { n: n + 1 };
+  }
+  // What came in may have become a take that was taken out again since.
+  return a.imported === false ? "shot.attempt.noTake" : "shot.attempt.notKnown";
+}
 
 /** What an attempt used, never as nothing when it is not known. */
 export const usedKey = (known: number | null): MessageKey =>

@@ -8,6 +8,7 @@ import { focusIfLost } from "./focus.ts";
 import {
   attemptKey,
   attemptsPage,
+  madeTake,
   morePages,
   moveFocus,
   shotCards,
@@ -48,7 +49,9 @@ export function ShotCards({
   host: ShotCardsHost;
 }) {
   const { t } = host;
-  const [stories, setStories] = useState<ShotCard[][] | "unknown" | null>(null);
+  const [stories, setStories] = useState<ShotCard[][] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [reads, setReads] = useState(0);
   const held = useRef(host);
   held.current = host;
 
@@ -72,17 +75,21 @@ export function ShotCards({
         : ("unknown" as const);
     })()
       .then((next) => {
-        if (current) setStories(next);
+        if (!current) return;
+        setFailed(next === "unknown");
+        // What was read before stays, and is said to be old.
+        if (next !== "unknown") setStories(next);
       })
       .catch(() => {
-        if (current) setStories("unknown");
+        if (current) setFailed(true);
       });
     return () => {
       current = false;
     };
-  }, [projectId, revision]);
+  }, [projectId, revision, reads]);
 
-  if (stories === null) return null;
+  if (stories === null && !failed) return null;
+  const single = stories !== null && stories.length < 2;
   return (
     <section
       className="shot-cards"
@@ -90,9 +97,21 @@ export function ShotCards({
       aria-label={t("shot.card.title")}
     >
       <h3>{t("shot.card.title")}</h3>
-      {stories === "unknown" ? (
-        <p role="status">{t("shot.card.unknown")}</p>
-      ) : stories.every((cards) => !cards.length) ? (
+      <div role="status">
+        {failed ? (
+          <p>{t(stories === null ? "shot.card.unknown" : "shot.card.old")}</p>
+        ) : null}
+      </div>
+      {failed ? (
+        <button
+          type="button"
+          data-testid="shot-cards-again"
+          onClick={() => setReads((n) => n + 1)}
+        >
+          {t("shot.card.again")}
+        </button>
+      ) : null}
+      {stories === null ? null : stories.every((cards) => !cards.length) ? (
         <p>{t("shot.card.none")}</p>
       ) : (
         stories.map((cards, n) =>
@@ -102,7 +121,7 @@ export function ShotCards({
               role="group"
               aria-label={t("shot.card.story", { n: host.number(n + 1) })}
             >
-              {stories.length > 1 ? (
+              {!single ? (
                 <h4>{t("shot.card.story", { n: host.number(n + 1) })}</h4>
               ) : null}
               <ul className="shot-card-list">
@@ -115,6 +134,7 @@ export function ShotCards({
                     host={held}
                     t={t}
                     lang={host.lang}
+                    Heading={single ? "h4" : "h5"}
                   />
                 ))}
               </ul>
@@ -126,7 +146,7 @@ export function ShotCards({
   );
 }
 
-// Redrawn only when its own shot changes, so a long story stays quick.
+// Not drawn again by what is typed or selected elsewhere, only when the project moves on.
 const Card = memo(
   function Card({
     projectId,
@@ -134,6 +154,7 @@ const Card = memo(
     card,
     host,
     t,
+    Heading,
   }: {
     projectId: string;
     revision: number;
@@ -141,6 +162,7 @@ const Card = memo(
     host: { current: ShotCardsHost };
     t: Translate;
     lang: string;
+    Heading: "h4" | "h5";
   }) {
     const { seconds } = host.current;
     const headingId = useId();
@@ -151,9 +173,9 @@ const Card = memo(
         data-shot={card.shotId}
         aria-labelledby={headingId}
       >
-        <h5 id={headingId} data-testid="shot-card-name">
+        <Heading id={headingId} data-testid="shot-card-name">
           <bdi>{card.name}</bdi>
-        </h5>
+        </Heading>
         <p data-testid="shot-card-duration">
           {t("shot.card.duration", {
             seconds: seconds(card.durationTicks / FLICKS_PER_SECOND),
@@ -176,6 +198,7 @@ const Card = memo(
           <button
             type="button"
             data-testid="shot-review"
+            aria-describedby={headingId}
             onClick={() =>
               host.current.onReview({
                 documentId: card.documentId,
@@ -192,6 +215,7 @@ const Card = memo(
           card={card}
           host={host}
           t={t}
+          describedBy={headingId}
         />
       </li>
     );
@@ -200,7 +224,8 @@ const Card = memo(
     a.projectId === b.projectId &&
     a.revision === b.revision &&
     a.card === b.card &&
-    a.lang === b.lang,
+    a.lang === b.lang &&
+    a.Heading === b.Heading,
 );
 
 function TakeStack({
@@ -227,12 +252,23 @@ function TakeStack({
   const index = Math.min(at, Math.max(0, card.takes.length - 1));
   const take = card.takes.find((x) => x.takeId === opened) ?? null;
   const { number } = host.current;
+  // The take that has the focus, kept when it is taken out: the next one takes it.
+  const focused = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      focused.current === null ||
+      card.takes.some((x) => x.takeId === focused.current)
+    )
+      return;
+    focused.current = null;
+    focusIfLost(options.current[index] ?? null, null);
+  }, [card.takes, index]);
 
   // One record, and only of the take that was opened.
   useEffect(() => {
     if (!take) return;
-    if (take.recordHash === null) {
-      setFacts("none");
+    if (!take.recordHash) {
+      setFacts(take.recordHash === null ? "none" : "unknown");
       return;
     }
     let current = true;
@@ -267,7 +303,7 @@ function TakeStack({
   return (
     <div
       onKeyDown={(e) => {
-        if (e.key !== "Escape" || !opened) return;
+        if (e.key !== "Escape" || !take) return;
         e.preventDefault();
         const n = card.takes.findIndex((x) => x.takeId === opened);
         setOpened(null);
@@ -291,16 +327,22 @@ function TakeStack({
             tabIndex={n === index ? 0 : -1}
             aria-selected={n === index}
             aria-current={x.shown ? "true" : undefined}
-            aria-expanded={opened === x.takeId}
             className="shot-take"
             data-testid="shot-take"
             data-take={x.takeId}
-            onFocus={() => setAt(n)}
+            onFocus={() => {
+              focused.current = x.takeId;
+              setAt(n);
+            }}
+            onBlur={(e) => {
+              if (e.currentTarget.isConnected) focused.current = null;
+            }}
             onClick={(e) => {
               e.currentTarget.focus();
               setOpened(opened === x.takeId ? null : x.takeId);
             }}
             onKeyDown={(e) => {
+              if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 setOpened(opened === x.takeId ? null : x.takeId);
@@ -324,95 +366,96 @@ function TakeStack({
           </li>
         ))}
       </ul>
-      {take ? (
-        <div
-          role="status"
-          className="shot-take-facts"
-          data-testid="shot-take-facts"
-          data-take={take.takeId}
-        >
-          <p>{t("shot.take.facts", { take: nameOf(take.takeId) })}</p>
-          {facts === null ? null : facts === "none" ? (
-            <>
-              <p>{t("shot.take.noRecord")}</p>
-              <p data-testid="shot-take-level">{t("shot.take.level.L0")}</p>
-            </>
-          ) : facts === "unknown" ? (
-            <p>{t("shot.take.unknown")}</p>
-          ) : (
-            <>
-              <p data-testid="shot-take-level">
-                {t(`shot.take.level.${facts.level}`)}
-              </p>
-              <dl>
-                <dt>{t("shot.take.origin")}</dt>
-                <dd>
-                  {facts.origin === "generation" ||
-                  facts.origin === "render" ||
-                  facts.origin === "declared"
-                    ? t(`shot.take.origin.${facts.origin}`)
-                    : t("shot.attempt.notKnown")}
-                </dd>
-                <dt>{t("shot.take.model")}</dt>
-                <dd>
-                  {facts.model === null ? (
-                    t("shot.attempt.notKnown")
-                  ) : (
-                    <bdi dir="ltr">{facts.model}</bdi>
-                  )}
-                </dd>
-                <dt>{t("shot.take.seed")}</dt>
-                <dd>
-                  {facts.seed === null ? (
-                    t("shot.attempt.notKnown")
-                  ) : (
-                    <bdi dir="ltr">{facts.seed}</bdi>
-                  )}
-                </dd>
-                <dt>{t("shot.take.size")}</dt>
-                <dd>
-                  {facts.width === null || facts.height === null ? (
-                    t("shot.attempt.notKnown")
-                  ) : (
-                    <bdi dir="ltr">
-                      {facts.width}×{facts.height}
-                    </bdi>
-                  )}
-                </dd>
-                {facts.derivedFromTakeId !== null ? (
-                  <>
-                    <dt>{t("shot.take.derivedFrom")}</dt>
-                    <dd data-testid="shot-take-derived">
-                      {nameOf(facts.derivedFromTakeId)}
-                    </dd>
-                    <dt>{t("shot.take.changed")}</dt>
-                    <dd data-testid="shot-take-changed">
-                      {facts.changedFields.length ? (
-                        <bdi dir="ltr">{facts.changedFields.join(", ")}</bdi>
-                      ) : (
-                        t("shot.take.unchanged")
-                      )}
-                    </dd>
-                  </>
-                ) : null}
-                {facts.revisionNote !== null ? (
-                  <>
-                    <dt>{t("shot.take.note")}</dt>
-                    <dd dir="auto">{facts.revisionNote}</dd>
-                  </>
-                ) : null}
-                <dt>{t("shot.take.record")}</dt>
-                <dd>
-                  <bdi dir="ltr">{shortHash(take.recordHash)}</bdi>
-                </dd>
-              </dl>
-            </>
-          )}
-          <p className="note">
-            {t("shot.take.count", { n: number(card.takes.length) })}
-          </p>
-        </div>
-      ) : null}
+      <div role="status">
+        {take ? (
+          <div
+            className="shot-take-facts"
+            data-testid="shot-take-facts"
+            data-take={take.takeId}
+          >
+            <p>{t("shot.take.facts", { take: nameOf(take.takeId) })}</p>
+            {facts === null ? null : facts === "none" ? (
+              <>
+                <p>{t("shot.take.noRecord")}</p>
+                <p data-testid="shot-take-level">{t("shot.take.level.L0")}</p>
+              </>
+            ) : facts === "unknown" ? (
+              <p>{t("shot.take.unknown")}</p>
+            ) : (
+              <>
+                <p data-testid="shot-take-level">
+                  {t(`shot.take.level.${facts.level}`)}
+                </p>
+                <dl>
+                  <dt>{t("shot.take.origin")}</dt>
+                  <dd>
+                    {facts.origin === "generation" ||
+                    facts.origin === "render" ||
+                    facts.origin === "declared"
+                      ? t(`shot.take.origin.${facts.origin}`)
+                      : t("shot.attempt.notKnown")}
+                  </dd>
+                  <dt>{t("shot.take.model")}</dt>
+                  <dd>
+                    {facts.model === null ? (
+                      t("shot.attempt.notKnown")
+                    ) : (
+                      <bdi dir="ltr">{facts.model}</bdi>
+                    )}
+                  </dd>
+                  <dt>{t("shot.take.seed")}</dt>
+                  <dd>
+                    {facts.seed === null ? (
+                      t("shot.attempt.notKnown")
+                    ) : (
+                      <bdi dir="ltr">{facts.seed}</bdi>
+                    )}
+                  </dd>
+                  <dt>{t("shot.take.size")}</dt>
+                  <dd>
+                    {facts.width === null || facts.height === null ? (
+                      t("shot.attempt.notKnown")
+                    ) : (
+                      <bdi dir="ltr">
+                        {facts.width}×{facts.height}
+                      </bdi>
+                    )}
+                  </dd>
+                  {facts.derivedFromTakeId !== null ? (
+                    <>
+                      <dt>{t("shot.take.derivedFrom")}</dt>
+                      <dd data-testid="shot-take-derived">
+                        {nameOf(facts.derivedFromTakeId)}
+                      </dd>
+                      <dt>{t("shot.take.changed")}</dt>
+                      <dd data-testid="shot-take-changed">
+                        {facts.changedFields.length ? (
+                          <bdi dir="ltr">{facts.changedFields.join(", ")}</bdi>
+                        ) : (
+                          t("shot.take.unchanged")
+                        )}
+                      </dd>
+                    </>
+                  ) : null}
+                  {facts.revisionNote !== null ? (
+                    <>
+                      <dt>{t("shot.take.note")}</dt>
+                      <dd dir="auto">{facts.revisionNote}</dd>
+                    </>
+                  ) : null}
+                  <dt>{t("shot.take.record")}</dt>
+                  <dd>
+                    <bdi dir="ltr">{shortHash(take.recordHash ?? null)}</bdi>
+                  </dd>
+                </dl>
+              </>
+            )}
+            <p className="note">
+              {t("shot.take.count", { n: number(card.takes.length) })}
+            </p>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -423,16 +466,20 @@ function ShotAttempts({
   card,
   host,
   t,
+  describedBy,
 }: {
   projectId: string;
   revision: number;
   card: ShotCard;
   host: { current: ShotCardsHost };
   t: Translate;
+  describedBy: string;
 }) {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState<Attempts | "unknown" | null>(null);
   const [more, setMore] = useState(false);
+  // The last page asked for could not be read; what was read before it stays.
+  const [missed, setMissed] = useState(false);
   const region = useRef<HTMLDivElement | null>(null);
   const status = useRef<HTMLParagraphElement | null>(null);
   // An answer for another time is dropped.
@@ -457,9 +504,12 @@ function ShotAttempts({
     }
     if (mine !== ticket.current) return;
     setMore(false);
+    setMissed(answer === null && before !== null);
     setPage((held) =>
       answer === null
-        ? "unknown"
+        ? before === null
+          ? "unknown"
+          : held
         : before !== null && held !== null && held !== "unknown"
           ? morePages(held, answer)
           : answer,
@@ -487,6 +537,7 @@ function ShotAttempts({
         type="button"
         data-testid="shot-attempts-open"
         aria-expanded={open}
+        aria-describedby={describedBy}
         onClick={() => setOpen(!open)}
       >
         {t(open ? "shot.attempt.hide" : "shot.attempt.show")}
@@ -494,7 +545,16 @@ function ShotAttempts({
       {open && page !== null ? (
         <div data-testid="shot-attempts" className="shot-attempts">
           {page === "unknown" ? (
-            <p role="status">{t("shot.attempt.unread")}</p>
+            <>
+              <p role="status">{t("shot.attempt.unread")}</p>
+              <button
+                type="button"
+                data-testid="shot-attempts-again"
+                onClick={() => void ask(null)}
+              >
+                {t("shot.card.again")}
+              </button>
+            </>
           ) : (
             <>
               <p
@@ -512,10 +572,13 @@ function ShotAttempts({
                   running: number(page.totals.running),
                   uncertain: number(page.totals.uncertain),
                 })}{" "}
-                {t("shot.attempt.time", {
-                  seconds: seconds(page.totals.wallMs / 1000),
-                  unknown: number(page.totals.wallMsUnknown),
-                })}{" "}
+                {page.totals.attempts > 0 &&
+                page.totals.wallMsUnknown === page.totals.attempts
+                  ? t("shot.attempt.timeUnknown")
+                  : t("shot.attempt.time", {
+                      seconds: seconds(page.totals.wallMs / 1000),
+                      unknown: number(page.totals.wallMsUnknown),
+                    })}{" "}
                 {page.totals.attempts > 0 &&
                 page.totals.quotaUnknown === page.totals.attempts
                   ? t("shot.attempt.useUnknown")
@@ -525,52 +588,50 @@ function ShotAttempts({
                     })}
               </p>
               <ol>
-                {page.attempts.map((a) => (
-                  <li
-                    key={a.seq}
-                    data-testid="shot-attempt"
-                    data-outcome={a.outcome}
-                    data-sent={String(a.sent)}
-                  >
-                    <span>{t(`shot.attempt.kind.${a.kind}`)}</span>
-                    {": "}
-                    <strong>{t(attemptKey(a))}</strong>
-                    <dl>
-                      <dt>{t("shot.attempt.started")}</dt>
-                      <dd>
-                        {a.startedAt === null
-                          ? t("shot.attempt.notKnown")
-                          : moment(a.startedAt)}
-                      </dd>
-                      <dt>{t("shot.attempt.took")}</dt>
-                      <dd>{used(a.wallMs, "ms")}</dd>
-                      <dt>{t("shot.attempt.used")}</dt>
-                      <dd data-testid="shot-attempt-used">
-                        {used(a.quotaSeconds, "s")}
-                      </dd>
-                      <dt>{t("shot.attempt.take")}</dt>
-                      <dd>
-                        {a.takeId === null
-                          ? t("shot.attempt.noTake")
-                          : a.takeInShot
-                            ? t("shot.take.name", {
-                                n: number(
-                                  card.takes.findIndex(
-                                    (x) => x.takeId === a.takeId,
-                                  ) + 1,
-                                ),
-                              })
-                            : t("shot.take.gone")}
-                      </dd>
-                    </dl>
-                    {a.diagnostic ? (
-                      <p dir="auto" className="note">
-                        {a.diagnostic}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
+                {page.attempts.map((a) => {
+                  const made = madeTake(a, card.takes);
+                  return (
+                    <li
+                      key={a.seq}
+                      data-testid="shot-attempt"
+                      data-outcome={a.outcome}
+                      data-sent={String(a.sent)}
+                    >
+                      <span>{t(`shot.attempt.kind.${a.kind}`)}</span>
+                      {": "}
+                      <strong>{t(attemptKey(a))}</strong>
+                      <dl>
+                        <dt>{t("shot.attempt.started")}</dt>
+                        <dd>
+                          {a.startedAt === null
+                            ? t("shot.attempt.notKnown")
+                            : moment(a.startedAt)}
+                        </dd>
+                        <dt>{t("shot.attempt.took")}</dt>
+                        <dd>{used(a.wallMs, "ms")}</dd>
+                        <dt>{t("shot.attempt.used")}</dt>
+                        <dd data-testid="shot-attempt-used">
+                          {used(a.quotaSeconds, "s")}
+                        </dd>
+                        <dt>{t("shot.attempt.take")}</dt>
+                        <dd data-testid="shot-attempt-take">
+                          {typeof made === "string"
+                            ? t(made)
+                            : t("shot.take.name", { n: number(made.n) })}
+                        </dd>
+                      </dl>
+                      {a.diagnostic ? (
+                        <p dir="auto" className="note">
+                          {a.diagnostic}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ol>
+              {missed ? (
+                <p role="status">{t("shot.attempt.moreUnread")}</p>
+              ) : null}
               {page.gaps.length ? (
                 <ul data-testid="shot-attempts-gaps">
                   {page.gaps.map((gap) => (

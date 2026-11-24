@@ -55,7 +55,12 @@ export function TakeReview({
   onApply: (proposal: TakeProposal) => Promise<TakeApplyOutcome>;
   // A shot whose takes a person asked to review elsewhere, and which asking it was: its first
   // take here that can be reviewed takes the focus, once its list is read.
-  focusShot?: { documentId: string; shotId: string; asked: number } | null;
+  focusShot?: {
+    projectId: string;
+    documentId: string;
+    shotId: string;
+    asked: number;
+  } | null;
 }) {
   const [rows, setRows] = useState<TakeRow[] | "unknown" | null>(null);
   const [proposal, setProposal] = useState<TakeProposal | null>(null);
@@ -70,7 +75,8 @@ export function TakeReview({
   const request = useRef(0);
   const noticeShown = useRef<HTMLDivElement | null>(null);
   const list = useRef<HTMLElement | null>(null);
-  const answered = useRef(0);
+  // One asked for before this was here is not asked of it.
+  const answered = useRef(focusShot?.asked ?? 0);
 
   const media = (side: TakeProposal["mappings"][number]["from"]) =>
     side.title !== null
@@ -143,7 +149,14 @@ export function TakeReview({
   }, [notice]);
 
   useEffect(() => {
-    if (!focusShot || rows === null || answered.current === focusShot.asked)
+    if (
+      !focusShot ||
+      focusShot.projectId !== projectId ||
+      rows === null ||
+      // Its buttons take no focus until it is done.
+      busy ||
+      answered.current === focusShot.asked
+    )
       return;
     answered.current = focusShot.asked;
     const takes = [
@@ -159,7 +172,7 @@ export function TakeReview({
       list.current;
     to?.focus();
     to?.scrollIntoView({ block: "nearest" });
-  }, [focusShot, rows]);
+  }, [focusShot, rows, busy, projectId]);
 
   const review = async (row: TakeRow) => {
     const ticket = ++request.current;

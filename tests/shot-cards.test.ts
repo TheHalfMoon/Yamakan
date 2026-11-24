@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   attemptKey,
   attemptsPage,
+  madeTake,
   morePages,
   moveFocus,
   shotCards,
@@ -84,7 +85,12 @@ test("a take list becomes cards with the shown take marked", () => {
 test("a list without record hashes still becomes cards", () => {
   const { recordHash: _, ...older } = take("t1");
   const [card] = shotCards(list([shot({ takes: [older] })]))!;
-  assert.equal(card!.takes[0]!.recordHash, null);
+  // Not said is not the same as none.
+  assert.equal(card!.takes[0]!.recordHash, undefined);
+  const [none] = shotCards(
+    list([shot({ takes: [take("t1", { recordHash: null })] })]),
+  )!;
+  assert.equal(none!.takes[0]!.recordHash, null);
 });
 
 test("an answer that is not of the form is not known", () => {
@@ -194,6 +200,7 @@ const attempt = (seq: number, over: Partial<Attempt> = {}): Attempt => ({
   kind: "generation",
   outcome: "succeeded",
   sent: true,
+  imported: true,
   startedAt: 1_000,
   wallMs: 2_000,
   quotaSeconds: null,
@@ -286,8 +293,8 @@ test("a page of attempts goes on from `next`, newest first", () => {
     [9, 8, 7],
   );
   assert.equal(both.next, null);
-  // Only a gap the page has words for.
-  assert.deepEqual(both.gaps, ["scan-limit"]);
+  // One the page has no words for is still said.
+  assert.deepEqual(both.gaps, ["scan-limit", "other"]);
 });
 
 test("a history that is not of the form is not known", () => {
@@ -298,6 +305,47 @@ test("a history that is not of the form is not known", () => {
     history([{ ...attempt(1), sent: undefined }]),
     history([{ ...attempt(1), kind: "other" }]),
     { ...history([]), totals: { attempts: 0 } },
+    // An incomplete history would look like a whole one.
+    history([], { gaps: undefined }),
+    history([], { gaps: "scan-limit" }),
+    history([], { next: undefined }),
+    history([], { next: "8" }),
+    history([], { next: -1 }),
   ])
     assert.equal(attemptsPage(odd), null);
+});
+
+test("the take an attempt made is named, and none is told from not known", () => {
+  const [card] = shotCards(list([shot()]))!;
+  const made = (over: Partial<Attempt>) =>
+    madeTake(attempt(1, over), card!.takes);
+  assert.deepEqual(made({ takeId: "t2" }), { n: 2 });
+  assert.equal(made({ takeId: "t9", takeInShot: false }), "shot.take.gone");
+  // The history was read after the card, and has a take that the card has not.
+  assert.equal(made({ takeId: "t9" }), "shot.attempt.takeLater");
+  assert.equal(made({ takeId: null, imported: false }), "shot.attempt.noTake");
+  // What came in may have been a take, taken out again since.
+  for (const imported of [true, null])
+    assert.equal(made({ takeId: null, imported }), "shot.attempt.notKnown");
+  const read = attemptsPage(
+    history([
+      attempt(2, { takeId: null, imported: false }),
+      { ...attempt(1), imported: "no" },
+    ]),
+  )!;
+  assert.deepEqual(
+    read.attempts.map((a) => a.imported),
+    [false, null],
+  );
+});
+
+test("a moment no date can hold is not known", () => {
+  const [last, past] = attemptsPage(
+    history([
+      attempt(2, { startedAt: 8_640_000_000_000_000 }),
+      attempt(1, { startedAt: 8_640_000_000_000_001 }),
+    ]),
+  )!.attempts;
+  assert.equal(last!.startedAt, 8_640_000_000_000_000);
+  assert.equal(past!.startedAt, null);
 });

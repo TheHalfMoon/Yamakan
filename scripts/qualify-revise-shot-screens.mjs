@@ -6,7 +6,7 @@
  * its videos are rows and ten bytes that no decoder is asked about, and its runs are rows. No
  * engine, no model, no network and no spend.
  *
- * Usage: node scripts/qualify-revise-shot-screens.mjs [receipt.json] [folder for pictures]
+ * Usage: node scripts/qualify-revise-shot-screens.mjs [receipt.json]
  */
 import { chromium } from "playwright-core";
 import { execFileSync, fork } from "node:child_process";
@@ -25,8 +25,12 @@ import { sha256Hex } from "../core/hash/canonical.ts";
 import { translate } from "../src/i18n.ts";
 import { readHost } from "./qualify-host.mjs";
 
-// Before anything runs.
+// Before anything runs, and before the pictures are written.
 const host = readHost();
+const git = (...args) =>
+  execFileSync("git", args, { encoding: "utf8", windowsHide: true }).trim();
+const head = git("rev-parse", "HEAD");
+const dirty = git("status", "--porcelain") !== "";
 
 execFileSync("npm", ["run", "build"], {
   stdio: "inherit",
@@ -42,8 +46,14 @@ const receipt =
       import.meta.url,
     ),
   );
-// Where pictures of the cards go, when a person wants to look at them.
-const pictures = process.argv[3] ?? null;
+// Pictures of the cards and of an applied take, beside the receipt that names them.
+const pictures = receipt.replace(/(-receipt)?\.json$/, "");
+const taken = [];
+const picture = async (of, name) => {
+  mkdirSync(pictures, { recursive: true });
+  await of.screenshot({ path: join(pictures, name) });
+  taken.push(name);
+};
 const FRAME = 23_520_000;
 const steps = [];
 const step = (name, detail = {}) => {
@@ -462,6 +472,16 @@ async function flow(lang, made) {
   await page.keyboard.press("Escape");
   assert.equal(await facts.count(), 0);
   assert.equal((await at()).take, made.takes[1].id);
+  // Escape goes back to the take that was opened, wherever the arrows went since.
+  await page.keyboard.press("Enter");
+  await facts.getByTestId("shot-take-level").waitFor();
+  await press("Home", made.takes[0].id);
+  await page.keyboard.press("Escape");
+  assert.equal(await facts.count(), 0);
+  assert.equal((await at()).take, made.takes[1].id);
+  // Alt with an arrow is the browser's.
+  await page.keyboard.press("Alt+ArrowUp");
+  assert.equal((await at()).take, made.takes[1].id);
   // A take with no record says so.
   await press("End", made.takes[2].id);
   await page.keyboard.press(" ");
@@ -469,8 +489,8 @@ async function flow(lang, made) {
   await page.keyboard.press("Escape");
   assert.equal(
     calls.filter((c) => c === "yamakan.take.record").length,
-    1,
-    "one record, of the take that was opened and has one",
+    2,
+    "one record each time a take that has one was opened",
   );
   step(
     `${lang}: how a take was made is read when it is opened, and Escape goes back to it`,
@@ -511,10 +531,7 @@ async function flow(lang, made) {
     `${lang}: what was tried is listed, failed and refused ones too, and what is not known is said`,
   );
 
-  if (pictures)
-    await page
-      .getByTestId("shot-cards")
-      .screenshot({ path: join(pictures, `cards-${lang}.png`) });
+  await picture(page.getByTestId("shot-cards"), `cards-${lang}.png`);
 
   // Narrow: nothing of the cards goes past the side.
   await page.setViewportSize({ width: 375, height: 800 });
@@ -528,10 +545,8 @@ async function flow(lang, made) {
     };
   });
   assert.ok(over.cards <= 0, `the cards scroll by ${over.cards}`);
-  if (pictures)
-    await page
-      .getByTestId("shot-cards")
-      .screenshot({ path: join(pictures, `cards-${lang}-375.png`) });
+  assert.ok(over.page <= 0, `the page scrolls by ${over.page}`);
+  await picture(page.getByTestId("shot-cards"), `cards-${lang}-375.png`);
   await page.setViewportSize({ width: 1280, height: 1000 });
   step(`${lang}: the cards fit 375 pixels`, { pageBeyond: over.page });
 
@@ -553,6 +568,7 @@ async function flow(lang, made) {
   await tabTo("take-proposal-apply");
   await page.keyboard.press("Enter");
   await page.getByTestId("take-notice-applied").waitFor();
+  await picture(page.getByTestId("take-review"), `applied-${lang}.png`);
   await page.waitForFunction(
     ([shot, take]) =>
       document
@@ -570,6 +586,15 @@ async function flow(lang, made) {
     expectedRevision: applied.revision,
   });
   assert.equal(undone.revision, applied.revision + 1);
+  const { shots } = await call("yamakan.take.list", {
+    projectId: made.projectId,
+    documentId: made.documentId,
+  });
+  assert.equal(
+    shots.find((s) => s.shotId === made.shotId).timeline.currentTakeId,
+    made.takes[0].id,
+    "the undo brings the earlier take back",
+  );
   step(
     `${lang}: a card leads to the one take review, where a take is applied and undone`,
     {
@@ -578,22 +603,44 @@ async function flow(lang, made) {
     },
   );
 
-  await page.reload();
-  await page.getByRole("button", { name: /Long/ }).first().click();
+  // The other project, with the page and the Director's section as they are.
   calls = [];
   const began = Date.now();
-  await page.locator("#workspace-tab-story").click();
+  await page.getByRole("button", { name: /Long/ }).first().click();
+  if (
+    !(await page
+      .getByTestId("shot-cards")
+      .isVisible()
+      .catch(() => false))
+  )
+    await page.locator("#workspace-tab-story").click();
   await page.waitForFunction(
     () =>
       document.querySelectorAll('[data-testid="shot-take"]').length === 1600,
   );
   const shownMs = Date.now() - began;
+  // What was asked of the other project's review is not asked of this one's.
+  await page.getByTestId("take-review").waitFor();
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll('[data-testid="take-review"] li[data-take]')
+        .length === 1600,
+  );
+  assert.ok(
+    !(await page.evaluate(() =>
+      document
+        .querySelector('[data-testid="take-review"]')
+        .contains(document.activeElement),
+    )),
+  );
   assert.equal(await page.getByTestId("shot-card").count(), 200);
   for (const each of ["yamakan.take.record", "yamakan.shot.history"])
     assert.ok(!calls.includes(each), each);
+  // One for the cards and one for the take review beside them.
+  const takeLists = calls.filter((c) => c === "yamakan.take.list").length;
+  assert.equal(takeLists, 2);
   step(`${lang}: 200 cards of 8 takes are shown and no card asks for its own`, {
     shownMs,
-    takeLists: calls.filter((c) => c === "yamakan.take.list").length,
   });
   await context.close();
 }
@@ -632,21 +679,20 @@ try {
     child.kill();
     await gone;
   }
-  const git = (...args) =>
-    execFileSync("git", args, { encoding: "utf8", windowsHide: true }).trim();
   writeFileSync(
     receipt,
     `${JSON.stringify(
       {
         task: "MPR-104",
         part: "a",
-        head: git("rev-parse", "HEAD"),
-        dirty: git("status", "--porcelain") !== "",
+        head,
+        dirty,
         host,
         outcome: passed ? "PASS" : blocked ? "BLOCKED" : "FAIL",
         passed,
         failure,
         steps,
+        screenshots: taken,
       },
       null,
       2,
