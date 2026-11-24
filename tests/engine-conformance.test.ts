@@ -1031,7 +1031,7 @@ const wrongServices: [
     (s, h) => ({
       ...s,
       status: async (id) => {
-        await sendsAgain(h.adapter());
+        await sendsAgain(await h.adapter());
         return s.status(id);
       },
     }),
@@ -1042,7 +1042,7 @@ const wrongServices: [
     (s, h) => ({
       ...s,
       start: async (r) => {
-        await sendsAgain(h.adapter());
+        await sendsAgain(await h.adapter());
         return s.start(r);
       },
     }),
@@ -1175,8 +1175,8 @@ test("a harness that leaves out a state, or gives no reason for it, is refused b
 });
 
 const ENGINES = new URL("../core/engines/", import.meta.url);
-// Anything that could make an adapter names the contract or one of its parts.
-// It does so itself, or by what it takes from a file that makes one (its types aside).
+// Anything that could make an adapter names the contract or one of its parts, or takes one from
+// a file that makes it (its types aside).
 const makers = [...Object.keys(ADAPTER_SUITES), ...PENDING]
   .map((f) => f.replace(".", "\\."))
   .join("|");

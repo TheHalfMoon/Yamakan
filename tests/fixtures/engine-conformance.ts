@@ -77,7 +77,7 @@ export type ConformanceHarness = {
   // Forgets everything the stand-in did. Called before each check and each scenario in one.
   reset(): void | Promise<void>;
   // A new adapter over the same stand-in, as after a restart of this service.
-  adapter(): EngineAdapterV2;
+  adapter(): EngineAdapterV2 | Promise<EngineAdapterV2>;
   // A valid request of an operation the adapter claims, with nothing it can leave out.
   request(over?: { operation?: Operation } & object): EngineRequestV2;
   refusedRequests(): { request: unknown; reason: RefusalReason }[];
@@ -172,7 +172,7 @@ async function each(
     }
     await h.reset();
     await arrange();
-    const adapter = h.adapter();
+    const adapter = await h.adapter();
     const request = h.request();
     const answer = await submitted(h, adapter, request);
     const sent = h.sends();
@@ -217,7 +217,9 @@ async function refuses(
   await h.reset();
   let answer: Awaited<ReturnType<EngineAdapterV2["submit"]>> | null = null;
   try {
-    answer = await h.adapter().submit(request as EngineRequestV2, h.context());
+    answer = await (
+      await h.adapter()
+    ).submit(request as EngineRequestV2, h.context());
   } catch (e) {
     if (reason !== null || !(e instanceof CommandError)) throw e;
   }
@@ -256,10 +258,10 @@ async function everythingSaid(h: ConformanceHarness) {
   await each(h, had(h), async (_, { adapter, answer, ref }) => {
     texts.push(answer.notice ?? "");
     statuses.push(...(await followed(adapter, ref)));
-    statuses.push(...(await followed(h.adapter(), ref)));
+    statuses.push(...(await followed(await h.adapter(), ref)));
     await adapter.requestCancel(ref);
     statuses.push(await adapter.status(ref));
-    statuses.push(await h.adapter().reconcile(ref));
+    statuses.push(await (await h.adapter()).reconcile(ref));
   });
   texts.push(...statuses.map((s) => s.diagnostic ?? ""));
   return { statuses, texts: texts.filter(Boolean) };
@@ -279,9 +281,9 @@ const FURTHER_ROLES: Record<Operation, readonly string[]> = {
   enhance: [],
 };
 // contract: "Available means measured constraints", and their hash is theirs.
-const claimed = (h: ConformanceHarness): CapabilityV2[] => {
-  const of = h
-    .adapter()
+const claimed = async (h: ConformanceHarness): Promise<CapabilityV2[]> => {
+  await h.reset();
+  const of = (await h.adapter())
     .capabilities()
     .map((c) => CapabilityV2Schema.parse(c))
     .filter((c) => c.available);
@@ -439,7 +441,7 @@ const ADAPTER: Record<
   // contract: "The input roles this engine honours (a request using another refuses)."
   "unlisted-role-refused": async (h) => {
     let asked = 0;
-    for (const c of claimed(h)) {
+    for (const c of await claimed(h)) {
       const { roles } = c.constraints!;
       const base = () => h.request({ operation: c.operation });
       const refused = async (inputs: unknown[], role: string) => {
@@ -464,7 +466,7 @@ const ADAPTER: Record<
 
   // contract: "a request is checked against them before any worker is spawned".
   "limits-held": async (h) => {
-    for (const c of claimed(h))
+    for (const c of await claimed(h))
       for (const [name, at, over] of boundsOf(
         c,
         h.request({ operation: c.operation }),
@@ -472,9 +474,11 @@ const ADAPTER: Record<
         await refuses(h, over, null, `${name}, past it,`);
         if (at === null) continue;
         await h.reset();
-        await submitted(h, h.adapter(), at as EngineRequestV2).catch((e) => {
-          throw new Error(`${name}: ${e.message}`);
-        });
+        await submitted(h, await h.adapter(), at as EngineRequestV2).catch(
+          (e) => {
+            throw new Error(`${name}: ${e.message}`);
+          },
+        );
       }
   },
 
@@ -489,7 +493,7 @@ const ADAPTER: Record<
     await each(h, SCENARIOS, async (scenario, { adapter, ref }) => {
       const { may, must } = TOLD[scenario];
       const before = await followed(adapter, ref);
-      const after = await followed(h.adapter(), ref);
+      const after = await followed(await h.adapter(), ref);
       for (const s of [...before, ...after])
         assert.ok(may.has(s.state), `${scenario} is told as ${s.state}.`);
       assert.ok(
@@ -581,7 +585,7 @@ const ADAPTER: Record<
           throw new Unavailable(h.unavailable.succeeded);
         await h.reset();
         await h.arrange.succeeded();
-        const adapter = h.adapter();
+        const adapter = await h.adapter();
         const request = h.request();
         const answers = await Promise.allSettled([
           adapter.submit(request, h.context()),
@@ -604,7 +608,7 @@ const ADAPTER: Record<
     await each(h, scenarios, async (scenario, { adapter, answer, ref }) => {
       assert.ok(answer.uncertain, `${scenario}: it is not said.`);
       const lands = scenario === "uncertainLanded";
-      for (const asked of [adapter, h.adapter()]) {
+      for (const asked of [adapter, await h.adapter()]) {
         const seen = (await followed(asked, ref)).map((s) => s.state);
         if (!lands) {
           assert.ok(!seen.includes("succeeded"), "It never arrived.");
@@ -620,12 +624,12 @@ const ADAPTER: Record<
   "restart-reconciles-without-sending": async (h) => {
     for (const first of ["reconcile", "status"] as const)
       await each(h, had(h), async (_, { ref }) => {
-        const after = h.adapter();
+        const after = await h.adapter();
         ExecutionStatusSchema.parse(await after[first](ref));
         await followed(after, ref);
         await after.enumerateArtifacts(ref).catch(() => []);
         // And after another, which is stopped.
-        const last = h.adapter();
+        const last = await h.adapter();
         await last.requestCancel(ref).catch(() => null);
         await followed(last, ref);
       });
@@ -634,7 +638,7 @@ const ADAPTER: Record<
   // contract: "Observations an adapter reports", of a run it never heard of and one it lost.
   "unknown-ref-answered-honestly": async (h) => {
     await h.reset();
-    const adapter = h.adapter();
+    const adapter = await h.adapter();
     const unlessNotFound = <T>(p: Promise<T>) =>
       p.catch((e) => {
         if (!notFound(e)) throw e;
@@ -750,7 +754,7 @@ const ADAPTER: Record<
   // contract: "An engine that sends a run off this computer must have this".
   "location-declared": async (h) => {
     await h.reset();
-    const adapter = h.adapter();
+    const adapter = await h.adapter();
     assert.equal(
       typeof adapter.location === "function",
       h.remote !== "none",
@@ -766,13 +770,13 @@ async function settled<T>(p: Promise<T>): Promise<PromiseSettledResult<T>> {
 }
 
 // The service over this adapter, with its ledger watched.
-function watched(h: ConformanceHarness, ledger: GenerationLedger) {
+async function watched(h: ConformanceHarness, ledger: GenerationLedger) {
   const { store, make = createGenerationService } = h.service!;
   const seen = {
     sendsAtBegin: [] as number[],
     refAtStatus: [] as (string | null)[],
   };
-  const held = h.adapter();
+  const held = await h.adapter();
   let current = "";
   // Whatever the adapter is made as.
   const adapter = new Proxy({} as EngineAdapterV2, {
@@ -810,7 +814,7 @@ async function servedIn(
   scenarios: readonly Scenario[],
   ask: (
     scenario: Scenario,
-    of: ReturnType<typeof watched> & {
+    of: Awaited<ReturnType<typeof watched>> & {
       ledger: GenerationLedger;
       request: GenerationRequest;
     },
@@ -829,7 +833,7 @@ async function servedIn(
     const ledger = ledgerOf(h);
     await ask(scenario, {
       ledger,
-      ...watched(h, ledger),
+      ...(await watched(h, ledger)),
       request: h.service.request,
     });
     assert.ok(
@@ -878,7 +882,7 @@ const SERVICE: Record<
         const { generationId } = await service.start(request);
         const sent = h.sends();
         assert.equal(ledger.read(generationId)?.phase, "sending", scenario);
-        const { service: next } = watched(h, ledger);
+        const { service: next } = await watched(h, ledger);
         assert.deepEqual(
           next.list(request.projectId).map((g) => g.generationId),
           [generationId],

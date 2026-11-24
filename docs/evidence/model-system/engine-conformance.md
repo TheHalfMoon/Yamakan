@@ -1,6 +1,6 @@
 # MPR-206: the engine operations, and the conformance kit
 
-Part a: the five operations written down, the kit, the in-process fake run through it, and the intake checklist. The three real adapters are not registered yet (part b): until then nothing here says that ComfyUI's, Kaggle's or the bridge's adapter passes.
+The five operations written down, the kit, and the intake checklist (part a), and two of the four adapters registered with the kit: the in-process fake and ComfyUI's. The bridge fails two checks (below) and Kaggle's adapter is not asked yet (the rest of part b): nothing here says that either passes.
 
 ## What was found (step 0)
 
@@ -51,13 +51,27 @@ The tests of the kit hold it to this: adapters wrong in one way each, made from 
 - **The fake's "Unknown engine execution." is a `NOT_FOUND` now,** which `unknown-ref-answered-honestly` asks for. Its words are the same.
 - **The lost run of the fake** is `failed` with `lostJob`.
 
+## What part b found
+
+**ComfyUI's adapter** failed two checks, and is changed:
+
+- **A lost answer was not said** (`uncertain-sends-nothing-more`, `uncertain-row-not-resent`). A prompt whose answer did not come back was followed, and not sent again, but the service was told it had arrived: its row said `sent`. It is `uncertain` now, so the row stays `sending` until the run is seen to have succeeded, as Kaggle's does. Two tests that held it to the older answer are changed with it. The Create page's words for such a run name Kaggle (`create.runUncertain`); no ComfyUI recipe is pinned, so no one can see them today, and the card that enables one changes them.
+- **The files of a run it does not know** were an error of no kind (`unknown-ref-answered-honestly`). It is a `NOT_FOUND` now, with the same words.
+
+Its stand-in is the server its own tests have, on loopback, put in each state by what becomes of a prompt; a file that is not the declared one is another each time it is read, and a lost run is one that is in neither its queue nor its history. Only its text to video is asked: that a recipe has one place for a role is held by its own tests. A ComfyUI that is really running was not asked. `adapter()` of a harness may be a promise now, since ComfyUI is asked what it has before it can run anything.
+
+**The bridge** failed more than it does now, and two checks still fail, so it is not registered and stays in `PENDING`:
+
+- **Changed:** an engine that throws as it takes a job may have started it. The bridge let that through as a refusal, so the service would have taken it for one, and the same attempt was sent again. It is `uncertain` now and is never sent again. An engine that throws because it refuses a job cannot be told from that, so such a refusal is `uncertain` for good too, which is the safe side. And a job the engine no longer knows was the engine's own error; it is `unknown` now, and has no files.
+- **Still failing, and reported:** `states-told-as-they-are` and `uncertain-sends-nothing-more`, for a run that landed though its answer was lost. A version 1 engine names a job only in that answer, so nothing over it can follow the run to its end. The version 1 contract would have to take a name, as version 2 engines here do, or the bridge be retired: nothing but tests uses `bridgeV1` today (the command registry reads `SERVER_RECIPES` and `recipeHash` from the same file). Neither is this card's to decide. `tests/engines.test.ts` holds the bridge to passing every other check and failing exactly these two.
+
 ## What to know when reading it
 
 - **The kit proves an adapter over its stand-in,** not over the real engine: whether a real Kaggle or ComfyUI behaves as the stand-in does is another question. The optional note on a real run is BLOCKED (FD-3, quota).
 - **The fake's three runs** are of one adapter with a stop that has no remote, one that ends the run and one that does not.
 - **`corrupt-artifact-rejected` is also passed by an adapter that names no file or refuses to,** which is as safe.
 - **`limits-held` does not ask** about a count of controls or how long an attempt's key may be.
-- **What part b is expected to find, by reading and not yet run:** Kaggle's adapter claims no capabilities, and asks about no length, prompt length or seed; it keeps no record of an attempt, so the same one after its run ended looks as if it would be sent again; and it takes no account of a frame rate, so listing the model's own would refuse what the service sends today (the project's), which is a decision and not only a fix. ComfyUI's says nothing of a lost answer, and throws an error of no kind for the files of a run it does not know. Each is to be fixed in that adapter or reported, and no check is to be loosened for it.
+- **What the rest of part b is expected to find, by reading and not yet run:** Kaggle's adapter claims no capabilities, and asks about no length, prompt length or seed; it keeps no record of an attempt, so the same one after its run ended looks as if it would be sent again; and it takes no account of a frame rate, so listing the model's own would refuse what the service sends today (the project's), which is a decision and not only a fix. Each is to be fixed in that adapter or reported, and no check is to be loosened for it.
 - **`sends()` is what the stand-in counts:** one that does not count a send which never landed cannot show such a send made again.
 - **Not asked:** whether a failed run leaves files (the contract does not say), and what a run stopped elsewhere cost.
 - **An uncertain answer's own words are not measured** (the card lists diagnostics and notices).
@@ -81,11 +95,11 @@ The tests of the kit hold it to this: adapters wrong in one way each, made from 
 
 ## The check
 
-`npm run qualify:engine-conformance`: **PASS** at `28b988192c9c3c5558b67bae2644054d2f2b6e5d`, on win32, with the in-process fake and the test files' own stand-ins. No network but loopback, no account, no download, no model and no spend.
+`npm run qualify:engine-conformance`: **PASS** at `44c6dafa103d12aeb1d76c8b814db8a2eab477b0`, on win32, with the in-process fake and the test files' own stand-ins. No network but loopback, no account, no download, no model and no spend.
 
 Operations compared with the contract: `textToVideo`, `imageToVideo`, `videoEdit`, `transcribe`, `enhance`.
 
-Adapter files not yet registered: `v1-bridge.ts`, `comfyui.ts`, `kaggle.ts`.
+Adapter files not yet registered: `v1-bridge.ts`, `kaggle.ts`.
 
 | Adapter | Check | Result |
 |---|---|---|
@@ -152,6 +166,27 @@ Adapter files not yet registered: `v1-bridge.ts`, `comfyui.ts`, `kaggle.ts`.
 | fake, going on elsewhere | `uncertain-row-not-resent` | PASS |
 | fake, going on elsewhere | `continuing-stop-blocks-import` | PASS |
 | fake, going on elsewhere | `corrupt-result-not-imported` | PASS |
+| comfyui | `refusal-sends-nothing` | PASS |
+| comfyui | `unlisted-role-refused` | PASS |
+| comfyui | `limits-held` | PASS |
+| comfyui | `status-parses` | PASS |
+| comfyui | `states-told-as-they-are` | PASS |
+| comfyui | `ended-failure-has-class` | PASS |
+| comfyui | `ref-usable-at-once` | PASS |
+| comfyui | `same-attempt-never-sent-twice` | PASS |
+| comfyui | `uncertain-sends-nothing-more` | PASS |
+| comfyui | `restart-reconciles-without-sending` | PASS |
+| comfyui | `unknown-ref-answered-honestly` | PASS |
+| comfyui | `cancel-never-overclaims` | PASS |
+| comfyui | `artifact-verified` | PASS |
+| comfyui | `corrupt-artifact-rejected` | PASS |
+| comfyui | `diagnostic-bounded` | PASS |
+| comfyui | `location-declared` | PASS |
+| comfyui | `row-before-send` | PASS |
+| comfyui | `ref-before-poll` | PASS |
+| comfyui | `uncertain-row-not-resent` | PASS |
+| comfyui | `continuing-stop-blocks-import` | PASS |
+| comfyui | `corrupt-result-not-imported` | PASS |
 
 | Offer | Machine-checked intake |
 |---|---|

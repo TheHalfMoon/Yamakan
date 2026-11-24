@@ -12,13 +12,15 @@ export const ADAPTER_SUITES: Readonly<
     tests: ["engine-conformance.test.ts"],
     names: ["fake", "fake, stopped elsewhere", "fake, going on elsewhere"],
   },
+  "comfyui.ts": {
+    makes: "createComfyEngine",
+    tests: ["comfyui-engine.test.ts"],
+    names: ["comfyui"],
+  },
 };
-// Not yet: part b of this card.
-export const PENDING: readonly string[] = [
-  "v1-bridge.ts",
-  "comfyui.ts",
-  "kaggle.ts",
-];
+// Not yet: Kaggle's is the rest of part b of this card, and the bridge fails two checks, by name in
+// tests/engines.test.ts.
+export const PENDING: readonly string[] = ["v1-bridge.ts", "kaggle.ts"];
 // What names the contract and makes no adapter, and why it does.
 export const NOT_ADAPTERS: Readonly<Record<string, string>> = {
   "contract-v2.ts": "The contract itself, and what an adapter is made of.",

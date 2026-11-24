@@ -30,6 +30,13 @@ import {
   bridgeV1,
   recipeHash,
 } from "../core/engines/v1-bridge.ts";
+import type { EngineAdapter, EngineStatus } from "../core/engines/contract.ts";
+import type { ProjectStore } from "../core/store.ts";
+import {
+  CONFORMANCE_CHECKS,
+  runConformance,
+  type ConformanceHarness,
+} from "./fixtures/engine-conformance.ts";
 
 const graph = {
   nodes: {
@@ -924,4 +931,224 @@ test("a stop that goes on says so", async () => {
       billingOutcome: "notApplicable",
     },
   );
+});
+
+// MPR-206: the conformance kit over the bridge. Its version 1 engine is the fake, put in each
+// state by what it says; each submit it takes is one send. It outlives a bridge, which after a
+// restart knows nothing of what another one started.
+const bridgeHarness = (): ConformanceHarness => {
+  let v1 = createFakeEngine();
+  let over: Partial<EngineAdapter> = {};
+  let sent = 0;
+  let imported = 0;
+  let attempts = 0;
+  const says = (state: EngineStatus["state"], error?: string) => ({
+    status: async (id: string) => ({ id, state, ...(error ? { error } : {}) }),
+    cancel: async (id: string) => ({ id, state }),
+  });
+  const set = (of: (engine: EngineAdapter) => Partial<EngineAdapter>) => () => {
+    over = of(v1);
+  };
+  const forgets = async (): Promise<never> => {
+    throw new Error("Unknown engine job.");
+  };
+  const make = (extra: { operation?: string } & object = {}) => {
+    const { operation, ...rest } = extra;
+    const of = { attemptKey: `conformance-${++attempts}`, ...rest };
+    return operation === "imageToVideo" ? imageToVideo(of) : textToVideo(of);
+  };
+  return {
+    reset: () => {
+      v1 = createFakeEngine();
+      over = {};
+      sent = 0;
+      imported = 0;
+    },
+    adapter: () =>
+      bridgeV1({
+        ...v1,
+        ...over,
+        submit: (r) => {
+          sent++;
+          return (over.submit ?? v1.submit)(r);
+        },
+      }),
+    request: make,
+    refusedRequests: () => [
+      {
+        request: {
+          ...make({ operation: "imageToVideo" }),
+          inputs: [
+            { role: "firstFrame", asset: imageRef },
+            { role: "lastFrame", asset: imageRef },
+          ],
+        },
+        reason: "INPUT_UNSUPPORTED",
+      },
+      {
+        request: { ...make(), controls: { guidance: 1 } },
+        reason: "CONTROL_UNSUPPORTED",
+      },
+      {
+        request: { ...make(), recipeHash: zeros },
+        reason: "RECIPE_UNKNOWN",
+      },
+      {
+        request: { ...make(), graph: { nodes: {} } },
+        reason: "INVALID_REQUEST",
+      },
+    ],
+    context: () => context(),
+    sends: () => sent,
+    remote: "none",
+    arrange: {
+      succeeded: set(() => ({})),
+      running: set(() => says("running")),
+      failed: set(() =>
+        says("failed", `No such file: ${process.cwd()}/m ${"x".repeat(600)}`),
+      ),
+      // The engine has the job, and what names it is lost with its answer.
+      uncertainLanded: set((engine) => ({
+        submit: async (r) => {
+          await engine.submit(r);
+          throw new Error("The connection was lost.");
+        },
+      })),
+      uncertainNeverLanded: set(() => ({
+        submit: async () => {
+          throw new Error("The connection was lost.");
+        },
+      })),
+      // Restarted: it knows nothing of what it took.
+      lost: set(() => ({ status: forgets, cancel: forgets, outputs: forgets })),
+      corruptArtifact: set((engine) => ({
+        outputs: async (id) =>
+          (await engine.outputs(id)).map((o) => ({ ...o, sha256: zeros })),
+      })),
+    },
+    unavailable: {},
+    service: {
+      store: {
+        exportProject: async () => ({
+          name: "Conformance",
+          output: { fps: { num: 30, den: 1 } },
+          assets: [],
+        }),
+        read: () => undefined,
+        importAsset: async () => {
+          imported++;
+          throw new Error("Nothing of these checks joins a store.");
+        },
+      } as unknown as ProjectStore,
+      request: {
+        projectId: "p",
+        recipe: {
+          id: "fake.textToVideo.v1",
+          hash: recipeHash(SERVER_RECIPES[0]!),
+          operation: "textToVideo",
+          modelManifestHash: zeros,
+        },
+        prompt: "A lighthouse at dusk",
+        width: 640,
+        height: 360,
+        durationFrames: 60,
+      },
+      imports: () => imported,
+    },
+  };
+};
+
+// Not registered (tests/fixtures/engine-suites.ts): a run that landed though its answer was lost
+// cannot be followed, since a version 1 engine names a job only in that answer. When this list
+// is empty the bridge is registered.
+test("the bridge passes the conformance kit but for a landed run whose answer was lost", async () => {
+  const results = await runConformance(bridgeHarness());
+  assert.deepEqual(
+    results.map((r) => r.check),
+    [...CONFORMANCE_CHECKS],
+  );
+  assert.deepEqual(
+    results.filter((r) => r.unavailable),
+    [],
+  );
+  const failed = results.filter((r) => !r.ok);
+  assert.deepEqual(
+    failed.map((r) => r.check),
+    ["states-told-as-they-are", "uncertain-sends-nothing-more"],
+  );
+  assert.match(failed[0]!.detail, /^uncertainLanded is not told: unknown/);
+  assert.match(failed[1]!.detail, /^unknown/);
+  // What each of them asks after that state passes too.
+  const h = bridgeHarness();
+  const { uncertainLanded: _landed, ...arrange } = h.arrange;
+  const rest = await runConformance({
+    ...h,
+    arrange,
+    unavailable: { uncertainLanded: "It fails, above." },
+  });
+  assert.deepEqual(
+    rest.filter((r) => !r.ok && !r.unavailable),
+    [],
+  );
+});
+
+test("a bridge whose engine throws as it takes a job says the send is uncertain, and never sends it again", async () => {
+  let submits = 0;
+  // Whether it says so at once or later.
+  const bridged = bridgeV1({
+    ...createFakeEngine(),
+    submit: () => {
+      if (++submits === 1) throw new Error("The connection was lost.");
+      return Promise.reject(new Error("The connection was lost."));
+    },
+  });
+  const request = textToVideo({ attemptKey: "lost-answer" });
+  const answer = await bridged.submit(request, context());
+  assert.ok("executionRef" in answer && answer.uncertain);
+  assert.deepEqual(await bridged.submit(request, context()), answer);
+  assert.equal(submits, 1);
+  assert.equal((await bridged.status(answer.executionRef)).state, "unknown");
+  assert.deepEqual(await bridged.enumerateArtifacts(answer.executionRef), []);
+  // Another generation of it is another run, and the one whose name is lost stays unknown.
+  const next = await bridged.submit(
+    textToVideo({ attemptKey: "lost-answer", leaseGeneration: 2 }),
+    context(),
+  );
+  assert.ok("executionRef" in next);
+  assert.notEqual(next.executionRef, answer.executionRef);
+});
+
+test("a bridge whose engine forgets a job says it is not known", async () => {
+  const v1 = createFakeEngine();
+  let gone = false;
+  const forgotten = async (): Promise<never> => {
+    throw new Error("Unknown engine job.");
+  };
+  const bridged = bridgeV1({
+    ...v1,
+    status: (id) => (gone ? forgotten() : v1.status(id)),
+    cancel: (id) => (gone ? forgotten() : v1.cancel(id)),
+  });
+  const answer = await bridged.submit(textToVideo(), context());
+  assert.ok("executionRef" in answer);
+  gone = true;
+  const status = ExecutionStatusSchema.parse(
+    await bridged.reconcile(answer.executionRef),
+  );
+  assert.equal(status.state, "unknown");
+  assert.deepEqual(await bridged.enumerateArtifacts(answer.executionRef), []);
+  assert.deepEqual(await bridged.requestCancel(answer.executionRef), {
+    requested: true,
+    localProcessExited: false,
+    remoteOutcome: "unknown",
+  });
+  // Known to have ended, and its files not given.
+  const without = bridgeV1({ ...v1, outputs: forgotten });
+  const ended = await without.submit(
+    textToVideo({ attemptKey: "no-files" }),
+    context(),
+  );
+  assert.ok("executionRef" in ended);
+  assert.equal((await without.status(ended.executionRef)).state, "succeeded");
+  assert.deepEqual(await without.enumerateArtifacts(ended.executionRef), []);
 });
