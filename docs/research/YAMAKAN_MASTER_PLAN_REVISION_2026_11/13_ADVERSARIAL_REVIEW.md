@@ -118,7 +118,7 @@ approval log, not a review tool.
 | CD-4 | MAJOR | With no language model, the director types every planning stage. | FIXED as a statement: document 00 section 2, Journey 4 of document 06 and a risk in MPR-604 say so. |
 | CD-5 | MAJOR | The shot list is approved with no cost figure beside it. | LEFT OPEN: OA-9. |
 | CD-6 | MAJOR | The marketing journey implies a team review that the product cannot hold. | FIXED: Journey 5 is retitled, and document 00 section 7 says there is one human principal and no second approver. |
-| CD-7 | MAJOR | The reason for a revision is not recorded. | PARTLY FIXED: OA-5, its record part accepted 2026-11-23 and the field in MPR-101; MPR-103 writes it. |
+| CD-7 | MAJOR | The reason for a revision is not recorded. | PARTLY FIXED: OA-5, its record part accepted 2026-11-23, the field in MPR-101 and written by MPR-103; its card part accepted 2026-11-24, for MPR-104 to build. |
 | CD-8 | MINOR | Some surfaces speak to an engineer: byte counts, ids, hashes. | PARTLY FIXED: MPR-104 shows a level word and says before a save that undo history ends. OA-10 was accepted on 2026-11-23: the brief form shows fullness and no byte count (MPR-106), and a proposal shows shot names and timecode and no id (MPR-303). |
 
 ### 3.2 Product strategist
@@ -306,7 +306,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-2 | MPR-802, MPR-803 | Protocol v2.1 uses a fresh brief set, pinned by hash, that no operator has worked. | CR-3 | MPR-802 part a |
 | OA-3 | MPR-801, MPR-803 | A comparative label is allowed against configuration 2-R alone; a run against 2-W is descriptive. | CR-2 | MPR-803 |
 | OA-4 | MPR-302, MPR-104 | A stage can be sent back with a note of at most 240 characters, kept in the story. No new table. | CD-1 | MPR-302 |
-| OA-5 | MPR-101, MPR-103, MPR-104 | The take record gains `revisionNote` (accepted by the founder on 2026-11-23), and the shot card lists attempts from `yamakan.shot.history` (not put to the founder; open). | CD-7 | MPR-104 |
+| OA-5 | MPR-101, MPR-103, MPR-104 | The take record gains `revisionNote` (accepted by the founder on 2026-11-23), and the shot card lists attempts from `yamakan.shot.history` (accepted by the founder on 2026-11-24). | CD-7 | accepted |
 | OA-6 | MPR-506 | The audit log has a row cap with a stated behaviour at the cap, and the card lists every mutating route that does not pass through `execute`. | SA-8 | MPR-506 |
 | OA-7 | MPR-402, MPR-403 | The order in which the two cards raise the story version is carried by a dependency, not kept by hand. | Dependency check, finding 3 | The second of the two starts |
 | OA-8 | MPR-302, MPR-301 | The approval prompt shows the stage's text and, when an approval is stale, the scene and shot ids that differ. | CD-2 | MPR-302 |

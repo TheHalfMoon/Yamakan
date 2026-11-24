@@ -68,7 +68,7 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-201 | 2 | VERIFIED | — | Add one model catalog and check every existing model list against it |
 | MPR-202 | 2 | VERIFIED | MPR-201 | Report capabilities as three-state cells and project generation options from them |
 | MPR-203 | 2 | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | Add a generation preflight with estimate, egress disclosure and a hash that start checks |
-| MPR-204 | 2 | REVIEW_PENDING | — | Add default-deny gates for egress, spend and download with recorded human approvals |
+| MPR-204 | 2 | VERIFIED | — | Add default-deny gates for egress, spend and download with recorded human approvals |
 | MPR-205 | 2 | WAITING_DEPENDENCIES | MPR-207, MPR-204 | Contain the Kaggle CLI route: environment, folder, caps, tested version and quota facts |
 | MPR-206 | 2 | REVIEW_PENDING | MPR-201 | Define the five engine operations and add a conformance kit every adapter must pass |
 | MPR-207 | 2 | REVIEW_PENDING | — | Record a typed failure class and end time on every ended generation |
@@ -1030,10 +1030,10 @@ Parts that wait on something outside engineering:
 - Existing: `src/main.tsx`, `src/create/CreateWorkspace.tsx`, `src/create/GeneratePanel.tsx`, `src/create/create-model.ts`, `src/director/TakeReview.tsx`, `src/director/take-review.ts`, `src/workspaces/ProjectShell.tsx`, `src/i18n.ts`, `src/style.css`, `tests/i18n.test.ts`, `tests/create-model.test.ts`, `scripts/qualify-take-review.mjs`, `scripts/qualify-kaggle-screens.mjs`, `package.json`, `docs/evidence/ultimate`, `src/director/DirectorPanel.tsx`
 - New files: `src/story/shot-cards.ts`, `src/story/ShotCards.tsx`, `src/create/revise-draft.ts`, `src/create/ReviseBanner.tsx`, `tests/shot-cards.test.ts`, `scripts/qualify-revise-shot-screens.mjs`, `docs/evidence/ultimate/MPR-104-revise-shot-screens.md`, `docs/evidence/ultimate/MPR-104-revise-shot-screens-receipt.json`
 - Interfaces:
-  - No new command and no input change to any command. The screens call `yamakan.take.list`, `yamakan.take.record`, `yamakan.take.revisionDraft`, `yamakan.generation.start` (with `target` and `derivedFromTakeId`), `yamakan.generation.import`, and the existing compare, propose and apply commands.
+  - No new command and no input change to any command. The screens call `yamakan.take.list`, `yamakan.take.record`, `yamakan.shot.history`, `yamakan.take.revisionDraft`, `yamakan.generation.start` (with `target` and `derivedFromTakeId`), `yamakan.generation.import`, and the existing compare, propose and apply commands.
   - One place starts generations: Create. 'Revise this shot' sets a revise intent `{documentId, shotId, takeId, shotName}` held in `src/main.tsx`, opens the Create workspace (`useWorkspace().open('create')`) and moves focus to the revise banner. Create receives the intent as a prop.
   - New `src/story/shot-cards.ts` (pure): `shotCards(takeList)` maps the answer of `yamakan.take.list` to card rows `{shotId, name, durationTicks, problem, takes: [{takeId, kind, shown, recordHash}]}` (it accepts answers without `recordHash`), and `moveFocus(index, key, rtl, count)` returns the next index for ArrowLeft, ArrowRight, Home and End.
-  - New `src/story/ShotCards.tsx`, mounted at the top of the Story panel. Test ids: `shot-cards`, `shot-card`, `shot-card-name`, `shot-card-duration`, `shot-card-problem`, `shot-take-stack` (a `role="listbox"` with one tab stop), `shot-take` (an option; `aria-selected` on the focused take and `aria-current="true"` on the take the timeline shows), `shot-take-facts` (the opened take's record, read with `yamakan.take.record`: model, seed, size, origin, the take it was derived from and what changed; and a level word taken from the record's origin: 'L1 Regenerable' for `generation`, 'L3 Structured scene' for `render`, otherwise 'L0 Flattened pixels'), `shot-revise`, `shot-review`.
+  - New `src/story/ShotCards.tsx`, mounted at the top of the Story panel. Test ids: `shot-cards`, `shot-card`, `shot-card-name`, `shot-card-duration`, `shot-card-problem`, `shot-take-stack` (a `role="listbox"` with one tab stop), `shot-take` (an option; `aria-selected` on the focused take and `aria-current="true"` on the take the timeline shows), `shot-take-facts` (the opened take's record, read with `yamakan.take.record`: model, seed, size, origin, the take it was derived from and what changed; and a level word taken from the record's origin: 'L1 Regenerable' for `generation`, 'L3 Structured scene' for `render`, otherwise 'L0 Flattened pixels'), `shot-attempts` (OA-5, accepted on 2026-11-24: every attempt that `yamakan.shot.history` gives for the shot, newest first, a page at a time: how it ended, when, how long it took and what it used, the take it made if it made one, and its message; failed, stopped and dismissed ones too; its totals and its named gaps; what is not known is said as not known, never as zero), `shot-revise`, `shot-review`.
   - `shot-review` opens the existing take review for that shot: `TakeReview` gains one optional prop `focusShot {documentId, shotId}`; `src/main.tsx` opens the Director `<details>` and passes it to `DirectorPanel`, which gains the same optional prop and hands it to `TakeReview`. Existing test ids and behaviour of `TakeReview` are unchanged.
   - New `src/create/revise-draft.ts` (pure): `applyDraft(brief, draft)` returns Create's fields set from a revision draft (the stored prompt is the final text that was sent, so `direction` is cleared to stop the direction words being added twice), `needsConfirm(brief, draft)` says whether typed text would be lost, and `checkRows(checks)` orders the checks for display.
   - New `src/create/ReviseBanner.tsx`. Test ids: `create-revise-banner` (names the shot; `tabIndex={-1}` heading that receives focus), `create-revise-check` (one row per check with its state as text, not colour alone), `create-revise-keep-typed` and `create-revise-use-take` (the choice when typed text would be lost), `create-target-clear` (return to making a new shot), `create-back-to-shot`.
@@ -1075,6 +1075,7 @@ Parts that wait on something outside engineering:
 - The whole flow passes in Arabic with `dir="rtl"` on the document, with no untranslated key and no horizontal scroll at a 375 px wide viewport.
 - Create without a revise intent behaves exactly as before.
 - Revising a shot saves the story, which ends timeline undo history; the page says so before the save.
+- A person who opens a card's attempts sees every one that `yamakan.shot.history` gives, failed and stopped ones included, with the totals and the gaps it names, in English and in Arabic (OA-5).
 
 **Test plan**
 
@@ -1098,7 +1099,7 @@ Parts that wait on something outside engineering:
 
 **Performance limits**
 
-- `yamakan.take.list` is called once per story document per project revision, not per card; records are read one at a time, only for a take whose facts are opened.
+- `yamakan.take.list` is called once per story document per project revision, not per card; records are read one at a time, only for a take whose facts are opened, and a shot's history only when its attempts are opened.
 - Up to 200 cards with 8 takes each render without a per-card request; typing in Create does not re-render the Story panel (the workspaces stay mounted, as `WorkspacePanel` keeps them).
 - No new polling: run state keeps using `GeneratePanel`'s existing timer.
 
@@ -1896,13 +1897,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 2 |
 | Track | 2 |
 | Pillars | A |
 | Dependencies | none |
 | Founder decisions | none |
 | Earlier plan items | stream:consent, stream:kaggle-create, YU-013, SS-007 |
+| Evidence | Merged in two parts, f9525648c0e9dbb9f1f661e9c7801e8523eadef4 (PR #305, pinned to d71ea0c) and 3664abd24513bd8568271622462ae56793ec47f8 (PR #307, pinned to 94b8a2a); qualify:gates passed at dc46bc4 in real Edge on the founder host with a stand-in for the Kaggle CLI (docs/evidence/model-system/gates.md): what came after it is OA-22's pins, text, and one import in a test; npm run test:studio passed on the founder host before main was brought in; the CI of both, the real checks of the second and main's CI passed; the step against real Kaggle is BLOCKED (FD-3, quota); the Arabic is unreviewed |
 
 **Goal.** Nothing leaves this computer, uses a remote allowance or is downloaded unless a person has recorded an approval for exactly that route, host, account and purpose, with an expiry and a limit. Each kind has one place in the code where the check is made, and tests prove that without an approval no process is started and no connection is opened.
 
