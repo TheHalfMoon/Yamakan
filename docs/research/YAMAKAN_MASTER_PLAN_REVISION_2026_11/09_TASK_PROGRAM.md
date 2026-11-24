@@ -893,7 +893,7 @@ Parts that wait on something outside engineering:
 | Dependencies | MPR-101, MPR-102 |
 | Founder decisions | FD-2 |
 | Earlier plan items | stream:kaggle-create, SS-006 |
-| Evidence | Merged as 89c6e7014372a9f6033d19cfccbef484bfa1ccb2 (PR #308, pinned to 47a82e3, which adds only the receipt and its write-up to bdafd6c); qualify:revisable-shot passed at bdafd6c on GitHub's Linux machine (docs/evidence/ultimate/MPR-103-take-revision-receipt.json), with a stand-in engine whose output does not follow its request and test patterns, so it proves the record and the flow and no model; it is not evidence of the founder host, whose sandbox starts no media worker; the 15 tests of tests/take-revision.test.ts passed there; main's CI passed |
+| Evidence | Merged as 89c6e7014372a9f6033d19cfccbef484bfa1ccb2 (PR #308, pinned to 47a82e3, which adds only the receipt and its write-up to bdafd6c); qualify:revisable-shot passed at bdafd6c on GitHub's Linux machine (docs/evidence/ultimate/MPR-103-take-revision-receipt.json), with a stand-in engine whose output does not follow its request and test patterns, so it proves the record and the flow and no model; it is not evidence of the founder host, whose sandbox starts no media worker; the 15 tests of tests/take-revision.test.ts passed on the founder host, with an engine double; main's CI passed |
 
 **Goal.** A person can open any take, get back the request that made it as an editable draft, change one field and generate a new take whose record says which take it came from and which fields changed. A revision is a new generation from changed inputs; it does not edit the pixels of the earlier take.
 
