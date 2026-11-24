@@ -256,6 +256,10 @@ try {
     await page.getByTestId("create-model-facts").textContent(),
     /720x480, 49 frames at 8 fps/,
   );
+  // What is not known of its licence, in words (MPR-208).
+  const open = await page.getByTestId("create-licence-open").textContent();
+  for (const words of ["T5 text encoder", "FFmpeg", "torch", "a watermark"])
+    assert.ok(open.includes(words), open);
   assert.match(await panel.textContent(), /only add words to the prompt/);
   step("what a model would be given is shown, with what direction really does");
 

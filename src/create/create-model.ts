@@ -1,11 +1,14 @@
 // What the Create workspace knows, apart from how it looks: the models that have
 // really been run, the words a direction adds to a prompt, and a run's receipt.
 // Nothing here runs a model.
+import type { OpenLicenceField } from "../../core/engines/licence.ts";
 
 export type CreateModel = {
   id: string;
   name: string;
   licence: string;
+  // What of its licence is not known, as the catalog has it (MPR-208).
+  licenceOpen: readonly OpenLicenceField[];
   // What has been run and looked at, not what the model might be able to do.
   width: number;
   height: number;
@@ -23,11 +26,23 @@ export type CreateModel = {
   folder: string;
 };
 
+const RUN_OPEN: readonly OpenLicenceField[] = [
+  { field: "bundled", part: "FFmpeg in imageio-ffmpeg 0.6.0" },
+  { field: "bundled", part: "torch, NumPy and Pillow on Kaggle's machine" },
+  { field: "bundled", part: "what these packages install and use in turn" },
+];
+
 export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
   {
     id: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
     name: "Wan2.2-TI2V-5B",
     licence: "Apache-2.0",
+    licenceOpen: [
+      ...RUN_OPEN,
+      { field: "outputUse", part: null },
+      { field: "watermark", part: null },
+      { field: "evidence", part: null },
+    ],
     width: 704,
     height: 480,
     frames: 81,
@@ -42,6 +57,11 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     id: "zai-org/CogVideoX-2b",
     name: "CogVideoX-2b",
     licence: "Apache-2.0",
+    licenceOpen: [
+      { field: "bundled", part: "T5 text encoder" },
+      ...RUN_OPEN,
+      { field: "watermark", part: null },
+    ],
     width: 720,
     height: 480,
     frames: 49,
@@ -54,6 +74,18 @@ export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([
     folder: "scripts/kaggle/cogvideox-2b",
   },
 ]);
+
+/** What is not known of a model's licence, in words. */
+export const licenceOpenWords = (
+  open: readonly OpenLicenceField[],
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+) =>
+  open
+    .map(({ field, part }) =>
+      // A part's name keeps its own direction in a sentence of another.
+      t(`create.licenceField.${field}`, { part: `⁨${part ?? ""}⁩` }),
+    )
+    .join(t("create.licenceOpenAnd"));
 
 export {
   DIRECTIONS,

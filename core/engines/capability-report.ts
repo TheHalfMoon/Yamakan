@@ -13,6 +13,7 @@ import {
   type ModelIdentity,
 } from "./catalog.ts";
 import type { Operation, RefusalReason } from "./contract-v2.ts";
+import { recipeLicence } from "./licence.ts";
 import { ENGINE_REASON_MESSAGES, type ReportReason } from "./reasons.ts";
 
 export const CAPABILITY_REPORT_FORMAT = "yamakan.capability-report/v1";
@@ -99,6 +100,24 @@ function cellOf(
         ...fromCatalog,
         state: "unsupported",
         reasons: ["OFFER_RETIRED"],
+      };
+    if (
+      offer.lifecycle !== "candidate" &&
+      !recipeLicence(
+        {
+          recipeId: offer.recipeId,
+          model: entry.identity.model,
+          revision: entry.identity.revision,
+        },
+        entry.licence,
+        { run: route === "kaggle" ? "hosted" : "local" },
+      ).offered
+    )
+      return {
+        ...its,
+        ...fromCatalog,
+        state: "unsupported",
+        reasons: ["RIGHTS_UNQUALIFIED"],
       };
     const [first] = offer.evidence;
     if (

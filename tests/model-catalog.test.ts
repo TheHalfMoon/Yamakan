@@ -85,8 +85,10 @@ test("the catalog parses, is frozen and stays inside its bounds", () => {
     );
   }
   for (const e of MODEL_CATALOG.entries) {
-    assert.equal(e.licence.sourceUrl, e.sourceUrl);
-    assert.equal(e.licence.verifiedAt, evidence.inspectedAt);
+    const { host, model, revision } = e.identity;
+    const raw = `https://${host}/${model}/raw/${revision}/`;
+    assert.ok(e.licence.sourceUrl.startsWith(raw), e.licence.sourceUrl);
+    assert.ok(e.licence.verifiedAt >= evidence.inspectedAt);
     for (const o of e.offers) {
       // Nothing is qualified or retired yet, and no recipe takes a reference.
       assert.equal(o.lifecycle, o.route === "kaggle" ? "offered" : "candidate");
@@ -788,9 +790,9 @@ test("each field has its form and its bound", () => {
         (c, v) => (c.entries[0].identity.variant = v),
       ],
       [
-        "weightsLicence",
-        ["", "a b", x(41)],
-        (c, v) => (c.entries[0].licence.weightsLicence = v),
+        "weights",
+        ["", " a", x(81)],
+        (c, v) => (c.entries[0].licence.weights.name = v),
       ],
       ["sourceUrl", urls, (c, v) => (c.entries[0].licence.sourceUrl = v)],
       ["sourceUrl", urls, (c, v) => (c.entries[0].sourceUrl = v)],
@@ -957,7 +959,7 @@ test("a catalog past its bounds is refused", () => {
   parseModelCatalog(held);
 });
 
-test("the catalog imports zod and types only", () => {
+test("the catalog imports zod, the licence block and types only", () => {
   const source = readFileSync(at("core/engines/catalog.ts"), "utf8");
   const code = source
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -971,7 +973,8 @@ test("the catalog imports zod and types only", () => {
   const named = [...code.matchAll(/^(.*)\bfrom\s+"([^"]+)"/gm)];
   assert.ok(named.length >= 5);
   for (const [, before, from] of named)
-    if (from !== "zod")
+    // The licence block's form, which imports zod alone (tests/licence-gate.test.ts).
+    if (from !== "zod" && from !== "./licence.ts")
       assert.match(before, /^import type \{ [A-Za-z0-9, ]+ \} $/, from);
   assert.equal((code.match(/\bfrom\s*["']/g) ?? []).length, named.length);
   assert.doesNotMatch(code, /^import\s*["']/m);

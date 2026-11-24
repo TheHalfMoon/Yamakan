@@ -110,6 +110,7 @@ import {
   kaggleTimeout,
   ledgerOptions,
   notebookUrl,
+  kaggleLicence,
   offeredKaggleRecipes,
 } from "../engines/kaggle.ts";
 import { ENGINE_V2_LIMITS } from "../engines/contract-v2.ts";
@@ -3126,6 +3127,8 @@ export const commands = {
                 model: r.model,
                 revision: r.revision,
                 licence: r.licence,
+                // What of it is not known (MPR-208).
+                licenceOpen: kaggleLicence(r).open,
                 width: r.width,
                 height: r.height,
                 frames: r.frames,

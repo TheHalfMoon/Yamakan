@@ -22,7 +22,10 @@ import {
   type CapabilityV2,
   type RefusalReason,
 } from "./contract-v2.ts";
+import { ACCEPTED_MODEL_LICENSES } from "./licence.ts";
 import { engineReasonMessage } from "./reasons.ts";
+
+export { ACCEPTED_MODEL_LICENSES } from "./licence.ts";
 
 export const MODEL_MANIFEST_FORMAT = "yamakan.model-manifest/v1";
 export const MANIFEST_LIMITS = Object.freeze({
@@ -31,14 +34,6 @@ export const MANIFEST_LIMITS = Object.freeze({
   files: 16,
   fileBytes: 64 * 1024 * 1024 * 1024,
 });
-// Licenses a model may carry and be used under (commercial use included).
-export const ACCEPTED_MODEL_LICENSES: readonly string[] = Object.freeze([
-  "apache-2.0",
-  "mit",
-  "bsd-2-clause",
-  "bsd-3-clause",
-]);
-
 const Sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 // One path segment: no separator, stream (:), short-name (~) or leading
 // dot, no trailing dot, and no Windows device name.

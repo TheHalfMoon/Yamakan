@@ -39,6 +39,7 @@ import {
 import { createFakeEngineV2 } from "../core/engines/fake.ts";
 import {
   createKaggleEngine,
+  kaggleLicence,
   notebookUrl,
   offeredKaggleRecipes,
 } from "../core/engines/kaggle.ts";
@@ -47,6 +48,7 @@ import { MESSAGES } from "../src/i18n.ts";
 import { ProjectStore } from "../core/store.ts";
 import { TakeRecordSchema } from "../core/take-record.ts";
 import { JobSupervisor } from "../core/jobs.ts";
+import { wholeLicence } from "./fixtures/licence-block.ts";
 
 const bases: string[] = [];
 const handles: { close(): unknown }[] = [];
@@ -121,7 +123,8 @@ const KAGGLE = {
   username: "someone",
 };
 
-// What main answered before the report (b8c9f3b), written out.
+// What main answered before the report (b8c9f3b), written out; since MPR-208 with what is not
+// known of a model's licence.
 const OPERATIONS_BEFORE = Operation.options.map((operation) => ({
   operation,
   available: false,
@@ -140,6 +143,7 @@ const OPTIONS_BEFORE = {
     model: r.model,
     revision: r.revision,
     licence: r.licence,
+    licenceOpen: kaggleLicence(r).open,
     width: r.width,
     height: r.height,
     frames: r.frames,
@@ -286,6 +290,7 @@ test("a retired offer and a missing offer are unsupported, each with its own rea
 
 test("a local offer also needs this build's discovery, whose reason it says", () => {
   const catalog = catalogWith((c) => {
+    c.entries[0].licence = wholeLicence();
     const local = offerOf(c, "local", "textToVideo");
     local.lifecycle = "qualified";
     local.recipeId = "local-wan";
@@ -331,6 +336,57 @@ test("a local offer also needs this build's discovery, whose reason it says", ()
   );
 });
 
+test("an offer its licence does not allow is unsupported, and is no choice", () => {
+  const report = (change: (c: ModelCatalog) => void) =>
+    build({ catalog: catalogWith(change), kaggleConfigured: true });
+  const text = (r: CapabilityReport) => {
+    const { state, reasons, source } = cell(r, "kaggle", "textToVideo");
+    return [state, reasons, source.kind];
+  };
+  const no = ["unsupported", ["RIGHTS_UNQUALIFIED"], "catalog"];
+  // A recipe of after the gate, with the same open fields.
+  const renamed = report((c) => {
+    offerOf(c, "kaggle", "textToVideo").recipeId = "kaggle-new";
+  });
+  assert.deepEqual(text(renamed), no);
+  assert.equal(
+    renamed.reasonMessages.RIGHTS_UNQUALIFIED,
+    ENGINE_REASON_MESSAGES.RIGHTS_UNQUALIFIED,
+  );
+  // One of before it, with a term that is known and against it.
+  assert.deepEqual(
+    text(
+      report((c) => {
+        c.entries[0].licence = { ...c.entries[0].licence, gated: "yes" };
+      }),
+    ),
+    no,
+  );
+  // A hosted run needs the right to one; a local run of the same model does not.
+  const local = report((c) => {
+    c.entries[0].licence = {
+      ...wholeLicence(),
+      hostedServiceRight: "notAllowed",
+    };
+    const offer = offerOf(c, "local", "textToVideo");
+    offer.lifecycle = "qualified";
+    offer.recipeId = "local-wan";
+  });
+  assert.deepEqual(text(local), no);
+  assert.deepEqual(cell(local, "local", "textToVideo").reasons, [
+    "NOT_QUALIFIED",
+    "ENGINE_DISABLED",
+  ]);
+  const choices = projectGenerationOptions(renamed, {
+    recipes: offeredKaggleRecipes(),
+    modelOf: (r) => r.id,
+  });
+  assert.deepEqual(choices.models, [
+    "kaggle-wan22-ti2v-5b-first-frame",
+    "kaggle-cogvideox-2b",
+  ]);
+});
+
 test("a place with more than one offer shows the furthest along", () => {
   const retired = { lifecycle: "retired" as const, recipeId: "kaggle-old" };
   for (const order of [1, -1]) {
@@ -357,6 +413,7 @@ test("a place with more than one offer shows the furthest along", () => {
     cell(
       build({
         catalog: catalogWith((c) => {
+          c.entries[0].licence = wholeLicence();
           const offer = offerOf(c, "kaggle", "textToVideo");
           const a = { ...offer, recipeId: "kaggle-a" };
           const b = { ...offer, recipeId: "kaggle-b" };
@@ -783,11 +840,21 @@ test("both commands take nothing, need the read scope, and answer with no Kaggle
   assert.deepEqual(imports(source).sort(), [
     "../command/errors.ts",
     "./catalog.ts",
+    "./licence.ts",
     "./reasons.ts",
   ]);
-  for (const name of ["command/errors", "engines/catalog", "engines/reasons"])
+  for (const name of [
+    "command/errors",
+    "engines/catalog",
+    "engines/licence",
+    "engines/reasons",
+  ])
     for (const from of imports(
       readFileSync(new URL(`../core/${name}.ts`, import.meta.url), "utf8"),
     ))
-      assert.ok(from === "zod", `${name} imports ${from}`);
+      assert.ok(
+        from === "zod" ||
+          (name === "engines/catalog" && from === "./licence.ts"),
+        `${name} imports ${from}`,
+      );
 });

@@ -36,6 +36,7 @@ import {
   RECEIPT_BYTE_LIMIT,
   VIDEO_CHECK_BYTE_LIMIT,
   composePrompt,
+  licenceOpenWords,
   parseReceipt,
   readBrief,
   sha256Of,
@@ -780,6 +781,13 @@ export function CreateWorkspace(props: {
             licence: model.licence,
           })}
         </p>
+        {model.licenceOpen.length > 0 && (
+          <p className="note" data-testid="create-licence-open">
+            {t("create.licenceOpen", {
+              fields: licenceOpenWords(model.licenceOpen, t),
+            })}
+          </p>
+        )}
 
         <div className="create-final">
           <h3>{t("create.finalPrompt")}</h3>

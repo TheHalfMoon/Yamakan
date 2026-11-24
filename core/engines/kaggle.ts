@@ -39,13 +39,16 @@ import { refusedSubmit } from "./failures.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
 import type { GateNetwork } from "../gates.ts";
 import type { RecipeFacts } from "../take-record.ts";
+import { catalogOfferFor } from "./catalog.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
+import { recipeLicence } from "./licence.ts";
 
 export type KaggleRecipe = {
   id: string;
   name: string;
   model: string;
   revision: string;
+  // What the catalog has for it.
   licence: string;
   // Offered from the page only once its own run from the page has been tested.
   offered: boolean;
@@ -66,13 +69,18 @@ export type KaggleRecipe = {
   output: string;
 };
 
+const licenceName = (recipeId: string) =>
+  licenceOf(recipeId)?.weights.name ?? "";
+const licenceOf = (recipeId: string) =>
+  catalogOfferFor(recipeId)?.entry.licence ?? null;
+
 export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
   {
     id: "kaggle-wan22-ti2v-5b",
     name: "Wan2.2-TI2V-5B",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
     revision: "b8fff7315c768468a5333511427288870b2e9635",
-    licence: "Apache-2.0",
+    licence: licenceName("kaggle-wan22-ti2v-5b"),
     offered: true,
     width: 704,
     height: 480,
@@ -95,7 +103,7 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     name: "Wan2.2-TI2V-5B, from a first frame",
     model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
     revision: "b8fff7315c768468a5333511427288870b2e9635",
-    licence: "Apache-2.0",
+    licence: licenceName("kaggle-wan22-ti2v-5b-first-frame"),
     offered: true,
     operation: "imageToVideo",
     width: 704,
@@ -116,7 +124,7 @@ export const KAGGLE_RECIPES: readonly KaggleRecipe[] = Object.freeze([
     name: "CogVideoX-2b",
     model: "zai-org/CogVideoX-2b",
     revision: "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
-    licence: "Apache-2.0",
+    licence: licenceName("kaggle-cogvideox-2b"),
     offered: true,
     width: 720,
     height: 480,
@@ -164,8 +172,22 @@ const TOO_MUCH_TO_SEND =
 const sha256 = (data: string | Uint8Array) =>
   createHash("sha256").update(data).digest("hex");
 
-export const offeredKaggleRecipes = () =>
-  KAGGLE_RECIPES.filter((r) => r.offered && existsSync(scriptOf(r)));
+/** What is known of a recipe's licence, and whether that lets it be offered here (MPR-208). */
+export const kaggleLicence = (
+  { id, model, revision }: Pick<KaggleRecipe, "id" | "model" | "revision">,
+  blockOf: (recipeId: string) => unknown = licenceOf,
+) =>
+  recipeLicence({ recipeId: id, model, revision }, blockOf(id), {
+    run: "hosted",
+  });
+
+export const offeredKaggleRecipes = (
+  blockOf: (recipeId: string) => unknown = licenceOf,
+) =>
+  KAGGLE_RECIPES.filter(
+    (r) =>
+      r.offered && kaggleLicence(r, blockOf).offered && existsSync(scriptOf(r)),
+  );
 
 /**
  * What this build knows of a run's recipe, if it is one of these at this model version. Its
@@ -182,7 +204,7 @@ export function kaggleRecipeFacts(
     sha256(readFileSync(scriptOf(r))) === recipe.hash;
   return {
     route: "kaggle",
-    model: { id: r.model, revision: r.revision, licence: r.licence },
+    model: { id: r.model, revision: r.revision, licence: r.licence || null },
     fps: sameScript ? r.fps : null,
     steps: sameScript ? r.steps : null,
   };
@@ -1338,6 +1360,8 @@ export function createKaggleEngine(options: {
       if (
         !recipe ||
         !(recipe.offered || options.alsoOffered?.includes(recipe.id)) ||
+        // Whatever its flag says, or a check of a recipe that is not offered yet.
+        !kaggleLicence(recipe).offered ||
         request.operation !== (recipe.operation ?? "textToVideo")
       )
         return { refused: "ENGINE_DISABLED" as const };
