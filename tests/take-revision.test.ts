@@ -2,6 +2,8 @@
 // what a run made from it changed, which the service finds and no client states. The store, the
 // job table and the commands are the real ones. The engine is a double whose one video is already
 // the project's, as its rows and ten bytes, so that no decoder is asked.
+// First: an engine tidies the folder it is given.
+import "./fixtures/own-temp.ts";
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { subscribe, unsubscribe } from "node:diagnostics_channel";

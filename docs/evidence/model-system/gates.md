@@ -25,7 +25,7 @@ At `245b079`, by reading: no `gate_approvals` table, no `core/gates.ts` and no `
 - A run started before this has no use row. It is followed while contacting is approved and counts against no limit.
 - The Arabic words are unreviewed.
 - The list of files with outbound call sites, and their number in each, is a search of the text of `core`, `server`, `cli` and `mcp`.
-- **Tests made with the computer's temporary folder could remove a person's old run folders:** an engine tidies folders of runs older than a day that its own workspace does not know, and several tests gave it the real folder (some since 2026-11-06, on main). The test files that did have a folder of their own now (`tests/fixtures/own-temp.ts`). Whether one was removed on the founder host cannot be told; none was there when this was found.
+- **Tests made with the computer's temporary folder could remove a person's old run folders:** an engine tidies folders of runs older than a day that its own workspace does not know, and several tests gave it the real folder (some since 2026-11-06, on main). The test files that did have a folder of their own now (`tests/fixtures/own-temp.ts`), one that MPR-103 brought to main on 2026-11-24 included (`tests/take-revision.test.ts`, found by the review of the merge). Whether one was removed on the founder host cannot be told; none was there when this was found, nor on 2026-11-24.
 
 ## Not covered
 
