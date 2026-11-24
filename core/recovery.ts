@@ -39,6 +39,7 @@ import { inspectWal } from "./wal.ts";
 import { restrictToOwner } from "./process/access.ts";
 import { fromEditView, parseCanonical } from "./canonical.ts";
 import type { CanonicalProject } from "./canonical.ts";
+import { GATES_SCHEMA, GATES_TABLES } from "./gates-schema.ts";
 import type { ProjectStore, RequestReceipt } from "./store.ts";
 
 // Format 2 (YU-014) adds the legacy workspace files and the creative closure
@@ -76,6 +77,7 @@ const RESTORE_POLICY = [
   "Jobs active in the original (cancel requests included) wait for an explicit retry or discard; their attempts are failed.",
   "Staged document uploads are dropped; agent tokens are revoked.",
   "Director approvals are void and likeness consents need revalidation (new execution epoch).",
+  "Approvals of what leaves this computer are not restored; a person gives them again.",
   "Unverifiable media is quarantined, unverifiable legacy files are left out, and unresolved documents are reported; the restore receipt names each.",
 ];
 
@@ -767,7 +769,47 @@ const EPOCH_TABLES = [
   "director_attempts",
   "director_requests",
 ] as const;
+// The one epoch there is, or null where there is not exactly one.
+const epochNow = (db: DatabaseSync) => {
+  const rows = db
+    .prepare("SELECT singleton, value FROM director_epoch LIMIT 2")
+    .all() as { singleton: unknown; value: unknown }[];
+  return rows.length === 1 &&
+    rows[0]!.singleton === 1 &&
+    typeof rows[0]!.value === "number"
+    ? rows[0]!.value
+    : null;
+};
+// Approvals of what leaves this computer (MPR-204) are never restored: a person gives them again.
+// Their tables go whatever they hold, at any version a backup claims, and are made again from
+// this build's own step, or by the upgrade.
+function removeApprovals(db: DatabaseSync) {
+  for (const table of GATES_TABLES)
+    if (has(db, table)) db.exec(`DROP TABLE ${table}`);
+  // The number the last one had, which would be the next one's beginning.
+  if (has(db, "sqlite_sequence"))
+    db.exec(
+      "DELETE FROM sqlite_sequence WHERE name LIKE 'gate\\_%' ESCAPE '\\'",
+    );
+  if (
+    db
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE name LIKE 'gate\\_approval%' ESCAPE '\\' LIMIT 1",
+      )
+      .get()
+  )
+    throw new CommandError(
+      "RECOVERY_REQUIRED",
+      "The backup's database holds something else under the name of its approvals.",
+    );
+  const { user_version: version } = db.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  };
+  if (version >= 19) db.exec(GATES_SCHEMA);
+}
+// The connection has foreign keys off (see the caller).
 function fenceRestored(db: DatabaseSync): Fenced {
+  removeApprovals(db);
   const run = (sql: string, ...args: (string | number)[]) =>
     Number(db.prepare(sql).run(...args).changes);
   const fenced: Fenced = {
@@ -841,14 +883,27 @@ function fenceRestored(db: DatabaseSync): Fenced {
         "The backup's database holds an epoch this workspace cannot go past.",
       );
     run("UPDATE director_epoch SET value = ? WHERE singleton = 1", highest + 1);
-    fenced.directorEpoch = (
-      db
-        .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
-        .get() as {
-        value: number;
-      }
-    ).value;
+    // Read back: a table with rules of its own could have let the change pass by.
+    fenced.directorEpoch = epochNow(db);
+    if (fenced.directorEpoch !== highest + 1)
+      throw new CommandError(
+        "RECOVERY_REQUIRED",
+        "The backup's database holds an epoch this workspace cannot change.",
+      );
   }
+  // Looked at again when all is done: each of these was set above, and nothing a backup brings
+  // may have set one back.
+  const back =
+    (has(db, "agent_tokens") &&
+      db
+        .prepare("SELECT 1 FROM agent_tokens WHERE revoked IS NOT 1 LIMIT 1")
+        .get() !== undefined) ||
+    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch);
+  if (back)
+    throw new CommandError(
+      "RECOVERY_REQUIRED",
+      "The backup's database does not keep what a restore must change.",
+    );
   return fenced;
 }
 
@@ -998,7 +1053,11 @@ async function restore(
       else legacyQuarantined.push({ path: file.path, reason: result });
     }
     // What could not be verified is kept registered but never served.
-    const db = new DatabaseSync(database);
+    // Without foreign keys: a table of a backup could otherwise set one row back as another is
+    // changed or removed.
+    const db = new DatabaseSync(database, {
+      enableForeignKeyConstraints: false,
+    });
     let fenced: Fenced;
     let closure: Closure;
     try {

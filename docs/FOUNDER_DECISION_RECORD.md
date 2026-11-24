@@ -278,3 +278,19 @@ Approval line in the packet's format:
 - **Taken to mean:** by the builder, not the founder's words: a recipe that makes one length says it twice; a reference is a PNG or JPEG, at most four in a request, beside text or the frames; and a request with one is refused wherever no engine honours it, which is everywhere today.
 - **Not put to the founder:** which engine should take references first, and what consent a reference picture of a person needs; no command takes one, so nothing can be sent.
 - **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.
+
+## 2026-11-23: An approval remembers the network settings it was given under
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-23. Asked "Must an approval record proxy and certificate settings, and block a start if they change (OA-20)?", with the choices "Yes, record them" and "No, leave as is", the founder answered "Yes, record them". The founder was told that the builder recommended yes; that an approval names Kaggle as the place, but the Kaggle program may go through a proxy or a replaced certificate; that the approval would remember whether either was set and a start would be refused if that changed; that it held MPR-204; and that the cost is to approve again after changing those settings. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** open amendment OA-20 of the master plan revision, in MPR-204 and MPR-205.
+- **Taken to mean:** by the builder, not the founder's words: whether a proxy or a certificate setting is there, never its value; that a setting which comes or goes closes the approval for every contact, following a run included, and not for a start only; and that putting the setting back opens it again.
+- **Not put to the founder:** what these facts do not see: a proxy set in Windows itself or in the Kaggle program's own settings file, one proxy or certificate replaced by another, and a setting that says which places need no proxy.
+- **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.
+
+## 2026-11-24: A landed database step is pinned by its text
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-24. Asked "May each landed database schema step's text be pinned by hash in a test (OA-22)?", with the choices "Yes, pin them" and "No, leave as is", the founder answered "Yes, pin them". The founder was told that the builder recommended yes; that it protects existing workspaces against an accidental change to a released database step; that it adds one line to that test for each new step; and that it was due before MPR-204 and held its two pull requests and the work behind them. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** open amendment OA-22 of the master plan revision, in MPR-204 and the later cards that add a step.
+- **Taken to mean:** by the builder, not the founder's words: the text of each of the nineteen steps as it is in the code now, MPR-204's own included, which lands with this; and that a line once there is not changed to make the test pass.
+- **Not put to the founder:** what the pins do not see: whether a step was changed between its first release and today, and the code around the steps (two steps that rebuild a table run with foreign keys off and are checked after, and what is done for a table that already has a column).
+- **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.

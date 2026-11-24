@@ -206,11 +206,14 @@ both be right.
   free version at merge".
 - Each step is additive, is tested against a workspace written by every older
   version, and leaves old receipts readable.
+- Each step's text is pinned by hash when it lands, one line in
+  `tests/workspace-db.test.ts` (OA-22, accepted 2026-11-24); a line that is
+  there is never changed.
 - These cards add no schema step and must not grow one: MPR-101, MPR-107,
   MPR-201, MPR-206, MPR-207, MPR-208, MPR-502. If one seems to need a table,
   stop and report it; the design in the card was chosen to avoid that.
 - A restored workspace is a new copy with a raised epoch. Gate approvals
-  (MPR-204) and pending approval requests (MPR-504) in it are void, and the
+  (MPR-204) are not in it, pending approval requests (MPR-504) are void, and the
   reservation of a void request stops counting (MPR-505). Spent budget rows
   and audit rows are those of the backup (MPR-505, MPR-506).
 

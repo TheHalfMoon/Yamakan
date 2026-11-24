@@ -89,8 +89,8 @@ them. Severity is the reviewer's own. The words in the last column mean:
 
 | Disposition | Findings | Of which blockers |
 |---|---|---|
-| FIXED | 50 | 6 |
-| PARTLY FIXED | 21 | 1 |
+| FIXED | 51 | 6 |
+| PARTLY FIXED | 20 | 1 |
 | STATED AS LIMIT | 5 | 1 |
 | LEFT OPEN | 7 | 1 |
 | ALREADY IN CARD | 1 | 0 |
@@ -224,7 +224,7 @@ before the schema cards of Stage 2.
 
 | Id | Severity | Finding | Disposition |
 |---|---|---|---|
-| SA-1 | MAJOR | Schema steps had no single order and no protection once landed. | PARTLY FIXED: handoff section 5.1 is the single list, and MPR-507 adds both of its columns in one part. Pinning each landed step by hash is OA-22. |
+| SA-1 | MAJOR | Schema steps had no single order and no protection once landed. | FIXED: handoff section 5.1 is the single list, MPR-507 adds both of its columns in one part, and each landed step is pinned by hash (OA-22, accepted 2026-11-24). |
 | SA-2 | MAJOR | Creating the sample project was not idempotent. | FIXED: MPR-604 takes an idempotency key, and the same key returns the same project and job. |
 | SA-3 | MAJOR | What a restore does to approvals, budgets and audit rows was not stated. | FIXED: handoff section 5.1 states the rule. |
 | SA-4 | MAJOR | Gate, budget and approval met at the start of a run with no stated order. | FIXED: MPR-505 reserves at filing, checks again at approval and commits at the gate before any connection opens. |
@@ -244,7 +244,7 @@ Verdict: yes, with fixes.
 | SE-1 | BLOCKER | MPR-101 stored prompt text unless the founder declined. | FIXED: the card builds with storage off and turns it on after FD-2 is recorded as accepted. |
 | SE-2 | MAJOR | Nothing checked that the person sees what will run. | FIXED: a negative test in MPR-504 covers direction-override, invisible and control characters, and clipping. |
 | SE-3 | MAJOR | A budget could be overshot by queued jobs. | FIXED: MPR-505 counts reserved rows in `agent_budget_usage`. |
-| SE-4 | MAJOR | The approved host is a label; the Kaggle CLI chooses its hosts and inherits proxy settings. | PARTLY FIXED: the page says so, MPR-205 depends on MPR-204, and the options answer and the preflight show whether a proxy or a certificate override is set. Storing that state on the approval and refusing a start when it differs is OA-20. |
+| SE-4 | MAJOR | The approved host is a label; the Kaggle CLI chooses its hosts and inherits proxy settings. | PARTLY FIXED: the page says so, MPR-205 depends on MPR-204, and the options answer and the preflight show whether a proxy or a certificate override is set. Storing that state on the approval and refusing a start when it differs is OA-20, accepted on 2026-11-23 (MPR-204). |
 | SE-5 | MAJOR | One standing approval could last a year. | FIXED: the page in MPR-204 proposes one run and one hour, and larger values are typed by the person. Document 11 states how strong an approval is before MPR-508. |
 | SE-6 | MAJOR | The export sidecar carried an unsalted prompt hash. | FIXED: in MPR-701 the hash is written for an export the person opted in for, under FD-2. |
 | SE-7 | MAJOR | Injected text was checked in two fields. | FIXED: a negative test in MPR-304 covers an asset name, a caption line and an OTIO clip name. |
@@ -321,9 +321,9 @@ registry, the task program is rendered again, and the package check is run.
 | OA-17 | MPR-207, MPR-202 | `failureClass` becomes required, and each measured fact carries a date and a sample size (accepted by the founder on 2026-11-23). | ME-6 | accepted |
 | OA-18 | MPR-207 | Three more failure classes: `credentialRejected`, `contentRefused`, `resourceExhausted` (accepted by the founder on 2026-11-23). | ME-8 | accepted |
 | OA-19 | MPR-203 | Preflight carries the route's licence state, so a person sees it before the run and not after. | Planner | MPR-203 |
-| OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs. | SE-4 | MPR-204 |
+| OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs (accepted by the founder on 2026-11-23). | SE-4 | accepted |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |
-| OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts`. | SA-1 | MPR-204 |
+| OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts` (accepted by the founder on 2026-11-24). | SA-1 | accepted |
 | OA-23 | MPR-003, MPR-209 and other cards with parts | The package check gets a part-aware rule, so a part that lands before its card's dependencies does not fail it. MPR-209 part a is the confirmed case; others were not examined. | Review of #281 | MPR-003 |
 | OA-24 | MPR-209 | Acceptance, tests, files and an offer field for the new `NOTICE` entries, the FFmpeg source or written offer, and `node.exe`, whose hash is the running host's and so differs between hosts. | Review of #281 | MPR-209 part a |
 

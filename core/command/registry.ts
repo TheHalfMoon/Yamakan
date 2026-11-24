@@ -102,6 +102,7 @@ import {
 import {
   createKaggleEngine,
   kaggleCli,
+  kaggleNetwork,
   kaggleRecipeFacts,
   kaggleRecipes,
   ledgerOptions,
@@ -181,6 +182,16 @@ import {
   shownTake,
 } from "../takes.ts";
 import { SHOT_HISTORY_LIMITS, shotHistory } from "../shot-history.ts";
+import {
+  GATE_LIMITS,
+  GATE_ROUTES,
+  GateKind,
+  GatePurpose,
+  GateRoute,
+  approveGate,
+  listGateApprovals,
+  revokeGate,
+} from "../gates.ts";
 import {
   fromEditView,
   parseCanonical,
@@ -2743,6 +2754,104 @@ export const commands = {
         a.consentId,
         Date.now(),
         principal.id,
+        receipt,
+      ),
+  }),
+  // A person's approvals of what leaves this computer and what uses a remote allowance
+  // (MPR-204), for the person at the browser as consents are.
+  "yamakan.gates.approve": define({
+    scope: "consent:grant",
+    mutation: true,
+    humanOnly: true,
+    summary:
+      "Record a person's approval for a route to contact its host, or to use its allowance: for one account and purpose, until it expires or its limit is used up, and under the network settings as they are. Browser session only.",
+    input: z
+      .object({
+        kind: GateKind,
+        route: GateRoute,
+        host: z
+          .string()
+          .min(1)
+          .max(253)
+          .regex(/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/),
+        account: z.string().min(1).max(80),
+        purpose: GatePurpose,
+        ttlMs: z
+          .number()
+          .int()
+          .min(GATE_LIMITS.ttlMsLeast)
+          .max(GATE_LIMITS.ttlMsMost),
+        limit: z
+          .object({
+            runs: z.number().int().min(1).max(GATE_LIMITS.runs),
+            units: z.number().int().min(0).max(GATE_LIMITS.units),
+          })
+          .strict(),
+      })
+      .strict(),
+    run: async (ctx, a) => {
+      if (a.kind === "download")
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "This build downloads nothing.",
+        );
+      if (!ctx.kaggle)
+        throw new CommandError(
+          "CAPABILITY_UNAVAILABLE",
+          "This service was not set up to use that route.",
+        );
+      if (
+        a.host !== GATE_ROUTES[a.route].host ||
+        a.account !== ctx.kaggle.username
+      )
+        throw new CommandError(
+          "VALIDATION",
+          "An approval names the route's own host and the account it is set up with.",
+        );
+      return approveGate(
+        ctx.store,
+        {
+          ask: {
+            kind: a.kind,
+            route: a.route,
+            host: a.host,
+            account: a.account,
+            purpose: a.purpose,
+            network: kaggleNetwork(process.env),
+          },
+          ttlMs: a.ttlMs,
+          limit: a.limit,
+          principalId: ctx.principal.id,
+        },
+        ctx.receipt,
+      );
+    },
+  }),
+  "yamakan.gates.list": define({
+    scope: "consent:grant",
+    mutation: false,
+    humanOnly: true,
+    summary:
+      "List the newest approvals for contacting a route's host and using its allowance, each with how it stands and what is left of it. Browser session only.",
+    input: z.object({}).strict(),
+    run: ({ store }) => listGateApprovals(store, kaggleNetwork(process.env)),
+  }),
+  "yamakan.gates.revoke": define({
+    scope: "consent:revoke",
+    mutation: true,
+    destructive: true,
+    humanOnly: true,
+    summary:
+      "Revoke an approval, once and for good: it allows nothing more. Browser session only.",
+    input: z.object({ approvalId: Id }).strict(),
+    run: async ({ store, principal, receipt }, a) =>
+      revokeGate(
+        store,
+        {
+          approvalId: a.approvalId,
+          principalId: principal.id,
+          network: kaggleNetwork(process.env),
+        },
         receipt,
       ),
   }),

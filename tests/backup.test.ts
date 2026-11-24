@@ -17,7 +17,15 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { ProjectStore } from "../core/store.ts";
+import {
+  approveGate,
+  consumeGates,
+  gateState,
+  requireGate,
+  revokeGate,
+} from "../core/gates.ts";
+import { GATES_SCHEMA, GATES_TABLES } from "../core/gates-schema.ts";
+import { ProjectStore, WORKSPACE_SCHEMA_STEPS } from "../core/store.ts";
 import { hashAgentToken } from "../core/agents.ts";
 import {
   backupWorkspace,
@@ -778,6 +786,21 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   db.prepare(
     "INSERT INTO Director_Requests VALUES ('browser-ui', 'r1', ?, '{}', ?, 0)",
   ).run("0".repeat(64), epoch + 5);
+  // Approvals of this epoch and of ones to come.
+  const approval = db.prepare(
+    "INSERT INTO gate_approvals(id, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, ?, 'kaggle', 'kaggle.com', 'someone', 'generation', 0, 0, 1000, 9999999, ?, 0, 9999999999999, 'browser-ui', ?)",
+  );
+  for (const [n, at] of [epoch, epoch + 7, epoch + 8].entries())
+    for (const [kind, unit] of [
+      ["egress", "bytes"],
+      ["spend", "seconds"],
+    ])
+      approval.run(
+        `0000000${n}-0000-4000-8000-00000000000${kind === "egress" ? 1 : 2}`,
+        kind,
+        unit,
+        at,
+      );
   db.close();
   const bytes = await readFile(path.join(dir, "workspace.sqlite"));
   const manifestFile = path.join(dir, "backup.json");
@@ -791,6 +814,23 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   await restored.initialize();
   assert.equal(restored.principalForAgentToken(token), null);
   assert.equal(restored.principalForAgentToken(agentToken), null);
+  for (const kind of ["egress", "spend"] as const) {
+    const ask = {
+      kind,
+      route: "kaggle",
+      host: "kaggle.com",
+      account: "someone",
+      purpose: "generation" as const,
+      network: { proxyConfigured: false, certificateOverride: false },
+    };
+    // Not even kept: a person gives them again.
+    assert.equal(gateState(restored, ask).state, "missing");
+    assert.throws(() => requireGate(restored, ask), /No one has approved/);
+    assert.throws(
+      () => consumeGates(restored, [{ ask, units: 1 }], "run"),
+      /No one has approved/,
+    );
+  }
   restored.close();
   const check = new DatabaseSync(path.join(target, "workspace.sqlite"), {
     readOnly: true,
@@ -876,3 +916,238 @@ test(
     assert.deepEqual(report.database.integrity, ["ok"]);
   },
 );
+
+// A backup whose database someone wrote, with a manifest that says it is what it is.
+async function forged(
+  over: (db: DatabaseSync) => void,
+  from?: (file: string) => void,
+) {
+  const { base, store, home } = await workspace();
+  const backup = await backupWorkspace(store, home);
+  store.close();
+  const dir = path.join(home, "backups", backup.backupId);
+  const file = path.join(dir, "workspace.sqlite");
+  if (from) {
+    await rm(file);
+    from(file);
+  }
+  const db = new DatabaseSync(file, { enableForeignKeyConstraints: false });
+  over(db);
+  const { user_version: version } = db.prepare("PRAGMA user_version").get() as {
+    user_version: number;
+  };
+  db.close();
+  const bytes = await readFile(file);
+  const manifestFile = path.join(dir, "backup.json");
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  manifest.schemaVersion = version;
+  if (from) manifest.projects = [];
+  manifest.database = { sha256: sha256(bytes), bytes: bytes.length };
+  await writeFile(manifestFile, JSON.stringify(manifest));
+  return { dir, target: path.join(base, "restored") };
+}
+const ASKS = (["egress", "spend"] as const).map((kind) => ({
+  kind,
+  route: "kaggle",
+  host: "kaggle.com",
+  account: "someone",
+  purpose: "generation" as const,
+  network: { proxyConfigured: false, certificateOverride: false },
+}));
+const plantApprovals = (db: DatabaseSync, epochs: number[]) => {
+  for (const epoch of epochs)
+    for (const kind of ["egress", "spend"])
+      db.prepare(
+        "INSERT INTO gate_approvals(id, kind, route, host, account, purpose, proxy_configured, certificate_override, limit_runs, limit_units, limit_unit, granted_at, expires_at, grantor_principal_id, epoch) VALUES (?, ?, 'kaggle', 'kaggle.com', 'someone', 'generation', 0, 0, 1000, 9999999, 'bytes', 0, 9999999999999, 'browser-ui', ?)",
+      ).run(crypto.randomUUID(), kind, epoch);
+};
+
+test("an approval planted in a backup of any version is not restored", async () => {
+  for (const version of [5, 11, 12, 18, 19]) {
+    const { dir, target } = await forged(
+      (db) => {
+        // The tables are planted whatever version the backup claims.
+        db.exec(GATES_SCHEMA);
+        plantApprovals(db, [1, 2, 3]);
+      },
+      (file) => {
+        const db = new DatabaseSync(file, {
+          enableForeignKeyConstraints: false,
+        });
+        for (const step of WORKSPACE_SCHEMA_STEPS.slice(0, version))
+          db.exec(step);
+        db.exec(`PRAGMA user_version = ${version}`);
+        db.close();
+      },
+    );
+    await restoreWorkspace(dir, target);
+    const restored = new ProjectStore(target);
+    await restored.initialize();
+    for (const ask of ASKS) {
+      assert.equal(gateState(restored, ask).state, "missing", `${version}`);
+      assert.throws(() => consumeGates(restored, [{ ask, units: 1 }], "run"));
+    }
+    restored.close();
+  }
+});
+
+test("approval tables with rules of their own are not restored, and an epoch that will not move refuses the restore", async () => {
+  // Rows that replace or ignore others would let a limit or a revocation pass by.
+  const { dir, target } = await forged((db) => {
+    for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+    db.exec(`CREATE TABLE Gate_Approvals(n INTEGER PRIMARY KEY, id TEXT, kind TEXT, route TEXT, host TEXT, account TEXT, purpose TEXT, proxy_configured INTEGER, certificate_override INTEGER, limit_runs INTEGER, limit_units INTEGER, limit_unit TEXT, granted_at INTEGER, expires_at INTEGER, grantor_principal_id TEXT, epoch INTEGER);
+CREATE TABLE gate_approval_revocations(approval_id TEXT, revoked_at INTEGER, principal_id TEXT UNIQUE ON CONFLICT IGNORE);
+CREATE TABLE gate_approval_uses(approval_id TEXT UNIQUE ON CONFLICT REPLACE, use_id TEXT, units INTEGER, used_at INTEGER);`);
+    plantApprovals(db, [1, 2, 3]);
+    // The largest number there can be, so that the next would be any number.
+    db.exec("UPDATE gate_approvals SET n = 9223372036854775807 WHERE n = 1");
+  });
+  await restoreWorkspace(dir, target);
+  const restored = new ProjectStore(target);
+  await restored.initialize();
+  const db = new DatabaseSync(path.join(target, "workspace.sqlite"), {
+    readOnly: true,
+  });
+  const fresh = new DatabaseSync(":memory:");
+  fresh.exec(GATES_SCHEMA);
+  const schema = (of: DatabaseSync) =>
+    of
+      .prepare(
+        "SELECT lower(name) AS name, sql FROM sqlite_master WHERE name LIKE 'gate_%' ORDER BY 1",
+      )
+      .all();
+  assert.deepEqual(schema(db), schema(fresh));
+  db.close();
+  fresh.close();
+  const [ask] = ASKS;
+  const give = () =>
+    approveGate(restored, {
+      ask: ask!,
+      ttlMs: 3_600_000,
+      limit: { runs: 2, units: 100 },
+      principalId: "browser-ui",
+    });
+  const first = give();
+  const used = [1, 2, 3].map((n) => {
+    try {
+      consumeGates(restored, [{ ask: ask!, units: 40 }], `run-${n}`);
+      return "used";
+    } catch {
+      return "refused";
+    }
+  });
+  assert.deepEqual(used, ["used", "used", "refused"]);
+  const second = give();
+  for (const { id } of [first, second]) {
+    revokeGate(restored, {
+      approvalId: id,
+      principalId: "browser-ui",
+      network: ask!.network,
+    });
+    assert.equal(
+      gateState(restored, ask!).state,
+      id === first.id ? "approved" : "revoked",
+    );
+  }
+  restored.close();
+
+  for (const rules of [
+    "singleton INTEGER, value INTEGER UNIQUE ON CONFLICT IGNORE",
+    "singleton INTEGER PRIMARY KEY, value INTEGER",
+  ]) {
+    const other = await forged((planted) => {
+      planted.exec(`DROP TABLE director_epoch;
+CREATE TABLE director_epoch(${rules});
+INSERT INTO director_epoch VALUES (1, 1), (2, 2);`);
+      plantApprovals(planted, [1]);
+    });
+    await assert.rejects(
+      restoreWorkspace(other.dir, other.target),
+      /an epoch this workspace cannot change/,
+    );
+  }
+});
+
+test("a backup whose tables would set back what a restore changes does not", async () => {
+  const agentToken = "e".repeat(64);
+  const agent = "agent:00000000-0000-4000-8000-000000000000";
+  const TOKEN = `INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '["project:read","project:write"]', 'planted', 0, '2026-01-01', NULL`;
+  for (const [what, plant] of [
+    [
+      "by the approvals it removes",
+      `DROP TABLE gate_approval_uses; DROP TABLE gate_approval_revocations; DROP TABLE gate_approvals;
+CREATE TABLE gate_approvals(n INTEGER, z TEXT, epoch INTEGER, UNIQUE(n, z));
+INSERT INTO gate_approvals VALUES (1, 't', 1), (2, 'e', 1);
+DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER PRIMARY KEY, value INTEGER DEFAULT 1, z TEXT DEFAULT NULL, FOREIGN KEY(value, z) REFERENCES gate_approvals(n, z) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT);
+INSERT INTO director_epoch VALUES (1, 1, 'e');
+DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, z TEXT DEFAULT NULL, FOREIGN KEY(revoked, z) REFERENCES gate_approvals(n, z) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT);
+${TOKEN}, 't');`,
+    ],
+    [
+      "by the epoch it raises",
+      `DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER PRIMARY KEY, value INTEGER, z TEXT, UNIQUE(value, z));
+INSERT INTO director_epoch VALUES (1, 1, 't');
+DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, z TEXT DEFAULT NULL, FOREIGN KEY(revoked, z) REFERENCES director_epoch(value, z) ON UPDATE SET DEFAULT ON DELETE SET DEFAULT);
+${TOKEN}, 't');`,
+    ],
+  ] as const) {
+    const { dir, target } = await forged((db) => db.exec(plant));
+    const receipt = await restoreWorkspace(dir, target);
+    const db = new DatabaseSync(path.join(target, "workspace.sqlite"), {
+      readOnly: true,
+    });
+    const { value } = db
+      .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
+      .get() as { value: number };
+    assert.equal(value, 2, what);
+    assert.deepEqual(
+      db
+        .prepare("SELECT revoked FROM agent_tokens")
+        .all()
+        .map((r) => (r as { revoked: number }).revoked),
+      [1],
+      what,
+    );
+    db.close();
+    assert.ok(receipt);
+    const restored = new ProjectStore(target);
+    await restored.initialize();
+    assert.equal(restored.principalForAgentToken(agentToken), null, what);
+    restored.close();
+  }
+});
+
+test("a planted number does not keep a person from approving, and another thing of that name is refused", async () => {
+  for (const last of ["9223372036854775807", "9223372036854775806"]) {
+    const { dir, target } = await forged((db) => {
+      plantApprovals(db, [1]);
+      for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+      db.exec(`CREATE TABLE gate_approvals(n INTEGER);
+DELETE FROM sqlite_sequence;
+INSERT INTO sqlite_sequence VALUES ('gate_approvals', ${last}), ('Gate_Approvals', ${last});`);
+    });
+    await restoreWorkspace(dir, target);
+    const restored = new ProjectStore(target);
+    await restored.initialize();
+    const given = approveGate(restored, {
+      ask: ASKS[0]!,
+      ttlMs: 3_600_000,
+      limit: { runs: 1, units: 1 },
+      principalId: "browser-ui",
+    });
+    assert.equal(given.state, "approved");
+    restored.close();
+  }
+  const { dir, target } = await forged((db) => {
+    for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+    db.exec("CREATE TABLE gate_approvals_asked(x)");
+  });
+  await assert.rejects(
+    restoreWorkspace(dir, target),
+    /something else under the name of its approvals/,
+  );
+});

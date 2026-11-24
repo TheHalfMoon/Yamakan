@@ -35,6 +35,7 @@ import {
   probe,
   verifyAndProbe,
 } from "./media.ts";
+import { GATES_SCHEMA } from "./gates-schema.ts";
 import {
   isHiddenVfrOriginal,
   referencedDigestsInRetention,
@@ -188,7 +189,7 @@ export type StoreOptions = {
 export const SNAPSHOT_FORMAT = "yamakan.project/2";
 export const EDIT_VIEW_FORMAT = "yamakan.edit-view/1";
 const MAX_REVISION = 10000;
-export const WORKSPACE_SCHEMA_VERSION = 18;
+export const WORKSPACE_SCHEMA_VERSION = 19;
 const SCHEMA_VERSION = WORKSPACE_SCHEMA_VERSION;
 const WORKSPACE_SCOPE = "";
 
@@ -451,6 +452,7 @@ CREATE TABLE IF NOT EXISTS cinema_models(
   PRIMARY KEY(project_id, digest)
 ) STRICT;
 `;
+const SCHEMA_V19 = GATES_SCHEMA;
 // Story documents and reference packs (YU-031): the two document tables
 // accept the new kinds, and each story or pack version is recorded under
 // its document id when it is committed (so a pin is one indexed lookup). SQLite cannot alter a CHECK, so each table is
@@ -769,6 +771,29 @@ const isDamaged = (e: unknown) =>
 const isBusy = (e: unknown) =>
   e instanceof Error && /database is locked|SQLITE_BUSY/i.test(e.message);
 
+// Every step, in order: one that has been released is never changed.
+export const WORKSPACE_SCHEMA_STEPS: readonly string[] = Object.freeze([
+  SCHEMA,
+  SCHEMA_V2,
+  SCHEMA_V3,
+  SCHEMA_V4,
+  SCHEMA_V5,
+  SCHEMA_V6,
+  SCHEMA_V7,
+  SCHEMA_V8,
+  SCHEMA_V9,
+  SCHEMA_V10,
+  SCHEMA_V11,
+  SCHEMA_V12,
+  SCHEMA_V13,
+  SCHEMA_V14,
+  SCHEMA_V15,
+  SCHEMA_V16,
+  SCHEMA_V17,
+  SCHEMA_V18,
+  SCHEMA_V19,
+]);
+
 export class ProjectStore {
   readonly root: string;
   readonly #options: StoreOptions;
@@ -851,26 +876,7 @@ export class ProjectStore {
         "PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;",
       );
       // Versioned, transactional schema steps; each commits on its own.
-      const steps = [
-        SCHEMA,
-        SCHEMA_V2,
-        SCHEMA_V3,
-        SCHEMA_V4,
-        SCHEMA_V5,
-        SCHEMA_V6,
-        SCHEMA_V7,
-        SCHEMA_V8,
-        SCHEMA_V9,
-        SCHEMA_V10,
-        SCHEMA_V11,
-        SCHEMA_V12,
-        SCHEMA_V13,
-        SCHEMA_V14,
-        SCHEMA_V15,
-        SCHEMA_V16,
-        SCHEMA_V17,
-        SCHEMA_V18,
-      ];
+      const steps = WORKSPACE_SCHEMA_STEPS;
       // Steps that rebuild a table referenced by a foreign key run with
       // enforcement off (it cannot change inside a transaction) and verify
       // every reference before committing.

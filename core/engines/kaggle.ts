@@ -37,6 +37,7 @@ import {
 } from "./contract-v2.ts";
 import { refusedSubmit } from "./failures.ts";
 import type { GenerationLedger, GenerationRecipe } from "./generation.ts";
+import type { GateNetwork } from "../gates.ts";
 import type { RecipeFacts } from "../take-record.ts";
 import { cleanImage, imageWithin } from "./clean-image.ts";
 
@@ -255,6 +256,23 @@ const CLI_ENVIRONMENT = [
   "CURL_CA_BUNDLE",
   "SSL_CERT_FILE",
 ];
+// Of those, what sends the CLI another way, and what changes whom it believes, whatever the case
+// of their letters: Windows reads them alike. The CLI also gets every KAGGLE_ name; which of them
+// it reads is not known, so one that looks like either counts.
+const PROXY_SETTING =
+  /^(?:(?:HTTP|HTTPS|ALL)_PROXY|KAGGLE_.*(?:PROXY|ENDPOINT|HOST|URL).*)$/i;
+const CERTIFICATE_SETTING =
+  /^(?:REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|SSL_CERT_FILE|KAGGLE_(?:.*(?:SSL|CERT|VERIFY).*|(?:.*_)?CA(?:_.*)?))$/i;
+/** Whether the CLI would be given a proxy or a certificate setting; never its value (OA-20). */
+export function kaggleNetwork(from: NodeJS.ProcessEnv): GateNetwork {
+  const given = Object.entries(kaggleCliEnvironment(from))
+    .filter(([, value]) => value)
+    .map(([name]) => name);
+  return {
+    proxyConfigured: given.some((name) => PROXY_SETTING.test(name)),
+    certificateOverride: given.some((name) => CERTIFICATE_SETTING.test(name)),
+  };
+}
 export function kaggleCliEnvironment(from: NodeJS.ProcessEnv) {
   const env: NodeJS.ProcessEnv = { PYTHONUTF8: "1" };
   for (const [name, value] of Object.entries(from))
