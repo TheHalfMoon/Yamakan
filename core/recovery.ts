@@ -41,6 +41,7 @@ import { fromEditView, parseCanonical } from "./canonical.ts";
 import type { CanonicalProject } from "./canonical.ts";
 import { GATES_SCHEMA, GATES_TABLES } from "./gates-schema.ts";
 import type { ProjectStore, RequestReceipt } from "./store.ts";
+import { assertWorkspaceSchema } from "./workspace-schema.ts";
 
 // Format 2 (YU-014) adds the legacy workspace files and the creative closure
 // of the database copy; format 1 backups stay restorable, labelled as not
@@ -600,6 +601,13 @@ export function backupWorkspace(
             `The database copy failed its integrity check: ${problems[0]}`,
           );
         schemaVersion = userVersion(copy);
+        // One that could not be restored is no backup.
+        const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
+        assertWorkspaceSchema(copy, steps, schemaVersion, {
+          of: "This workspace's database",
+          named: true,
+          so: "a backup of it could not be restored, so none was made. Diagnose it (npm run recovery -- diagnose)",
+        });
         projects = heads(copy);
         objects = readyObjects(copy);
         closure = creativeClosure(copy);
@@ -781,8 +789,8 @@ const epochNow = (db: DatabaseSync) => {
     : null;
 };
 // Approvals of what leaves this computer (MPR-204) are never restored: a person gives them again.
-// Their tables go whatever they hold, at any version a backup claims, and are made again from
-// this build's own step, or by the upgrade.
+// Their tables, which are this build's own or there are none, go whatever they hold, and are made
+// again from its step, or by the upgrade.
 function removeApprovals(db: DatabaseSync) {
   for (const table of GATES_TABLES)
     if (has(db, table)) db.exec(`DROP TABLE ${table}`);
@@ -898,7 +906,14 @@ function fenceRestored(db: DatabaseSync): Fenced {
       db
         .prepare("SELECT 1 FROM agent_tokens WHERE revoked IS NOT 1 LIMIT 1")
         .get() !== undefined) ||
-    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch);
+    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch) ||
+    // Whatever it is called: a job or an attempt that has not ended and is not held would go on.
+    (has(db, "jobs") &&
+      db
+        .prepare(
+          "SELECT 1 FROM jobs WHERE state IS NULL OR state NOT IN ('succeeded', 'cancelled', 'failed', 'reconciliationRequired') UNION ALL SELECT 1 FROM attempts WHERE state IS NULL OR state NOT IN ('succeeded', 'cancelled', 'failed') LIMIT 1",
+        )
+        .get() !== undefined);
   if (back)
     throw new CommandError(
       "RECOVERY_REQUIRED",
@@ -968,6 +983,8 @@ async function restore(
       );
     let restored: Head[];
     let ready: ObjectRow[];
+    // Read here: the store and this read each other as they load.
+    const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
     const check = new DatabaseSync(database, { readOnly: true });
     try {
       const problems = integrity(check);
@@ -994,6 +1011,8 @@ async function restore(
           "RECOVERY_REQUIRED",
           "The restored database's version does not match the backup manifest.",
         );
+      // Before anything is read by its name or changed.
+      assertWorkspaceSchema(check, steps, manifest.schemaVersion);
       restored = heads(check);
       if (JSON.stringify(restored) !== JSON.stringify(manifest.projects))
         throw new CommandError(
@@ -1076,6 +1095,22 @@ async function restore(
       closure = creativeClosure(db);
     } finally {
       db.close();
+    }
+    // As the next open will find it: read anew, and on a connection that checks the rules of rows
+    // too, which a read-only one does not.
+    const after = new DatabaseSync(database, {
+      enableForeignKeyConstraints: false,
+    });
+    try {
+      assertWorkspaceSchema(after, steps, manifest.schemaVersion);
+      const problems = integrity(after);
+      if (problems)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          `The restored database failed its integrity check: ${problems[0]}`,
+        );
+    } finally {
+      after.close();
     }
     const receipt = {
       format: RESTORE_FORMAT,
@@ -1309,6 +1344,8 @@ export async function diagnoseWorkspace(
       wal: await inspectWal(`${file}-wal`),
       schemaVersion: null as number | null,
       integrity: null as string[] | null,
+      // Why a backup of it could not be restored; null when it could, or it was not asked.
+      schema: null as string | null,
       error: null as string | null,
     },
     projects: [] as Head[],
@@ -1362,6 +1399,16 @@ export async function diagnoseWorkspace(
       db = new DatabaseSync(copy);
       report.database.schemaVersion = userVersion(db);
       report.database.integrity = integrity(db) ?? ["ok"];
+      const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
+      try {
+        assertWorkspaceSchema(db, steps, report.database.schemaVersion, {
+          of: "This workspace's database",
+          so: "a backup of it could not be restored",
+          named: true,
+        });
+      } catch (e) {
+        report.database.schema = (e as Error).message;
+      }
       report.projects = heads(db);
       rows = db
         .prepare(
