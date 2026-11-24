@@ -1289,9 +1289,7 @@ test("a table of another make is not hidden behind a right one of nearly its nam
         db.exec(`DROP TABLE agent_tokens;
 CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, q TEXT, p TEXT, FOREIGN KEY(q, p, revoked) REFERENCES document_uploads(principal_id, project_id, request_id) ON DELETE SET DEFAULT);
 INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '[]', 'planted', 0, '2026-01-01', NULL, NULL, NULL);`);
-        db.exec(
-          sql.replace(/agent_tokens/, `"agent_to${KELVIN}ens"`),
-        );
+        db.exec(sql.replace(/agent_tokens/, `"agent_to${KELVIN}ens"`));
       },
     ],
     [
@@ -1303,7 +1301,9 @@ INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '[
           )
           .get() as { sql: string };
         db.exec("ALTER TABLE likeness_consents ADD COLUMN planted TEXT");
-        db.exec(sql.replace(/likeness_consents/, `"li${KELVIN}eness_consents"`));
+        db.exec(
+          sql.replace(/likeness_consents/, `"li${KELVIN}eness_consents"`),
+        );
       },
     ],
     [

@@ -45,9 +45,9 @@ const keyOf = (e: Pick<Entry, "type" | "name">) => `${e.type} ${e.name}`;
 // What a database holds, by its exact words. Nothing is read by its name here, so it costs no more
 // than its rows, whatever they say.
 function entriesOf(db: DatabaseSync, most: number): Entry[] | null {
-  const { n } = db
-    .prepare("SELECT count(*) AS n FROM sqlite_master")
-    .get() as { n: number };
+  const { n } = db.prepare("SELECT count(*) AS n FROM sqlite_master").get() as {
+    n: number;
+  };
   if (n > most) return null;
   const odd = db
     .prepare(
