@@ -1078,15 +1078,28 @@ test("the bridge passes the conformance kit but for a landed run whose answer wa
   );
   assert.match(failed[0]!.detail, /^uncertainLanded is not told: unknown/);
   assert.match(failed[1]!.detail, /^unknown/);
+  // What each of them asks after that state passes too.
+  const h = bridgeHarness();
+  const { uncertainLanded: _landed, ...arrange } = h.arrange;
+  const rest = await runConformance({
+    ...h,
+    arrange,
+    unavailable: { uncertainLanded: "It fails, above." },
+  });
+  assert.deepEqual(
+    rest.filter((r) => !r.ok && !r.unavailable),
+    [],
+  );
 });
 
 test("a bridge whose engine throws as it takes a job says the send is uncertain, and never sends it again", async () => {
   let submits = 0;
+  // Whether it says so at once or later.
   const bridged = bridgeV1({
     ...createFakeEngine(),
-    submit: async () => {
-      submits++;
-      throw new Error("The connection was lost.");
+    submit: () => {
+      if (++submits === 1) throw new Error("The connection was lost.");
+      return Promise.reject(new Error("The connection was lost."));
     },
   });
   const request = textToVideo({ attemptKey: "lost-answer" });
@@ -1129,4 +1142,13 @@ test("a bridge whose engine forgets a job says it is not known", async () => {
     localProcessExited: false,
     remoteOutcome: "unknown",
   });
+  // Known to have ended, and its files not given.
+  const without = bridgeV1({ ...v1, outputs: forgotten });
+  const ended = await without.submit(
+    textToVideo({ attemptKey: "no-files" }),
+    context(),
+  );
+  assert.ok("executionRef" in ended);
+  assert.equal((await without.status(ended.executionRef)).state, "succeeded");
+  assert.deepEqual(await without.enumerateArtifacts(ended.executionRef), []);
 });
