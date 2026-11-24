@@ -60,8 +60,8 @@ These rules apply to every card and are not repeated inside the cards.
 | MPR-010 | 0 | REVIEW_PENDING | — | Decide and close the pinned-take path past consent revocation at the commit point |
 | MPR-101 | 1 | VERIFIED | — | Record every take's generation or render request as an immutable, hashed take record |
 | MPR-102 | 1 | VERIFIED | MPR-101 | Let a generation target a story shot and append its take on import |
-| MPR-103 | 1 | REVIEW_PENDING | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
-| MPR-104 | 1 | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
+| MPR-103 | 1 | VERIFIED | MPR-101, MPR-102 | Add a revision draft read command and record what changed between takes |
+| MPR-104 | 1 | QUALIFICATION_READY | MPR-102, MPR-103, SS-006 | Add 'Revise this shot' entries and a shot card with its take stack in Story and Create |
 | MPR-105 | 1 | REVIEW_PENDING | SS-006 | Keep a shot's take replaceable after its clip is split or trimmed |
 | MPR-106 | 1 | VERIFIED | MPR-101 | Persist the brief, scene scripts and shot intent in the story document |
 | MPR-107 | 1 | VERIFIED | MPR-101, MPR-102 | Add a bounded shot history read command: the revision ledger of one shot |
@@ -886,13 +886,14 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | REVIEW_PENDING |
+| State | VERIFIED |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
 | Dependencies | MPR-101, MPR-102 |
 | Founder decisions | FD-2 |
 | Earlier plan items | stream:kaggle-create, SS-006 |
+| Evidence | Merged as 89c6e7014372a9f6033d19cfccbef484bfa1ccb2 (PR #308, pinned to 47a82e3, which adds only the receipt and its write-up to bdafd6c); qualify:revisable-shot passed at bdafd6c on GitHub's Linux machine (docs/evidence/ultimate/MPR-103-take-revision-receipt.json), with a stand-in engine whose output does not follow its request and test patterns, so it proves the record and the flow and no model; it is not evidence of the founder host, whose sandbox starts no media worker; the 15 tests of tests/take-revision.test.ts passed on the founder host, with an engine double; main's CI passed |
 
 **Goal.** A person can open any take, get back the request that made it as an editable draft, change one field and generate a new take whose record says which take it came from and which fields changed. A revision is a new generation from changed inputs; it does not edit the pixels of the earlier take.
 
@@ -1004,7 +1005,7 @@ Parts that wait on something outside engineering:
 
 | Field | Value |
 | --- | --- |
-| State | WAITING_DEPENDENCIES |
+| State | QUALIFICATION_READY |
 | Stage | 1 |
 | Track | 1 |
 | Pillars | B |
