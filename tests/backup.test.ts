@@ -1385,8 +1385,12 @@ test("a backup that could not be restored is not made", async () => {
   await opened.initialize();
   await assert.rejects(
     backupWorkspace(opened, home),
-    /This workspace's database holds something this workspace never creates; a backup of it could not be restored/,
+    /This workspace's database holds something this workspace never creates \(table by_hand\); a backup of it could not be restored/,
   );
   assert.deepEqual(await readdir(path.join(home, "backups")), []);
   opened.close();
+  assert.match(
+    (await diagnoseWorkspace(root)).database.schema ?? "",
+    /\(table by_hand\); a backup of it could not be restored/,
+  );
 });

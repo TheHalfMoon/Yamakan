@@ -101,7 +101,7 @@ export function assertWorkspaceSchema(
   steps: readonly string[],
   version: number,
   // What is asked, and what then did not happen.
-  said: { of: string; so: string } = {
+  said: { of: string; so: string; named?: boolean } = {
     of: "The backup's database",
     so: "it was not restored",
   },
@@ -113,6 +113,9 @@ export function assertWorkspaceSchema(
     );
   };
   const MORE = "holds something this workspace never creates";
+  // A workspace's own person may be told its name; a backup's word is not repeated.
+  const more = (e?: Entry): never =>
+    refuse(said.named && e ? `${MORE} (${keyOf(e).slice(0, 80)})` : MORE);
   if (!Number.isSafeInteger(version) || version < 1 || version > steps.length)
     refuse("is of a version this build does not know");
   const own = new DatabaseSync(":memory:", {
@@ -137,7 +140,12 @@ export function assertWorkspaceSchema(
     // First what there is, by its words alone: a database with more, or with anything of another
     // kind, is refused before SQLite is asked about any of it.
     const entries =
-      entriesOf(db, wanted.size + Object.keys(OWN).length) ?? refuse(MORE);
+      entriesOf(
+        db,
+        said.named
+          ? Number.MAX_SAFE_INTEGER
+          : wanted.size + Object.keys(OWN).length,
+      ) ?? more();
     const found = new Map<string, Entry>();
     for (const e of entries) {
       if (
@@ -151,7 +159,7 @@ export function assertWorkspaceSchema(
         continue;
       }
       const same = wanted.get(keyOf(e));
-      if (!same || found.has(keyOf(e))) refuse(MORE);
+      if (!same || found.has(keyOf(e))) more(e);
       // Only a name this build knows is said: another is the backup's own word.
       if (
         e.table !== same!.table ||

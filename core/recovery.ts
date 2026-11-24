@@ -605,6 +605,7 @@ export function backupWorkspace(
         const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
         assertWorkspaceSchema(copy, steps, schemaVersion, {
           of: "This workspace's database",
+          named: true,
           so: "a backup of it could not be restored, so none was made. Diagnose it (npm run recovery -- diagnose)",
         });
         projects = heads(copy);
@@ -788,8 +789,8 @@ const epochNow = (db: DatabaseSync) => {
     : null;
 };
 // Approvals of what leaves this computer (MPR-204) are never restored: a person gives them again.
-// Their tables go whatever they hold, at any version a backup claims, and are made again from
-// this build's own step, or by the upgrade.
+// Their tables, which are this build's own or there are none, go whatever they hold, and are made
+// again from its step, or by the upgrade.
 function removeApprovals(db: DatabaseSync) {
   for (const table of GATES_TABLES)
     if (has(db, table)) db.exec(`DROP TABLE ${table}`);
@@ -1343,6 +1344,8 @@ export async function diagnoseWorkspace(
       wal: await inspectWal(`${file}-wal`),
       schemaVersion: null as number | null,
       integrity: null as string[] | null,
+      // Why a backup of it could not be restored; null when it could, or it was not asked.
+      schema: null as string | null,
       error: null as string | null,
     },
     projects: [] as Head[],
@@ -1396,6 +1399,16 @@ export async function diagnoseWorkspace(
       db = new DatabaseSync(copy);
       report.database.schemaVersion = userVersion(db);
       report.database.integrity = integrity(db) ?? ["ok"];
+      const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
+      try {
+        assertWorkspaceSchema(db, steps, report.database.schemaVersion, {
+          of: "This workspace's database",
+          so: "a backup of it could not be restored",
+          named: true,
+        });
+      } catch (e) {
+        report.database.schema = (e as Error).message;
+      }
       report.projects = heads(db);
       rows = db
         .prepare(

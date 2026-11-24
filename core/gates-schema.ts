@@ -2,7 +2,7 @@
 // downloaded (MPR-204), under the network settings they were given under (OA-20): the workspace's
 // schema step 19. No row is updated: a revocation and a use are rows of their own, and none is
 // given back. The number of an approval is never used again, so the newest is always the last
-// given. A restore removes the tables whatever they hold, and makes them again from this.
+// given. A restore empties the tables, whatever they hold, and makes them again from this.
 export const GATES_TABLES = Object.freeze([
   "gate_approval_uses",
   "gate_approval_revocations",
