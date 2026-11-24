@@ -3128,7 +3128,7 @@ export const commands = {
                 revision: r.revision,
                 licence: r.licence,
                 // What of it is not known (MPR-208).
-                licenceOpen: kaggleLicence(r.id).open,
+                licenceOpen: kaggleLicence(r).open,
                 width: r.width,
                 height: r.height,
                 frames: r.frames,

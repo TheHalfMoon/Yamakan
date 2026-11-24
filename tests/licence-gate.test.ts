@@ -131,7 +131,7 @@ test("a block that is absent or not of the form is refused, and every reason is 
     { code: { ...term(), extra: 1 } },
     { code: { name: "x", spdx: null } },
     { weights: term({ name: "" }) },
-    { weights: term({ name: "x".repeat(121) }) },
+    { weights: term({ name: "x".repeat(81) }) },
     { weights: term({ commercialUse: "yes" }) },
     { baseModel: { kind: "none", name: "x" } },
     { bundled: [{ name: "x", role: "y", term: term(), extra: 1 }] },
@@ -285,9 +285,10 @@ test("the open fields are those that are not known, by name", () => {
 });
 
 // What each offered entry lacks, as a person reads it: its recipe and the field.
+const EXEMPT = PRE_GATE_EXCEPTIONS.recipes.map((r) => r.recipeId);
 const lacking = (
   entries: typeof MODEL_CATALOG.entries,
-  exempt: readonly string[] = PRE_GATE_EXCEPTIONS.recipeIds,
+  exempt: readonly string[] = EXEMPT,
 ) =>
   entries.flatMap((entry) =>
     entry.offers
@@ -312,12 +313,8 @@ const lacking = (
 test("every offered entry has a whole block, but for the recipes from before the gate", () => {
   assert.deepEqual(lacking(MODEL_CATALOG.entries), []);
   // Each list that could offer one, whether or not the catalog calls it offered.
-  for (const { id } of KAGGLE_RECIPES)
-    assert.equal(
-      recipeLicence(id, catalogOfferFor(id)?.entry.licence, HOSTED).offered,
-      true,
-      id,
-    );
+  for (const recipe of KAGGLE_RECIPES)
+    assert.equal(kaggleLicence(recipe).offered, true, recipe.id);
   for (const { id } of [...PINNED_COMFY_RECIPES, ...PINNED_MODEL_MANIFESTS])
     assert.deepEqual(
       licenceGate(catalogOfferFor(id)?.entry.licence, LOCAL),
@@ -331,7 +328,7 @@ test("every offered entry has a whole block, but for the recipes from before the
   // whole one.
   const all = lacking(MODEL_CATALOG.entries, []);
   assert.equal(all.length, 3);
-  for (const id of PRE_GATE_EXCEPTIONS.recipeIds)
+  for (const id of EXEMPT)
     assert.ok(
       all.some((l) => l.startsWith(`${id}: FIELD_UNKNOWN`)),
       id,
@@ -346,24 +343,39 @@ test("every offered entry has a whole block, but for the recipes from before the
 
 test("the list from before the gate is closed, and excuses only what is not known", () => {
   // A new entry here is a decision of the founder's, not a change of code.
+  const wan = {
+    model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+    revision: "b8fff7315c768468a5333511427288870b2e9635",
+  };
   assert.deepEqual(PRE_GATE_EXCEPTIONS, {
     at: "2026-11-24",
-    recipeIds: [
-      "kaggle-wan22-ti2v-5b",
-      "kaggle-wan22-ti2v-5b-first-frame",
-      "kaggle-cogvideox-2b",
+    recipes: [
+      { recipeId: "kaggle-wan22-ti2v-5b", ...wan },
+      { recipeId: "kaggle-wan22-ti2v-5b-first-frame", ...wan },
+      {
+        recipeId: "kaggle-cogvideox-2b",
+        model: "zai-org/CogVideoX-2b",
+        revision: "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+      },
     ],
   });
-  assert.ok(Object.isFrozen(PRE_GATE_EXCEPTIONS.recipeIds));
-  for (const id of PRE_GATE_EXCEPTIONS.recipeIds)
+  assert.ok(Object.isFrozen(PRE_GATE_EXCEPTIONS.recipes));
+  for (const r of PRE_GATE_EXCEPTIONS.recipes) {
+    assert.ok(Object.isFrozen(r));
     assert.ok(
-      KAGGLE_RECIPES.some((r) => r.id === id),
-      id,
+      KAGGLE_RECIPES.some(
+        (k) =>
+          k.id === r.recipeId &&
+          k.model === r.model &&
+          k.revision === r.revision,
+      ),
+      r.recipeId,
     );
+  }
 
-  const [id] = PRE_GATE_EXCEPTIONS.recipeIds;
-  const offered = (value: unknown, recipeId: string | null = id!) =>
-    recipeLicence(recipeId, value, HOSTED).offered;
+  const [first] = PRE_GATE_EXCEPTIONS.recipes;
+  const offered = (value: unknown, over: object = {}) =>
+    recipeLicence({ ...first!, ...over }, value, HOSTED).offered;
   const open = block({
     bundled: [
       {
@@ -377,9 +389,11 @@ test("the list from before the gate is closed, and excuses only what is not know
   });
   assert.equal(offered(open), true);
   assert.equal(offered(whole()), true);
-  // Not for another recipe, nor for one without a name.
-  assert.equal(offered(open, "kaggle-new"), false);
-  assert.equal(offered(open, null), false);
+  // Not for another recipe, one without a name, or another model or revision under its id.
+  assert.equal(offered(open, { recipeId: "kaggle-new" }), false);
+  assert.equal(offered(open, { recipeId: null }), false);
+  assert.equal(offered(open, { model: "Someone/Else" }), false);
+  assert.equal(offered(open, { revision: "0".repeat(40) }), false);
   // And not what is known and against it.
   for (const over of [
     { weights: term({ commercialUse: "notAllowed" }) },
@@ -390,7 +404,21 @@ test("the list from before the gate is closed, and excuses only what is not know
     { territorialExclusions: { kind: "excluded", regions: ["EU"] } },
     { outputUse: { kind: "restricted", note: "No." } },
     { hostedServiceRight: "notAllowed" },
+    { hostedServiceRight: "unknown" },
     { gated: "yes" },
+    // A licence that is named is not one that is not known, whatever is said of its use.
+    { weights: term({ spdx: "CC-BY-NC-4.0", commercialUse: "unknown" }) },
+    { baseModel: term({ spdx: "openrail", commercialUse: "unknown" }) },
+    { code: term({ spdx: "AGPL-3.0-only", commercialUse: "unknown" }) },
+    {
+      bundled: [
+        {
+          name: "x",
+          role: "y",
+          term: term({ spdx: "GPL-3.0-only", commercialUse: "unknown" }),
+        },
+      ],
+    },
   ])
     assert.equal(offered({ ...open, ...over }), false, JSON.stringify(over));
   for (const odd of [undefined, {}, "Apache-2.0"])
@@ -400,10 +428,16 @@ test("the list from before the gate is closed, and excuses only what is not know
 test("today's three recipes are offered with what is not known of them", () => {
   assert.deepEqual(
     offeredKaggleRecipes().map((r) => r.id),
-    PRE_GATE_EXCEPTIONS.recipeIds,
+    EXEMPT,
   );
   const said = (id: string) => {
-    const { offered, reasons, open } = kaggleLicence(id);
+    const { offered, reasons, open } = kaggleLicence(
+      KAGGLE_RECIPES.find((r) => r.id === id) ?? {
+        id,
+        model: "m",
+        revision: "r",
+      },
+    );
     return {
       offered,
       reasons,
@@ -413,6 +447,7 @@ test("today's three recipes are offered with what is not known of them", () => {
   const run = [
     "bundled: FFmpeg in imageio-ffmpeg 0.6.0",
     "bundled: torch, NumPy and Pillow on Kaggle's machine",
+    "bundled: what these packages install and use in turn",
   ];
   const wan = {
     offered: true,
@@ -432,6 +467,49 @@ test("today's three recipes are offered with what is not known of them", () => {
     reasons: ["BLOCK_MISSING"],
     open: [],
   });
+});
+
+test("a Kaggle recipe is dropped when its block is made incomplete, and needs the right to a hosted run", () => {
+  const offeredWith = (change: (b: Record<string, unknown>) => void) =>
+    offeredKaggleRecipes((id) => {
+      const block = structuredClone(catalogOfferFor(id)!.entry.licence);
+      if (id === "kaggle-cogvideox-2b") change(block);
+      return block;
+    }).map((r) => r.id);
+  const two = EXEMPT.slice(0, 2);
+  assert.deepEqual(
+    offeredWith(() => {}),
+    EXEMPT,
+  );
+  for (const key of Object.keys(whole()))
+    assert.deepEqual(
+      offeredWith((b) => delete b[key]),
+      two,
+      key,
+    );
+  // Runs there are hosted, so this is asked of each; a local run would not ask it.
+  for (const right of ["unknown", "notAllowed"])
+    assert.deepEqual(
+      offeredWith((b) => (b.hostedServiceRight = right)),
+      two,
+      right,
+    );
+});
+
+test("a licence's name can be kept in a take's record and shown on one line", async () => {
+  const { TakeRecordSchema } = await import("../core/take-record.ts");
+  const kept = (TakeRecordSchema as any).shape.model.unwrap().shape.licence as {
+    safeParse: (v: unknown) => { success: boolean };
+  };
+  const block_ = (name: string) =>
+    LicenceBlockSchema.safeParse(block({ weights: term({ name }) })).success;
+  for (const name of ["A", "x".repeat(80), "ترخيص"]) {
+    assert.equal(block_(name), true, name);
+    assert.equal(kept.safeParse(name).success, true, name);
+  }
+  assert.equal(block_("x".repeat(81)), false);
+  for (const odd of ["a\nb", "a\u2028b", "a\u202eb", "a\u0000b", "a\u2066b"])
+    assert.equal(block_(odd), false, JSON.stringify(odd));
 });
 
 test("a recipe the gate refuses is in no list and cannot be started, and nothing is run", async (t) => {
@@ -491,8 +569,7 @@ test("a recipe the gate refuses is in no list and cannot be started, and nothing
   for (const id of ["kaggle-not-read", "kaggle-cogvideox-2b"])
     assert.equal(await start(id), "NOT_FOUND That recipe is not available.");
   // One that is offered gets past this, to the approvals it has not: the refusal is the gate's.
-  const offered = await start("kaggle-wan22-ti2v-5b");
-  assert.doesNotMatch(offered, /^(NOT_FOUND|started)/);
+  assert.match(await start("kaggle-wan22-ti2v-5b"), /No one has approved contacting kaggle.com/);
   assert.deepEqual(await call("yamakan.generation.list", { projectId }), []);
 });
 

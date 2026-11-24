@@ -174,13 +174,19 @@ const sha256 = (data: string | Uint8Array) =>
 
 /** What is known of a recipe's licence, and whether that lets it be offered here (MPR-208). */
 export const kaggleLicence = (
-  recipeId: string,
-  block: unknown = licenceOf(recipeId),
-) => recipeLicence(recipeId, block, { run: "hosted" });
+  { id, model, revision }: Pick<KaggleRecipe, "id" | "model" | "revision">,
+  blockOf: (recipeId: string) => unknown = licenceOf,
+) =>
+  recipeLicence({ recipeId: id, model, revision }, blockOf(id), {
+    run: "hosted",
+  });
 
-export const offeredKaggleRecipes = () =>
+export const offeredKaggleRecipes = (
+  blockOf: (recipeId: string) => unknown = licenceOf,
+) =>
   KAGGLE_RECIPES.filter(
-    (r) => r.offered && kaggleLicence(r.id).offered && existsSync(scriptOf(r)),
+    (r) =>
+      r.offered && kaggleLicence(r, blockOf).offered && existsSync(scriptOf(r)),
   );
 
 /**
@@ -198,7 +204,7 @@ export function kaggleRecipeFacts(
     sha256(readFileSync(scriptOf(r))) === recipe.hash;
   return {
     route: "kaggle",
-    model: { id: r.model, revision: r.revision, licence: r.licence },
+    model: { id: r.model, revision: r.revision, licence: r.licence || null },
     fps: sameScript ? r.fps : null,
     steps: sameScript ? r.steps : null,
   };
@@ -1355,7 +1361,7 @@ export function createKaggleEngine(options: {
         !recipe ||
         !(recipe.offered || options.alsoOffered?.includes(recipe.id)) ||
         // Whatever its flag says, or a check of a recipe that is not offered yet.
-        !kaggleLicence(recipe.id).offered ||
+        !kaggleLicence(recipe).offered ||
         request.operation !== (recipe.operation ?? "textToVideo")
       )
         return { refused: "ENGINE_DISABLED" as const };

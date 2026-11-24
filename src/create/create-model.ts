@@ -29,6 +29,7 @@ export type CreateModel = {
 const RUN_OPEN: readonly OpenLicenceField[] = [
   { field: "bundled", part: "FFmpeg in imageio-ffmpeg 0.6.0" },
   { field: "bundled", part: "torch, NumPy and Pillow on Kaggle's machine" },
+  { field: "bundled", part: "what these packages install and use in turn" },
 ];
 
 export const CREATE_MODELS: readonly CreateModel[] = Object.freeze([

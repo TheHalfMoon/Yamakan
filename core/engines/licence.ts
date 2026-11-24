@@ -96,7 +96,8 @@ export const SourceUrl = z
 const Right = z.enum(["allowed", "notAllowed", "unknown"]);
 export const LicenceTermSchema = z
   .object({
-    name: words(120),
+    // As long as a take's record may keep it, on one line of plain characters: it is shown.
+    name: words(80).regex(/^[^\p{C}\p{Zl}\p{Zp}]+$/u),
     // Null where the publisher names no licence that has one.
     spdx: words(200).nullable(),
     commercialUse: Right,
@@ -278,15 +279,36 @@ export function licenceGate(block: unknown, use: LicenceUse): LicenceGate {
 
 // The recipes that were offered before this gate (2026-11-24), by the founder's direction. Closed:
 // a test refuses a new one. Each stays offered with what is not known of its licence shown, until
-// the founder decides; it is not a clearance, and what is known and against it is not excused.
+// the founder decides; it is not a clearance, and what is known and against it is not excused. Each
+// is at its model's revision: another model under the same id is another recipe.
+export type OfferedRecipe = {
+  recipeId: string | null;
+  model: string;
+  revision: string;
+};
+const WAN = {
+  model: "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+  revision: "b8fff7315c768468a5333511427288870b2e9635",
+};
 export const PRE_GATE_EXCEPTIONS = Object.freeze({
   at: "2026-11-24",
-  recipeIds: Object.freeze([
-    "kaggle-wan22-ti2v-5b",
-    "kaggle-wan22-ti2v-5b-first-frame",
-    "kaggle-cogvideox-2b",
-  ] as readonly string[]),
+  recipes: Object.freeze([
+    Object.freeze({ recipeId: "kaggle-wan22-ti2v-5b", ...WAN }),
+    Object.freeze({ recipeId: "kaggle-wan22-ti2v-5b-first-frame", ...WAN }),
+    Object.freeze({
+      recipeId: "kaggle-cogvideox-2b",
+      model: "zai-org/CogVideoX-2b",
+      revision: "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
+    }),
+  ]),
 });
+export const beforeTheGate = (of: OfferedRecipe) =>
+  PRE_GATE_EXCEPTIONS.recipes.some(
+    (r) =>
+      r.recipeId === of.recipeId &&
+      r.model === of.model &&
+      r.revision === of.revision,
+  );
 // What a component whose licence is not known gives, and no more.
 const OPEN: readonly LicenceRefusal[] = [
   "FIELD_UNKNOWN",
@@ -296,7 +318,7 @@ const OPEN: readonly LicenceRefusal[] = [
 
 /** Whether a recipe may be offered: by the gate, or as one of the recipes before it. */
 export function recipeLicence(
-  recipeId: string | null,
+  recipe: OfferedRecipe,
   block: unknown,
   use: LicenceUse,
 ): { offered: boolean; reasons: LicenceRefusal[]; open: OpenLicenceField[] } {
@@ -306,8 +328,7 @@ export function recipeLicence(
   return {
     offered:
       parsed.success &&
-      recipeId !== null &&
-      PRE_GATE_EXCEPTIONS.recipeIds.includes(recipeId) &&
+      beforeTheGate(recipe) &&
       gate.reasons.every((r) => OPEN.includes(r)) &&
       // A licence that is named and not accepted is not one that is not known.
       !namedAndUnaccepted(parsed.data),
@@ -316,12 +337,15 @@ export function recipeLicence(
   };
 }
 
+// Nothing is known of a licence only where neither its name in SPDX nor its use is.
+const notKnown = (t: LicenceTerm) =>
+  t.spdx === null && t.commercialUse === "unknown";
 const namedAndUnaccepted = (b: LicenceBlock) =>
   [b.weights, ...(isNone(b.baseModel) ? [] : [b.baseModel])].some(
     (t) =>
-      t.commercialUse !== "unknown" &&
+      !notKnown(t) &&
       !ACCEPTED_MODEL_LICENSES.includes((t.spdx ?? "").toLowerCase()),
   ) ||
   [b.code, ...b.bundled.map((x) => x.term)].some(
-    (t) => t.commercialUse !== "unknown" && !packageLicenseAccepted(t.spdx),
+    (t) => !notKnown(t) && !packageLicenseAccepted(t.spdx),
   );

@@ -143,7 +143,7 @@ const OPTIONS_BEFORE = {
     model: r.model,
     revision: r.revision,
     licence: r.licence,
-    licenceOpen: kaggleLicence(r.id).open,
+    licenceOpen: kaggleLicence(r).open,
     width: r.width,
     height: r.height,
     frames: r.frames,

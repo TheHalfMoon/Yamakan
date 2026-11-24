@@ -25,6 +25,7 @@ import { diagnostic } from "../core/engines/contract-v2.ts";
 import { MODEL_CATALOG } from "../core/engines/catalog.ts";
 import {
   PRE_GATE_EXCEPTIONS,
+  beforeTheGate,
   licenceGate,
   openLicenceFields,
   recipeLicence,
@@ -201,7 +202,12 @@ const entries = MODEL_CATALOG.entries.flatMap((entry) =>
   entry.offers.map((offer) => {
     const use = { run: offer.route === "kaggle" ? "hosted" : "local" };
     const gate = licenceGate(entry.licence, use);
-    const { offered } = recipeLicence(offer.recipeId, entry.licence, use);
+    const recipe = {
+      recipeId: offer.recipeId,
+      model: entry.identity.model,
+      revision: entry.identity.revision,
+    };
+    const { offered } = recipeLicence(recipe, entry.licence, use);
     return {
       id: entry.id,
       recipeId: offer.recipeId,
@@ -210,9 +216,7 @@ const entries = MODEL_CATALOG.entries.flatMap((entry) =>
       gate: gate.offered ? "offered" : "refused",
       reasons: gate.offered ? [] : gate.reasons,
       open: openLicenceFields(entry.licence, use),
-      beforeTheGate: PRE_GATE_EXCEPTIONS.recipeIds.includes(
-        offer.recipeId ?? "",
-      ),
+      beforeTheGate: beforeTheGate(recipe),
       mayBeOffered: offered,
       sourceUrl: entry.licence.sourceUrl,
       verifiedAt: entry.licence.verifiedAt,

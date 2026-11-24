@@ -103,9 +103,15 @@ function cellOf(
       };
     if (
       offer.lifecycle !== "candidate" &&
-      !recipeLicence(offer.recipeId, entry.licence, {
-        run: route === "kaggle" ? "hosted" : "local",
-      }).offered
+      !recipeLicence(
+        {
+          recipeId: offer.recipeId,
+          model: entry.identity.model,
+          revision: entry.identity.revision,
+        },
+        entry.licence,
+        { run: route === "kaggle" ? "hosted" : "local" },
+      ).offered
     )
       return {
         ...its,

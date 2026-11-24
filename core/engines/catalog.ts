@@ -344,6 +344,11 @@ const RUN_WITH = [
     role: "packages it has already",
     term: NOT_KNOWN("versions not known"),
   },
+  {
+    name: "what these packages install and use in turn",
+    role: "packages",
+    term: NOT_KNOWN("not looked at"),
+  },
 ];
 const APACHE_BLOCK = {
   code: APACHE,

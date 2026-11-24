@@ -791,7 +791,7 @@ test("each field has its form and its bound", () => {
       ],
       [
         "weights",
-        ["", " a", x(121)],
+        ["", " a", x(81)],
         (c, v) => (c.entries[0].licence.weights.name = v),
       ],
       ["sourceUrl", urls, (c, v) => (c.entries[0].licence.sourceUrl = v)],
