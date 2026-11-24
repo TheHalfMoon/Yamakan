@@ -35,7 +35,7 @@ At `245b079`, by reading: no `gate_approvals` table, no `core/gates.ts` and no `
 
 ## The check
 
-`npm run qualify:gates`: **PASS** at `d46164c9eba84470413cabda9ed287808ccf272a`, with a clean checkout. Host: `{"platform":"win32","githubImage":null,"freeDiskBytes":13818011648,"freeMemoryBytes":4501905408,"onAcPower":true,"load":null,"need":"unmeasured"}`.
+`npm run qualify:gates`: **PASS** at `dc46bc436f11dd8be01ae3576d8a494b09fbaf50`, with a clean checkout. Host: `{"platform":"win32","githubImage":null,"freeDiskBytes":9380724736,"freeMemoryBytes":3904860160,"onAcPower":true,"load":null,"need":"unmeasured"}`.
 
 - with no approval the page says what would be allowed, one run and one hour.
 - with no approval the start is refused on the page, and the stand-in was not started.
