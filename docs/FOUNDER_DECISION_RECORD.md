@@ -286,3 +286,11 @@ Approval line in the packet's format:
 - **Taken to mean:** by the builder, not the founder's words: whether a proxy or a certificate setting is there, never its value; that a setting which comes or goes closes the approval for every contact, following a run included, and not for a start only; and that putting the setting back opens it again.
 - **Not put to the founder:** what these facts do not see: a proxy set in Windows itself or in the Kaggle program's own settings file, one proxy or certificate replaced by another, and a setting that says which places need no proxy.
 - **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.
+
+## 2026-11-24: A landed database step is pinned by its text
+
+- **Source and form:** chat to Claude Opus in Claude Code on 2026-11-24. Asked "May each landed database schema step's text be pinned by hash in a test (OA-22)?", with the choices "Yes, pin them" and "No, leave as is", the founder answered "Yes, pin them". The founder was told that the builder recommended yes; that it protects existing workspaces against an accidental change to a released database step; that it adds one line to that test for each new step; and that it was due before MPR-204 and held its two pull requests and the work behind them. Chat instruction only: no signed approval and no founder GitHub review.
+- **Authorized scope:** open amendment OA-22 of the master plan revision, in MPR-204 and the later cards that add a step.
+- **Taken to mean:** by the builder, not the founder's words: the text of each of the nineteen steps as it is in the code now, MPR-204's own included, which lands with this; and that a line once there is not changed to make the test pass.
+- **Not put to the founder:** what the pins do not see: whether a step was changed between its first release and today, and the code around the steps (the order of two steps that rebuild a table, what is done for a table that already has a column).
+- **Still not authorized:** FD-3 to FD-11 are not decided by this entry. Models and providers stay off, spending zero, release NO-GO.

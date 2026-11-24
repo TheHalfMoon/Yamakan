@@ -224,7 +224,7 @@ before the schema cards of Stage 2.
 
 | Id | Severity | Finding | Disposition |
 |---|---|---|---|
-| SA-1 | MAJOR | Schema steps had no single order and no protection once landed. | PARTLY FIXED: handoff section 5.1 is the single list, and MPR-507 adds both of its columns in one part. Pinning each landed step by hash is OA-22. |
+| SA-1 | MAJOR | Schema steps had no single order and no protection once landed. | FIXED: handoff section 5.1 is the single list, MPR-507 adds both of its columns in one part, and each landed step is pinned by hash (OA-22, accepted 2026-11-24). |
 | SA-2 | MAJOR | Creating the sample project was not idempotent. | FIXED: MPR-604 takes an idempotency key, and the same key returns the same project and job. |
 | SA-3 | MAJOR | What a restore does to approvals, budgets and audit rows was not stated. | FIXED: handoff section 5.1 states the rule. |
 | SA-4 | MAJOR | Gate, budget and approval met at the start of a run with no stated order. | FIXED: MPR-505 reserves at filing, checks again at approval and commits at the gate before any connection opens. |
@@ -323,7 +323,7 @@ registry, the task program is rendered again, and the package check is run.
 | OA-19 | MPR-203 | Preflight carries the route's licence state, so a person sees it before the run and not after. | Planner | MPR-203 |
 | OA-20 | MPR-204, MPR-205 | The egress approval stores whether a proxy or a certificate override was set, and a start is refused when that differs (accepted by the founder on 2026-11-23). | SE-4 | accepted |
 | OA-21 | Document 12 | Section 8 gains a table of the worst-case disk use of one project. | WU-2 | MPR-507 part a |
-| OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts`. | SA-1 | MPR-204 |
+| OA-22 | MPR-204, MPR-507, MPR-303, MPR-504, MPR-505, MPR-506 | Each landed schema step's text is pinned by hash in `tests/workspace-db.test.ts` (accepted by the founder on 2026-11-24). | SA-1 | accepted |
 | OA-23 | MPR-003, MPR-209 and other cards with parts | The package check gets a part-aware rule, so a part that lands before its card's dependencies does not fail it. MPR-209 part a is the confirmed case; others were not examined. | Review of #281 | MPR-003 |
 | OA-24 | MPR-209 | Acceptance, tests, files and an offer field for the new `NOTICE` entries, the FFmpeg source or written offer, and `node.exe`, whose hash is the running host's and so differs between hosts. | Review of #281 | MPR-209 part a |
 
