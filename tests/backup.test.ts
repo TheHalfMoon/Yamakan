@@ -955,10 +955,12 @@ const plantApprovals = (db: DatabaseSync, epochs: number[]) => {
 
 test("an approval planted in a backup of any version is not restored", async () => {
   for (const version of [5, 11, 12, 18, 19]) {
+    // There are no such tables before version 19.
+    const made = version >= 19;
     const { dir, target } = await forged(
       (db) => {
         // The tables are planted whatever version the backup claims.
-        db.exec(GATES_SCHEMA);
+        if (!made) db.exec(GATES_SCHEMA);
         plantApprovals(db, [1, 2, 3]);
       },
       (file) => {
@@ -971,6 +973,14 @@ test("an approval planted in a backup of any version is not restored", async () 
         db.close();
       },
     );
+    if (!made) {
+      await assert.rejects(
+        restoreWorkspace(dir, target),
+        /something this workspace never creates/,
+        `${version}`,
+      );
+      continue;
+    }
     await restoreWorkspace(dir, target);
     const restored = new ProjectStore(target);
     await restored.initialize();
@@ -982,34 +992,34 @@ test("an approval planted in a backup of any version is not restored", async () 
   }
 });
 
-test("approval tables with rules of their own are not restored, and an epoch that will not move refuses the restore", async () => {
+test("approval tables with rules of their own refuse the restore, and so does an epoch's", async () => {
   // Rows that replace or ignore others would let a limit or a revocation pass by.
-  const { dir, target } = await forged((db) => {
-    for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
-    db.exec(`CREATE TABLE Gate_Approvals(n INTEGER PRIMARY KEY, id TEXT, kind TEXT, route TEXT, host TEXT, account TEXT, purpose TEXT, proxy_configured INTEGER, certificate_override INTEGER, limit_runs INTEGER, limit_units INTEGER, limit_unit TEXT, granted_at INTEGER, expires_at INTEGER, grantor_principal_id TEXT, epoch INTEGER);
+  for (const rules of [
+    `CREATE TABLE Gate_Approvals(n INTEGER PRIMARY KEY, id TEXT, kind TEXT, route TEXT, host TEXT, account TEXT, purpose TEXT, proxy_configured INTEGER, certificate_override INTEGER, limit_runs INTEGER, limit_units INTEGER, limit_unit TEXT, granted_at INTEGER, expires_at INTEGER, grantor_principal_id TEXT, epoch INTEGER);
 CREATE TABLE gate_approval_revocations(approval_id TEXT, revoked_at INTEGER, principal_id TEXT UNIQUE ON CONFLICT IGNORE);
-CREATE TABLE gate_approval_uses(approval_id TEXT UNIQUE ON CONFLICT REPLACE, use_id TEXT, units INTEGER, used_at INTEGER);`);
+CREATE TABLE gate_approval_uses(approval_id TEXT UNIQUE ON CONFLICT REPLACE, use_id TEXT, units INTEGER, used_at INTEGER);`,
+    GATES_SCHEMA.replace("UNIQUE", "UNIQUE ON CONFLICT REPLACE"),
+    "",
+  ]) {
+    const { dir, target } = await forged((db) => {
+      for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
+      db.exec(rules);
+    });
+    await assert.rejects(
+      restoreWorkspace(dir, target),
+      /not made as this workspace makes its own|something this workspace never creates/,
+      rules.slice(0, 60),
+    );
+  }
+  // Right ones are emptied, and their limits are kept: the largest number there can be, so that
+  // the next would be any number, is none of theirs.
+  const { dir, target } = await forged((db) => {
     plantApprovals(db, [1, 2, 3]);
-    // The largest number there can be, so that the next would be any number.
     db.exec("UPDATE gate_approvals SET n = 9223372036854775807 WHERE n = 1");
   });
   await restoreWorkspace(dir, target);
   const restored = new ProjectStore(target);
   await restored.initialize();
-  const db = new DatabaseSync(path.join(target, "workspace.sqlite"), {
-    readOnly: true,
-  });
-  const fresh = new DatabaseSync(":memory:");
-  fresh.exec(GATES_SCHEMA);
-  const schema = (of: DatabaseSync) =>
-    of
-      .prepare(
-        "SELECT lower(name) AS name, sql FROM sqlite_master WHERE name LIKE 'gate_%' ORDER BY 1",
-      )
-      .all();
-  assert.deepEqual(schema(db), schema(fresh));
-  db.close();
-  fresh.close();
   const [ask] = ASKS;
   const give = () =>
     approveGate(restored, {
@@ -1124,13 +1134,33 @@ INSERT INTO director_epoch VALUES (1, 1);`,
     const { dir, target } = await forged((db) => db.exec(plant));
     await assert.rejects(
       restoreWorkspace(dir, target),
-      /not made as this workspace makes its own|something this workspace never creates|integrity check/,
+      /not made as this workspace makes its own|something this workspace never creates/,
       what,
     );
     // Nothing is left that could be opened.
     await assert.rejects(access(path.join(target, "workspace.sqlite")), what);
   }
 });
+
+const JOB_STATES = [
+  "queued",
+  "preparing",
+  "running",
+  "validating",
+  "succeeded",
+  "cancelRequested",
+  "cancelled",
+  "failed",
+  "reconciliationRequired",
+];
+const ATTEMPT_STATES = [
+  "preparing",
+  "running",
+  "validating",
+  "succeeded",
+  "cancelled",
+  "failed",
+];
 
 test("a workspace that any version made or upgraded is restored, and its jobs are held", async () => {
   for (let version = 1; version <= WORKSPACE_SCHEMA_STEPS.length; version++) {
@@ -1156,24 +1186,23 @@ test("a workspace that any version made or upgraded is restored, and its jobs ar
     await opened.initialize();
     await opened.create("After");
     opened.close();
-    // And one of that version as it was, with a job in each state it can have. Jobs came with
-    // version 4; a backup of version 1, 8 or 9 has never been one that this can read.
-    if (version < 4 || version === 8 || version === 9) continue;
+    // And one of that version as it was, with a job and an attempt in each state it can have. Jobs
+    // came with version 3; a backup of version 1, 8 or 9 has never been one that this can read.
+    if (version < 3 || version === 8 || version === 9) continue;
     const old = await forged(
       (was) => {
-        for (const [n, state] of [
-          "queued",
-          "preparing",
-          "running",
-          "validating",
-          "cancelRequested",
-          "succeeded",
-        ].entries())
+        for (const [n, state] of JOB_STATES.entries())
           was
             .prepare(
               "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', 'p', ?, 'k', '{}', ?)",
             )
             .run(`job-${n}`, n, state);
+        for (const [n, state] of ATTEMPT_STATES.entries())
+          was
+            .prepare(
+              "INSERT INTO attempts(job_id, attempt_no, generation, state) VALUES ('job-0', ?, 1, ?)",
+            )
+            .run(n + 1, state);
       },
       (file) => {
         const was = new DatabaseSync(file, {
@@ -1189,25 +1218,30 @@ test("a workspace that any version made or upgraded is restored, and its jobs ar
     const held = new DatabaseSync(path.join(old.target, "workspace.sqlite"), {
       readOnly: true,
     });
-    assert.deepEqual(
+    const states = (table: string) =>
       held
-        .prepare("SELECT DISTINCT state FROM jobs ORDER BY 1")
+        .prepare(`SELECT DISTINCT state FROM ${table} ORDER BY 1`)
         .all()
-        .map((r) => (r as { state: string }).state),
-      ["reconciliationRequired", "succeeded"],
+        .map((r) => (r as { state: string }).state);
+    assert.deepEqual(
+      states("jobs"),
+      ["cancelled", "failed", "reconciliationRequired", "succeeded"],
+      `version ${version}`,
+    );
+    assert.deepEqual(
+      states("attempts"),
+      ["cancelled", "failed", "succeeded"],
       `version ${version}`,
     );
     held.close();
   }
 });
 
-test("a planted number does not keep a person from approving, and another thing of that name is refused", async () => {
+test("a planted number does not keep a person from approving", async () => {
   for (const last of ["9223372036854775807", "9223372036854775806"]) {
     const { dir, target } = await forged((db) => {
       plantApprovals(db, [1]);
-      for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
-      db.exec(`CREATE TABLE gate_approvals(n INTEGER);
-DELETE FROM sqlite_sequence;
+      db.exec(`DELETE FROM sqlite_sequence;
 INSERT INTO sqlite_sequence VALUES ('gate_approvals', ${last}), ('Gate_Approvals', ${last});`);
     });
     await restoreWorkspace(dir, target);
@@ -1222,12 +1256,137 @@ INSERT INTO sqlite_sequence VALUES ('gate_approvals', ${last}), ('Gate_Approvals
     assert.equal(given.state, "approved");
     restored.close();
   }
-  const { dir, target } = await forged((db) => {
-    for (const table of GATES_TABLES) db.exec(`DROP TABLE ${table}`);
-    db.exec("CREATE TABLE gate_approvals_asked(x)");
-  });
-  await assert.rejects(
-    restoreWorkspace(dir, target),
-    /something this workspace never creates/,
+});
+
+// A row of SQLite's own table of what there is, which it takes as it is.
+const schemaRow = (
+  db: DatabaseSync,
+  type: string,
+  name: string,
+  table: string,
+  sql: string,
+  rowid?: string,
+) => {
+  db.enableDefensive?.(false);
+  db.exec("PRAGMA writable_schema = ON");
+  db.prepare(
+    `INSERT INTO sqlite_master(${rowid ? "rowid, " : ""}type, name, tbl_name, rootpage, sql) VALUES (${rowid ? `${rowid}, ` : ""}?, ?, ?, 0, ?)`,
+  ).run(type, name, table, sql);
+  db.exec("PRAGMA writable_schema = OFF");
+};
+
+test("a table of another make is not hidden behind a right one of nearly its name, nor a trigger behind a case", async () => {
+  const agentToken = "e".repeat(64);
+  const agent = "agent:00000000-0000-4000-8000-000000000000";
+  const KELVIN = "\u212a";
+  for (const [what, plant] of [
+    [
+      "a token's table, by a letter that only looks like another",
+      (db: DatabaseSync) => {
+        const { sql } = db
+          .prepare("SELECT sql FROM sqlite_master WHERE name = 'agent_tokens'")
+          .get() as { sql: string };
+        db.exec(`DROP TABLE agent_tokens;
+CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, q TEXT, p TEXT, FOREIGN KEY(q, p, revoked) REFERENCES document_uploads(principal_id, project_id, request_id) ON DELETE SET DEFAULT);
+INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '[]', 'planted', 0, '2026-01-01', NULL, NULL, NULL);`);
+        db.exec(
+          sql.replace(/agent_tokens/, `"agent_to${KELVIN}ens"`),
+        );
+      },
+    ],
+    [
+      "a consent's table, the same way",
+      (db: DatabaseSync) => {
+        const { sql } = db
+          .prepare(
+            "SELECT sql FROM sqlite_master WHERE name = 'likeness_consents'",
+          )
+          .get() as { sql: string };
+        db.exec("ALTER TABLE likeness_consents ADD COLUMN planted TEXT");
+        db.exec(sql.replace(/likeness_consents/, `"li${KELVIN}eness_consents"`));
+      },
+    ],
+    [
+      "a trigger under another case, on a table under another case",
+      (db: DatabaseSync) =>
+        schemaRow(
+          db,
+          "Trigger",
+          "zz",
+          "Gate_Approvals",
+          "CREATE TRIGGER zz AFTER INSERT ON gate_approvals BEGIN UPDATE agent_tokens SET revoked = 0; UPDATE director_epoch SET value = 1; END",
+          "9223372036854775807",
+        ),
+    ],
+    [
+      "a view of an approvals' table's name",
+      (db: DatabaseSync) => {
+        db.exec("DROP TABLE gate_approval_uses");
+        schemaRow(
+          db,
+          "View",
+          "gate_approval_uses",
+          "gate_approval_uses",
+          "CREATE VIEW gate_approval_uses AS SELECT 1",
+        );
+      },
+    ],
+    [
+      "a counter's table with rules",
+      (db: DatabaseSync) => {
+        db.enableDefensive?.(false);
+        db.exec(`PRAGMA writable_schema = ON;
+UPDATE sqlite_master SET sql = 'CREATE TABLE sqlite_sequence(name REFERENCES document_uploads(id) ON DELETE SET NULL,seq)' WHERE name = 'sqlite_sequence';
+PRAGMA writable_schema = OFF;`);
+      },
+    ],
+  ] as [string, (db: DatabaseSync) => void][]) {
+    const { dir, target } = await forged(plant);
+    await assert.rejects(
+      restoreWorkspace(dir, target),
+      (e: { code?: string }) => e.code === "RECOVERY_REQUIRED",
+      what,
+    );
+    await assert.rejects(access(path.join(target, "workspace.sqlite")), what);
+  }
+});
+
+test("a job or attempt whose state is none there can be is not left to go on", async () => {
+  for (const plant of [
+    "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES ('j', 'export', 'p', 0, 'k', '{}', 'Queued')",
+    "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES ('j', 'export', 'p', 0, 'k', '{}', 'failed'); INSERT INTO attempts(job_id, attempt_no, generation, state) VALUES ('j', 1, 1, 'Running')",
+  ]) {
+    const { dir, target } = await forged((db) =>
+      db.exec(`PRAGMA ignore_check_constraints = ON; ${plant}`),
+    );
+    await assert.rejects(
+      restoreWorkspace(dir, target),
+      /does not keep what a restore must change|integrity check/,
+      plant,
+    );
+    await assert.rejects(access(path.join(target, "workspace.sqlite")));
+  }
+  // And a rule of a row that nothing else here looks at.
+  const { dir, target } = await forged((db) =>
+    db.exec(
+      "PRAGMA ignore_check_constraints = ON; INSERT INTO supervisor(id, generation) VALUES (2, 0)",
+    ),
   );
+  await assert.rejects(restoreWorkspace(dir, target), /integrity check/);
+});
+
+test("a backup that could not be restored is not made", async () => {
+  const { root, store, home } = await workspace();
+  store.close();
+  const db = new DatabaseSync(path.join(root, "workspace.sqlite"));
+  db.exec("CREATE TABLE by_hand(x)");
+  db.close();
+  const opened = new ProjectStore(root);
+  await opened.initialize();
+  await assert.rejects(
+    backupWorkspace(opened, home),
+    /This workspace's database holds something this workspace never creates; a backup of it could not be restored/,
+  );
+  assert.deepEqual(await readdir(path.join(home, "backups")), []);
+  opened.close();
 });

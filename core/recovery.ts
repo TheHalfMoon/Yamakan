@@ -601,6 +601,12 @@ export function backupWorkspace(
             `The database copy failed its integrity check: ${problems[0]}`,
           );
         schemaVersion = userVersion(copy);
+        // One that could not be restored is no backup.
+        const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
+        assertWorkspaceSchema(copy, steps, schemaVersion, {
+          of: "This workspace's database",
+          so: "a backup of it could not be restored, so none was made. Diagnose it (npm run recovery -- diagnose)",
+        });
         projects = heads(copy);
         objects = readyObjects(copy);
         closure = creativeClosure(copy);
@@ -976,6 +982,8 @@ async function restore(
       );
     let restored: Head[];
     let ready: ObjectRow[];
+    // Read here: the store and this read each other as they load.
+    const { WORKSPACE_SCHEMA_STEPS: steps } = await import("./store.ts");
     const check = new DatabaseSync(database, { readOnly: true });
     try {
       const problems = integrity(check);
@@ -1002,15 +1010,8 @@ async function restore(
           "RECOVERY_REQUIRED",
           "The restored database's version does not match the backup manifest.",
         );
-      // Before anything is read by its name or changed. What is not kept (the approvals, whose
-      // tables go whatever they hold) is not looked at.
-      // Read here: the store and this read each other as they load.
-      const { WORKSPACE_SCHEMA_STEPS } = await import("./store.ts");
-      assertWorkspaceSchema(
-        check,
-        WORKSPACE_SCHEMA_STEPS,
-        manifest.schemaVersion,
-      );
+      // Before anything is read by its name or changed.
+      assertWorkspaceSchema(check, steps, manifest.schemaVersion);
       restored = heads(check);
       if (JSON.stringify(restored) !== JSON.stringify(manifest.projects))
         throw new CommandError(
@@ -1093,6 +1094,22 @@ async function restore(
       closure = creativeClosure(db);
     } finally {
       db.close();
+    }
+    // As the next open will find it: read anew, and on a connection that checks the rules of rows
+    // too, which a read-only one does not.
+    const after = new DatabaseSync(database, {
+      enableForeignKeyConstraints: false,
+    });
+    try {
+      assertWorkspaceSchema(after, steps, manifest.schemaVersion);
+      const problems = integrity(after);
+      if (problems)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          `The restored database failed its integrity check: ${problems[0]}`,
+        );
+    } finally {
+      after.close();
     }
     const receipt = {
       format: RESTORE_FORMAT,

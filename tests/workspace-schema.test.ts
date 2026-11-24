@@ -45,13 +45,14 @@ test("every version this build knows is made as itself, and as no other", () => 
 
 // A small schema, so that each rule is changed alone.
 const OWN = [
-  `CREATE TABLE a(id INTEGER PRIMARY KEY CHECK(id = 1), word TEXT NOT NULL DEFAULT 'x' COLLATE NOCASE, n INTEGER UNIQUE, s TEXT GENERATED ALWAYS AS (word || 'y') VIRTUAL);
+  `CREATE TABLE a(id INTEGER PRIMARY KEY CHECK(id = 1), word TEXT NOT NULL DEFAULT 'x' COLLATE NOCASE, n INTEGER UNIQUE CHECK(n IS NOT NULL AND word <> 'b'), s TEXT GENERATED ALWAYS AS (word || 'y') VIRTUAL);
 CREATE TABLE b(id TEXT PRIMARY KEY, a INTEGER REFERENCES a(id) ON DELETE CASCADE, UNIQUE(a, id) ON CONFLICT IGNORE) STRICT, WITHOUT ROWID;
 CREATE INDEX b_a ON b(a) WHERE a > 0;`,
 ];
 const like = (sql: string) => {
   const db = new DatabaseSync(":memory:", {
     enableForeignKeyConstraints: false,
+    enableDoubleQuotedStringLiterals: true,
   });
   db.exec(sql);
   return asked(db, 1, OWN);
@@ -63,13 +64,13 @@ test("how a statement is spaced, cased, quoted or commented is no part of it", (
   for (const same of [
     own.replaceAll(" ", "\n  "),
     own
-      .replace("CREATE TABLE a", 'create table "A"')
-      .replace("word TEXT", "[Word] text"),
+      .replace("CREATE TABLE a", 'create table "a"')
+      .replace("word TEXT", "[word] TEXT"),
     own.replace("word TEXT", "`word` /* a word */ TEXT -- of it\n"),
     `${own.replaceAll("TABLE a(", "TABLE z(").replaceAll("REFERENCES a(", "REFERENCES z(")}
 ALTER TABLE z RENAME TO a;`,
     // What counts and what is measured hold no rule.
-    `${own} CREATE TABLE gate_approvals(x); CREATE INDEX gate_x ON gate_approvals(x); ANALYZE;`,
+    `${own} CREATE TABLE q(n INTEGER PRIMARY KEY AUTOINCREMENT); DROP TABLE q; ANALYZE;`,
   ])
     assert.equal(like(same), "ok", same);
 });
@@ -100,6 +101,10 @@ test("each rule that is another, missing or more is refused", () => {
     ["ON b(a) WHERE", "ON b(a DESC) WHERE"],
     ["CREATE INDEX b_a ON b(a) WHERE a > 0;", ""],
     ["word TEXT", "word TEXT, more TEXT"],
+    // Where only the statement says it.
+    ["word <> 'b'", "word <> 'B'"],
+    ["n IS NOT NULL", 'n IS NOT "NULL"'],
+    ["n IS NOT NULL", "n IS NOT 'NULL'"],
     // A word of SQL in quotes is a name: here a type, and no rule.
     [
       "INTEGER PRIMARY KEY CHECK(id = 1)",
@@ -119,7 +124,8 @@ test("each rule that is another, missing or more is refused", () => {
     "CREATE INDEX c ON a(word);",
     "CREATE VIEW c AS SELECT 1;",
     "CREATE TRIGGER c AFTER INSERT ON a BEGIN SELECT 1; END;",
-    "CREATE TABLE gate_approvals_asked(x);",
+    "CREATE TABLE gate_approvals(x);",
+    'CREATE TABLE "A\u212a"(x);',
     "CREATE VIRTUAL TABLE c USING fts5(x);",
   ])
     assert.match(
@@ -133,11 +139,56 @@ test("each rule that is another, missing or more is refused", () => {
         .replace("CREATE TABLE b", "CREATE TABLE c")
         .replace("ON b(a)", "ON c(a)"),
     ),
-    /not made as this workspace makes its own/,
+    /something this workspace never creates/,
   );
   // The backup's own words are not said.
   assert.doesNotMatch(
     like(`${own} CREATE TABLE "C:\\Users\\someone"(x);`),
     /someone/,
   );
+});
+
+test("a database of many things or long words is refused at once", () => {
+  const began = performance.now();
+  const many = Array.from(
+    { length: 3000 },
+    (_, n) => `CREATE TABLE many_${n}(x);`,
+  ).join("");
+  assert.match(like(own + many), /something this workspace never creates/);
+  const long = new DatabaseSync(":memory:", {
+    enableForeignKeyConstraints: false,
+  });
+  long.exec(own.replace("word TEXT", `word /* ${"/* ".repeat(5_000)} */ TEXT`));
+  assert.match(asked(long, 1, OWN), /not made as this workspace makes its own/);
+  const huge = new DatabaseSync(":memory:", {
+    enableForeignKeyConstraints: false,
+  });
+  huge.exec(own.replace("DEFAULT 'x'", `DEFAULT '${"x".repeat(2_000_000)}'`));
+  assert.match(asked(huge, 1, OWN), /not made as this workspace makes its own/);
+  assert.ok(performance.now() - began < 10_000);
+});
+
+test("a row of SQLite's own table that is not as it writes them is refused", () => {
+  for (const sql of [
+    "UPDATE sqlite_master SET type = 'Table' WHERE name = 'a'",
+    "UPDATE sqlite_master SET tbl_name = 'A' WHERE name = 'a'",
+    "UPDATE sqlite_master SET name = CAST('a' AS BLOB) WHERE name = 'a'",
+    "INSERT INTO sqlite_master(type, name, tbl_name, rootpage, sql) VALUES ('Trigger', 'zz', 'A', 0, 'CREATE TRIGGER zz AFTER INSERT ON a BEGIN SELECT 1; END')",
+    "INSERT INTO sqlite_master(type, name, tbl_name, rootpage, sql) SELECT type, name, tbl_name, rootpage, sql FROM sqlite_master WHERE name = 'a'",
+    "INSERT INTO sqlite_master(type, name, tbl_name, rootpage, sql) VALUES ('table', 'sqlite_stat1', 'sqlite_stat1', 0, 'CREATE TABLE sqlite_stat1(tbl,idx,stat,more)')",
+  ]) {
+    const db = new DatabaseSync(":memory:", {
+      enableForeignKeyConstraints: false,
+    });
+    db.exec(own);
+    db.enableDefensive?.(false);
+    db.exec(
+      `PRAGMA writable_schema = ON; ${sql}; PRAGMA writable_schema = OFF;`,
+    );
+    assert.match(
+      asked(db, 1, OWN),
+      /something this workspace never creates|not made as/,
+      sql,
+    );
+  }
 });
