@@ -41,6 +41,7 @@ import { fromEditView, parseCanonical } from "./canonical.ts";
 import type { CanonicalProject } from "./canonical.ts";
 import { GATES_SCHEMA, GATES_TABLES } from "./gates-schema.ts";
 import type { ProjectStore, RequestReceipt } from "./store.ts";
+import { assertWorkspaceSchema } from "./workspace-schema.ts";
 
 // Format 2 (YU-014) adds the legacy workspace files and the creative closure
 // of the database copy; format 1 backups stay restorable, labelled as not
@@ -898,7 +899,14 @@ function fenceRestored(db: DatabaseSync): Fenced {
       db
         .prepare("SELECT 1 FROM agent_tokens WHERE revoked IS NOT 1 LIMIT 1")
         .get() !== undefined) ||
-    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch);
+    (fenced.directorEpoch !== null && epochNow(db) !== fenced.directorEpoch) ||
+    // Whatever it is called: a job or an attempt that has not ended and is not held would go on.
+    (has(db, "jobs") &&
+      db
+        .prepare(
+          "SELECT 1 FROM jobs WHERE state IS NULL OR state NOT IN ('succeeded', 'cancelled', 'failed', 'reconciliationRequired') UNION ALL SELECT 1 FROM attempts WHERE state IS NULL OR state NOT IN ('succeeded', 'cancelled', 'failed') LIMIT 1",
+        )
+        .get() !== undefined);
   if (back)
     throw new CommandError(
       "RECOVERY_REQUIRED",
@@ -994,6 +1002,15 @@ async function restore(
           "RECOVERY_REQUIRED",
           "The restored database's version does not match the backup manifest.",
         );
+      // Before anything is read by its name or changed. What is not kept (the approvals, whose
+      // tables go whatever they hold) is not looked at.
+      // Read here: the store and this read each other as they load.
+      const { WORKSPACE_SCHEMA_STEPS } = await import("./store.ts");
+      assertWorkspaceSchema(
+        check,
+        WORKSPACE_SCHEMA_STEPS,
+        manifest.schemaVersion,
+      );
       restored = heads(check);
       if (JSON.stringify(restored) !== JSON.stringify(manifest.projects))
         throw new CommandError(

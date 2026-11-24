@@ -1,6 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import {
+  access,
   copyFile,
   mkdir,
   mkdtemp,
@@ -752,10 +753,8 @@ test("a backup made to carry authority restores with none", async () => {
   const { base, store, home } = await workspace();
   const backup = await backupWorkspace(store, home);
   const dir = path.join(home, "backups", backup.backupId);
-  // As someone who wrote the backup would: tables without their rules and under names in
-  // another case, which SQLite reads as the same tables; a token claiming to be the browser
-  // and never revoked; a live agent's token; and a consent and a request at later epochs.
-  const token = "a".repeat(64);
+  // As someone who wrote the backup would, in tables as they are: a live agent's token, and a
+  // consent and a request at later epochs.
   const agentToken = "e".repeat(64);
   const db = new DatabaseSync(path.join(dir, "workspace.sqlite"));
   const epoch = (
@@ -765,16 +764,9 @@ test("a backup made to carry authority restores with none", async () => {
       value: number;
     }
   ).value;
-  db.exec(`DROP TABLE agent_tokens;
-CREATE TABLE Agent_Tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);
-ALTER TABLE director_epoch RENAME TO tmp_epoch;
-ALTER TABLE tmp_epoch RENAME TO Director_Epoch;
-ALTER TABLE director_requests RENAME TO tmp_requests;
-ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   const plant = db.prepare(
-    "INSERT INTO Agent_Tokens VALUES (?, ?, '[]', 'planted', ?, '2026-01-01')",
+    "INSERT INTO agent_tokens(agent_id, token_hash, scopes, label, revoked, created_at) VALUES (?, ?, '[]', 'planted', ?, '2026-01-01')",
   );
-  plant.run("browser-ui", hashAgentToken(token), null);
   plant.run(
     `agent:${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}`,
     hashAgentToken(agentToken),
@@ -784,7 +776,7 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
     "INSERT INTO likeness_consents VALUES ('c1', 'someone', 'likeness-send', '1', 0, 9999999999999, 'browser-ui', ?)",
   ).run(epoch + 1);
   db.prepare(
-    "INSERT INTO Director_Requests VALUES ('browser-ui', 'r1', ?, '{}', ?, 0)",
+    "INSERT INTO director_requests VALUES ('browser-ui', 'r1', ?, '{}', ?, 0)",
   ).run("0".repeat(64), epoch + 5);
   // Approvals of this epoch and of ones to come.
   const approval = db.prepare(
@@ -812,7 +804,6 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
   await restoreWorkspace(dir, target);
   const restored = new ProjectStore(target);
   await restored.initialize();
-  assert.equal(restored.principalForAgentToken(token), null);
   assert.equal(restored.principalForAgentToken(agentToken), null);
   for (const kind of ["egress", "spend"] as const) {
     const ask = {
@@ -848,7 +839,7 @@ ALTER TABLE tmp_requests RENAME TO Director_Requests;`);
       .prepare("SELECT revoked FROM agent_tokens")
       .all()
       .map((r) => (r as { revoked: number }).revoked),
-    [1, 1],
+    [1],
   );
   check.close();
   store.close();
@@ -1063,12 +1054,12 @@ INSERT INTO director_epoch VALUES (1, 1), (2, 2);`);
     });
     await assert.rejects(
       restoreWorkspace(other.dir, other.target),
-      /an epoch this workspace cannot change/,
+      /not made as this workspace makes its own \(table director_epoch\)/,
     );
   }
 });
 
-test("a backup whose tables would set back what a restore changes does not", async () => {
+test("a backup whose tables would set back what a restore changes is refused", async () => {
   const agentToken = "e".repeat(64);
   const agent = "agent:00000000-0000-4000-8000-000000000000";
   const TOKEN = `INSERT INTO agent_tokens VALUES ('${agent}', '${hashAgentToken(agentToken)}', '["project:read","project:write"]', 'planted', 0, '2026-01-01', NULL`;
@@ -1094,30 +1085,119 @@ DROP TABLE agent_tokens;
 CREATE TABLE agent_tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER DEFAULT 0, created_at TEXT, expires_at TEXT, z TEXT DEFAULT NULL, FOREIGN KEY(revoked, z) REFERENCES director_epoch(value, z) ON UPDATE SET DEFAULT ON DELETE SET DEFAULT);
 ${TOKEN}, 't');`,
     ],
+    [
+      "by names in another case, without their rules",
+      `DROP TABLE agent_tokens;
+CREATE TABLE Agent_Tokens(agent_id TEXT, token_hash TEXT, scopes TEXT, label TEXT, revoked INTEGER, created_at TEXT);
+ALTER TABLE director_epoch RENAME TO tmp_epoch;
+ALTER TABLE tmp_epoch RENAME TO Director_Epoch;
+INSERT INTO Agent_Tokens VALUES ('browser-ui', '${hashAgentToken(agentToken)}', '[]', 'planted', NULL, '2026-01-01');`,
+    ],
+    // What the first open deletes would set the epoch back.
+    [
+      "by the uploads that the first open deletes",
+      `DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER PRIMARY KEY CHECK(singleton = 1), value INTEGER NOT NULL DEFAULT 1, upload TEXT DEFAULT NULL REFERENCES document_uploads(id) ON DELETE SET DEFAULT);
+INSERT INTO director_epoch VALUES (1, 1, NULL);`,
+    ],
+    // A queued job that the hold does not see.
+    [
+      "by a job's state in another kind",
+      `DROP TABLE attempts; DROP TABLE jobs;
+CREATE TABLE jobs(job_id TEXT PRIMARY KEY, kind TEXT, project_id TEXT, frozen_revision INTEGER, idempotency_key TEXT, payload TEXT, state TEXT GENERATED ALWAYS AS (CASE cancel_requested WHEN 0 THEN 'queued' ELSE 'failed' END), cancel_requested INTEGER DEFAULT 0, progress REAL, error TEXT, artifact TEXT, plan_hash TEXT);
+CREATE TABLE attempts(job_id TEXT, attempt_no INTEGER, generation INTEGER, state TEXT, pid INTEGER, exit_code INTEGER, error TEXT, receipt TEXT);`,
+    ],
+    [
+      "by a column of its own",
+      "ALTER TABLE jobs ADD COLUMN planted TEXT DEFAULT 'x' REFERENCES projects(project_id) ON DELETE SET DEFAULT;",
+    ],
+    ["by an index of its own", "CREATE UNIQUE INDEX planted ON jobs(state);"],
+    ["by a table of its own", "CREATE TABLE planted(x TEXT);"],
+    ["by a table that is not there", "DROP TABLE consent_revalidations;"],
+    [
+      "by a rule written as a type",
+      `DROP TABLE director_epoch;
+CREATE TABLE director_epoch(singleton INTEGER "PRIMARY" "KEY" CHECK(singleton = 1), value INTEGER NOT NULL);
+INSERT INTO director_epoch VALUES (1, 1);`,
+    ],
   ] as const) {
     const { dir, target } = await forged((db) => db.exec(plant));
-    const receipt = await restoreWorkspace(dir, target);
-    const db = new DatabaseSync(path.join(target, "workspace.sqlite"), {
-      readOnly: true,
-    });
-    const { value } = db
-      .prepare("SELECT value FROM director_epoch WHERE singleton = 1")
-      .get() as { value: number };
-    assert.equal(value, 2, what);
-    assert.deepEqual(
-      db
-        .prepare("SELECT revoked FROM agent_tokens")
-        .all()
-        .map((r) => (r as { revoked: number }).revoked),
-      [1],
+    await assert.rejects(
+      restoreWorkspace(dir, target),
+      /not made as this workspace makes its own|something this workspace never creates|integrity check/,
       what,
     );
+    // Nothing is left that could be opened.
+    await assert.rejects(access(path.join(target, "workspace.sqlite")), what);
+  }
+});
+
+test("a workspace that any version made or upgraded is restored, and its jobs are held", async () => {
+  for (let version = 1; version <= WORKSPACE_SCHEMA_STEPS.length; version++) {
+    // Upgraded by this build, then backed up: made as one it made at once.
+    const { base, root, store, home } = await workspace();
+    store.close();
+    await rm(path.join(root, "workspace.sqlite"));
+    for (const side of ["-wal", "-shm"])
+      await rm(path.join(root, `workspace.sqlite${side}`), { force: true });
+    const db = new DatabaseSync(path.join(root, "workspace.sqlite"), {
+      enableForeignKeyConstraints: false,
+    });
+    for (const step of WORKSPACE_SCHEMA_STEPS.slice(0, version)) db.exec(step);
+    db.exec(`PRAGMA user_version = ${version}`);
     db.close();
-    assert.ok(receipt);
-    const restored = new ProjectStore(target);
-    await restored.initialize();
-    assert.equal(restored.principalForAgentToken(agentToken), null, what);
-    restored.close();
+    const upgraded = new ProjectStore(root);
+    await upgraded.initialize();
+    const backup = await backupWorkspace(upgraded, home);
+    upgraded.close();
+    const target = path.join(base, "restored");
+    await restoreWorkspace(path.join(home, "backups", backup.backupId), target);
+    const opened = new ProjectStore(target);
+    await opened.initialize();
+    await opened.create("After");
+    opened.close();
+    // And one of that version as it was, with a job in each state it can have. Jobs came with
+    // version 4; a backup of version 1, 8 or 9 has never been one that this can read.
+    if (version < 4 || version === 8 || version === 9) continue;
+    const old = await forged(
+      (was) => {
+        for (const [n, state] of [
+          "queued",
+          "preparing",
+          "running",
+          "validating",
+          "cancelRequested",
+          "succeeded",
+        ].entries())
+          was
+            .prepare(
+              "INSERT INTO jobs(job_id, kind, project_id, frozen_revision, idempotency_key, payload, state) VALUES (?, 'export', 'p', ?, 'k', '{}', ?)",
+            )
+            .run(`job-${n}`, n, state);
+      },
+      (file) => {
+        const was = new DatabaseSync(file, {
+          enableForeignKeyConstraints: false,
+        });
+        for (const step of WORKSPACE_SCHEMA_STEPS.slice(0, version))
+          was.exec(step);
+        was.exec(`PRAGMA user_version = ${version}`);
+        was.close();
+      },
+    );
+    await restoreWorkspace(old.dir, old.target);
+    const held = new DatabaseSync(path.join(old.target, "workspace.sqlite"), {
+      readOnly: true,
+    });
+    assert.deepEqual(
+      held
+        .prepare("SELECT DISTINCT state FROM jobs ORDER BY 1")
+        .all()
+        .map((r) => (r as { state: string }).state),
+      ["reconciliationRequired", "succeeded"],
+      `version ${version}`,
+    );
+    held.close();
   }
 });
 
@@ -1148,6 +1228,6 @@ INSERT INTO sqlite_sequence VALUES ('gate_approvals', ${last}), ('Gate_Approvals
   });
   await assert.rejects(
     restoreWorkspace(dir, target),
-    /something else under the name of its approvals/,
+    /something this workspace never creates/,
   );
 });
