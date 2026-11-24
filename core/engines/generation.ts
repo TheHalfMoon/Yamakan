@@ -56,8 +56,16 @@ export type GenerationRequest = {
   noUnconsentedPerson?: true;
   // The story shot its video is made for. The command has checked it.
   target?: GenerationTarget;
+  // The take of that shot it revises. The command has read it.
+  derivedFrom?: GenerationBase;
 };
 export type GenerationTarget = { documentId: string; shotId: string };
+// Kept by its record's hash, so it stands when the take is taken out later.
+export type GenerationBase = {
+  takeId: string;
+  recordHash: string;
+  revisionNote?: string;
+};
 
 // Whether a targeted run's video became a take of its shot as it was brought in, and why not.
 export type TakeOutcome =
@@ -69,6 +77,8 @@ export type TakeOutcome =
       recordHash: string;
       contentHash: string;
       revision: number;
+      // What could not be recorded of it.
+      notice?: string;
     }
   | {
       appended: false;
@@ -133,6 +143,8 @@ export type GenerationRecord = {
   // no shot, and from older records.
   target?: GenerationTarget;
   take?: TakeOutcome;
+  // The take it revises. Absent from a run that revises none, and from older records.
+  derivedFrom?: GenerationBase;
   // Where the engine has it, as this workspace was set up when it left.
   remote?: string | null;
   // Said beside every later answer, across a restart.
@@ -648,6 +660,7 @@ export function createGenerationService(options: {
           : {}),
         inputs: inputPins,
         ...(request.target ? { target: request.target } : {}),
+        ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         executionRef: null,
         phase: "sending",
         remote: here,

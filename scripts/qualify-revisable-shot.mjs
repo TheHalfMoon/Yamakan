@@ -6,6 +6,9 @@
  * of it as it is brought in, the timeline stays as it was, and what stops it is said. MPR-107:
  * one shot's history says what was tried for it, the same over REST and MCP from the service
  * started on this workspace, and stays inside its time and size on a project with many runs.
+ * MPR-103: a take's request is read back as a draft, a run from it with another seed records that
+ * the seed is what changed, and the new take is placed and undone as one step. The stand-in
+ * engine's output does not follow its request, so this proves the record and not a model.
  *
  * The engine is the in-process fake, and its one output is replaced by a test pattern made
  * with ffmpeg here: nothing in it is AI output. No network, no model, no spend.
@@ -13,7 +16,7 @@
  * What this host has is recorded first. What the run needs is unmeasured, so nothing is
  * refused for it; a missing ffmpeg or native helper ends BLOCKED, never PASS.
  *
- * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json [MPR-102-receipt.json [MPR-107-receipt.json]]]
+ * Usage: node scripts/qualify-revisable-shot.mjs [receipt.json [MPR-102-receipt.json [MPR-107-receipt.json [MPR-103-receipt.json]]]]
  */
 import { execFileSync, fork, spawn } from "node:child_process";
 import { once } from "node:events";
@@ -80,8 +83,19 @@ const historyOut =
           import.meta.url,
         ),
       ));
+const revisionOut =
+  process.argv[5] ??
+  (process.argv[2]
+    ? null
+    : fileURLToPath(
+        new URL(
+          "../docs/evidence/ultimate/MPR-103-take-revision-receipt.json",
+          import.meta.url,
+        ),
+      ));
 const steps = [];
 const historySteps = [];
+const revisionSteps = [];
 const measured = { worstMs: null, largestBytes: null };
 // The service and the MCP server, while they run.
 let served;
@@ -719,6 +733,157 @@ try {
     { ledger },
   );
 
+  // MPR-103, on a shot of its own.
+  const revisionStep = (name, detail) => {
+    revisionSteps.push({ name, ...detail });
+    console.log(`ok - ${name}`);
+  };
+  const revisedShot = { ...told, id: randomUUID(), name: "Revised" };
+  const revisionStory = randomUUID();
+  const revisionScene = randomUUID();
+  const saveRevised = async (shot) => {
+    const held = (await call("yamakan.document.list", { projectId })).find(
+      (d) => d.id === revisionStory,
+    );
+    return call("yamakan.story.save", {
+      projectId,
+      expectedRevision: await head(),
+      documentId: revisionStory,
+      expectedContentHash: held?.contentHash ?? null,
+      story: {
+        format: "yamakan.story",
+        formatVersion: 2,
+        title: "Revised",
+        scenes: [{ id: revisionScene, name: "One", shots: [shot] }],
+      },
+    });
+  };
+  const aim = { documentId: revisionStory, shotId: revisedShot.id };
+  await saveRevised(revisedShot);
+  ends = "succeeded";
+  const makeTake = async (made, more) => {
+    makes = made;
+    const { generationId } = await call("yamakan.generation.start", {
+      projectId,
+      target: aim,
+      ...more,
+    });
+    await call("yamakan.generation.status", { generationId });
+    const { take } = await call("yamakan.generation.import", { generationId });
+    assert.equal(take.appended, true);
+    const { record } = await call("yamakan.take.record", {
+      projectId,
+      ...aim,
+      takeId: take.takeId,
+    });
+    return { ...take, record };
+  };
+  const firstTake = await makeTake(onePattern, {
+    recipeId: recipe.id,
+    prompt: PROMPT,
+    seed: 7,
+    width: 704,
+    height: 480,
+    durationFrames: 60,
+  });
+  const drafted = await call("yamakan.take.revisionDraft", {
+    projectId,
+    ...aim,
+    takeId: firstTake.takeId,
+  });
+  assert.equal(drafted.base.recordHash, firstTake.recordHash);
+  assert.deepEqual(drafted.draft, {
+    recipeId: recipe.id,
+    prompt: PROMPT,
+    seed: 7,
+    width: 704,
+    height: 480,
+    durationFrames: 60,
+    firstFrameAssetId: null,
+  });
+  assert.deepEqual(
+    [drafted.complete, drafted.startable, drafted.reason],
+    [true, true, null],
+  );
+  revisionStep("a take's request is read back as a draft", {
+    baseRecordHash: firstTake.recordHash,
+    draft: { ...drafted.draft, prompt: "(kept)" },
+    checks: drafted.checks,
+  });
+  const shownRevised = (
+    await call("yamakan.document.get", { projectId, documentId: revisionStory })
+  ).content.scenes[0].shots[0];
+  await saveRevised({ ...shownRevised, selectedTakeId: firstTake.takeId });
+  await call("yamakan.story.assemble", {
+    projectId,
+    expectedRevision: await head(),
+    documentId: revisionStory,
+    trackId: (await call("yamakan.project.open", { projectId })).tracks.find(
+      (t) => t.kind === "video",
+    ).id,
+  });
+  const { firstFrameAssetId: _none, ...startAgain } = drafted.draft;
+  const nextTake = await makeTake(otherPattern, {
+    ...startAgain,
+    seed: 8,
+    derivedFromTakeId: firstTake.takeId,
+    revisionNote: "Another seed, for this check.",
+  });
+  assert.equal(nextTake.record.derivedFromTakeId, firstTake.takeId);
+  assert.equal(nextTake.record.derivedFromRecordHash, firstTake.recordHash);
+  assert.deepEqual(nextTake.record.changedFields, ["seed"]);
+  assert.equal(nextTake.record.revisionNote, "Another seed, for this check.");
+  revisionStep("a run from the draft with another seed records that change", {
+    baseRecordHash: firstTake.recordHash,
+    newRecordHash: nextTake.recordHash,
+    changedFields: nextTake.record.changedFields,
+    revisionNote: nextTake.record.revisionNote,
+  });
+  const repeated = await makeTake(otherPattern, {
+    ...startAgain,
+    derivedFromTakeId: firstTake.takeId,
+  });
+  assert.deepEqual(repeated.record.changedFields, []);
+  assert.equal(repeated.record.revisionNote, null);
+  revisionStep("a run from the draft as it is records no change", {
+    newRecordHash: repeated.recordHash,
+    changedFields: repeated.record.changedFields,
+  });
+  const shownNow = async () =>
+    (await call("yamakan.take.list", { projectId, documentId: revisionStory }))
+      .shots[0].timeline.currentTakeId;
+  assert.equal(await shownNow(), firstTake.takeId);
+  const sideBySide = await call("yamakan.take.compare", {
+    projectId,
+    ...aim,
+    takeIds: [firstTake.takeId, nextTake.takeId],
+  });
+  assert.equal(sideBySide.takes.length, 2);
+  const revisionProposal = await call("yamakan.take.proposeReplace", {
+    projectId,
+    ...aim,
+    takeId: nextTake.takeId,
+  });
+  const beforeApply = await head();
+  const placed = await call("yamakan.take.apply", {
+    projectId,
+    expectedRevision: beforeApply,
+    proposal: revisionProposal,
+  });
+  assert.equal(placed.revision, beforeApply + 1);
+  assert.equal(await shownNow(), nextTake.takeId);
+  const takenBack = await call("yamakan.project.undo", {
+    projectId,
+    expectedRevision: placed.revision,
+  });
+  assert.equal(takenBack.revision, placed.revision + 1);
+  assert.equal(await shownNow(), firstTake.takeId);
+  revisionStep("the new take is compared, placed and undone as one step", {
+    revisionBefore: beforeApply,
+    applied: placed.revision,
+    undone: takenBack.revision,
+  });
+
   // A project with many runs and many notes.
   const many = { ...told, id: randomUUID(), name: "Many" };
   const manyStory = randomUUID();
@@ -867,10 +1032,16 @@ try {
       reject(new Error(`The service exited ${code}.`));
     });
   });
-  const overRest = await new YamakanClient({
+  const client = new YamakanClient({
     baseUrl: url,
     token: readFileSync(join(workspaceFolder, "token"), "utf8").trim(),
-  }).call("yamakan.shot.history", ask);
+  });
+  const overRest = await client.call("yamakan.shot.history", ask);
+  const askDraft = { projectId, ...aim, takeId: firstTake.takeId };
+  const draftOverRest = await client.call(
+    "yamakan.take.revisionDraft",
+    askDraft,
+  );
   spoken = spawn(process.execPath, [join(where, "mcp", "main.ts")], {
     env: {
       ...process.env,
@@ -881,7 +1052,8 @@ try {
     stdio: ["pipe", "pipe", "ignore"],
     windowsHide: true,
   });
-  const overMcp = await new Promise((resolve, reject) => {
+  const answers = [];
+  const [overMcp, draftOverMcp] = await new Promise((resolve, reject) => {
     const timer = setTimeout(
       () => reject(new Error("MCP did not answer.")),
       20_000,
@@ -889,11 +1061,21 @@ try {
     let said = "";
     spoken.stdout.on("data", (chunk) => {
       said += String(chunk);
-      if (!said.includes("\n")) return;
+      const lines = said.split("\n");
+      said = lines.pop();
+      try {
+        for (const line of lines) {
+          const { id, result } = JSON.parse(line);
+          if (id !== undefined)
+            answers[id - 1] = JSON.parse(result.content[0].text);
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        return reject(e);
+      }
+      if (answers[0] === undefined || answers[1] === undefined) return;
       clearTimeout(timer);
-      resolve(
-        JSON.parse(JSON.parse(said.split("\n")[0]).result.content[0].text),
-      );
+      resolve(answers);
     });
     // One that has gone is said, after the receipts are written.
     spoken.once("exit", (code) => {
@@ -908,6 +1090,11 @@ try {
         id: 1,
         method: "tools/call",
         params: { name: "yamakan_shot_history", arguments: ask },
+      })}\n${JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "yamakan_take_revisionDraft", arguments: askDraft },
       })}\n`,
     );
   });
@@ -916,6 +1103,21 @@ try {
   const bare = ({ revision: _r, ...rest }) => rest;
   assert.deepEqual(bare(overRest), bare(JSON.parse(JSON.stringify(ledger))));
   historyStep("the service answers the same over REST and over MCP");
+  assert.deepEqual(draftOverMcp, draftOverRest);
+  assert.deepEqual(draftOverRest.draft, drafted.draft);
+  // A service with nothing set up still reads the request, and says why it starts nothing.
+  assert.deepEqual(
+    [
+      draftOverRest.complete,
+      draftOverRest.startable,
+      draftOverRest.checks.find((c) => c.field === "route").state,
+    ],
+    [true, false, "unavailable"],
+  );
+  revisionStep(
+    "a service with no engine gives the same draft over REST and over MCP",
+    { checks: draftOverRest.checks },
+  );
   passed = true;
 } catch (e) {
   // This receipt may be committed, and an error can hold a local path naming the user.
@@ -944,6 +1146,7 @@ try {
     [receiptOut, "MPR-101", steps],
     [targetOut, "MPR-102", targetSteps],
     [historyOut, "MPR-107", historySteps, measured],
+    [revisionOut, "MPR-103", revisionSteps],
   ])
     if (out)
       writeFileSync(

@@ -162,7 +162,6 @@ import {
   DeclaredSchema,
   TAKE_RECORD_LIMITS,
   buildDeclaredRecord,
-  buildGenerationRecord,
   buildRenderRecord,
   recordHashOf,
   type TakeRecord,
@@ -172,6 +171,10 @@ import {
   TAKE_LIMITS,
   TakeProposalInputSchema,
   appendGeneratedTake,
+  generatedRecord,
+  generationBase,
+  revisionDraft,
+  type Offer,
   assertGenerationTarget,
   assertTakeMedia,
   compareTakes,
@@ -378,6 +381,17 @@ const kaggleAsk = (kind: "egress" | "spend", account: string): GateAsk => ({
   purpose: "generation",
   network: kaggleNetwork(process.env),
 });
+const NO_ENGINE = "No local engine is configured for this service.";
+const comfyRecipes = (): GenerationRecipe[] =>
+  PINNED_COMFY_RECIPES.filter(
+    (r): r is typeof r & { operation: GenerationRecipe["operation"] } =>
+      r.operation === "textToVideo" || r.operation === "imageToVideo",
+  ).map((r) => ({
+    id: r.id,
+    hash: comfyRecipeHash(r),
+    operation: r.operation,
+    modelManifestHash: r.modelManifestHash,
+  }));
 function generationOf(ctx: CommandContext): Generation {
   if (ctx.generation) return ctx.generation;
   if (ctx.kaggle) {
@@ -427,10 +441,7 @@ function generationOf(ctx: CommandContext): Generation {
   }
   const { available, reason } = comfyGeneration();
   if (!available || !ctx.comfyUrl)
-    throw new CommandError(
-      "CAPABILITY_UNAVAILABLE",
-      reason ?? "No local engine is configured for this service.",
-    );
+    throw new CommandError("CAPABILITY_UNAVAILABLE", reason ?? NO_ENGINE);
   let held = generations.get(ctx.store);
   if (!held) {
     held = {
@@ -441,19 +452,34 @@ function generationOf(ctx: CommandContext): Generation {
         // A ComfyUI on this computer: no approval is asked for it.
         permit: noRemoteUse,
       }),
-      recipes: PINNED_COMFY_RECIPES.filter(
-        (r): r is typeof r & { operation: GenerationRecipe["operation"] } =>
-          r.operation === "textToVideo" || r.operation === "imageToVideo",
-      ).map((r) => ({
-        id: r.id,
-        hash: comfyRecipeHash(r),
-        operation: r.operation,
-        modelManifestHash: r.modelManifestHash,
-      })),
+      recipes: comfyRecipes(),
     };
     generations.set(ctx.store, held);
   }
   return held;
+}
+
+// The same models, and why there are none, read without an engine or the Kaggle CLI (MPR-103).
+function offerOf(ctx: CommandContext): Offer {
+  const bare = (recipes: readonly GenerationRecipe[]): Offer => ({
+    reason: null,
+    recipes: recipes.map((r) => ({ ...r, makes: null })),
+  });
+  if (ctx.generation) return bare(ctx.generation.recipes);
+  if (ctx.kaggle) {
+    const made = new Map(offeredKaggleRecipes().map((r) => [r.id, r]));
+    return {
+      reason: null,
+      recipes: kaggleRecipes().map((r) => ({
+        ...r,
+        makes: made.get(r.id) ?? null,
+      })),
+    };
+  }
+  const { available, reason } = comfyGeneration();
+  return available && ctx.comfyUrl
+    ? bare(comfyRecipes())
+    : { reason: reason ?? NO_ENGINE, recipes: [] };
 }
 
 const NO_REPLAY =
@@ -612,7 +638,15 @@ async function withRecords(
           "VALIDATION",
           "This generation did not make the take's media.",
         );
-      record = buildGenerationRecord(row, generationFacts(row));
+      const made = generatedRecord(ctx.store, row, generationFacts(row));
+      // Nothing here could say it, and a record is kept as it is written: the take can be saved
+      // without one.
+      if (made.notice !== null)
+        throw new CommandError(
+          "RECOVERY_REQUIRED",
+          `${made.notice} Nothing was saved; the take can be saved without a record.`,
+        );
+      record = made.record;
     } else {
       const asset = assets.find((x) => x.id === take.assetId);
       if (!asset)
@@ -1283,6 +1317,17 @@ export const commands = {
         record: store.takeRecord(a.projectId, a.documentId, take.recordHash),
       };
     },
+  }),
+  "yamakan.take.revisionDraft": define({
+    scope: "project:read",
+    mutation: false,
+    summary:
+      "Read the request that made one take of a story shot as a draft to change and start again, and whether what it needs is still offered here: each part is ok, changed, unavailable or unknown, with a sentence. A take made elsewhere gives what its receipt says; a render and a take without a record give none, and why. A repeat of the same request may look different. Changes nothing and starts nothing.",
+    input: z
+      .object({ projectId: Id, documentId: Id, shotId: Id, takeId: Id })
+      .strict(),
+    run: (ctx, a) =>
+      revisionDraft(ctx.store, a, offerOf(ctx), (id) => generationRow(ctx, id)),
   }),
   "yamakan.take.compare": define({
     scope: "project:read",
@@ -3010,17 +3055,53 @@ export const commands = {
         noUnconsentedPerson: z.literal(true).optional(),
         // The story shot its video is made for: bringing it in adds it to that shot's takes.
         target: z.object({ documentId: Id, shotId: Id }).strict().optional(),
+        // The take of that shot it revises, and why, in the person's words (OA-5). What changed
+        // is the service's to say.
+        derivedFromTakeId: Id.optional(),
+        revisionNote: z
+          .string()
+          .trim()
+          .min(1)
+          .max(TAKE_RECORD_LIMITS.revisionNote)
+          .optional(),
       })
       .strict(),
-    run: async (ctx, { recipeId, ...request }) => {
+    run: async (
+      ctx,
+      { recipeId, derivedFromTakeId, revisionNote, ...request },
+    ) => {
       const generation = generationOf(ctx);
       const recipe = generation.recipes.find((r) => r.id === recipeId);
       if (!recipe)
         throw new CommandError("NOT_FOUND", "That recipe is not available.");
       const { target } = request;
+      if (derivedFromTakeId !== undefined && !target)
+        throw new CommandError(
+          "VALIDATION",
+          "A revision names the shot it is for.",
+        );
+      if (revisionNote !== undefined && derivedFromTakeId === undefined)
+        throw new CommandError(
+          "VALIDATION",
+          "A revision note is of a run that revises a take.",
+        );
       if (target)
         await assertGenerationTarget(ctx.store, { ...request, target });
-      return generation.service.start({ ...request, recipe });
+      const derivedFrom =
+        target && derivedFromTakeId !== undefined
+          ? generationBase(
+              ctx.store,
+              request.projectId,
+              target,
+              derivedFromTakeId,
+              revisionNote,
+            )
+          : undefined;
+      return generation.service.start({
+        ...request,
+        recipe,
+        ...(derivedFrom ? { derivedFrom } : {}),
+      });
     },
   }),
   // What a person can start here, if anything, and where it would run.

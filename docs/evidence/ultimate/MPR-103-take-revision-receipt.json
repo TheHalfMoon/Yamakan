@@ -1,0 +1,143 @@
+{
+  "task": "MPR-103",
+  "head": "bdafd6c6f261d132367bd8a4457c9e866129e9e6",
+  "dirty": false,
+  "host": {
+    "platform": "linux",
+    "githubImage": "ubuntu24",
+    "freeDiskBytes": 93841051648,
+    "freeMemoryBytes": 15273488384,
+    "onAcPower": null,
+    "load": [
+      0.29,
+      0.16,
+      0.1
+    ],
+    "need": "unmeasured"
+  },
+  "outcome": "PASS",
+  "passed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "a take's request is read back as a draft",
+      "baseRecordHash": "d9a99f76f61c367dfa7d3d486b3263c676c908a3a84efcd8a94ef78f306bd67b",
+      "draft": {
+        "recipeId": "qualify-pattern",
+        "prompt": "(kept)",
+        "seed": 7,
+        "width": 704,
+        "height": 480,
+        "durationFrames": 60,
+        "firstFrameAssetId": null
+      },
+      "checks": [
+        {
+          "field": "route",
+          "state": "ok",
+          "message": "Models can be started here."
+        },
+        {
+          "field": "recipe",
+          "state": "ok",
+          "message": "This model is offered with the same run script."
+        },
+        {
+          "field": "model",
+          "state": "ok",
+          "message": "The model is the same version."
+        },
+        {
+          "field": "prompt",
+          "state": "ok",
+          "message": "The prompt was kept."
+        },
+        {
+          "field": "seed",
+          "state": "ok",
+          "message": "The seed was kept."
+        },
+        {
+          "field": "width",
+          "state": "unknown",
+          "message": "The width this model makes is not known here."
+        },
+        {
+          "field": "height",
+          "state": "unknown",
+          "message": "The height this model makes is not known here."
+        },
+        {
+          "field": "durationFrames",
+          "state": "unknown",
+          "message": "The length this model makes is not known here."
+        }
+      ]
+    },
+    {
+      "name": "a run from the draft with another seed records that change",
+      "baseRecordHash": "d9a99f76f61c367dfa7d3d486b3263c676c908a3a84efcd8a94ef78f306bd67b",
+      "newRecordHash": "d20a7d25cffe837fdb7b744e52a4e158f24db3169331638c290d55ca38eb5c1b",
+      "changedFields": [
+        "seed"
+      ],
+      "revisionNote": "Another seed, for this check."
+    },
+    {
+      "name": "a run from the draft as it is records no change",
+      "newRecordHash": "d94479a6fdcda24c5e707191058fce2a929230ff8f4b8c5a91406494f020897e",
+      "changedFields": []
+    },
+    {
+      "name": "the new take is compared, placed and undone as one step",
+      "revisionBefore": 34,
+      "applied": 35,
+      "undone": 36
+    },
+    {
+      "name": "a service with no engine gives the same draft over REST and over MCP",
+      "checks": [
+        {
+          "field": "route",
+          "state": "unavailable",
+          "message": "Engines are off in this build."
+        },
+        {
+          "field": "recipe",
+          "state": "unknown",
+          "message": "Nothing can be started here, so whether this model is offered is not known."
+        },
+        {
+          "field": "model",
+          "state": "unknown",
+          "message": "Whether the model is the same version is not known."
+        },
+        {
+          "field": "prompt",
+          "state": "ok",
+          "message": "The prompt was kept."
+        },
+        {
+          "field": "seed",
+          "state": "ok",
+          "message": "The seed was kept."
+        },
+        {
+          "field": "width",
+          "state": "unknown",
+          "message": "The width this model makes is not known here."
+        },
+        {
+          "field": "height",
+          "state": "unknown",
+          "message": "The height this model makes is not known here."
+        },
+        {
+          "field": "durationFrames",
+          "state": "unknown",
+          "message": "The length this model makes is not known here."
+        }
+      ]
+    }
+  ]
+}

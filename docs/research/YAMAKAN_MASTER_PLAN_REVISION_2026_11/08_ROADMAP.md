@@ -119,10 +119,10 @@ revised from its own record, and the history of a shot can be read.
 | --- | --- | --- | --- | --- |
 | MPR-101 | An immutable, hashed record of how each take was made | VERIFIED | none | FD-2 |
 | MPR-102 | A generation targets a story shot and appends its take on import | VERIFIED | MPR-101 | none |
-| MPR-103 | A revision draft read from a take; what changed between takes is recorded | QUALIFICATION_READY | MPR-101, MPR-102 | FD-2 |
+| MPR-103 | A revision draft read from a take; what changed between takes is recorded | REVIEW_PENDING | MPR-101, MPR-102 | FD-2 |
 | MPR-104 | Shot cards with the take stack and a 'Revise this shot' entry | WAITING_DEPENDENCIES | MPR-102, MPR-103, SS-006 | none |
 | MPR-105 | A shot's take stays replaceable after its clip is split or trimmed | REVIEW_PENDING | SS-006 | none |
-| MPR-106 | Brief, scene scripts and shot intent stored in the story document | REVIEW_PENDING | MPR-101 | none |
+| MPR-106 | Brief, scene scripts and shot intent stored in the story document | VERIFIED | MPR-101 | none |
 | MPR-107 | A bounded history of one shot: takes, attempts, replacements, totals | VERIFIED | MPR-101, MPR-102 | none |
 
 Exit: MPR-101 to MPR-107 verified. One shot is generated or rendered onto its
@@ -149,17 +149,17 @@ agent surface with waits, approvals, budgets and an audit feed.
 | Card | What it delivers | State | Depends on | Decision |
 | --- | --- | --- | --- | --- |
 | MPR-201 | One model catalog; every existing model list checked against it | VERIFIED | none | none |
-| MPR-202 | Capabilities as supported, unsupported or unverified cells | REVIEW_PENDING | MPR-201 | none |
+| MPR-202 | Capabilities as supported, unsupported or unverified cells | VERIFIED | MPR-201 | none |
 | MPR-203 | Preflight: estimate, egress disclosure and a hash that start checks | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-204, MPR-205, MPR-207 | none |
 | MPR-204 | Default-deny gates with recorded human approvals | REVIEW_PENDING | none | none |
 | MPR-205 | The Kaggle command-line route contained; quota facts stated | WAITING_DEPENDENCIES | MPR-204, MPR-207 | FD-10 (second part only) |
-| MPR-206 | Five engine operations defined; a conformance kit for every adapter | QUALIFICATION_READY | MPR-201 | none |
+| MPR-206 | Five engine operations defined; a conformance kit for every adapter | REVIEW_PENDING | MPR-201 | none |
 | MPR-207 | A typed failure class and end time on every ended generation | REVIEW_PENDING | none | none |
 | MPR-208 | Every offered model gated on a complete, machine-checked licence block | QUALIFICATION_READY | MPR-201 | none |
 | MPR-209 | Notices, the source offer and the route licence shown; wider SBOM | WAITING_DEPENDENCIES | MPR-208 | none |
 | MPR-210 | The hosted-provider profile, proven on a loopback fake only | WAITING_DEPENDENCIES | MPR-203, MPR-204, MPR-206, MPR-207 | none |
 | MPR-303 | Hash-bound edit proposals; a propose-only agent mode | QUALIFICATION_READY | SS-006 | none |
-| MPR-305 | A deterministic, reasoned route order from the router | WAITING_DEPENDENCIES | MPR-202 | none |
+| MPR-305 | A deterministic, reasoned route order from the router | QUALIFICATION_READY | MPR-202 | none |
 | MPR-501 | An honest MCP tool list: scope filter, mutation flags, cancellation | VERIFIED | none | none |
 | MPR-502 | A bounded job wait and a revision event cursor | QUALIFICATION_READY | MPR-501 | none |
 | MPR-503 | CLI and SDK act as an agent; generated CLI help; media import helpers | QUALIFICATION_READY | MPR-501 | none |
@@ -219,7 +219,7 @@ one camera and render record per shot, and a consistency measurement harness.
 | --- | --- | --- | --- | --- |
 | MPR-401 | An entity, an approved anchor and variants on each reference pack | QUALIFICATION_READY | MPR-101 | none |
 | MPR-402 | Entities scheduled per shot; a report of what a route will receive | WAITING_DEPENDENCIES | MPR-101, MPR-102, MPR-103, MPR-202, MPR-203, MPR-401 | none |
-| MPR-403 | One camera and render record per shot; the legacy scene store read-only | WAITING_DEPENDENCIES | MPR-101, MPR-106 | none |
+| MPR-403 | One camera and render record per shot; the legacy scene store read-only | QUALIFICATION_READY | MPR-101, MPR-106 | none |
 | MPR-404 | Blender depth and normal control passes for control-capable routes | DEFERRED | MPR-202, MPR-203, MPR-204, MPR-206, MPR-403, MPR-507 | FD-3, FD-4, FD-5 |
 | MPR-405 | A consistency measurement harness with a local blind study | WAITING_DEPENDENCIES | MPR-201, MPR-202, MPR-401, MPR-402 | FD-3, FD-4, FD-5, FD-6 |
 

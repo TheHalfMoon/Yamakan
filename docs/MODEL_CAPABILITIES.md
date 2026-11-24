@@ -1,5 +1,7 @@
 # Versioned generation and capability contract
 
+> The operations the engine contract has, and how one is added, are defined in [Engine operations](ENGINE_OPERATIONS.md). Any other named below is proposed there, and nothing here promises it.
+
 > **Status, 2026-11-23, main 16d2175:** a proposal from before the generation work; the contract in code has five operations, not the thirteen listed. Kept as written for history. Current state: [current-state index](CURRENT_STATE_INDEX.md).
 
 Final proposal: [master plan](IMPLEMENTATION_PLAN.md) and [operational contracts](OPERATIONAL_CONTRACTS.md) own current scope and exact protocols. Earlier evidence remains bounded; no final implementation or founder approval is implied.

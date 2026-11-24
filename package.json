@@ -60,6 +60,7 @@
     "qualify:model-catalog": "node scripts/qualify-model-catalog.mjs",
     "qualify:capability-report": "node scripts/qualify-capability-report.mjs",
     "qualify:gates": "node scripts/qualify-gates.mjs",
+    "qualify:engine-conformance": "node scripts/qualify-engine-conformance.mjs",
     "qualify:revisable-shot": "node scripts/qualify-revisable-shot.mjs",
     "qualify:take-review": "node scripts/qualify-take-review.mjs",
     "qualify:story-brief": "node scripts/qualify-story-brief.mjs",

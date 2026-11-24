@@ -8,6 +8,7 @@ import type {
   EngineStatus,
   EngineSubmitRequest,
 } from "./contract.ts";
+import { CommandError } from "../command/errors.ts";
 import { ENGINE_CONTRACT } from "./contract.ts";
 import {
   AttemptFence,
@@ -200,7 +201,33 @@ export type FakeEngineV2Options = {
   beforeInput?: (request: EngineRequestV2) => Promise<void>;
   // Executions stay running (a long render) until cancelled.
   stayRunning?: boolean;
+  // Where its executions are kept; its own when absent.
+  world?: FakeWorld;
+  // The send's answer is lost, after it landed or before.
+  uncertainSubmit?: "landed" | "neverLanded";
+  // The engine no longer knows what it started.
+  lostExecutions?: boolean;
+  // What it leaves is not what it declared.
+  corruptArtifact?: boolean;
+  // It runs elsewhere, and a stop there ends the run or does not.
+  cancelOutcome?: "stopped" | "continuing";
 };
+
+type FakeExecution = { status: ExecutionStatus; artifact: Artifact | null };
+/**
+ * What outlives an adapter: what was started, what that left, and how often anything was sent.
+ * Two adapters over one world are the one before a restart and the one after it.
+ */
+export type FakeWorld = {
+  executions: Map<string, FakeExecution>;
+  sends: number;
+  seq: number;
+};
+export const createFakeWorld = (): FakeWorld => ({
+  executions: new Map(),
+  sends: 0,
+  seq: 0,
+});
 
 const FAKE_V2_CONSTRAINTS: Constraints = {
   maxWidth: 1280,
@@ -250,15 +277,24 @@ async function verifyAsset(
 
 export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
   const artifactBytes = options.artifactBytes ?? 3 * 1024 * 1024 + 17;
-  type Execution = { status: ExecutionStatus; artifact: Artifact | null };
-  const executions = new Map<string, Execution>();
+  const world = options.world ?? createFakeWorld();
+  const { executions } = world;
   const fence = new AttemptFence();
   let spawned = 0;
-  let seq = 0;
-  const known = (ref: string) => {
+  const known = (ref: string): FakeExecution => {
     const e = executions.get(ref);
-    if (!e) throw new Error("Unknown engine execution.");
-    return e;
+    if (!e) throw new CommandError("NOT_FOUND", "Unknown engine execution.");
+    return options.lostExecutions
+      ? {
+          status: {
+            executionRef: ref,
+            state: "failed",
+            diagnostic: "The engine no longer knows this run.",
+            failureClass: "lostJob",
+          },
+          artifact: null,
+        }
+      : e;
   };
   const capabilities = (): CapabilityV2[] =>
     Operation.options.map((operation) => {
@@ -281,6 +317,9 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
     contract: ENGINE_CONTRACT_V2,
     spawned: () => spawned,
     capabilities,
+    ...(options.cancelOutcome
+      ? { location: (recipeId: string) => `fake/${recipeId}` }
+      : {}),
     async submit(raw, context) {
       const parsed = EngineRequestV2Schema.safeParse(raw);
       if (!parsed.success) return { refused: "INVALID_REQUEST" };
@@ -306,8 +345,22 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
           )
             return { refused: "INVALID_REQUEST" };
         }
+        world.sends++;
+        const ref = `fake-v2-${++world.seq}`;
+        const answer = options.uncertainSubmit
+          ? {
+              executionRef: ref,
+              uncertain: "The answer was lost; it may have arrived.",
+            }
+          : { executionRef: ref };
+        if (options.uncertainSubmit === "neverLanded") {
+          executions.set(ref, {
+            status: { executionRef: ref, state: "unknown" },
+            artifact: null,
+          });
+          return answer;
+        }
         spawned++;
-        const ref = `fake-v2-${++seq}`;
         let artifact: Artifact | null = null;
         if (!options.failExecutions) {
           const hash = createHash("sha256");
@@ -357,9 +410,7 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
           e.artifact = null;
         }
         // A newer generation went live first: this one is stale.
-        return cancel === ref
-          ? { refused: "STALE_ATTEMPT" }
-          : { executionRef: ref };
+        return cancel === ref ? { refused: "STALE_ATTEMPT" } : answer;
       });
     },
     async status(ref) {
@@ -371,8 +422,17 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
     },
     async requestCancel(ref) {
       const e = known(ref);
+      if (options.cancelOutcome === "continuing")
+        return {
+          requested: true,
+          localProcessExited: true,
+          remoteAcknowledged: false,
+          remoteOutcome: "continuing",
+          billingOutcome: "unknown",
+        };
       // Executions finish within submit, so there is never a running one.
-      if (e.status.state === "queued" || e.status.state === "running") {
+      const going = e.status.state === "queued" || e.status.state === "running";
+      if (going) {
         e.status = {
           executionRef: ref,
           state: "cancelled",
@@ -380,11 +440,19 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
         };
         e.artifact = null;
       }
-      return {
-        requested: true,
-        localProcessExited: true,
-        billingOutcome: "notApplicable",
-      };
+      return options.cancelOutcome
+        ? {
+            requested: true,
+            localProcessExited: true,
+            remoteAcknowledged: going,
+            remoteOutcome: going ? "stopped" : "unknown",
+            billingOutcome: "unknown",
+          }
+        : {
+            requested: true,
+            localProcessExited: true,
+            billingOutcome: "notApplicable",
+          };
     },
     async enumerateArtifacts(ref) {
       const e = known(ref);
@@ -400,7 +468,11 @@ export function createFakeEngineV2(options: FakeEngineV2Options = {}) {
         e.artifact.handle !== handle
       )
         throw new Error("No such artifact.");
-      yield* fakeBytes(ref, e.artifact.byteLength, ENGINE_V2_LIMITS.chunkBytes);
+      yield* fakeBytes(
+        options.corruptArtifact ? `${ref}-other` : ref,
+        e.artifact.byteLength,
+        ENGINE_V2_LIMITS.chunkBytes,
+      );
     },
   };
   return adapter;
